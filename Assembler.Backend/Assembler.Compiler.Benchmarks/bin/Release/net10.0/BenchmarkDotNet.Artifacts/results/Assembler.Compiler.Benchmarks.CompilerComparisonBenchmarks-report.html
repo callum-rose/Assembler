@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>Assembler.Compiler.Benchmarks.CompilerComparisonBenchmarks-20260502-120905</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.15.6, macOS 26.3.1 (25D2128) [Darwin 25.3.0]
+Apple M3, 1 CPU, 8 logical and 8 physical cores
+.NET SDK 10.0.203
+  [Host]     : .NET 10.0.7 (10.0.7, 10.0.726.21808), Arm64 RyuJIT armv8.0-a
+  DefaultJob : .NET 10.0.7 (10.0.7, 10.0.726.21808), Arm64 RyuJIT armv8.0-a
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                          </th><th>Mean    </th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>&#39;Standard: Compile Simple Addition&#39;</td><td>12,975.9219 ns</td><td>91.5007 ns</td><td>85.5898 ns</td><td>2.1973</td><td>1.0986</td><td>0.0305</td><td>18408 B</td>
+</tr><tr><td>&#39;Fast: Compile Simple Addition&#39;</td><td>4,605.1730 ns</td><td>19.4846 ns</td><td>17.2726 ns</td><td>1.7548</td><td>0.8774</td><td>0.0458</td><td>14728 B</td>
+</tr><tr><td>&#39;Standard: Compile Complex Expression&#39;</td><td>18,630.4589 ns</td><td>134.8172 ns</td><td>126.1081 ns</td><td>3.2349</td><td>1.5869</td><td>-</td><td>27065 B</td>
+</tr><tr><td>&#39;Fast: Compile Complex Expression&#39;</td><td>6,197.6994 ns</td><td>17.6406 ns</td><td>16.5011 ns</td><td>2.5558</td><td>0.8469</td><td>0.0534</td><td>21370 B</td>
+</tr><tr><td>&#39;Standard: Compile With Conditionals&#39;</td><td>23,954.7503 ns</td><td>90.7442 ns</td><td>75.7755 ns</td><td>3.4180</td><td>1.7090</td><td>-</td><td>28744 B</td>
+</tr><tr><td>&#39;Fast: Compile With Conditionals&#39;</td><td>6,384.4628 ns</td><td>20.8107 ns</td><td>18.4482 ns</td><td>2.9373</td><td>0.9766</td><td>0.0610</td><td>24616 B</td>
+</tr><tr><td>&#39;Standard: Compile With Loop&#39;</td><td>29,912.9901 ns</td><td>396.7957 ns</td><td>331.3424 ns</td><td>3.6621</td><td>1.8311</td><td>-</td><td>31408 B</td>
+</tr><tr><td>&#39;Fast: Compile With Loop&#39;</td><td>6,702.9290 ns</td><td>94.0437 ns</td><td>87.9685 ns</td><td>2.8687</td><td>0.9537</td><td>0.0534</td><td>24016 B</td>
+</tr><tr><td>&#39;Standard: Compile Fibonacci&#39;</td><td>44,416.9082 ns</td><td>450.9807 ns</td><td>352.0961 ns</td><td>5.7373</td><td>0.7324</td><td>-</td><td>48129 B</td>
+</tr><tr><td>&#39;Fast: Compile Fibonacci&#39;</td><td>10,030.2320 ns</td><td>197.5935 ns</td><td>313.4042 ns</td><td>4.3640</td><td>1.4496</td><td>0.0610</td><td>36497 B</td>
+</tr><tr><td>&#39;Standard: Compile Math Operation&#39;</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td>
+</tr><tr><td>&#39;Fast: Compile Math Operation&#39;</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td><td>NA</td>
+</tr><tr><td>&#39;Standard: Execute Simple Addition&#39;</td><td>0.3236 ns</td><td>0.0024 ns</td><td>0.0020 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>&#39;Fast: Execute Simple Addition&#39;</td><td>0.3681 ns</td><td>0.0096 ns</td><td>0.0080 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>&#39;Standard: Execute Fibonacci(20)&#39;</td><td>5.7259 ns</td><td>0.0825 ns</td><td>0.0771 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>&#39;Fast: Execute Fibonacci(20)&#39;</td><td>5.9758 ns</td><td>0.0462 ns</td><td>0.0409 ns</td><td>-</td><td>-</td><td>-</td><td>-</td>
+</tr><tr><td>&#39;Standard: Compile + Execute Addition&#39;</td><td>13,290.6419 ns</td><td>256.0067 ns</td><td>273.9243 ns</td><td>2.1973</td><td>1.0986</td><td>0.0305</td><td>18408 B</td>
+</tr><tr><td>&#39;Fast: Compile + Execute Addition&#39;</td><td>12,137.6181 ns</td><td>238.8745 ns</td><td>245.3065 ns</td><td>1.7395</td><td>0.8545</td><td>0.0305</td><td>14728 B</td>
+</tr><tr><td>&#39;Standard: Compile + Execute Complex&#39;</td><td>31,445.5090 ns</td><td>162.2496 ns</td><td>143.8301 ns</td><td>4.0283</td><td>1.9531</td><td>-</td><td>34688 B</td>
+</tr><tr><td>&#39;Fast: Compile + Execute Complex&#39;</td><td>28,438.1935 ns</td><td>465.6220 ns</td><td>388.8155 ns</td><td>3.2349</td><td>1.0376</td><td>-</td><td>27243 B</td>
+</tr></tbody></table>
+</body>
+</html>

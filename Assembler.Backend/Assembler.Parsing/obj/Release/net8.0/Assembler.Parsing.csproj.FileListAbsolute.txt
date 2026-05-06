@@ -1,0 +1,35 @@
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.csproj.AssemblyReference.cache
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.GeneratedMSBuildEditorConfig.editorconfig
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.AssemblyInfoInputs.cache
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.AssemblyInfo.cs
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.csproj.CoreCompileInputs.cache
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.exe
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.deps.json
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.runtimeconfig.json
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.pdb
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/YamlDotNet.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assemble.7733D367.Up2Date
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/refint/Assembler.Parsing.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.pdb
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.genruntimeconfig.cache
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/obj/Release/net8.0/ref/Assembler.Parsing.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Pong.yaml
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Models.dll
+C:/Users/Callum.Rose/Documents/Assembler.Parsing/bin/Release/net8.0/Assembler.Models.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.deps.json
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/bin/Release/net8.0/Assembler.Parsing.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/bin/Release/net8.0/Assembler.Definitions.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/bin/Release/net8.0/Assembler.Definitions.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assemble.7733D367.Up2Date
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/refint/Assembler.Parsing.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/Assembler.Parsing.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Parsing/obj/Release/net8.0/ref/Assembler.Parsing.dll

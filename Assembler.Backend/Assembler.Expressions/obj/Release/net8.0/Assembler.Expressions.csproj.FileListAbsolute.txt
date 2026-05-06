@@ -1,0 +1,17 @@
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Expressions.deps.json
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Expressions.dll
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Expressions.pdb
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Generators.Attributes.dll
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Models.dll
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Generators.Attributes.pdb
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\bin\Release\net8.0\Assembler.Models.pdb
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.csproj.AssemblyReference.cache
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.AssemblyInfoInputs.cache
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.AssemblyInfo.cs
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.csproj.CoreCompileInputs.cache
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assemble.8BF57C7D.Up2Date
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.dll
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\refint\Assembler.Expressions.dll
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\Assembler.Expressions.pdb
+C:\Users\Callum.Rose\Documents\Assembler.Expressions\obj\Release\net8.0\ref\Assembler.Expressions.dll

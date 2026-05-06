@@ -1,0 +1,20 @@
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.deps.json
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.dll
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.pdb
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.csproj.AssemblyReference.cache
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.GeneratedMSBuildEditorConfig.editorconfig
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.AssemblyInfoInputs.cache
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.AssemblyInfo.cs
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.csproj.CoreCompileInputs.cache
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.dll
+C:/Users/Callum.Rose/Documents/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.deps.json
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/bin/Release/netstandard2.0/Assembler.Generators.Attributes.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/Release/netstandard2.0/Assembler.Generators.Attributes.pdb

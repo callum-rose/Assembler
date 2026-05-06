@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "26QBbpww93g=",
+  "success": true,
+  "projectFilePath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj",
+  "expectedPackageFiles": [
+    "/Users/callumrose/.nuget/packages/fastexpressioncompiler/5.3.0/fastexpressioncompiler.5.3.0.nupkg.sha512",
+    "/Users/callumrose/.nuget/packages/fastexpressioncompiler.lightexpression/5.3.0/fastexpressioncompiler.lightexpression.5.3.0.nupkg.sha512"
+  ],
+  "logs": []
+}

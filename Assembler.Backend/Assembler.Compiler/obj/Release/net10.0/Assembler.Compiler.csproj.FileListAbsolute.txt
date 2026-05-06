@@ -1,0 +1,12 @@
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/bin/Release/net10.0/Assembler.Compiler.deps.json
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/bin/Release/net10.0/Assembler.Compiler.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/bin/Release/net10.0/Assembler.Compiler.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/refint/Assembler.Compiler.dll
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/Assembler.Compiler.pdb
+/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/obj/Release/net10.0/ref/Assembler.Compiler.dll

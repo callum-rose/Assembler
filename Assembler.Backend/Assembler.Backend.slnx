@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Assembler.Compiler.Benchmarks/Assembler.Compiler.Benchmarks.csproj" />
+  <Project Path="Assembler.Compiler.Tests/Assembler.Compiler.Tests.csproj" />
+  <Project Path="Assembler.Compiler/Assembler.Compiler.csproj" />
+  <Project Path="Assembler.Definitions/Assembler.Definitions.csproj" />
+  <Project Path="Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj" />
+  <Project Path="Assembler.Generators.Tests/Assembler.Generators.Tests.csproj" />
+  <Project Path="Assembler.Generators/Assembler.Generators.csproj" />
+  <Project Path="Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj" />
+  <Project Path="Assembler.Parsing/Assembler.Parsing.csproj" />
+</Solution>
