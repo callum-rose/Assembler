@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = Assembler.Generators.Attributes
-build_property.ProjectDir = /Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/
+build_property.ProjectDir = /Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Generators.Attributes/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false

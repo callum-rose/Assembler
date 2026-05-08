@@ -53,11 +53,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
+      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
       "projectName": "Assembler.Parsing.Phase1",
-      "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
+      "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
       "packagesPath": "/Users/callumrose/.nuget/packages/",
-      "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/obj/",
+      "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/callumrose/.nuget/NuGet/NuGet.Config"

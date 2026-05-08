@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {}
+    "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {}
   },
   "projects": {
-    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
+    "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj",
+        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj",
         "projectName": "Assembler.Compiler",
-        "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj",
+        "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj",
         "packagesPath": "/Users/callumrose/.nuget/packages/",
-        "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/obj/",
+        "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -347,14 +347,14 @@
         }
       }
     },
-    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
+    "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
+        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
         "projectName": "Assembler.Parsing.Phase1",
-        "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
+        "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj",
         "packagesPath": "/Users/callumrose/.nuget/packages/",
-        "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/obj/",
+        "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -686,14 +686,14 @@
         }
       }
     },
-    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {
+    "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj",
+        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj",
         "projectName": "Assembler.Parsing.Phase2",
-        "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj",
+        "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj",
         "packagesPath": "/Users/callumrose/.nuget/packages/",
-        "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/obj/",
+        "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -708,11 +708,11 @@
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
-                "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj"
+              "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
+                "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj"
               },
-              "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
-                "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj"
+              "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
+                "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj"
               }
             }
           }

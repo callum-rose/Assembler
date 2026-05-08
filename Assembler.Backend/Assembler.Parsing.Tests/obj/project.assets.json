@@ -1126,11 +1126,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj",
+      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj",
       "projectName": "Assembler.Parsing.Tests",
-      "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj",
+      "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj",
       "packagesPath": "/Users/callumrose/.nuget/packages/",
-      "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Tests/obj/",
+      "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -1145,11 +1145,11 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
-              "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj"
+            "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj": {
+              "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase1/Assembler.Parsing.Phase1.csproj"
             },
-            "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {
-              "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj"
+            "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj": {
+              "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler.Backend/Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj"
             }
           }
         }
