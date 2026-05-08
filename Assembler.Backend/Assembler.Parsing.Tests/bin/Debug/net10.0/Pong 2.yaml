@@ -1,0 +1,332 @@
+Game:
+  Title: Simple Pong Game
+  Description: A basic implementation of the classic Pong game with two paddles and a ball.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#000000"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  - Id: left initial score
+    Value: 0
+  - Id: right initial score
+    Value: 0
+  - Id: ball initial position
+    Value: !vec { X: 0, Y: 0 }
+  - Id: ball initial velocity
+    Value: !vec { X: 1, Y: 1 }
+  - Id: left paddle initial position
+    Value: !vec { X: -5, Y: 0 }
+  - Id: right paddle initial position
+    Value: !vec { X: 5, Y: 0 }
+  - Id: paddle speed
+    Value: 0.2
+  - Id: left paddle up key
+    Value: "w"
+  - Id: left paddle down key
+    Value: "s"
+  - Id: right paddle up key
+    Value: "up"
+  - Id: right paddle down key
+    Value: "down"
+  - Id: upper wall position
+    Value: !vec { X: 0, Y: 3 }
+  - Id: lower wall position
+    Value: !vec { X: 0, Y: -3 }
+  - Id: left goal position
+    Value: !vec { X: -6, Y: 0 }
+  - Id: right goal position
+    Value: !vec { X: 6, Y: 0 }
+  - Id: left goal size
+    Value: !vec { X: 0.2, Y: 6 }
+  - Id: right goal size
+    Value: !vec { X: 0.2, Y: 6 }
+  - Id: paddle height
+    Value: 1
+  - Id: paddle width
+    Value: 0.2
+  - Id: ball size
+    Value: 0.2
+  - Id: score per goal
+    Value: 1
+  - Id: score to win
+    Value: 5
+  - Id: camera position
+    Value: !vec { X: 0, Y: 0, Z: -10 }
+  - Id: camera rotation
+    Value: !vec { X: 0, Y: 0, Z: 0 }
+  - Id: camera view
+    Value: "orthographic"
+  - Id: camera size
+    Value: 10
+
+Variables:
+  - Id: left score
+    InitialValue: !ref left initial score
+  - Id: right score
+    InitialValue: !ref right initial score
+  - Id: ball velocity
+    InitialValue: !ref ball initial velocity
+
+Expressions:
+  - Id: ball and paddle velocity change
+    Type: vector
+    Expression: "a * b"
+    Arguments:
+      - !ref ball velocity
+      - !vec { X: -1, Y: 1 }
+  - Id: ball and wall velocity change
+    Type: vector
+    Expression: "a * b"
+    Arguments:
+      - !ref ball velocity
+      - !vec { X: 1, Y: -1 }
+  - Id: left score adder
+    Type: int
+    Expression: "a + b"
+    Arguments:
+      - !ref left score
+      - !ref score per goal
+  - Id: right score adder
+    Type: int
+    Expression: "a + b"
+    Arguments:
+      - !ref right score
+      - !ref score per goal
+  - Id: left player has won
+    Type: boolean
+    Expression: "a >= b"
+    Arguments:
+      - !ref left score
+      - !ref score to win
+  - Id: right player has won
+    Type: boolean
+    Expression: "a >= b"
+    Arguments:
+      - !ref right score
+      - !ref score to win
+
+Entities:
+  - Id: left paddle
+    Tags:
+      - left paddle
+    Position: left paddle initial position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: paddle width
+            Y: paddle height
+          IsTrigger: false
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !ref left paddle up key
+          Listeners:
+            - EntityRef: left paddle
+              BehaviourRef: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: -(paddle speed)
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !ref left paddle down key
+          Listeners:
+            - EntityRef: left paddle
+              BehaviourRef: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: paddle speed
+  - Id: right paddle
+    Tags:
+      - right paddle
+    Position: right paddle initial position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: paddle width
+            Y: paddle height
+          IsTrigger: false
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !ref right paddle up key
+          Listeners:
+            - EntityRef: right paddle
+              BehaviourRef: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: -(paddle speed)
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !ref right paddle down key
+          Listeners:
+            - EntityRef: right paddle
+              BehaviourRef: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: paddle speed
+  - Id: ball
+    Tags:
+      - ball
+    Position: ball initial position
+    Behaviours:
+      - Type: sphere collider
+        Id: sphere collider
+        Properties:
+          Size: ball size
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+      - Type: velocity
+        Id: velocity
+        Properties:
+          VelocityVariableRef: ball velocity
+      - Type: collision enter trigger
+        Id: paddle collision trigger
+        Properties:
+          TagsToDetect:
+            - left paddle
+            - right paddle
+          Listeners:
+            - EntityRef: ball
+              BehaviourRef: paddle bounce velocity setter
+      - Type: vector variable setter
+        Id: paddle bounce velocity setter
+        Properties:
+          VariableToSetRef: ball velocity
+          ExpressionRef: ball and paddle velocity change
+      - Type: collision enter trigger
+        Id: wall collision trigger
+        Properties:
+          TagsToDetect:
+            - wall
+          Listeners:
+            - EntityRef: ball
+              BehaviourRef: wall bounce velocity setter
+      - Type: vector variable setter
+        Id: wall bounce velocity setter
+        Properties:
+          VariableToSetRef: ball velocity
+          ExpressionRef: ball and wall velocity change
+      - Type: position variable setter
+        Id: position resetter
+        Properties:
+          VariableToSetRef: position
+          ValueExpression: ball initial position
+  - Id: upper wall
+    Tags:
+      - wall
+    Position: upper wall position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+  - Id: lower wall
+    Tags:
+      - wall
+    Position: lower wall position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+  - Id: left goal
+    Tags:
+      - goal
+    Position: left goal position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: left goal size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: goal trigger
+        Properties:
+          TagsToDetect:
+            - ball
+          Listeners:
+            - EntityRef: left goal
+              BehaviourRef: right score incrementer
+            - EntityRef: ball
+              BehaviourRef: ball resetter
+      - Type: int variable setter
+        Id: right score incrementer
+        Properties:
+          VariableToSetRef: right score
+          ExpressionRef: right score adder
+      - Type: position variable setter
+        Id: ball resetter
+        Properties:
+          VariableToSetRef: position
+          ValueExpression: ball initial position
+  - Id: right goal
+    Tags:
+      - goal
+    Position: right goal position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: right goal size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: goal trigger
+        Properties:
+          TagsToDetect:
+            - ball
+          Listeners:
+            - EntityRef: right goal
+              BehaviourRef: left score incrementer
+            - EntityRef: ball
+              BehaviourRef: ball resetter
+      - Type: int variable setter
+        Id: left score incrementer
+        Properties:
+          VariableToSetRef: left score
+          ExpressionRef: left score adder
+      - Type: position variable setter
+        Id: ball resetter
+        Properties:
+          VariableToSetRef: position
+          ValueExpression: ball initial position
+  - Id: camera
+    Tags:
+      - camera
+    Position: camera position
+    Rotation: camera rotation
+    Behaviours:
+      - Type: camera
+        Id: camera
+        Properties:
+          View: !ref camera view
+          Size: !ref camera size
+  - Id: win condition checker
+    Behaviours:
+      - Type: condition trigger
+        Id: left score win condition trigger
+        Properties:
+          ConditionExpressionRef: left player has won
+      - Type: condition trigger
+        Id: right score win condition trigger
+        Properties:
+          ConditionExpressionRef: right player has won

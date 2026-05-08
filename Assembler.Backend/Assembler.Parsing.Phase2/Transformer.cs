@@ -1,4 +1,6 @@
 using Assembler.Parsing.Phase1.Dtos;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Assembler.Parsing2;
 
@@ -100,7 +102,7 @@ public static class Transformer
 				ConvertGeneral<string>(resolvedValues, props?["ExpressionId"]),
 				ConvertArgumentList(resolvedValues, props?["Arguments"])),
 
-			_ => throw new InvalidOperationException($"Cannot convert behaviour type '{behaviourDto.Type}'")
+			_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 		};
 	}
 
@@ -108,21 +110,20 @@ public static class Transformer
 		obj is List<object> list
 			? list.Select(item =>
 			{
-				string? entityId = null, behaviourId = null;
-				if (item is Dictionary<string, object> sd)
+				string? entityId = GetValueFromDictionary(item, "EntityId") as string;
+				string? behaviourId = GetValueFromDictionary(item, "BehaviourId") as string;
+
+				if (entityId is null || behaviourId is null)
 				{
-					sd.TryGetValue("EntityId", out var e); entityId = e as string;
-					sd.TryGetValue("BehaviourId", out var b); behaviourId = b as string;
+					throw new ParsingException($"Cannot convert listener: {item}. Missing EntityId or BehaviourId.");
 				}
-				else if (item is Dictionary<object, object> od)
-				{
-					od.TryGetValue("EntityId", out var e); entityId = e as string;
-					od.TryGetValue("BehaviourId", out var b); behaviourId = b as string;
-				}
-				else throw new InvalidOperationException($"Cannot convert listener: {item}");
-				return new Listener(entityId ?? string.Empty, behaviourId ?? string.Empty);
+
+				return new Listener(entityId, behaviourId);
 			}).ToArray()
 			: [];
+
+	private static object? GetValueFromDictionary(object item, string key) =>
+		item is IDictionary<string, object> sd && sd.TryGetValue(key, out var val) ? val : null;
 
 	private static IReadOnlyList<string> ConvertStringList(object? obj) =>
 		obj is List<object> list
@@ -137,12 +138,13 @@ public static class Transformer
 	private static float ConvertFloat(IReadOnlyList<Value> resolvedValues, object? obj)
 	{
 		var value = Convert(resolvedValues, obj);
+
 		return value switch
 		{
 			float f => f,
 			int i => (float)i,
 			double d => (float)d,
-			_ => throw new InvalidOperationException($"Cannot convert '{value}' to float")
+			_ => throw new ParsingException($"Cannot convert '{value}' to float")
 		};
 	}
 
@@ -153,30 +155,27 @@ public static class Transformer
 	private static T ConvertGeneral<T>(IReadOnlyList<Value> resolvedValues, object? obj) =>
 		obj switch
 		{
-			RefDto refDto => resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Object is T t
-				? t
-				: throw new Exception($"Cannot resolve reference '{refDto.Id}'"),
+			RefDto refDto => refDto.ResolveValue<T>(resolvedValues),
 			T t => t,
-			_ => throw new InvalidOperationException($"Cannot convert value '{obj}' of type '{obj?.GetType()}' to a {typeof(T)}")
+			_ => throw new ParsingException($"Cannot convert value '{obj}' of type '{obj?.GetType()}' to a {typeof(T)}")
 		};
 
 	private static Vector3 ConvertVector(IReadOnlyList<Value> resolvedValues, object? obj) =>
 		obj switch
 		{
 			VecDto vecDto => vecDto.ToVector3(resolvedValues),
-			RefDto refDto => (Vector3)(resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Object ?? throw new Exception(
-				$"Cannot resolve reference '{refDto.Id}'")),
+			RefDto refDto => refDto.ResolveValue<Vector3>(resolvedValues),
 			null => new Vector3(0, 0, 0),
-			_ => throw new InvalidOperationException($"Cannot convert {obj} to a Vector3")
+			_ => throw new ParsingException($"Cannot convert {obj} to a Vector3")
 		};
 
 	private static object Convert(IReadOnlyList<Value> resolvedValues, object? obj) =>
 		obj switch
 		{
 			VecDto vecDto => vecDto.ToVector3(resolvedValues),
-			RefDto refDto => resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Object ?? throw new Exception(
+			RefDto refDto => resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Object ?? throw new ParsingException(
 				$"Cannot resolve reference '{refDto.Id}'"),
 			not null => obj,
-			_ => throw new InvalidOperationException($"Cannot convert {obj} to a value")
+			_ => throw new ParsingException($"Cannot convert {obj} to a value")
 		};
 }

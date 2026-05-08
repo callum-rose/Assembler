@@ -1,0 +1,105 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Assembler.Parsing.Phase2/1.0.0": {
+        "dependencies": {
+          "Assembler.Compiler": "1.0.0",
+          "Assembler.Parsing.Phase1": "1.0.0"
+        },
+        "runtime": {
+          "Assembler.Parsing.Phase2.dll": {}
+        }
+      },
+      "FastExpressionCompiler/5.3.0": {
+        "runtime": {
+          "lib/net9.0/FastExpressionCompiler.dll": {
+            "assemblyVersion": "5.3.0.0",
+            "fileVersion": "5.3.0.0"
+          }
+        }
+      },
+      "FastExpressionCompiler.LightExpression/5.3.0": {
+        "runtime": {
+          "lib/net9.0/FastExpressionCompiler.LightExpression.dll": {
+            "assemblyVersion": "5.3.0.0",
+            "fileVersion": "5.3.0.0"
+          }
+        }
+      },
+      "YamlDotNet/16.3.0": {
+        "runtime": {
+          "lib/net8.0/YamlDotNet.dll": {
+            "assemblyVersion": "16.0.0.0",
+            "fileVersion": "16.3.0.0"
+          }
+        }
+      },
+      "Assembler.Compiler/1.0.0": {
+        "dependencies": {
+          "FastExpressionCompiler": "5.3.0",
+          "FastExpressionCompiler.LightExpression": "5.3.0"
+        },
+        "runtime": {
+          "Assembler.Compiler.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Assembler.Parsing.Phase1/1.0.0": {
+        "dependencies": {
+          "YamlDotNet": "16.3.0"
+        },
+        "runtime": {
+          "Assembler.Parsing.Phase1.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Assembler.Parsing.Phase2/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "FastExpressionCompiler/5.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-XRmGW48Gdm7B70WUtTJJUnmuc8jRDmOhhjG/a3rix/nXChnrkETaSvA0j2VrcsH4MNeYLe60LA5o5JABmbneag==",
+      "path": "fastexpressioncompiler/5.3.0",
+      "hashPath": "fastexpressioncompiler.5.3.0.nupkg.sha512"
+    },
+    "FastExpressionCompiler.LightExpression/5.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-HWk/cYwRPX0vyj43uUHr5cVUHhbkIo0emXm0lkGhC9bvSoKxMmjc5Zd2lNjOxfrmdHfS6bv9V1Ysq8c4LtfNLA==",
+      "path": "fastexpressioncompiler.lightexpression/5.3.0",
+      "hashPath": "fastexpressioncompiler.lightexpression.5.3.0.nupkg.sha512"
+    },
+    "YamlDotNet/16.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SgMOdxbz8X65z8hraIs6hOEdnkH6hESTAIUa7viEngHOYaH+6q5XJmwr1+yb9vJpNQ19hCQY69xbFsLtXpobQA==",
+      "path": "yamldotnet/16.3.0",
+      "hashPath": "yamldotnet.16.3.0.nupkg.sha512"
+    },
+    "Assembler.Compiler/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Assembler.Parsing.Phase1/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

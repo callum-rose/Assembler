@@ -1,0 +1,13 @@
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/bin/Debug/net10.0/Assembler.Parsing2.deps.json
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/bin/Debug/net10.0/Assembler.Parsing2.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/bin/Debug/net10.0/Assembler.Parsing2.pdb
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.sourcelink.json
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/refint/Assembler.Parsing2.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/Assembler.Parsing2.pdb
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Parsing2/obj/Debug/net10.0/ref/Assembler.Parsing2.dll

@@ -10,7 +10,9 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 	public bool Deserialize(IParser reader, Type expectedType, Func<IParser, Type, object?> nestedObjectDeserializer,
 		out object? value, ObjectDeserializer rootDeserializer)
 	{
-		if (expectedType != typeof(object))
+		if (expectedType != typeof(object) &&
+		    expectedType != typeof(IDictionary<object, object>) &&
+		    expectedType != typeof(Dictionary<object, object>))
 		{
 			value = null;
 			return false;
@@ -27,7 +29,7 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 			case Scalar scalar when scalar.Tag == "!const":
 				value = nestedObjectDeserializer(reader, typeof(ConstRefDto));
 				return true;
-			
+
 			case Scalar scalar:
 				reader.MoveNext();
 				value = ParseScalar(scalar);
@@ -36,7 +38,7 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 			case MappingStart mappingStart when mappingStart.Tag == "!vec":
 				value = nestedObjectDeserializer(reader, typeof(VecDto));
 				return true;
-			
+
 			case MappingStart:
 			{
 				var dict = new Dictionary<string, object>();
@@ -45,7 +47,7 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 				while (!reader.TryConsume<MappingEnd>(out _))
 				{
 					var key = reader.Consume<Scalar>().Value;
-					var entryValue = nestedObjectDeserializer(reader, typeof(object));
+					var entryValue = rootDeserializer(typeof(object));
 					dict[key] = entryValue!;
 				}
 
@@ -60,7 +62,7 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 
 				while (!reader.TryConsume<SequenceEnd>(out _))
 				{
-					var item = nestedObjectDeserializer(reader, typeof(object));
+					var item = rootDeserializer(typeof(object));
 					list.Add(item!);
 				}
 
@@ -85,7 +87,7 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 		{
 			return floatValue;
 		}
-		
+
 		if (bool.TryParse(scalar.Value, out var boolValue))
 		{
 			return boolValue;

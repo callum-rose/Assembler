@@ -4,145 +4,38 @@ namespace Assembler.Parsing2;
 
 public static class VecDtoExtensions
 {
-	extension(VecDto dto)
+	public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<Value> resolvedValues)
 	{
-		public Vector2 ToVector2(IReadOnlyList<Value> resolvedValues)
+		return new Vector2(
+			ResolveComponent(dto.X, resolvedValues),
+			ResolveComponent(dto.Y, resolvedValues)
+		);
+	}
+
+	public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<Value> resolvedValues)
+	{
+		return new Vector3(
+			ResolveComponent(dto.X, resolvedValues),
+			ResolveComponent(dto.Y, resolvedValues),
+			dto.Z is not null ? ResolveComponent(dto.Z, resolvedValues) : 0f
+		);
+	}
+
+	private static float ResolveComponent(object? component, IReadOnlyList<Value> resolvedValues)
+	{
+		if (component is int i) return i;
+		if (component is float f) return f;
+		if (component is double d) return (float)d;
+		if (component is string s && float.TryParse(s, out var parsedFloat)) return parsedFloat;
+		if (component is RefDto refDto)
 		{
-			var vec = new Vector2();
+			if (refDto.TryResolveValue<float>(resolvedValues, out var f2)) return f2;
+			if (refDto.TryResolveValue<int>(resolvedValues, out var i2)) return i2;
+			if (refDto.TryResolveValue<double>(resolvedValues, out var d2)) return (float)d2;
 
-			{
-				if (dto.X is int i)
-				{
-					vec.X = i;
-				}
-				else if (dto.X is float f)
-				{
-					vec.X = f;
-				}
-				else if (dto.X is string s && float.TryParse(s, out var parsedFloat))
-				{
-					vec.X = parsedFloat;
-				}
-				else if (dto.X is RefDto refDto)
-				{
-					vec.X = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
-						f2 : 
-						refDto.ResolveValue<int>(resolvedValues);
-				}
-				else
-				{
-					throw new ArgumentException("Invalid X value in VecDto", nameof(dto));
-				}
-			}
-
-			{
-				if (dto.Y is int i)
-				{
-					vec.Y = i;
-				}
-				else if (dto.Y is float f)
-				{
-					vec.Y = f;
-				}
-				else if (dto.Y is string s && float.TryParse(s, out var parsedFloat))
-				{
-					vec.Y = parsedFloat;
-				}
-				else if (dto.Y is RefDto refDto)
-				{
-					vec.Y = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
-						f2 : 
-						refDto.ResolveValue<int>(resolvedValues);
-				}
-				else
-				{
-					throw new ArgumentException("Invalid Y value in VecDto", nameof(dto));
-				}
-			}
-
-			return vec;
+			throw new ParsingException($"Reference with ID {refDto.Id} could not be resolved to a numeric type.");
 		}
 
-		public Vector3 ToVector3(IReadOnlyList<Value> resolvedValues)
-		{
-			var vec = new Vector3();
-
-			{
-				if (dto.X is int i)
-				{
-					vec.X = i;
-				}
-				else if (dto.X is float f)
-				{
-					vec.X = f;
-				}
-				else if (dto.X is string s && float.TryParse(s, out var parsedFloat))
-				{
-					vec.X = parsedFloat;
-				}
-				else if (dto.X is RefDto refDto)
-				{
-					vec.X = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
-						f2 : 
-						refDto.ResolveValue<int>(resolvedValues);
-				}
-				else
-				{
-					throw new ArgumentException("Invalid X value in VecDto", nameof(dto));
-				}
-			}
-
-			{
-				if (dto.Y is int i)
-				{
-					vec.Y = i;
-				}
-				else if (dto.Y is float f)
-				{
-					vec.Y = f;
-				}
-				else if (dto.Y is string s && float.TryParse(s, out var parsedFloat))
-				{
-					vec.Y = parsedFloat;
-				}
-				else if (dto.Y is RefDto refDto)
-				{
-					vec.Y = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
-						f2 : 
-						refDto.ResolveValue<int>(resolvedValues);
-				}
-				else
-				{
-					throw new ArgumentException("Invalid Y value in VecDto", nameof(dto));
-				}
-			}
-
-			{
-				if (dto.Z is int i)
-				{
-					vec.Z = i;
-				}
-				else if (dto.Z is float f)
-				{
-					vec.Z = f;
-				}
-				else if (dto.Z is string s && float.TryParse(s, out var parsedFloat))
-				{
-					vec.Z = parsedFloat;
-				}
-				else if (dto.Z is RefDto refDto)
-				{
-					vec.Z = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
-						f2 : 
-						refDto.ResolveValue<int>(resolvedValues);
-				}
-				else if (dto.Z is not null)
-				{
-					throw new ArgumentException("Invalid Z value in VecDto", nameof(dto));
-				}
-			}
-
-			return vec;
-		}
+		throw new ParsingException($"Invalid component value: {component ?? "null"}");
 	}
 }
