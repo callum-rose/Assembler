@@ -2,7 +2,7 @@ using Assembler.Parsing.Phase1.Dtos;
 
 namespace Assembler.Parsing2;
 
-public static class VecDtoToVector
+public static class VecDtoExtensions
 {
 	extension(VecDto dto)
 	{
