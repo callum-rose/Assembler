@@ -22,9 +22,11 @@ public record Entity(
 	IReadOnlyList<string> Tags,
 	Vector3 InitialPosition,
 	Vector3 InitialRotation,
-	IReadOnlyList<Records> Behaviours);
+	IReadOnlyList<Behaviour> Behaviours);
 
-public record Records(string Id, string Type, IReadOnlyDictionary<string, object> Properties);
+public abstract record Behaviour(string Id);
 
-public record Expression(string Id, string ReturnType, Delegate Delegate);
+public record BoxCollider(string Id, Vector3 Size, bool IsTrigger) : Behaviour(Id);
+
+public record Expression(string Id, IReadOnlyList<string> ArgumentTypes, string ReturnType, string ExpressionBody);
 

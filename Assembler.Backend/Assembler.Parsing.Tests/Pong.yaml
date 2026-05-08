@@ -63,67 +63,43 @@ Constants:
 
 Variables:
   - Id: left score
-    Value: !ref initial score
+    Value: !const initial score
   - Id: right score
-    Value: !ref initial score
+    Value: !const initial score
   - Id: ball velocity
-    Value: !ref ball initial velocity
+    Value: !const ball initial velocity
 
 Expressions:
-  - Id: ball and paddle velocity change
-    Type: vector
+  - Id: vec multiply
+    ArgumentTypes: [ vector, vector ]
+    ReturnType: vector
     Expression: "a * b"
-    Arguments:
-      - !ref ball velocity
-      - !vec { X: -1, Y: 1 }
-  - Id: ball and wall velocity change
-    Type: vector
-    Expression: "a * b"
-    Arguments:
-      - !ref ball velocity
-      - !vec { X: 1, Y: -1 }
-  - Id: left score adder
-    Type: int
+  - Id: int add
+    ArgumentTypes: [ int, int ]
+    ReturnType: int
     Expression: "a + b"
-    Arguments:
-      - !ref left score
-      - !ref score per goal
-  - Id: right score adder
-    Type: int
-    Expression: "a + b"
-    Arguments:
-      - !ref right score
-      - !ref score per goal
-  - Id: left player has won
-    Type: boolean
+  - Id: int greater or equal
+    ArgumentTypes: [ int, int ]
+    ReturnType: boolean
     Expression: "a >= b"
-    Arguments:
-      - !ref left score
-      - !ref score to win
-  - Id: right player has won
-    Type: boolean
-    Expression: "a >= b"
-    Arguments:
-      - !ref right score
-      - !ref score to win
 
 Entities:
   - Id: left paddle
     Tags:
       - left paddle
-    Position: left paddle initial position
+    Position: !const left paddle initial position
     Behaviours:
       - Type: box collider
         Id: box collider
         Properties:
           Size: !vec
-            X: !ref paddle width
-            Y: !ref paddle height
+            X: !const paddle width
+            Y: !const paddle height
           IsTrigger: false
       - Type: key hold trigger
         Id: up key trigger
         Properties:
-          Key: !ref left paddle up key
+          Key: !const left paddle up key
           Listeners:
             - EntityId: left paddle
               BehaviourId: move up
@@ -132,11 +108,11 @@ Entities:
         Properties:
           Displacement: !vec
             X: 0
-            Y: !ref paddle up speed
+            Y: !const paddle up speed
       - Type: key hold trigger
         Id: down key trigger
         Properties:
-          Key: !ref left paddle down key
+          Key: !const left paddle down key
           Listeners:
             - EntityId: left paddle
               BehaviourId: move down
@@ -145,23 +121,23 @@ Entities:
         Properties:
           Displacement: !vec
             X: 0
-            Y: !ref paddle down speed
+            Y: !const paddle down speed
   - Id: right paddle
     Tags:
       - right paddle
-    Position: right paddle initial position
+    Position: !const right paddle initial position
     Behaviours:
       - Type: box collider
         Id: box collider
         Properties:
           Size: !vec
-            X: !ref paddle width
-            Y: !ref paddle height
+            X: !const paddle width
+            Y: !const paddle height
           IsTrigger: false
       - Type: key hold trigger
         Id: up key trigger
         Properties:
-          Key: !ref right paddle up key
+          Key: !const right paddle up key
           Listeners:
             - EntityId: right paddle
               BehaviourId: move up
@@ -170,11 +146,11 @@ Entities:
         Properties:
           Displacement: !vec
             X: 0
-            Y: !ref paddle up speed
+            Y: !const paddle up speed
       - Type: key hold trigger
         Id: down key trigger
         Properties:
-          Key: !ref right paddle down key
+          Key: !const right paddle down key
           Listeners:
             - EntityId: right paddle
               BehaviourId: move down
@@ -183,16 +159,16 @@ Entities:
         Properties:
           Displacement: !vec
             X: 0
-            Y: !ref paddle down speed
+            Y: !const paddle down speed
   - Id: ball
     Tags:
       - ball
-    Position: ball initial position
+    Position: !const ball initial position
     Behaviours:
       - Type: sphere collider
         Id: sphere collider
         Properties:
-          Size: !ref ball size
+          Size: !const ball size
       - Type: rigidbody
         Id: rigidbody
         Properties:
@@ -200,7 +176,7 @@ Entities:
       - Type: velocity
         Id: velocity
         Properties:
-          VelocityVariableRef: !ref ball velocity
+          VelocityVariableId: ball velocity
       - Type: collision enter trigger
         Id: paddle collision trigger
         Properties:
@@ -213,8 +189,11 @@ Entities:
       - Type: vector variable setter
         Id: paddle bounce velocity setter
         Properties:
-          VariableToSetRef: !ref ball velocity
-          ExpressionRef: !ref ball and paddle velocity change
+          VariableId: ball velocity
+          ExpressionId: vec multiply
+          Arguments:
+            - !var ball velocity
+            - !vec { X: -1, Y: 1 }
       - Type: collision enter trigger
         Id: wall collision trigger
         Properties:
@@ -226,36 +205,38 @@ Entities:
       - Type: vector variable setter
         Id: wall bounce velocity setter
         Properties:
-          VariableToSetRef: !ref ball velocity
-          ExpressionRef: !ref ball and wall velocity change
-      - Type: position variable setter
+          VariableId: ball velocity
+          ExpressionId: vec multiply
+          Arguments:
+            - !var ball velocity
+            - !vec { X: 1, Y: -1 }
+      - Type: position setter
         Id: position resetter
         Properties:
-          VariableToSetRef: !ref position
-          ValueExpression: !ref ball initial position
+          ValueExpression: !const ball initial position
   - Id: upper wall
     Tags:
       - wall
-    Position: !ref upper wall position
+    Position: !const upper wall position
     Behaviours:
       - Type: box collider
         Id: box collider
   - Id: lower wall
     Tags:
       - wall
-    Position: !ref lower wall position
+    Position: !const lower wall position
     Behaviours:
       - Type: box collider
         Id: box collider
   - Id: left goal
     Tags:
       - goal
-    Position: !ref left goal position
+    Position: !const left goal position
     Behaviours:
       - Type: box collider
         Id: box collider
         Properties:
-          Size: !ref goal size
+          Size: !const goal size
           IsTrigger: true
       - Type: trigger enter trigger
         Id: goal trigger
@@ -270,22 +251,20 @@ Entities:
       - Type: int variable setter
         Id: right score incrementer
         Properties:
-          VariableToSetRef: !ref right score
-          ExpressionRef: !ref right score adder
-      - Type: position variable setter
-        Id: ball resetter
-        Properties:
-          VariableToSetRef: !ref position
-          ValueExpression: !ref ball initial position
+          VariableId: right score
+          ExpressionId: int add
+          Arguments:
+            - !var right score
+            - !const score per goal
   - Id: right goal
     Tags:
       - goal
-    Position: !ref right goal position
+    Position: !const right goal position
     Behaviours:
       - Type: box collider
         Id: box collider
         Properties:
-          Size: !ref goal size
+          Size: !const goal size
           IsTrigger: true
       - Type: trigger enter trigger
         Id: goal trigger
@@ -300,31 +279,36 @@ Entities:
       - Type: int variable setter
         Id: left score incrementer
         Properties:
-          VariableToSetRef: left score
-          ExpressionRef: left score adder
-      - Type: position variable setter
-        Id: ball resetter
-        Properties:
-          VariableToSetRef: position
-          ValueExpression: ball initial position
+          VariableId: left score
+          ExpressionId: int add
+          Arguments:
+            - !var left score
+            - !const score per goal
   - Id: camera
     Tags:
       - camera
-    Position: !ref camera position
-    Rotation: !ref camera rotation
+    Position: !const camera position
+    Rotation: !const camera rotation
     Behaviours:
       - Type: camera
         Id: camera
         Properties:
-          View: !ref camera view
-          Size: !ref camera size
+          View: !const camera view
+          Size: !const camera size
   - Id: win condition checker
+    Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       - Type: condition trigger
         Id: left score win condition trigger
         Properties:
-          ConditionExpressionRef: !ref left player has won
+          ExpressionId: int greater or equal
+          Arguments:
+            - !var left score
+            - !const score to win
       - Type: condition trigger
         Id: right score win condition trigger
         Properties:
-          ConditionExpressionRef: !ref right player has won
+          ExpressionId: int greater or equal
+          Arguments:
+            - !var right score
+            - !const score to win

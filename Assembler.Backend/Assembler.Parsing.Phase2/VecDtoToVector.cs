@@ -6,7 +6,7 @@ public static class VecDtoToVector
 {
 	extension(VecDto dto)
 	{
-		public Vector2 ToVector2(IReadOnlyList<ValueDto> resolvedReferences)
+		public Vector2 ToVector2(IReadOnlyList<Value> resolvedValues)
 		{
 			var vec = new Vector2();
 
@@ -25,7 +25,9 @@ public static class VecDtoToVector
 				}
 				else if (dto.X is RefDto refDto)
 				{
-					vec.X = refDto.ResolveValue<float>(resolvedReferences);
+					vec.X = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
+						f2 : 
+						refDto.ResolveValue<int>(resolvedValues);
 				}
 				else
 				{
@@ -48,7 +50,9 @@ public static class VecDtoToVector
 				}
 				else if (dto.Y is RefDto refDto)
 				{
-					vec.Y = refDto.ResolveValue<float>(resolvedReferences);
+					vec.Y = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
+						f2 : 
+						refDto.ResolveValue<int>(resolvedValues);
 				}
 				else
 				{
@@ -59,7 +63,7 @@ public static class VecDtoToVector
 			return vec;
 		}
 
-		public Vector3 ToVector3(IReadOnlyList<ValueDto> resolvedReferences)
+		public Vector3 ToVector3(IReadOnlyList<Value> resolvedValues)
 		{
 			var vec = new Vector3();
 
@@ -78,7 +82,9 @@ public static class VecDtoToVector
 				}
 				else if (dto.X is RefDto refDto)
 				{
-					vec.X = refDto.ResolveValue<float>(resolvedReferences);
+					vec.X = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
+						f2 : 
+						refDto.ResolveValue<int>(resolvedValues);
 				}
 				else
 				{
@@ -101,7 +107,9 @@ public static class VecDtoToVector
 				}
 				else if (dto.Y is RefDto refDto)
 				{
-					vec.Y = refDto.ResolveValue<float>(resolvedReferences);
+					vec.Y = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
+						f2 : 
+						refDto.ResolveValue<int>(resolvedValues);
 				}
 				else
 				{
@@ -124,7 +132,9 @@ public static class VecDtoToVector
 				}
 				else if (dto.Z is RefDto refDto)
 				{
-					vec.Z = refDto.ResolveValue<float>(resolvedReferences);
+					vec.Z = refDto.TryResolveValue<float>(resolvedValues, out var f2) ? 
+						f2 : 
+						refDto.ResolveValue<int>(resolvedValues);
 				}
 				else if (dto.Z is not null)
 				{

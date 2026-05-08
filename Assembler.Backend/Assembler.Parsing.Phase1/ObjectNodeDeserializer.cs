@@ -20,8 +20,12 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 
 		switch (current)
 		{
-			case Scalar scalar when scalar.Tag == "!ref":
-				value = nestedObjectDeserializer(reader, typeof(RefDto));
+			case Scalar scalar when scalar.Tag == "!var":
+				value = nestedObjectDeserializer(reader, typeof(VarRefDto));
+				return true;
+
+			case Scalar scalar when scalar.Tag == "!const":
+				value = nestedObjectDeserializer(reader, typeof(ConstRefDto));
 				return true;
 			
 			case Scalar scalar:
@@ -80,6 +84,11 @@ internal class ObjectNodeDeserializer : INodeDeserializer
 		if (float.TryParse(scalar.Value, out var floatValue))
 		{
 			return floatValue;
+		}
+		
+		if (bool.TryParse(scalar.Value, out var boolValue))
+		{
+			return boolValue;
 		}
 
 		return scalar.Value;
