@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj": {}
+    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj": {}
   },
   "projects": {
-    "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj": {
+    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj",
+        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj",
         "projectName": "Assembler.Definitions",
-        "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj",
+        "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/Assembler.Definitions.csproj",
         "packagesPath": "/Users/callumrose/.nuget/packages/",
-        "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/obj/",
+        "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/callumrose/.nuget/NuGet/NuGet.Config"

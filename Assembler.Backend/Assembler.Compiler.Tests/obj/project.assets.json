@@ -1052,11 +1052,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler.Tests/Assembler.Compiler.Tests.csproj",
+      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler.Tests/Assembler.Compiler.Tests.csproj",
       "projectName": "Assembler.Compiler.Tests",
-      "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler.Tests/Assembler.Compiler.Tests.csproj",
+      "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler.Tests/Assembler.Compiler.Tests.csproj",
       "packagesPath": "/Users/callumrose/.nuget/packages/",
-      "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler.Tests/obj/",
+      "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -1071,8 +1071,8 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
-              "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj"
+            "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj": {
+              "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Compiler/Assembler.Compiler.csproj"
             }
           }
         }

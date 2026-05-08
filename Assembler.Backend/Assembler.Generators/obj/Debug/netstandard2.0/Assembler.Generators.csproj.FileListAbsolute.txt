@@ -28,3 +28,14 @@ C:/Users/Callum.Rose/Documents/Assembler.Backend/Assembler.Generators/obj/Debug/
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.csproj.CoreCompileInputs.cache
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.dll
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.pdb
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/bin/Debug/netstandard2.0/Assembler.Generators.deps.json
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/bin/Debug/netstandard2.0/Assembler.Generators.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/bin/Debug/netstandard2.0/Assembler.Generators.pdb
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.sourcelink.json
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/Debug/netstandard2.0/Assembler.Generators.pdb

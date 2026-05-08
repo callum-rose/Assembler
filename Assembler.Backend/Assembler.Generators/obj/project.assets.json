@@ -1027,11 +1027,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/Assembler.Generators.csproj",
+      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/Assembler.Generators.csproj",
       "projectName": "Assembler.Generators",
-      "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/Assembler.Generators.csproj",
+      "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/Assembler.Generators.csproj",
       "packagesPath": "/Users/callumrose/.nuget/packages/",
-      "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators/obj/",
+      "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/callumrose/.nuget/NuGet/NuGet.Config"

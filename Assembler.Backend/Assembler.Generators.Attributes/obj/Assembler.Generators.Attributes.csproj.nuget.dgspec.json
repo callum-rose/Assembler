@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {}
+    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {}
   },
   "projects": {
-    "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {
+    "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj",
+        "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj",
         "projectName": "Assembler.Generators.Attributes",
-        "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj",
+        "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj",
         "packagesPath": "/Users/callumrose/.nuget/packages/",
-        "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/obj/",
+        "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/callumrose/.nuget/NuGet/NuGet.Config"

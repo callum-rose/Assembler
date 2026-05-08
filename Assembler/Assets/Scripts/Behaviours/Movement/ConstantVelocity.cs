@@ -1,12 +1,10 @@
-using Assembler.Generators.Attributes;
-using Core;
 using UnityEngine;
 
 namespace Behaviours.Movement
 {
 	public partial class ConstantVelocity : MovementBehaviour
 	{
-		[Inject("Velocity")]  private Vector3 velocity;
+		private Vector3 velocity;
 
 		private void Update()
 		{

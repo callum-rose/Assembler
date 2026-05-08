@@ -1,16 +1,15 @@
 using System.Collections.Generic;
-using Assembler.Generators.Attributes;
 using Core;
 
 namespace Behaviours.Triggers.Composite
 {
 	public class WhenAll : Trigger
 	{
-		[Inject("Triggers")] private Trigger[] _triggers;
+		private Trigger[] _triggers;
 
 		private readonly List<Trigger> _triggeredTriggers = new();
 
-		protected override void OnInitialise()
+		protected override void OnInitialise(Configuration configuration)
 		{
 			foreach (var trigger in _triggers)
 			{

@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using Assembler.Parsing2.Dtos;
 using UnityEngine;
 
 namespace Core
@@ -12,12 +14,14 @@ namespace Core
 			get => tags;
 			set => tags = value;
 		}
-
-		private void Start()
+		
+		public void Initialise(EntityDto entityDto)
 		{
-			foreach (var gameBehaviour in GetComponents<GameBehaviour>())
+			Tags = entityDto.Tags?.ToArray() ?? Array.Empty<string>();
+
+			foreach (var behaviourDto in entityDto.Behaviours ?? Enumerable.Empty<BehaviourDto>())
 			{
-				gameBehaviour.Initialise(this);
+				
 			}
 		}
 	}

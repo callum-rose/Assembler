@@ -1,5 +1,4 @@
 using System;
-using Assembler.Generators.Attributes;
 using Core;
 using Variables;
 
@@ -7,8 +6,8 @@ namespace Behaviours.VariableUpdaters
 {
 	public abstract class VariableSetterBehaviour<T> : GameBehaviour
 	{
-		[Inject("Value Getter")] private Func<T> _valueGetter;
-		[Inject("Variable")] private GameVariable<T> _variable;
+		private Func<T> _valueGetter;
+		private GameVariable<T> _variable;
 
 		public override void Execute()
 		{

@@ -1003,11 +1003,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Tests/Assembler.Generators.Tests.csproj",
+      "projectUniqueName": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Tests/Assembler.Generators.Tests.csproj",
       "projectName": "Assembler.Generators.Tests",
-      "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Tests/Assembler.Generators.Tests.csproj",
+      "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Tests/Assembler.Generators.Tests.csproj",
       "packagesPath": "/Users/callumrose/.nuget/packages/",
-      "outputPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Tests/obj/",
+      "outputPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/callumrose/.nuget/NuGet/NuGet.Config"
@@ -1022,8 +1022,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {
-              "projectPath": "/Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj"
+            "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj": {
+              "projectPath": "/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Generators.Attributes/Assembler.Generators.Attributes.csproj"
             }
           }
         }

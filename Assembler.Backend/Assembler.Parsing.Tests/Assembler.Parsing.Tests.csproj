@@ -22,7 +22,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Assembler.Parsing\Assembler.Parsing.csproj" />
+      <ProjectReference Include="..\Assembler.Parsing.Phase1\Assembler.Parsing.Phase1.csproj" />
+      <ProjectReference Include="..\Assembler.Parsing.Phase2\Assembler.Parsing.Phase2.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -34,3 +34,12 @@ C:/Users/Callum.Rose/Documents/Assembler.Backend/Assembler.Definitions/obj/Debug
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/refint/Assembler.Definitions.dll
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.pdb
 /Users/callumrose/Documents/Unity Projects/Assembler/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/ref/Assembler.Definitions.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.csproj.AssemblyReference.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.GeneratedMSBuildEditorConfig.editorconfig
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.AssemblyInfoInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.AssemblyInfo.cs
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.csproj.CoreCompileInputs.cache
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.sourcelink.json
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/refint/Assembler.Definitions.dll
+/Users/callumrose/Documents/Unity Projects 2/Assembler.Backend/Assembler.Definitions/obj/Debug/net8.0/Assembler.Definitions.pdb
