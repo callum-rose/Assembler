@@ -72,14 +72,17 @@ Variables:
 Expressions:
   - Id: vec multiply
     ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ a, b ]
     ReturnType: vector
     Expression: "a * b"
   - Id: int add
     ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b"
   - Id: int greater or equal
     ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
     ReturnType: boolean
     Expression: "a >= b"
 
@@ -213,7 +216,7 @@ Entities:
       - Type: position setter
         Id: position resetter
         Properties:
-          ValueExpression: !const ball initial position
+          Position: !const ball initial position
   - Id: upper wall
     Tags:
       - wall

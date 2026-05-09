@@ -1,10 +1,12 @@
-using BenchmarkDotNet.Running;
 using Assembler.Compiler.Tests;
-using Assembler.Compiler.Benchmarks;
+using BenchmarkDotNet.Running;
+
+// using Assembler.Compiler.Benchmarks;
 
 // Run the comparison benchmarks between standard and fast expression compilers
-BenchmarkRunner.Run<CompilerComparisonBenchmarks>();
+// BenchmarkRunner.Run<CompilerComparisonBenchmarks>();
 
 // Uncomment to run other benchmarks:
-// BenchmarkRunner.Run<CompiledBenchmarks>();
+
+BenchmarkRunner.Run<CompiledBenchmarks>();
 // BenchmarkRunner.Run<CompileBenchmarks>();

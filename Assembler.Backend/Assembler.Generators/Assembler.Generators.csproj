@@ -9,9 +9,4 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <Copy SourceFiles="$(OutputPath)/$(AssemblyName).dll" DestinationFolder="$(ProjectDir)/../../Assembler/Assets/Scripts"/>
-        <Copy SourceFiles="$(OutputPath)/$(AssemblyName).pdb" DestinationFolder="$(ProjectDir)/../../Assembler/Assets/Scripts"/>
-    </Target>
-
 </Project>

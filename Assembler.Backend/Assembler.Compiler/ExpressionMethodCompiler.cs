@@ -14,6 +14,7 @@ public class ExpressionMethodCompiler
 		{
 			_registeredMethods[name] = new List<MethodInfo>();
 		}
+
 		_registeredMethods[name].Add(methodInfo);
 	}
 
@@ -31,10 +32,10 @@ public class ExpressionMethodCompiler
 	{
 		// Register by fully qualified name
 		_registeredTypes[type.FullName ?? type.Name] = type;
-		
+
 		// Register by simple name
 		_registeredTypes[type.Name] = type;
-		
+
 		// Register by alias if provided
 		if (alias != null)
 		{
@@ -42,7 +43,7 @@ public class ExpressionMethodCompiler
 		}
 	}
 
-	public Delegate Compile(string code, Type returnType, params (Type type, string name)[] parameters)
+	public Delegate Compile(string code, Type returnType, out Type delegateType, params (Type type, string name)[] parameters)
 	{
 		var lexer = new Lexer(code);
 		var tokens = lexer.Tokenize();
@@ -75,7 +76,7 @@ public class ExpressionMethodCompiler
 
 		var body = parser.ParseMethodBody(new Dictionary<string, Type>());
 
-		var delegateType = GetDelegateType(returnType, parameters.Select(p => p.type).ToArray());
+		delegateType = GetDelegateType(returnType, parameters.Select(p => p.type).ToArray());
 		var lambda = Expression.Lambda(delegateType, body, paramExprs);
 
 		return lambda.Compile();
@@ -83,34 +84,39 @@ public class ExpressionMethodCompiler
 
 	public Func<TResult> CompileFunc<TResult>(string code)
 	{
-		return (Func<TResult>)Compile(code, typeof(TResult));
+		return (Func<TResult>)Compile(code, typeof(TResult), out _);
 	}
 
 	public Func<T, TResult> CompileFunc<T, TResult>(string code, string paramName)
 	{
-		return (Func<T, TResult>)Compile(code, typeof(TResult), (typeof(T), paramName));
+		return (Func<T, TResult>)Compile(code, typeof(TResult), out _, (typeof(T), paramName));
 	}
-	
-	public Func<TParam0, TParam1, TResult> CompileFunc<TParam0, TParam1, TResult>(string code, string paramName0, string paramName1)
+
+	public Func<TParam0, TParam1, TResult> CompileFunc<TParam0, TParam1, TResult>(string code, string paramName0,
+		string paramName1)
 	{
-		return (Func<TParam0,TParam1, TResult>)Compile(code, typeof(TResult), (typeof(TParam0), paramName0), (typeof(TParam1), paramName1));
+		return (Func<TParam0, TParam1, TResult>)Compile(code,
+			typeof(TResult),
+			out _,
+			(typeof(TParam0), paramName0),
+			(typeof(TParam1), paramName1));
 	}
 
 	public Action CompileAction(string code)
 	{
-		return (Action)Compile(code, typeof(void));
+		return (Action)Compile(code, typeof(void), out _);
 	}
 
 	public Action<T> CompileAction<T>(string code, string paramName)
 	{
-		return (Action<T>)Compile(code, typeof(void), (typeof(T), paramName));
+		return (Action<T>)Compile(code, typeof(void), out _, (typeof(T), paramName));
 	}
 
 	public Action<T1, T2> CompileAction<T1, T2>(string code,
 		string param1Name = "input1",
 		string param2Name = "input2")
 	{
-		return (Action<T1, T2>)Compile(code, typeof(void), (typeof(T1), param1Name), (typeof(T2), param2Name));
+		return (Action<T1, T2>)Compile(code, typeof(void), out _, (typeof(T1), param1Name), (typeof(T2), param2Name));
 	}
 
 	private Type GetDelegateType(Type returnType, Type[] parameterTypes)
@@ -128,6 +134,7 @@ public class ExpressionMethodCompiler
 		}
 
 		var allTypes = parameterTypes.Append(returnType).ToArray();
+
 		return allTypes.Length switch
 		{
 			1 => typeof(Func<>).MakeGenericType(allTypes),

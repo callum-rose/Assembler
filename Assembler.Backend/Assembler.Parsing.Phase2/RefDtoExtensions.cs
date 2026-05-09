@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Assembler.Parsing.Phase1.Dtos;
+using Assembler.Parsing2.Info;
 
 namespace Assembler.Parsing2;
 
 public static class RefDtoExtensions
 {
-	public static T ResolveValue<T>(this RefDto refDto, IReadOnlyList<Value> resolvedValues)
+	public static T ResolveValue<T>(this RefDto refDto, IReadOnlyList<VariableInfo> resolvedValues)
 	{
 		var valueDto = resolvedValues.FirstOrDefault(v => v.Id == refDto.Id);
 
@@ -14,24 +15,24 @@ public static class RefDtoExtensions
 			throw new ParsingException($"Reference with ID {refDto.Id} not found");
 		}
 
-		if (valueDto.Object is not T value)
+		if (valueDto.Value is not T value)
 		{
 			// Special case for numeric conversions
 			if (typeof(T) == typeof(float))
 			{
-				if (valueDto.Object is int i)
+				if (valueDto.Value is int i)
 				{
 					return (T)(object)(float)i;
 				}
 			}
 
-			throw new ParsingException($"Reference with ID {refDto.Id} does not contain a value of type {typeof(T).Name}. Actual type: {valueDto.Object?.GetType().Name ?? "null"}");
+			throw new ParsingException($"Reference with ID {refDto.Id} does not contain a value of type {typeof(T).Name}. Actual type: {valueDto.Value?.GetType().Name ?? "null"}");
 		}
 
 		return value;
 	}
 
-	public static bool TryResolveValue<T>(this RefDto refDto, IReadOnlyList<Value> resolvedValues, [NotNullWhen(true)] out T? value)
+	public static bool TryResolveValue<T>(this RefDto refDto, IReadOnlyList<VariableInfo> resolvedValues, [NotNullWhen(true)] out T? value)
 	{
 		var valueDto = resolvedValues.FirstOrDefault(v => v.Id == refDto.Id);
 
@@ -41,7 +42,7 @@ public static class RefDtoExtensions
 			return false;
 		}
 
-		if (valueDto.Object is not T t)
+		if (valueDto.Value is not T t)
 		{
 			value = default;
 			return false;

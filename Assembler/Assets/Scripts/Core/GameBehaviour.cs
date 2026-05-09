@@ -1,51 +1,40 @@
 using System;
 using System.Collections.Generic;
-using Assembler.Parsing2.Dtos;
+using Assembler.Parsing2;
+using Assembler.Parsing2.Info;
 using UnityEngine;
 
 namespace Core
 {
+
 	public static class GameBehaviourFactory
 	{
-		public static BehaviourDto Create(GameObject gameObject, BehaviourDto behaviourDto)
+		public static void Create(GameObject gameObject, BehaviourInfo behaviour)
 		{
-			switch (behaviourDto.Type)
+			switch (behaviour)
 			{
-				case "box collider":
+				case BoxColliderInfo boxColliderInfo:
 					var boxCollider = gameObject.AddComponent<BoxCollider>();
-					
-					if (behaviourDto.Properties.TryGetValue("Size", out var value) && value is VecDto size)
-					{
-						var sizeVector = new Vector3(size.X, size.Y, size.Z);
-						boxCollider.size = sizeVector;
-					}
-
+					boxCollider.size = boxColliderInfo.Size.ToUnity();
+					boxCollider.isTrigger = boxColliderInfo.IsTrigger;
 					break;
-					
-				case "":
-				default:
-					throw new Exception("Cannot create behaviour of type null or empty");
 			}
 		}
 	}
-	
-	public abstract class GameBehaviour : MonoBehaviour
+
+	public abstract class GameBehaviour<T> : MonoBehaviour where T : BehaviourInfo
 	{
-		public abstract class Configuration
-		{
-		}
-		
 		protected GameEntity Entity { get; private set; }
-		
-		public void Initialise(GameEntity entity, Configuration configuration)
+
+		public void Initialise(GameEntity entity, T behaviourInfo)
 		{
 			Entity = entity;
 
-			OnInitialise(configuration);
+			OnInitialise(behaviourInfo);
 		}
 
 		public abstract void Execute();
 
-		protected virtual void OnInitialise(Configuration configuration) { }
+		protected virtual void OnInitialise(T behaviourInfo) { }
 	}
 }

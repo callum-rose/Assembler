@@ -1,6 +1,7 @@
 using Assembler.Parsing.Phase1;
 using Assembler.Parsing.Phase1.Dtos;
 using Assembler.Parsing2;
+using Assembler.Parsing2.Info;
 
 namespace Assembler.Parsing.Tests;
 
@@ -19,7 +20,7 @@ public class Tests
 	{
 		var vecDto = new VecDto { X = "1", Y = new VarRefDto { Id = "test variable" } };
 
-		var testVariable = new Value("test variable", 5.0f);
+		var testVariable = new VariableInfo("test variable", 5.0f);
 
 		var vector2 = vecDto.ToVector2([testVariable]);
 

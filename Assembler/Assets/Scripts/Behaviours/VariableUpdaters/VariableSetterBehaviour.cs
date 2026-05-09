@@ -1,10 +1,11 @@
 using System;
+using Assembler.Parsing2.Info;
 using Core;
 using Variables;
 
 namespace Behaviours.VariableUpdaters
 {
-	public abstract class VariableSetterBehaviour<T> : GameBehaviour
+	public abstract class VariableSetterBehaviour<T> : GameBehaviour<T> where T : BehaviourInfo
 	{
 		private Func<T> _valueGetter;
 		private GameVariable<T> _variable;

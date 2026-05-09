@@ -11,7 +11,7 @@ public class CompileBenchmarks
 	public void Setup()
 	{
 		_compiler = new ExpressionMethodCompiler();
-		
+
 		// Register some static methods for benchmarks that need them
 		_compiler.RegisterStaticMethods(typeof(Math));
 		_compiler.RegisterStaticMethods(typeof(string));
@@ -33,7 +33,7 @@ public class CompileBenchmarks
 	public Func<int, int, int> CompileSimpleAddition()
 	{
 		var code = "return a + b;";
-		var compiled = _compiler.Compile(code, typeof(int), (typeof(int), "a"), (typeof(int), "b"));
+		var compiled = _compiler.Compile(code, typeof(int), out _, (typeof(int), "a"), (typeof(int), "b"));
 		return (Func<int, int, int>)compiled;
 	}
 
@@ -41,7 +41,7 @@ public class CompileBenchmarks
 	public Func<int, int, int, int> CompileMultipleOperations()
 	{
 		var code = "return (a + b) * c;";
-		var compiled = _compiler.Compile(code, typeof(int), (typeof(int), "a"), (typeof(int), "b"), (typeof(int), "c"));
+		var compiled = _compiler.Compile(code, typeof(int), out _, (typeof(int), "a"), (typeof(int), "b"), (typeof(int), "c"));
 		return (Func<int, int, int, int>)compiled;
 	}
 
@@ -49,7 +49,7 @@ public class CompileBenchmarks
 	public Func<double, double, double> CompileMathOperation()
 	{
 		var code = "return Math.Pow(x, y);";
-		var compiled = _compiler.Compile(code, typeof(double), (typeof(double), "x"), (typeof(double), "y"));
+		var compiled = _compiler.Compile(code, typeof(double), out _, (typeof(double), "x"), (typeof(double), "y"));
 		return (Func<double, double, double>)compiled;
 	}
 
@@ -69,7 +69,7 @@ public class CompileBenchmarks
 	public Func<bool, int> CompileConditional()
 	{
 		var code = "if (condition) { return 1; } else { return 0; }";
-		var compiled = _compiler.Compile(code, typeof(int), (typeof(bool), "condition"));
+		var compiled = _compiler.Compile(code, typeof(int), out _, (typeof(bool), "condition"));
 		return (Func<bool, int>)compiled;
 	}
 
@@ -90,7 +90,7 @@ public class CompileBenchmarks
 	[Benchmark]
 	public int CompileAndExecuteWithParameters()
 	{
-		var compiled = _compiler.Compile("return a + b;", typeof(int), (typeof(int), "a"), (typeof(int), "b"));
+		var compiled = _compiler.Compile("return a + b;", typeof(int), out _, (typeof(int), "a"), (typeof(int), "b"));
 		var func = (Func<int, int, int>)compiled;
 		return func(5, 10);
 	}
@@ -99,11 +99,13 @@ public class CompileBenchmarks
 	public int CompileMultipleFunctions()
 	{
 		int sum = 0;
+
 		for (int i = 0; i < 10; i++)
 		{
 			var func = _compiler.CompileFunc<int>($"return {i * 10};");
 			sum += func();
 		}
+
 		return sum;
 	}
 
@@ -111,7 +113,7 @@ public class CompileBenchmarks
 	public Func<string, int> CompileStringLength()
 	{
 		var code = "return str.Length;";
-		var compiled = _compiler.Compile(code, typeof(int), (typeof(string), "str"));
+		var compiled = _compiler.Compile(code, typeof(int), out _, (typeof(string), "str"));
 		return (Func<string, int>)compiled;
 	}
 
@@ -119,7 +121,7 @@ public class CompileBenchmarks
 	public Func<int, bool> CompileComparison()
 	{
 		var code = "return x > 10;";
-		var compiled = _compiler.Compile(code, typeof(bool), (typeof(int), "x"));
+		var compiled = _compiler.Compile(code, typeof(bool), out _, (typeof(int), "x"));
 		return (Func<int, bool>)compiled;
 	}
 }

@@ -7,5 +7,6 @@
   <Project Path="Assembler.Generators/Assembler.Generators.csproj" />
   <Project Path="Assembler.Parsing.Phase1\Assembler.Parsing.Phase1.csproj" />
   <Project Path="Assembler.Parsing.Phase2/Assembler.Parsing.Phase2.csproj" />
+  <Project Path="Assembler.Parsing.Phase3/Assembler.Parsing.Phase3.csproj" />
   <Project Path="Assembler.Parsing.Tests/Assembler.Parsing.Tests.csproj" />
 </Solution>

@@ -1,5 +1,3 @@
-using System.Collections;
-
 namespace Assembler.Compiler.Tests;
 
 public class Tests

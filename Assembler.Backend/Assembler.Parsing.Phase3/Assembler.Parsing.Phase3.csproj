@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Assembler.Compiler\Assembler.Compiler.csproj"/>
+        <ProjectReference Include="..\Assembler.Parsing.Phase2\Assembler.Parsing.Phase2.csproj"/>
+    </ItemGroup>
+
+    <Target Name="CopyToUnity" AfterTargets="Build">
+        <PropertyGroup>
+            <UnityPluginDir>$(MSBuildThisFileDirectory)..\..\Assembler\Assets\Plugins\</UnityPluginDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <OutputFiles Include="$(TargetPath)"/>
+            <OutputFiles Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')"/>
+            <OutputFiles Include="$(TargetDir)$(TargetName).xml" Condition="Exists('$(TargetDir)$(TargetName).xml')"/>
+            <OutputFiles Include="@(RuntimeCopyLocalItems)" Condition="'%(RuntimeCopyLocalItems.Extension)' == '.dll' or '%(RuntimeCopyLocalItems.Extension)' == '.pdb' or '%(RuntimeCopyLocalItems.Extension)' == '.xml'"/>
+        </ItemGroup>
+        <Message Text="Copying $(MSBuildProjectName) output and dependencies to Unity..." Importance="high"/>
+        <Delete Files="$(UnityPluginDir)%(OutputFiles.Filename)%(OutputFiles.Extension)" Condition="Exists('$(UnityPluginDir)%(OutputFiles.Filename)%(OutputFiles.Extension)')"/>
+        <Copy SourceFiles="@(OutputFiles)" DestinationFolder="$(UnityPluginDir)" SkipUnchangedFiles="false"/>
+    </Target>
+
+</Project>
