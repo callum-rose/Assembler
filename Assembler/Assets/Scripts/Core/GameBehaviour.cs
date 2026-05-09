@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using Assembler.Parsing2;
-using Assembler.Parsing2.Info;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 using UnityEngine;
 
-namespace Core
+namespace AssemblerAlpha.Core
 {
 
 	public static class GameBehaviourFactory

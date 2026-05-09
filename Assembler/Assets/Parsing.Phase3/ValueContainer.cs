@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Assembler.Parsing.Phase3
+namespace Assembler.Parsing.Phase3.Parsing.Phase3
 {
 	public sealed class ValueContainer<T>
 	{

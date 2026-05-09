@@ -1,8 +1,7 @@
-using Assembler.Parsing2;
-using Assembler.Parsing2.Info;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Core;
 
-namespace Behaviours.Movement
+namespace AssemblerAlpha.Behaviours.Movement
 {
 	public abstract class PositionBehaviour<T> : GameBehaviour<T> where T : BehaviourInfo
 	{

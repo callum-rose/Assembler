@@ -1,4 +1,4 @@
-namespace Behaviours.Triggers.Variable
+namespace AssemblerAlpha.Behaviours.Triggers.State
 {
 	public class BoolIsTrue : VariableTrigger<bool>
 	{

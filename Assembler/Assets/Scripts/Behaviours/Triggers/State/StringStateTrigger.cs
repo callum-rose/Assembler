@@ -1,5 +1,5 @@
 
-namespace Behaviours.Triggers.Variable
+namespace AssemblerAlpha.Behaviours.Triggers.State
 {
 	public abstract class StringVariableTrigger : CompareVariableTrigger<string>
 	{

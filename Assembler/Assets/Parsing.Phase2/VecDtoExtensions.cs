@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Assembler.Parsing.Phase1.Dtos;
-using Assembler.Parsing2.Info;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Parsing.Phase1.Dtos;
 
-namespace Assembler.Parsing2
+namespace Assembler.Parsing.Phase2.Parsing.Phase2
 {
 	public static class VecDtoExtensions
 	{

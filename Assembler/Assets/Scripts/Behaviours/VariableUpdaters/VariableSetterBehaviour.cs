@@ -1,14 +1,14 @@
 using System;
-using Assembler.Parsing2.Info;
-using Core;
-using Variables;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Core;
+using AssemblerAlpha.Variables;
 
-namespace Behaviours.VariableUpdaters
+namespace AssemblerAlpha.Behaviours.VariableUpdaters
 {
-	public abstract class VariableSetterBehaviour<T> : GameBehaviour<T> where T : BehaviourInfo
+	public abstract class VariableSetterBehaviour<TInfo, TValue> : GameBehaviour<TInfo> where TInfo : BehaviourInfo
 	{
-		private Func<T> _valueGetter;
-		private GameVariable<T> _variable;
+		private Func<TValue> _valueGetter;
+		private GameVariable<TValue> _variable;
 
 		public override void Execute()
 		{
@@ -16,11 +16,31 @@ namespace Behaviours.VariableUpdaters
 		}
 	}
 
-	public class StringSetter : VariableSetterBehaviour<string> { }
+	public class StringSetter : VariableSetterBehaviour<StringVariableSetterInfo, string>
+	{
+		protected override void OnInitialise(StringVariableSetterInfo behaviourInfo)
+		{
+		}
+	}
 
-	public class IntSetter : VariableSetterBehaviour<int> { }
+	public class IntSetter : VariableSetterBehaviour<IntVariableSetterInfo, int>
+	{
+		protected override void OnInitialise(IntVariableSetterInfo behaviourInfo)
+		{
+		}
+	}
 
-	public class FloatSetter : VariableSetterBehaviour<float> { }
+	public class FloatSetter : VariableSetterBehaviour<FloatVariableSetterInfo, float>
+	{
+		protected override void OnInitialise(FloatVariableSetterInfo behaviourInfo)
+		{
+		}
+	}
 
-	public class BoolSetter : VariableSetterBehaviour<bool> { }
+	public class BoolSetter : VariableSetterBehaviour<BoolVariableSetterInfo, bool>
+	{
+		protected override void OnInitialise(BoolVariableSetterInfo behaviourInfo)
+		{
+		}
+	}
 }

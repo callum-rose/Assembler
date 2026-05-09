@@ -1,3 +1,14 @@
 {
-  "name": "Assembler.Parsing.Phase1"
+    "name": "Assembler.Parsing.Phase1",
+    "rootNamespace": "Assembler.Parsing.Phase1",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

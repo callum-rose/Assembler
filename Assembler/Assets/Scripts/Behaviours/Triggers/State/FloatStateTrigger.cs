@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Behaviours.Triggers.Variable
+namespace AssemblerAlpha.Behaviours.Triggers.State
 {
 	public abstract class FloatVariableTrigger : CompareVariableTrigger<float>
 	{

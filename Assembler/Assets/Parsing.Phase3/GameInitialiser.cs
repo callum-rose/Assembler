@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Assembler.Compiler;
-using Assembler.Parsing2.Info;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Compiler;
 
-namespace Assembler.Parsing.Phase3
+namespace Assembler.Parsing.Phase3.Parsing.Phase3
 {
 	public static class GameInitialiser
 	{

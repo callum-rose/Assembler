@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 
-namespace Behaviours.Triggers.Composite
+namespace AssemblerAlpha.Behaviours.Triggers.Composite
 {
-	public partial class WhenAny : Trigger
+	public partial class WhenAny : Trigger<WhenAnyInfo>
 	{
-		private IReadOnlyList<Trigger> _triggers;
+		private IReadOnlyList<Trigger<BehaviourInfo>> _triggers;
 
-		protected override void OnInitialise(Configuration configuration)
+		protected override void OnInitialise(WhenAnyInfo behaviourInfo)
 		{
 			foreach (var trigger in _triggers)
 			{

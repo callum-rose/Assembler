@@ -1,12 +1,13 @@
-using Variables;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Variables;
 
-namespace Behaviours.Triggers.Variable
+namespace AssemblerAlpha.Behaviours.Triggers.State
 {
-	public abstract class VariableTrigger<T> : Trigger
+	public abstract class VariableTrigger<TValue> : Trigger<ConditionTriggerInfo>
 	{
-		protected GameVariable<T> Variable { get; private set; }
+		protected GameVariable<TValue> Variable { get; private set; }
 
-		protected override void OnInitialise(Configuration configuration)
+		protected override void OnInitialise(ConditionTriggerInfo behaviourInfo)
 		{
 			Variable.Changed += VariableOnChanged;
 		}
@@ -14,12 +15,12 @@ namespace Behaviours.Triggers.Variable
 		protected abstract void VariableOnChanged();
 	}
 
-	public abstract class CompareVariableTrigger<T> : Trigger
+	public abstract class CompareVariableTrigger<TValue> : Trigger<ConditionTriggerInfo>
 	{
-		protected GameVariable<T> Variable { get; private set; }
-		protected GameVariable<T> OtherVariable { get; private set; }
+		protected GameVariable<TValue> Variable { get; private set; }
+		protected GameVariable<TValue> OtherVariable { get; private set; }
 		
-		protected override void OnInitialise(Configuration configuration)
+		protected override void OnInitialise(ConditionTriggerInfo behaviourInfo)
 		{
 			Variable.Changed += OnEitherVariableChanged;
 			OtherVariable.Changed += OnEitherVariableChanged;

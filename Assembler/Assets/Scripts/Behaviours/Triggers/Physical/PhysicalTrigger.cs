@@ -1,10 +1,11 @@
 using System.Linq;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Core;
 using UnityEngine;
 
-namespace Behaviours.Triggers.Physical
+namespace AssemblerAlpha.Behaviours.Triggers.Physical
 {
-	public abstract class PhysicalTrigger : Trigger
+	public abstract class PhysicalTrigger<T> : Trigger<T> where T : BehaviourInfo
 	{
 		private string[] tags;
 

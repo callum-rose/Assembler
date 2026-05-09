@@ -1,9 +1,8 @@
-using Assembler.Parsing.Phase3;
-using Assembler.Parsing2.Info;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Core;
 using UnityEngine;
 
-namespace Behaviours.Movement
+namespace AssemblerAlpha.Behaviours.Movement
 {
 	public class SetPosition : PositionBehaviour<SetPositionInfo>
 	{

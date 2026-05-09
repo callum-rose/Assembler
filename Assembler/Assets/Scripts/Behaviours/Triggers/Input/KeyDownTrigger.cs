@@ -1,11 +1,15 @@
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 using UnityEngine;
 
-namespace Behaviours.Triggers.Input
+namespace AssemblerAlpha.Behaviours.Triggers.Input
 {
-	public partial class KeyDownTrigger : InputTrigger
+	public partial class KeyDownTrigger : InputTrigger<KeyDownTriggerInfo>
 	{
 		private KeyCode _keyCode;
+
+		protected override void OnInitialise(KeyDownTriggerInfo behaviourInfo)
+		{
+		}
 
 		private void Update()
 		{

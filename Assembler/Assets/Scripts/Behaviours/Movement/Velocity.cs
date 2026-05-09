@@ -1,12 +1,13 @@
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 using UnityEngine;
 
-namespace Behaviours.Movement
+namespace AssemblerAlpha.Behaviours.Movement
 {
-	public partial class Velocity : PositionBehaviour<VelocityBehaviourInfo>
+	public partial class Velocity : PositionBehaviour<VelocityInfo>
 	{
 		private Vector3 velocity;
 
-		protected override void OnInitialise(VelocityBehaviourInfo behaviourInfo)
+		protected override void OnInitialise(VelocityInfo behaviourInfo)
 		{
 			
 		}

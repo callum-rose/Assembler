@@ -1,6 +1,6 @@
 using System;
 
-namespace Assembler.Parsing2
+namespace Assembler.Parsing.Phase2.Parsing.Phase2
 {
 	public class ParsingException : Exception
 	{

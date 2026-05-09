@@ -1,6 +1,11 @@
-namespace Behaviours.Triggers.Input
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+
+namespace AssemblerAlpha.Behaviours.Triggers.Input
 {
-	public class LongPress : InputTrigger
+	public class LongPress : InputTrigger<LongPressTriggerInfo>
 	{
+		protected override void OnInitialise(LongPressTriggerInfo behaviourInfo)
+		{
+		}
 	}
 }

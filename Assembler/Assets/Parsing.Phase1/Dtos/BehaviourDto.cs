@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.Parsing.Phase1.Dtos
+namespace Parsing.Phase1.Dtos
 {
     public class BehaviourDto
     {

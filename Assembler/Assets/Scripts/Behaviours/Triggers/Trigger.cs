@@ -1,11 +1,12 @@
 using System;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using AssemblerAlpha.Core;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace Behaviours.Triggers
+namespace AssemblerAlpha.Behaviours.Triggers
 {
-	public abstract class Trigger : GameBehaviour
+	public abstract class Trigger<T> : GameBehaviour<T> where T : BehaviourInfo
 	{
 		[SerializeField] private UnityEvent testEvent;
 

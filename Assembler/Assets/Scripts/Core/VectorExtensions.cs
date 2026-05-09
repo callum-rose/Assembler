@@ -1,6 +1,6 @@
-using Assembler.Parsing2;
+using Assembler.Parsing.Phase2.Parsing.Phase2;
 
-namespace Core
+namespace AssemblerAlpha.Core
 {
 	public static class VectorExtensions
 	{

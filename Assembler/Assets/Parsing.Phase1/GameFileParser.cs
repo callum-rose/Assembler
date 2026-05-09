@@ -1,8 +1,8 @@
-using Assembler.Parsing.Phase1.Dtos;
+using Parsing.Phase1.Dtos;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace Assembler.Parsing.Phase1
+namespace Parsing.Phase1
 {
 	public class GameFileParser
 	{

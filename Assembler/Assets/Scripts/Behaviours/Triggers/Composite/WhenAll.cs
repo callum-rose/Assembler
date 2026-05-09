@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 
-namespace Behaviours.Triggers.Composite
+namespace AssemblerAlpha.Behaviours.Triggers.Composite
 {
-	public class WhenAll : Trigger
+	public class WhenAll : Trigger<WhenAllInfo>
 	{
-		private Trigger[] _triggers;
+		private Trigger<BehaviourInfo>[] _triggers;
 
-		private readonly List<Trigger> _triggeredTriggers = new();
+		private readonly List<Trigger<BehaviourInfo>> _triggeredTriggers = new();
 
-		protected override void OnInitialise(Configuration configuration)
+		protected override void OnInitialise(WhenAllInfo behaviourInfo)
 		{
 			foreach (var trigger in _triggers)
 			{
@@ -19,7 +19,7 @@ namespace Behaviours.Triggers.Composite
 
 		public override void Execute() { }
 
-		private void TriggerOnTriggered(Trigger trigger)
+		private void TriggerOnTriggered(Trigger<BehaviourInfo> trigger)
 		{
 			_triggeredTriggers.Add(trigger);
 

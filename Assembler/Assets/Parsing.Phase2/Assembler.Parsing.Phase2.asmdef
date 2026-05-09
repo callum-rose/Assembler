@@ -1,4 +1,16 @@
 {
-  "name": "Assembler.Parsing.Phase2",
-  "references":[ "GUID:7f2fed0c006b40cc9898c38a0446f9f4" ]
+    "name": "Assembler.Parsing.Phase2",
+    "rootNamespace": "Assembler.Parsing.Phase2",
+    "references": [
+        "GUID:7f2fed0c006b40cc9898c38a0446f9f4"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

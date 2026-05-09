@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Variables
+namespace AssemblerAlpha.Variables
 {
 	public abstract class GameVariable
 	{

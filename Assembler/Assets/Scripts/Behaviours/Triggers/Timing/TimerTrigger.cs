@@ -1,12 +1,16 @@
 using System.Collections;
-using Core;
+using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 using UnityEngine;
 
-namespace Behaviours.Triggers.Timing
+namespace AssemblerAlpha.Behaviours.Triggers.Timing
 {
-	public partial class TimerTrigger : TimingTrigger
+	public partial class TimerTrigger : TimingTrigger<AfterInfo>
 	{
 		private float _duration;
+
+		protected override void OnInitialise(AfterInfo behaviourInfo)
+		{
+		}
 
 		public override void Execute()
 		{
