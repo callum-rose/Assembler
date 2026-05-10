@@ -38,7 +38,7 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 				e.Expression ?? string.Empty)).ToArray();
 
 			var entities = gameDto.Entities?.Select(e => new EntityInfo(e.Id ?? string.Empty,
-				e.Tags,
+				e.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
 				ConvertVector(allValues, e.Position),
 				ConvertVector(allValues, e.Rotation),
 				e.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ?? Array.Empty<BehaviourInfo>())).ToArray() ?? Array.Empty<EntityInfo>();
@@ -54,25 +54,23 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 			return behaviourDto.Type switch
 			{
 				"box collider" => new BoxColliderInfo(id,
-					props?.GetValueOrDefault("Size") is { } boxSize
-						? ConvertVector(resolvedValues, boxSize)
-						: new Vector3(0, 0, 0),
-					props?.GetValueOrDefault("IsTrigger") is bool isTrigger && isTrigger),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Size")),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"))),
 
 				"sphere collider" => new SphereColliderInfo(id,
-					ConvertFloat(resolvedValues, props?["Size"])),
+					Wrap<float>(resolvedValues, props?["Size"])),
 
 				"rigidbody" => new RigidbodyInfo(id,
-					ConvertGeneral<bool>(resolvedValues, props?["UseGravity"])),
+					Wrap<bool>(resolvedValues, props?["UseGravity"])),
 
 				"velocity" => new VelocityInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["VelocityVariableId"])),
+					Wrap<string>(resolvedValues, props?["VelocityVariableId"])),
 
 				"translate" => new TranslateInfo(id,
-					ConvertVector(resolvedValues, props?["Displacement"])),
+					Wrap<Vector3>(resolvedValues, props?["Displacement"])),
 
 				"key hold trigger" => new KeyHoldTriggerInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["Key"]),
+					Wrap<string>(resolvedValues, props?["Key"]),
 					ConvertListeners(props?["Listeners"])),
 
 				"collision enter trigger" => new CollisionEnterTriggerInfo(id,
@@ -84,24 +82,24 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 					ConvertListeners(props?["Listeners"])),
 
 				"vector variable setter" => new VectorVariableSetterInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["VariableId"]),
-					ConvertGeneral<string>(resolvedValues, props?["ExpressionId"]),
+					Wrap<string>(resolvedValues, props?["VariableId"]),
+					Wrap<string>(resolvedValues, props?["ExpressionId"]),
 					ConvertArgumentList(resolvedValues, props?["Arguments"])),
 
 				"int variable setter" => new IntVariableSetterInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["VariableId"]),
-					ConvertGeneral<string>(resolvedValues, props?["ExpressionId"]),
+					Wrap<string>(resolvedValues, props?["VariableId"]),
+					Wrap<string>(resolvedValues, props?["ExpressionId"]),
 					ConvertArgumentList(resolvedValues, props?["Arguments"])),
 
 				"position setter" => new SetPositionInfo(id,
-					ConvertVector(resolvedValues, props?["Position"])),
+					Wrap<Vector3>(resolvedValues, props?["Position"])),
 
 				"camera" => new CameraInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["View"]),
-					ConvertFloat(resolvedValues, props?["Size"])),
+					Wrap<string>(resolvedValues, props?["View"]),
+					Wrap<float>(resolvedValues, props?["Size"])),
 
 				"condition trigger" => new ConditionTriggerInfo(id,
-					ConvertGeneral<string>(resolvedValues, props?["ExpressionId"]),
+					Wrap<string>(resolvedValues, props?["ExpressionId"]),
 					ConvertArgumentList(resolvedValues, props?["Arguments"])),
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
@@ -132,46 +130,76 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
 				: Array.Empty<string>();
 
-		private static IReadOnlyList<ValueInfo> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
+		private static IReadOnlyList<ValueWrapper<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
 			obj is List<object> list
-				? list.Select(item => ConvertArgument(resolvedValues, item)).ToArray()
-				: Array.Empty<ValueInfo>();
+				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()
+				: Array.Empty<ValueWrapper<object>>();
 
-		private static ValueInfo ConvertArgument(IReadOnlyList<VariableInfo> resolvedValues, object argument)
+		/// <summary>
+		/// Wraps a raw deserialised value into a <see cref="ValueWrapper{T}"/>.
+		/// Constants (including <see cref="ConstRefDto"/>) are dereferenced to their values.
+		/// Variable references become <see cref="VariableRef{T}"/>.
+		/// Expression references become <see cref="ExpressionRef{T}"/> with their arguments
+		/// recursively wrapped as <see cref="ValueWrapper{T}"/>.
+		/// </summary>
+		private static ValueWrapper<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw)
 		{
-			return argument switch
+			switch (raw)
 			{
-				VarRefDto varRefDto => new VariableRefValueInfo(varRefDto.Id ?? string.Empty),
-				ConstRefDto constRefDto => new ConstantValueInfo(resolvedValues.First(v => v.Id == constRefDto.Id).Value),
-				not null => new ConstantValueInfo(Convert(resolvedValues, argument)),
-				_ => throw new ParsingException($"Cannot convert argument: {argument}")
-			};
+				case ConstRefDto constRefDto:
+					return new Constant<T>(constRefDto.ResolveValue<T>(resolvedValues));
+
+				case VarRefDto varRefDto:
+					return new VariableRef<T>(varRefDto.Id ?? string.Empty);
+
+				case ExprRefDto exprRefDto:
+				{
+					var args = exprRefDto.Arguments ?? Array.Empty<object>();
+					var wrappedArgs = args.Select(a => Wrap<object>(resolvedValues, a)).ToArray();
+					return new ExpressionRef<T>(exprRefDto.ExpressionId ?? string.Empty, wrappedArgs);
+				}
+
+				case VecDto vecDto when typeof(T) == typeof(Vector3):
+					return new Constant<T>((T)(object)vecDto.ToVector3(resolvedValues));
+
+				case VecDto vecDto when typeof(T) == typeof(Vector2):
+					return new Constant<T>((T)(object)vecDto.ToVector2(resolvedValues));
+
+				case null:
+					return typeof(T) == typeof(Vector3)
+						? new Constant<T>((T)(object)new Vector3(0, 0, 0))
+						: throw new ParsingException($"Cannot convert null to a {typeof(T)}");
+
+				default:
+					return new Constant<T>(CoerceConstant<T>(raw));
+			}
 		}
 
-		private static float ConvertFloat(IReadOnlyList<VariableInfo> resolvedValues, object? obj)
+		private static T CoerceConstant<T>(object value)
 		{
-			var value = Convert(resolvedValues, obj);
-
-			return value switch
+			if (value is T t)
 			{
-				float f => f,
-				int i => i,
-				double d => (float)d,
-				_ => throw new ParsingException($"Cannot convert '{value}' to float")
-			};
+				return t;
+			}
+
+			if (typeof(T) == typeof(float))
+			{
+				switch (value)
+				{
+					case int i: 
+						return (T)(object)(float)i;
+					case double d: 
+						return (T)(object)(float)d;
+				}
+			}
+
+			if (typeof(T) == typeof(object))
+			{
+				return (T)value;
+			}
+
+			throw new ParsingException($"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
 		}
-
-		private static IReadOnlyDictionary<string, object> ConvertProperties(IReadOnlyList<VariableInfo> resolvedValues,
-			IReadOnlyDictionary<string, object?>? properties) =>
-			properties?.ToDictionary(p => p.Key, p => Convert(resolvedValues, p.Value)) ?? new Dictionary<string, object>();
-
-		private static T ConvertGeneral<T>(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
-			obj switch
-			{
-				RefDto refDto => refDto.ResolveValue<T>(resolvedValues),
-				T t => t,
-				_ => throw new ParsingException($"Cannot convert value '{obj}' of type '{obj?.GetType()}' to a {typeof(T)}")
-			};
 
 		private static Vector3 ConvertVector(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
 			obj switch
