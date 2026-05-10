@@ -8,4 +8,10 @@ namespace Parsing.Phase1.Dtos
     public sealed class VarRefDto : RefDto{}
 
     public sealed class ConstRefDto : RefDto{}
+
+    public sealed class ExprRefDto
+    {
+        public string? ExpressionId { get; set; }
+        public object[]? Arguments { get; set; }
+    }
 }

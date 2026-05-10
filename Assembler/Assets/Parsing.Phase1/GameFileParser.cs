@@ -11,9 +11,11 @@ namespace Parsing.Phase1
 			.WithTagMapping("!vec", typeof(VecDto))
 			.WithTagMapping("!var", typeof(VarRefDto))
 			.WithTagMapping("!const", typeof(ConstRefDto))
+			.WithTagMapping("!expr", typeof(ExprRefDto))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
 			.WithTypeConverter(new ConstTypeConverter())
+			.WithTypeConverter(new ExprTypeConverter())
 			.WithNodeDeserializer(new ObjectNodeDeserializer())
 			.Build();
 

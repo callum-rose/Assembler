@@ -78,7 +78,7 @@ namespace Assembler.Building
 					var component = GameBehaviourFactory.AddComponent(gameObject, behaviourInfo);
 					behavioursToInitialise.Add((component, behaviourInfo));
 					
-					behaviourRegistry[behaviourInfo.Id] = component;
+					// behaviourRegistry[behaviourInfo.Id] = component;
 				}
 			}
 

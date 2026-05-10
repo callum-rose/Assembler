@@ -334,6 +334,3 @@ Entities:
           Arguments:
             - !var right score
             - !const score to win
-
-GameOver:
-  - 

@@ -41,6 +41,10 @@ namespace Parsing.Phase1
 					value = nestedObjectDeserializer(reader, typeof(VecDto));
 					return true;
 
+				case MappingStart mappingStart when mappingStart.Tag == "!expr":
+					value = nestedObjectDeserializer(reader, typeof(ExprRefDto));
+					return true;
+
 				case MappingStart:
 				{
 					var dict = new Dictionary<string, object>();

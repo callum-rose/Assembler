@@ -9,10 +9,10 @@ namespace AssemblerAlpha.Behaviours.Movement
 	{
 		private ValueContainer<Vector3> velocity;
 
-		protected override void OnInitialise(VelocityData behaviourInfo)
-		{
-			velocity = behaviourInfo.Velocity;
-		}
+		// protected override void OnInitialise(VelocityData behaviourInfo)
+		// {
+		// 	velocity = behaviourInfo.Velocity;
+		// }
 
 		private void Update()
 		{
