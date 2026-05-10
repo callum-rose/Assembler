@@ -1,4 +1,4 @@
-namespace Parsing.Phase1.Dtos
+namespace Assembler.Parsing.Phase1.Dtos
 {
     public abstract record RefDto
     {

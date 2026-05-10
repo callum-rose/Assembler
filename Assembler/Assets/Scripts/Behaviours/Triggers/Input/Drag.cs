@@ -1,11 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public class Drag : InputTrigger<DragTriggerInfo>
+	public class Drag : InputTrigger<DragTriggerData>
 	{
-		protected override void OnInitialise(DragTriggerInfo behaviourInfo)
-		{
-		}
 	}
 }

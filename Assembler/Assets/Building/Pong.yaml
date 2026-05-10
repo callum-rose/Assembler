@@ -48,7 +48,7 @@ Constants:
     Value: 1
   - Id: paddle width
     Value: 0.2
-  - Id: ball size
+  - Id: ball radius
     Value: 0.2
   - Id: score per goal
     Value: 1
@@ -178,7 +178,7 @@ Entities:
       - Type: sphere collider
         Id: sphere collider
         Properties:
-          Size: !const ball size
+          Radius: !const ball radius
       - Type: rigidbody
         Id: rigidbody
         Properties:
@@ -186,7 +186,7 @@ Entities:
       - Type: velocity
         Id: velocity
         Properties:
-          VelocityVariableId: ball velocity
+          Velocity: !var ball velocity
       - Type: collision enter trigger
         Id: paddle collision trigger
         Properties:

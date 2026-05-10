@@ -1,14 +1,9 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Physical
+namespace Assembler.Behaviours.Triggers.Physical
 {
-	public class TriggerExit : PhysicalTrigger<TriggerExitTriggerInfo>
+	public class TriggerExit : PhysicalTrigger
 	{
-		protected override void OnInitialise(TriggerExitTriggerInfo behaviourInfo)
-		{
-		}
-
 		private void OnTriggerExit(Collider other)
 		{
 			if (IsOtherRelevant(other.gameObject))

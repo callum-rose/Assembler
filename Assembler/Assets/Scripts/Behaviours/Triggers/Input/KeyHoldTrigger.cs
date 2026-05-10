@@ -1,19 +1,12 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using UnityEngine;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public partial class KeyHoldTrigger : InputTrigger<KeyHoldTriggerInfo>
+	public class KeyHoldTrigger : InputTrigger<KeyHoldTriggerData>
 	{
-		private KeyCode _keyCode;
-
-		protected override void OnInitialise(KeyHoldTriggerInfo behaviourInfo)
-		{
-		}
-
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKey(_keyCode))
+			if (UnityEngine.Input.GetKey(Data.Key.Value))
 			{
 				Execute();
 			}

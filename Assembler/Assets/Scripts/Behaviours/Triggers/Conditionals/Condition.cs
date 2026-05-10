@@ -1,18 +1,17 @@
 using System;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Conditionals
+namespace Assembler.Behaviours.Triggers.Conditionals
 {
-	public partial class Condition : Trigger<ConditionInfo>
+	public class Condition : Trigger<ConditionData>
 	{
-		public Func<bool> _condition;
-
-		protected override void OnInitialise(ConditionInfo behaviourInfo)
-		{
-		}
-		
 		public override void Execute()
 		{
+			if (Data.Condition.Value)
+			{
+				InvokeListeners();
+			}
 		}
 	}
 }

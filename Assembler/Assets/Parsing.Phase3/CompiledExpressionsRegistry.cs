@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using Compiler;
+using Assembler.Compiler.Compiler;
+using Assembler.Parsing.Phase2.Info;
 
-namespace Assembler.Parsing.Phase3.Parsing.Phase3
+namespace Assembler.Parsing.Phase3
 {
 	public class CompiledExpressionsRegistry
 	{
@@ -12,6 +12,7 @@ namespace Assembler.Parsing.Phase3.Parsing.Phase3
 		private readonly ExpressionMethodCompiler _compiler;
 
 		private readonly Dictionary<string, (Type delegateType, Delegate @delegate)> _compiledExpressions = new();
+		private readonly Dictionary<string, ExpressionInfo> _expressionInfos = new();
 
 		public CompiledExpressionsRegistry(IReadOnlyDictionary<string, Type> typeRegistry, ExpressionMethodCompiler compiler)
 		{
@@ -28,6 +29,34 @@ namespace Assembler.Parsing.Phase3.Parsing.Phase3
 				expressionInfo.Arguments.Select(a => (_typeRegistry[a.type], a.name)).ToArray());
 
 			_compiledExpressions[expressionInfo.Id] = (delegateType, compiledExpression);
+			_expressionInfos[expressionInfo.Id] = expressionInfo;
+		}
+
+		public (Type delegateType, Delegate @delegate) GetCompiled(string id)
+		{
+			if (!_compiledExpressions.TryGetValue(id, out var typeAndDelegate))
+			{
+				throw new Exception($"Compiled expression not found for id: {id}");
+			}
+			return typeAndDelegate;
+		}
+
+		public ExpressionInfo GetInfo(string id)
+		{
+			if (!_expressionInfos.TryGetValue(id, out var info))
+			{
+				throw new Exception($"Expression info not found for id: {id}");
+			}
+			return info;
+		}
+
+		public Type ResolveType(string typeName)
+		{
+			if (!_typeRegistry.TryGetValue(typeName, out var type))
+			{
+				throw new Exception($"Type not registered: {typeName}");
+			}
+			return type;
 		}
 
 		public T Get<T>(string id) where T : Delegate

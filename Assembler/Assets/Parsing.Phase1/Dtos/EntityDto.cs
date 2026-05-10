@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Parsing.Phase1.Dtos
+namespace Assembler.Parsing.Phase1.Dtos
 {
     public sealed record EntityDto
     {

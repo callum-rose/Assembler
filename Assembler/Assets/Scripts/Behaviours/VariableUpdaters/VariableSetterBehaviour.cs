@@ -1,19 +1,13 @@
-using System;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
-using AssemblerAlpha.Variables;
+using Assembler.Core;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.VariableUpdaters
+namespace Assembler.Behaviours.VariableUpdaters
 {
-	public abstract class VariableSetterBehaviour<TInfo, TValue> : GameBehaviour<TInfo> where TInfo : BehaviourInfo
+	public abstract class VariableSetterBehaviour<TValue> : GameBehaviour<VariableSetterData<TValue>>
 	{
-		private Func<TValue> _valueGetter;
-		private GameVariable<TValue> _variable;
-
 		public override void Execute()
 		{
-			_variable.Value = _valueGetter.Invoke();
+			Data.ValueContainer.Value = Data.ValueProvider.Value;
 		}
 	}
-
 }

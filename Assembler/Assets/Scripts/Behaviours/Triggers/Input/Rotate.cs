@@ -1,11 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public class Rotate : InputTrigger<RotateTriggerInfo>
+	public class Rotate : InputTrigger<RotateTriggerData>
 	{
-		protected override void OnInitialise(RotateTriggerInfo behaviourInfo)
-		{
-		}
 	}
 }

@@ -1,11 +1,4 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-
-namespace AssemblerAlpha.Behaviours.VariableUpdaters
+namespace Assembler.Behaviours.VariableUpdaters
 {
-	public class IntSetter : VariableSetterBehaviour<IntVariableSetterInfo, int>
-	{
-		protected override void OnInitialise(IntVariableSetterInfo behaviourInfo)
-		{
-		}
-	}
+	public class IntSetter : VariableSetterBehaviour<int> { }
 }

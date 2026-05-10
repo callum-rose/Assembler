@@ -1,4 +1,4 @@
-﻿namespace Compiler
+﻿namespace Assembler.Compiler.Compiler
 {
 	public class Token
 	{

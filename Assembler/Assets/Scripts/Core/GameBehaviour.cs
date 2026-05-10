@@ -1,20 +1,23 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Core
+namespace Assembler.Core
 {
 	public abstract class GameBehaviour : MonoBehaviour
 	{
 		public abstract void Execute();
 	}
 
-	public abstract class GameBehaviour<T> : GameBehaviour where T : BehaviourInfo
+	public abstract class GameBehaviour<TData> : GameBehaviour where TData : BehaviourData
 	{
-		public void Initialise(T behaviourInfo)
+		protected TData Data { get; private set; }
+
+		public void Initialise(TData data)
 		{
-			OnInitialise(behaviourInfo);
+			Data = data;
+			OnInitialise(data);
 		}
 
-		protected virtual void OnInitialise(T behaviourInfo) { }
+		protected virtual void OnInitialise(TData data) { }
 	}
 }

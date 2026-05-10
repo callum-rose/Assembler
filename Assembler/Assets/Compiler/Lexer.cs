@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Compiler
+namespace Assembler.Compiler.Compiler
 {
 	public class Lexer
 	{

@@ -1,6 +1,6 @@
 using System;
 
-namespace Assembler.Parsing.Phase3.Parsing.Phase3
+namespace Assembler.Parsing.Phase3
 {
 	public sealed class ExpressionContainer<TReturn>
 	{

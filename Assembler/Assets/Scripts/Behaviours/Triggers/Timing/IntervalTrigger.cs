@@ -1,25 +1,23 @@
 using System.Collections;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Triggers.Timing
 {
-	public partial class IntervalTrigger : TimingTrigger<EveryInfo>
+	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
 	{
-		private int _intervalCount;
-		private float _intervalDuration;
-
-		protected override void OnInitialise(EveryInfo behaviourInfo)
+		public override void Execute()
 		{
+			StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
 		}
 
-		private IEnumerator Start()
+		private IEnumerator Routine(float interval, int count)
 		{
-			for (int i = 0; _intervalCount == 0 || i < _intervalCount; i++)
+			for (int i = 0; count == 0 || i < count; i++)
 			{
-				yield return new WaitForSeconds(_intervalDuration);
+				yield return new WaitForSeconds(interval);
 
-				Execute();
+				InvokeListeners();
 			}
 		}
 	}

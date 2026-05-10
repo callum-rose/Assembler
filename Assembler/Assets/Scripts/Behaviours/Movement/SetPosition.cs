@@ -1,21 +1,20 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Movement
+namespace Assembler.Behaviours.Movement
 {
-	public class SetPosition : PositionBehaviour<SetPositionInfo>
+	public class SetPosition : PositionBehaviour<SetPositionData>
 	{
-		private Vector3 _position;
+		private IValueProvider<Vector3> _position;
 		
-		protected override void OnInitialise(SetPositionInfo behaviourInfo)
+		protected override void OnInitialise(SetPositionData behaviourInfo)
 		{
-			_position = behaviourInfo.ValueExpression.ToUnity();
+			_position = behaviourInfo.ValueExpression;
 		}
 
 		public override void Execute()
 		{
-			transform.position = _position;
+			transform.position = _position.Value;
 		}
 	}
 }

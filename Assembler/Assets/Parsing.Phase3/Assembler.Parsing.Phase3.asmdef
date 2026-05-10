@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Parsing.Phase3",
-    "rootNamespace": "Assembler.Parsing.Phase3",
+    "rootNamespace": "Assembler",
     "references": [
         "GUID:3b68eed265f84f5d82499448985de9e2",
         "GUID:558738e5587346ec902c6c7e136d8558"

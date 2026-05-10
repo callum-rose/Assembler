@@ -1,25 +1,21 @@
 using System;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
+using Assembler.Core;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 using UnityEngine.Events;
 
-namespace AssemblerAlpha.Behaviours.Triggers
+namespace Assembler.Behaviours.Triggers
 {
-	public abstract class Trigger<T> : GameBehaviour<T> where T : BehaviourInfo
+	public abstract class Trigger<T> : GameBehaviour<T> where T : TriggerData
 	{
-		[SerializeField] private UnityEvent testEvent;
+		public override void Execute() { }
 
-		public event Action Triggered;
-
-		public override void Execute()
+		protected void InvokeListeners()
 		{
-		}
-		
-		protected void InvokeTrigger()
-		{
-			Triggered?.Invoke();
-			testEvent.Invoke();
+			foreach (var listener in Data.Listeners)
+			{
+				listener();
+			}
 		}
 	}
 }

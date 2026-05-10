@@ -1,11 +1,6 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-
-namespace AssemblerAlpha.Behaviours.VariableUpdaters
+namespace Assembler.Behaviours.VariableUpdaters
 {
-	public class FloatSetter : VariableSetterBehaviour<FloatVariableSetterInfo, float>
+	public class FloatSetter : VariableSetterBehaviour<float>
 	{
-		protected override void OnInitialise(FloatVariableSetterInfo behaviourInfo)
-		{
-		}
 	}
 }

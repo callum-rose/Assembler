@@ -1,21 +1,25 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Movement
+namespace Assembler.Behaviours.Movement
 {
-	public partial class Translate : PositionBehaviour<TranslateInfo>
+	public class Translate : PositionBehaviour<TranslateData>
 	{
-		private Vector3 displacement;
-		
-		protected override void OnInitialise(TranslateInfo behaviourInfo)
+		private IValueProvider<Vector3> displacement;
+
+		public Translate(IValueProvider<Vector3> displacement)
 		{
-			displacement = behaviourInfo.Displacement.ToUnity();
+			this.displacement = displacement;
 		}
-		
+
+		protected override void OnInitialise(TranslateData behaviourInfo)
+		{
+			displacement = behaviourInfo.Displacement;
+		}
+
 		public override void Execute()
 		{
-			transform.position += displacement * Time.deltaTime;
+			transform.position += displacement.Value * Time.deltaTime;
 		}
 	}
 }

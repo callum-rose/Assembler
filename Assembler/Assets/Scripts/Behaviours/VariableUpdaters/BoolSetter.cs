@@ -1,11 +1,6 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-
-namespace AssemblerAlpha.Behaviours.VariableUpdaters
+namespace Assembler.Behaviours.VariableUpdaters
 {
-	public class BoolSetter : VariableSetterBehaviour<BoolVariableSetterInfo, bool>
+	public class BoolSetter : VariableSetterBehaviour<bool>
 	{
-		protected override void OnInitialise(BoolVariableSetterInfo behaviourInfo)
-		{
-		}
 	}
 }

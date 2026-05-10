@@ -1,6 +1,6 @@
 using System;
 
-namespace Assembler.Parsing.Phase2.Parsing.Phase2
+namespace Assembler.Parsing.Phase2
 {
 	public readonly struct Vector2 : IEquatable<Vector2>
 	{

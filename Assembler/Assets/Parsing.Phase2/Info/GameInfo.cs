@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.Parsing.Phase2.Parsing.Phase2.Info
+namespace Assembler.Parsing.Phase2.Info
 {
 	public record GameInfo(
 		AboutInfo About,

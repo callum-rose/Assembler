@@ -1,18 +1,22 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using Assembler.Parsing.Phase3.Parsing.Phase3;
-using AssemblerAlpha.Variables;
+using Assembler.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Movement
+namespace Assembler.Behaviours.Movement
 {
-	public partial class Velocity : PositionBehaviour<VelocityInfo>
+	public class Velocity : PositionBehaviour<VelocityData>
 	{
-		private ValueContainer<Vector3> velocity;
+		private IValueProvider<Vector3> _velocity;
 
-		// protected override void OnInitialise(VelocityData behaviourInfo)
-		// {
-		// 	velocity = behaviourInfo.Velocity;
-		// }
+		public Velocity(IValueProvider<Vector3> velocity)
+		{
+			_velocity = velocity;
+		}
+
+		protected override void OnInitialise(VelocityData data)
+		{
+			_velocity = data.Velocity;
+		}
 
 		private void Update()
 		{
@@ -21,7 +25,7 @@ namespace AssemblerAlpha.Behaviours.Movement
 
 		public override void Execute()
 		{
-			transform.position += velocity.Value * Time.deltaTime;
+			transform.position += _velocity.Value * Time.deltaTime;
 		}
 	}
 }

@@ -1,9 +1,7 @@
 using System;
-using System.Linq;
-using Parsing.Phase1.Dtos;
 using UnityEngine;
 
-namespace AssemblerAlpha.Core
+namespace Assembler.Core
 {
 	public sealed class GameEntity : MonoBehaviour
 	{

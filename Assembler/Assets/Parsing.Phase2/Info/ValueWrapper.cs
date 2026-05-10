@@ -1,8 +1,13 @@
 using System.Collections.Generic;
 
-namespace Assembler.Parsing.Phase2.Parsing.Phase2.Info
+namespace Assembler.Parsing.Phase2.Info
 {
 	public abstract record ValueWrapper<T>;
+
+	public sealed record None<T> : ValueWrapper<T>
+	{
+		public readonly static None<T> Instance = new();
+	}
 
 	public sealed record Constant<T>(T Value) : ValueWrapper<T>;
 

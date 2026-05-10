@@ -1,8 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Triggers.Timing
 {
-	public abstract class TimingTrigger<T> : Trigger<T> where T : BehaviourInfo
+	public abstract class TimingTrigger<T> : Trigger<T> where T : TriggerData
 	{
 	}
 }

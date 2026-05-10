@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Compiler
+namespace Assembler.Compiler.Compiler
 {
 	public class ExpressionMethodCompiler
 	{

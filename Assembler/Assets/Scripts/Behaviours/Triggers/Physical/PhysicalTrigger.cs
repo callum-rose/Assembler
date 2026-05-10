@@ -1,19 +1,17 @@
 using System.Linq;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
+using Assembler.Core;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Physical
+namespace Assembler.Behaviours.Triggers.Physical
 {
-	public abstract class PhysicalTrigger<T> : Trigger<T> where T : BehaviourInfo
+	public abstract class PhysicalTrigger : Trigger<PhysicalTriggerData>
 	{
-		private string[] tags;
-
 		protected bool IsOtherRelevant(GameObject gameObject)
 		{
 			return gameObject.GetComponentInParent<GameEntity>() is var entity &&
 			       entity != null &&
-			       entity.Tags.Intersect(tags).Any();
+			       entity.Tags.Intersect(Data.TagsToDetect).Any();
 		}
 	}
 }

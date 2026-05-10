@@ -1,16 +1,12 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Triggers.Timing
 {
-	public class EveryFrameTrigger : TimingTrigger<EveryFrameInfo>
+	public class EveryFrameTrigger : TimingTrigger<EveryFrameTriggerData>
 	{
-		protected override void OnInitialise(EveryFrameInfo behaviourInfo)
-		{
-		}
-
 		private void Update()
 		{
-			InvokeTrigger();
+			InvokeListeners();
 		}
 	}
 }

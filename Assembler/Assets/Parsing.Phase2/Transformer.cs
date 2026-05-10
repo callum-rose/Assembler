@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using Parsing.Phase1.Dtos;
+using Assembler.Parsing.Phase1.Dtos;
+using Assembler.Parsing.Phase2.Info;
 
-namespace Assembler.Parsing.Phase2.Parsing.Phase2
+namespace Assembler.Parsing.Phase2
 {
 	public static class Transformer
 	{
@@ -12,7 +12,9 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 		{
 			var info = new AboutInfo(gameDto.Game?.Title ?? string.Empty, gameDto.Game?.Description ?? string.Empty);
 			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0, gameDto.World?.BackgroundColor ?? string.Empty);
-			var physics = new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<VariableInfo>()) ?? new Vector3(0, 0, 0));
+
+			var physics =
+				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<VariableInfo>()) ?? new Vector3(0, 0, 0));
 
 			var constants = new List<VariableInfo>(gameDto.Constants?.Count ?? 0);
 
@@ -33,15 +35,17 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 			IReadOnlyList<VariableInfo> allValues = constants.Concat(variables).ToArray();
 
 			var expressions = gameDto.Expressions?.Select(e => new ExpressionInfo(e.Id ?? string.Empty,
-				(e.ArgumentTypes ?? Array.Empty<string>()).Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
+				(e.ArgumentTypes ?? Array.Empty<string>())
+				.Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
 				e.ReturnType ?? string.Empty,
 				e.Expression ?? string.Empty)).ToArray();
 
 			var entities = gameDto.Entities?.Select(e => new EntityInfo(e.Id ?? string.Empty,
-				e.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
-				ConvertVector(allValues, e.Position),
-				ConvertVector(allValues, e.Rotation),
-				e.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ?? Array.Empty<BehaviourInfo>())).ToArray() ?? Array.Empty<EntityInfo>();
+					e.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
+					Wrap<Vector3>(allValues, e.Position),
+					Wrap<Vector3>(allValues, e.Rotation),
+					e.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ?? Array.Empty<BehaviourInfo>()))
+				.ToArray() ?? Array.Empty<EntityInfo>();
 
 			return new GameInfo(info, world, physics, variables, expressions, entities);
 		}
@@ -58,55 +62,54 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"))),
 
 				"sphere collider" => new SphereColliderInfo(id,
-					Wrap<float>(resolvedValues, props?["Size"])),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Radius")),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"))),
 
 				"rigidbody" => new RigidbodyInfo(id,
-					Wrap<bool>(resolvedValues, props?["UseGravity"])),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("UseGravity"))),
 
-				"velocity" => new VelocityInfo(id,
-					Wrap<string>(resolvedValues, props?["VelocityVariableId"])),
+				"velocity" => new VelocityInfo(id, Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Velocity"))),
 
-				"translate" => new TranslateInfo(id,
-					Wrap<Vector3>(resolvedValues, props?["Displacement"])),
+				"translate" => new TranslateInfo(id, Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Displacement"))),
 
 				"key hold trigger" => new KeyHoldTriggerInfo(id,
-					Wrap<string>(resolvedValues, props?["Key"]),
-					ConvertListeners(props?["Listeners"])),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Key")),
+					ConvertListeners(props?.GetValueOrDefault("Listeners"))),
 
 				"collision enter trigger" => new CollisionEnterTriggerInfo(id,
-					ConvertStringList(props?["TagsToDetect"]),
-					ConvertListeners(props?["Listeners"])),
+					ConvertStringList(props?.GetValueOrDefault("TagsToDetect")),
+					ConvertListeners(props?.GetValueOrDefault("Listeners"))),
 
 				"trigger enter trigger" => new TriggerEnterTriggerInfo(id,
-					ConvertStringList(props?["TagsToDetect"]),
-					ConvertListeners(props?["Listeners"])),
+					ConvertStringList(props?.GetValueOrDefault("TagsToDetect")),
+					ConvertListeners(props?.GetValueOrDefault("Listeners"))),
 
 				"vector variable setter" => new VectorVariableSetterInfo(id,
-					Wrap<string>(resolvedValues, props?["VariableId"]),
-					Wrap<string>(resolvedValues, props?["ExpressionId"]),
-					ConvertArgumentList(resolvedValues, props?["Arguments"])),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
+					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
 
 				"int variable setter" => new IntVariableSetterInfo(id,
-					Wrap<string>(resolvedValues, props?["VariableId"]),
-					Wrap<string>(resolvedValues, props?["ExpressionId"]),
-					ConvertArgumentList(resolvedValues, props?["Arguments"])),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
+					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
 
 				"position setter" => new SetPositionInfo(id,
-					Wrap<Vector3>(resolvedValues, props?["Position"])),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
 
 				"camera" => new CameraInfo(id,
-					Wrap<string>(resolvedValues, props?["View"]),
-					Wrap<float>(resolvedValues, props?["Size"])),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View")),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"))),
 
 				"condition trigger" => new ConditionTriggerInfo(id,
-					Wrap<string>(resolvedValues, props?["ExpressionId"]),
-					ConvertArgumentList(resolvedValues, props?["Arguments"])),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
+					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};
 		}
 
-		private static IReadOnlyList<ListenerInfo> ConvertListeners(object? obj) =>
+		private static IReadOnlyList<BehaviourDescriptor> ConvertListeners(object? obj) =>
 			obj is List<object> list
 				? list.Select(item =>
 				{
@@ -118,9 +121,9 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 						throw new ParsingException($"Cannot convert listener: {item}. Missing EntityId or BehaviourId.");
 					}
 
-					return new ListenerInfo(entityId, behaviourId);
+					return new BehaviourDescriptor(entityId, behaviourId);
 				}).ToArray()
-				: (IReadOnlyList<ListenerInfo>)Array.Empty<object>();
+				: (IReadOnlyList<BehaviourDescriptor>)Array.Empty<object>();
 
 		private static object? GetValueFromDictionary(object item, string key) =>
 			item is IDictionary<string, object> sd && sd.TryGetValue(key, out var val) ? val : null;
@@ -130,7 +133,8 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
 				: Array.Empty<string>();
 
-		private static IReadOnlyList<ValueWrapper<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
+		private static IReadOnlyList<ValueWrapper<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
+			object? obj) =>
 			obj is List<object> list
 				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()
 				: Array.Empty<ValueWrapper<object>>();
@@ -166,9 +170,7 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 					return new Constant<T>((T)(object)vecDto.ToVector2(resolvedValues));
 
 				case null:
-					return typeof(T) == typeof(Vector3)
-						? new Constant<T>((T)(object)new Vector3(0, 0, 0))
-						: throw new ParsingException($"Cannot convert null to a {typeof(T)}");
+					return None<T>.Instance;
 
 				default:
 					return new Constant<T>(CoerceConstant<T>(raw));
@@ -186,9 +188,9 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 			{
 				switch (value)
 				{
-					case int i: 
+					case int i:
 						return (T)(object)(float)i;
-					case double d: 
+					case double d:
 						return (T)(object)(float)d;
 				}
 			}
@@ -201,14 +203,14 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 			throw new ParsingException($"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
 		}
 
-		private static Vector3 ConvertVector(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
-			obj switch
-			{
-				VecDto vecDto => vecDto.ToVector3(resolvedValues),
-				RefDto refDto => refDto.ResolveValue<Vector3>(resolvedValues),
-				null => new Vector3(0, 0, 0),
-				_ => throw new ParsingException($"Cannot convert {obj} to a Vector3")
-			};
+		// private static ValueWrapper<Vector3> ConvertVector(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
+		// 	obj switch
+		// 	{
+		// 		VecDto vecDto => vecDto.ToVector3(resolvedValues),
+		// 		RefDto refDto => refDto.ResolveValue<Vector3>(resolvedValues),
+		// 		null => new Vector3(0, 0, 0),
+		// 		_ => throw new ParsingException($"Cannot convert {obj} to a Vector3")
+		// 	};
 
 		private static object Convert(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
 			obj switch

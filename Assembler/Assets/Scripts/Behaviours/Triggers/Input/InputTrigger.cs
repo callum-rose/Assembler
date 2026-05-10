@@ -1,8 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public abstract class InputTrigger<T> : Trigger<T> where T : BehaviourInfo
+	public abstract class InputTrigger<T> : Trigger<T> where T : TriggerData
 	{
 	}
 }

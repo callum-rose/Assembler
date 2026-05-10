@@ -1,11 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public class DoubleTap : InputTrigger<DoubleTapTriggerInfo>
+	public class DoubleTap : InputTrigger<DoubleTapTriggerData>
 	{
-		protected override void OnInitialise(DoubleTapTriggerInfo behaviourInfo)
-		{
-		}
 	}
 }

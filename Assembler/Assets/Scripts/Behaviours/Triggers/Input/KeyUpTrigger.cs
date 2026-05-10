@@ -1,19 +1,12 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using UnityEngine;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public partial class KeyUpTrigger : InputTrigger<KeyUpTriggerInfo>
+	public class KeyUpTrigger : InputTrigger<KeyUpTriggerData>
 	{
-		private KeyCode _keyCode;
-
-		protected override void OnInitialise(KeyUpTriggerInfo behaviourInfo)
-		{
-		}
-
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKeyUp(_keyCode))
+			if (UnityEngine.Input.GetKeyUp(Data.Key.Value))
 			{
 				Execute();
 			}

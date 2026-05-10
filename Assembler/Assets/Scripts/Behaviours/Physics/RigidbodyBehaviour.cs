@@ -1,18 +1,21 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using AssemblerAlpha.Core;
+using Assembler.Core;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Physics
+namespace Assembler.Behaviours.Physics
 {
 	[RequireComponent(typeof(Rigidbody))]
-	public abstract class RigidbodyBehaviour<T> : GameBehaviour<T> where T : BehaviourInfo
+	public sealed class RigidbodyBehaviour : GameBehaviour<RigidbodyData>
 	{
-		protected Rigidbody Rigidbody { get; private set; }
+		private Rigidbody _rigidbody;
 
-		private void Awake()
+		protected override void OnInitialise(RigidbodyData data)
 		{
-			Rigidbody = GetComponent<Rigidbody>();
+			_rigidbody = gameObject.AddComponent<Rigidbody>();
+			data.IsKinematic.UseIfValueExists(v => _rigidbody.isKinematic = v);
+			data.UseGravity.UseIfValueExists(v => _rigidbody.useGravity = v);
 		}
-	}
 
+		public override void Execute() { }
+	}
 }

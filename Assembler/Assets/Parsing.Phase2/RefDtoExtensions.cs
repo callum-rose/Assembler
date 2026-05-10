@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using Parsing.Phase1.Dtos;
+using Assembler.Parsing.Phase1.Dtos;
+using Assembler.Parsing.Phase2.Info;
 
-namespace Assembler.Parsing.Phase2.Parsing.Phase2
+namespace Assembler.Parsing.Phase2
 {
 	public static class RefDtoExtensions
 	{

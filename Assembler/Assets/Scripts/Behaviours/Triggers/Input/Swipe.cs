@@ -1,11 +1,8 @@
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Input
+namespace Assembler.Behaviours.Triggers.Input
 {
-	public class Swipe : InputTrigger<SwipeTriggerInfo>
+	public class Swipe : InputTrigger<SwipeTriggerData>
 	{
-		protected override void OnInitialise(SwipeTriggerInfo behaviourInfo)
-		{
-		}
 	}
 }

@@ -1,6 +1,6 @@
 using System;
 
-namespace AssemblerAlpha.Core
+namespace Assembler.Core
 {
 	[AttributeUsage(AttributeTargets.Class)]
 	public class GenerateDocumentationAttribute : Attribute { }

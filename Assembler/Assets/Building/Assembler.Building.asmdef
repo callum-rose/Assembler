@@ -1,6 +1,6 @@
 {
   "name": "Assembler.Building",
-  "rootNamespace": "Assembler.Building",
+  "rootNamespace": "Assembler",
   "references": [
     "GUID:3b68eed265f84f5d82499448985de9e2",
     "GUID:03b8ae7e50864c37a75f086e96044e3e",

@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Assembler.Parsing.Phase2.Parsing.Phase2;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
-using Assembler.Parsing.Phase3.Parsing.Phase3;
-using AssemblerAlpha.Core;
-using Parsing.Phase1;
+using Assembler.Core;
+using Assembler.Parsing.Phase1;
+using Assembler.Parsing.Phase2;
+using Assembler.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 using UnityEditor;
 using UnityEngine;
 using Vector3 = UnityEngine.Vector3;
@@ -30,21 +30,11 @@ namespace Assembler.Building
 			// 1. Initialize variables and expressions
 			var typeRegistry = new Dictionary<string, Type>
 			{
-				{
-					"float", typeof(float)
-				},
-				{
-					"int", typeof(int)
-				},
-				{
-					"string", typeof(string)
-				},
-				{
-					"bool", typeof(bool)
-				},
-				{
-					"vector", typeof(Vector3)
-				}
+				["float"] = typeof(float),
+				["int"] = typeof(int),
+				["string"] = typeof(string),
+				["bool"] = typeof(bool),
+				["vector"] = typeof(Vector3)
 			};
 
 			var (variableRegistry, compiledExpressionsRegistry) = GameInitialiser.Initialise(gameInfo, typeRegistry);
@@ -52,40 +42,41 @@ namespace Assembler.Building
 			// 2. Apply Physics settings
 			Physics.gravity = gameInfo.Physics.Gravity.ToUnity();
 
-			var entityRegistry = new Dictionary<string, (GameEntity, Dictionary<string, GameBehaviour>)>();
+			var entityRegistry = new Dictionary<string, GameEntity>();
+			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
+
+			var initialisations = new List<Action<VariableRegistry, CompiledExpressionsRegistry>>();
 
 			// 3. Instantiate Entities and Add Behaviours
-			var behavioursToInitialise = new List<(Component, BehaviourInfo)>();
 			foreach (var entityInfo in gameInfo.Entities)
 			{
 				var gameObject = new GameObject(entityInfo.Id)
 				{
 					transform =
 					{
-						position = entityInfo.InitialPosition.ToUnity(),
-						rotation = Quaternion.Euler(entityInfo.InitialRotation.ToUnity())
+						position = entityInfo.InitialPosition.Resolve(variableRegistry, compiledExpressionsRegistry).Value.ToUnity(),
+						rotation = Quaternion.Euler(entityInfo.InitialRotation.Resolve(variableRegistry, compiledExpressionsRegistry).Value.ToUnity())
 					}
 				};
 
 				var gameEntity = gameObject.AddComponent<GameEntity>();
-				gameEntity.Tags = entityInfo.Tags?.ToArray() ?? Array.Empty<string>();
-
-				var behaviourRegistry = new Dictionary<string, GameBehaviour>();
-				entityRegistry.Add(entityInfo.Id, (gameEntity, behaviourRegistry));
+				gameEntity.Tags = entityInfo.Tags.ToArray();
+				
+				entityRegistry[entityInfo.Id] = gameEntity;
 
 				foreach (var behaviourInfo in entityInfo.Behaviours)
 				{
-					var component = GameBehaviourFactory.AddComponent(gameObject, behaviourInfo);
-					behavioursToInitialise.Add((component, behaviourInfo));
-					
-					// behaviourRegistry[behaviourInfo.Id] = component;
+					var (gameBehaviour, initialise) = GameBehaviourFactory.AddComponent(gameObject, behaviourInfo);
+
+					behaviourRegistry[new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id)] = gameBehaviour;
+					initialisations.Add(initialise);
 				}
 			}
 
 			// 4. Initialise Behaviours
-			foreach (var (component, behaviourInfo) in behavioursToInitialise)
+			foreach (var initialise in initialisations)
 			{
-				GameBehaviourFactory.SetData(component, behaviourInfo);
+				initialise(variableRegistry, compiledExpressionsRegistry);
 			}
 		}
 	}

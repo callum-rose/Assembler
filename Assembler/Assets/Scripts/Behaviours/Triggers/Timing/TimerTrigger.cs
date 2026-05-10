@@ -1,27 +1,21 @@
 using System.Collections;
-using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
+using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace AssemblerAlpha.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Triggers.Timing
 {
-	public partial class TimerTrigger : TimingTrigger<AfterInfo>
+	public class TimerTrigger : TimingTrigger<TimerTriggerData>
 	{
-		private float _duration;
-
-		protected override void OnInitialise(AfterInfo behaviourInfo)
-		{
-		}
-
 		public override void Execute()
 		{
-			StartCoroutine(InvokeTriggerAfter(_duration));
+			StartCoroutine(InvokeTriggerAfter(Data.Delay.Value));
 		}
 
 		private IEnumerator InvokeTriggerAfter(float seconds)
 		{
 			yield return new WaitForSeconds(seconds);
 
-			InvokeTrigger();
+			InvokeListeners();
 		}
 	}
 }

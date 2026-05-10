@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Parsing.Phase1",
-    "rootNamespace": "Assembler.Parsing.Phase1",
+    "rootNamespace": "Assembler",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
