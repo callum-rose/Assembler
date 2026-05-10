@@ -12,20 +12,37 @@ namespace Parsing.Phase1
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
-			var vec = new VecDto();
 			parser.Consume<MappingStart>();
+
+			object? x = null;
+			object? y = null;
+			object? z = null;
+
 			while (!parser.TryConsume<MappingEnd>(out _))
 			{
 				var key = parser.Consume<Scalar>().Value;
 				var value = rootDeserializer(typeof(object));
+
 				switch (key)
 				{
-					case "X": vec.X = value; break;
-					case "Y": vec.Y = value; break;
-					case "Z": vec.Z = value; break;
+					case "X":
+						x = value;
+						break;
+					case "Y":
+						y = value;
+						break;
+					case "Z":
+						z = value;
+						break;
 				}
 			}
-			return vec;
+
+			return new VecDto
+			{
+				X = x,
+				Y = y,
+				Z = z
+			};
 		}
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>

@@ -2,12 +2,12 @@ using System.Collections.Generic;
 
 namespace Parsing.Phase1.Dtos
 {
-    public class EntityDto
+    public sealed record EntityDto
     {
-        public string? Id { get; set; }
-        public List<string>? Tags { get; set; }
-        public object? Position { get; set; }
-        public object? Rotation { get; set; }
-        public List<BehaviourDto>? Behaviours { get; set; }
+        public string? Id { get; init; }
+        public List<string>? Tags { get; init; }
+        public object? Position { get; init; }
+        public object? Rotation { get; init; }
+        public List<BehaviourDto>? Behaviours { get; init; }
     }
 }

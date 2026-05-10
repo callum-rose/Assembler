@@ -1,9 +1,8 @@
 namespace Parsing.Phase1.Dtos
 {
-    public class WorldDto
+    public sealed record WorldDto
     {
-        public int? Dimensionality { get; set; }
-
-        public string? BackgroundColor { get; set; }
+        public int? Dimensionality { get; init; }
+        public string? BackgroundColor { get; init; }
     }
 }

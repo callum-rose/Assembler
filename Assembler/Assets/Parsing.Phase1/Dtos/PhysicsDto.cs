@@ -1,7 +1,7 @@
 namespace Parsing.Phase1.Dtos
 {
-    public class PhysicsDto
+    public sealed record PhysicsDto
     {
-        public VecDto? Gravity { get; set; }
+        public VecDto? Gravity { get; init; }
     }
 }

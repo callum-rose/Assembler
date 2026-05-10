@@ -88,8 +88,6 @@ Expressions:
     ReturnType: bool
     Expression: "a >= b;"
   - Id: random ball initial position
-    ArgumentTypes: [ ]
-    ArgumentNames: [ ]
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(0, UnityEngine.Random.Range(-2f, 2f), 0);"
 

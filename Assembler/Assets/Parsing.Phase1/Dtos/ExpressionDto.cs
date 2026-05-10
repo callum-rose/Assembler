@@ -1,11 +1,11 @@
 namespace Parsing.Phase1.Dtos
 {
-    public class ExpressionDto
+    public sealed record ExpressionDto
     {
-        public string? Id { get; set; }
-        public string[]? ArgumentTypes { get; set; }
-        public string[]? ArgumentNames { get; set; }
-        public string? ReturnType { get; set; }
-        public string? Expression { get; set; }
+        public string? Id { get; init; }
+        public string[]? ArgumentTypes { get; init; }
+        public string[]? ArgumentNames { get; init; }
+        public string? ReturnType { get; init; }
+        public string? Expression { get; init; }
     }
 }

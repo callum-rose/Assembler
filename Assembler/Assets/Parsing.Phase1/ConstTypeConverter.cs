@@ -13,7 +13,10 @@ namespace Parsing.Phase1
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
 			var scalar = parser.Consume<Scalar>();
-			return new ConstRefDto { Id = scalar.Value };
+			return new ConstRefDto
+			{
+				Id = scalar.Value
+			};
 		}
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>

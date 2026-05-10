@@ -1,17 +1,17 @@
 namespace Parsing.Phase1.Dtos
 {
-    public abstract class RefDto
+    public abstract record RefDto
     {
-        public string? Id { get; set; }
+        public string? Id { get; init; }
     }
 
-    public sealed class VarRefDto : RefDto{}
+    public sealed record VarRefDto : RefDto;
 
-    public sealed class ConstRefDto : RefDto{}
+    public sealed record ConstRefDto : RefDto;
 
-    public sealed class ExprRefDto
+    public sealed record ExprRefDto
     {
-        public string? ExpressionId { get; set; }
-        public object[]? Arguments { get; set; }
+        public string? ExpressionId { get; init; }
+        public object[]? Arguments { get; init; }
     }
 }

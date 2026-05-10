@@ -13,26 +13,34 @@ namespace Parsing.Phase1
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
-			var expr = new ExprRefDto();
 			parser.Consume<MappingStart>();
+
+			string? expressionId = null;
+			object[]? arguments = null;
+			
 			while (!parser.TryConsume<MappingEnd>(out _))
 			{
 				var key = parser.Consume<Scalar>().Value;
 				switch (key)
 				{
 					case "ExpressionId":
-						expr.ExpressionId = parser.Consume<Scalar>().Value;
+						expressionId = parser.Consume<Scalar>().Value;
 						break;
 					case "Arguments":
 						var args = rootDeserializer(typeof(List<object>));
-						expr.Arguments = ((List<object>)args).ToArray();
+						arguments = ((List<object>)args).ToArray();
 						break;
 					default:
 						parser.SkipThisAndNestedEvents();
 						break;
 				}
 			}
-			return expr;
+
+			return new ExprRefDto
+			{
+				ExpressionId = expressionId,
+				Arguments = arguments
+			};
 		}
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>

@@ -2,14 +2,14 @@ using System.Collections.Generic;
 
 namespace Parsing.Phase1.Dtos
 {
-    public class GameDto
+    public sealed record GameDto
     {
-        public InfoDto? Game { get; set; }
-        public WorldDto? World { get; set; }
-        public PhysicsDto? Physics { get; set; }
-        public List<ValueDto>? Constants { get; set; }
-        public List<ValueDto>? Variables { get; set; }
-        public List<ExpressionDto>? Expressions { get; set; }
-        public List<EntityDto>? Entities { get; set; }
+        public InfoDto? Game { get; init; }
+        public WorldDto? World { get; init; }
+        public PhysicsDto? Physics { get; init; }
+        public List<ValueDto>? Constants { get; init; }
+        public List<ValueDto>? Variables { get; init; }
+        public List<ExpressionDto>? Expressions { get; init; }
+        public List<EntityDto>? Entities { get; init; }
     }
 }

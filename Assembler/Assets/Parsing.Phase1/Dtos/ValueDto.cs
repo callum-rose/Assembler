@@ -1,8 +1,8 @@
 namespace Parsing.Phase1.Dtos
 {
-    public class ValueDto
+    public sealed record ValueDto
     {
-        public string? Id { get; set; }
-        public object? Value { get; set; }
+        public string? Id { get; init; }
+        public object? Value { get; init; }
     }
 }

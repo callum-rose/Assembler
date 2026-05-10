@@ -2,10 +2,10 @@ using System.Collections.Generic;
 
 namespace Parsing.Phase1.Dtos
 {
-    public class BehaviourDto
+    public sealed record BehaviourDto
     {
-        public string? Type { get; set; }
-        public string? Id { get; set; }
-        public Dictionary<string, object>? Properties { get; set; }
+        public string? Type { get; init; }
+        public string? Id { get; init; }
+        public Dictionary<string, object>? Properties { get; init; }
     }
 }
