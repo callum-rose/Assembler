@@ -1,0 +1,34 @@
+# Game Lifetime Process
+
+- Yaml
+- Deserialised
+  - Don't resolve values
+  - Don't process anything
+  - Solely for getting game into memory
+- Strong Types
+  - Transform so all information is in a valid / non-null / typed state
+  - Validation
+  - Constants dereferenced
+  - Reference values still just contain ref id
+  - Expression values not compiled, but has all information to return a value with no arguments i.e. it curries all arguments (consts, vars, other expressions?) into itself
+- Build
+  - Global
+    - Physics
+    - Background
+    - Etc.
+  - Assets
+    - Load textures, models, audio
+    - Store in map against id
+  - Entities
+    - Instantiate variables and store in map against id
+    - Compile expressions
+    - Create entities and behaviours, and map against id
+    - Create data objects (which contain references to other behaviours) to pass into behaviours
+    - Setup behaviours with data objects
+- Execution
+  - Call some kind of Begin method on all behaviours
+  - Game plays
+  - Play until game end signal is triggered
+- Cleanup
+  - Unload assets
+  - Dispose of entities and behaviours

@@ -16,31 +16,4 @@ namespace AssemblerAlpha.Behaviours.VariableUpdaters
 		}
 	}
 
-	public class StringSetter : VariableSetterBehaviour<StringVariableSetterInfo, string>
-	{
-		protected override void OnInitialise(StringVariableSetterInfo behaviourInfo)
-		{
-		}
-	}
-
-	public class IntSetter : VariableSetterBehaviour<IntVariableSetterInfo, int>
-	{
-		protected override void OnInitialise(IntVariableSetterInfo behaviourInfo)
-		{
-		}
-	}
-
-	public class FloatSetter : VariableSetterBehaviour<FloatVariableSetterInfo, float>
-	{
-		protected override void OnInitialise(FloatVariableSetterInfo behaviourInfo)
-		{
-		}
-	}
-
-	public class BoolSetter : VariableSetterBehaviour<BoolVariableSetterInfo, bool>
-	{
-		protected override void OnInitialise(BoolVariableSetterInfo behaviourInfo)
-		{
-		}
-	}
 }

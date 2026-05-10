@@ -5,6 +5,7 @@ using Assembler.Parsing.Phase2.Parsing.Phase2.Info;
 
 namespace Assembler.Parsing.Phase3.Parsing.Phase3
 {
+
 	public class VariableRegistry
 	{
 		private readonly Dictionary<string, object> _variables = new();

@@ -1,0 +1,339 @@
+Game:
+  Title: Simple Pong Game
+  Description: A basic implementation of the classic Pong game with two paddles and a ball.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#000000"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  - Id: initial score
+    Value: 0
+  - Id: ball initial velocity
+    Value: !vec { X: 1, Y: 1 }
+  - Id: left paddle initial position
+    Value: !vec { X: -5, Y: 0 }
+  - Id: right paddle initial position
+    Value: !vec { X: 5, Y: 0 }
+  - Id: paddle up speed
+    Value: 0.2
+  - Id: paddle down speed
+    Value: -0.2
+  - Id: left paddle up key
+    Value: "w"
+  - Id: left paddle down key
+    Value: "s"
+  - Id: right paddle up key
+    Value: "up"
+  - Id: right paddle down key
+    Value: "down"
+  - Id: upper wall position
+    Value: !vec { X: 0, Y: 3 }
+  - Id: lower wall position
+    Value: !vec { X: 0, Y: -3 }
+  - Id: left goal position
+    Value: !vec { X: -6, Y: 0 }
+  - Id: right goal position
+    Value: !vec { X: 6, Y: 0 }
+  - Id: goal size
+    Value: !vec { X: 0.2, Y: 6 }
+  - Id: wall width
+    Value: 12.2
+  - Id: wall height
+    Value: 0.2
+  - Id: paddle height
+    Value: 1
+  - Id: paddle width
+    Value: 0.2
+  - Id: ball size
+    Value: 0.2
+  - Id: score per goal
+    Value: 1
+  - Id: score to win
+    Value: 5
+  - Id: camera position
+    Value: !vec { X: 0, Y: 0, Z: -10 }
+  - Id: camera rotation
+    Value: !vec { X: 0, Y: 0, Z: 0 }
+  - Id: camera view
+    Value: "orthographic"
+  - Id: camera size
+    Value: 10
+
+Variables:
+  - Id: left score
+    Value: !const initial score
+  - Id: right score
+    Value: !const initial score
+  - Id: ball velocity
+    Value: !const ball initial velocity
+
+Expressions:
+  - Id: vec multiply
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ a, b ]
+    ReturnType: vector
+    Expression: "new UnityEngine.Vector3(a.x * b.x, a.y * b.y, a.z * b.z);"
+  - Id: int add
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+  - Id: int greater or equal
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: bool
+    Expression: "a >= b;"
+  - Id: random ball initial position
+    ArgumentTypes: [ ]
+    ArgumentNames: [ ]
+    ReturnType: vector
+    Expression: "new UnityEngine.Vector3(0, UnityEngine.Random.Range(-2f, 2f), 0);"
+
+Entities:
+  - Id: left paddle
+    Tags:
+      - left paddle
+    Position: !const left paddle initial position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const paddle width
+            Y: !const paddle height
+          IsTrigger: false
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !const left paddle up key
+          Listeners:
+            - EntityId: left paddle
+              BehaviourId: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle up speed
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !const left paddle down key
+          Listeners:
+            - EntityId: left paddle
+              BehaviourId: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle down speed
+  - Id: right paddle
+    Tags:
+      - right paddle
+    Position: !const right paddle initial position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const paddle width
+            Y: !const paddle height
+          IsTrigger: false
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !const right paddle up key
+          Listeners:
+            - EntityId: right paddle
+              BehaviourId: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle up speed
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !const right paddle down key
+          Listeners:
+            - EntityId: right paddle
+              BehaviourId: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle down speed
+  - Id: ball
+    Tags:
+      - ball
+    Position: !expr 
+      ExpressionId: random ball initial position
+      Arguments: [ ]
+    Behaviours:
+      - Type: sphere collider
+        Id: sphere collider
+        Properties:
+          Size: !const ball size
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+      - Type: velocity
+        Id: velocity
+        Properties:
+          VelocityVariableId: ball velocity
+      - Type: collision enter trigger
+        Id: paddle collision trigger
+        Properties:
+          TagsToDetect:
+            - left paddle
+            - right paddle
+          Listeners:
+            - EntityId: ball
+              BehaviourId: paddle bounce velocity setter
+      - Type: vector variable setter
+        Id: paddle bounce velocity setter
+        Properties:
+          VariableId: ball velocity
+          ExpressionId: vec multiply
+          Arguments:
+            - !var ball velocity
+            - !vec { X: -1, Y: 1 }
+      - Type: collision enter trigger
+        Id: wall collision trigger
+        Properties:
+          TagsToDetect:
+            - wall
+          Listeners:
+            - EntityId: ball
+              BehaviourId: wall bounce velocity setter
+      - Type: vector variable setter
+        Id: wall bounce velocity setter
+        Properties:
+          VariableId: ball velocity
+          ExpressionId: vec multiply
+          Arguments:
+            - !var ball velocity
+            - !vec { X: 1, Y: -1 }
+      - Type: position setter
+        Id: position resetter
+        Properties:
+          Position: !expr
+            ExpressionId: random ball initial position
+            Arguments: [ ]
+  - Id: upper wall
+    Tags:
+      - wall
+    Position: !const upper wall position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const wall width
+            Y: !const wall height
+  - Id: lower wall
+    Tags:
+      - wall
+    Position: !const lower wall position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const wall width
+            Y: !const wall height
+  - Id: left goal
+    Tags:
+      - goal
+    Position: !const left goal position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const goal size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: goal trigger
+        Properties:
+          TagsToDetect:
+            - ball
+          Listeners:
+            - EntityId: left goal
+              BehaviourId: right score incrementer
+            - EntityId: ball
+              BehaviourId: ball resetter
+      - Type: int variable setter
+        Id: right score incrementer
+        Properties:
+          VariableId: right score
+          ExpressionId: int add
+          Arguments:
+            - !var right score
+            - !const score per goal
+  - Id: right goal
+    Tags:
+      - goal
+    Position: !const right goal position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const goal size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: goal trigger
+        Properties:
+          TagsToDetect:
+            - ball
+          Listeners:
+            - EntityId: right goal
+              BehaviourId: left score incrementer
+            - EntityId: ball
+              BehaviourId: ball resetter
+      - Type: int variable setter
+        Id: left score incrementer
+        Properties:
+          VariableId: left score
+          ExpressionId: int add
+          Arguments:
+            - !var left score
+            - !const score per goal
+  - Id: camera
+    Tags:
+      - camera
+    Position: !const camera position
+    Rotation: !const camera rotation
+    Behaviours:
+      - Type: camera
+        Id: camera
+        Properties:
+          View: !const camera view
+          Size: !const camera size
+  - Id: win condition checker
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: condition trigger
+        Id: left score win condition trigger
+        Properties:
+          ExpressionId: int greater or equal
+          Arguments:
+            - !var left score
+            - !const score to win
+      - Type: condition trigger
+        Id: right score win condition trigger
+        Properties:
+          ExpressionId: int greater or equal
+          Arguments:
+            - !var right score
+            - !const score to win
+
+GameOver:
+  - 

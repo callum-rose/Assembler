@@ -94,7 +94,7 @@ namespace Assembler.Parsing.Phase2.Parsing.Phase2
 					ConvertArgumentList(resolvedValues, props?["Arguments"])),
 
 				"position setter" => new SetPositionInfo(id,
-					ConvertVector(resolvedValues, props?["ValueExpression"])),
+					ConvertVector(resolvedValues, props?["Position"])),
 
 				"camera" => new CameraInfo(id,
 					ConvertGeneral<string>(resolvedValues, props?["View"]),

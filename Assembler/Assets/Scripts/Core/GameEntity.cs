@@ -14,15 +14,5 @@ namespace AssemblerAlpha.Core
 			get => tags;
 			set => tags = value;
 		}
-		
-		public void Initialise(EntityDto entityDto)
-		{
-			Tags = entityDto.Tags?.ToArray() ?? Array.Empty<string>();
-
-			foreach (var behaviourDto in entityDto.Behaviours ?? Enumerable.Empty<BehaviourDto>())
-			{
-				
-			}
-		}
 	}
 }
