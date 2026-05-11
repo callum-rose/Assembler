@@ -7,12 +7,13 @@ namespace Assembler.Core
 {
 	public abstract class GameBehaviour : MonoBehaviour
 	{
-		private IReadOnlyList<Action> _listeners; 
-		
+		protected string _id;
+		private IReadOnlyList<Action> _listeners;
+
 		public abstract void Execute();
 
-		protected void SetListeners(IReadOnlyList<Action> listeners) => _listeners = listeners;
-		
+		protected void SetBase(BehaviourData behaviourData) => (_id, _listeners) = (behaviourData.Id, behaviourData.Listeners);
+
 		protected void NotifyListeners()
 		{
 			foreach (var listener in _listeners)
@@ -29,8 +30,8 @@ namespace Assembler.Core
 		public void Initialise(TData data)
 		{
 			Data = data;
-			
-			SetListeners(data.Listeners);
+
+			SetBase(data);
 			OnInitialise(data);
 		}
 

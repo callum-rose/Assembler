@@ -1,4 +1,5 @@
 using Assembler.Parsing.Phase3;
+using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Input
 {
@@ -6,9 +7,17 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKey(Data.Key.Value))
+			var keyCode = Data.Key.Value switch
 			{
-				Execute();
+				"w" => KeyCode.W,
+				"s" => KeyCode.S,
+				"up" => KeyCode.UpArrow,
+				"down" => KeyCode.DownArrow
+			};
+			
+			if (UnityEngine.Input.GetKey(keyCode))
+			{
+				InvokeListeners();
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 using Assembler.Core;
 using Assembler.Parsing.Phase3;
+using UnityEngine;
 
 namespace Assembler.Behaviours.VariableUpdaters
 {
@@ -8,6 +9,7 @@ namespace Assembler.Behaviours.VariableUpdaters
 		public override void Execute()
 		{
 			Data.ValueToSet.Value = Data.ValueToGet.Value;
+			Debug.Log($"{_id} set to {Data.ValueToSet.Value}");
 		}
 	}
 }

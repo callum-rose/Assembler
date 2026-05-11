@@ -17,9 +17,9 @@ Constants:
   - Id: right paddle initial position
     Value: !vec { X: 5, Y: 0 }
   - Id: paddle up speed
-    Value: 0.2
+    Value: 2
   - Id: paddle down speed
-    Value: -0.2
+    Value: -2
   - Id: left paddle up key
     Value: "w"
   - Id: left paddle down key

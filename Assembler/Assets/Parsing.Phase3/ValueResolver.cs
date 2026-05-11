@@ -12,7 +12,7 @@ namespace Assembler.Parsing.Phase3
 		{
 			return valueSource switch
 			{
-				ConstantSource<T> constant => new ValueContainerProvider<T>(new ValueContainer<T>(constant.Value)),
+				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
 				VariableSource<T> variableRef => new ValueContainerProvider<T>(variables.Get<T>(variableRef.VariableId)),
 				ExpressionSource<T> expressionRef => new ExpressionContainerProvider<T>(
 					BuildExpressionContainer(expressionRef, variables, expressions)),

@@ -7,11 +7,10 @@ namespace Assembler.Behaviours.Triggers.Physical
 {
 	public abstract class PhysicalTrigger : Trigger<PhysicalTriggerData>
 	{
-		protected bool IsOtherRelevant(GameObject gameObject)
+		protected bool IsOtherRelevant(GameObject other)
 		{
-			return gameObject.GetComponentInParent<GameEntity>() is var entity &&
-			       entity != null &&
-			       entity.Tags.Intersect(Data.TagsToDetect).Any();
+			var otherGameEntity = other.GetComponent<GameEntity>();
+			return otherGameEntity != null && otherGameEntity.Tags.Intersect(Data.TagsToDetect).Any();
 		}
 	}
 }

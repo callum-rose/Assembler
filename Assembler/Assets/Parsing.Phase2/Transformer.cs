@@ -95,27 +95,27 @@ namespace Assembler.Parsing.Phase2
 				"vector variable setter" => new VariableSetterInfo<Vector3>(id,
 					GetListeners(behaviourDto),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Value"))),
 
 				"int variable setter" => new VariableSetterInfo<int>(id,
 					GetListeners(behaviourDto),
 					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<int>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+					Wrap<int>(resolvedValues, props?.GetValueOrDefault("Value"))),
 
 				"float variable setter" => new VariableSetterInfo<float>(id,
 					GetListeners(behaviourDto),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Value"))),
 
 				"bool variable setter" => new VariableSetterInfo<bool>(id,
 					GetListeners(behaviourDto),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Value"))),
 
 				"string variable setter" => new VariableSetterInfo<string>(id,
 					GetListeners(behaviourDto),
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Value"))),
 
 				"position setter" => new SetPositionInfo(id,
 					GetListeners(behaviourDto),
@@ -198,7 +198,10 @@ namespace Assembler.Parsing.Phase2
 
 				case VecDto vecDto when typeof(T) == typeof(Vector2):
 					return new ConstantSource<T>((T)(object)vecDto.ToVector2(resolvedValues));
-
+				
+				case VecDto vecDto:
+					return new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues));
+				
 				case null when fallback is not null:
 					return new ConstantSource<T>(fallback);
 
