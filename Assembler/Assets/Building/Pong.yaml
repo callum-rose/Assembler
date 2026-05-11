@@ -106,9 +106,9 @@ Entities:
         Id: up key trigger
         Properties:
           Key: !const left paddle up key
-          Listeners:
-            - EntityId: left paddle
-              BehaviourId: move up
+        Listeners:
+          - EntityId: left paddle
+            BehaviourId: move up
       - Type: translate
         Id: move up
         Properties:
@@ -119,9 +119,9 @@ Entities:
         Id: down key trigger
         Properties:
           Key: !const left paddle down key
-          Listeners:
-            - EntityId: left paddle
-              BehaviourId: move down
+        Listeners:
+          - EntityId: left paddle
+            BehaviourId: move down
       - Type: translate
         Id: move down
         Properties:
@@ -144,9 +144,9 @@ Entities:
         Id: up key trigger
         Properties:
           Key: !const right paddle up key
-          Listeners:
-            - EntityId: right paddle
-              BehaviourId: move up
+        Listeners:
+          - EntityId: right paddle
+            BehaviourId: move up
       - Type: translate
         Id: move up
         Properties:
@@ -157,9 +157,9 @@ Entities:
         Id: down key trigger
         Properties:
           Key: !const right paddle down key
-          Listeners:
-            - EntityId: right paddle
-              BehaviourId: move down
+        Listeners:
+          - EntityId: right paddle
+            BehaviourId: move down
       - Type: translate
         Id: move down
         Properties:
@@ -190,9 +190,9 @@ Entities:
           TagsToDetect:
             - left paddle
             - right paddle
-          Listeners: !listeners
-            - EntityId: ball
-              BehaviourId: paddle bounce velocity setter
+        Listeners:
+          - EntityId: ball
+            BehaviourId: paddle bounce velocity setter
       - Type: vector variable setter
         Id: paddle bounce velocity setter
         Properties:
@@ -207,9 +207,9 @@ Entities:
         Properties:
           TagsToDetect:
             - wall
-          Listeners:
-            - EntityId: ball
-              BehaviourId: wall bounce velocity setter
+        Listeners:
+          - EntityId: ball
+            BehaviourId: wall bounce velocity setter
       - Type: vector variable setter
         Id: wall bounce velocity setter
         Properties:
@@ -262,11 +262,11 @@ Entities:
         Properties:
           TagsToDetect:
             - ball
-          Listeners:
-            - EntityId: left goal
-              BehaviourId: right score incrementer
-            - EntityId: ball
-              BehaviourId: ball resetter
+        Listeners:
+          - EntityId: left goal
+            BehaviourId: right score incrementer
+          - EntityId: ball
+            BehaviourId: ball resetter
       - Type: int variable setter
         Id: right score incrementer
         Properties:
@@ -291,11 +291,11 @@ Entities:
         Properties:
           TagsToDetect:
             - ball
-          Listeners:
-            - EntityId: right goal
-              BehaviourId: left score incrementer
-            - EntityId: ball
-              BehaviourId: ball resetter
+        Listeners:
+          - EntityId: right goal
+            BehaviourId: left score incrementer
+          - EntityId: ball
+            BehaviourId: ball resetter
       - Type: int variable setter
         Id: left score incrementer
         Properties:
