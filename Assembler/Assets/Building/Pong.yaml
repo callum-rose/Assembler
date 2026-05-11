@@ -220,7 +220,7 @@ Entities:
               - !var ball velocity
               - !vec { X: 1, Y: -1 }
       - Type: position setter
-        Id: position resetter
+        Id: ball resetter
         Properties:
           Position: !expr
             ExpressionId: random ball initial position

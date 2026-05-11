@@ -7,8 +7,13 @@ namespace Assembler.Parsing.Phase3
 	public abstract class BehaviourData
 	{
 		public string Id { get; }
+		public IReadOnlyList<Action> Listeners { get; }
 
-		protected BehaviourData(string id) => Id = id;
+		protected BehaviourData(string id, IReadOnlyList<Action> listeners)
+		{
+			Id = id;
+			Listeners = listeners;
+		}
 	}
 
 	public sealed class BoxColliderData : BehaviourData
@@ -16,8 +21,8 @@ namespace Assembler.Parsing.Phase3
 		public IValueProvider<UnityEngine.Vector3> Size { get; }
 		public IValueProvider<bool> IsTrigger { get; }
 
-		public BoxColliderData(string id, IValueProvider<UnityEngine.Vector3> size, IValueProvider<bool> isTrigger) :
-			base(id) =>
+		public BoxColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> size, IValueProvider<bool> isTrigger) :
+			base(id, listeners) =>
 			(Size, IsTrigger) = (size, isTrigger);
 	}
 
@@ -26,7 +31,7 @@ namespace Assembler.Parsing.Phase3
 		public IValueProvider<float> Radius { get; }
 		public IValueProvider<bool> IsTrigger { get; init; } = NullValueProvider<bool>.Instance;
 
-		public SphereColliderData(string id, IValueProvider<float> radius) : base(id) => Radius = radius;
+		public SphereColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<float> radius) : base(id, listeners) => Radius = radius;
 	}
 
 	public sealed class RigidbodyData : BehaviourData
@@ -34,21 +39,21 @@ namespace Assembler.Parsing.Phase3
 		public IValueProvider<bool> IsKinematic { get; init; } = NullValueProvider<bool>.Instance;
 		public IValueProvider<bool> UseGravity { get; init; } = NullValueProvider<bool>.Instance;
 
-		public RigidbodyData(string id) : base(id) { }
+		public RigidbodyData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
 	}
 
 	public sealed class VelocityData : BehaviourData
 	{
 		public IValueProvider<UnityEngine.Vector3> Velocity { get; }
 
-		public VelocityData(string id, IValueProvider<UnityEngine.Vector3> velocity) : base(id) => Velocity = velocity;
+		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> velocity) : base(id, listeners) => Velocity = velocity;
 	}
 
 	public sealed class TranslateData : BehaviourData
 	{
 		public IValueProvider<UnityEngine.Vector3> Displacement { get; }
 
-		public TranslateData(string id, IValueProvider<UnityEngine.Vector3> displacement) : base(id) =>
+		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> displacement) : base(id, listeners) =>
 			Displacement = displacement;
 	}
 
@@ -56,7 +61,7 @@ namespace Assembler.Parsing.Phase3
 	{
 		public IValueProvider<UnityEngine.Vector3> ValueExpression { get; }
 
-		public SetPositionData(string id, IValueProvider<UnityEngine.Vector3> valueExpression) : base(id) =>
+		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> valueExpression) : base(id, listeners) =>
 			ValueExpression = valueExpression;
 	}
 
@@ -64,7 +69,7 @@ namespace Assembler.Parsing.Phase3
 	{
 		public IReadOnlyList<Action> Listeners { get; }
 
-		protected TriggerData(string id, IReadOnlyList<Action> listeners) : base(id) => Listeners = listeners;
+		protected TriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) => Listeners = listeners;
 	}
 
 	public sealed class KeyHoldTriggerData : TriggerData
@@ -129,13 +134,11 @@ namespace Assembler.Parsing.Phase3
 	public sealed class ConditionData : TriggerData
 	{
 		public IValueProvider<bool> Condition { get; }
-		public IValueProvider<string> ExecuteOn { get; }
 
-		public ConditionData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners, IValueProvider<string> executeOn) :
+		public ConditionData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners) :
 			base(id, listeners)
 		{
 			Condition = condition;
-			ExecuteOn = executeOn;
 		}
 	}
 
@@ -203,21 +206,21 @@ namespace Assembler.Parsing.Phase3
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 
-		public WhenAllData(string id, IReadOnlyList<string> triggerIds) : base(id) => TriggerIds = triggerIds;
+		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
 	}
 
 	public sealed class WhenAnyData : BehaviourData
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 
-		public WhenAnyData(string id, IReadOnlyList<string> triggerIds) : base(id) => TriggerIds = triggerIds;
+		public WhenAnyData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
 	}
 
 	public sealed class SpawnerData : BehaviourData
 	{
 		public BehaviourInfo Info { get; }
 
-		public SpawnerData(string id, BehaviourInfo info) : base(id) => Info = info;
+		public SpawnerData(string id, IReadOnlyList<Action> listeners, BehaviourInfo info) : base(id, listeners) => Info = info;
 	}
 
 	public class VariableSetterData<T> : BehaviourData
@@ -225,7 +228,7 @@ namespace Assembler.Parsing.Phase3
 		public IValueProvider<T> ValueToSet { get; }
 		public IValueProvider<T> ValueToGet { get; }
 
-		public VariableSetterData(string id, IValueProvider<T> valueToSet, IValueProvider<T> valueToGet) : base(id) =>
+		public VariableSetterData(string id, IReadOnlyList<Action> listeners, IValueProvider<T> valueToSet, IValueProvider<T> valueToGet) : base(id, listeners) =>
 			(ValueToSet, ValueToGet) = (valueToSet, valueToGet);
 	}
 
@@ -234,6 +237,6 @@ namespace Assembler.Parsing.Phase3
 		public IValueProvider<string> Perspective { get; }
 		public IValueProvider<float> Size { get; }
 
-		public CameraData(string id, IValueProvider<string> perspective, IValueProvider<float> size) : base(id) => (Perspective, Size) = (perspective, size);
+		public CameraData(string id, IReadOnlyList<Action> listeners, IValueProvider<string> perspective, IValueProvider<float> size) : base(id, listeners) => (Perspective, Size) = (perspective, size);
 	}
 }

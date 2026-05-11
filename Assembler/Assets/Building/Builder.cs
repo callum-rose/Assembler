@@ -44,9 +44,9 @@ namespace Assembler.Building
 			Physics.gravity = gameInfo.Physics.Gravity;
 
 			var entityRegistry = new Dictionary<string, GameEntity>();
-			var behaviourRegistry = new BehaviourRegistry();
+			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
 
-			var initialisations = new List<Action>();
+			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
 
 			// 3. Instantiate Entities and Add Behaviours
 			foreach (var entityInfo in gameInfo.Entities)
@@ -73,7 +73,7 @@ namespace Assembler.Building
 						variableRegistry,
 						compiledExpressionsRegistry);
 
-					behaviourRegistry.Register(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
+					behaviourRegistry.Add(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
 					initialisations.Add(initialise);
 				}
 			}
@@ -81,7 +81,7 @@ namespace Assembler.Building
 			// 4. Initialise Behaviours
 			foreach (var initialise in initialisations)
 			{
-				initialise();
+				initialise(behaviourRegistry);
 			}
 		}
 	}

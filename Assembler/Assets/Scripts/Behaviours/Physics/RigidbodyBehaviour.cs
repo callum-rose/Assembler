@@ -4,7 +4,6 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Physics
 {
-	[RequireComponent(typeof(Rigidbody))]
 	public sealed class RigidbodyBehaviour : GameBehaviour<RigidbodyData>
 	{
 		private Rigidbody _rigidbody;

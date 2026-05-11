@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
@@ -16,7 +18,11 @@ namespace Assembler.Core
 {
 	public static class GameBehaviourFactory
 	{
-		public static (GameBehaviour, Action) AddComponent(
+		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> listenerRegistry) =>
+			listeners.Select(d => listenerRegistry[d]).Select(b => (Action)b.Execute).ToArray();
+
+		public static (GameBehaviour, Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>) AddComponent(
 			GameObject gameObject,
 			BehaviourInfo behaviourInfo,
 			VariableRegistry variableRegistry,
@@ -24,14 +30,15 @@ namespace Assembler.Core
 		{
 			var vr = variableRegistry;
 			var cr = compiledExpressionRegistry;
-			
+
 			switch (behaviourInfo)
 			{
 				case BoxColliderInfo boxColliderInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<AutoAddBoxColliderBehaviour>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new BoxColliderData(boxColliderInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new BoxColliderData(boxColliderInfo.Id,
+						boxColliderInfo.Listeners.ToActions(listenerRegistry),
 						boxColliderInfo.Size.Resolve(vr, cr),
 						boxColliderInfo.IsTrigger.Resolve(vr, cr))));
 				}
@@ -40,7 +47,9 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<AutoAddSphereColliderBehaviour>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new SphereColliderData(sphereColliderInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new SphereColliderData(
+						sphereColliderInfo.Id,
+						sphereColliderInfo.Listeners.ToActions(listenerRegistry),
 						sphereColliderInfo.Radius.Resolve(vr, cr))));
 				}
 
@@ -48,17 +57,19 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<RigidbodyBehaviour>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new RigidbodyData(rigidbodyInfo.Id)
-					{
-						UseGravity = rigidbodyInfo.UseGravity.Resolve(vr, cr)
-					}));
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(
+						new RigidbodyData(rigidbodyInfo.Id, rigidbodyInfo.Listeners.ToActions(listenerRegistry))
+						{
+							UseGravity = rigidbodyInfo.UseGravity.Resolve(vr, cr)
+						}));
 				}
 
 				case VelocityInfo velocityInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<Velocity>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VelocityData(velocityInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VelocityData(velocityInfo.Id,
+						velocityInfo.Listeners.ToActions(listenerRegistry),
 						velocityInfo.Velocity.Resolve(vr, cr))));
 				}
 
@@ -66,7 +77,8 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<Translate>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new TranslateData(translateInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new TranslateData(translateInfo.Id,
+						translateInfo.Listeners.ToActions(listenerRegistry),
 						translateInfo.Displacement.Resolve(vr, cr))));
 				}
 
@@ -74,7 +86,8 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<SetPosition>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new SetPositionData(setPositionInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new SetPositionData(setPositionInfo.Id,
+						setPositionInfo.Listeners.ToActions(listenerRegistry),
 						setPositionInfo.ValueExpression.Resolve(vr, cr))));
 				}
 
@@ -82,27 +95,30 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<KeyHoldTrigger>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new KeyHoldTriggerData(keyHoldTriggerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new KeyHoldTriggerData(
+						keyHoldTriggerInfo.Id,
 						keyHoldTriggerInfo.Key.Resolve(vr, cr),
-						Array.Empty<Action>())));
+						keyHoldTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case KeyDownTriggerInfo keyDownTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<KeyDownTrigger>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new KeyDownTriggerData(keyDownTriggerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new KeyDownTriggerData(
+						keyDownTriggerInfo.Id,
 						keyDownTriggerInfo.Key.Resolve(vr, cr),
-						Array.Empty<Action>())));
+						keyDownTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case KeyUpTriggerInfo keyUpTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<KeyUpTrigger>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new KeyUpTriggerData(keyUpTriggerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new KeyUpTriggerData(
+						keyUpTriggerInfo.Id,
 						keyUpTriggerInfo.Key.Resolve(vr, cr),
-						Array.Empty<Action>())));
+						keyUpTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case TapTriggerInfo tapTriggerInfo:
@@ -110,7 +126,8 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<Tap>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new TapTriggerData(tapTriggerInfo.Id, Array.Empty<Action>())));
+						listenerRegistry => gameBehaviour.Initialise(new TapTriggerData(tapTriggerInfo.Id,
+							tapTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case DoubleTapTriggerInfo doubleTapTriggerInfo:
@@ -118,8 +135,9 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<DoubleTap>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new DoubleTapTriggerData(doubleTapTriggerInfo.Id,
-							Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new DoubleTapTriggerData(doubleTapTriggerInfo.Id,
+								doubleTapTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case LongPressTriggerInfo longPressTriggerInfo:
@@ -127,8 +145,9 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<LongPress>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new LongPressTriggerData(longPressTriggerInfo.Id,
-							Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new LongPressTriggerData(longPressTriggerInfo.Id,
+								longPressTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case SwipeTriggerInfo swipeTriggerInfo:
@@ -136,7 +155,9 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<Swipe>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new SwipeTriggerData(swipeTriggerInfo.Id, Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new SwipeTriggerData(swipeTriggerInfo.Id,
+								swipeTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case DragTriggerInfo dragTriggerInfo:
@@ -144,7 +165,9 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<Drag>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new DragTriggerData(dragTriggerInfo.Id, Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new DragTriggerData(dragTriggerInfo.Id,
+								dragTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case PinchTriggerInfo pinchTriggerInfo:
@@ -152,7 +175,9 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<Pinch>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new PinchTriggerData(pinchTriggerInfo.Id, Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new PinchTriggerData(pinchTriggerInfo.Id,
+								pinchTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case RotateTriggerInfo rotateTriggerInfo:
@@ -160,38 +185,41 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<Rotate>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new RotateTriggerData(rotateTriggerInfo.Id,
-							Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new RotateTriggerData(rotateTriggerInfo.Id,
+								rotateTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				// case ConditionInfo conditionInfo:
 				// {
 				// 	var gameBehaviour = gameObject.AddComponent<Condition>();
 				//
-				// 	return (gameBehaviour, () => gameBehaviour.Initialise(new ConditionData(conditionInfo.Id,
+				// 	return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new ConditionData(conditionInfo.Id,
 				// 		ResolveConditionExpression(conditionInfo.ExpressionId,
 				// 			conditionInfo.Arguments,
 				// 			vr,
 				// 			cr),
-				// 		Array.Empty<Action>())));
+				// 		listenerRegistry)));
 				// }
 
 				case TimerTriggerInfo timerTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<TimerTrigger>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new TimerTriggerData(timerTriggerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new TimerTriggerData(
+						timerTriggerInfo.Id,
 						timerTriggerInfo.Delay.Resolve(vr, cr),
-						Array.Empty<Action>())));
+						timerTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case IntervalTriggerInfo intervalTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<IntervalTrigger>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new IntervalTriggerData(intervalTriggerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new IntervalTriggerData(
+						intervalTriggerInfo.Id,
 						intervalTriggerInfo.Interval.Resolve(vr, cr),
-						Array.Empty<Action>())));
+						intervalTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case EveryFrameTriggerInfo everyFrameTriggerInfo:
@@ -199,66 +227,68 @@ namespace Assembler.Core
 					var gameBehaviour = gameObject.AddComponent<EveryFrameTrigger>();
 
 					return (gameBehaviour,
-						() => gameBehaviour.Initialise(new EveryFrameTriggerData(everyFrameTriggerInfo.Id,
-							Array.Empty<Action>())));
+						listenerRegistry =>
+							gameBehaviour.Initialise(new EveryFrameTriggerData(everyFrameTriggerInfo.Id,
+								everyFrameTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case CollisionEnterTriggerInfo collisionEnterTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<CollisionEnter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new CollisionEnterTriggerData(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new CollisionEnterTriggerData(
 						collisionEnterTriggerInfo.Id,
 						collisionEnterTriggerInfo.TagsToDetect,
-						Array.Empty<Action>())));
+						collisionEnterTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case CollisionExitTriggerInfo collisionExitTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<CollisionExit>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new CollisionExitTriggerData(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new CollisionExitTriggerData(
 						collisionExitTriggerInfo.Id,
 						collisionExitTriggerInfo.TagsToDetect,
-						Array.Empty<Action>())));
+						collisionExitTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case CollisionStayTriggerInfo collisionStayTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<CollisionStay>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new CollisionStayTriggerData(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new CollisionStayTriggerData(
 						collisionStayTriggerInfo.Id,
 						collisionStayTriggerInfo.TagsToDetect,
-						Array.Empty<Action>())));
+						collisionStayTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case TriggerEnterTriggerInfo triggerEnterTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<TriggerEnter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new TriggerEnterTriggerData(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new TriggerEnterTriggerData(
 						triggerEnterTriggerInfo.Id,
 						triggerEnterTriggerInfo.TagsToDetect,
-						Array.Empty<Action>())));
+						triggerEnterTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case TriggerExitTriggerInfo triggerExitTriggerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<TriggerExit>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new TriggerExitTriggerData(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new TriggerExitTriggerData(
 						triggerExitTriggerInfo.Id,
 						triggerExitTriggerInfo.TagsToDetect,
-						Array.Empty<Action>())));
+						triggerExitTriggerInfo.Listeners.ToActions(listenerRegistry))));
 				}
 
 				case VariableSetterInfo<Vector3> variableSetterInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<Vector3Setter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VariableSetterData<Vector3>(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VariableSetterData<Vector3>(
 						variableSetterInfo.Id,
+						variableSetterInfo.Listeners.ToActions(listenerRegistry),
 						variableSetterInfo.ValueToSet.Resolve(vr, cr),
 						variableSetterInfo.ValueToGet.Resolve(vr, cr)
 					)));
@@ -268,8 +298,9 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<IntSetter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VariableSetterData<int>(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VariableSetterData<int>(
 						variableSetterInfo.Id,
+						variableSetterInfo.Listeners.ToActions(listenerRegistry),
 						variableSetterInfo.ValueToSet.Resolve(vr, cr),
 						variableSetterInfo.ValueToGet.Resolve(vr, cr)
 					)));
@@ -279,8 +310,9 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<FloatSetter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VariableSetterData<float>(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VariableSetterData<float>(
 						variableSetterInfo.Id,
+						variableSetterInfo.Listeners.ToActions(listenerRegistry),
 						variableSetterInfo.ValueToSet.Resolve(vr, cr),
 						variableSetterInfo.ValueToGet.Resolve(vr, cr)
 					)));
@@ -290,8 +322,9 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<BoolSetter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VariableSetterData<bool>(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VariableSetterData<bool>(
 						variableSetterInfo.Id,
+						variableSetterInfo.Listeners.ToActions(listenerRegistry),
 						variableSetterInfo.ValueToSet.Resolve(vr, cr),
 						variableSetterInfo.ValueToGet.Resolve(vr, cr)
 					)));
@@ -301,8 +334,9 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<StringSetter>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new VariableSetterData<string>(
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new VariableSetterData<string>(
 						variableSetterInfo.Id,
+						variableSetterInfo.Listeners.ToActions(listenerRegistry),
 						variableSetterInfo.ValueToSet.Resolve(vr, cr),
 						variableSetterInfo.ValueToGet.Resolve(vr, cr)
 					)));
@@ -312,17 +346,21 @@ namespace Assembler.Core
 				{
 					var gameBehaviour = gameObject.AddComponent<CameraBehaviour>();
 
-					return (gameBehaviour, () => gameBehaviour.Initialise(new CameraData(info.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new CameraData(info.Id,
+						info.Listeners.ToActions(listenerRegistry),
 						info.View.Resolve(vr, cr),
 						info.Size.Resolve(vr, cr))));
 				}
 
-				// case ConditionTriggerInfo info:
-				// {
-				// 	var gameBehaviour = gameObject.AddComponent<Condition>();
-				// 	
-				// 	return (gameBehaviour, () => gameBehaviour.Initialise(new ConditionData(info.Id, info.Condition.Resolve(vr, cr), info.Listeners, info.ExecuteOn.Resolve(vr, cr))));
-				// }
+				case ConditionTriggerInfo info:
+				{
+					var gameBehaviour = gameObject.AddComponent<Condition>();
+
+					return (gameBehaviour,
+						listenerRegistry => gameBehaviour.Initialise(new ConditionData(info.Id,
+							info.Condition.Resolve(vr, cr),
+							info.Listeners.ToActions(listenerRegistry))));
+				}
 
 				default:
 					throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
