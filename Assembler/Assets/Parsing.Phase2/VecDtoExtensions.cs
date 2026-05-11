@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Assembler.Parsing.Phase1.Dtos;
 using Assembler.Parsing.Phase2.Info;
+using UnityEngine;
 
 namespace Assembler.Parsing.Phase2
 {

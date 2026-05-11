@@ -7,7 +7,7 @@ namespace Assembler.Behaviours.VariableUpdaters
 	{
 		public override void Execute()
 		{
-			Data.ValueContainer.Value = Data.ValueProvider.Value;
+			Data.ValueToSet.Value = Data.ValueToGet.Value;
 		}
 	}
 }

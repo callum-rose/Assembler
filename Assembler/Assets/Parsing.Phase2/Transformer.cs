@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Parsing.Phase1.Dtos;
 using Assembler.Parsing.Phase2.Info;
+using UnityEngine;
 
 namespace Assembler.Parsing.Phase2
 {
@@ -84,15 +85,25 @@ namespace Assembler.Parsing.Phase2
 					ConvertStringList(props?.GetValueOrDefault("TagsToDetect")),
 					ConvertListeners(props?.GetValueOrDefault("Listeners"))),
 
-				"vector variable setter" => new VectorVariableSetterInfo(id,
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
-					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
+				"vector variable setter" => new VariableSetterInfo<Vector3>(id,
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
 
-				"int variable setter" => new IntVariableSetterInfo(id,
+				"int variable setter" => new VariableSetterInfo<int>(id,
+					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<int>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+
+				"float variable setter" => new VariableSetterInfo<float>(id,
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+
+				"bool variable setter" => new VariableSetterInfo<bool>(id,
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId")),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
+
+				"string variable setter" => new VariableSetterInfo<string>(id,
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
-					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId"))),
 
 				"position setter" => new SetPositionInfo(id,
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
@@ -101,9 +112,9 @@ namespace Assembler.Parsing.Phase2
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View")),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"))),
 
-				"condition trigger" => new ConditionTriggerInfo(id,
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("ExpressionId")),
-					ConvertArgumentList(resolvedValues, props?.GetValueOrDefault("Arguments"))),
+				// "condition trigger" => new ConditionTriggerInfo(id,
+				// 	Wrap<bool>(resolvedValues, props?.GetValueOrDefault("")),
+				// 	Wrap<
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};
@@ -133,50 +144,50 @@ namespace Assembler.Parsing.Phase2
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
 				: Array.Empty<string>();
 
-		private static IReadOnlyList<ValueWrapper<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
+		private static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
 			object? obj) =>
 			obj is List<object> list
 				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()
-				: Array.Empty<ValueWrapper<object>>();
+				: Array.Empty<ValueSource<object>>();
 
 		/// <summary>
-		/// Wraps a raw deserialised value into a <see cref="ValueWrapper{T}"/>.
+		/// Wraps a raw deserialised value into a <see cref="ValueSource{T}"/>.
 		/// Constants (including <see cref="ConstRefDto"/>) are dereferenced to their values.
-		/// Variable references become <see cref="VariableRef{T}"/>.
-		/// Expression references become <see cref="ExpressionRef{T}"/> with their arguments
-		/// recursively wrapped as <see cref="ValueWrapper{T}"/>.
+		/// Variable references become <see cref="VariableSource{T}"/>.
+		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
+		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		private static ValueWrapper<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw, T? fallback = default)
+		private static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw, T? fallback = default)
 		{
 			switch (raw)
 			{
 				case ConstRefDto constRefDto:
-					return new Constant<T>(constRefDto.ResolveValue<T>(resolvedValues));
+					return new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues));
 
 				case VarRefDto varRefDto:
-					return new VariableRef<T>(varRefDto.Id ?? string.Empty);
+					return new VariableSource<T>(varRefDto.Id ?? string.Empty);
 
 				case ExprRefDto exprRefDto:
 				{
 					var args = exprRefDto.Arguments ?? Array.Empty<object>();
 					var wrappedArgs = args.Select(a => Wrap<object>(resolvedValues, a)).ToArray();
-					return new ExpressionRef<T>(exprRefDto.ExpressionId ?? string.Empty, wrappedArgs);
+					return new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty, wrappedArgs);
 				}
 
 				case VecDto vecDto when typeof(T) == typeof(Vector3):
-					return new Constant<T>((T)(object)vecDto.ToVector3(resolvedValues));
+					return new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues));
 
 				case VecDto vecDto when typeof(T) == typeof(Vector2):
-					return new Constant<T>((T)(object)vecDto.ToVector2(resolvedValues));
+					return new ConstantSource<T>((T)(object)vecDto.ToVector2(resolvedValues));
 
 				case null when fallback is not null:
-					return new Constant<T>(fallback);
+					return new ConstantSource<T>(fallback);
 
 				case null:
 					return None<T>.Instance;
 
 				default:
-					return new Constant<T>(CoerceConstant<T>(raw));
+					return new ConstantSource<T>(CoerceConstant<T>(raw));
 			}
 		}
 

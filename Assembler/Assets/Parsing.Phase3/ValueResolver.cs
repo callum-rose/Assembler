@@ -6,46 +6,40 @@ namespace Assembler.Parsing.Phase3
 {
 	public static class ValueResolver
 	{
-		public static IValueProvider<T> Resolve<T>(this ValueWrapper<T> wrapper,
+		public static IValueProvider<T> Resolve<T>(this ValueSource<T> valueSource,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions)
 		{
-			switch (wrapper)
+			return valueSource switch
 			{
-				case Constant<T> constant:
-					return new ValueContainerProvider<T>(new ValueContainer<T>(constant.Value));
-
-				case VariableRef<T> variableRef:
-					return new ValueContainerProvider<T>(variables.Get<T>(variableRef.VariableId));
-
-				case ExpressionRef<T> expressionRef:
-					return new ExpressionContainerProvider<T>(BuildExpressionContainer(expressionRef, variables, expressions));
-
-				case None<T>:
-					return NullValueProvider<T>.Instance;
-
-				default:
-					throw new Exception($"Unsupported ValueWrapper type: {wrapper?.GetType()}");
-			}
+				ConstantSource<T> constant => new ValueContainerProvider<T>(new ValueContainer<T>(constant.Value)),
+				VariableSource<T> variableRef => new ValueContainerProvider<T>(variables.Get<T>(variableRef.VariableId)),
+				ExpressionSource<T> expressionRef => new ExpressionContainerProvider<T>(
+					BuildExpressionContainer(expressionRef, variables, expressions)),
+				None<T> => NullValueProvider<T>.Instance,
+				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource?.GetType()}")
+			};
 		}
 
 		private static ExpressionContainer<TReturn> BuildExpressionContainer<TReturn>(
-			ExpressionRef<TReturn> expressionRef,
+			ExpressionSource<TReturn> expressionSource,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions)
 		{
-			var (delegateType, @delegate) = expressions.GetCompiled(expressionRef.ExpressionId);
-			var info = expressions.GetInfo(expressionRef.ExpressionId);
+			var (delegateType, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
+			var info = expressions.GetInfo(expressionSource.ExpressionId);
 
-			var argProviders = new IValueProvider<object>[expressionRef.Arguments.Count];
+			var argProviders = new IValueProvider<object>[expressionSource.Arguments.Count];
 
-			for (int i = 0; i < expressionRef.Arguments.Count; i++)
+			for (int i = 0; i < expressionSource.Arguments.Count; i++)
 			{
 				var paramType = expressions.ResolveType(info.Arguments[i].type);
-				argProviders[i] = ResolveAsObject(expressionRef.Arguments[i], paramType, variables, expressions);
+				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i], paramType, variables, expressions);
 			}
 
-			Func<TReturn> curried = () =>
+			return new ExpressionContainer<TReturn>(InvokeWithArgs);
+
+			TReturn InvokeWithArgs()
 			{
 				var args = new object[argProviders.Length];
 
@@ -60,22 +54,22 @@ namespace Assembler.Parsing.Phase3
 				}
 				catch (Exception e)
 				{
-					throw new Exception($"Failed to evaluate expression '{expressionRef.ExpressionId}' to '{typeof(TReturn)}' with arguments: {string.Join(", ", expressionRef.Arguments)}", e);
+					throw new Exception(
+						$"Failed to evaluate expression '{expressionSource.ExpressionId}' to '{typeof(TReturn)}' with arguments: {string.Join(", ", expressionSource.Arguments)}",
+						e);
 				}
-			};
-
-			return new ExpressionContainer<TReturn>(curried);
+			}
 		}
 
 		// Argument-side resolver: wrapper is ValueWrapper<object> at the surface level,
 		// but underlying records may be Constant<T>/VariableRef<T>/ExpressionRef<T> for the actual T.
 		private static IValueProvider<object> ResolveAsObject(
-			ValueWrapper<object> wrapper,
+			ValueSource<object> valueSource,
 			Type expectedType,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions)
 		{
-			var wrapperType = wrapper.GetType();
+			var wrapperType = valueSource.GetType();
 			var genericDef = wrapperType.GetGenericTypeDefinition();
 			var innerType = wrapperType.GetGenericArguments()[0];
 			var typeForResolve = innerType == typeof(object) ? expectedType : innerType;
@@ -86,7 +80,7 @@ namespace Assembler.Parsing.Phase3
 			return (IValueProvider<object>)method.Invoke(null,
 				new object[]
 				{
-					wrapper, variables, expressions
+					valueSource, variables, expressions
 				});
 		}
 
@@ -97,17 +91,17 @@ namespace Assembler.Parsing.Phase3
 		{
 			switch (wrapperBoxed)
 			{
-				case Constant<T> c:
+				case ConstantSource<T> c:
 					return new BoxedProvider<T>(new ValueContainerProvider<T>(new ValueContainer<T>(c.Value)));
-				case VariableRef<T> v:
+				case VariableSource<T> v:
 					return new BoxedProvider<T>(new ValueContainerProvider<T>(variables.Get<T>(v.VariableId)));
-				case ExpressionRef<T> e:
+				case ExpressionSource<T> e:
 					return new BoxedProvider<T>(
 						new ExpressionContainerProvider<T>(BuildExpressionContainer(e, variables, expressions)));
 				// Fallback: argument was declared with object generic but holds a Constant<object>/etc.
-				case Constant<object> co:
+				case ConstantSource<object> co:
 					return new ConstObjectProvider(co.Value);
-				case VariableRef<object> vo:
+				case VariableSource<object> vo:
 					return new BoxedProvider<T>(new ValueContainerProvider<T>(variables.Get<T>(vo.VariableId)));
 				default:
 					throw new Exception($"Unsupported argument wrapper: {wrapperBoxed?.GetType()}");
@@ -116,7 +110,11 @@ namespace Assembler.Parsing.Phase3
 
 		private sealed class BoxedProvider<T> : IValueProvider<object>
 		{
-			public object Value => _inner.Value;
+			public object Value
+			{
+				get => _inner.Value;
+				set => _inner.Value = value is T t ? t : default;
+			}
 
 			private readonly IValueProvider<T> _inner;
 
@@ -125,7 +123,11 @@ namespace Assembler.Parsing.Phase3
 
 		private sealed class ConstObjectProvider : IValueProvider<object>
 		{
-			public object Value => _value;
+			public object Value
+			{
+				get => _value;
+				set => throw new InvalidOperationException("Cannot set the value of a " + nameof(ConstObjectProvider));
+			}
 
 			private readonly object _value;
 

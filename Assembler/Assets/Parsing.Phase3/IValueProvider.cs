@@ -2,42 +2,38 @@ using System;
 
 namespace Assembler.Parsing.Phase3
 {
-	public interface IValueProvider<out T>
+	public interface IValueProvider<T>
 	{
 		/// <summary>
-		/// The provided value. Use when sure the value exists, some implementations may throw.
+		/// Get and sets the inner value.
+		/// Will throw when getting if there is no inner value, and will throw when setting if it's not a settable value
 		/// </summary>
-		T Value { get; }
+		T Value { get; set; }
 	}
 
 	public class NullValueProvider<T> : IValueProvider<T>
 	{
 		public static NullValueProvider<T> Instance { get; } = new();
 
-		public T Value => throw new InvalidOperationException("Null value provider cannot provide a value");
+		public T Value
+		{
+			get => throw new InvalidOperationException("Null value provider cannot provide a value");
+			set => throw new InvalidOperationException("Null value provider cannot have its value set");
+		}
 
 		private NullValueProvider() { }
 	}
 
-	public static class IValueProviderExtensions
-	{
-		public static IValueProvider<TOutput> Map<TInput, TOutput>(this IValueProvider<TInput> provider,
-			Func<TInput, TOutput> mapper) => new MappedValueProvider<TInput, TOutput>(provider, mapper);
-
-		public static void UseIfValueExists<T>(this IValueProvider<T> provider, Action<T> action)
-		{
-			if (provider is not NullValueProvider<T>)
-			{
-				action(provider.Value);
-			}
-		}
-	}
-	
 	public sealed class ValueProvider<T> : IValueProvider<T>
 	{
-		public T Value { get; }
+		public T Value { get; set; }
 
 		public ValueProvider(T value)
+		{
+			Value = value;
+		}
+
+		public void Set(T value)
 		{
 			Value = value;
 		}
@@ -45,7 +41,11 @@ namespace Assembler.Parsing.Phase3
 
 	public sealed class ValueContainerProvider<T> : IValueProvider<T>
 	{
-		public T Value => _container.Value;
+		public T Value
+		{
+			get => _container.Value;
+			set => _container.Value = value;
+		}
 
 		private readonly ValueContainer<T> _container;
 
@@ -57,7 +57,11 @@ namespace Assembler.Parsing.Phase3
 
 	public sealed class ExpressionContainerProvider<T> : IValueProvider<T>
 	{
-		public T Value => _container.Invoke();
+		public T Value
+		{
+			get => _container.Invoke();
+			set => throw new InvalidOperationException("ExpressionContainerProvider cannot have its value set");
+		}
 
 		private readonly ExpressionContainer<T> _container;
 
@@ -69,7 +73,11 @@ namespace Assembler.Parsing.Phase3
 
 	public sealed class MappedValueProvider<TInput, TOutput> : IValueProvider<TOutput>
 	{
-		public TOutput Value => _mapper(_inner.Value);
+		public TOutput Value
+		{
+			get => _mapper(_inner.Value);
+			set => throw new InvalidOperationException("MappedValueProvider cannot have its value set");
+		}
 
 		private readonly IValueProvider<TInput> _inner;
 		private readonly Func<TInput, TOutput> _mapper;

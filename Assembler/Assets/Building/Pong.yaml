@@ -12,8 +12,6 @@ Physics:
 Constants:
   - Id: initial score
     Value: 0
-  - Id: ball initial velocity
-    Value: !vec { X: 1, Y: 1 }
   - Id: left paddle initial position
     Value: !vec { X: -5, Y: 0 }
   - Id: right paddle initial position
@@ -69,7 +67,7 @@ Variables:
   - Id: right score
     Value: !const initial score
   - Id: ball velocity
-    Value: !const ball initial velocity
+    Value: !vec { X: 1, Y: 1 }
 
 Expressions:
   - Id: vec multiply
@@ -171,7 +169,7 @@ Entities:
   - Id: ball
     Tags:
       - ball
-    Position: !expr 
+    Position: !expr
       ExpressionId: random ball initial position
     Behaviours:
       - Type: sphere collider
@@ -192,17 +190,18 @@ Entities:
           TagsToDetect:
             - left paddle
             - right paddle
-          Listeners:
+          Listeners: !listeners
             - EntityId: ball
               BehaviourId: paddle bounce velocity setter
       - Type: vector variable setter
         Id: paddle bounce velocity setter
         Properties:
-          VariableId: ball velocity
-          ExpressionId: vec multiply
-          Arguments:
-            - !var ball velocity
-            - !vec { X: -1, Y: 1 }
+          VariableId: !var ball velocity
+          Value: !expr
+            ExpressionId: vec multiply
+            Arguments:
+              - !var ball velocity
+              - !vec { X: -1, Y: 1 }
       - Type: collision enter trigger
         Id: wall collision trigger
         Properties:
@@ -214,11 +213,12 @@ Entities:
       - Type: vector variable setter
         Id: wall bounce velocity setter
         Properties:
-          VariableId: ball velocity
-          ExpressionId: vec multiply
-          Arguments:
-            - !var ball velocity
-            - !vec { X: 1, Y: -1 }
+          VariableId: !var ball velocity
+          Value: !expr
+            ExpressionId: vec multiply
+            Arguments:
+              - !var ball velocity
+              - !vec { X: 1, Y: -1 }
       - Type: position setter
         Id: position resetter
         Properties:
@@ -270,11 +270,12 @@ Entities:
       - Type: int variable setter
         Id: right score incrementer
         Properties:
-          VariableId: right score
-          ExpressionId: int add
-          Arguments:
-            - !var right score
-            - !const score per goal
+          VariableId: !var right score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var right score
+              - !const score per goal
   - Id: right goal
     Tags:
       - goal
@@ -298,11 +299,12 @@ Entities:
       - Type: int variable setter
         Id: left score incrementer
         Properties:
-          VariableId: left score
-          ExpressionId: int add
-          Arguments:
-            - !var left score
-            - !const score per goal
+          VariableId: !var left score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var left score
+              - !const score per goal
   - Id: camera
     Tags:
       - camera
@@ -320,14 +322,16 @@ Entities:
       - Type: condition trigger
         Id: left score win condition trigger
         Properties:
-          ExpressionId: int greater or equal
-          Arguments:
-            - !var left score
-            - !const score to win
+          Condition: !expr
+            ExpressionId: int greater or equal
+            Arguments:
+              - !var left score
+              - !const score to win
       - Type: condition trigger
         Id: right score win condition trigger
         Properties:
-          ExpressionId: int greater or equal
-          Arguments:
-            - !var right score
-            - !const score to win
+          Condition: !expr
+            ExpressionId: int greater or equal
+            Arguments:
+              - !var right score
+              - !const score to win

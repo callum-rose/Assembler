@@ -129,9 +129,14 @@ namespace Assembler.Parsing.Phase3
 	public sealed class ConditionData : TriggerData
 	{
 		public IValueProvider<bool> Condition { get; }
+		public IValueProvider<string> ExecuteOn { get; }
 
-		public ConditionData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners) :
-			base(id, listeners) => Condition = condition;
+		public ConditionData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners, IValueProvider<string> executeOn) :
+			base(id, listeners)
+		{
+			Condition = condition;
+			ExecuteOn = executeOn;
+		}
 	}
 
 	public sealed class TimerTriggerData : TriggerData
@@ -217,10 +222,18 @@ namespace Assembler.Parsing.Phase3
 
 	public class VariableSetterData<T> : BehaviourData
 	{
-		public IValueProvider<T> ValueProvider { get; }
-		public ValueContainer<T> ValueContainer { get; }
+		public IValueProvider<T> ValueToSet { get; }
+		public IValueProvider<T> ValueToGet { get; }
 
-		public VariableSetterData(string id, IValueProvider<T> valueProvider, ValueContainer<T> valueContainer) : base(id) =>
-			(ValueProvider, ValueContainer) = (valueProvider, valueContainer);
+		public VariableSetterData(string id, IValueProvider<T> valueToSet, IValueProvider<T> valueToGet) : base(id) =>
+			(ValueToSet, ValueToGet) = (valueToSet, valueToGet);
+	}
+
+	public class CameraData : BehaviourData
+	{
+		public IValueProvider<string> Perspective { get; }
+		public IValueProvider<float> Size { get; }
+
+		public CameraData(string id, IValueProvider<string> perspective, IValueProvider<float> size) : base(id) => (Perspective, Size) = (perspective, size);
 	}
 }
