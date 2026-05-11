@@ -146,7 +146,7 @@ namespace Assembler.Parsing.Phase2
 		/// Expression references become <see cref="ExpressionRef{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueWrapper{T}"/>.
 		/// </summary>
-		private static ValueWrapper<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw)
+		private static ValueWrapper<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw, T? fallback = default)
 		{
 			switch (raw)
 			{
@@ -168,6 +168,9 @@ namespace Assembler.Parsing.Phase2
 
 				case VecDto vecDto when typeof(T) == typeof(Vector2):
 					return new Constant<T>((T)(object)vecDto.ToVector2(resolvedValues));
+
+				case null when fallback is not null:
+					return new Constant<T>(fallback);
 
 				case null:
 					return None<T>.Instance;

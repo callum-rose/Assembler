@@ -21,6 +21,9 @@ namespace Assembler.Parsing.Phase3
 				case ExpressionRef<T> expressionRef:
 					return new ExpressionContainerProvider<T>(BuildExpressionContainer(expressionRef, variables, expressions));
 
+				case None<T>:
+					return NullValueProvider<T>.Instance;
+
 				default:
 					throw new Exception($"Unsupported ValueWrapper type: {wrapper?.GetType()}");
 			}
@@ -51,7 +54,14 @@ namespace Assembler.Parsing.Phase3
 					args[i] = argProviders[i].Value;
 				}
 
-				return (TReturn)@delegate.DynamicInvoke(args);
+				try
+				{
+					return (TReturn)@delegate.DynamicInvoke(args);
+				}
+				catch (Exception e)
+				{
+					throw new Exception($"Failed to evaluate expression '{expressionRef.ExpressionId}' to '{typeof(TReturn)}' with arguments: {string.Join(", ", expressionRef.Arguments)}", e);
+				}
 			};
 
 			return new ExpressionContainer<TReturn>(curried);

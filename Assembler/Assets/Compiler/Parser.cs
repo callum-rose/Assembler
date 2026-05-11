@@ -1256,6 +1256,36 @@ namespace Assembler.Compiler.Compiler
 		{
 			var memberName = Expect(TokenType.Identifier).Value;
 
+			// Detect "type sentinel" used for static member access (e.g. UnityEngine.Random.Range(...)).
+			// ParsePrimary returns Expression.Constant(type, typeof(Type)) when an identifier resolves to a Type.
+			Type? staticTargetType = null;
+			if (instance is ConstantExpression ce && ce.Type == typeof(Type) && ce.Value is Type tt)
+			{
+				staticTargetType = tt;
+			}
+
+			// Handle nested type / namespace continuation (e.g. UnityEngine.Random where UnityEngine alone
+			// isn't a Type yet). If we have a "namespace sentinel", the previous step stored the partial
+			// dotted name in _pendingNamespacePrefix; try to resolve again with the new segment.
+			if (staticTargetType == null && instance is ConstantExpression ns && ns.Type == typeof(string) &&
+			    ns.Value is string nsPrefix && nsPrefix.StartsWith("__ns:"))
+			{
+				var combined = nsPrefix.Substring(5) + "." + memberName;
+				var resolved = TryResolveType(combined);
+				if (resolved != null)
+				{
+					return Expression.Constant(resolved, typeof(Type));
+				}
+				// Still not a full type - keep accumulating.
+				return Expression.Constant("__ns:" + combined, typeof(string));
+			}
+
+			// Static member access on a resolved Type.
+			if (staticTargetType != null)
+			{
+				return ParseStaticMemberAccess(staticTargetType, memberName);
+			}
+
 			// Check if it's a method call
 			if (Current.Type == TokenType.LeftParen)
 			{
@@ -1815,12 +1845,49 @@ namespace Assembler.Compiler.Compiler
 			{
 				var value = _tokens[_position - 1].Value;
 
-				if (value.Contains('.'))
+				// Numeric literal suffixes: 2f, 2F (float), 2d, 2D (double), 2m, 2M (decimal),
+				// 2L (long), 2u (uint), 2ul / 2uL (ulong). The lexer emits these as a separate
+				// Identifier token immediately after the number.
+				if (Current.Type == TokenType.Identifier)
 				{
-					return Expression.Constant(double.Parse(value));
+					var suffix = Current.Value;
+					switch (suffix)
+					{
+						case "f":
+						case "F":
+							Advance();
+							return Expression.Constant(float.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+						case "d":
+						case "D":
+							Advance();
+							return Expression.Constant(double.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+						case "m":
+						case "M":
+							Advance();
+							return Expression.Constant(decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+						case "l":
+						case "L":
+							Advance();
+							return Expression.Constant(long.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+						case "u":
+						case "U":
+							Advance();
+							return Expression.Constant(uint.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+						case "ul":
+						case "uL":
+						case "Ul":
+						case "UL":
+							Advance();
+							return Expression.Constant(ulong.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+					}
 				}
 
-				return Expression.Constant(int.Parse(value));
+				if (value.Contains('.'))
+				{
+					return Expression.Constant(double.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+				}
+
+				return Expression.Constant(int.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
 			}
 
 			if (Match(TokenType.String))
@@ -1956,7 +2023,33 @@ namespace Assembler.Compiler.Compiler
 					return Expression.PreDecrementAssign(_variables[name]);
 				}
 
-				return _variables[name];
+				if (_variables.TryGetValue(name, out var variable))
+				{
+					return variable;
+				}
+
+				// Not a known variable. If followed by a dot, it might be a namespace/type prefix
+				// (e.g. UnityEngine.Random.Range(...)). Try to resolve the dotted name as a Type;
+				// if not yet a full type, return a "namespace sentinel" so ParseMemberAccess can
+				// keep accumulating segments.
+				if (Current.Type == TokenType.Dot)
+				{
+					var asType = TryResolveType(name);
+					if (asType != null)
+					{
+						return Expression.Constant(asType, typeof(Type));
+					}
+					return Expression.Constant("__ns:" + name, typeof(string));
+				}
+
+				// Maybe a bare type reference (rare, but harmless to support).
+				var bareType = TryResolveType(name);
+				if (bareType != null)
+				{
+					return Expression.Constant(bareType, typeof(Type));
+				}
+
+				throw new Exception($"Unknown identifier '{name}' at line {Current.Line}");
 			}
 
 			if (Match(TokenType.LeftParen))
@@ -1982,25 +2075,7 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			// Try to resolve the type
-			Type? type = null;
-		
-			// First try registered types
-			if (_registeredTypes.TryGetValue(typeName, out type))
-			{
-				// Type found in registered types
-			}
-			else
-			{
-				// Try to resolve from loaded assemblies by fully qualified name
-				foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-				{
-					type = assembly.GetType(typeName);
-					if (type != null)
-					{
-						break;
-					}
-				}
-			}
+			Type? type = TryResolveType(typeName);
 
 			if (type == null)
 			{
@@ -2029,47 +2104,168 @@ namespace Assembler.Compiler.Compiler
 			if (constructor == null)
 			{
 				// Try to find compatible constructor
-				var constructors = type.GetConstructors();
-				foreach (var ctor in constructors)
+				foreach (var ctor in type.GetConstructors())
 				{
 					var parameters = ctor.GetParameters();
-					if (parameters.Length == argTypes.Length)
+					if (parameters.Length != argTypes.Length)
 					{
-						bool compatible = true;
-						for (int i = 0; i < argTypes.Length; i++)
-						{
-							if (!IsCompatibleType(argTypes[i], parameters[i].ParameterType))
-							{
-								compatible = false;
-								break;
-							}
-						}
+						continue;
+					}
 
-						if (compatible)
+					bool compatible = true;
+					for (int i = 0; i < argTypes.Length; i++)
+					{
+						if (!IsCompatibleType(argTypes[i], parameters[i].ParameterType))
 						{
-							constructor = ctor;
-							// Convert arguments if needed
-							var convertedArgs = new List<Expression>();
-							for (int i = 0; i < arguments.Count; i++)
-							{
-								if (arguments[i].Type != parameters[i].ParameterType)
-								{
-									convertedArgs.Add(Expression.Convert(arguments[i], parameters[i].ParameterType));
-								}
-								else
-								{
-									convertedArgs.Add(arguments[i]);
-								}
-							}
-							return Expression.New(constructor, convertedArgs);
+							compatible = false;
+							break;
 						}
+					}
+
+					if (compatible)
+					{
+						constructor = ctor;
+						break;
 					}
 				}
 
-				throw new Exception($"No matching constructor found for type '{typeName}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
+				if (constructor == null)
+				{
+					throw new Exception($"No matching constructor found for type '{typeName}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
+				}
 			}
 
-			return Expression.New(constructor, arguments);
+			// Always convert arguments to match the resolved constructor's parameter types.
+			var ctorParams = constructor.GetParameters();
+			var finalArgs = new List<Expression>(arguments.Count);
+			for (int i = 0; i < arguments.Count; i++)
+			{
+				if (arguments[i].Type != ctorParams[i].ParameterType)
+				{
+					finalArgs.Add(Expression.Convert(arguments[i], ctorParams[i].ParameterType));
+				}
+				else
+				{
+					finalArgs.Add(arguments[i]);
+				}
+			}
+
+			return Expression.New(constructor, finalArgs);
+		}
+
+		private Type? TryResolveType(string typeName)
+		{
+			if (_registeredTypes.TryGetValue(typeName, out var type))
+			{
+				return type;
+			}
+
+			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				var t = assembly.GetType(typeName);
+				if (t != null)
+				{
+					return t;
+				}
+			}
+
+			return null;
+		}
+
+		private Expression ParseStaticMemberAccess(Type targetType, string memberName)
+		{
+			// Static method call
+			if (Current.Type == TokenType.LeftParen)
+			{
+				Match(TokenType.LeftParen);
+
+				var arguments = new List<Expression>();
+				if (Current.Type != TokenType.RightParen)
+				{
+					do
+					{
+						arguments.Add(ParseExpression());
+					}
+					while (Match(TokenType.Comma));
+				}
+				Expect(TokenType.RightParen);
+
+				var argTypes = arguments.Select(a => a.Type).ToArray();
+
+				// Try exact-signature lookup first
+				var method = targetType.GetMethod(
+					memberName,
+					BindingFlags.Public | BindingFlags.Static,
+					null,
+					argTypes,
+					null);
+
+				// Fall back to overload resolution by name + arg count
+				if (method == null)
+				{
+					var candidates = targetType
+						.GetMethods(BindingFlags.Public | BindingFlags.Static)
+						.Where(m => m.Name == memberName)
+						.ToList();
+
+					method = FindBestMethodOverload(candidates, argTypes);
+				}
+
+				if (method == null)
+				{
+					throw new Exception(
+						$"No matching static method '{memberName}' on type '{targetType.FullName}' " +
+						$"with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
+				}
+
+				var parameters = method.GetParameters();
+				var convertedArgs = new List<Expression>();
+				for (int i = 0; i < arguments.Count; i++)
+				{
+					if (arguments[i].Type != parameters[i].ParameterType)
+					{
+						convertedArgs.Add(Expression.Convert(arguments[i], parameters[i].ParameterType));
+					}
+					else
+					{
+						convertedArgs.Add(arguments[i]);
+					}
+				}
+
+				return Expression.Call(null, method, convertedArgs);
+			}
+
+			// Static property / field access (and possible assignment)
+			var property = targetType.GetProperty(memberName, BindingFlags.Public | BindingFlags.Static);
+			if (property != null)
+			{
+				if (Match(TokenType.Assign))
+				{
+					var value = ParseExpression();
+					return Expression.Assign(Expression.Property(null, property), value);
+				}
+				return Expression.Property(null, property);
+			}
+
+			var field = targetType.GetField(memberName, BindingFlags.Public | BindingFlags.Static);
+			if (field != null)
+			{
+				if (Match(TokenType.Assign))
+				{
+					var value = ParseExpression();
+					return Expression.Assign(Expression.Field(null, field), value);
+				}
+				return Expression.Field(null, field);
+			}
+
+			// Could be a nested type: Foo.Bar where Bar is a nested type of Foo.
+			var nested = targetType.GetNestedType(memberName, BindingFlags.Public);
+			if (nested != null)
+			{
+				return Expression.Constant(nested, typeof(Type));
+			}
+
+			throw new Exception($"Static member '{memberName}' not found on type '{targetType.FullName}'");
 		}
 
 		private Expression ParseLambdaWithType(Type? parameterType)

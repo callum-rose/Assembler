@@ -173,7 +173,6 @@ Entities:
       - ball
     Position: !expr 
       ExpressionId: random ball initial position
-      Arguments: [ ]
     Behaviours:
       - Type: sphere collider
         Id: sphere collider
