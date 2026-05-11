@@ -88,6 +88,11 @@ Expressions:
   - Id: random ball initial position
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(0, UnityEngine.Random.Range(-2f, 2f), 0);"
+  - Id: is game over
+    ArgumentTypes: [ int, int, int]
+    ArgumentNames: [ a, b, w ]
+    ReturnType: bool
+    Expression: "a >= w || b >= w;"
 
 Entities:
   - Id: left paddle
@@ -335,3 +340,10 @@ Entities:
             Arguments:
               - !var right score
               - !const score to win
+
+GameOverCondition: !expr
+  ExpressionId: is game over
+  Arguments:
+    - !var left score
+    - !var right score
+    - !const score to win

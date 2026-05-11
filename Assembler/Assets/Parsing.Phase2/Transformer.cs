@@ -48,7 +48,9 @@ namespace Assembler.Parsing.Phase2
 					e.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ?? Array.Empty<BehaviourInfo>()))
 				.ToArray() ?? Array.Empty<EntityInfo>();
 
-			return new GameInfo(info, world, physics, variables, expressions, entities);
+			var gameOverCondition = Wrap<bool>(allValues, gameDto.GameOverCondition);
+
+			return new GameInfo(info, world, physics, variables, expressions, entities, gameOverCondition);
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues, BehaviourDto behaviourDto)

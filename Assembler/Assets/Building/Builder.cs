@@ -83,6 +83,9 @@ namespace Assembler.Building
 			{
 				initialise(behaviourRegistry);
 			}
+			
+			// 5. Run game over condition
+			
 		}
 	}
 

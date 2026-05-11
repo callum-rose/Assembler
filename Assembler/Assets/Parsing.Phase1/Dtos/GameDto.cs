@@ -11,5 +11,6 @@ namespace Assembler.Parsing.Phase1.Dtos
         public List<ValueDto>? Variables { get; init; }
         public List<ExpressionDto>? Expressions { get; init; }
         public List<EntityDto>? Entities { get; init; }
+        public object? GameOverCondition { get; init; }
     }
 }
