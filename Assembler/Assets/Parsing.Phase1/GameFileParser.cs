@@ -12,10 +12,12 @@ namespace Assembler.Parsing.Phase1
 			.WithTagMapping("!var", typeof(VarRefDto))
 			.WithTagMapping("!const", typeof(ConstRefDto))
 			.WithTagMapping("!expr", typeof(ExprRefDto))
+			.WithTagMapping("!parameter", typeof(ParamRefDto))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
 			.WithTypeConverter(new ConstTypeConverter())
 			.WithTypeConverter(new ExprTypeConverter())
+			.WithTypeConverter(new ParamTypeConverter())
 			.WithNodeDeserializer(new ObjectNodeDeserializer())
 			.Build();
 

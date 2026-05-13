@@ -1,5 +1,5 @@
 {
-    "name": "Test",
+    "name": "Tests.Compiler",
     "optionalUnityReferences": [
         "TestAssemblies"
     ],

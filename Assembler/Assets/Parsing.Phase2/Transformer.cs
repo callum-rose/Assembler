@@ -41,11 +41,36 @@ namespace Assembler.Parsing.Phase2
 				e.ReturnType ?? string.Empty,
 				e.Expression ?? string.Empty)).ToArray();
 
-			var entities = gameDto.Entities?.Select(e => new EntityInfo(e.Id ?? string.Empty,
-					e.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
-					Wrap<Vector3>(allValues, e.Position),
-					Wrap<Vector3>(allValues, e.Rotation),
-					e.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ?? Array.Empty<BehaviourInfo>()))
+			var entities = gameDto.Entities?.Select(entity =>
+				{
+					if (!string.IsNullOrEmpty(entity.Template))
+					{
+						var entityTemplate = gameDto.Templates?.FirstOrDefault(t => t.Id == entity.Template);
+						
+						if (entityTemplate == null)
+						{
+							throw new ParsingException($"Template '{entity.Template}' not found for entity '{entity.Id}'");
+						}
+
+						entity = entityTemplate with
+						{
+							Id = entity.Id,
+							Tags = (entity.Tags ?? new List<string>()).Concat(entityTemplate.Tags ?? new List<string>()).ToList(),
+							Position = entity.Position ?? entityTemplate.Position,
+							Rotation = entity.Rotation ?? entityTemplate.Rotation,
+							Behaviours = (entity.Behaviours ?? new List<BehaviourDto>()).Concat(entityTemplate.Behaviours ?? new List<BehaviourDto>()).ToList()
+						};
+					}
+
+					var parameters = entity.Parameters ?? new Dictionary<string, object>();
+
+					return new EntityInfo(entity.Id ?? string.Empty,
+						entity.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
+						Wrap<Vector3>(allValues, entity.Position, parameters: parameters),
+						Wrap<Vector3>(allValues, entity.Rotation, parameters: parameters),
+						entity.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
+						Array.Empty<BehaviourInfo>());
+				})
 				.ToArray() ?? Array.Empty<EntityInfo>();
 
 			var gameOverCondition = Wrap<bool>(allValues, gameDto.GameOverCondition);
@@ -53,7 +78,8 @@ namespace Assembler.Parsing.Phase2
 			return new GameInfo(info, world, physics, variables, expressions, entities, gameOverCondition);
 		}
 
-		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues, BehaviourDto behaviourDto)
+		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues,
+			BehaviourDto behaviourDto, IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
 			var props = behaviourDto.Properties;
@@ -62,29 +88,29 @@ namespace Assembler.Parsing.Phase2
 			{
 				"box collider" => new BoxColliderInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Size")),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
 
 				"sphere collider" => new SphereColliderInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Radius")),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"))),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Radius"), parameters: parameters),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
 
 				"rigidbody" => new RigidbodyInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("UseGravity"))),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("UseGravity"), parameters: parameters)),
 
 				"velocity" => new VelocityInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Velocity"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Velocity"), parameters: parameters)),
 
 				"translate" => new TranslateInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Displacement"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Displacement"), parameters: parameters)),
 
 				"key hold trigger" => new KeyHoldTriggerInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Key"))),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Key"), parameters: parameters)),
 
 				"collision enter trigger" => new CollisionEnterTriggerInfo(id,
 					GetListeners(behaviourDto),
@@ -96,41 +122,41 @@ namespace Assembler.Parsing.Phase2
 
 				"vector variable setter" => new VariableSetterInfo<Vector3>(id,
 					GetListeners(behaviourDto),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Value"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"int variable setter" => new VariableSetterInfo<int>(id,
 					GetListeners(behaviourDto),
-					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<int>(resolvedValues, props?.GetValueOrDefault("Value"))),
+					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
+					Wrap<int>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"float variable setter" => new VariableSetterInfo<float>(id,
 					GetListeners(behaviourDto),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Value"))),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"bool variable setter" => new VariableSetterInfo<bool>(id,
 					GetListeners(behaviourDto),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Value"))),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"string variable setter" => new VariableSetterInfo<string>(id,
 					GetListeners(behaviourDto),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId")),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Value"))),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"position setter" => new SetPositionInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"), parameters: parameters)),
 
 				"camera" => new CameraInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View")),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"))),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View"), parameters: parameters),
+					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters)),
 
 				"condition trigger" => new ConditionTriggerInfo(id,
 					GetListeners(behaviourDto),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Condition"))),
+					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Condition"), parameters: parameters)),
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};
@@ -178,10 +204,21 @@ namespace Assembler.Parsing.Phase2
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		private static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw, T? fallback = default)
+		private static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw,
+			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			switch (raw)
 			{
+				case ParamRefDto paramRefDto:
+				{
+					if (parameters == null || !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue))
+					{
+						throw new ParsingException($"Parameter '{paramRefDto.Id}' not found");
+					}
+
+					return Wrap(resolvedValues, paramValue, fallback);
+				}
+
 				case ConstRefDto constRefDto:
 					return new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues));
 

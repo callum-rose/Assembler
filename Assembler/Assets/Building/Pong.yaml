@@ -69,6 +69,81 @@ Variables:
   - Id: ball velocity
     Value: !vec { X: 1, Y: 1 }
 
+Templates:
+  - Id: paddle_template
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const paddle width
+            Y: !const paddle height
+          IsTrigger: false
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !parameter up_key
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle up speed
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !parameter down_key
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec
+            X: 0
+            Y: !const paddle down speed
+  - Id: wall_template
+    Tags:
+      - wall
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !vec
+            X: !const wall width
+            Y: !const wall height
+  - Id: goal_template
+    Tags:
+      - goal
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const goal size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: goal trigger
+        Properties:
+          TagsToDetect:
+            - ball
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: score incrementer
+          - EntityId: ball
+            BehaviourId: ball resetter
+      - Type: int variable setter
+        Id: score incrementer
+        Properties:
+          VariableId: !parameter score_var
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !parameter score_var
+              - !const score per goal
+
 Expressions:
   - Id: vec multiply
     ArgumentTypes: [ vector, vector ]
@@ -96,81 +171,21 @@ Expressions:
 
 Entities:
   - Id: left paddle
-    Tags:
-      - left paddle
+    Template: paddle_template
+    Tags: [ left paddle ]
     Position: !const left paddle initial position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !vec
-            X: !const paddle width
-            Y: !const paddle height
-          IsTrigger: false
-      - Type: key hold trigger
-        Id: up key trigger
-        Properties:
-          Key: !const left paddle up key
-        Listeners:
-          - EntityId: left paddle
-            BehaviourId: move up
-      - Type: translate
-        Id: move up
-        Properties:
-          Displacement: !vec
-            X: 0
-            Y: !const paddle up speed
-      - Type: key hold trigger
-        Id: down key trigger
-        Properties:
-          Key: !const left paddle down key
-        Listeners:
-          - EntityId: left paddle
-            BehaviourId: move down
-      - Type: translate
-        Id: move down
-        Properties:
-          Displacement: !vec
-            X: 0
-            Y: !const paddle down speed
+    Parameters:
+      up_key: !const left paddle up key
+      down_key: !const left paddle down key
+      self_id: left paddle
   - Id: right paddle
-    Tags:
-      - right paddle
+    Template: paddle_template
+    Tags: [ right paddle ]
     Position: !const right paddle initial position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !vec
-            X: !const paddle width
-            Y: !const paddle height
-          IsTrigger: false
-      - Type: key hold trigger
-        Id: up key trigger
-        Properties:
-          Key: !const right paddle up key
-        Listeners:
-          - EntityId: right paddle
-            BehaviourId: move up
-      - Type: translate
-        Id: move up
-        Properties:
-          Displacement: !vec
-            X: 0
-            Y: !const paddle up speed
-      - Type: key hold trigger
-        Id: down key trigger
-        Properties:
-          Key: !const right paddle down key
-        Listeners:
-          - EntityId: right paddle
-            BehaviourId: move down
-      - Type: translate
-        Id: move down
-        Properties:
-          Displacement: !vec
-            X: 0
-            Y: !const paddle down speed
+    Parameters:
+      up_key: !const right paddle up key
+      down_key: !const right paddle down key
+      self_id: right paddle
   - Id: ball
     Tags:
       - ball
@@ -231,85 +246,23 @@ Entities:
             ExpressionId: random ball initial position
             Arguments: [ ]
   - Id: upper wall
-    Tags:
-      - wall
+    Template: wall_template
     Position: !const upper wall position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !vec
-            X: !const wall width
-            Y: !const wall height
   - Id: lower wall
-    Tags:
-      - wall
+    Template: wall_template
     Position: !const lower wall position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !vec
-            X: !const wall width
-            Y: !const wall height
   - Id: left goal
-    Tags:
-      - goal
+    Template: goal_template
     Position: !const left goal position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !const goal size
-          IsTrigger: true
-      - Type: trigger enter trigger
-        Id: goal trigger
-        Properties:
-          TagsToDetect:
-            - ball
-        Listeners:
-          - EntityId: left goal
-            BehaviourId: right score incrementer
-          - EntityId: ball
-            BehaviourId: ball resetter
-      - Type: int variable setter
-        Id: right score incrementer
-        Properties:
-          VariableId: !var right score
-          Value: !expr
-            ExpressionId: int add
-            Arguments:
-              - !var right score
-              - !const score per goal
+    Parameters:
+      self_id: left goal
+      score_var: !var right score
   - Id: right goal
-    Tags:
-      - goal
+    Template: goal_template
     Position: !const right goal position
-    Behaviours:
-      - Type: box collider
-        Id: box collider
-        Properties:
-          Size: !const goal size
-          IsTrigger: true
-      - Type: trigger enter trigger
-        Id: goal trigger
-        Properties:
-          TagsToDetect:
-            - ball
-        Listeners:
-          - EntityId: right goal
-            BehaviourId: left score incrementer
-          - EntityId: ball
-            BehaviourId: ball resetter
-      - Type: int variable setter
-        Id: left score incrementer
-        Properties:
-          VariableId: !var left score
-          Value: !expr
-            ExpressionId: int add
-            Arguments:
-              - !var left score
-              - !const score per goal
+    Parameters:
+      self_id: right goal
+      score_var: !var left score
   - Id: camera
     Tags:
       - camera
