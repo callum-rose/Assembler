@@ -41,54 +41,50 @@ namespace Assembler.Parsing.Phase2
 				e.ReturnType ?? string.Empty,
 				e.Expression ?? string.Empty)).ToArray();
 
-			var entities = gameDto.Entities?.Select(entity =>
+			var templates = gameDto.Templates?
+				.Select(t => new ConcreteEntityInfo(
+					t.Id ?? string.Empty,
+					NullEntityInfo.Instance,
+					t.Tags ?? new List<string>(),
+					Wrap<Vector3>(allValues, t.Position),
+					Wrap<Vector3>(allValues, t.Rotation),
+					t.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ??
+					Array.Empty<BehaviourInfo>()))
+				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
+
+			var entities = gameDto.Entities?.Select(entityDto =>
 				{
-					EntityDto entityToUse;
+					EntityInfo template;
 					Dictionary<string, object> parameters;
 
-					var entityId = entity.Id ?? string.Empty;
+					var entityId = entityDto.Id ?? string.Empty;
 
-					if (entity.Template is null)
+					if (entityDto.Template is null)
 					{
-						entityToUse = entity;
+						template = NullEntityInfo.Instance;
 						parameters = new Dictionary<string, object>();
 					}
 					else
 					{
-						var entityTemplate = gameDto.Templates?.FirstOrDefault(t => t.Id == entity.Template.Id);
+						template = templates.First(t => t.Id == entityDto.Template.Id);
 
-						if (entityTemplate is null)
-						{
-							throw new ParsingException($"Template '{entity.Template}' not found for entity '{entity.Id}'");
-						}
-
-						entityToUse = entityTemplate with
-						{
-							Id = entity.Id,
-							Tags =
-							(entity.Tags ?? new List<string>()).Concat(entityTemplate.Tags ?? new List<string>()).ToList(),
-							Position = entity.Position ?? entityTemplate.Position,
-							Rotation = entity.Rotation ?? entityTemplate.Rotation,
-							Behaviours = (entity.Behaviours ?? new List<BehaviourDto>())
-							.Concat(entityTemplate.Behaviours ?? new List<BehaviourDto>()).ToList(),
-						};
-
-						parameters = entity.Template.Parameters ?? new Dictionary<string, object>();
+						parameters = entityDto.Template.Parameters ?? new Dictionary<string, object>();
 						parameters.Add("self_id", entityId);
 					}
 
-					return new EntityInfo(entityId,
-						entityToUse.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
-						Wrap<Vector3>(allValues, entityToUse.Position, parameters: parameters),
-						Wrap<Vector3>(allValues, entityToUse.Rotation, parameters: parameters),
-						entityToUse.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
+					return new ConcreteEntityInfo(entityId,
+						template,
+						entityDto.Tags ?? new List<string>(),
+						Wrap<Vector3>(allValues, entityDto.Position, parameters: parameters),
+						Wrap<Vector3>(allValues, entityDto.Rotation, parameters: parameters),
+						entityDto.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
 						Array.Empty<BehaviourInfo>());
 				})
 				.ToArray() ?? Array.Empty<EntityInfo>();
 
 			var gameOverCondition = Wrap<bool>(allValues, gameDto.GameOverCondition);
 
-			return new GameInfo(info, world, physics, variables, expressions, entities, gameOverCondition);
+			return new GameInfo(info, world, physics, variables, expressions, templates, entities, gameOverCondition);
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues,
@@ -170,6 +166,11 @@ namespace Assembler.Parsing.Phase2
 				"condition trigger" => new ConditionTriggerInfo(id,
 					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Condition"), parameters: parameters)),
+
+				"spawner" => new SpawnerInfo(id,
+					GetListeners(behaviourDto, resolvedValues, parameters),
+					Wrap<string>(resolvedValues, props?.GetValueOrDefault("TemplateId")),
+					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};

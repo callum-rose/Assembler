@@ -218,9 +218,14 @@ namespace Assembler.Parsing.Phase3
 
 	public sealed class SpawnerData : BehaviourData
 	{
-		public BehaviourInfo Info { get; }
+		public Action Create { get; }
+		
+		public SpawnerData(string id, IReadOnlyList<Action> listeners, Action create) : base(id, listeners) => Create = create;
+	}
 
-		public SpawnerData(string id, IReadOnlyList<Action> listeners, BehaviourInfo info) : base(id, listeners) => Info = info;
+	public sealed class DestroyData : BehaviourData
+	{
+		public DestroyData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
 	}
 
 	public class VariableSetterData<T> : BehaviourData

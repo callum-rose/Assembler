@@ -32,3 +32,9 @@
 - Cleanup
   - Unload assets
   - Dispose of entities and behaviours
+
+Spawning
+- Spawner needs information about how to construct a new entity
+- Information in form of templates
+- Templates require access to variables, expressions and also parameters
+- 

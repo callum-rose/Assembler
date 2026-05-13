@@ -16,4 +16,6 @@ namespace Assembler.Parsing.Phase2.Info
 	public sealed record ExpressionSource<T>(
 		string ExpressionId,
 		IReadOnlyList<ValueSource<object>> Arguments) : ValueSource<T>;
+	
+	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>;
 }

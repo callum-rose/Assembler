@@ -7,7 +7,7 @@ namespace Assembler.Parsing.Phase3
 {
 	public class VariableRegistry
 	{
-		private readonly Dictionary<string, object> _variables = new();
+		private readonly Dictionary<string, ValueContainer> _variables = new();
 
 		public void Register(VariableInfo variableInfo)
 		{

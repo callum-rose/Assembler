@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Phase3
 {
-	public sealed class ValueContainer<T>
+	public abstract class ValueContainer { }
+	
+	public sealed class ValueContainer<T> : ValueContainer
 	{
 		public event Action<T>? ValueChanged;
 
@@ -26,7 +28,7 @@ namespace Assembler.Parsing.Phase3
 
 		public ValueContainer(T initialValue)
 		{
-			Value = initialValue;
+			_value = initialValue;
 		}
 	}
 }

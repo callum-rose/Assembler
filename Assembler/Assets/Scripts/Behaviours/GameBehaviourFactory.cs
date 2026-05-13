@@ -4,25 +4,22 @@ using System.Linq;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
+using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Behaviours.VariableUpdaters;
-using Assembler.Parsing.Phase2;
+using Assembler.Core;
 using Assembler.Parsing.Phase2.Info;
 using Assembler.Parsing.Phase3;
 using UnityEngine;
 
-namespace Assembler.Core
+namespace Assembler.Behaviours
 {
 	public static class GameBehaviourFactory
 	{
-		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<BehaviourDescriptor> listeners,
-			IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> listenerRegistry) =>
-			listeners.Select(d => listenerRegistry[d]).Select(b => (Action)b.Execute).ToArray();
-
-		public static (GameBehaviour, Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>) AddComponent(
+		public static (GameBehaviour, Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>) Create(
 			GameObject gameObject,
 			BehaviourInfo behaviourInfo,
 			VariableRegistry variableRegistry,
@@ -362,21 +359,24 @@ namespace Assembler.Core
 							info.Listeners.ToActions(listenerRegistry))));
 				}
 
+				case SpawnerInfo spawnerInfo:
+				{
+					var gameBehaviour = gameObject.AddComponent<SpawnerBehaviour>();
+					gameBehaviour.Variables = variableRegistry;
+					gameBehaviour.ExpressionRegistry = compiledExpressionRegistry;
+
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new SpawnerData(spawnerInfo.Id,
+						spawnerInfo.Listeners.ToActions(listenerRegistry),
+						() => GameEntityFactory.Create())));
+				}
+
 				default:
 					throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 			}
 		}
 
-		private static IValueProvider<bool> ResolveConditionExpression(
-			ValueSource<string> expressionIdSource,
-			System.Collections.Generic.IReadOnlyList<ValueSource<object>> arguments,
-			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions)
-		{
-			// Build a synthetic ExpressionRef<bool> and resolve it via the standard path.
-			var idProvider = expressionIdSource.Resolve(variables, expressions);
-			var exprRef = new ExpressionSource<bool>(idProvider.Value, arguments);
-			return exprRef.Resolve(variables, expressions);
-		}
+		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> listenerRegistry) =>
+			listeners.Select(d => listenerRegistry[d]).Select(b => (Action)b.Execute).ToArray();
 	}
 }

@@ -32,7 +32,8 @@ namespace Assembler.Parsing.Phase2.Info
 	public record CollisionStayTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TagsToDetect) : BehaviourInfo(Id, Listeners);
 	public record WhenAllInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TriggerIds) : BehaviourInfo(Id, Listeners);
 	public record WhenAnyInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TriggerIds) : BehaviourInfo(Id, Listeners);
-	public record SpawnerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> ObjectName, IReadOnlyList<string> Tags, ValueSource<Vector3> Position, ValueSource<Vector3> Rotation, IReadOnlyList<string> BehaviourIds) : BehaviourInfo(Id, Listeners);
+	public record SpawnerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> TemplateId, ValueSource<Vector3> Wrap) : BehaviourInfo(Id, Listeners);
+
 	public record VariableSetterInfo<T>(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<T> ValueToSet, ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners);
 	public record SetPositionInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Vector3> ValueExpression) : BehaviourInfo(Id, Listeners);
 	public record CameraInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> View, ValueSource<float> Size) : BehaviourInfo(Id, Listeners);

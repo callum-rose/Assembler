@@ -1,8 +1,11 @@
 {
-    "name": "Assembler.Parsing.Phase2",
+    "name": "Assembler.Behaviours",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.Parsing.Phase1"
+        "Assembler.Parsing.Phase2",
+        "Assembler.Core",
+        "Assembler.Parsing.Phase3",
+        "Assembler.Extensions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

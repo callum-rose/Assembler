@@ -9,6 +9,7 @@ namespace Assembler.Parsing.Phase2.Info
 		// IReadOnlyList<ValueInfo> Constants,
 		IReadOnlyList<VariableInfo> Variables,
 		IReadOnlyList<ExpressionInfo> Expressions,
+		IReadOnlyList<EntityInfo> Templates,
 		IReadOnlyList<EntityInfo> Entities,
 		ValueSource<bool> GameOverCondition);
 }

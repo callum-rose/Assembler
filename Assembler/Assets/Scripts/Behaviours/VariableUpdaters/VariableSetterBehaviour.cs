@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.VariableUpdaters
 		public override void Execute()
 		{
 			Data.ValueToSet.Value = Data.ValueToGet.Value;
-			Debug.Log($"{_id} set to {Data.ValueToSet.Value}");
+			Debug.Log($"{Id} set to {Data.ValueToSet.Value}");
 		}
 	}
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Assembler.Compiler.Compiler;
 using Assembler.Core;
 using Assembler.Extensions;
 using Assembler.Parsing.Phase1;
@@ -38,44 +39,27 @@ namespace Assembler.Building
 				["vector"] = typeof(Vector3)
 			};
 
-			var (variableRegistry, compiledExpressionsRegistry) = GameInitialiser.Initialise(gameInfo, typeRegistry);
+			var variableRegistry = new VariableRegistry();
 
-			// 2. Apply Physics settings
-			Physics.gravity = gameInfo.Physics.Gravity;
+			foreach (var variableInfo in gameInfo.Variables)
+			{
+				variableRegistry.Register(variableInfo);
+			}
 
-			var entityRegistry = new Dictionary<string, GameEntity>();
+			var compiledExpressionsRegistry = new CompiledExpressionsRegistry(typeRegistry, new ExpressionMethodCompiler());
+
+			foreach (var expressionInfo in gameInfo.Expressions)
+			{
+				compiledExpressionsRegistry.CompileAndRegister(expressionInfo);
+			}
+
+			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
-
 			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
 
-			// 3. Instantiate Entities and Add Behaviours
 			foreach (var entityInfo in gameInfo.Entities)
 			{
-				var gameObject = new GameObject(entityInfo.Id)
-				{
-					transform =
-					{
-						position = entityInfo.InitialPosition.Resolve(variableRegistry, compiledExpressionsRegistry).Value,
-						rotation = entityInfo.InitialRotation.Resolve(variableRegistry, compiledExpressionsRegistry).Value
-							.FromEuler()
-					}
-				};
-
-				var gameEntity = gameObject.AddComponent<GameEntity>();
-				gameEntity.Tags = entityInfo.Tags.ToArray();
-
-				entityRegistry[entityInfo.Id] = gameEntity;
-
-				foreach (var behaviourInfo in entityInfo.Behaviours)
-				{
-					var (gameBehaviour, initialise) = GameBehaviourFactory.AddComponent(gameObject,
-						behaviourInfo,
-						variableRegistry,
-						compiledExpressionsRegistry);
-
-					behaviourRegistry.Add(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
-					initialisations.Add(initialise);
-				}
+				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, behaviourRegistry, initialisations);
 			}
 
 			// 4. Initialise Behaviours
@@ -83,10 +67,8 @@ namespace Assembler.Building
 			{
 				initialise(behaviourRegistry);
 			}
-			
+
 			// 5. Run game over condition
-			
 		}
 	}
-
 }

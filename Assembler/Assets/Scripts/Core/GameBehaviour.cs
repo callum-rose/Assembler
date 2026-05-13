@@ -7,12 +7,13 @@ namespace Assembler.Core
 {
 	public abstract class GameBehaviour : MonoBehaviour
 	{
-		protected string _id;
+		protected string Id { get; private set; }
+		
 		private IReadOnlyList<Action> _listeners;
 
 		public abstract void Execute();
 
-		protected void SetBase(BehaviourData behaviourData) => (_id, _listeners) = (behaviourData.Id, behaviourData.Listeners);
+		protected void SetBase(BehaviourData behaviourData) => (Id, _listeners) = (behaviourData.Id, behaviourData.Listeners);
 
 		protected void NotifyListeners()
 		{
