@@ -43,32 +43,45 @@ namespace Assembler.Parsing.Phase2
 
 			var entities = gameDto.Entities?.Select(entity =>
 				{
-					if (!string.IsNullOrEmpty(entity.Template))
+					EntityDto entityToUse;
+					Dictionary<string, object> parameters;
+
+					var entityId = entity.Id ?? string.Empty;
+
+					if (entity.Template is null)
 					{
-						var entityTemplate = gameDto.Templates?.FirstOrDefault(t => t.Id == entity.Template);
-						
-						if (entityTemplate == null)
+						entityToUse = entity;
+						parameters = new Dictionary<string, object>();
+					}
+					else
+					{
+						var entityTemplate = gameDto.Templates?.FirstOrDefault(t => t.Id == entity.Template.Id);
+
+						if (entityTemplate is null)
 						{
 							throw new ParsingException($"Template '{entity.Template}' not found for entity '{entity.Id}'");
 						}
 
-						entity = entityTemplate with
+						entityToUse = entityTemplate with
 						{
 							Id = entity.Id,
-							Tags = (entity.Tags ?? new List<string>()).Concat(entityTemplate.Tags ?? new List<string>()).ToList(),
+							Tags =
+							(entity.Tags ?? new List<string>()).Concat(entityTemplate.Tags ?? new List<string>()).ToList(),
 							Position = entity.Position ?? entityTemplate.Position,
 							Rotation = entity.Rotation ?? entityTemplate.Rotation,
-							Behaviours = (entity.Behaviours ?? new List<BehaviourDto>()).Concat(entityTemplate.Behaviours ?? new List<BehaviourDto>()).ToList()
+							Behaviours = (entity.Behaviours ?? new List<BehaviourDto>())
+							.Concat(entityTemplate.Behaviours ?? new List<BehaviourDto>()).ToList(),
 						};
+
+						parameters = entity.Template.Parameters ?? new Dictionary<string, object>();
+						parameters.Add("self_id", entityId);
 					}
 
-					var parameters = entity.Parameters ?? new Dictionary<string, object>();
-
-					return new EntityInfo(entity.Id ?? string.Empty,
-						entity.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
-						Wrap<Vector3>(allValues, entity.Position, parameters: parameters),
-						Wrap<Vector3>(allValues, entity.Rotation, parameters: parameters),
-						entity.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
+					return new EntityInfo(entityId,
+						entityToUse.Tags ?? (IReadOnlyList<string>)Array.Empty<string>(),
+						Wrap<Vector3>(allValues, entityToUse.Position, parameters: parameters),
+						Wrap<Vector3>(allValues, entityToUse.Rotation, parameters: parameters),
+						entityToUse.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
 						Array.Empty<BehaviourInfo>());
 				})
 				.ToArray() ?? Array.Empty<EntityInfo>();
@@ -87,84 +100,92 @@ namespace Assembler.Parsing.Phase2
 			return behaviourDto.Type switch
 			{
 				"box collider" => new BoxColliderInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
 
 				"sphere collider" => new SphereColliderInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Radius"), parameters: parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
 
 				"rigidbody" => new RigidbodyInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("UseGravity"), parameters: parameters)),
 
 				"velocity" => new VelocityInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Velocity"), parameters: parameters)),
 
 				"translate" => new TranslateInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Displacement"), parameters: parameters)),
 
 				"key hold trigger" => new KeyHoldTriggerInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Key"), parameters: parameters)),
 
 				"collision enter trigger" => new CollisionEnterTriggerInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					ConvertStringList(props?.GetValueOrDefault("TagsToDetect"))),
 
 				"trigger enter trigger" => new TriggerEnterTriggerInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					ConvertStringList(props?.GetValueOrDefault("TagsToDetect"))),
 
 				"vector variable setter" => new VariableSetterInfo<Vector3>(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"int variable setter" => new VariableSetterInfo<int>(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
 					Wrap<int>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"float variable setter" => new VariableSetterInfo<float>(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"bool variable setter" => new VariableSetterInfo<bool>(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"string variable setter" => new VariableSetterInfo<string>(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
 
 				"position setter" => new SetPositionInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"), parameters: parameters)),
 
 				"camera" => new CameraInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View"), parameters: parameters),
 					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters)),
 
 				"condition trigger" => new ConditionTriggerInfo(id,
-					GetListeners(behaviourDto),
+					GetListeners(behaviourDto, resolvedValues, parameters),
 					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Condition"), parameters: parameters)),
 
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};
 		}
 
-		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto) =>
+		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
+			IReadOnlyList<VariableInfo> variables, IReadOnlyDictionary<string, object> parameters) =>
 			behaviourDto.Listeners
-				?.Select(l => new BehaviourDescriptor(l.EntityId ?? string.Empty, l.BehaviourId ?? string.Empty)).ToArray() ??
+				?.Select(l => new BehaviourDescriptor(l.EntityId switch
+					{
+						ParamRefDto paramRefDto => (string)parameters[paramRefDto.Id ?? string.Empty],
+						ConstRefDto constDto => constDto.ResolveValue<string>(variables),
+						string behaviourId => behaviourId,
+						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
+					},
+					l.BehaviourId ?? string.Empty)).ToArray() ??
 			Array.Empty<BehaviourDescriptor>();
 
 		private static IReadOnlyList<BehaviourDescriptor> ConvertListeners(object? obj) =>
@@ -228,7 +249,7 @@ namespace Assembler.Parsing.Phase2
 				case ExprRefDto exprRefDto:
 				{
 					var args = exprRefDto.Arguments ?? Array.Empty<object>();
-					var wrappedArgs = args.Select(a => Wrap<object>(resolvedValues, a)).ToArray();
+					var wrappedArgs = args.Select(a => Wrap<object>(resolvedValues, a, parameters: parameters)).ToArray();
 					return new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty, wrappedArgs);
 				}
 
@@ -237,10 +258,10 @@ namespace Assembler.Parsing.Phase2
 
 				case VecDto vecDto when typeof(T) == typeof(Vector2):
 					return new ConstantSource<T>((T)(object)vecDto.ToVector2(resolvedValues));
-				
+
 				case VecDto vecDto:
 					return new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues));
-				
+
 				case null when fallback is not null:
 					return new ConstantSource<T>(fallback);
 

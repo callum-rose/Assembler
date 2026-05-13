@@ -164,28 +164,28 @@ Expressions:
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(0, UnityEngine.Random.Range(-2f, 2f), 0);"
   - Id: is game over
-    ArgumentTypes: [ int, int, int]
+    ArgumentTypes: [ int, int, int ]
     ArgumentNames: [ a, b, w ]
     ReturnType: bool
     Expression: "a >= w || b >= w;"
 
 Entities:
   - Id: left paddle
-    Template: paddle_template
+    Template:
+      Id: paddle_template
+      Parameters:
+        up_key: !const left paddle up key
+        down_key: !const left paddle down key
     Tags: [ left paddle ]
     Position: !const left paddle initial position
-    Parameters:
-      up_key: !const left paddle up key
-      down_key: !const left paddle down key
-      self_id: left paddle
   - Id: right paddle
-    Template: paddle_template
+    Template:
+      Id: paddle_template
+      Parameters:
+        up_key: !const right paddle up key
+        down_key: !const right paddle down key
     Tags: [ right paddle ]
     Position: !const right paddle initial position
-    Parameters:
-      up_key: !const right paddle up key
-      down_key: !const right paddle down key
-      self_id: right paddle
   - Id: ball
     Tags:
       - ball
@@ -246,23 +246,23 @@ Entities:
             ExpressionId: random ball initial position
             Arguments: [ ]
   - Id: upper wall
-    Template: wall_template
+    Template: { Id: wall_template }
     Position: !const upper wall position
   - Id: lower wall
-    Template: wall_template
+    Template: { Id: wall_template }
     Position: !const lower wall position
   - Id: left goal
-    Template: goal_template
+    Template: 
+      Id: goal_template
+      Parameters:
+        score_var: !var right score
     Position: !const left goal position
-    Parameters:
-      self_id: left goal
-      score_var: !var right score
   - Id: right goal
-    Template: goal_template
+    Template: 
+      Id: goal_template
+      Parameters:
+        score_var: !var left score
     Position: !const right goal position
-    Parameters:
-      self_id: right goal
-      score_var: !var left score
   - Id: camera
     Tags:
       - camera
