@@ -1,0 +1,360 @@
+Game:
+  Title: Snake
+  Description: >
+    A Snake-like game. Guide the head to eat food and increase your score.
+    Avoid hitting the walls. Movement is continuous (held keys), not stepped.
+    First to reach the score limit wins. Self-collision is not implemented
+    due to engine limitations — wall collision ends the game instead.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#000000"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  - Id: initial score
+    Value: 0
+  - Id: score to win
+    Value: 10
+  - Id: score per food
+    Value: 1
+
+  # Movement
+  - Id: move speed
+    Value: 3
+  - Id: up key
+    Value: "w"
+  - Id: down key
+    Value: "s"
+  - Id: left key
+    Value: "a"
+  - Id: right key
+    Value: "d"
+
+  # Arena
+  - Id: arena half width
+    Value: 7
+  - Id: arena half height
+    Value: 5
+  - Id: wall thickness
+    Value: 0.4
+
+  # Wall positions
+  - Id: top wall position
+    Value: !vec { X: 0, Y: 5.2 }
+  - Id: bottom wall position
+    Value: !vec { X: 0, Y: -5.2 }
+  - Id: left wall position
+    Value: !vec { X: -7.2, Y: 0 }
+  - Id: right wall position
+    Value: !vec { X: 7.2, Y: 0 }
+
+  # Wall sizes
+  - Id: horizontal wall size
+    Value: !vec { X: 14.8, Y: 0.4 }
+  - Id: vertical wall size
+    Value: !vec { X: 0.4, Y: 10.4 }
+
+  # Snake head
+  - Id: head start position
+    Value: !vec { X: 0, Y: 0 }
+  - Id: head size
+    Value: !vec { X: 0.5, Y: 0.5 }
+
+  # Food
+  - Id: food size
+    Value: !vec { X: 0.5, Y: 0.5 }
+  - Id: food position a
+    Value: !vec { X: 2, Y: 2 }
+  - Id: food position b
+    Value: !vec { X: -3, Y: 1 }
+  - Id: food position c
+    Value: !vec { X: 4, Y: -2 }
+  - Id: food position d
+    Value: !vec { X: -2, Y: -3 }
+  - Id: food position e
+    Value: !vec { X: 1, Y: 3 }
+  - Id: food offscreen position
+    Value: !vec { X: 100, Y: 100 }
+
+  # Camera
+  - Id: camera position
+    Value: !vec { X: 0, Y: 0, Z: -10 }
+  - Id: camera rotation
+    Value: !vec { X: 0, Y: 0, Z: 0 }
+  - Id: camera view
+    Value: "orthographic"
+  - Id: camera size
+    Value: 8
+
+Variables:
+  - Id: score
+    Value: !const initial score
+
+Expressions:
+  - Id: int add
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+
+  - Id: int greater or equal
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: bool
+    Expression: "a >= b;"
+
+  - Id: is game over
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ score, target ]
+    ReturnType: bool
+    Expression: "score >= target;"
+
+Templates:
+  # Horizontal wall (top/bottom)
+  - Id: h_wall_template
+    Tags:
+      - wall
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const horizontal wall size
+          IsTrigger: false
+
+  # Vertical wall (left/right)
+  - Id: v_wall_template
+    Tags:
+      - wall
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const vertical wall size
+          IsTrigger: false
+
+  # Food pickup — teleports to offscreen when eaten, cycling through
+  # preset positions via sequential position setters
+  - Id: food_template
+    Tags:
+      - food
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const food size
+          IsTrigger: true
+      - Type: trigger enter trigger
+        Id: eaten trigger
+        Properties:
+          TagsToDetect:
+            - head
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: hide food
+          - EntityId: !parameter next_food_id
+            BehaviourId: show next food
+          - EntityId: score tracker
+            BehaviourId: score incrementer
+      - Type: position setter
+        Id: hide food
+        Properties:
+          Position: !const food offscreen position
+      - Type: position setter
+        Id: show next food
+        Properties:
+          Position: !parameter next_food_pos
+
+Entities:
+  # --- Walls ---
+  - Id: top wall
+    Template: { Id: h_wall_template }
+    Position: !const top wall position
+
+  - Id: bottom wall
+    Template: { Id: h_wall_template }
+    Position: !const bottom wall position
+
+  - Id: left wall
+    Template: { Id: v_wall_template }
+    Position: !const left wall position
+
+  - Id: right wall
+    Template: { Id: v_wall_template }
+    Position: !const right wall position
+
+  # --- Snake Head ---
+  - Id: snake head
+    Tags:
+      - head
+    Position: !const head start position
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const head size
+          IsTrigger: false
+
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+
+      # Up
+      - Type: key hold trigger
+        Id: up key trigger
+        Properties:
+          Key: !const up key
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: move up
+      - Type: translate
+        Id: move up
+        Properties:
+          Displacement: !vec { X: 0, Y: !const move speed }
+
+      # Down
+      - Type: key hold trigger
+        Id: down key trigger
+        Properties:
+          Key: !const down key
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: move down
+      - Type: translate
+        Id: move down
+        Properties:
+          Displacement: !vec { X: 0, Y: -3 }
+
+      # Left
+      - Type: key hold trigger
+        Id: left key trigger
+        Properties:
+          Key: !const left key
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: move left
+      - Type: translate
+        Id: move left
+        Properties:
+          Displacement: !vec { X: -3, Y: 0 }
+
+      # Right
+      - Type: key hold trigger
+        Id: right key trigger
+        Properties:
+          Key: !const right key
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: move right
+      - Type: translate
+        Id: move right
+        Properties:
+          Displacement: !vec { X: !const move speed, Y: 0 }
+
+      # Wall collision = game over trigger
+      - Type: collision enter trigger
+        Id: wall collision trigger
+        Properties:
+          TagsToDetect:
+            - wall
+        Listeners:
+          - EntityId: game manager
+            BehaviourId: trigger game over
+
+  # --- Food entities (cycle: a -> b -> c -> d -> e -> a) ---
+  - Id: food a
+    Template:
+      Id: food_template
+      Parameters:
+        next_food_id: food b
+        next_food_pos: !const food position b
+    Position: !const food position a
+
+  - Id: food b
+    Template:
+      Id: food_template
+      Parameters:
+        next_food_id: food c
+        next_food_pos: !const food position c
+    Position: !const food offscreen position
+
+  - Id: food c
+    Template:
+      Id: food_template
+      Parameters:
+        next_food_id: food d
+        next_food_pos: !const food position d
+    Position: !const food offscreen position
+
+  - Id: food d
+    Template:
+      Id: food_template
+      Parameters:
+        next_food_id: food e
+        next_food_pos: !const food position e
+    Position: !const food offscreen position
+
+  - Id: food e
+    Template:
+      Id: food_template
+      Parameters:
+        next_food_id: food a
+        next_food_pos: !const food position a
+    Position: !const food offscreen position
+
+  # --- Score Tracker ---
+  - Id: score tracker
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: int variable setter
+        Id: score incrementer
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !const score per food
+
+  # --- Game Manager ---
+  # Holds the win condition check and a dummy game-over setter
+  - Id: game manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: condition trigger
+        Id: win condition trigger
+        Properties:
+          Condition: !expr
+            ExpressionId: int greater or equal
+            Arguments:
+              - !var score
+              - !const score to win
+      # Receives signal from wall collision on snake head.
+      # Sets score to winning value to force GameOverCondition true.
+      - Type: int variable setter
+        Id: trigger game over
+        Properties:
+          VariableId: !var score
+          Value: -999
+
+  # --- Camera ---
+  - Id: camera
+    Tags:
+      - camera
+    Position: !const camera position
+    Rotation: !const camera rotation
+    Behaviours:
+      - Type: camera
+        Id: camera
+        Properties:
+          View: !const camera view
+          Size: !const camera size
+
+GameOverCondition: !expr
+  ExpressionId: is game over
+  Arguments:
+    - !var score
+    - !const score to win

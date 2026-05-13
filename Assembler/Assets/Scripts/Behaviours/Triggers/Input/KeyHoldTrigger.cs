@@ -11,6 +11,10 @@ namespace Assembler.Behaviours.Triggers.Input
 			{
 				"w" => KeyCode.W,
 				"s" => KeyCode.S,
+				"d" => KeyCode.D,
+				"a" => KeyCode.A,
+				"left" => KeyCode.LeftArrow,
+				"right" => KeyCode.RightArrow,
 				"up" => KeyCode.UpArrow,
 				"down" => KeyCode.DownArrow
 			};
