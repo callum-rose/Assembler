@@ -132,8 +132,6 @@ Templates:
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: score incrementer
-          - EntityId: ball
-            BehaviourId: ball resetter
       - Type: int variable setter
         Id: score incrementer
         Properties:
@@ -143,6 +141,69 @@ Templates:
             Arguments:
               - !parameter score_var
               - !const score per goal
+  - Id: ball_template
+    Tags:
+      - ball
+    Behaviours:
+      - Type: sphere collider
+        Id: sphere collider
+        Properties:
+          Radius: !const ball radius
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+      - Type: velocity
+        Id: velocity
+        Properties:
+          Velocity: !var ball velocity
+      - Type: collision enter trigger
+        Id: paddle collision trigger
+        Properties:
+          TagsToDetect:
+            - left paddle
+            - right paddle
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: paddle bounce velocity setter
+      - Type: vector variable setter
+        Id: paddle bounce velocity setter
+        Properties:
+          VariableId: !var ball velocity
+          Value: !expr
+            ExpressionId: vec multiply
+            Arguments:
+              - !var ball velocity
+              - !vec { X: -1, Y: 1 }
+      - Type: collision enter trigger
+        Id: wall collision trigger
+        Properties:
+          TagsToDetect:
+            - wall
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: wall bounce velocity setter
+      - Type: vector variable setter
+        Id: wall bounce velocity setter
+        Properties:
+          VariableId: !var ball velocity
+          Value: !expr
+            ExpressionId: vec multiply
+            Arguments:
+              - !var ball velocity
+              - !vec { X: 1, Y: -1 }
+      - Type: trigger enter trigger
+        Id: goal detector
+        Properties:
+          TagsToDetect:
+            - goal
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destructor
+          - EntityId: ball spawner
+            BehaviourId: spawn ball
+      - Type: destroy
+        Id: self destructor
 
 Expressions:
   - Id: vec multiply
@@ -186,65 +247,6 @@ Entities:
         down_key: !const right paddle down key
     Tags: [ right paddle ]
     Position: !const right paddle initial position
-  - Id: ball
-    Tags:
-      - ball
-    Position: !expr
-      ExpressionId: random ball initial position
-    Behaviours:
-      - Type: sphere collider
-        Id: sphere collider
-        Properties:
-          Radius: !const ball radius
-      - Type: rigidbody
-        Id: rigidbody
-        Properties:
-          UseGravity: false
-      - Type: velocity
-        Id: velocity
-        Properties:
-          Velocity: !var ball velocity
-      - Type: collision enter trigger
-        Id: paddle collision trigger
-        Properties:
-          TagsToDetect:
-            - left paddle
-            - right paddle
-        Listeners:
-          - EntityId: ball
-            BehaviourId: paddle bounce velocity setter
-      - Type: vector variable setter
-        Id: paddle bounce velocity setter
-        Properties:
-          VariableId: !var ball velocity
-          Value: !expr
-            ExpressionId: vec multiply
-            Arguments:
-              - !var ball velocity
-              - !vec { X: -1, Y: 1 }
-      - Type: collision enter trigger
-        Id: wall collision trigger
-        Properties:
-          TagsToDetect:
-            - wall
-        Listeners:
-          - EntityId: ball
-            BehaviourId: wall bounce velocity setter
-      - Type: vector variable setter
-        Id: wall bounce velocity setter
-        Properties:
-          VariableId: !var ball velocity
-          Value: !expr
-            ExpressionId: vec multiply
-            Arguments:
-              - !var ball velocity
-              - !vec { X: 1, Y: -1 }
-      - Type: position setter
-        Id: ball resetter
-        Properties:
-          Position: !expr
-            ExpressionId: random ball initial position
-            Arguments: [ ]
   - Id: upper wall
     Template: { Id: wall_template }
     Position: !const upper wall position
@@ -252,13 +254,13 @@ Entities:
     Template: { Id: wall_template }
     Position: !const lower wall position
   - Id: left goal
-    Template: 
+    Template:
       Id: goal_template
       Parameters:
         score_var: !var right score
     Position: !const left goal position
   - Id: right goal
-    Template: 
+    Template:
       Id: goal_template
       Parameters:
         score_var: !var left score
@@ -293,6 +295,21 @@ Entities:
             Arguments:
               - !var right score
               - !const score to win
+  - Id: ball spawner
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: timer trigger
+        Id: initial spawn trigger
+        Properties:
+          Delay: 0
+        Listeners:
+          - EntityId: ball spawner
+            BehaviourId: spawn ball
+      - Type: spawner
+        Id: spawn ball
+        Properties:
+          TemplateId: ball_template
+          Position: !expr random ball initial position
 
 GameOverCondition: !expr
   ExpressionId: is game over
