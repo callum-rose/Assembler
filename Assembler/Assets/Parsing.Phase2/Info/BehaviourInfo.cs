@@ -22,6 +22,7 @@ namespace Assembler.Parsing.Phase2.Info
 	public record RotateTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners) : BehaviourInfo(Id, Listeners);
 	public record ConditionInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> ExpressionId, IReadOnlyList<ValueSource<object>> Arguments) : BehaviourInfo(Id, Listeners);
 	public record TimerTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<float> Delay) : BehaviourInfo(Id, Listeners);
+	public record OnStartTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners) : BehaviourInfo(Id, Listeners);
 	public record IntervalTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<float> Interval) : BehaviourInfo(Id, Listeners);
 	public record EveryFrameTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners) : BehaviourInfo(Id, Listeners);
 	public record CollisionEnterTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TagsToDetect) : BehaviourInfo(Id, Listeners);
@@ -32,8 +33,8 @@ namespace Assembler.Parsing.Phase2.Info
 	public record CollisionStayTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TagsToDetect) : BehaviourInfo(Id, Listeners);
 	public record WhenAllInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TriggerIds) : BehaviourInfo(Id, Listeners);
 	public record WhenAnyInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, IReadOnlyList<string> TriggerIds) : BehaviourInfo(Id, Listeners);
-	public record SpawnerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> TemplateId, ValueSource<Vector3> Wrap) : BehaviourInfo(Id, Listeners);
-
+	public record SpawnerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> TemplateId, ValueSource<Vector3> Position) : BehaviourInfo(Id, Listeners);
+	public record DestroyInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners) : BehaviourInfo(Id, Listeners);
 	public record VariableSetterInfo<T>(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<T> ValueToSet, ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners);
 	public record SetPositionInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Vector3> ValueExpression) : BehaviourInfo(Id, Listeners);
 	public record CameraInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<string> View, ValueSource<float> Size) : BehaviourInfo(Id, Listeners);

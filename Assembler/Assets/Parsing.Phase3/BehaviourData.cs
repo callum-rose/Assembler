@@ -159,6 +159,11 @@ namespace Assembler.Parsing.Phase3
 			listeners) => Interval = interval;
 	}
 
+	public sealed class OnStartTriggerData : TriggerData
+	{
+		public OnStartTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+	}
+
 	public sealed class EveryFrameTriggerData : TriggerData
 	{
 		public EveryFrameTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
@@ -218,9 +223,15 @@ namespace Assembler.Parsing.Phase3
 
 	public sealed class SpawnerData : BehaviourData
 	{
-		public Action Create { get; }
-		
-		public SpawnerData(string id, IReadOnlyList<Action> listeners, Action create) : base(id, listeners) => Create = create;
+		public IValueProvider<string> TemplateId { get; }
+		public IValueProvider<UnityEngine.Vector3> Position { get; }
+
+		public SpawnerData(
+			string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<string> templateId,
+			IValueProvider<UnityEngine.Vector3> position) : base(id, listeners) =>
+			(TemplateId, Position) = (templateId, position);
 	}
 
 	public sealed class DestroyData : BehaviourData

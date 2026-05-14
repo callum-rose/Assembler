@@ -8,6 +8,7 @@ namespace Assembler.Parsing.Phase2.Info
 		PhysicsInfo Physics,
 		// IReadOnlyList<ValueInfo> Constants,
 		IReadOnlyList<VariableInfo> Variables,
+		IReadOnlyList<VariableInfo> ResolvedValues,
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,
 		IReadOnlyList<EntityInfo> Entities,

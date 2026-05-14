@@ -72,19 +72,33 @@ namespace Assembler.Parsing.Phase2
 						parameters.Add("self_id", entityId);
 					}
 
+					var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters))
+					                    ?? Enumerable.Empty<BehaviourInfo>();
+
+					var inheritedBehaviours = template is NullEntityInfo
+						? Enumerable.Empty<BehaviourInfo>()
+						: template.Behaviours.Select(b => TemplateInstantiator.SubstituteBehaviour(b, parameters, allValues));
+
 					return new ConcreteEntityInfo(entityId,
 						template,
-						entityDto.Tags ?? new List<string>(),
+						(entityDto.Tags ?? Enumerable.Empty<string>()).Concat(template.Tags).ToList(),
 						Wrap<Vector3>(allValues, entityDto.Position, parameters: parameters),
 						Wrap<Vector3>(allValues, entityDto.Rotation, parameters: parameters),
-						entityDto.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters)).ToArray() ??
-						Array.Empty<BehaviourInfo>());
+						inheritedBehaviours.Concat(ownBehaviours).ToArray());
 				})
 				.ToArray() ?? Array.Empty<EntityInfo>();
 
 			var gameOverCondition = Wrap<bool>(allValues, gameDto.GameOverCondition);
 
-			return new GameInfo(info, world, physics, variables, expressions, templates, entities, gameOverCondition);
+			return new GameInfo(info,
+				world,
+				physics,
+				variables,
+				allValues,
+				expressions,
+				templates,
+				entities,
+				gameOverCondition);
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues,
@@ -172,15 +186,23 @@ namespace Assembler.Parsing.Phase2
 					Wrap<string>(resolvedValues, props?.GetValueOrDefault("TemplateId")),
 					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
 
+				"destroy" => new DestroyInfo(id,
+					GetListeners(behaviourDto, resolvedValues, parameters)),
+
+				"on start trigger" => new OnStartTriggerInfo(id,
+					GetListeners(behaviourDto, resolvedValues, parameters)),
+
 				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
 			};
 		}
 
 		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
-			IReadOnlyList<VariableInfo> variables, IReadOnlyDictionary<string, object> parameters) =>
+			IReadOnlyList<VariableInfo> variables, IReadOnlyDictionary<string, object>? parameters) =>
 			behaviourDto.Listeners
 				?.Select(l => new BehaviourDescriptor(l.EntityId switch
 					{
+						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
+						                                                   (paramRefDto.Id ?? string.Empty),
 						ParamRefDto paramRefDto => (string)parameters[paramRefDto.Id ?? string.Empty],
 						ConstRefDto constDto => constDto.ResolveValue<string>(variables),
 						string behaviourId => behaviourId,
@@ -188,6 +210,8 @@ namespace Assembler.Parsing.Phase2
 					},
 					l.BehaviourId ?? string.Empty)).ToArray() ??
 			Array.Empty<BehaviourDescriptor>();
+
+		internal const string ParameterEntityIdSentinel = "@param:";
 
 		private static IReadOnlyList<BehaviourDescriptor> ConvertListeners(object? obj) =>
 			obj is List<object> list
@@ -226,14 +250,19 @@ namespace Assembler.Parsing.Phase2
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		private static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw,
+		internal static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw,
 			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			switch (raw)
 			{
 				case ParamRefDto paramRefDto:
 				{
-					if (parameters == null || !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue))
+					if (parameters == null)
+					{
+						return new ParameterSource<T>(paramRefDto.Id ?? string.Empty);
+					}
+
+					if (!parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue))
 					{
 						throw new ParsingException($"Parameter '{paramRefDto.Id}' not found");
 					}

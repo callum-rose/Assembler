@@ -5,12 +5,12 @@ namespace Assembler.Behaviours.Spawners
 {
 	public class SpawnerBehaviour : GameBehaviour<SpawnerData>
 	{
-		public VariableRegistry Variables { get; set; }
-		public CompiledExpressionsRegistry ExpressionRegistry { get; set; }
+		public IEntitySpawner Spawner { get; set; }
 
 		public override void Execute()
 		{
-			GameEntityFactory.Create(Data.Entity, );
+			Spawner.Spawn(Data.TemplateId.Value, Data.Position.Value);
+			NotifyListeners();
 		}
 	}
 }

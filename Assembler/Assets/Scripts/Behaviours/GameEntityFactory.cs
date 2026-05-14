@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
 using Assembler.Parsing.Phase2.Info;
 using Assembler.Parsing.Phase3;
@@ -14,6 +15,7 @@ namespace Assembler.Core
 		public static void Create(EntityInfo entityInfo,
 			VariableRegistry variableRegistry,
 			CompiledExpressionsRegistry compiledExpressionsRegistry,
+			IEntitySpawner entitySpawner,
 			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
 			List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>> initialisations)
 		{
@@ -34,7 +36,8 @@ namespace Assembler.Core
 				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject,
 					behaviourInfo,
 					variableRegistry,
-					compiledExpressionsRegistry);
+					compiledExpressionsRegistry,
+					entitySpawner);
 
 				behaviourRegistry.Add(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
 				initialisations.Add(initialise);

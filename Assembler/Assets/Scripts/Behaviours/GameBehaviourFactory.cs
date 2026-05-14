@@ -23,7 +23,8 @@ namespace Assembler.Behaviours
 			GameObject gameObject,
 			BehaviourInfo behaviourInfo,
 			VariableRegistry variableRegistry,
-			CompiledExpressionsRegistry compiledExpressionRegistry)
+			CompiledExpressionsRegistry compiledExpressionRegistry,
+			IEntitySpawner entitySpawner)
 		{
 			var vr = variableRegistry;
 			var cr = compiledExpressionRegistry;
@@ -198,6 +199,15 @@ namespace Assembler.Behaviours
 				// 			cr),
 				// 		listenerRegistry)));
 				// }
+				
+				case OnStartTriggerInfo onStartTriggerInfo:
+				{
+					var gameBehaviour = gameObject.AddComponent<OnStartTrigger>();
+
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new OnStartTriggerData(
+						onStartTriggerInfo.Id,
+						onStartTriggerInfo.Listeners.ToActions(listenerRegistry))));
+				}
 
 				case TimerTriggerInfo timerTriggerInfo:
 				{
@@ -362,12 +372,22 @@ namespace Assembler.Behaviours
 				case SpawnerInfo spawnerInfo:
 				{
 					var gameBehaviour = gameObject.AddComponent<SpawnerBehaviour>();
-					gameBehaviour.Variables = variableRegistry;
-					gameBehaviour.ExpressionRegistry = compiledExpressionRegistry;
+					gameBehaviour.Spawner = entitySpawner;
 
-					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new SpawnerData(spawnerInfo.Id,
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new SpawnerData(
+						spawnerInfo.Id,
 						spawnerInfo.Listeners.ToActions(listenerRegistry),
-						() => GameEntityFactory.Create())));
+						spawnerInfo.TemplateId.Resolve(vr, cr),
+						spawnerInfo.Position.Resolve(vr, cr))));
+				}
+
+				case DestroyInfo info:
+				{
+					var gameBehaviour = gameObject.AddComponent<DestroyBehaviour>();
+
+					return (gameBehaviour, listenerRegistry => gameBehaviour.Initialise(new DestroyData(
+						info.Id,
+						info.Listeners.ToActions(listenerRegistry))));
 				}
 
 				default:

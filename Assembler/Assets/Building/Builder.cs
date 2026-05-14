@@ -20,7 +20,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build")]
 		public static void TestBuild()
 		{
-			var yaml = File.ReadAllText("Assets/Building/Snake.yaml");
+			var yaml = File.ReadAllText("Assets/Building/Pong.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -57,9 +57,17 @@ namespace Assembler.Building
 			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
 			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
 
+			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
+			var entitySpawner = new GameEntitySpawner(
+				variableRegistry,
+				compiledExpressionsRegistry,
+				templatesById,
+				gameInfo.ResolvedValues,
+				behaviourRegistry);
+
 			foreach (var entityInfo in gameInfo.Entities)
 			{
-				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, behaviourRegistry, initialisations);
+				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, entitySpawner, behaviourRegistry, initialisations);
 			}
 
 			// 4. Initialise Behaviours

@@ -298,10 +298,8 @@ Entities:
   - Id: ball spawner
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: timer trigger
+      - Type: on start trigger
         Id: initial spawn trigger
-        Properties:
-          Delay: 0
         Listeners:
           - EntityId: ball spawner
             BehaviourId: spawn ball
@@ -309,7 +307,7 @@ Entities:
         Id: spawn ball
         Properties:
           TemplateId: ball_template
-          Position: !expr random ball initial position
+          Position: !expr { ExpressionId: random ball initial position }
 
 GameOverCondition: !expr
   ExpressionId: is game over
