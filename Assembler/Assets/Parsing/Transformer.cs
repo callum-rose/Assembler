@@ -105,95 +105,15 @@ namespace Assembler.Parsing
 			BehaviourDto behaviourDto, IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
-			var props = behaviourDto.Properties;
+			var type = behaviourDto.Type ?? string.Empty;
 
-			return behaviourDto.Type switch
+			if (!BehaviourRegistry.All.TryGetValue(type, out var entry))
 			{
-				"box collider" => new BoxColliderInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
+				throw new ParsingException($"Cannot convert behaviour type '{type}'");
+			}
 
-				"sphere collider" => new SphereColliderInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Radius"), parameters: parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("IsTrigger"), parameters: parameters)),
-
-				"rigidbody" => new RigidbodyInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("UseGravity"), parameters: parameters)),
-
-				"velocity" => new VelocityInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Velocity"), parameters: parameters)),
-
-				"translate" => new TranslateInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Displacement"), parameters: parameters)),
-
-				"key hold trigger" => new KeyHoldTriggerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Key"), parameters: parameters)),
-
-				"collision enter trigger" => new CollisionEnterTriggerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					ConvertStringList(props?.GetValueOrDefault("TagsToDetect"))),
-
-				"trigger enter trigger" => new TriggerEnterTriggerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					ConvertStringList(props?.GetValueOrDefault("TagsToDetect"))),
-
-				"vector variable setter" => new VariableSetterInfo<Vector3>(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
-
-				"int variable setter" => new VariableSetterInfo<int>(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<int>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
-					Wrap<int>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
-
-				"float variable setter" => new VariableSetterInfo<float>(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
-
-				"bool variable setter" => new VariableSetterInfo<bool>(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
-
-				"string variable setter" => new VariableSetterInfo<string>(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("VariableId"), parameters: parameters),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("Value"), parameters: parameters)),
-
-				"position setter" => new SetPositionInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"), parameters: parameters)),
-
-				"camera" => new CameraInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("View"), parameters: parameters),
-					Wrap<float>(resolvedValues, props?.GetValueOrDefault("Size"), parameters: parameters)),
-
-				"condition trigger" => new ConditionTriggerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<bool>(resolvedValues, props?.GetValueOrDefault("Condition"), parameters: parameters)),
-
-				"spawner" => new SpawnerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters),
-					Wrap<string>(resolvedValues, props?.GetValueOrDefault("TemplateId")),
-					Wrap<Vector3>(resolvedValues, props?.GetValueOrDefault("Position"))),
-
-				"destroy" => new DestroyInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters)),
-
-				"on start trigger" => new OnStartTriggerInfo(id,
-					GetListeners(behaviourDto, resolvedValues, parameters)),
-
-				_ => throw new ParsingException($"Cannot convert behaviour type '{behaviourDto.Type}'")
-			};
+			return entry.Factory(id, GetListeners(behaviourDto, resolvedValues, parameters),
+				behaviourDto.Properties, resolvedValues, parameters);
 		}
 
 		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
@@ -232,12 +152,12 @@ namespace Assembler.Parsing
 		private static object? GetValueFromDictionary(object item, string key) =>
 			item is IDictionary<string, object> sd && sd.TryGetValue(key, out var val) ? val : null;
 
-		private static IReadOnlyList<string> ConvertStringList(object? obj) =>
+		internal static IReadOnlyList<string> ConvertStringList(object? obj) =>
 			obj is List<object> list
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
 				: Array.Empty<string>();
 
-		private static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
+		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
 			object? obj) =>
 			obj is List<object> list
 				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()

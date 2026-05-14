@@ -213,7 +213,7 @@ namespace Assembler.Resolving
 		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
 	}
 
-	public sealed class WhenAnyData : BehaviourData
+	public sealed class WhenAnyData : TriggerData
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 

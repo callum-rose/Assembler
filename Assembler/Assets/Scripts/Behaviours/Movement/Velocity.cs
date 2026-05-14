@@ -3,20 +3,8 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
 {
-	public class Velocity : PositionBehaviour<VelocityData>
+	public class Velocity : TransformBehaviour<VelocityData>
 	{
-		private IValueProvider<Vector3> _velocity;
-
-		public Velocity(IValueProvider<Vector3> velocity)
-		{
-			_velocity = velocity;
-		}
-
-		protected override void OnInitialise(VelocityData data)
-		{
-			_velocity = data.Velocity;
-		}
-
 		private void Update()
 		{
 			Execute();
@@ -24,7 +12,7 @@ namespace Assembler.Behaviours.Movement
 
 		public override void Execute()
 		{
-			transform.position += _velocity.Value * Time.deltaTime;
+			transform.position += Data.Velocity.Value * Time.deltaTime;
 		}
 	}
 }

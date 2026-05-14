@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using Assembler.Resolving;
 using UnityEngine;
@@ -6,7 +7,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 {
 	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
 	{
-		public override void Execute()
+		private void Start()
 		{
 			StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
 		}

@@ -1,10 +1,9 @@
 Game:
   Title: Snake
   Description: >
-    A Snake-like game. Guide the head to eat food and increase your score.
-    Avoid hitting the walls. Movement is continuous (held keys), not stepped.
-    First to reach the score limit wins. Self-collision is not implemented
-    due to engine limitations — wall collision ends the game instead.
+    Classic Snake. Use WASD to change direction. The snake moves one step every
+    interval. Eat food to grow and score points. Hit a wall or yourself and it's
+    game over. Reach 10 points to win.
 
 World:
   Dimensionality: 2
@@ -14,84 +13,75 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
+  # Scoring
   - Id: initial score
     Value: 0
-  - Id: score to win
-    Value: 10
   - Id: score per food
     Value: 1
+  - Id: score to win
+    Value: 10
 
-  # Movement
-  - Id: move speed
-    Value: 3
-  - Id: up key
-    Value: "w"
-  - Id: down key
-    Value: "s"
-  - Id: left key
-    Value: "a"
-  - Id: right key
-    Value: "d"
+  # Grid / movement
+  - Id: cell size
+    Value: 0.6
+  - Id: step interval
+    Value: 0.15
 
-  # Arena
-  - Id: arena half width
-    Value: 7
-  - Id: arena half height
-    Value: 5
-  - Id: wall thickness
-    Value: 0.4
+  # Directions (one cell per step)
+  - Id: dir up
+    Value: !vec { X: 0, Y: 0.6 }
+  - Id: dir down
+    Value: !vec { X: 0, Y: -0.6 }
+  - Id: dir left
+    Value: !vec { X: -0.6, Y: 0 }
+  - Id: dir right
+    Value: !vec { X: 0.6, Y: 0 }
+
+  # Starting state
+  - Id: head start position
+    Value: !vec { X: 0, Y: 0 }
+  - Id: initial direction
+    Value: !vec { X: 0.6, Y: 0 }
+
+  # Sizes
+  - Id: head size
+    Value: !vec { X: 0.55, Y: 0.55 }
+  - Id: segment size
+    Value: !vec { X: 0.55, Y: 0.55 }
+  - Id: food size
+    Value: !vec { X: 0.5, Y: 0.5 }
+  - Id: horizontal wall size
+    Value: !vec { X: 15.6, Y: 0.6 }
+  - Id: vertical wall size
+    Value: !vec { X: 0.6, Y: 15.6 }
 
   # Wall positions
   - Id: top wall position
-    Value: !vec { X: 0, Y: 5.2 }
+    Value: !vec { X: 0, Y: 7.5 }
   - Id: bottom wall position
-    Value: !vec { X: 0, Y: -5.2 }
+    Value: !vec { X: 0, Y: -7.5 }
   - Id: left wall position
-    Value: !vec { X: -7.2, Y: 0 }
+    Value: !vec { X: -7.5, Y: 0 }
   - Id: right wall position
-    Value: !vec { X: 7.2, Y: 0 }
+    Value: !vec { X: 7.5, Y: 0 }
 
-  # Wall sizes
-  - Id: horizontal wall size
-    Value: !vec { X: 14.8, Y: 0.4 }
-  - Id: vertical wall size
-    Value: !vec { X: 0.4, Y: 10.4 }
-
-  # Snake head
-  - Id: head start position
-    Value: !vec { X: 0, Y: 0 }
-  - Id: head size
-    Value: !vec { X: 0.5, Y: 0.5 }
-
-  # Food
-  - Id: food size
-    Value: !vec { X: 0.5, Y: 0.5 }
-  - Id: food position a
-    Value: !vec { X: 2, Y: 2 }
-  - Id: food position b
-    Value: !vec { X: -3, Y: 1 }
-  - Id: food position c
-    Value: !vec { X: 4, Y: -2 }
-  - Id: food position d
-    Value: !vec { X: -2, Y: -3 }
-  - Id: food position e
-    Value: !vec { X: 1, Y: 3 }
-  - Id: food offscreen position
-    Value: !vec { X: 100, Y: 100 }
+  # Offscreen dump
+  - Id: food offscreen
+    Value: !vec { X: 999, Y: 999 }
 
   # Camera
   - Id: camera position
     Value: !vec { X: 0, Y: 0, Z: -10 }
   - Id: camera rotation
     Value: !vec { X: 0, Y: 0, Z: 0 }
-  - Id: camera view
-    Value: "orthographic"
-  - Id: camera size
-    Value: 8
 
 Variables:
   - Id: score
     Value: !const initial score
+  - Id: direction
+    Value: !const initial direction
+  - Id: is dead
+    Value: false
 
 Expressions:
   - Id: int add
@@ -107,13 +97,28 @@ Expressions:
     Expression: "a >= b;"
 
   - Id: is game over
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ score, target ]
+    ArgumentTypes: [ int, int, bool ]
+    ArgumentNames: [ score, target, dead ]
     ReturnType: bool
-    Expression: "score >= target;"
+    Expression: "score >= target || dead;"
+
+  # Returns a random food position snapped to the cell grid, within the arena bounds
+  - Id: next food position
+    ReturnType: vector
+    Expression: >
+      float halfArena = 6.6f;
+      float cell = 0.6f;
+      float x = UnityEngine.Mathf.Round(UnityEngine.Random.Range(-halfArena, halfArena) / cell) * cell;
+      float y = UnityEngine.Mathf.Round(UnityEngine.Random.Range(-halfArena, halfArena) / cell) * cell;
+      return new UnityEngine.Vector3(x, y, 0f);
+
+  - Id: vec add
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ a, b ]
+    ReturnType: vector
+    Expression: "new UnityEngine.Vector3(a.x + b.x, a.y + b.y, a.z + b.z);"
 
 Templates:
-  # Horizontal wall (top/bottom)
   - Id: h_wall_template
     Tags:
       - wall
@@ -124,7 +129,6 @@ Templates:
           Size: !const horizontal wall size
           IsTrigger: false
 
-  # Vertical wall (left/right)
   - Id: v_wall_template
     Tags:
       - wall
@@ -135,8 +139,31 @@ Templates:
           Size: !const vertical wall size
           IsTrigger: false
 
-  # Food pickup — teleports to offscreen when eaten, cycling through
-  # preset positions via sequential position setters
+  # Body segment — spawned at the head's position each step.
+  # Has a timer trigger that destroys it after a delay, creating
+  # the tail effect. The delay controls effective snake length:
+  # delay = cell_size * num_segments * step_interval
+  # Starting length ~5 segments = 5 * 0.15 = 0.75s
+  - Id: segment_template
+    Tags:
+      - segment
+    Behaviours:
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !const segment size
+          IsTrigger: true
+      - Type: timer trigger
+        Id: lifetime timer
+        Properties:
+          Delay: 0.75
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      - Type: destroy
+        Id: self destruct
+
+  # Food — hides itself on contact, advances food index, spawns next food
   - Id: food_template
     Tags:
       - food
@@ -153,19 +180,15 @@ Templates:
             - head
         Listeners:
           - EntityId: !parameter self_id
-            BehaviourId: hide food
-          - EntityId: !parameter next_food_id
-            BehaviourId: show next food
+            BehaviourId: hide self
+          - EntityId: food manager
+            BehaviourId: spawn next food
           - EntityId: score tracker
-            BehaviourId: score incrementer
+            BehaviourId: increment score
       - Type: position setter
-        Id: hide food
+        Id: hide self
         Properties:
-          Position: !const food offscreen position
-      - Type: position setter
-        Id: show next food
-        Properties:
-          Position: !parameter next_food_pos
+          Position: !const food offscreen
 
 Entities:
   # --- Walls ---
@@ -202,115 +225,113 @@ Entities:
         Properties:
           UseGravity: false
 
-      # Up
-      - Type: key hold trigger
-        Id: up key trigger
+      # Stepped movement: fires every interval
+      - Type: interval trigger
+        Id: step timer
         Properties:
-          Key: !const up key
+          Interval: !const step interval
         Listeners:
           - EntityId: snake head
-            BehaviourId: move up
-      - Type: translate
-        Id: move up
-        Properties:
-          Displacement: !vec { X: 0, Y: !const move speed }
+            BehaviourId: step move
+          - EntityId: segment manager
+            BehaviourId: spawn segment at head
 
-      # Down
-      - Type: key hold trigger
-        Id: down key trigger
+      - Type: translate
+        Id: step move
         Properties:
-          Key: !const down key
+          Displacement: !var direction
+
+      # Direction input — key down (one event per press, not continuous)
+      - Type: key down trigger
+        Id: up key
+        Properties:
+          Key: "w"
         Listeners:
           - EntityId: snake head
-            BehaviourId: move down
-      - Type: translate
-        Id: move down
+            BehaviourId: set dir up
+      - Type: vector variable setter
+        Id: set dir up
         Properties:
-          Displacement: !vec { X: 0, Y: -3 }
+          VariableId: !var direction
+          Value: !const dir up
 
-      # Left
-      - Type: key hold trigger
-        Id: left key trigger
+      - Type: key down trigger
+        Id: down key
         Properties:
-          Key: !const left key
+          Key: "s"
         Listeners:
           - EntityId: snake head
-            BehaviourId: move left
-      - Type: translate
-        Id: move left
+            BehaviourId: set dir down
+      - Type: vector variable setter
+        Id: set dir down
         Properties:
-          Displacement: !vec { X: -3, Y: 0 }
+          VariableId: !var direction
+          Value: !const dir down
 
-      # Right
-      - Type: key hold trigger
-        Id: right key trigger
+      - Type: key down trigger
+        Id: left key
         Properties:
-          Key: !const right key
+          Key: "a"
         Listeners:
           - EntityId: snake head
-            BehaviourId: move right
-      - Type: translate
-        Id: move right
+            BehaviourId: set dir left
+      - Type: vector variable setter
+        Id: set dir left
         Properties:
-          Displacement: !vec { X: !const move speed, Y: 0 }
+          VariableId: !var direction
+          Value: !const dir left
 
-      # Wall collision = game over trigger
+      - Type: key down trigger
+        Id: right key
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: set dir right
+      - Type: vector variable setter
+        Id: set dir right
+        Properties:
+          VariableId: !var direction
+          Value: !const dir right
+
+      # Death triggers — wall or self collision sets is dead = true
       - Type: collision enter trigger
-        Id: wall collision trigger
+        Id: wall hit
         Properties:
           TagsToDetect:
             - wall
         Listeners:
           - EntityId: game manager
-            BehaviourId: trigger game over
+            BehaviourId: set dead
 
-  # --- Food entities (cycle: a -> b -> c -> d -> e -> a) ---
-  - Id: food a
-    Template:
-      Id: food_template
-      Parameters:
-        next_food_id: food b
-        next_food_pos: !const food position b
-    Position: !const food position a
+      - Type: trigger enter trigger
+        Id: self hit
+        Properties:
+          TagsToDetect:
+            - segment
+        Listeners:
+          - EntityId: game manager
+            BehaviourId: set dead
 
-  - Id: food b
-    Template:
-      Id: food_template
-      Parameters:
-        next_food_id: food c
-        next_food_pos: !const food position c
-    Position: !const food offscreen position
-
-  - Id: food c
-    Template:
-      Id: food_template
-      Parameters:
-        next_food_id: food d
-        next_food_pos: !const food position d
-    Position: !const food offscreen position
-
-  - Id: food d
-    Template:
-      Id: food_template
-      Parameters:
-        next_food_id: food e
-        next_food_pos: !const food position e
-    Position: !const food offscreen position
-
-  - Id: food e
-    Template:
-      Id: food_template
-      Parameters:
-        next_food_id: food a
-        next_food_pos: !const food position a
-    Position: !const food offscreen position
+  # --- Segment Manager ---
+  # Spawns a segment at the head's current position on each step tick.
+  # The segment's own timer trigger destroys it after its lifetime elapses,
+  # so the tail naturally shortens at the back as it grows at the front.
+  - Id: segment manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: spawner
+        Id: spawn segment at head
+        Properties:
+          TemplateId: segment_template
+          Position: !vec { X: 0, Y: 0 }
 
   # --- Score Tracker ---
   - Id: score tracker
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       - Type: int variable setter
-        Id: score incrementer
+        Id: increment score
         Properties:
           VariableId: !var score
           Value: !expr
@@ -319,11 +340,34 @@ Entities:
               - !var score
               - !const score per food
 
+  # --- Food Manager ---
+  # Spawns first food on start, then a new piece each time the current one is eaten.
+  - Id: food manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: on start trigger
+        Id: on start
+        Listeners:
+          - EntityId: food manager
+            BehaviourId: spawn next food
+
+      - Type: spawner
+        Id: spawn next food
+        Properties:
+          TemplateId: food_template
+          Position: !expr
+            ExpressionId: next food position
+
   # --- Game Manager ---
-  # Holds the win condition check and a dummy game-over setter
   - Id: game manager
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
+      - Type: bool variable setter
+        Id: set dead
+        Properties:
+          VariableId: !var is dead
+          Value: true
+
       - Type: condition trigger
         Id: win condition trigger
         Properties:
@@ -332,13 +376,6 @@ Entities:
             Arguments:
               - !var score
               - !const score to win
-      # Receives signal from wall collision on snake head.
-      # Sets score to winning value to force GameOverCondition true.
-      - Type: int variable setter
-        Id: trigger game over
-        Properties:
-          VariableId: !var score
-          Value: -999
 
   # --- Camera ---
   - Id: camera
@@ -350,11 +387,12 @@ Entities:
       - Type: camera
         Id: camera
         Properties:
-          View: !const camera view
-          Size: !const camera size
+          View: "orthographic"
+          Size: 10
 
 GameOverCondition: !expr
   ExpressionId: is game over
   Arguments:
     - !var score
     - !const score to win
+    - !var is dead

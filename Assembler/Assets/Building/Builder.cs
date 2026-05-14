@@ -21,7 +21,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build")]
 		public static void TestBuild()
 		{
-			var yaml = File.ReadAllText("Assets/Building/Pong.yaml");
+			var yaml = File.ReadAllText("Assets/Building/Snake.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);

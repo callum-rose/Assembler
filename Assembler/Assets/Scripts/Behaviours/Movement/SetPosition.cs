@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
 {
-	public class SetPosition : PositionBehaviour<SetPositionData>
+	public class SetPosition : TransformBehaviour<SetPositionData>
 	{
 		private IValueProvider<Vector3> _position;
 		
