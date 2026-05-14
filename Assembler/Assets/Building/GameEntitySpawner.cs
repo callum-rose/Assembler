@@ -19,6 +19,7 @@ namespace Assembler.Building
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templatesById;
 		private readonly IReadOnlyList<VariableInfo> _allValues;
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
+		private readonly AssetRegistry _assets;
 		private int _spawnCounter;
 
 		public GameEntitySpawner(
@@ -26,13 +27,15 @@ namespace Assembler.Building
 			CompiledExpressionsRegistry expressions,
 			IReadOnlyDictionary<string, EntityInfo> templatesById,
 			IReadOnlyList<VariableInfo> allValues,
-			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry)
+			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
+			AssetRegistry assets)
 		{
 			_variables = variables;
 			_expressions = expressions;
 			_templatesById = templatesById;
 			_allValues = allValues;
 			_behaviourRegistry = behaviourRegistry;
+			_assets = assets;
 		}
 
 		public void Spawn(string templateId, Vector3 position)
@@ -53,7 +56,7 @@ namespace Assembler.Building
 				_allValues);
 
 			var inits = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
-			GameEntityFactory.Create(entity, _variables, _expressions, this, _behaviourRegistry, inits);
+			GameEntityFactory.Create(entity, _variables, _expressions, this, _behaviourRegistry, inits, _assets);
 
 			foreach (var init in inits)
 			{

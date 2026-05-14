@@ -8,7 +8,8 @@ namespace Assembler.Resolving
 	{
 		public static IValueProvider<T> Resolve<T>(this ValueSource<T> valueSource,
 			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions)
+			CompiledExpressionsRegistry expressions,
+			AssetRegistry assets)
 		{
 			return valueSource switch
 			{
@@ -16,6 +17,7 @@ namespace Assembler.Resolving
 				VariableSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
 				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
 					BuildExpressionContainer(expressionRef, variables, expressions)),
+				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource?.GetType()}")
 			};

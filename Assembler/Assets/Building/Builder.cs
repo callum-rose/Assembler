@@ -54,6 +54,10 @@ namespace Assembler.Building
 				compiledExpressionsRegistry.CompileAndRegister(expressionInfo);
 			}
 
+			// 2. Load assets
+			var assetRegistry = new AssetRegistry();
+			assetRegistry.LoadAll(gameInfo.Assets);
+
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
 			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
@@ -64,11 +68,12 @@ namespace Assembler.Building
 				compiledExpressionsRegistry,
 				templatesById,
 				gameInfo.ResolvedValues,
-				behaviourRegistry);
+				behaviourRegistry,
+				assetRegistry);
 
 			foreach (var entityInfo in gameInfo.Entities)
 			{
-				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, entitySpawner, behaviourRegistry, initialisations);
+				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, entitySpawner, behaviourRegistry, initialisations, assetRegistry);
 			}
 
 			// 4. Initialise Behaviours

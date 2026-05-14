@@ -20,8 +20,9 @@ namespace Assembler.Parsing
 
 			var assets = gameDto.Assets.EmptyIfNull().Select(a => a.Type switch
 			{
-				"sprite" => new SpriteAssetInfo(a.Id ?? string.Empty, a.ResourcePath ?? string.Empty),
-				_ => throw new NotImplementedException()
+				"sprite" => (AssetInfo)new SpriteAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
+				"audioclip" => new AudioClipAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
+				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
 			var constants = new List<VariableInfo>(gameDto.Constants?.Count ?? 0);
@@ -171,6 +172,7 @@ namespace Assembler.Parsing
 					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
 					: Wrap(resolvedValues, paramValue, fallback),
 				ConstRefDto constRefDto => new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues)),
+				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
 				VarRefDto varRefDto => new VariableSource<T>(varRefDto.Id ?? string.Empty),
 				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
 					exprRefDto.Arguments

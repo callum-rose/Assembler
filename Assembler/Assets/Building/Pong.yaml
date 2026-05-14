@@ -12,10 +12,12 @@ Physics:
 Assets:
   - Id: square
     Type: sprite
-    ResourcePath: Textures/white_box.png
+    Source: resources
+    Path: Textures/white_box
   - Id: circle
     Type: sprite
-    ResourcePath: Textures/white_circle.png
+    Source: resources
+    Path: Textures/white_circle
     
 Constants:
   - Id: initial score
@@ -80,6 +82,13 @@ Variables:
 Templates:
   - Id: paddle_template
     Behaviours:
+      - Type: sprite
+        Id: sprite
+        Properties:
+          Sprite: !asset square
+          Size: !vec
+            X: !const paddle width
+            Y: !const paddle height
       - Type: box collider
         Id: box collider
         Properties:
@@ -117,6 +126,13 @@ Templates:
     Tags:
       - wall
     Behaviours:
+      - Type: sprite
+        Id: sprite
+        Properties:
+          Sprite: !asset square
+          Size: !vec
+            X: !const wall width
+            Y: !const wall height
       - Type: box collider
         Id: box collider
         Properties:
@@ -153,6 +169,13 @@ Templates:
     Tags:
       - ball
     Behaviours:
+      - Type: sprite
+        Id: sprite
+        Properties:
+          Sprite: !asset circle
+          Size: !vec
+            X: !const ball radius
+            Y: !const ball radius
       - Type: sphere collider
         Id: sphere collider
         Properties:

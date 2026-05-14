@@ -17,14 +17,15 @@ namespace Assembler.Behaviours
 			CompiledExpressionsRegistry compiledExpressionsRegistry,
 			IEntitySpawner entitySpawner,
 			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
-			List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>> initialisations)
+			List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>> initialisations,
+			AssetRegistry assets = null)
 		{
 			var gameObject = new GameObject(entityInfo.Id)
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(variableRegistry, compiledExpressionsRegistry).Value,
-					rotation = entityInfo.InitialRotation.Resolve(variableRegistry, compiledExpressionsRegistry).Value.FromEuler()
+					position = entityInfo.InitialPosition.Resolve(variableRegistry, compiledExpressionsRegistry, assets).Value,
+					rotation = entityInfo.InitialRotation.Resolve(variableRegistry, compiledExpressionsRegistry, assets).Value.FromEuler()
 				}
 			};
 
@@ -37,7 +38,8 @@ namespace Assembler.Behaviours
 					behaviourInfo,
 					variableRegistry,
 					compiledExpressionsRegistry,
-					entitySpawner);
+					entitySpawner,
+					assets);
 
 				behaviourRegistry.Add(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
 				initialisations.Add(initialise);

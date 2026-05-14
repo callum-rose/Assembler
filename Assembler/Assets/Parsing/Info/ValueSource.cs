@@ -18,4 +18,6 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<ValueSource<object>> Arguments) : ValueSource<T>;
 	
 	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>;
+
+	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;
 }

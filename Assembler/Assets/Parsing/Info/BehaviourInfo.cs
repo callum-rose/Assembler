@@ -406,16 +406,35 @@ namespace Assembler.Parsing.Info
 				Condition.Substitute(parameters, allValues));
 	}
 
-	public record SpriteInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Sprite> Sprite)
+	public record SpriteInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Sprite> Sprite, ValueSource<Vector2> Size)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static SpriteInfo Create(string id, IReadOnlyList<BehaviourDescriptor> listeners,
 			Dictionary<string, object>? props, IReadOnlyList<VariableInfo> v, IReadOnlyDictionary<string, object>? p) =>
 			new(id, listeners,
-				Transformer.Wrap<Sprite>(v, props?.GetValueOrDefault("Sprite"), parameters: p));
+				Transformer.Wrap<Sprite>(v, props?.GetValueOrDefault("Sprite"), parameters: p),
+				Transformer.Wrap<Vector2>(v, props?.GetValueOrDefault("Size"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners, IReadOnlyDictionary<string, object> parameters, IReadOnlyList<VariableInfo> allValues) =>
 			new SpriteInfo(Id, substitutedListeners,
-				Sprite.Substitute(parameters, allValues));
+				Sprite.Substitute(parameters, allValues),
+				Size.Substitute(parameters, allValues));
+	}
+
+	public record AudioSourceInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<AudioClip> Clip, ValueSource<bool> PlayOnStart, ValueSource<bool> Loop)
+		: BehaviourInfo(Id, Listeners)
+	{
+		public static AudioSourceInfo Create(string id, IReadOnlyList<BehaviourDescriptor> listeners,
+			Dictionary<string, object>? props, IReadOnlyList<VariableInfo> v, IReadOnlyDictionary<string, object>? p) =>
+			new(id, listeners,
+				Transformer.Wrap<AudioClip>(v, props?.GetValueOrDefault("Clip"), parameters: p),
+				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("PlayOnStart"), parameters: p),
+				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("Loop"), parameters: p));
+
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners, IReadOnlyDictionary<string, object> parameters, IReadOnlyList<VariableInfo> allValues) =>
+			new AudioSourceInfo(Id, substitutedListeners,
+				Clip.Substitute(parameters, allValues),
+				PlayOnStart.Substitute(parameters, allValues),
+				Loop.Substitute(parameters, allValues));
 	}
 }

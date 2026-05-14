@@ -257,7 +257,19 @@ namespace Assembler.Resolving
 	public class SpriteData : BehaviourData
 	{
 		public IValueProvider<Sprite> Sprite { get; }
+		public IValueProvider<Vector2> Size { get; }
 
-		public SpriteData(string id, IReadOnlyList<Action> listeners, IValueProvider<Sprite> sprite) : base(id, listeners) => Sprite = sprite;
+		public SpriteData(string id, IReadOnlyList<Action> listeners, IValueProvider<Sprite> sprite, IValueProvider<Vector2> size) : base(id, listeners) =>
+			(Sprite, Size) = (sprite, size);
+	}
+
+	public class AudioSourceData : BehaviourData
+	{
+		public IValueProvider<AudioClip> Clip { get; }
+		public IValueProvider<bool> PlayOnStart { get; }
+		public IValueProvider<bool> Loop { get; }
+
+		public AudioSourceData(string id, IReadOnlyList<Action> listeners, IValueProvider<AudioClip> clip, IValueProvider<bool> playOnStart, IValueProvider<bool> loop) : base(id, listeners) =>
+			(Clip, PlayOnStart, Loop) = (clip, playOnStart, loop);
 	}
 }
