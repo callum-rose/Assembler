@@ -405,4 +405,17 @@ namespace Assembler.Parsing.Info
 			new ConditionTriggerInfo(Id, substitutedListeners,
 				Condition.Substitute(parameters, allValues));
 	}
+
+	public record SpriteInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Sprite> Sprite)
+		: BehaviourInfo(Id, Listeners)
+	{
+		public static SpriteInfo Create(string id, IReadOnlyList<BehaviourDescriptor> listeners,
+			Dictionary<string, object>? props, IReadOnlyList<VariableInfo> v, IReadOnlyDictionary<string, object>? p) =>
+			new(id, listeners,
+				Transformer.Wrap<Sprite>(v, props?.GetValueOrDefault("Sprite"), parameters: p));
+
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners, IReadOnlyDictionary<string, object> parameters, IReadOnlyList<VariableInfo> allValues) =>
+			new SpriteInfo(Id, substitutedListeners,
+				Sprite.Substitute(parameters, allValues));
+	}
 }

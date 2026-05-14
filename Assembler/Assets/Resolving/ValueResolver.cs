@@ -13,15 +13,15 @@ namespace Assembler.Resolving
 			return valueSource switch
 			{
 				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
-				VariableSource<T> variableRef => new ValueContainerProvider<T>(variables.Get<T>(variableRef.VariableId)),
-				ExpressionSource<T> expressionRef => new ExpressionContainerProvider<T>(
+				VariableSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
+				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
 					BuildExpressionContainer(expressionRef, variables, expressions)),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource?.GetType()}")
 			};
 		}
 
-		private static ExpressionContainer<TReturn> BuildExpressionContainer<TReturn>(
+		private static Func<TReturn> BuildExpressionContainer<TReturn>(
 			ExpressionSource<TReturn> expressionSource,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions)
@@ -37,7 +37,7 @@ namespace Assembler.Resolving
 				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i], paramType, variables, expressions);
 			}
 
-			return new ExpressionContainer<TReturn>(InvokeWithArgs);
+			return InvokeWithArgs;
 
 			TReturn InvokeWithArgs()
 			{
@@ -89,23 +89,16 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions)
 		{
-			switch (wrapperBoxed)
+			return wrapperBoxed switch
 			{
-				case ConstantSource<T> c:
-					return new BoxedProvider<T>(new ValueContainerProvider<T>(new ValueContainer<T>(c.Value)));
-				case VariableSource<T> v:
-					return new BoxedProvider<T>(new ValueContainerProvider<T>(variables.Get<T>(v.VariableId)));
-				case ExpressionSource<T> e:
-					return new BoxedProvider<T>(
-						new ExpressionContainerProvider<T>(BuildExpressionContainer(e, variables, expressions)));
+				ConstantSource<T> c => new BoxedProvider<T>(new ValueProvider<T>(c.Value)),
+				VariableSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
+				ExpressionSource<T> e => new BoxedProvider<T>(new ExpressionValueProvider<T>(BuildExpressionContainer(e, variables, expressions))),
 				// Fallback: argument was declared with object generic but holds a Constant<object>/etc.
-				case ConstantSource<object> co:
-					return new ConstObjectProvider(co.Value);
-				case VariableSource<object> vo:
-					return new BoxedProvider<T>(new ValueContainerProvider<T>(variables.Get<T>(vo.VariableId)));
-				default:
-					throw new Exception($"Unsupported argument wrapper: {wrapperBoxed?.GetType()}");
-			}
+				ConstantSource<object> co => new ConstObjectProvider(co.Value),
+				VariableSource<object> vo => new BoxedProvider<T>(variables.Get<T>(vo.VariableId)),
+				_ => throw new Exception($"Unsupported argument wrapper: {wrapperBoxed?.GetType()}")
+			};
 		}
 
 		private sealed class BoxedProvider<T> : IValueProvider<object>

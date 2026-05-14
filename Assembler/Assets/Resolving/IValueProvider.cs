@@ -39,53 +39,19 @@ namespace Assembler.Resolving
 		}
 	}
 
-	public sealed class ValueContainerProvider<T> : IValueProvider<T>
+	public sealed class ExpressionValueProvider<T> : IValueProvider<T>
 	{
 		public T Value
 		{
-			get => _container.Value;
-			set => _container.Value = value;
-		}
-
-		private readonly ValueContainer<T> _container;
-
-		public ValueContainerProvider(ValueContainer<T> container)
-		{
-			_container = container;
-		}
-	}
-
-	public sealed class ExpressionContainerProvider<T> : IValueProvider<T>
-	{
-		public T Value
-		{
-			get => _container.Invoke();
+			get => _func.Invoke();
 			set => throw new InvalidOperationException("ExpressionContainerProvider cannot have its value set");
 		}
 
-		private readonly ExpressionContainer<T> _container;
+		private readonly Func<T> _func;
 
-		public ExpressionContainerProvider(ExpressionContainer<T> container)
+		public ExpressionValueProvider(Func<T> func)
 		{
-			_container = container;
-		}
-	}
-
-	public sealed class MappedValueProvider<TInput, TOutput> : IValueProvider<TOutput>
-	{
-		public TOutput Value
-		{
-			get => _mapper(_inner.Value);
-			set => throw new InvalidOperationException("MappedValueProvider cannot have its value set");
-		}
-
-		private readonly IValueProvider<TInput> _inner;
-		private readonly Func<TInput, TOutput> _mapper;
-
-		public MappedValueProvider(IValueProvider<TInput> inner, Func<TInput, TOutput> mapper)
-		{
-			_inner = inner;
-			_mapper = mapper;
+			_func = func;
 		}
 	}
 }

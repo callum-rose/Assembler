@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Assembler.Resolving
 {
@@ -251,5 +252,12 @@ namespace Assembler.Resolving
 		public IValueProvider<float> Size { get; }
 
 		public CameraData(string id, IReadOnlyList<Action> listeners, IValueProvider<string> perspective, IValueProvider<float> size) : base(id, listeners) => (Perspective, Size) = (perspective, size);
+	}
+
+	public class SpriteData : BehaviourData
+	{
+		public IValueProvider<Sprite> Sprite { get; }
+
+		public SpriteData(string id, IReadOnlyList<Action> listeners, IValueProvider<Sprite> sprite) : base(id, listeners) => Sprite = sprite;
 	}
 }

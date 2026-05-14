@@ -8,7 +8,15 @@ World:
 
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
-
+  
+Assets:
+  - Id: square
+    Type: sprite
+    ResourcePath: Textures/white_box.png
+  - Id: circle
+    Type: sprite
+    ResourcePath: Textures/white_circle.png
+    
 Constants:
   - Id: initial score
     Value: 0

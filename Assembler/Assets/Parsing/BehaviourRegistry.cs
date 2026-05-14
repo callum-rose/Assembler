@@ -61,6 +61,7 @@ namespace Assembler.Parsing
 				["float variable setter"] = (VariableSetterInfo<float>.Create, new[] { new PropDescriptor("VariableId", typeof(float)), new PropDescriptor("Value", typeof(float)) }),
 				["bool variable setter"] = (VariableSetterInfo<bool>.Create, new[] { new PropDescriptor("VariableId", typeof(bool)), new PropDescriptor("Value", typeof(bool)) }),
 				["string variable setter"] = (VariableSetterInfo<string>.Create, new[] { new PropDescriptor("VariableId", typeof(string)), new PropDescriptor("Value", typeof(string)) }),
+				["sprite"] = (SpriteInfo.Create, new[] { new PropDescriptor("Sprite", typeof(Sprite)) }),
 			};
 
 		[MenuItem("Assembler/Find and Log All Concrete Behaviour Info Types")]

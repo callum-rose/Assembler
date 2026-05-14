@@ -6,6 +6,7 @@ namespace Assembler.Parsing.Info
 		AboutInfo About,
 		WorldInfo World,
 		PhysicsInfo Physics,
+		IReadOnlyList<AssetInfo> Assets,
 		// IReadOnlyList<ValueInfo> Constants,
 		IReadOnlyList<VariableInfo> Variables,
 		IReadOnlyList<VariableInfo> ResolvedValues,
@@ -13,4 +14,5 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<EntityInfo> Templates,
 		IReadOnlyList<EntityInfo> Entities,
 		ValueSource<bool> GameOverCondition);
+
 }

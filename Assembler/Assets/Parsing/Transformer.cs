@@ -18,6 +18,12 @@ namespace Assembler.Parsing
 			var physics =
 				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<VariableInfo>()) ?? new Vector3(0, 0, 0));
 
+			var assets = gameDto.Assets.EmptyIfNull().Select(a => a.Type switch
+			{
+				"sprite" => new SpriteAssetInfo(a.Id ?? string.Empty, a.ResourcePath ?? string.Empty),
+				_ => throw new NotImplementedException()
+			}).ToList();
+
 			var constants = new List<VariableInfo>(gameDto.Constants?.Count ?? 0);
 
 			foreach (var valueDto in gameDto.Constants ?? Enumerable.Empty<ValueDto>())
@@ -94,6 +100,7 @@ namespace Assembler.Parsing
 			return new GameInfo(info,
 				world,
 				physics,
+				assets,
 				variables,
 				allValues,
 				expressions,
