@@ -5,7 +5,9 @@
         "Assembler.Parsing.Phase2",
         "Assembler.Core",
         "Assembler.Parsing.Phase3",
-        "Assembler.Extensions"
+        "Assembler.Extensions",
+        "Assembler.Resolving",
+        "Assembler.Parsing"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

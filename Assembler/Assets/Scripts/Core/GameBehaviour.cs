@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Assembler.Parsing.Phase3;
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Core

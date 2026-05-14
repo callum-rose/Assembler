@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Assembler.Core;
-using Assembler.Parsing.Phase2.Info;
+using Assembler.Parsing.Info;
 
 namespace Assembler.Building
 {

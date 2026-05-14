@@ -1,5 +1,5 @@
 using Assembler.Core;
-using Assembler.Parsing.Phase3;
+using Assembler.Resolving;
 
 namespace Assembler.Behaviours.Physics
 {

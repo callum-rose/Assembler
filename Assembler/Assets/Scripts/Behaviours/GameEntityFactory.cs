@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
+using Assembler.Core;
 using Assembler.Extensions;
-using Assembler.Parsing.Phase2.Info;
-using Assembler.Parsing.Phase3;
+using Assembler.Parsing.Info;
+using Assembler.Resolving;
 using UnityEngine;
 
-namespace Assembler.Core
+namespace Assembler.Behaviours
 {
 	public static class GameEntityFactory
 	{

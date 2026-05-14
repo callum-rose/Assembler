@@ -1,0 +1,17 @@
+{
+    "name": "Assembler.Parsing",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.Parsing.Phase1",
+        "Assembler.Deserialisation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

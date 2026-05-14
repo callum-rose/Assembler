@@ -4,7 +4,8 @@
     "references": [
         "Assembler.Parsing.Phase3",
         "Assembler.Parsing.Phase2",
-        "Assembler.Extensions"
+        "Assembler.Extensions",
+        "Assembler.Resolving"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

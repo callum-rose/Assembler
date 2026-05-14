@@ -1,5 +1,5 @@
 using System.Collections;
-using Assembler.Parsing.Phase3;
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing

@@ -6,7 +6,9 @@
         "Assembler.Parsing.Phase1",
         "Assembler.Parsing.Phase2",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Assembler.Deserialisation",
+        "Assembler.Parsing"
     ],
     "includePlatforms": [
         "Editor"

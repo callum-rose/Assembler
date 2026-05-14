@@ -1,6 +1,5 @@
 using System;
-using Assembler.Parsing.Phase2.Info;
-using Assembler.Parsing.Phase3;
+using Assembler.Resolving;
 
 namespace Assembler.Behaviours.Triggers.Conditionals
 {
