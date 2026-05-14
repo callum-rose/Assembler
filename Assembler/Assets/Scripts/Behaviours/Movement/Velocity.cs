@@ -1,9 +1,10 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
 {
-	public class Velocity : TransformBehaviour<VelocityData>
+	public class Velocity : GameBehaviour<VelocityData>
 	{
 		private void Update()
 		{

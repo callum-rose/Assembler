@@ -1,9 +1,10 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Physics
 {
-	public sealed class AutoAddBoxColliderBehaviour : AutoAddColliderBehaviour<BoxColliderData>
+	public sealed class AutoAddBoxColliderBehaviour : GameBehaviour<BoxColliderData>
 	{
 		private BoxCollider _boxCollider;
 		

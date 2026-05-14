@@ -1,9 +1,10 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Physics
 {
-	public sealed class AutoAddSphereColliderBehaviour : AutoAddColliderBehaviour<SphereColliderData>
+	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
 	{
 		private SphereCollider _sphereCollider;
 		

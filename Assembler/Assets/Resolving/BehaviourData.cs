@@ -66,9 +66,7 @@ namespace Assembler.Resolving
 
 	public abstract class TriggerData : BehaviourData
 	{
-		public IReadOnlyList<Action> Listeners { get; }
-
-		protected TriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) => Listeners = listeners;
+		protected TriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
 	}
 
 	public sealed class KeyHoldTriggerData : TriggerData
@@ -213,7 +211,7 @@ namespace Assembler.Resolving
 		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
 	}
 
-	public sealed class WhenAnyData : TriggerData
+	public sealed class WhenAnyData : BehaviourData
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 

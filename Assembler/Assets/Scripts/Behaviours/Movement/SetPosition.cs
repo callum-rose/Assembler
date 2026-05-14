@@ -1,9 +1,10 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
 {
-	public class SetPosition : TransformBehaviour<SetPositionData>
+	public class SetPosition : GameBehaviour<SetPositionData>
 	{
 		private IValueProvider<Vector3> _position;
 		

@@ -133,25 +133,6 @@ namespace Assembler.Parsing
 
 		internal const string ParameterEntityIdSentinel = "@param:";
 
-		private static IReadOnlyList<BehaviourDescriptor> ConvertListeners(object? obj) =>
-			obj is List<object> list
-				? list.Select(item =>
-				{
-					string? entityId = GetValueFromDictionary(item, "EntityId") as string;
-					string? behaviourId = GetValueFromDictionary(item, "BehaviourId") as string;
-
-					if (entityId is null || behaviourId is null)
-					{
-						throw new ParsingException($"Cannot convert listener: {item}. Missing EntityId or BehaviourId.");
-					}
-
-					return new BehaviourDescriptor(entityId, behaviourId);
-				}).ToArray()
-				: (IReadOnlyList<BehaviourDescriptor>)Array.Empty<object>();
-
-		private static object? GetValueFromDictionary(object item, string key) =>
-			item is IDictionary<string, object> sd && sd.TryGetValue(key, out var val) ? val : null;
-
 		internal static IReadOnlyList<string> ConvertStringList(object? obj) =>
 			obj is List<object> list
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
@@ -248,15 +229,6 @@ namespace Assembler.Parsing
 
 			throw new ParsingException($"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
 		}
-
-		// private static ValueWrapper<Vector3> ConvertVector(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
-		// 	obj switch
-		// 	{
-		// 		VecDto vecDto => vecDto.ToVector3(resolvedValues),
-		// 		RefDto refDto => refDto.ResolveValue<Vector3>(resolvedValues),
-		// 		null => new Vector3(0, 0, 0),
-		// 		_ => throw new ParsingException($"Cannot convert {obj} to a Vector3")
-		// 	};
 
 		private static object Convert(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
 			obj switch
