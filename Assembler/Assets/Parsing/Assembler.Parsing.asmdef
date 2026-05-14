@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler",
     "references": [
         "Assembler.Parsing.Phase1",
-        "Assembler.Deserialisation"
+        "Assembler.Deserialisation",
+        "Assembler.Extensions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

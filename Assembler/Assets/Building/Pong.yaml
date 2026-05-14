@@ -86,10 +86,10 @@ Templates:
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move up
-      - Type: translate
+      - Type: velocity
         Id: move up
         Properties:
-          Displacement: !vec
+          Velocity: !vec
             X: 0
             Y: !const paddle up speed
       - Type: key hold trigger
@@ -99,10 +99,10 @@ Templates:
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move down
-      - Type: translate
+      - Type: velocity
         Id: move down
         Properties:
-          Displacement: !vec
+          Velocity: !vec
             X: 0
             Y: !const paddle down speed
   - Id: wall_template

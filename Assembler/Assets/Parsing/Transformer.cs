@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Deserialisation.Dtos;
+using Assembler.Extensions;
 using Assembler.Parsing.Info;
 using UnityEngine;
 
@@ -112,14 +113,17 @@ namespace Assembler.Parsing
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
-			return entry.Factory(id, GetListeners(behaviourDto, resolvedValues, parameters),
-				behaviourDto.Properties, resolvedValues, parameters);
+			return entry.Factory(id,
+				GetListeners(behaviourDto, resolvedValues, parameters),
+				behaviourDto.Properties,
+				resolvedValues,
+				parameters);
 		}
 
 		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
 			IReadOnlyList<VariableInfo> variables, IReadOnlyDictionary<string, object>? parameters) =>
-			behaviourDto.Listeners
-				?.Select(l => new BehaviourDescriptor(l.EntityId switch
+			behaviourDto.Listeners?
+				.Select(l => new BehaviourDescriptor(l.EntityId switch
 					{
 						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
 						                                                   (paramRefDto.Id ?? string.Empty),
@@ -152,57 +156,28 @@ namespace Assembler.Parsing
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
 		internal static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw,
-			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null)
-		{
-			switch (raw)
+			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null) =>
+			raw switch
 			{
-				case ParamRefDto paramRefDto:
-				{
-					if (parameters == null)
-					{
-						return new ParameterSource<T>(paramRefDto.Id ?? string.Empty);
-					}
-
-					if (!parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue))
-					{
-						throw new ParsingException($"Parameter '{paramRefDto.Id}' not found");
-					}
-
-					return Wrap(resolvedValues, paramValue, fallback);
-				}
-
-				case ConstRefDto constRefDto:
-					return new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues));
-
-				case VarRefDto varRefDto:
-					return new VariableSource<T>(varRefDto.Id ?? string.Empty);
-
-				case ExprRefDto exprRefDto:
-				{
-					var args = exprRefDto.Arguments ?? Array.Empty<object>();
-					var wrappedArgs = args.Select(a => Wrap<object>(resolvedValues, a, parameters: parameters)).ToArray();
-					return new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty, wrappedArgs);
-				}
-
-				case VecDto vecDto when typeof(T) == typeof(Vector3):
-					return new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues));
-
-				case VecDto vecDto when typeof(T) == typeof(Vector2):
-					return new ConstantSource<T>((T)(object)vecDto.ToVector2(resolvedValues));
-
-				case VecDto vecDto:
-					return new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues));
-
-				case null when fallback is not null:
-					return new ConstantSource<T>(fallback);
-
-				case null:
-					return None<T>.Instance;
-
-				default:
-					return new ConstantSource<T>(CoerceConstant<T>(raw));
-			}
-		}
+				ParamRefDto paramRefDto when parameters is null => new ParameterSource<T>(paramRefDto.Id ?? string.Empty),
+				ParamRefDto paramRefDto => !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue)
+					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
+					: Wrap(resolvedValues, paramValue, fallback),
+				ConstRefDto constRefDto => new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues)),
+				VarRefDto varRefDto => new VariableSource<T>(varRefDto.Id ?? string.Empty),
+				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
+					exprRefDto.Arguments
+						.EmptyIfNull()
+						.Select(a => Wrap<object>(resolvedValues, a, parameters: parameters)).ToArray()),
+				VecDto vecDto when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
+					(T)(object)vecDto.ToVector3(resolvedValues)),
+				VecDto vecDto when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
+					(T)(object)vecDto.ToVector2(resolvedValues)),
+				VecDto vecDto => new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues)),
+				null when fallback is not null => new ConstantSource<T>(fallback),
+				null => None<T>.Instance,
+				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
+			};
 
 		private static T CoerceConstant<T>(object value)
 		{
