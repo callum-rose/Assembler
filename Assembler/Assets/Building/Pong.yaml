@@ -69,7 +69,7 @@ Constants:
   - Id: camera view
     Value: "orthographic"
   - Id: camera size
-    Value: 10
+    Value: 4
 
 Variables:
   - Id: left score

@@ -1,3 +1,4 @@
+using System;
 using Assembler.Core;
 using Assembler.Resolving;
 using UnityEngine;
@@ -17,6 +18,12 @@ namespace Assembler.Behaviours.Physics
 
 		public override void Execute()
 		{
+		}
+
+		private void OnDrawGizmos()
+		{
+			Gizmos.color = Color.white;
+			Gizmos.DrawCube(transform.position, _boxCollider.size);
 		}
 	}
 }
