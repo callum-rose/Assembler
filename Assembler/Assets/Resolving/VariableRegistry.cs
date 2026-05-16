@@ -16,6 +16,7 @@ namespace Assembler.Resolving
 				int i => new ValueProvider<int>(i),
 				float f => new ValueProvider<float>(f),
 				bool b => new ValueProvider<bool>(b),
+				string s => new ValueProvider<string>(s),
 				Vector2 vec2 => new ValueProvider<Vector2>(vec2),
 				Vector3 vec3 => new ValueProvider<Vector3>(vec3),
 				_ => throw new Exception(
@@ -23,19 +24,25 @@ namespace Assembler.Resolving
 			};
 		}
 
-		public ValueProvider<T> Get<T>(string id)
+		public IValueProvider<T> Get<T>(string id)
 		{
 			if (!_variables.TryGetValue(id, out var container))
 			{
 				throw new Exception($"Variable not registered for id: {id}");
 			}
 
-			if (container is not ValueProvider<T> typedContainer)
+			if (container is ValueProvider<T> typedContainer)
 			{
-				throw new Exception($"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}");
+				return typedContainer;
 			}
 
-			return typedContainer;
+			if (container is IValueProvider<int> intContainer && typeof(T) == typeof(float))
+			{
+				return (IValueProvider<T>)(object)new MappedValueProvider<int, float>(intContainer, i => i);
+			}
+
+			throw new Exception($"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}");
+
 		}
 	}
 }

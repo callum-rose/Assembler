@@ -25,24 +25,20 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
-			var constants = new List<VariableInfo>(gameDto.Constants?.Count ?? 0);
+			var variables = new List<VariableInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
 			foreach (var valueDto in gameDto.Constants ?? Enumerable.Empty<ValueDto>())
 			{
-				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(constants, valueDto.Value));
-				constants.Add(value);
-			}
-
-			var variables = new List<VariableInfo>(gameDto.Variables?.Count ?? 0);
-
-			foreach (var valueDto in gameDto.Variables ?? Enumerable.Empty<ValueDto>())
-			{
-				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(constants, valueDto.Value));
+				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
 				variables.Add(value);
 			}
-
-			IReadOnlyList<VariableInfo> allValues = constants.Concat(variables).ToArray();
-
+			
+			foreach (var valueDto in gameDto.Variables ?? Enumerable.Empty<ValueDto>())
+			{
+				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
+				variables.Add(value);
+			}
+			
 			var expressions = gameDto.Expressions?.Select(e => new ExpressionInfo(e.Id ?? string.Empty,
 				(e.ArgumentTypes ?? Array.Empty<string>())
 				.Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
@@ -54,9 +50,9 @@ namespace Assembler.Parsing
 					t.Id ?? string.Empty,
 					NullEntityInfo.Instance,
 					t.Tags ?? new List<string>(),
-					Wrap<Vector3>(allValues, t.Position),
-					Wrap<Vector3>(allValues, t.Rotation),
-					t.Behaviours?.Select(b => CreateBehaviour(allValues, b)).ToArray() ??
+					Wrap<Vector3>(variables, t.Position),
+					Wrap<Vector3>(variables, t.Rotation),
+					t.Behaviours?.Select(b => CreateBehaviour(variables, b)).ToArray() ??
 					Array.Empty<BehaviourInfo>()))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
@@ -80,30 +76,29 @@ namespace Assembler.Parsing
 						parameters.Add("self_id", entityId);
 					}
 
-					var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(allValues, b, parameters))
+					var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(variables, b, parameters))
 					                    ?? Enumerable.Empty<BehaviourInfo>();
 
 					var inheritedBehaviours = template is NullEntityInfo
 						? Enumerable.Empty<BehaviourInfo>()
-						: template.Behaviours.Select(b => TemplateInstantiator.SubstituteBehaviour(b, parameters, allValues));
+						: template.Behaviours.Select(b => TemplateInstantiator.SubstituteBehaviour(b, parameters, variables));
 
 					return new ConcreteEntityInfo(entityId,
 						template,
 						(entityDto.Tags ?? Enumerable.Empty<string>()).Concat(template.Tags).ToList(),
-						Wrap<Vector3>(allValues, entityDto.Position, parameters: parameters),
-						Wrap<Vector3>(allValues, entityDto.Rotation, parameters: parameters),
+						Wrap<Vector3>(variables, entityDto.Position, parameters: parameters),
+						Wrap<Vector3>(variables, entityDto.Rotation, parameters: parameters),
 						inheritedBehaviours.Concat(ownBehaviours).ToArray());
 				})
 				.ToArray() ?? Array.Empty<EntityInfo>();
 
-			var gameOverCondition = Wrap<bool>(allValues, gameDto.GameOverCondition);
+			var gameOverCondition = Wrap<bool>(variables, gameDto.GameOverCondition);
 
 			return new GameInfo(info,
 				world,
 				physics,
 				assets,
 				variables,
-				allValues,
 				expressions,
 				templates,
 				entities,
@@ -136,7 +131,7 @@ namespace Assembler.Parsing
 						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
 						                                                   (paramRefDto.Id ?? string.Empty),
 						ParamRefDto paramRefDto => (string)parameters[paramRefDto.Id ?? string.Empty],
-						ConstRefDto constDto => constDto.ResolveValue<string>(variables),
+						VarRefDto varRefDto => varRefDto.ResolveValue<string>(variables),
 						string behaviourId => behaviourId,
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
 					},
@@ -171,7 +166,6 @@ namespace Assembler.Parsing
 				ParamRefDto paramRefDto => !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue)
 					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
 					: Wrap(resolvedValues, paramValue, fallback),
-				ConstRefDto constRefDto => new ConstantSource<T>(constRefDto.ResolveValue<T>(resolvedValues)),
 				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
 				VarRefDto varRefDto => new VariableSource<T>(varRefDto.Id ?? string.Empty),
 				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,

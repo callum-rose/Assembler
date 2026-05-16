@@ -67,7 +67,7 @@ namespace Assembler.Building
 				variableRegistry,
 				compiledExpressionsRegistry,
 				templatesById,
-				gameInfo.ResolvedValues,
+				gameInfo.Variables,
 				behaviourRegistry,
 				assetRegistry);
 

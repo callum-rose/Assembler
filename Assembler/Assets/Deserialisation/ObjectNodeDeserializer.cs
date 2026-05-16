@@ -28,10 +28,6 @@ namespace Assembler.Deserialisation
 					value = nestedObjectDeserializer(reader, typeof(VarRefDto));
 					return true;
 
-				case Scalar scalar when scalar.Tag == "!const":
-					value = nestedObjectDeserializer(reader, typeof(ConstRefDto));
-					return true;
-
 				case Scalar scalar:
 					reader.MoveNext();
 					value = ParseScalar(scalar);
