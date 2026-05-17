@@ -154,7 +154,7 @@ namespace Assembler.Parsing
 		/// <summary>
 		/// Wraps a raw deserialised value into a <see cref="ValueSource{T}"/>.
 		/// Constants (including <see cref="ConstRefDto"/>) are dereferenced to their values.
-		/// Variable references become <see cref="VariableSource{T}"/>.
+		/// Variable references become <see cref="ValueReferenceSource{T}"/>.
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
@@ -167,7 +167,7 @@ namespace Assembler.Parsing
 					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
 					: Wrap(resolvedValues, paramValue, fallback),
 				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
-				VarRefDto varRefDto => new VariableSource<T>(varRefDto.Id ?? string.Empty),
+				VarRefDto varRefDto => new ValueReferenceSource<T>(varRefDto.Id ?? string.Empty),
 				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
 					exprRefDto.Arguments
 						.EmptyIfNull()

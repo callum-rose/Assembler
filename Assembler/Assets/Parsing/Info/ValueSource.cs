@@ -11,7 +11,7 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ConstantSource<T>(T Value) : ValueSource<T>;
 
-	public sealed record VariableSource<T>(string VariableId) : ValueSource<T>;
+	public sealed record ValueReferenceSource<T>(string VariableId) : ValueSource<T>;
 
 	public sealed record ExpressionSource<T>(
 		string ExpressionId,

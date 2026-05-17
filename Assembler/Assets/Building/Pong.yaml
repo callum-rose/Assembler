@@ -8,7 +8,7 @@ World:
 
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
-  
+
 Assets:
   - Id: square
     Type: sprite
@@ -18,7 +18,7 @@ Assets:
     Type: sprite
     Source: resources
     Path: Textures/white_circle
-    
+
 Constants:
   - Id: initial score
     Value: 0
@@ -27,9 +27,9 @@ Constants:
   - Id: right paddle initial position
     Value: !vec { X: 5, Y: 0 }
   - Id: paddle up speed
-    Value: 2
+    Value: 5
   - Id: paddle down speed
-    Value: -2
+    Value: -5
   - Id: left paddle up key
     Value: "w"
   - Id: left paddle down key
@@ -53,7 +53,7 @@ Constants:
   - Id: wall height
     Value: 0.2
   - Id: paddle height
-    Value: 1
+    Value: 1.0
   - Id: paddle width
     Value: 0.2
   - Id: ball radius
@@ -73,11 +73,11 @@ Constants:
 
 Variables:
   - Id: left score
-    Value: !const initial score
+    Value: !var initial score
   - Id: right score
-    Value: !const initial score
+    Value: !var initial score
   - Id: ball velocity
-    Value: !vec { X: 1, Y: 1 }
+    Value: !vec { X: 3, Y: 3 }
 
 Templates:
   - Id: paddle_template
@@ -87,14 +87,14 @@ Templates:
         Properties:
           Sprite: !asset square
           Size: !vec
-            X: !const paddle width
-            Y: !const paddle height
+            X: !var paddle width
+            Y: !var paddle height
       - Type: box collider
         Id: box collider
         Properties:
           Size: !vec
-            X: !const paddle width
-            Y: !const paddle height
+            X: !var paddle width
+            Y: !var paddle height
           IsTrigger: false
       - Type: key hold trigger
         Id: up key trigger
@@ -108,7 +108,7 @@ Templates:
         Properties:
           Velocity: !vec
             X: 0
-            Y: !const paddle up speed
+            Y: !var paddle up speed
       - Type: key hold trigger
         Id: down key trigger
         Properties:
@@ -121,7 +121,7 @@ Templates:
         Properties:
           Velocity: !vec
             X: 0
-            Y: !const paddle down speed
+            Y: !var paddle down speed
   - Id: wall_template
     Tags:
       - wall
@@ -131,14 +131,14 @@ Templates:
         Properties:
           Sprite: !asset square
           Size: !vec
-            X: !const wall width
-            Y: !const wall height
+            X: !var wall width
+            Y: !var wall height
       - Type: box collider
         Id: box collider
         Properties:
           Size: !vec
-            X: !const wall width
-            Y: !const wall height
+            X: !var wall width
+            Y: !var wall height
   - Id: goal_template
     Tags:
       - goal
@@ -146,7 +146,7 @@ Templates:
       - Type: box collider
         Id: box collider
         Properties:
-          Size: !const goal size
+          Size: !var goal size
           IsTrigger: true
       - Type: trigger enter trigger
         Id: goal trigger
@@ -164,7 +164,7 @@ Templates:
             ExpressionId: int add
             Arguments:
               - !parameter score_var
-              - !const score per goal
+              - !var score per goal
   - Id: ball_template
     Tags:
       - ball
@@ -174,12 +174,12 @@ Templates:
         Properties:
           Sprite: !asset circle
           Size: !vec
-            X: !const ball radius
-            Y: !const ball radius
+            X: !var ball radius
+            Y: !var ball radius
       - Type: sphere collider
         Id: sphere collider
         Properties:
-          Radius: !const ball radius
+          Radius: !var ball radius
       - Type: rigidbody
         Id: rigidbody
         Properties:
@@ -266,47 +266,47 @@ Entities:
     Template:
       Id: paddle_template
       Parameters:
-        up_key: !const left paddle up key
-        down_key: !const left paddle down key
+        up_key: !var left paddle up key
+        down_key: !var left paddle down key
     Tags: [ left paddle ]
-    Position: !const left paddle initial position
+    Position: !var left paddle initial position
   - Id: right paddle
     Template:
       Id: paddle_template
       Parameters:
-        up_key: !const right paddle up key
-        down_key: !const right paddle down key
+        up_key: !var right paddle up key
+        down_key: !var right paddle down key
     Tags: [ right paddle ]
-    Position: !const right paddle initial position
+    Position: !var right paddle initial position
   - Id: upper wall
     Template: { Id: wall_template }
-    Position: !const upper wall position
+    Position: !var upper wall position
   - Id: lower wall
     Template: { Id: wall_template }
-    Position: !const lower wall position
+    Position: !var lower wall position
   - Id: left goal
     Template:
       Id: goal_template
       Parameters:
         score_var: !var right score
-    Position: !const left goal position
+    Position: !var left goal position
   - Id: right goal
     Template:
       Id: goal_template
       Parameters:
         score_var: !var left score
-    Position: !const right goal position
+    Position: !var right goal position
   - Id: camera
     Tags:
       - camera
-    Position: !const camera position
-    Rotation: !const camera rotation
+    Position: !var camera position
+    Rotation: !var camera rotation
     Behaviours:
       - Type: camera
         Id: camera
         Properties:
-          View: !const camera view
-          Size: !const camera size
+          View: !var camera view
+          Size: !var camera size
   - Id: win condition checker
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
@@ -317,7 +317,7 @@ Entities:
             ExpressionId: int greater or equal
             Arguments:
               - !var left score
-              - !const score to win
+              - !var score to win
       - Type: condition trigger
         Id: right score win condition trigger
         Properties:
@@ -325,7 +325,7 @@ Entities:
             ExpressionId: int greater or equal
             Arguments:
               - !var right score
-              - !const score to win
+              - !var score to win
   - Id: ball spawner
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
@@ -345,4 +345,4 @@ GameOverCondition: !expr
   Arguments:
     - !var left score
     - !var right score
-    - !const score to win
+    - !var score to win

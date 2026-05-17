@@ -14,7 +14,7 @@ namespace Assembler.Resolving
 			return valueSource switch
 			{
 				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
-				VariableSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
+				ValueReferenceSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
 				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
 					BuildExpressionContainer(expressionRef, variables, expressions)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
@@ -94,11 +94,11 @@ namespace Assembler.Resolving
 			return wrapperBoxed switch
 			{
 				ConstantSource<T> c => new BoxedProvider<T>(new ValueProvider<T>(c.Value)),
-				VariableSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
+				ValueReferenceSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
 				ExpressionSource<T> e => new BoxedProvider<T>(new ExpressionValueProvider<T>(BuildExpressionContainer(e, variables, expressions))),
 				// Fallback: argument was declared with object generic but holds a Constant<object>/etc.
 				ConstantSource<object> co => new ConstObjectProvider(co.Value),
-				VariableSource<object> vo => new BoxedProvider<T>(variables.Get<T>(vo.VariableId)),
+				ValueReferenceSource<object> vo => new BoxedProvider<T>(variables.Get<T>(vo.VariableId)),
 				_ => throw new Exception($"Unsupported argument wrapper: {wrapperBoxed?.GetType()}")
 			};
 		}
