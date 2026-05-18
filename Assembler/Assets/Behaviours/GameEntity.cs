@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Assembler.Core
+namespace Assembler.Behaviours
 {
 	public sealed class GameEntity : MonoBehaviour
 	{

@@ -18,10 +18,10 @@ namespace Assembler.Resolving
 
 	public sealed class BoxColliderData : BehaviourData
 	{
-		public IValueProvider<UnityEngine.Vector3> Size { get; }
+		public IValueProvider<Vector3> Size { get; }
 		public IValueProvider<bool> IsTrigger { get; }
 
-		public BoxColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> size, IValueProvider<bool> isTrigger) :
+		public BoxColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> size, IValueProvider<bool> isTrigger) :
 			base(id, listeners) =>
 			(Size, IsTrigger) = (size, isTrigger);
 	}
@@ -44,24 +44,24 @@ namespace Assembler.Resolving
 
 	public sealed class VelocityData : BehaviourData
 	{
-		public IValueProvider<UnityEngine.Vector3> Velocity { get; }
+		public IValueProvider<Vector3> Velocity { get; }
 
-		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> velocity) : base(id, listeners) => Velocity = velocity;
+		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> velocity) : base(id, listeners) => Velocity = velocity;
 	}
 
 	public sealed class TranslateData : BehaviourData
 	{
-		public IValueProvider<UnityEngine.Vector3> Displacement { get; }
+		public IValueProvider<Vector3> Displacement { get; }
 
-		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> displacement) : base(id, listeners) =>
+		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> displacement) : base(id, listeners) =>
 			Displacement = displacement;
 	}
 
 	public sealed class SetPositionData : BehaviourData
 	{
-		public IValueProvider<UnityEngine.Vector3> ValueExpression { get; }
+		public IValueProvider<Vector3> ValueExpression { get; }
 
-		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<UnityEngine.Vector3> valueExpression) : base(id, listeners) =>
+		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> valueExpression) : base(id, listeners) =>
 			ValueExpression = valueExpression;
 	}
 
@@ -222,13 +222,13 @@ namespace Assembler.Resolving
 	public sealed class SpawnerData : BehaviourData
 	{
 		public IValueProvider<string> TemplateId { get; }
-		public IValueProvider<UnityEngine.Vector3> Position { get; }
+		public IValueProvider<Vector3> Position { get; }
 
 		public SpawnerData(
 			string id,
 			IReadOnlyList<Action> listeners,
 			IValueProvider<string> templateId,
-			IValueProvider<UnityEngine.Vector3> position) : base(id, listeners) =>
+			IValueProvider<Vector3> position) : base(id, listeners) =>
 			(TemplateId, Position) = (templateId, position);
 	}
 

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Assembler.Core;
+using Assembler.Behaviours;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Building

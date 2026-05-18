@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
-using Assembler.Core;
 using Assembler.Extensions;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;

@@ -9,7 +9,7 @@ namespace Assembler.Deserialisation
 {
 	internal class ObjectNodeDeserializer : INodeDeserializer
 	{
-		public bool Deserialize(IParser reader, Type expectedType, Func<IParser, Type, object> nestedObjectDeserializer,
+		public bool Deserialize(IParser reader, Type expectedType, Func<IParser, Type, object?> nestedObjectDeserializer,
 			out object? value, ObjectDeserializer rootDeserializer)
 		{
 			if (expectedType != typeof(object) &&

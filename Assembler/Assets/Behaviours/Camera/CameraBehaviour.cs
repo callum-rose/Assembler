@@ -1,4 +1,3 @@
-using Assembler.Core;
 using Assembler.Resolving;
 
 namespace Assembler.Behaviours.Camera

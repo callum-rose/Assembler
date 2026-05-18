@@ -21,7 +21,6 @@ namespace Assembler.Deserialisation
 			.WithNodeDeserializer(new ObjectNodeDeserializer())
 			.Build();
 
-		public GameDto Parse(string yaml) =>
-			_deserializer.Deserialize<GameDto>(yaml);
+		public GameDto Parse(string yaml) => _deserializer.Deserialize<GameDto>(yaml);
 	}
 }

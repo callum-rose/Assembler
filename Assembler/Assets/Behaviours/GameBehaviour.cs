@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Assembler.Resolving;
 using UnityEngine;
 
-namespace Assembler.Core
+namespace Assembler.Behaviours
 {
 	public abstract class GameBehaviour : MonoBehaviour
 	{

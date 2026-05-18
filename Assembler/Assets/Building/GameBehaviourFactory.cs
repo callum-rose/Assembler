@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Behaviours;
 using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Movement;
@@ -12,7 +13,6 @@ using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Behaviours.VariableUpdaters;
-using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEngine;
