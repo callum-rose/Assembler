@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Assembler.Behaviours;
 using Assembler.Compiler.Compiler;
 using Assembler.Core;
 using Assembler.Deserialisation;
@@ -61,17 +60,19 @@ namespace Assembler.Building
 			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
-			var entitySpawner = new GameEntitySpawner(
+
+			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,
-				templatesById,
-				gameInfo.Variables,
 				behaviourRegistry,
-				assetRegistry);
+				assetRegistry,
+				entitySpawner);
 
+			var entitySpawner = new GameEntitySpawner(templatesById, gameEntityFactory);
+			
 			foreach (var entityInfo in gameInfo.Entities)
 			{
-				GameEntityFactory.Create(entityInfo, variableRegistry, compiledExpressionsRegistry, entitySpawner, behaviourRegistry, initialisations, assetRegistry);
+				gameEntityFactory.Create(entityInfo, initialisations);
 			}
 
 			// 4. Initialise Behaviours

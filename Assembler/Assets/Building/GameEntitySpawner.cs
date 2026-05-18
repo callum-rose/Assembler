@@ -5,7 +5,6 @@ using Assembler.Behaviours.Spawners;
 using Assembler.Core;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
-using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Building
@@ -14,34 +13,22 @@ namespace Assembler.Building
 	{
 		private const string SpawnedIdPrefix = "$spawn$";
 
-		private readonly VariableRegistry _variables;
-		private readonly CompiledExpressionsRegistry _expressions;
-		private readonly IReadOnlyDictionary<string, EntityInfo> _templatesById;
+		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
+		private readonly GameEntityFactory _gameEntityFactory;
+		private readonly IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
-		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
-		private readonly AssetRegistry _assets;
-		
+
 		private int _spawnCounter;
 
-		public GameEntitySpawner(
-			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions,
-			IReadOnlyDictionary<string, EntityInfo> templatesById,
-			IReadOnlyList<ValueInfo> allValues,
-			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
-			AssetRegistry assets)
+		public GameEntitySpawner(IReadOnlyDictionary<string, EntityInfo> templates, GameEntityFactory gameEntityFactory)
 		{
-			_variables = variables;
-			_expressions = expressions;
-			_templatesById = templatesById;
-			_allValues = allValues;
-			_behaviourRegistry = behaviourRegistry;
-			_assets = assets;
+			_templates = templates;
+			_gameEntityFactory = gameEntityFactory;
 		}
 
 		public void Spawn(string templateId, Vector3 position)
 		{
-			if (!_templatesById.TryGetValue(templateId, out var template))
+			if (!_templates.TryGetValue(templateId, out var template))
 			{
 				throw new InvalidOperationException($"No template registered with id '{templateId}'");
 			}
@@ -57,7 +44,7 @@ namespace Assembler.Building
 				_allValues);
 
 			var inits = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
-			GameEntityFactory.Create(entity, _variables, _expressions, this, _behaviourRegistry, inits, _assets);
+			_gameEntityFactory.Create(entity, inits);
 
 			foreach (var init in inits)
 			{

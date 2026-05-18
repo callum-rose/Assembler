@@ -1,23 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Spawners;
+using Assembler.Behaviours.Sprites;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
-using Assembler.Behaviours.Audio;
-using Assembler.Behaviours.Sprites;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEngine;
 
-namespace Assembler.Behaviours
+namespace Assembler.Building
 {
 	public static class GameBehaviourFactory
 	{
