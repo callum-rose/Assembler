@@ -17,7 +17,7 @@ namespace Assembler.Building
 		private readonly VariableRegistry _variables;
 		private readonly CompiledExpressionsRegistry _expressions;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templatesById;
-		private readonly IReadOnlyList<VariableInfo> _allValues;
+		private readonly IReadOnlyList<ValueInfo> _allValues;
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
 		private readonly AssetRegistry _assets;
 		private int _spawnCounter;
@@ -26,7 +26,7 @@ namespace Assembler.Building
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			IReadOnlyDictionary<string, EntityInfo> templatesById,
-			IReadOnlyList<VariableInfo> allValues,
+			IReadOnlyList<ValueInfo> allValues,
 			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
 			AssetRegistry assets)
 		{

@@ -16,7 +16,7 @@ namespace Assembler.Parsing
 			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0, gameDto.World?.BackgroundColor ?? string.Empty);
 
 			var physics =
-				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<VariableInfo>()) ?? new Vector3(0, 0, 0));
+				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<ValueInfo>()) ?? new Vector3(0, 0, 0));
 
 			var assets = gameDto.Assets.EmptyIfNull().Select(a => a.Type switch
 			{
@@ -25,17 +25,17 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
-			var variables = new List<VariableInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
+			var variables = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
 			foreach (var valueDto in gameDto.Constants ?? Enumerable.Empty<ValueDto>())
 			{
-				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
+				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
 				variables.Add(value);
 			}
 			
 			foreach (var valueDto in gameDto.Variables ?? Enumerable.Empty<ValueDto>())
 			{
-				var value = new VariableInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
+				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
 				variables.Add(value);
 			}
 			
@@ -105,7 +105,7 @@ namespace Assembler.Parsing
 				gameOverCondition);
 		}
 
-		private static BehaviourInfo CreateBehaviour(IReadOnlyList<VariableInfo> resolvedValues,
+		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
 			BehaviourDto behaviourDto, IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
@@ -124,7 +124,7 @@ namespace Assembler.Parsing
 		}
 
 		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
-			IReadOnlyList<VariableInfo> variables, IReadOnlyDictionary<string, object>? parameters) =>
+			IReadOnlyList<ValueInfo> variables, IReadOnlyDictionary<string, object>? parameters) =>
 			behaviourDto.Listeners?
 				.Select(l => new BehaviourDescriptor(l.EntityId switch
 					{
@@ -145,7 +145,7 @@ namespace Assembler.Parsing
 				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
 				: Array.Empty<string>();
 
-		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<VariableInfo> resolvedValues,
+		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
 			object? obj) =>
 			obj is List<object> list
 				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()
@@ -158,7 +158,7 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		internal static ValueSource<T> Wrap<T>(IReadOnlyList<VariableInfo> resolvedValues, object? raw,
+		internal static ValueSource<T> Wrap<T>(IReadOnlyList<ValueInfo> resolvedValues, object? raw,
 			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null) =>
 			raw switch
 			{
@@ -208,7 +208,7 @@ namespace Assembler.Parsing
 			throw new ParsingException($"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
 		}
 
-		private static object Convert(IReadOnlyList<VariableInfo> resolvedValues, object? obj) =>
+		private static object Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj) =>
 			obj switch
 			{
 				VecDto vecDto => vecDto.ToVector3(resolvedValues),

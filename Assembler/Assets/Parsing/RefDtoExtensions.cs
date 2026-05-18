@@ -8,7 +8,7 @@ namespace Assembler.Parsing
 {
 	public static class RefDtoExtensions
 	{
-		public static T ResolveValue<T>(this RefDto refDto, IReadOnlyList<VariableInfo> resolvedValues)
+		public static T ResolveValue<T>(this RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			var valueDto = resolvedValues.FirstOrDefault(v => v.Id == refDto.Id);
 
@@ -34,7 +34,7 @@ namespace Assembler.Parsing
 			return value;
 		}
 
-		public static bool TryResolveValue<T>(this RefDto refDto, IReadOnlyList<VariableInfo> resolvedValues, [NotNullWhen(true)] out T? value)
+		public static bool TryResolveValue<T>(this RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues, [NotNullWhen(true)] out T? value)
 		{
 			var valueDto = resolvedValues.FirstOrDefault(v => v.Id == refDto.Id);
 

@@ -12,7 +12,7 @@ namespace Assembler.Parsing
 			string newEntityId,
 			ValueSource<Vector3> overridePosition,
 			IReadOnlyDictionary<string, object> parameters,
-			IReadOnlyList<VariableInfo> allValues)
+			IReadOnlyList<ValueInfo> allValues)
 		{
 			var behaviours = template.Behaviours
 				.Select(b => SubstituteBehaviour(b, parameters, allValues))
@@ -29,7 +29,7 @@ namespace Assembler.Parsing
 
 		public static ValueSource<T> Substitute<T>(this ValueSource<T> source,
 			IReadOnlyDictionary<string, object> parameters,
-			IReadOnlyList<VariableInfo> allValues)
+			IReadOnlyList<ValueInfo> allValues)
 		{
 			return source switch
 			{
@@ -45,7 +45,7 @@ namespace Assembler.Parsing
 		public static BehaviourInfo SubstituteBehaviour(
 			BehaviourInfo info,
 			IReadOnlyDictionary<string, object> parameters,
-			IReadOnlyList<VariableInfo> allValues)
+			IReadOnlyList<ValueInfo> allValues)
 		{
 			var listeners = SubstituteListeners(info.Listeners, parameters);
 			return info.SubstituteParameters(listeners, parameters, allValues);

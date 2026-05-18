@@ -7,7 +7,7 @@ namespace Assembler.Parsing
 {
 	public static class VecDtoExtensions
 	{
-		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<VariableInfo> resolvedValues)
+		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			return new Vector2(
 				ResolveComponent(dto.X, resolvedValues),
@@ -15,7 +15,7 @@ namespace Assembler.Parsing
 			);
 		}
 
-		public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<VariableInfo> resolvedValues)
+		public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			return new Vector3(
 				ResolveComponent(dto.X, resolvedValues),
@@ -24,7 +24,7 @@ namespace Assembler.Parsing
 			);
 		}
 
-		private static float ResolveComponent(object? component, IReadOnlyList<VariableInfo> resolvedValues)
+		private static float ResolveComponent(object? component, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			if (component is int i)
 			{

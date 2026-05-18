@@ -9,9 +9,9 @@ namespace Assembler.Resolving
 	{
 		private readonly Dictionary<string, object> _variables = new();
 
-		public void Register(VariableInfo variableInfo)
+		public void Register(ValueInfo valueInfo)
 		{
-			_variables[variableInfo.Id] = variableInfo.Value switch
+			_variables[valueInfo.Id] = valueInfo.Value switch
 			{
 				int i => new ValueProvider<int>(i),
 				float f => new ValueProvider<float>(f),
@@ -20,7 +20,7 @@ namespace Assembler.Resolving
 				Vector2 vec2 => new ValueProvider<Vector2>(vec2),
 				Vector3 vec3 => new ValueProvider<Vector3>(vec3),
 				_ => throw new Exception(
-					$"Unsupported value type of '{variableInfo.Value.GetType()}' for variable '{variableInfo.Id}'")
+					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
 			};
 		}
 
@@ -31,18 +31,13 @@ namespace Assembler.Resolving
 				throw new Exception($"Variable not registered for id: {id}");
 			}
 
-			if (container is ValueProvider<T> typedContainer)
+			return container switch
 			{
-				return typedContainer;
-			}
-
-			if (container is IValueProvider<int> intContainer && typeof(T) == typeof(float))
-			{
-				return (IValueProvider<T>)(object)new MappedValueProvider<int, float>(intContainer, i => i);
-			}
-
-			throw new Exception($"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}");
-
+				IValueProvider<T> typedContainer => typedContainer,
+				IValueProvider<int> intContainer when typeof(T) == typeof(float) =>
+					(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intContainer, i => i),
+				_ => throw new Exception($"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}")
+			};
 		}
 	}
 }

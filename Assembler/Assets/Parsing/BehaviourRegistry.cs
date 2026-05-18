@@ -15,7 +15,7 @@ namespace Assembler.Parsing
 		string id,
 		IReadOnlyList<BehaviourDescriptor> listeners,
 		Dictionary<string, object>? props,
-		IReadOnlyList<VariableInfo> resolvedValues,
+		IReadOnlyList<ValueInfo> resolvedValues,
 		IReadOnlyDictionary<string, object>? parameters);
 
 	internal static class BehaviourRegistry
