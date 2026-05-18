@@ -1,4 +1,3 @@
-using System;
 using Assembler.Resolving;
 
 namespace Assembler.Behaviours.Triggers.Conditionals

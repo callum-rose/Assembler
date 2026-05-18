@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;

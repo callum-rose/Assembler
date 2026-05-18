@@ -6,12 +6,10 @@ using Assembler.Behaviours;
 using Assembler.Compiler.Compiler;
 using Assembler.Core;
 using Assembler.Deserialisation;
-using Assembler.Extensions;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEditor;
-using UnityEngine;
 using Vector3 = UnityEngine.Vector3;
 
 namespace Assembler.Building

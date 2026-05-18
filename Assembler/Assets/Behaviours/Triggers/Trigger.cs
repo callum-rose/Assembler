@@ -1,8 +1,5 @@
-using System;
 using Assembler.Core;
 using Assembler.Resolving;
-using UnityEngine;
-using UnityEngine.Events;
 
 namespace Assembler.Behaviours.Triggers
 {
