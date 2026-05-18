@@ -1,33 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Assembler.Parsing.Info;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace Assembler.Resolving
 {
-	public interface IAssetLoader
-	{
-		T Load<T>(string path) where T : Object;
-	}
-
-	public sealed class ResourcesAssetLoader : IAssetLoader
-	{
-		public T Load<T>(string path) where T : Object
-		{
-			var pathWithoutExtension = Path.ChangeExtension(path, null);
-			var asset = Resources.Load<T>(pathWithoutExtension);
-
-			if (asset == null)
-			{
-				throw new InvalidOperationException($"Failed to load asset of type '{typeof(T).Name}' at path '{pathWithoutExtension}'");
-			}
-
-			return asset;
-		}
-	}
-
 	public sealed class AssetRegistry
 	{
 		private readonly Dictionary<string, Object> _assets = new();

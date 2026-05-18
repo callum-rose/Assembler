@@ -20,6 +20,7 @@ namespace Assembler.Building
 		private readonly IReadOnlyList<ValueInfo> _allValues;
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
 		private readonly AssetRegistry _assets;
+		
 		private int _spawnCounter;
 
 		public GameEntitySpawner(
