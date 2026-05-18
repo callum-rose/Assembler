@@ -4,6 +4,7 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Camera;
+using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Spawners;
@@ -339,6 +340,28 @@ namespace Assembler.Building
 					i.PlayOnStart.Resolve(vr, cr, ar),
 					i.Loop.Resolve(vr, cr, ar))));
 			},
+			[typeof(SphereGizmoInfo)] = (go, info, vr, cr, es, ar) =>
+			{
+				var i = (SphereGizmoInfo)info;
+				var b = go.AddComponent<SphereGizmoBehaviour>();
+
+				return (b, lr => b.Initialise(new SphereGizmoData(i.Id,
+					i.Listeners.ToActions(lr),
+					i.Radius.Resolve(vr, cr, ar),
+					i.IsWire.Resolve(vr, cr, ar),
+					i.Colour.Resolve(vr, cr, ar))));
+			},
+			[typeof(CubeGizmoInfo)] = (go, info, vr, cr, es, ar) =>
+			{
+				var i = (CubeGizmoInfo)info;
+				var b = go.AddComponent<CubeGizmoBehaviour>();
+
+				return (b, lr => b.Initialise(new CubeGizmoData(i.Id,
+					i.Listeners.ToActions(lr),
+					i.Size.Resolve(vr, cr, ar),
+					i.IsWire.Resolve(vr, cr, ar),
+					i.Colour.Resolve(vr, cr, ar))));
+			}
 		};
 
 		public static (GameBehaviour, InitialiseBehaviourEvent) Create(

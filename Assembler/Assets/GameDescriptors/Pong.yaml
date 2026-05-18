@@ -9,16 +9,6 @@ World:
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
-Assets:
-  - Id: square
-    Type: sprite
-    Source: resources
-    Path: Textures/white_box
-  - Id: circle
-    Type: sprite
-    Source: resources
-    Path: Textures/white_circle
-
 Constants:
   - Id: initial score
     Value: 0
@@ -82,13 +72,14 @@ Variables:
 Templates:
   - Id: paddle_template
     Behaviours:
-      - Type: sprite
-        Id: sprite
+      - Type: cube gizmo
+        Id: gizmo
         Properties:
-          Sprite: !asset square
           Size: !vec
             X: !var paddle width
             Y: !var paddle height
+          IsWire: false
+          Colour: "#FFFFFF"
       - Type: box collider
         Id: box collider
         Properties:
@@ -126,13 +117,14 @@ Templates:
     Tags:
       - wall
     Behaviours:
-      - Type: sprite
-        Id: sprite
+      - Type: cube gizmo
+        Id: gizmo
         Properties:
-          Sprite: !asset square
           Size: !vec
             X: !var wall width
             Y: !var wall height
+          IsWire: false
+          Colour: "#FFFFFF"
       - Type: box collider
         Id: box collider
         Properties:
@@ -169,13 +161,12 @@ Templates:
     Tags:
       - ball
     Behaviours:
-      - Type: sprite
-        Id: sprite
+      - Type: sphere gizmo
+        Id: gizmo
         Properties:
-          Sprite: !asset circle
-          Size: !vec
-            X: !var ball radius
-            Y: !var ball radius
+          Radius: !var ball radius
+          IsWire: false
+          Colour: "#FFFFFF"
       - Type: sphere collider
         Id: sphere collider
         Properties:

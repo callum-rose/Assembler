@@ -8,7 +8,7 @@ namespace Assembler.Behaviours.VariableUpdaters
 		public override void Execute()
 		{
 			Data.ValueToSet.Value = Data.ValueToGet.Value;
-			Debug.Log($"{Id} set to {Data.ValueToSet.Value}");
+			UnityEngine.Debug.Log($"{Id} set to {Data.ValueToSet.Value}");
 		}
 	}
 }

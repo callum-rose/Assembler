@@ -21,7 +21,10 @@ namespace Assembler.Resolving
 		public IValueProvider<Vector3> Size { get; }
 		public IValueProvider<bool> IsTrigger { get; }
 
-		public BoxColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> size, IValueProvider<bool> isTrigger) :
+		public BoxColliderData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<Vector3> size,
+			IValueProvider<bool> isTrigger) :
 			base(id, listeners) =>
 			(Size, IsTrigger) = (size, isTrigger);
 	}
@@ -31,7 +34,8 @@ namespace Assembler.Resolving
 		public IValueProvider<float> Radius { get; }
 		public IValueProvider<bool> IsTrigger { get; init; } = NullValueProvider<bool>.Instance;
 
-		public SphereColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<float> radius) : base(id, listeners) => Radius = radius;
+		public SphereColliderData(string id, IReadOnlyList<Action> listeners, IValueProvider<float> radius) : base(id,
+			listeners) => Radius = radius;
 	}
 
 	public sealed class RigidbodyData : BehaviourData
@@ -46,14 +50,16 @@ namespace Assembler.Resolving
 	{
 		public IValueProvider<Vector3> Velocity { get; }
 
-		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> velocity) : base(id, listeners) => Velocity = velocity;
+		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> velocity) :
+			base(id, listeners) => Velocity = velocity;
 	}
 
 	public sealed class TranslateData : BehaviourData
 	{
 		public IValueProvider<Vector3> Displacement { get; }
 
-		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> displacement) : base(id, listeners) =>
+		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> displacement) : base(id,
+			listeners) =>
 			Displacement = displacement;
 	}
 
@@ -61,7 +67,8 @@ namespace Assembler.Resolving
 	{
 		public IValueProvider<Vector3> ValueExpression { get; }
 
-		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> valueExpression) : base(id, listeners) =>
+		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> valueExpression) : base(id,
+			listeners) =>
 			ValueExpression = valueExpression;
 	}
 
@@ -171,7 +178,8 @@ namespace Assembler.Resolving
 	{
 		public IReadOnlyList<string> TagsToDetect { get; }
 
-		protected PhysicalTriggerData(string id, IReadOnlyList<string> tagsToDetect,
+		protected PhysicalTriggerData(string id,
+			IReadOnlyList<string> tagsToDetect,
 			IReadOnlyList<Action> listeners) : base(id, listeners) => TagsToDetect = tagsToDetect;
 	}
 
@@ -209,14 +217,16 @@ namespace Assembler.Resolving
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 
-		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
+		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) :
+			base(id, listeners) => TriggerIds = triggerIds;
 	}
 
 	public sealed class WhenAnyData : BehaviourData
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 
-		public WhenAnyData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) : base(id, listeners) => TriggerIds = triggerIds;
+		public WhenAnyData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) :
+			base(id, listeners) => TriggerIds = triggerIds;
 	}
 
 	public sealed class SpawnerData : BehaviourData
@@ -242,7 +252,10 @@ namespace Assembler.Resolving
 		public IValueProvider<T> ValueToSet { get; }
 		public IValueProvider<T> ValueToGet { get; }
 
-		public VariableSetterData(string id, IReadOnlyList<Action> listeners, IValueProvider<T> valueToSet, IValueProvider<T> valueToGet) : base(id, listeners) =>
+		public VariableSetterData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<T> valueToSet,
+			IValueProvider<T> valueToGet) : base(id, listeners) =>
 			(ValueToSet, ValueToGet) = (valueToSet, valueToGet);
 	}
 
@@ -251,7 +264,10 @@ namespace Assembler.Resolving
 		public IValueProvider<string> Perspective { get; }
 		public IValueProvider<float> Size { get; }
 
-		public CameraData(string id, IReadOnlyList<Action> listeners, IValueProvider<string> perspective, IValueProvider<float> size) : base(id, listeners) => (Perspective, Size) = (perspective, size);
+		public CameraData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<string> perspective,
+			IValueProvider<float> size) : base(id, listeners) => (Perspective, Size) = (perspective, size);
 	}
 
 	public class SpriteData : BehaviourData
@@ -259,7 +275,10 @@ namespace Assembler.Resolving
 		public IValueProvider<Sprite> Sprite { get; }
 		public IValueProvider<Vector2> Size { get; }
 
-		public SpriteData(string id, IReadOnlyList<Action> listeners, IValueProvider<Sprite> sprite, IValueProvider<Vector2> size) : base(id, listeners) =>
+		public SpriteData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<Sprite> sprite,
+			IValueProvider<Vector2> size) : base(id, listeners) =>
 			(Sprite, Size) = (sprite, size);
 	}
 
@@ -269,7 +288,37 @@ namespace Assembler.Resolving
 		public IValueProvider<bool> PlayOnStart { get; }
 		public IValueProvider<bool> Loop { get; }
 
-		public AudioSourceData(string id, IReadOnlyList<Action> listeners, IValueProvider<AudioClip> clip, IValueProvider<bool> playOnStart, IValueProvider<bool> loop) : base(id, listeners) =>
+		public AudioSourceData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<AudioClip> clip,
+			IValueProvider<bool> playOnStart,
+			IValueProvider<bool> loop) : base(id, listeners) =>
 			(Clip, PlayOnStart, Loop) = (clip, playOnStart, loop);
+	}
+
+	public class SphereGizmoData : BehaviourData
+	{
+		public IValueProvider<float> Radius { get; }
+		public IValueProvider<bool> IsWire { get; }
+		public IValueProvider<Color> Colour { get; }
+
+		public SphereGizmoData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<float> radius,
+			IValueProvider<bool> isWire,
+			IValueProvider<Color> colour) : base(id, listeners) => (Radius, IsWire, Colour) = (radius, isWire, colour);
+	}
+
+	public class CubeGizmoData : BehaviourData
+	{
+		public IValueProvider<Vector3> Size { get; }
+		public IValueProvider<bool> IsWire { get; }
+		public IValueProvider<Color> Colour { get; }
+
+		public CubeGizmoData(string id,
+			IReadOnlyList<Action> listeners,
+			IValueProvider<Vector3> size,
+			IValueProvider<bool> isWire,
+			IValueProvider<Color> colour) : base(id, listeners) => (Size, IsWire, Colour) = (size, isWire, colour);
 	}
 }

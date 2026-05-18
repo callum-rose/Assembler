@@ -3,112 +3,44 @@
 ## `box collider`
 | Property | Type |
 |----------|------|
-| Size | `Vector3` |
-| IsTrigger | `bool` |
+| Size | `UnityEngine.Vector3` |
+| IsTrigger | `System.Boolean` |
 
 ## `sphere collider`
 | Property | Type |
 |----------|------|
-| Radius | `float` |
-| IsTrigger | `bool` |
+| Radius | `System.Single` |
+| IsTrigger | `System.Boolean` |
 
 ## `rigidbody`
 | Property | Type |
 |----------|------|
-| UseGravity | `bool` |
+| UseGravity | `System.Boolean` |
 
 ## `velocity`
 | Property | Type |
 |----------|------|
-| Velocity | `Vector3` |
+| Velocity | `UnityEngine.Vector3` |
 
 ## `translate`
 | Property | Type |
 |----------|------|
-| Displacement | `Vector3` |
+| Displacement | `UnityEngine.Vector3` |
 
 ## `key hold trigger`
 | Property | Type |
 |----------|------|
-| Key | `string` |
-
-## `collision enter trigger`
-| Property | Type |
-|----------|------|
-| TagsToDetect | `string[]` |
-
-## `trigger enter trigger`
-| Property | Type |
-|----------|------|
-| TagsToDetect | `string[]` |
-
-## `vector variable setter`
-| Property | Type |
-|----------|------|
-| VariableId | `Vector3` |
-| Value | `Vector3` |
-
-## `int variable setter`
-| Property | Type |
-|----------|------|
-| VariableId | `int` |
-| Value | `int` |
-
-## `float variable setter`
-| Property | Type |
-|----------|------|
-| VariableId | `float` |
-| Value | `float` |
-
-## `bool variable setter`
-| Property | Type |
-|----------|------|
-| VariableId | `bool` |
-| Value | `bool` |
-
-## `string variable setter`
-| Property | Type |
-|----------|------|
-| VariableId | `string` |
-| Value | `string` |
-
-## `position setter`
-| Property | Type |
-|----------|------|
-| Position | `Vector3` |
-
-## `camera`
-| Property | Type |
-|----------|------|
-| View | `string` |
-| Size | `float` |
-
-## `condition trigger`
-| Property | Type |
-|----------|------|
-| Condition | `bool` |
-
-## `spawner`
-| Property | Type |
-|----------|------|
-| TemplateId | `string` |
-| Position | `Vector3` |
-
-## `destroy`
-No properties.
-
-## `on start trigger`
-No properties.
+| Key | `System.String` |
 
 ## `key down trigger`
 | Property | Type |
 |----------|------|
-| Key | `string` |
+| Key | `System.String` |
 
 ## `key up trigger`
 | Property | Type |
 |----------|------|
-| Key | `string` |
+| Key | `System.String` |
 
 ## `tap trigger`
 No properties.
@@ -134,49 +66,144 @@ No properties.
 ## `condition`
 | Property | Type |
 |----------|------|
-| ExpressionId | `string` |
-| Arguments | `object[]` |
+| ExpressionId | `System.String` |
+| Arguments | `System.Object[]` |
 
 ## `timer trigger`
 | Property | Type |
 |----------|------|
-| Delay | `float` |
+| Delay | `System.Single` |
+
+## `on start trigger`
+No properties.
 
 ## `interval trigger`
 | Property | Type |
 |----------|------|
-| Interval | `float` |
+| Interval | `System.Single` |
 
 ## `every frame trigger`
 No properties.
 
+## `collision enter trigger`
+| Property | Type |
+|----------|------|
+| TagsToDetect | `System.String[]` |
+
+## `trigger enter trigger`
+| Property | Type |
+|----------|------|
+| TagsToDetect | `System.String[]` |
+
 ## `trigger exit trigger`
 | Property | Type |
 |----------|------|
-| TagsToDetect | `string[]` |
+| TagsToDetect | `System.String[]` |
 
 ## `trigger stay trigger`
 | Property | Type |
 |----------|------|
-| TagsToDetect | `string[]` |
+| TagsToDetect | `System.String[]` |
 
 ## `collision exit trigger`
 | Property | Type |
 |----------|------|
-| TagsToDetect | `string[]` |
+| TagsToDetect | `System.String[]` |
 
 ## `collision stay trigger`
 | Property | Type |
 |----------|------|
-| TagsToDetect | `string[]` |
+| TagsToDetect | `System.String[]` |
 
 ## `when all`
 | Property | Type |
 |----------|------|
-| TriggerIds | `string[]` |
+| TriggerIds | `System.String[]` |
 
 ## `when any`
 | Property | Type |
 |----------|------|
-| TriggerIds | `string[]` |
+| TriggerIds | `System.String[]` |
+
+## `spawner`
+| Property | Type |
+|----------|------|
+| TemplateId | `System.String` |
+| Position | `UnityEngine.Vector3` |
+
+## `destroy`
+No properties.
+
+## `position setter`
+| Property | Type |
+|----------|------|
+| Position | `UnityEngine.Vector3` |
+
+## `camera`
+| Property | Type |
+|----------|------|
+| View | `System.String` |
+| Size | `System.Single` |
+
+## `condition trigger`
+| Property | Type |
+|----------|------|
+| Condition | `System.Boolean` |
+
+## `vector variable setter`
+| Property | Type |
+|----------|------|
+| VariableId | `UnityEngine.Vector3` |
+| Value | `UnityEngine.Vector3` |
+
+## `int variable setter`
+| Property | Type |
+|----------|------|
+| VariableId | `System.Int32` |
+| Value | `System.Int32` |
+
+## `float variable setter`
+| Property | Type |
+|----------|------|
+| VariableId | `System.Single` |
+| Value | `System.Single` |
+
+## `bool variable setter`
+| Property | Type |
+|----------|------|
+| VariableId | `System.Boolean` |
+| Value | `System.Boolean` |
+
+## `string variable setter`
+| Property | Type |
+|----------|------|
+| VariableId | `System.String` |
+| Value | `System.String` |
+
+## `sprite`
+| Property | Type |
+|----------|------|
+| Sprite | `UnityEngine.Sprite` |
+| Size | `UnityEngine.Vector2` |
+
+## `audio source`
+| Property | Type |
+|----------|------|
+| Clip | `UnityEngine.AudioClip` |
+| PlayOnStart | `System.Boolean` |
+| Loop | `System.Boolean` |
+
+## `sphere gizmo`
+| Property | Type |
+|----------|------|
+| Radius | `System.Single` |
+| IsWire | `System.Boolean` |
+| Colour | `UnityEngine.Color` |
+
+## `cube gizmo`
+| Property | Type |
+|----------|------|
+| Size | `UnityEngine.Vector3` |
+| IsWire | `System.Boolean` |
+| Colour | `UnityEngine.Color` |
 
