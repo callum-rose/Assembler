@@ -45,6 +45,8 @@ namespace Assembler.Parsing
 				(e.ArgumentTypes ?? Array.Empty<string>())
 				.Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
 				e.ReturnType ?? string.Empty,
+				e.RegisterTypes ?? Array.Empty<string>(),
+				e.RegisterTypeStatics ?? Array.Empty<string>(),
 				e.Expression ?? string.Empty)).ToArray();
 
 			var templates = gameDto.Templates?

@@ -22,6 +22,44 @@ namespace Assembler.Resolving
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)
 		{
+			foreach (var typeName in expressionInfo.RegisterTypes)
+			{
+				var type = Type.GetType(typeName);
+				
+				if (type is null)
+				{
+					type = AppDomain.CurrentDomain.GetAssemblies()
+						.SelectMany(a => a.GetTypes())
+						.FirstOrDefault(t => t.FullName == typeName);
+					
+					if (type is null)
+					{
+						throw new Exception($"Type not found for name: {typeName}");
+					}
+				}
+				
+				_compiler.RegisterType(type);
+			}
+
+			foreach (var typeName in expressionInfo.RegisterTypeStatics)
+			{
+				var type = Type.GetType(typeName);
+				
+				if (type is null)
+				{
+					type = AppDomain.CurrentDomain.GetAssemblies()
+						.SelectMany(a => a.GetTypes())
+						.FirstOrDefault(t => t.FullName == typeName);
+					
+					if (type is null)
+					{
+						throw new Exception($"Type not found for name: {typeName}");
+					}
+				}
+				
+				_compiler.RegisterStaticMethods(type);
+			}
+			
 			var compiledExpression = _compiler.Compile(
 				expressionInfo.Expression,
 				_typeRegistry[expressionInfo.ReturnType],

@@ -60,6 +60,8 @@ Constants:
     Value: "orthographic"
   - Id: camera size
     Value: 4
+  - Id: paddle bounce factor
+    Value: 8
 
 Variables:
   - Id: left score
@@ -188,15 +190,20 @@ Templates:
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: paddle bounce velocity setter
+            Outputs:
+              contact_point: hit_point
+              other_position: paddle_position
       - Type: vector variable setter
         Id: paddle bounce velocity setter
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            ExpressionId: vec multiply
+            ExpressionId: paddle bounce
             Arguments:
               - !var ball velocity
-              - !vec { X: -1, Y: 1 }
+              - !output hit_point
+              - !output paddle_position
+              - !var paddle bounce factor
       - Type: collision enter trigger
         Id: wall collision trigger
         Properties:
@@ -228,6 +235,14 @@ Templates:
         Id: self destructor
 
 Expressions:
+  - Id: paddle bounce
+    ArgumentTypes: [ vector, vector, vector, float ]
+    ArgumentNames: [ ball_vel, hit_point, paddle_pos, factor ]
+    ReturnType: vector
+    Expression: "var speed = ball_vel.magnitude; 
+      var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f); 
+      var norm = dir.normalized; 
+      new UnityEngine.Vector3(norm.x * speed, norm.y * speed, 0f);"
   - Id: vec multiply
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ a, b ]
@@ -245,7 +260,9 @@ Expressions:
     Expression: "a >= b;"
   - Id: random ball initial position
     ReturnType: vector
-    Expression: "new UnityEngine.Vector3(0, UnityEngine.Random.Range(-2f, 2f), 0);"
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "new Vector3(0, Range(-2f, 2f), 0);"
   - Id: is game over
     ArgumentTypes: [ int, int, int ]
     ArgumentNames: [ a, b, w ]

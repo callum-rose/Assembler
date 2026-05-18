@@ -8,14 +8,14 @@ namespace Assembler.Compiler.Compiler
 {
 	public class ExpressionMethodCompiler
 	{
-		private readonly Dictionary<string, List<MethodInfo>> _registeredMethods = new();
+		private readonly Dictionary<string, HashSet<MethodInfo>> _registeredMethods = new();
 		private readonly Dictionary<string, Type> _registeredTypes = new();
 
 		public void RegisterMethod(string name, MethodInfo methodInfo)
 		{
 			if (!_registeredMethods.ContainsKey(name))
 			{
-				_registeredMethods[name] = new List<MethodInfo>();
+				_registeredMethods[name] = new HashSet<MethodInfo>();
 			}
 
 			_registeredMethods[name].Add(methodInfo);
