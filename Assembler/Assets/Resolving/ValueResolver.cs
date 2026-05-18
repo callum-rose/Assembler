@@ -41,7 +41,11 @@ namespace Assembler.Resolving
 			for (int i = 0; i < expressionSource.Arguments.Count; i++)
 			{
 				var paramType = expressions.ResolveType(info.Arguments[i].type);
-				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i], paramType, variables, expressions,
+
+				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i],
+					paramType,
+					variables,
+					expressions,
 					triggerContext);
 			}
 
@@ -102,16 +106,21 @@ namespace Assembler.Resolving
 			return wrapperBoxed switch
 			{
 				ConstantSource<T> c => new BoxedProvider<T>(new ValueProvider<T>(c.Value)),
-				ValueReferenceSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
-				ExpressionSource<T> e => new BoxedProvider<T>(new ExpressionValueProvider<T>(
-					BuildExpressionContainer(e, variables, expressions, triggerContext))),
-				TriggerOutputSource<T> o => new BoxedProvider<T>(new TriggerOutputProvider<T>(o.OutputName,
-					triggerContext ?? throw new InvalidOperationException(
-						$"TriggerContext required to resolve trigger output '{o.OutputName}'"))),
-				// Fallback: argument was declared with object generic but holds a Constant<object>/etc.
 				ConstantSource<object> co => new ConstObjectProvider(co.Value),
+				ValueReferenceSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
 				ValueReferenceSource<object> vo => new BoxedProvider<T>(variables.Get<T>(vo.VariableId)),
-				_ => throw new Exception($"Unsupported argument wrapper: {wrapperBoxed?.GetType()}")
+				ExpressionSource<T> e => new BoxedProvider<T>(
+					new ExpressionValueProvider<T>(
+						BuildExpressionContainer(e, variables, expressions, triggerContext))),
+				TriggerOutputSource<T> o => new BoxedProvider<T>(
+					new TriggerOutputProvider<T>(o.OutputName,
+						triggerContext ?? throw new InvalidOperationException(
+							$"TriggerContext required to resolve trigger output '{o.OutputName}'"))),
+				TriggerOutputSource<object> o => new BoxedProvider<T>(
+					new TriggerOutputProvider<T>(o.OutputName,
+						triggerContext ?? throw new InvalidOperationException(
+							$"TriggerContext required to resolve trigger output '{o.OutputName}'"))),
+				_ => throw new Exception($"Unsupported argument wrapper: {wrapperBoxed.GetType()}")
 			};
 		}
 
