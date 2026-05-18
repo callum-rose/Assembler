@@ -2,11 +2,11 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record RigidbodyInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<bool> UseGravity)
+	public record RigidbodyInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<bool> UseGravity)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static RigidbodyInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -14,7 +14,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("UseGravity"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new RigidbodyInfo(Id,

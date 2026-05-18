@@ -4,11 +4,11 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record TriggerEnterTriggerInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		IReadOnlyList<string> TagsToDetect) : BehaviourInfo(Id, Listeners)
 	{
 		public static TriggerEnterTriggerInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.ConvertStringList(props?.GetValueOrDefault("TagsToDetect")));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TriggerEnterTriggerInfo(Id, substitutedListeners, TagsToDetect);

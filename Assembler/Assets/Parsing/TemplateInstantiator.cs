@@ -51,8 +51,8 @@ namespace Assembler.Parsing
 			return info.SubstituteParameters(listeners, parameters, allValues);
 		}
 
-		private static IReadOnlyList<BehaviourDescriptor> SubstituteListeners(
-			IReadOnlyList<BehaviourDescriptor> listeners,
+		private static IReadOnlyList<ListenerInfo> SubstituteListeners(
+			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, object> parameters)
 		{
 			if (listeners.Count == 0)
@@ -60,24 +60,30 @@ namespace Assembler.Parsing
 				return listeners;
 			}
 
-			var result = new BehaviourDescriptor[listeners.Count];
+			var result = new ListenerInfo[listeners.Count];
+			
 			for (var i = 0; i < listeners.Count; i++)
 			{
 				var l = listeners[i];
-				if (l.EntityId.StartsWith(Transformer.ParameterEntityIdSentinel))
-				{
-					var paramId = l.EntityId.Substring(Transformer.ParameterEntityIdSentinel.Length);
-					if (!parameters.TryGetValue(paramId, out var raw) || raw is not string entityId)
-					{
-						throw new ParsingException(
-							$"Listener parameter '{paramId}' is missing or not a string");
-					}
 
-					result[i] = new BehaviourDescriptor(entityId, l.BehaviourId);
+				if (!l.BehaviourDescriptor.EntityId.StartsWith(Transformer.ParameterEntityIdSentinel))
+				{
+					result[i] = l;
+					continue;
+				}
+
+				var paramId = l.BehaviourDescriptor.EntityId.Substring(Transformer.ParameterEntityIdSentinel.Length);
+
+				if (parameters.TryGetValue(paramId, out var raw) && raw is string entityId)
+				{
+					result[i] = new ListenerInfo(l.BehaviourDescriptor with { EntityId = entityId })
+					{
+						OutputMapping = l.OutputMapping
+					};
 				}
 				else
 				{
-					result[i] = l;
+					throw new ParsingException($"Listener parameter '{paramId}' is missing or not a string");
 				}
 			}
 

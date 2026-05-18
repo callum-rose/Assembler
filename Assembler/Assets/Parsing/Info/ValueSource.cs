@@ -20,4 +20,6 @@ namespace Assembler.Parsing.Info
 	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>;
 
 	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;
+
+	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
 }

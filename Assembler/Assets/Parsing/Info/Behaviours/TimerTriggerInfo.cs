@@ -2,11 +2,11 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record TimerTriggerInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<float> Delay)
+	public record TimerTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<float> Delay)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static TimerTriggerInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -14,7 +14,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.Wrap<float>(v, props?.GetValueOrDefault("Delay"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TimerTriggerInfo(Id,

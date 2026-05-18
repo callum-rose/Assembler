@@ -31,338 +31,344 @@ namespace Assembler.Building
 			VariableRegistry vr,
 			CompiledExpressionsRegistry cr,
 			IEntitySpawner spawner,
-			AssetRegistry ar);
+			AssetRegistry ar,
+			TriggerContext tc);
 
 		private readonly static Dictionary<Type, BehaviourBuilder> Builders = new()
 		{
-			[typeof(BoxColliderInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(BoxColliderInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (BoxColliderInfo)info;
 				var b = go.AddComponent<AutoAddBoxColliderBehaviour>();
 
 				return (b, lr => b.Initialise(new BoxColliderData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Size.Resolve(vr, cr, ar),
-					i.IsTrigger.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Size.Resolve(vr, cr, ar, tc),
+					i.IsTrigger.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(SphereColliderInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SphereColliderInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SphereColliderInfo)info;
 				var b = go.AddComponent<AutoAddSphereColliderBehaviour>();
 
 				return (b, lr => b.Initialise(new SphereColliderData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Radius.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Radius.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(RigidbodyInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(RigidbodyInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (RigidbodyInfo)info;
 				var b = go.AddComponent<RigidbodyBehaviour>();
 
-				return (b, lr => b.Initialise(new RigidbodyData(i.Id, i.Listeners.ToActions(lr))
+				return (b, lr => b.Initialise(new RigidbodyData(i.Id, i.Listeners.ToActions(lr, tc))
 				{
-					UseGravity = i.UseGravity.Resolve(vr, cr, ar)
+					UseGravity = i.UseGravity.Resolve(vr, cr, ar, tc)
 				}));
 			},
-			[typeof(VelocityInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VelocityInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VelocityInfo)info;
 				var b = go.AddComponent<Velocity>();
 
 				return (b, lr => b.Initialise(new VelocityData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Velocity.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Velocity.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(TranslateInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(TranslateInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (TranslateInfo)info;
 				var b = go.AddComponent<Translate>();
 
 				return (b, lr => b.Initialise(new TranslateData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Displacement.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Displacement.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(SetPositionInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SetPositionInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SetPositionInfo)info;
 				var b = go.AddComponent<SetPosition>();
 
 				return (b, lr => b.Initialise(new SetPositionData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueExpression.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueExpression.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(KeyHoldTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(KeyHoldTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (KeyHoldTriggerInfo)info;
 				var b = go.AddComponent<KeyHoldTrigger>();
 
 				return (b, lr => b.Initialise(new KeyHoldTriggerData(i.Id,
-					i.Key.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Key.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(KeyDownTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(KeyDownTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (KeyDownTriggerInfo)info;
 				var b = go.AddComponent<KeyDownTrigger>();
 
 				return (b, lr => b.Initialise(new KeyDownTriggerData(i.Id,
-					i.Key.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Key.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(KeyUpTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(KeyUpTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (KeyUpTriggerInfo)info;
 				var b = go.AddComponent<KeyUpTrigger>();
 
 				return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
-					i.Key.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Key.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(TapTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(TapTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (TapTriggerInfo)info;
 				var b = go.AddComponent<Tap>();
-				return (b, lr => b.Initialise(new TapTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new TapTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(DoubleTapTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(DoubleTapTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (DoubleTapTriggerInfo)info;
 				var b = go.AddComponent<DoubleTap>();
-				return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(LongPressTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(LongPressTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (LongPressTriggerInfo)info;
 				var b = go.AddComponent<LongPress>();
-				return (b, lr => b.Initialise(new LongPressTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new LongPressTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(SwipeTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SwipeTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SwipeTriggerInfo)info;
 				var b = go.AddComponent<Swipe>();
-				return (b, lr => b.Initialise(new SwipeTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new SwipeTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(DragTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(DragTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (DragTriggerInfo)info;
 				var b = go.AddComponent<Drag>();
-				return (b, lr => b.Initialise(new DragTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new DragTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(PinchTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(PinchTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (PinchTriggerInfo)info;
 				var b = go.AddComponent<Pinch>();
-				return (b, lr => b.Initialise(new PinchTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new PinchTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(RotateTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(RotateTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (RotateTriggerInfo)info;
 				var b = go.AddComponent<Rotate>();
-				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (OnStartTriggerInfo)info;
 				var b = go.AddComponent<OnStartTrigger>();
-				return (b, lr => b.Initialise(new OnStartTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new OnStartTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(TimerTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(TimerTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (TimerTriggerInfo)info;
 				var b = go.AddComponent<TimerTrigger>();
 
 				return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
-					i.Delay.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Delay.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(IntervalTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(IntervalTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (IntervalTriggerInfo)info;
 				var b = go.AddComponent<IntervalTrigger>();
 
 				return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
-					i.Interval.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Interval.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(EveryFrameTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(EveryFrameTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (EveryFrameTriggerInfo)info;
 				var b = go.AddComponent<EveryFrameTrigger>();
-				return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(CollisionEnterTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(CollisionEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (CollisionEnterTriggerInfo)info;
 				var b = go.AddComponent<CollisionEnter>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
 					i.TagsToDetect,
-					i.Listeners.ToActions(lr))));
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(CollisionExitTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(CollisionExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (CollisionExitTriggerInfo)info;
 				var b = go.AddComponent<CollisionExit>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionExitTriggerData(i.Id,
 					i.TagsToDetect,
-					i.Listeners.ToActions(lr))));
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(CollisionStayTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(CollisionStayTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (CollisionStayTriggerInfo)info;
 				var b = go.AddComponent<CollisionStay>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionStayTriggerData(i.Id,
 					i.TagsToDetect,
-					i.Listeners.ToActions(lr))));
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(TriggerEnterTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(TriggerEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (TriggerEnterTriggerInfo)info;
 				var b = go.AddComponent<TriggerEnter>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new TriggerEnterTriggerData(i.Id,
 					i.TagsToDetect,
-					i.Listeners.ToActions(lr))));
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(TriggerExitTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(TriggerExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (TriggerExitTriggerInfo)info;
 				var b = go.AddComponent<TriggerExit>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new TriggerExitTriggerData(i.Id,
 					i.TagsToDetect,
-					i.Listeners.ToActions(lr))));
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(ConditionTriggerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(ConditionTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (ConditionTriggerInfo)info;
 				var b = go.AddComponent<Condition>();
 
 				return (b, lr => b.Initialise(new ConditionData(i.Id,
-					i.Condition.Resolve(vr, cr, ar),
-					i.Listeners.ToActions(lr))));
+					i.Condition.Resolve(vr, cr, ar, tc),
+					i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(CameraInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(CameraInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (CameraInfo)info;
 				var b = go.AddComponent<CameraBehaviour>();
 
 				return (b, lr => b.Initialise(new CameraData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.View.Resolve(vr, cr, ar),
-					i.Size.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.View.Resolve(vr, cr, ar, tc),
+					i.Size.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(SpawnerInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SpawnerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SpawnerInfo)info;
 				var b = go.AddComponent<SpawnerBehaviour>();
 				b.Spawner = es;
 
 				return (b, lr => b.Initialise(new SpawnerData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.TemplateId.Resolve(vr, cr, ar),
-					i.Position.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.TemplateId.Resolve(vr, cr, ar, tc),
+					i.Position.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (DestroyInfo)info;
 				var b = go.AddComponent<DestroyBehaviour>();
-				return (b, lr => b.Initialise(new DestroyData(i.Id, i.Listeners.ToActions(lr))));
+				return (b, lr => b.Initialise(new DestroyData(i.Id, i.Listeners.ToActions(lr, tc))));
 			},
-			[typeof(VariableSetterInfo<Vector3>)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VariableSetterInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VariableSetterInfo<Vector3>)info;
 				var b = go.AddComponent<Vector3Setter>();
 
 				return (b, lr => b.Initialise(new VariableSetterData<Vector3>(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueToSet.Resolve(vr, cr, ar),
-					i.ValueToGet.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueToSet.Resolve(vr, cr, ar, tc),
+					i.ValueToGet.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(VariableSetterInfo<int>)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VariableSetterInfo<int>)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VariableSetterInfo<int>)info;
 				var b = go.AddComponent<IntSetter>();
 
 				return (b, lr => b.Initialise(new VariableSetterData<int>(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueToSet.Resolve(vr, cr, ar),
-					i.ValueToGet.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueToSet.Resolve(vr, cr, ar, tc),
+					i.ValueToGet.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(VariableSetterInfo<float>)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VariableSetterInfo<float>)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VariableSetterInfo<float>)info;
 				var b = go.AddComponent<FloatSetter>();
 
 				return (b, lr => b.Initialise(new VariableSetterData<float>(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueToSet.Resolve(vr, cr, ar),
-					i.ValueToGet.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueToSet.Resolve(vr, cr, ar, tc),
+					i.ValueToGet.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(VariableSetterInfo<bool>)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VariableSetterInfo<bool>)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VariableSetterInfo<bool>)info;
 				var b = go.AddComponent<BoolSetter>();
 
 				return (b, lr => b.Initialise(new VariableSetterData<bool>(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueToSet.Resolve(vr, cr, ar),
-					i.ValueToGet.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueToSet.Resolve(vr, cr, ar, tc),
+					i.ValueToGet.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(VariableSetterInfo<string>)] = (go, info, vr, cr, es, ar) =>
+			[typeof(VariableSetterInfo<string>)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (VariableSetterInfo<string>)info;
 				var b = go.AddComponent<StringSetter>();
 
 				return (b, lr => b.Initialise(new VariableSetterData<string>(i.Id,
-					i.Listeners.ToActions(lr),
-					i.ValueToSet.Resolve(vr, cr, ar),
-					i.ValueToGet.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.ValueToSet.Resolve(vr, cr, ar, tc),
+					i.ValueToGet.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SpriteInfo)info;
 				var b = go.AddComponent<SpriteBehaviour>();
 
 				return (b, lr => b.Initialise(new SpriteData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Sprite.Resolve(vr, cr, ar),
-					i.Size.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Sprite.Resolve(vr, cr, ar, tc),
+					i.Size.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(AudioSourceInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(AudioSourceInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (AudioSourceInfo)info;
 				var b = go.AddComponent<AudioSourceBehaviour>();
 
 				return (b, lr => b.Initialise(new AudioSourceData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Clip.Resolve(vr, cr, ar),
-					i.PlayOnStart.Resolve(vr, cr, ar),
-					i.Loop.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Clip.Resolve(vr, cr, ar, tc),
+					i.PlayOnStart.Resolve(vr, cr, ar, tc),
+					i.Loop.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(SphereGizmoInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(SphereGizmoInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (SphereGizmoInfo)info;
 				var b = go.AddComponent<SphereGizmoBehaviour>();
 
 				return (b, lr => b.Initialise(new SphereGizmoData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Radius.Resolve(vr, cr, ar),
-					i.IsWire.Resolve(vr, cr, ar),
-					i.Colour.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Radius.Resolve(vr, cr, ar, tc),
+					i.IsWire.Resolve(vr, cr, ar, tc),
+					i.Colour.Resolve(vr, cr, ar, tc))));
 			},
-			[typeof(CubeGizmoInfo)] = (go, info, vr, cr, es, ar) =>
+			[typeof(CubeGizmoInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
 				var i = (CubeGizmoInfo)info;
 				var b = go.AddComponent<CubeGizmoBehaviour>();
 
 				return (b, lr => b.Initialise(new CubeGizmoData(i.Id,
-					i.Listeners.ToActions(lr),
-					i.Size.Resolve(vr, cr, ar),
-					i.IsWire.Resolve(vr, cr, ar),
-					i.Colour.Resolve(vr, cr, ar))));
+					i.Listeners.ToActions(lr, tc),
+					i.Size.Resolve(vr, cr, ar, tc),
+					i.IsWire.Resolve(vr, cr, ar, tc),
+					i.Colour.Resolve(vr, cr, ar, tc))));
 			}
 		};
 
@@ -372,7 +378,8 @@ namespace Assembler.Building
 			VariableRegistry variableRegistry,
 			CompiledExpressionsRegistry compiledExpressionRegistry,
 			IEntitySpawner entitySpawner,
-			AssetRegistry assets = null)
+			AssetRegistry assets,
+			TriggerContext triggerContext)
 		{
 			return Builders.TryGetValue(behaviourInfo.GetType(), out var builder)
 				? builder(gameObject,
@@ -380,12 +387,28 @@ namespace Assembler.Building
 					variableRegistry,
 					compiledExpressionRegistry,
 					entitySpawner,
-					assets)
+					assets,
+					triggerContext)
 				: throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 		}
 
-		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<BehaviourDescriptor> listeners,
-			IReadOnlyBehaviourRegistry listenerRegistry) =>
-			listeners.Select(d => listenerRegistry[d]).Select(b => (Action)b.Execute).ToArray();
+		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<ListenerInfo> listeners,
+			IReadOnlyBehaviourRegistry listenerRegistry,
+			TriggerContext triggerContext) =>
+			listeners.Select(d =>
+			{
+				var behaviour = listenerRegistry[d.BehaviourDescriptor];
+				
+				if (d.OutputMapping.Count == 0)
+				{
+					return (Action)behaviour.Execute;
+				}
+
+				return () =>
+				{
+					triggerContext.ApplyMapping(d.OutputMapping);
+					behaviour.Execute();
+				};
+			}).ToArray();
 	}
 }

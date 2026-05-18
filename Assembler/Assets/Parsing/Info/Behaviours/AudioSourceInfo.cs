@@ -5,14 +5,14 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record AudioSourceInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<AudioClip> Clip,
 		ValueSource<bool> PlayOnStart,
 		ValueSource<bool> Loop)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static AudioSourceInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -22,7 +22,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("PlayOnStart"), parameters: p),
 				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("Loop"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new AudioSourceInfo(Id,

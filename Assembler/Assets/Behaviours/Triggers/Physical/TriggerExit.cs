@@ -8,7 +8,16 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				Execute();
+				TriggerContext.Push();
+				try
+				{
+					TriggerContext.Set("other_position", other.transform.position);
+					InvokeListeners();
+				}
+				finally
+				{
+					TriggerContext.Pop();
+				}
 			}
 		}
 	}

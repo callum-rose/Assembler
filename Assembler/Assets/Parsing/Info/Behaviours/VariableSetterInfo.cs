@@ -4,12 +4,12 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record VariableSetterInfo<T>(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<T> ValueToSet,
 		ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners)
 	{
 		public static VariableSetterInfo<T> Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -18,7 +18,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<T>(v, props?.GetValueOrDefault("VariableId"), parameters: p),
 				Transformer.Wrap<T>(v, props?.GetValueOrDefault("Value"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new VariableSetterInfo<T>(Id,

@@ -5,13 +5,13 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record SpriteInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<Sprite> Sprite,
 		ValueSource<Vector2> Size)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static SpriteInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -20,7 +20,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<Sprite>(v, props?.GetValueOrDefault("Sprite"), parameters: p),
 				Transformer.Wrap<Vector2>(v, props?.GetValueOrDefault("Size"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new SpriteInfo(Id,

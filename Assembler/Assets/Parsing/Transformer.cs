@@ -20,7 +20,9 @@ namespace Assembler.Parsing
 
 			var assets = gameDto.Assets.EmptyIfNull().Select(a => a.Type switch
 			{
-				"sprite" => (AssetInfo)new SpriteAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
+				"sprite" => (AssetInfo)new SpriteAssetInfo(a.Id ?? string.Empty,
+					a.Source ?? "resources",
+					a.Path ?? string.Empty),
 				"audioclip" => new AudioClipAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
@@ -106,7 +108,8 @@ namespace Assembler.Parsing
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
-			BehaviourDto behaviourDto, IReadOnlyDictionary<string, object>? parameters = null)
+			BehaviourDto behaviourDto,
+			IReadOnlyDictionary<string, object>? parameters = null)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
 			var type = behaviourDto.Type ?? string.Empty;
@@ -123,10 +126,14 @@ namespace Assembler.Parsing
 				parameters);
 		}
 
-		private static IReadOnlyList<BehaviourDescriptor> GetListeners(BehaviourDto behaviourDto,
-			IReadOnlyList<ValueInfo> variables, IReadOnlyDictionary<string, object>? parameters) =>
-			behaviourDto.Listeners?
-				.Select(l => new BehaviourDescriptor(l.EntityId switch
+		private static IReadOnlyList<ListenerInfo> GetListeners(BehaviourDto behaviourDto,
+			IReadOnlyList<ValueInfo> variables,
+			IReadOnlyDictionary<string, object>? parameters) =>
+			behaviourDto.Listeners
+				.EmptyIfNull()
+				.Select(l =>
+				{
+					var entityId = l.EntityId switch
 					{
 						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
 						                                                   (paramRefDto.Id ?? string.Empty),
@@ -134,9 +141,16 @@ namespace Assembler.Parsing
 						VarRefDto varRefDto => varRefDto.ResolveValue<string>(variables),
 						string behaviourId => behaviourId,
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
-					},
-					l.BehaviourId ?? string.Empty)).ToArray() ??
-			Array.Empty<BehaviourDescriptor>();
+					};
+
+					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
+
+					return new ListenerInfo(behaviourDescriptor)
+					{
+						OutputMapping = l.Outputs ?? new Dictionary<string, string>()
+					};
+				})
+				.ToArray();
 
 		internal const string ParameterEntityIdSentinel = "@param:";
 
@@ -158,8 +172,10 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		internal static ValueSource<T> Wrap<T>(IReadOnlyList<ValueInfo> resolvedValues, object? raw,
-			T? fallback = default, IReadOnlyDictionary<string, object>? parameters = null) =>
+		internal static ValueSource<T> Wrap<T>(IReadOnlyList<ValueInfo> resolvedValues,
+			object? raw,
+			T? fallback = default,
+			IReadOnlyDictionary<string, object>? parameters = null) =>
 			raw switch
 			{
 				ParamRefDto paramRefDto when parameters is null => new ParameterSource<T>(paramRefDto.Id ?? string.Empty),
@@ -167,6 +183,7 @@ namespace Assembler.Parsing
 					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
 					: Wrap(resolvedValues, paramValue, fallback),
 				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
+				OutputRefDto outputRefDto => new TriggerOutputSource<T>(outputRefDto.Id ?? string.Empty),
 				VarRefDto varRefDto => new ValueReferenceSource<T>(varRefDto.Id ?? string.Empty),
 				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
 					exprRefDto.Arguments

@@ -59,13 +59,16 @@ namespace Assembler.Building
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
+			var triggerContext = new TriggerContext();
+
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,
 				behaviourRegistry,
 				assetRegistry,
 				templatesById,
-				gameInfo.Variables);
+				gameInfo.Variables,
+				triggerContext);
 			
 			var initialisations = new InitialisationQueue();
 

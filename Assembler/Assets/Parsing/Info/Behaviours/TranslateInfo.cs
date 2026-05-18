@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record TranslateInfo(string Id, IReadOnlyList<BehaviourDescriptor> Listeners, ValueSource<Vector3> Displacement)
+	public record TranslateInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<Vector3> Displacement)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static TranslateInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -15,7 +15,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Displacement"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TranslateInfo(Id,

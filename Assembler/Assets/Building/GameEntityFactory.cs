@@ -21,6 +21,7 @@ namespace Assembler.Building
 		private readonly AssetRegistry _assets;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
+		private readonly TriggerContext _triggerContext;
 
 		private int _spawnCounter;
 
@@ -29,7 +30,8 @@ namespace Assembler.Building
 			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
 			IReadOnlyDictionary<string, EntityInfo> templates,
-			IReadOnlyList<ValueInfo> allValues)
+			IReadOnlyList<ValueInfo> allValues,
+			TriggerContext triggerContext)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -37,6 +39,7 @@ namespace Assembler.Building
 			_assets = assets;
 			_templates = templates;
 			_allValues = allValues;
+			_triggerContext = triggerContext;
 		}
 
 		public EntityBuildResult Create(EntityInfo entityInfo)
@@ -63,7 +66,8 @@ namespace Assembler.Building
 					_variables,
 					_expressions,
 					this,
-					_assets);
+					_assets,
+					_triggerContext);
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour));
 				initialisations.Add(initialise);

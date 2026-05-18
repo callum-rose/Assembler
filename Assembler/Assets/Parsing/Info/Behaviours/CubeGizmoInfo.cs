@@ -5,13 +5,13 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record CubeGizmoInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<Vector3> Size,
 		ValueSource<bool> IsWire,
 		ValueSource<Color> Colour) : BehaviourInfo(Id, Listeners)
 	{
 		public static CubeGizmoInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -21,7 +21,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("IsWire"), parameters: p),
 				Transformer.Wrap<Color>(v, props?.GetValueOrDefault("Colour"), parameters: p));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new CubeGizmoInfo(Id,

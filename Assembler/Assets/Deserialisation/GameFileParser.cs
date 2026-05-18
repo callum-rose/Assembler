@@ -14,12 +14,14 @@ namespace Assembler.Deserialisation
 			.WithTagMapping("!expr", typeof(ExprRefDto))
 			.WithTagMapping("!parameter", typeof(ParamRefDto))
 			.WithTagMapping("!asset", typeof(AssetRefDto))
+			.WithTagMapping("!output", typeof(OutputRefDto))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new ColourTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
 			.WithTypeConverter(new ExprTypeConverter())
 			.WithTypeConverter(new ParamTypeConverter())
 			.WithTypeConverter(new AssetTypeConverter())
+			.WithTypeConverter(new OutputTypeConverter())
 			.WithNodeDeserializer(new ObjectNodeDeserializer())
 			.Build();
 

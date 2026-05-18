@@ -5,12 +5,12 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record ConditionInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> ExpressionId,
 		IReadOnlyList<ValueSource<object>> Arguments) : BehaviourInfo(Id, Listeners)
 	{
 		public static ConditionInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -19,7 +19,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<string>(v, props?.GetValueOrDefault("ExpressionId"), parameters: p),
 				Transformer.ConvertArgumentList(v, props?.GetValueOrDefault("Arguments")));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new ConditionInfo(Id,

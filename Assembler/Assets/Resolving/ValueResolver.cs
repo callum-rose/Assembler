@@ -9,15 +9,19 @@ namespace Assembler.Resolving
 		public static IValueProvider<T> Resolve<T>(this ValueSource<T> valueSource,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
-			AssetRegistry assets)
+			AssetRegistry assets,
+			TriggerContext triggerContext = null)
 		{
 			return valueSource switch
 			{
 				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
 				ValueReferenceSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
 				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
-					BuildExpressionContainer(expressionRef, variables, expressions)),
+					BuildExpressionContainer(expressionRef, variables, expressions, triggerContext)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
+				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName,
+					triggerContext ?? throw new InvalidOperationException(
+						$"TriggerContext required to resolve trigger output '{output.OutputName}'")),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource?.GetType()}")
 			};
@@ -26,7 +30,8 @@ namespace Assembler.Resolving
 		private static Func<TReturn> BuildExpressionContainer<TReturn>(
 			ExpressionSource<TReturn> expressionSource,
 			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions)
+			CompiledExpressionsRegistry expressions,
+			TriggerContext triggerContext)
 		{
 			var (delegateType, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
@@ -36,7 +41,8 @@ namespace Assembler.Resolving
 			for (int i = 0; i < expressionSource.Arguments.Count; i++)
 			{
 				var paramType = expressions.ResolveType(info.Arguments[i].type);
-				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i], paramType, variables, expressions);
+				argProviders[i] = ResolveAsObject(expressionSource.Arguments[i], paramType, variables, expressions,
+					triggerContext);
 			}
 
 			return InvokeWithArgs;
@@ -69,7 +75,8 @@ namespace Assembler.Resolving
 			ValueSource<object> valueSource,
 			Type expectedType,
 			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions)
+			CompiledExpressionsRegistry expressions,
+			TriggerContext triggerContext)
 		{
 			var wrapperType = valueSource.GetType();
 			var genericDef = wrapperType.GetGenericTypeDefinition();
@@ -82,20 +89,25 @@ namespace Assembler.Resolving
 			return (IValueProvider<object>)method.Invoke(null,
 				new object[]
 				{
-					valueSource, variables, expressions
+					valueSource, variables, expressions, triggerContext
 				});
 		}
 
 		private static IValueProvider<object> ResolveTyped<T>(
 			object wrapperBoxed,
 			VariableRegistry variables,
-			CompiledExpressionsRegistry expressions)
+			CompiledExpressionsRegistry expressions,
+			TriggerContext triggerContext)
 		{
 			return wrapperBoxed switch
 			{
 				ConstantSource<T> c => new BoxedProvider<T>(new ValueProvider<T>(c.Value)),
 				ValueReferenceSource<T> v => new BoxedProvider<T>(variables.Get<T>(v.VariableId)),
-				ExpressionSource<T> e => new BoxedProvider<T>(new ExpressionValueProvider<T>(BuildExpressionContainer(e, variables, expressions))),
+				ExpressionSource<T> e => new BoxedProvider<T>(new ExpressionValueProvider<T>(
+					BuildExpressionContainer(e, variables, expressions, triggerContext))),
+				TriggerOutputSource<T> o => new BoxedProvider<T>(new TriggerOutputProvider<T>(o.OutputName,
+					triggerContext ?? throw new InvalidOperationException(
+						$"TriggerContext required to resolve trigger output '{o.OutputName}'"))),
 				// Fallback: argument was declared with object generic but holds a Constant<object>/etc.
 				ConstantSource<object> co => new ConstObjectProvider(co.Value),
 				ValueReferenceSource<object> vo => new BoxedProvider<T>(variables.Get<T>(vo.VariableId)),

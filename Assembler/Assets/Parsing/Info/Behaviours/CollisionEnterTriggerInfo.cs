@@ -4,11 +4,11 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record CollisionEnterTriggerInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		IReadOnlyList<string> TagsToDetect) : BehaviourInfo(Id, Listeners)
 	{
 		public static CollisionEnterTriggerInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.ConvertStringList(props?.GetValueOrDefault("TagsToDetect")));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new CollisionEnterTriggerInfo(Id, substitutedListeners, TagsToDetect);

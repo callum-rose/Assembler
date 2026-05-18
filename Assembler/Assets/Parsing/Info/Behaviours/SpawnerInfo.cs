@@ -5,12 +5,12 @@ namespace Assembler.Parsing.Info.Behaviours
 {
 	public record SpawnerInfo(
 		string Id,
-		IReadOnlyList<BehaviourDescriptor> Listeners,
+		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> TemplateId,
 		ValueSource<Vector3> Position) : BehaviourInfo(Id, Listeners)
 	{
 		public static SpawnerInfo Create(string id,
-			IReadOnlyList<BehaviourDescriptor> listeners,
+			IReadOnlyList<ListenerInfo> listeners,
 			Dictionary<string, object>? props,
 			IReadOnlyList<ValueInfo> v,
 			IReadOnlyDictionary<string, object>? p) =>
@@ -19,7 +19,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.Wrap<string>(v, props?.GetValueOrDefault("TemplateId")),
 				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Position")));
 
-		public override BehaviourInfo SubstituteParameters(IReadOnlyList<BehaviourDescriptor> substitutedListeners,
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new SpawnerInfo(Id,
