@@ -1,4 +1,6 @@
+using UnityEngine;
+
 namespace Assembler.Parsing.Info
 {
-	public record WorldInfo(int Dimensionality, string BackgroundColour);
+	public record WorldInfo(int Dimensionality, Color BackgroundColour);
 }
