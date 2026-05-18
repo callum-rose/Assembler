@@ -32,13 +32,13 @@ namespace Assembler.Parsing
 				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
 				variables.Add(value);
 			}
-			
+
 			foreach (var valueDto in gameDto.Variables ?? Enumerable.Empty<ValueDto>())
 			{
 				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
 				variables.Add(value);
 			}
-			
+
 			var expressions = gameDto.Expressions?.Select(e => new ExpressionInfo(e.Id ?? string.Empty,
 				(e.ArgumentTypes ?? Array.Empty<string>())
 				.Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
@@ -177,6 +177,8 @@ namespace Assembler.Parsing
 				VecDto vecDto when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
 					(T)(object)vecDto.ToVector2(resolvedValues)),
 				VecDto vecDto => new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues)),
+				ColourDto colourDto when typeof(T) == typeof(Color) => new ConstantSource<T>(
+					(T)(object)colourDto.ToColor(resolvedValues)),
 				null when fallback is not null => new ConstantSource<T>(fallback),
 				null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
@@ -212,6 +214,7 @@ namespace Assembler.Parsing
 			obj switch
 			{
 				VecDto vecDto => vecDto.ToVector3(resolvedValues),
+				ColourDto colourDto => colourDto.ToColor(resolvedValues),
 				RefDto refDto => resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Value ?? throw new ParsingException(
 					$"Cannot resolve reference '{refDto.Id}'"),
 				not null => obj,

@@ -5,26 +5,9 @@ using UnityEngine;
 
 namespace Assembler.Parsing
 {
-	public static class VecDtoExtensions
+	public static class FloatHelper
 	{
-		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
-		{
-			return new Vector2(
-				ResolveComponent(dto.X, resolvedValues),
-				ResolveComponent(dto.Y, resolvedValues)
-			);
-		}
-
-		public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
-		{
-			return new Vector3(
-				ResolveComponent(dto.X, resolvedValues),
-				ResolveComponent(dto.Y, resolvedValues),
-				dto.Z is not null ? ResolveComponent(dto.Z, resolvedValues) : 0f
-			);
-		}
-
-		private static float ResolveComponent(object? component, IReadOnlyList<ValueInfo> resolvedValues)
+		public static float Resolve(object? component, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			if (component is int i)
 			{
@@ -67,6 +50,26 @@ namespace Assembler.Parsing
 			}
 
 			throw new ParsingException($"Invalid component value: {component ?? "null"}");
+		}
+	}
+	
+	public static class VecDtoExtensions
+	{
+		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			return new Vector2(
+				FloatHelper.Resolve(dto.X, resolvedValues),
+				FloatHelper.Resolve(dto.Y, resolvedValues)
+			);
+		}
+
+		public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			return new Vector3(
+				FloatHelper.Resolve(dto.X, resolvedValues),
+				FloatHelper.Resolve(dto.Y, resolvedValues),
+				dto.Z is not null ? FloatHelper.Resolve(dto.Z, resolvedValues) : 0f
+			);
 		}
 	}
 }

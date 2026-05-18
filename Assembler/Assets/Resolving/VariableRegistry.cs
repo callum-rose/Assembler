@@ -19,6 +19,7 @@ namespace Assembler.Resolving
 				string s => new ValueProvider<string>(s),
 				Vector2 vec2 => new ValueProvider<Vector2>(vec2),
 				Vector3 vec3 => new ValueProvider<Vector3>(vec3),
+				Color c => new ValueProvider<Color>(c),
 				_ => throw new Exception(
 					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
 			};

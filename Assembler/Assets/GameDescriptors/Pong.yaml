@@ -79,7 +79,7 @@ Templates:
             X: !var paddle width
             Y: !var paddle height
           IsWire: false
-          Colour: "#FFFFFF"
+          Colour: !colour red
       - Type: box collider
         Id: box collider
         Properties:
@@ -124,7 +124,7 @@ Templates:
             X: !var wall width
             Y: !var wall height
           IsWire: false
-          Colour: "#FFFFFF"
+          Colour: !colour white
       - Type: box collider
         Id: box collider
         Properties:
@@ -166,7 +166,7 @@ Templates:
         Properties:
           Radius: !var ball radius
           IsWire: false
-          Colour: "#FFFFFF"
+          Colour: !colour blue
       - Type: sphere collider
         Id: sphere collider
         Properties:

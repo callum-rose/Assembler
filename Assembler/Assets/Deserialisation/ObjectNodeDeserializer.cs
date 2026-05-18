@@ -28,6 +28,10 @@ namespace Assembler.Deserialisation
 					value = nestedObjectDeserializer(reader, typeof(VarRefDto));
 					return true;
 
+				case Scalar scalar when scalar.Tag == "!colour":
+					value = nestedObjectDeserializer(reader, typeof(ColourDto));
+					return true;
+
 				case Scalar scalar:
 					reader.MoveNext();
 					value = ParseScalar(scalar);
@@ -35,6 +39,10 @@ namespace Assembler.Deserialisation
 
 				case MappingStart mappingStart when mappingStart.Tag == "!vec":
 					value = nestedObjectDeserializer(reader, typeof(VecDto));
+					return true;
+
+				case MappingStart mappingStart when mappingStart.Tag == "!colour":
+					value = nestedObjectDeserializer(reader, typeof(ColourDto));
 					return true;
 
 				case MappingStart mappingStart when mappingStart.Tag == "!expr":
