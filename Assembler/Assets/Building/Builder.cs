@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Assembler.Compiler.Compiler;
-using Assembler.Core;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
@@ -56,8 +55,7 @@ namespace Assembler.Building
 			assetRegistry.LoadAll(gameInfo.Assets);
 
 			// 3. Instantiate Entities and Behaviours
-			var behaviourRegistry = new Dictionary<BehaviourDescriptor, GameBehaviour>();
-			var initialisations = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
+			var behaviourRegistry = new BehaviourRegistry();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
@@ -68,17 +66,18 @@ namespace Assembler.Building
 				assetRegistry,
 				templatesById,
 				gameInfo.Variables);
+			
+			var initialisations = new InitialisationQueue();
 
 			foreach (var entityInfo in gameInfo.Entities)
 			{
-				gameEntityFactory.Create(entityInfo, initialisations);
+				var result = gameEntityFactory.Create(entityInfo);
+				behaviourRegistry.Register(result);
+				initialisations.Enqueue(result);
 			}
 
 			// 4. Initialise Behaviours
-			foreach (var initialise in initialisations)
-			{
-				initialise(behaviourRegistry);
-			}
+			initialisations.ExecuteAll(behaviourRegistry);
 
 			// 5. Run game over condition
 		}

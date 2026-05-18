@@ -17,7 +17,7 @@ namespace Assembler.Building
 
 		private readonly VariableRegistry _variables;
 		private readonly CompiledExpressionsRegistry _expressions;
-		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviourRegistry;
+		private readonly BehaviourRegistry _behaviourRegistry;
 		private readonly AssetRegistry _assets;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
@@ -26,7 +26,7 @@ namespace Assembler.Building
 
 		public GameEntityFactory(VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
-			Dictionary<BehaviourDescriptor, GameBehaviour> behaviourRegistry,
+			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			IReadOnlyList<ValueInfo> allValues)
@@ -39,8 +39,7 @@ namespace Assembler.Building
 			_allValues = allValues;
 		}
 
-		public void Create(EntityInfo entityInfo,
-			List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>> initialisations)
+		public EntityBuildResult Create(EntityInfo entityInfo)
 		{
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -54,6 +53,9 @@ namespace Assembler.Building
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 
+			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour)>();
+			var initialisations = new List<InitialiseBehaviourEvent>();
+
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{
 				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject,
@@ -63,9 +65,11 @@ namespace Assembler.Building
 					this,
 					_assets);
 
-				_behaviourRegistry.Add(new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour);
+				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour));
 				initialisations.Add(initialise);
 			}
+
+			return new EntityBuildResult(behaviours, initialisations);
 		}
 
 		public void Spawn(string templateId, Vector3 position)
@@ -85,10 +89,10 @@ namespace Assembler.Building
 				parameters,
 				_allValues);
 
-			var inits = new List<Action<IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour>>>();
-			Create(entity, inits);
+			var result = Create(entity);
+			_behaviourRegistry.Register(result);
 
-			foreach (var init in inits)
+			foreach (var init in result.Initialisations)
 			{
 				init(_behaviourRegistry);
 			}
