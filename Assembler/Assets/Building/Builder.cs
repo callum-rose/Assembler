@@ -66,10 +66,9 @@ namespace Assembler.Building
 				compiledExpressionsRegistry,
 				behaviourRegistry,
 				assetRegistry,
-				entitySpawner);
+				templatesById,
+				gameInfo.Variables);
 
-			var entitySpawner = new GameEntitySpawner(templatesById, gameEntityFactory);
-			
 			foreach (var entityInfo in gameInfo.Entities)
 			{
 				gameEntityFactory.Create(entityInfo, initialisations);
