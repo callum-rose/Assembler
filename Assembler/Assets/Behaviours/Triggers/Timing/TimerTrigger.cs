@@ -1,5 +1,6 @@
 using System.Collections;
 using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing

@@ -4,10 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using UnityEditor;
 using UnityEngine;
-using SphereGizmoInfo = Assembler.Parsing.Info.SphereGizmoInfo;
-using CubeGizmoInfo = Assembler.Parsing.Info.CubeGizmoInfo;
+using SphereGizmoInfo = Assembler.Parsing.Info.Behaviours.SphereGizmoInfo;
+using CubeGizmoInfo = Assembler.Parsing.Info.Behaviours.CubeGizmoInfo;
 
 namespace Assembler.Parsing
 {

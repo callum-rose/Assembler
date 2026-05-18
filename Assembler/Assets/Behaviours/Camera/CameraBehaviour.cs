@@ -1,4 +1,5 @@
 using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Camera
 {

@@ -2,6 +2,7 @@ using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 using UnityEngine;
 

@@ -15,7 +15,9 @@ using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Building
