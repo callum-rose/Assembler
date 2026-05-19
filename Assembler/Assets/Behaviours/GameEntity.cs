@@ -1,4 +1,5 @@
 using System;
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours
@@ -11,6 +12,14 @@ namespace Assembler.Behaviours
 		{
 			get => tags;
 			set => tags = value;
+		}
+
+		public EntityVariableScope? VariableScope { get; set; }
+
+		private void OnDestroy()
+		{
+			VariableScope?.Dispose();
+			VariableScope = null;
 		}
 	}
 }

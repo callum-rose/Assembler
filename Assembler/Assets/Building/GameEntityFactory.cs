@@ -44,17 +44,28 @@ namespace Assembler.Building
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo)
 		{
+			var scope = entityInfo.Variables.Count > 0 ? _variables.CreateScope() : null;
+
+			if (scope != null)
+			{
+				foreach (var valueInfo in entityInfo.Variables)
+				{
+					scope.Create(valueInfo);
+				}
+			}
+
 			var gameObject = new GameObject(entityInfo.Id)
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets).Value,
-					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets).Value.FromEuler()
+					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, scope: scope).Value,
+					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, scope: scope).Value.FromEuler()
 				}
 			};
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
+			gameEntity.VariableScope = scope;
 
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
@@ -67,7 +78,8 @@ namespace Assembler.Building
 					_expressions,
 					this,
 					_assets,
-					_triggerContext);
+					_triggerContext,
+					scope);
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
 				initialisations.Add(initialise);

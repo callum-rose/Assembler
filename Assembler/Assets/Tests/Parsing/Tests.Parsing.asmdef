@@ -8,7 +8,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Assembler.Deserialisation",
-        "Assembler.Parsing"
+        "Assembler.Parsing",
+        "Assembler.Resolving"
     ],
     "includePlatforms": [
         "Editor"
