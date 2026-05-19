@@ -25,6 +25,11 @@ namespace Assembler.Resolving
 			};
 		}
 
+		public void RegisterCollection(string id, IReadOnlyList<string> items)
+		{
+			_variables[id] = new ValueProvider<IReadOnlyList<string>>(items);
+		}
+
 		public IValueProvider<T> Get<T>(string id)
 		{
 			if (!_variables.TryGetValue(id, out var container))

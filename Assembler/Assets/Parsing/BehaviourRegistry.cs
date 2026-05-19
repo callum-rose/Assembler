@@ -169,6 +169,10 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("Size", typeof(Vector3)), new PropDescriptor("IsWire", typeof(bool)),
 					new PropDescriptor("Colour", typeof(Color))
+				}),
+				["for each trigger"] = (ForEachTriggerInfo.Create, new[]
+				{
+					new PropDescriptor("Entities", typeof(object))
 				})
 			};
 

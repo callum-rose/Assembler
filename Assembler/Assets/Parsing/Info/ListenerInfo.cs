@@ -7,7 +7,8 @@ namespace Assembler.Parsing.Info
 		public IReadOnlyDictionary<string, string> OutputMapping { get; init; } = new Dictionary<string, string>();
 		public string? EntityTag { get; init; }
 		public string? BehaviourTag { get; init; }
+		public string? OutputEntityId { get; init; }
 
-		public bool IsDynamic => EntityTag != null || BehaviourTag != null;
+		public bool IsDynamic => EntityTag != null || BehaviourTag != null || OutputEntityId != null;
 	}
 }

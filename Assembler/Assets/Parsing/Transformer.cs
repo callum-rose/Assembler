@@ -57,6 +57,11 @@ namespace Assembler.Parsing
 
 			var gameOverCondition = CreateValueSource<bool>(values, gameDto.GameOverCondition);
 
+			var collections = gameDto.Collections
+				.EmptyIfNull()
+				.Select(c => new CollectionInfo(c.Id ?? string.Empty, c.Items ?? new List<string>()))
+				.ToArray();
+
 			return new GameInfo(info,
 				world,
 				physics,
@@ -65,7 +70,8 @@ namespace Assembler.Parsing
 				expressions,
 				templates,
 				entities,
-				gameOverCondition);
+				gameOverCondition,
+				collections);
 
 			ConcreteEntityInfo CreateEntityInfo(EntityDto entityDto)
 			{
@@ -135,6 +141,15 @@ namespace Assembler.Parsing
 							OutputMapping = l.Outputs ?? new Dictionary<string, string>(),
 							EntityTag = l.EntityTag,
 							BehaviourTag = l.BehaviourTag
+						};
+					}
+
+					if (l.EntityId is OutputRefDto outputRefDto)
+					{
+						return new ListenerInfo(new BehaviourDescriptor(string.Empty, l.BehaviourId ?? string.Empty))
+						{
+							OutputMapping = l.Outputs ?? new Dictionary<string, string>(),
+							OutputEntityId = outputRefDto.Id
 						};
 					}
 

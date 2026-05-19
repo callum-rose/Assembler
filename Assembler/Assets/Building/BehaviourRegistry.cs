@@ -9,6 +9,7 @@ namespace Assembler.Building
 	public interface IReadOnlyBehaviourRegistry
 	{
 		GameBehaviour this[BehaviourDescriptor descriptor] { get; }
+		bool TryGet(BehaviourDescriptor descriptor, out GameBehaviour? behaviour);
 		IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null);
 		IReadOnlyList<GameBehaviour> GetByEntityTagAndBehaviourId(string entityTag, string behaviourId);
 	}
@@ -27,6 +28,9 @@ namespace Assembler.Building
 	public class BehaviourRegistry : IReadOnlyBehaviourRegistry
 	{
 		public GameBehaviour this[BehaviourDescriptor descriptor] => _behaviours[descriptor];
+
+		public bool TryGet(BehaviourDescriptor descriptor, out GameBehaviour? behaviour)
+			=> _behaviours.TryGetValue(descriptor, out behaviour);
 
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviours = new();
 		private readonly Dictionary<string, List<GameBehaviour>> _behavioursByTag = new();

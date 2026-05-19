@@ -22,4 +22,6 @@ namespace Assembler.Parsing.Info
 	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;
 
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
+
+	public sealed record TagQuerySource(string EntityTag) : ValueSource<IReadOnlyList<string>>;
 }

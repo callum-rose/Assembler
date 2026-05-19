@@ -14,5 +14,6 @@ namespace Assembler.Deserialisation.Dtos
         public List<EntityDto>? Templates { get; init; }
         public List<EntityDto>? Entities { get; init; }
         public object? GameOverCondition { get; init; }
+        public List<CollectionDto>? Collections { get; init; }
     }
 }

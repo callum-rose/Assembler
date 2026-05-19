@@ -9,6 +9,7 @@ using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Sprites;
+using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Physical;
@@ -373,6 +374,22 @@ namespace Assembler.Building
 					i.Size.Resolve(vr, cr, ar, tc),
 					i.IsWire.Resolve(vr, cr, ar, tc),
 					i.Colour.Resolve(vr, cr, ar, tc))));
+			},
+			[typeof(ForEachTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (ForEachTriggerInfo)info;
+				var b = go.AddComponent<ForEachTrigger>();
+				b.TriggerContext = tc;
+
+				IValueProvider<IReadOnlyList<string>> entities = i.Entities switch
+				{
+					TagQuerySource q => new TagQueryProvider(q.EntityTag),
+					_               => i.Entities.Resolve(vr, cr, ar, tc)
+				};
+
+				return (b, lr => b.Initialise(new ForEachTriggerData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					entities)));
 			}
 		};
 
@@ -424,6 +441,15 @@ namespace Assembler.Building
 			{
 				if (listener.OutputMapping.Count > 0)
 					triggerContext.ApplyMapping(listener.OutputMapping);
+
+				if (listener.OutputEntityId != null)
+				{
+					var entityId = triggerContext.Get<string>(listener.OutputEntityId);
+					var descriptor = new BehaviourDescriptor(entityId, listener.BehaviourDescriptor.BehaviourId);
+					if (registry.TryGet(descriptor, out var target) && target)
+						target.Execute();
+					return;
+				}
 
 				var targets = listener.BehaviourTag != null
 					? registry.GetByBehaviourTag(listener.BehaviourTag, listener.EntityTag)

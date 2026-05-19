@@ -43,6 +43,11 @@ namespace Assembler.Building
 				variableRegistry.Register(variableInfo);
 			}
 
+			foreach (var collection in gameInfo.Collections)
+			{
+				variableRegistry.RegisterCollection(collection.Id, collection.Items);
+			}
+
 			var compiledExpressionsRegistry = new CompiledExpressionsRegistry(typeRegistry, new ExpressionMethodCompiler());
 
 			foreach (var expressionInfo in gameInfo.Expressions)
