@@ -13,7 +13,9 @@ namespace Assembler.Parsing
 		public static GameInfo Transform(GameDto gameDto)
 		{
 			var info = new AboutInfo(gameDto.Game?.Title ?? string.Empty, gameDto.Game?.Description ?? string.Empty);
-			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0, gameDto.World?.BackgroundColor?.ToColor(Array.Empty<ValueInfo>()) ?? Color.black);
+
+			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0,
+				gameDto.World?.BackgroundColor?.ToColor(Array.Empty<ValueInfo>()) ?? Color.black);
 
 			var physics =
 				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<ValueInfo>()) ?? new Vector3(0, 0, 0));
@@ -47,15 +49,14 @@ namespace Assembler.Parsing
 				.Select(t => new ConcreteEntityInfo(
 					t.Id ?? string.Empty,
 					t.Tags ?? new List<string>(),
-					CreateValueSource<Vector3>(values, t.Position),
-					CreateValueSource<Vector3>(values, t.Rotation),
-					t.Behaviours?.Select(b => CreateBehaviour(values, b)).ToArray() ??
-					Array.Empty<BehaviourInfo>()))
+					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Position)),
+					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Rotation)),
+					t.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, new Dictionary<string, AssemblerValue>())).ToArray()))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
 			var entities = gameDto.Entities.EmptyIfNull().Select(CreateEntityInfo).ToArray();
 
-			var gameOverCondition = CreateValueSource<bool>(values, gameDto.GameOverCondition);
+			var gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
 
 			return new GameInfo(info,
 				world,
@@ -70,28 +71,28 @@ namespace Assembler.Parsing
 			ConcreteEntityInfo CreateEntityInfo(EntityDto entityDto)
 			{
 				EntityInfo template;
-				Dictionary<string, object> parameters;
+				Dictionary<string, AssemblerValue> parameters;
 
 				var entityId = entityDto.Id ?? string.Empty;
 
 				if (entityDto.Template is null)
 				{
 					template = NullEntityInfo.Instance;
-					parameters = new Dictionary<string, object>();
+					parameters = new Dictionary<string, AssemblerValue>();
 				}
 				else
 				{
 					template = templates.First(t => t.Id == entityDto.Template.Id);
-					parameters = entityDto.Template.Parameters ?? new Dictionary<string, object>();
+					parameters = ConvertProps(entityDto.Template.Parameters);
 				}
 
-				var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(values, b, parameters)) ?? Enumerable.Empty<BehaviourInfo>();
-
+				var ownBehaviours = entityDto.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, parameters));
+				
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					values,
-					CreateValueSource<Vector3>(values, entityDto.Position, parameters: parameters),
-					CreateValueSource<Vector3>(values, entityDto.Rotation, parameters: parameters),
+					CreateValueSource<Vector3>(values, ToAssemblerValue(entityDto.Position), parameters: parameters),
+					CreateValueSource<Vector3>(values, ToAssemblerValue(entityDto.Rotation), parameters: parameters),
 					parameters,
 					entityDto.Tags,
 					ownBehaviours);
@@ -100,7 +101,7 @@ namespace Assembler.Parsing
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
 			BehaviourDto behaviourDto,
-			IReadOnlyDictionary<string, object>? parameters = null)
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
 			var type = behaviourDto.Type ?? string.Empty;
@@ -110,20 +111,25 @@ namespace Assembler.Parsing
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
+			var props = ConvertProps(behaviourDto.Properties);
+
 			var info = entry.Factory(id,
 				GetListeners(behaviourDto, resolvedValues, parameters),
-				behaviourDto.Properties,
+				props,
 				resolvedValues,
 				parameters);
 
 			return behaviourDto.Tags is { Count: > 0 }
-				? info with { Tags = behaviourDto.Tags.ToArray() }
+				? info with
+				{
+					Tags = behaviourDto.Tags.ToArray()
+				}
 				: info;
 		}
 
 		private static IReadOnlyList<ListenerInfo> GetListeners(BehaviourDto behaviourDto,
 			IReadOnlyList<ValueInfo> variables,
-			IReadOnlyDictionary<string, object>? parameters) =>
+			IReadOnlyDictionary<string, AssemblerValue>? parameters) =>
 			behaviourDto.Listeners
 				.EmptyIfNull()
 				.Select(l =>
@@ -142,7 +148,11 @@ namespace Assembler.Parsing
 					{
 						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
 						                                                   (paramRefDto.Id ?? string.Empty),
-						ParamRefDto paramRefDto => (string)parameters[paramRefDto.Id ?? string.Empty],
+						ParamRefDto paramRefDto => parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
+						                           && pv is StringValue sv
+							? sv.Value
+							: throw new ParsingException(
+								$"Listener parameter '{paramRefDto.Id}' is missing or not a string"),
 						VarRefDto varRefDto => varRefDto.ResolveValue<string>(variables),
 						string behaviourId => behaviourId,
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
@@ -159,88 +169,190 @@ namespace Assembler.Parsing
 
 		internal const string ParameterEntityIdSentinel = "@param:";
 
-		internal static IReadOnlyList<string> ConvertStringList(object? obj) =>
-			obj is List<object> list
-				? list.Select(item => item as string ?? item?.ToString() ?? string.Empty).ToArray()
+		internal static IReadOnlyList<string> ConvertStringList(AssemblerValue? value) =>
+			value is ListValue list
+				? list.Value
+					.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
+					.ToArray()
 				: Array.Empty<string>();
 
 		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
-			object? obj) =>
-			obj is List<object> list
-				? list.Select(item => CreateValueSource<object>(resolvedValues, item)).ToArray()
+			AssemblerValue? value) =>
+			value is ListValue list
+				? list.Value.Select(item =>
+					CreateValueSource<object>(resolvedValues, item, new Dictionary<string, AssemblerValue>())).ToArray()
 				: Array.Empty<ValueSource<object>>();
 
+		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
+			AssemblerValue raw,
+			T? fallback = default) =>
+			CreateValueSource(resolvedValues, raw, new Dictionary<string, AssemblerValue>(), fallback);
+
 		/// <summary>
-		/// Wraps a raw deserialised value into a <see cref="ValueSource{T}"/>.
-		/// Constants (including <see cref="ConstRefDto"/>) are dereferenced to their values.
+		/// Wraps a parsed <see cref="AssemblerValue"/> into a <see cref="ValueSource{T}"/>.
+		/// Constants are dereferenced to their values.
 		/// Variable references become <see cref="ValueReferenceSource{T}"/>.
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
 		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
-			object? raw,
-			T? fallback = default,
-			IReadOnlyDictionary<string, object>? parameters = null) =>
+			AssemblerValue raw,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
+			T? fallback = default) =>
 			raw switch
 			{
-				ParamRefDto paramRefDto when parameters is null => new ParameterSource<T>(paramRefDto.Id ?? string.Empty),
-				ParamRefDto paramRefDto => !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue)
-					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
-					: CreateValueSource(resolvedValues, paramValue, fallback),
-				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
-				OutputRefDto outputRefDto => new TriggerOutputSource<T>(outputRefDto.Id ?? string.Empty),
-				VarRefDto varRefDto => new ValueReferenceSource<T>(varRefDto.Id ?? string.Empty),
-				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
-					exprRefDto.Arguments
-						.EmptyIfNull()
-						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters: parameters)).ToArray()),
-				VecDto vecDto when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
-					(T)(object)vecDto.ToVector3(resolvedValues)),
-				VecDto vecDto when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
-					(T)(object)vecDto.ToVector2(resolvedValues)),
-				VecDto vecDto => new ConstantSource<T>((T)(object)vecDto.ToVector3(resolvedValues)),
-				ColourDto colourDto when typeof(T) == typeof(Color) => new ConstantSource<T>(
-					(T)(object)colourDto.ToColor(resolvedValues)),
+				ParamRef paramRef => parameters.TryGetValue(paramRef.Id, out var paramValue)
+					? CreateValueSource(resolvedValues, paramValue, fallback)
+					: new ParameterSource<T>(paramRef.Id),
+				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
+				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
+				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
+				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
+					exprRef.Arguments
+						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters))
+						.ToArray()),
+				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
+					(T)(object)vec.ToVector3(resolvedValues)),
+				VecValue vec when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
+					(T)(object)vec.ToVector2(resolvedValues)),
+				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(resolvedValues)),
+				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
+					(T)(object)col.ToColor(resolvedValues)),
+				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
+				Vector3Value v3 when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
+					(T)(object)new Vector2(v3.Value.x, v3.Value.y)),
+				Vector2Value v2 when typeof(T) == typeof(Vector2) => new ConstantSource<T>((T)(object)v2.Value),
+				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
 				null when fallback is not null => new ConstantSource<T>(fallback),
 				null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
 			};
 
-		private static T CoerceConstant<T>(object value)
+		private static T CoerceConstant<T>(AssemblerValue value)
 		{
-			if (value is T t)
+			if (RefDtoExtensions.TryUnwrap<T>(value, out var unwrapped))
 			{
-				return t;
-			}
-
-			if (typeof(T) == typeof(float))
-			{
-				switch (value)
-				{
-					case int i:
-						return (T)(object)(float)i;
-					case double d:
-						return (T)(object)(float)d;
-				}
+				return unwrapped;
 			}
 
 			if (typeof(T) == typeof(object))
 			{
-				return (T)value;
+				return (T)Unwrap(value);
 			}
 
-			throw new ParsingException($"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
+			throw new ParsingException(
+				$"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
 		}
 
-		private static object Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj) =>
+		private static object Unwrap(AssemblerValue value) =>
+			value switch
+			{
+				IntValue i => i.Value,
+				FloatValue f => f.Value,
+				BoolValue b => b.Value,
+				StringValue s => s.Value,
+				Vector2Value v => v.Value,
+				Vector3Value v => v.Value,
+				ColorValue c => c.Value,
+				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")
+			};
+
+		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj) =>
 			obj switch
 			{
-				VecDto vecDto => vecDto.ToVector3(resolvedValues),
-				ColourDto colourDto => colourDto.ToColor(resolvedValues),
-				RefDto refDto => resolvedValues.FirstOrDefault(v => v.Id == refDto.Id)?.Value ?? throw new ParsingException(
-					$"Cannot resolve reference '{refDto.Id}'"),
-				not null => obj,
-				_ => throw new ParsingException($"Cannot convert {obj} to a value")
+				VecDto vecDto => new Vector3Value(vecDto.ToVector3(resolvedValues)),
+				ColourDto colourDto => new ColorValue(colourDto.ToColor(resolvedValues)),
+				RefDto refDto => ResolveRef(refDto, resolvedValues),
+				int i => new IntValue(i),
+				float f => new FloatValue(f),
+				double d => new FloatValue((float)d),
+				bool b => new BoolValue(b),
+				string s => new StringValue(s),
+				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
+				_ => throw new ParsingException("Cannot convert null to a value")
 			};
+
+		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			foreach (var v in resolvedValues)
+			{
+				if (v.Id == refDto.Id)
+				{
+					return v.Value;
+				}
+			}
+
+			throw new ParsingException($"Cannot resolve reference '{refDto.Id}'");
+		}
+
+		private static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)
+		{
+			if (raw is null)
+			{
+				return new Dictionary<string, AssemblerValue>();
+			}
+
+			var result = new Dictionary<string, AssemblerValue>(raw.Count);
+
+			foreach (var kvp in raw)
+			{
+				var converted = ToAssemblerValue(kvp.Value);
+
+				if (converted is not NoValue)
+				{
+					result[kvp.Key] = converted;
+				}
+			}
+
+			return result;
+		}
+
+		public static AssemblerValue ToAssemblerValue(object? raw) =>
+			raw switch
+			{
+				null => NoValue.Instance,
+				AssemblerValue av => av,
+				int i => new IntValue(i),
+				float f => new FloatValue(f),
+				double d => new FloatValue((float)d),
+				bool b => new BoolValue(b),
+				string s => new StringValue(s),
+				VarRefDto v => new VarRef(v.Id ?? string.Empty),
+				AssetRefDto v => new AssetRef(v.Id ?? string.Empty),
+				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
+				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
+				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
+					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
+				ColourDto v => new ColourValue(ToAssemblerValue(v.R),
+					ToAssemblerValue(v.G),
+					ToAssemblerValue(v.B),
+					ToAssemblerValue(v.A),
+					v.Raw is not null ? new StringValue(v.Raw) : NoValue.Instance),
+				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
+				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
+				_ => throw new ParsingException(
+					$"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
+			};
+
+		private static IReadOnlyDictionary<string, AssemblerValue> ToAssemblerDict(IDictionary<string, object> dict)
+		{
+			var result = new Dictionary<string, AssemblerValue>(dict.Count);
+
+			foreach (var kvp in dict)
+			{
+				var converted = ToAssemblerValue(kvp.Value);
+
+				if (converted is not NoValue)
+				{
+					result[kvp.Key] = converted;
+				}
+			}
+
+			return result;
+		}
+
+		private static IReadOnlyList<AssemblerValue> ToAssemblerList(IEnumerable<object> list) =>
+			list.Select(ToAssemblerValue).Where(converted => converted is not NoValue).ToList();
 	}
 }

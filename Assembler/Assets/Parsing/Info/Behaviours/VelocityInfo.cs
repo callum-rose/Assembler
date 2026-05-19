@@ -8,15 +8,15 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static VelocityInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, object>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, object>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Velocity"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Velocity"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new VelocityInfo(Id,
 				substitutedListeners,

@@ -4,12 +4,9 @@ namespace Assembler.Resolving
 	{
 		public T Value { get; set; }
 
-		public ValueProvider(T value)
-		{
-			Value = value;
-		}
+		object IValueProvider.Value => Value!;
 
-		public void Set(T value)
+		public ValueProvider(T value)
 		{
 			Value = value;
 		}

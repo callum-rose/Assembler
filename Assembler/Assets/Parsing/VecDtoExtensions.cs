@@ -51,8 +51,48 @@ namespace Assembler.Parsing
 
 			throw new ParsingException($"Invalid component value: {component ?? "null"}");
 		}
+
+		public static float Resolve(AssemblerValue? component, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			return component switch
+			{
+				IntValue iv => iv.Value,
+				FloatValue fv => fv.Value,
+				StringValue sv when float.TryParse(sv.Value, out var parsed) => parsed,
+				VarRef varRef => ResolveVarRefAsFloat(varRef, resolvedValues),
+				null => throw new ParsingException("Invalid component value: null"),
+				_ => throw new ParsingException($"Invalid component value: {component}")
+			};
+		}
+
+		private static float ResolveVarRefAsFloat(VarRef varRef, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			ValueInfo? found = null;
+
+			foreach (var v in resolvedValues)
+			{
+				if (v.Id == varRef.Id)
+				{
+					found = v;
+					break;
+				}
+			}
+
+			if (found is null)
+			{
+				throw new ParsingException($"Reference with ID {varRef.Id} not found");
+			}
+
+			return found.Value switch
+			{
+				FloatValue fv => fv.Value,
+				IntValue iv => iv.Value,
+				_ => throw new ParsingException(
+					$"Reference with ID {varRef.Id} could not be resolved to a numeric type.")
+			};
+		}
 	}
-	
+
 	public static class VecDtoExtensions
 	{
 		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
@@ -69,6 +109,26 @@ namespace Assembler.Parsing
 				FloatHelper.Resolve(dto.X, resolvedValues),
 				FloatHelper.Resolve(dto.Y, resolvedValues),
 				dto.Z is not null ? FloatHelper.Resolve(dto.Z, resolvedValues) : 0f
+			);
+		}
+	}
+
+	public static class VecValueExtensions
+	{
+		public static Vector2 ToVector2(this VecValue value, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			return new Vector2(
+				FloatHelper.Resolve(value.X, resolvedValues),
+				FloatHelper.Resolve(value.Y, resolvedValues)
+			);
+		}
+
+		public static Vector3 ToVector3(this VecValue value, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			return new Vector3(
+				FloatHelper.Resolve(value.X, resolvedValues),
+				FloatHelper.Resolve(value.Y, resolvedValues),
+				value.Z is not NoValue ? FloatHelper.Resolve(value.Z, resolvedValues) : 0f
 			);
 		}
 	}

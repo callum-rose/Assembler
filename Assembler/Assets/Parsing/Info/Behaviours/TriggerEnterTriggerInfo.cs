@@ -9,15 +9,15 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static TriggerEnterTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, object>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, object>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.ConvertStringList(props?.GetValueOrDefault("TagsToDetect")));
+				Transformer.ConvertStringList(props.GetValueOrDefault("TagsToDetect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TriggerEnterTriggerInfo(Id, substitutedListeners, TagsToDetect);
 	}

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Parsing.Info;
@@ -20,6 +19,21 @@ namespace Assembler.Parsing
 				FloatHelper.Resolve(dto.G, resolvedValues),
 				FloatHelper.Resolve(dto.B, resolvedValues),
 				dto.A is not null ? FloatHelper.Resolve(dto.A, resolvedValues) : 1f
+			);
+		}
+
+		public static Color ToColor(this ColourValue value, IReadOnlyList<ValueInfo> resolvedValues)
+		{
+			if (value.Raw is StringValue stringValue)
+			{
+				return ParseRawColour(stringValue.Value);
+			}
+
+			return new Color(
+				FloatHelper.Resolve(value.R, resolvedValues),
+				FloatHelper.Resolve(value.G, resolvedValues),
+				FloatHelper.Resolve(value.B, resolvedValues),
+				value.A is not NoValue ? FloatHelper.Resolve(value.A, resolvedValues) : 1f
 			);
 		}
 

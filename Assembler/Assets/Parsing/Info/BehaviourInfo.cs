@@ -9,7 +9,7 @@ namespace Assembler.Parsing.Info
 
 		public abstract BehaviourInfo SubstituteParameters(
 			IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues);
 	}
 

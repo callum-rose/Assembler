@@ -17,9 +17,9 @@ namespace Assembler.Parsing
 	internal delegate BehaviourInfo BehaviourFactory(
 		string id,
 		IReadOnlyList<ListenerInfo> listeners,
-		Dictionary<string, object>? props,
+		IReadOnlyDictionary<string, AssemblerValue> props,
 		IReadOnlyList<ValueInfo> resolvedValues,
-		IReadOnlyDictionary<string, object>? parameters);
+		IReadOnlyDictionary<string, AssemblerValue> parameters);
 
 	internal static class BehaviourRegistry
 	{
@@ -116,7 +116,7 @@ namespace Assembler.Parsing
 					new PropDescriptor("TemplateId", typeof(string)),
 					new PropDescriptor("Position", typeof(Vector3)),
 					new PropDescriptor("Rotation", typeof(Vector3)),
-					new PropDescriptor("Parameters", typeof(Dictionary<string, object>))
+					new PropDescriptor("Parameters", typeof(Dictionary<string, AssemblerValue>))
 				}),
 				["destroy"] = (DestroyInfo.Create, Array.Empty<PropDescriptor>()),
 				["position setter"] = (SetPositionInfo.Create, new[]
