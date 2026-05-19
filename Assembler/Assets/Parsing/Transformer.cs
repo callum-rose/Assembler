@@ -174,7 +174,7 @@ namespace Assembler.Parsing
 
 		private static IReadOnlyList<ListenerInfo> GetListeners(BehaviourDto behaviourDto,
 			IReadOnlyList<ValueInfo> variables,
-			IReadOnlyDictionary<string, AssemblerValue>? parameters) =>
+			IReadOnlyDictionary<string, AssemblerValue> parameters) =>
 			behaviourDto.Listeners
 				.EmptyIfNull()
 				.Select(l =>
@@ -191,13 +191,10 @@ namespace Assembler.Parsing
 
 					var entityId = l.EntityId switch
 					{
-						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
-						                                                   (paramRefDto.Id ?? string.Empty),
 						ParamRefDto paramRefDto => parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
 						                           && pv is StringValue sv
 							? sv.Value
-							: throw new ParsingException(
-								$"Listener parameter '{paramRefDto.Id}' is missing or not a string"),
+							: ParameterEntityIdSentinel + (paramRefDto.Id ?? string.Empty),
 						VarRefDto varRefDto => varRefDto.ResolveValue<string>(variables),
 						string behaviourId => behaviourId,
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
@@ -268,8 +265,8 @@ namespace Assembler.Parsing
 					(T)(object)new Vector2(v3.Value.x, v3.Value.y)),
 				Vector2Value v2 when typeof(T) == typeof(Vector2) => new ConstantSource<T>((T)(object)v2.Value),
 				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
-				null when fallback is not null => new ConstantSource<T>(fallback),
-				null => None<T>.Instance,
+				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
+				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
 			};
 

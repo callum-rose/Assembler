@@ -13,18 +13,18 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static TextLabelInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, object>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, object>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("Text"), parameters: p),
-				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
-				Transformer.CreateValueSource<int>(v, props?.GetValueOrDefault("FontSize"), fallback: 0, parameters: p),
-				ScreenRectParser.Parse(props?.GetValueOrDefault("Rect")));
+				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("Text"), parameters: p),
+				Transformer.CreateValueSource(v, props.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
+				Transformer.CreateValueSource(v, props.GetValueOrDefault("FontSize"), fallback: 0, parameters: p),
+				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TextLabelInfo(Id,
 				substitutedListeners,
