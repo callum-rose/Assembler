@@ -7,11 +7,35 @@ namespace Assembler.Resolving
 {
 	public class VariableRegistry
 	{
-		private readonly Dictionary<string, IValueProvider> _variables = new();
+		private readonly Dictionary<string, IValueProvider> _global = new();
 
 		public void Register(ValueInfo valueInfo)
 		{
-			_variables[valueInfo.Id] = valueInfo.Value switch
+			_global[valueInfo.Id] = BuildProvider(valueInfo);
+		}
+		
+		public IValueProvider<T> Get<T>(string id) => Get<T>(id, new EntityVariableScope());
+
+		public IValueProvider<T> Get<T>(string id, EntityVariableScope scope)
+		{
+			if (scope.TryGet(id, out var provider) || _global.TryGetValue(id, out provider))
+			{
+				return provider switch
+				{
+					IValueProvider<T> typedProvider => typedProvider,
+					IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
+						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+					_ => throw new Exception(
+						$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {provider.GetType()}")
+				};
+			}
+
+			throw new Exception($"Variable not registered for id: {id}");
+		}
+
+		internal static IValueProvider BuildProvider(ValueInfo valueInfo)
+		{
+			return valueInfo.Value switch
 			{
 				IntValue i => new ValueProvider<int>(i.Value),
 				FloatValue f => new ValueProvider<float>(f.Value),
@@ -22,23 +46,6 @@ namespace Assembler.Resolving
 				ColorValue c => new ValueProvider<Color>(c.Value),
 				_ => throw new Exception(
 					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
-			};
-		}
-
-		public IValueProvider<T> Get<T>(string id)
-		{
-			if (!_variables.TryGetValue(id, out var container))
-			{
-				throw new Exception($"Variable not registered for id: {id}");
-			}
-
-			return container switch
-			{
-				IValueProvider<T> typedProvider => typedProvider,
-				IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
-					(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
-				_ => throw new Exception(
-					$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}")
 			};
 		}
 	}

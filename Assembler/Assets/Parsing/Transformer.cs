@@ -51,7 +51,8 @@ namespace Assembler.Parsing
 					t.Tags ?? new List<string>(),
 					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Position)),
 					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Rotation)),
-					t.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, new Dictionary<string, AssemblerValue>())).ToArray()))
+					t.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, new Dictionary<string, AssemblerValue>())).ToArray(),
+					CreateEntityVariables(t.Variables)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
 			var entities = gameDto.Entities.EmptyIfNull().Select(CreateEntityInfo).ToArray();
@@ -87,7 +88,7 @@ namespace Assembler.Parsing
 				}
 
 				var ownBehaviours = entityDto.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, parameters));
-				
+
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					values,
@@ -95,8 +96,52 @@ namespace Assembler.Parsing
 					CreateValueSource<Vector3>(values, ToAssemblerValue(entityDto.Rotation), parameters: parameters),
 					parameters,
 					entityDto.Tags,
-					ownBehaviours);
+					ownBehaviours,
+					CreateEntityVariables(entityDto.Variables));
 			}
+		}
+
+		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyList<ValueDto>? variables)
+		{
+			if (variables == null || variables.Count == 0)
+			{
+				return Array.Empty<ValueInfo>();
+			}
+
+			var result = new ValueInfo[variables.Count];
+
+			for (var i = 0; i < variables.Count; i++)
+			{
+				var v = variables[i];
+				result[i] = new ValueInfo(v.Id ?? string.Empty, ToAssemblerValue(v.Value));
+			}
+
+			return result;
+		}
+
+		internal static AssemblerValue SubstituteAssemblerValue(AssemblerValue value,
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		{
+			return value switch
+			{
+				ParamRef paramRef => parameters.TryGetValue(paramRef.Id, out var resolved)
+					? resolved
+					: throw new ParsingException(
+						$"Parameter '{paramRef.Id}' not supplied during template instantiation"),
+				VecValue vec => new VecValue(
+					SubstituteAssemblerValue(vec.X, parameters),
+					SubstituteAssemblerValue(vec.Y, parameters),
+					SubstituteAssemblerValue(vec.Z, parameters)),
+				ColourValue col => new ColourValue(
+					SubstituteAssemblerValue(col.R, parameters),
+					SubstituteAssemblerValue(col.G, parameters),
+					SubstituteAssemblerValue(col.B, parameters),
+					SubstituteAssemblerValue(col.A, parameters),
+					col.Raw),
+				ExprRef exprRef => new ExprRef(exprRef.ExpressionId,
+					exprRef.Arguments.Select(a => SubstituteAssemblerValue(a, parameters)).ToArray()),
+				_ => value
+			};
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,

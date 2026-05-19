@@ -10,22 +10,25 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<string> Tags,
 		ValueSource<Vector3> InitialPosition,
 		ValueSource<Vector3> InitialRotation,
-		IReadOnlyList<BehaviourInfo> Behaviours);
+		IReadOnlyList<BehaviourInfo> Behaviours,
+		IReadOnlyList<ValueInfo> Variables);
 
 	public sealed record ConcreteEntityInfo(
 		string Id,
 		IReadOnlyList<string> Tags,
 		ValueSource<Vector3> InitialPosition,
 		ValueSource<Vector3> InitialRotation,
-		IReadOnlyList<BehaviourInfo> Behaviours)
-		: EntityInfo(Id, NullEntityInfo.Instance, Tags, InitialPosition, InitialRotation, Behaviours);
+		IReadOnlyList<BehaviourInfo> Behaviours,
+		IReadOnlyList<ValueInfo> Variables)
+		: EntityInfo(Id, NullEntityInfo.Instance, Tags, InitialPosition, InitialRotation, Behaviours, Variables);
 
 	public sealed record NullEntityInfo() : EntityInfo(string.Empty,
 		Instance,
 		Array.Empty<string>(),
 		None<Vector3>.Instance,
 		None<Vector3>.Instance,
-		Array.Empty<BehaviourInfo>())
+		Array.Empty<BehaviourInfo>(),
+		Array.Empty<ValueInfo>())
 	{
 		public readonly static NullEntityInfo Instance = new();
 	}

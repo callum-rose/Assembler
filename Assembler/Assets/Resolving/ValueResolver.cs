@@ -10,22 +10,20 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			AssetRegistry assets,
-			TriggerContext? triggerContext = null)
+			TriggerContext triggerContext,
+			EntityVariableScope scope)
 		{
 			return valueSource switch
 			{
 				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
-				ValueReferenceSource<T> variableRef => variables.Get<T>(variableRef.VariableId),
-				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
-					BuildExpressionContainer(expressionRef,
-						variables,
-						expressions,
-						triggerContext ?? throw new InvalidOperationException(
-							$"TriggerContext required to resolve expression '{expressionRef.ExpressionId}'"))),
+				ValueReferenceSource<T> variableRef => variables.Get<T>(variableRef.VariableId, scope),
+				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(BuildExpressionContainer(expressionRef,
+					variables,
+					expressions,
+					triggerContext,
+					scope)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
-				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName,
-					triggerContext ?? throw new InvalidOperationException(
-						$"TriggerContext required to resolve trigger output '{output.OutputName}'")),
+				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName, triggerContext),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};
@@ -35,7 +33,8 @@ namespace Assembler.Resolving
 			ExpressionSource<TReturn> expressionSource,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
-			TriggerContext triggerContext)
+			TriggerContext triggerContext,
+			EntityVariableScope? scope)
 		{
 			var (_, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
@@ -50,7 +49,8 @@ namespace Assembler.Resolving
 					paramType,
 					variables,
 					expressions,
-					triggerContext);
+					triggerContext,
+					scope);
 			}
 
 			return InvokeWithArgs;
@@ -84,7 +84,8 @@ namespace Assembler.Resolving
 			Type expectedType,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
-			TriggerContext triggerContext)
+			TriggerContext triggerContext,
+			EntityVariableScope? scope)
 		{
 			var wrapperType = valueSource.GetType();
 			var innerType = wrapperType.GetGenericArguments()[0];
@@ -94,9 +95,9 @@ namespace Assembler.Resolving
 				BindingFlags.NonPublic | BindingFlags.Static)!.MakeGenericMethod(typeForResolve);
 
 			return (IValueProvider)method.Invoke(null,
-				new object[]
+				new object?[]
 				{
-					valueSource, variables, expressions, triggerContext
+					valueSource, variables, expressions, triggerContext, scope
 				});
 		}
 
@@ -104,16 +105,17 @@ namespace Assembler.Resolving
 			object wrapperBoxed,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
-			TriggerContext triggerContext)
+			TriggerContext triggerContext,
+			EntityVariableScope? scope)
 		{
 			return wrapperBoxed switch
 			{
 				ConstantSource<T> c => new ValueProvider<T>(c.Value),
 				ConstantSource<object> co => new ConstObjectProvider(co.Value),
-				ValueReferenceSource<T> v => variables.Get<T>(v.VariableId),
-				ValueReferenceSource<object> vo => variables.Get<T>(vo.VariableId),
+				ValueReferenceSource<T> v => variables.Get<T>(v.VariableId, scope),
+				ValueReferenceSource<object> vo => variables.Get<T>(vo.VariableId, scope),
 				ExpressionSource<T> e => new ExpressionValueProvider<T>(
-					BuildExpressionContainer(e, variables, expressions, triggerContext)),
+					BuildExpressionContainer(e, variables, expressions, triggerContext, scope)),
 				TriggerOutputSource<T> o => new TriggerOutputProvider<T>(o.OutputName,
 					triggerContext ?? throw new InvalidOperationException(
 						$"TriggerContext required to resolve trigger output '{o.OutputName}'")),

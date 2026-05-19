@@ -15,7 +15,8 @@ namespace Assembler.Parsing
 			ValueSource<Vector3> rotation,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IEnumerable<string>? additionalTags = null,
-			IEnumerable<BehaviourInfo>? additionalBehaviours = null)
+			IEnumerable<BehaviourInfo>? additionalBehaviours = null,
+			IReadOnlyList<ValueInfo>? additionalVariables = null)
 		{
 			var augmentedParameters = new Dictionary<string, AssemblerValue>(parameters.EmptyIfNull())
 			{
@@ -36,13 +37,33 @@ namespace Assembler.Parsing
 				? rotation
 				: template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
 
+			var inheritedVariables = template.Variables.Select(v => new ValueInfo(v.Id,
+				FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, augmentedParameters), allValues)));
+
+			var flattenedAdditional = additionalVariables
+				.EmptyIfNull()
+				.Select(v => new ValueInfo(v.Id, FlattenAssemblerValue(v.Value, allValues)));
+
+			var variables = inheritedVariables
+				.Concat(flattenedAdditional)
+				.ToArray();
+
 			return new ConcreteEntityInfo(
 				entityId,
 				tags,
 				resolvedPosition,
 				resolvedRotation,
-				behaviours);
+				behaviours,
+				variables);
 		}
+
+		private static AssemblerValue FlattenAssemblerValue(AssemblerValue value, IReadOnlyList<ValueInfo> allValues) =>
+			value switch
+			{
+				VecValue vec => new Vector3Value(vec.ToVector3(allValues)),
+				ColourValue col => new ColorValue(col.ToColor(allValues)),
+				_ => value
+			};
 
 		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,

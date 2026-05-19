@@ -10,6 +10,7 @@ namespace Assembler.Deserialisation.Dtos
 		public object? Position { get; init; }
 		public object? Rotation { get; init; }
 		public List<BehaviourDto>? Behaviours { get; init; }
+		public List<ValueDto>? Variables { get; init; }
 	}
 
 }

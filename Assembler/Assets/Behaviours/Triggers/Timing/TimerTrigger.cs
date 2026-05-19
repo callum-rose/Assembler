@@ -7,6 +7,11 @@ namespace Assembler.Behaviours.Triggers.Timing
 {
 	public class TimerTrigger : TimingTrigger<TimerTriggerData>
 	{
+		private void Start()
+		{
+			Execute();
+		}
+
 		public override void Execute()
 		{
 			StartCoroutine(InvokeTriggerAfter(Data.Delay.Value));
