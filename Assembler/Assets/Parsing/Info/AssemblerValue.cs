@@ -5,6 +5,11 @@ namespace Assembler.Parsing.Info
 {
 	public abstract record AssemblerValue;
 
+	public sealed record NoValue : AssemblerValue
+	{
+		public readonly static NoValue Instance = new();
+	}
+
 	public sealed record IntValue(int Value) : AssemblerValue;
 
 	public sealed record FloatValue(float Value) : AssemblerValue;
@@ -19,14 +24,14 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ColorValue(Color Value) : AssemblerValue;
 
-	public sealed record VecValue(AssemblerValue? X, AssemblerValue? Y, AssemblerValue? Z) : AssemblerValue;
+	public sealed record VecValue(AssemblerValue X, AssemblerValue Y, AssemblerValue Z) : AssemblerValue;
 
 	public sealed record ColourValue(
-		AssemblerValue? R,
-		AssemblerValue? G,
-		AssemblerValue? B,
-		AssemblerValue? A,
-		string? Raw) : AssemblerValue;
+		AssemblerValue R,
+		AssemblerValue G,
+		AssemblerValue B,
+		AssemblerValue A,
+		AssemblerValue Raw) : AssemblerValue;
 
 	public abstract record AssemblerRef(string Id) : AssemblerValue;
 

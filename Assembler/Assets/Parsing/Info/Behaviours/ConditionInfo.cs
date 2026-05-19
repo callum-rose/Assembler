@@ -11,13 +11,13 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static ConditionInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, AssemblerValue>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("ExpressionId"), parameters: p),
-				Transformer.ConvertArgumentList(v, props?.GetValueOrDefault("Arguments")));
+				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("ExpressionId"), parameters: p),
+				Transformer.ConvertArgumentList(v, props.GetValueOrDefault("Arguments")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,

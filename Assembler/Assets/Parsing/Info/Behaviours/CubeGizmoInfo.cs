@@ -12,14 +12,14 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static CubeGizmoInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, AssemblerValue>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Size"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("IsWire"), parameters: p),
-				Transformer.CreateValueSource<Color>(v, props?.GetValueOrDefault("Colour"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Size"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("IsWire"), parameters: p),
+				Transformer.CreateValueSource<Color>(v, props.GetValueOrDefault("Colour"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,

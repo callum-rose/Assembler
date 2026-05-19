@@ -14,14 +14,14 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static SpawnerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, AssemblerValue>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("TemplateId")),
-				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Position")),
-				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Rotation")),
+				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("TemplateId"), null),
+				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Position"), null),
+				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Rotation"), null),
 				ParseParameters(v, props));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -38,7 +38,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 		private static IReadOnlyDictionary<string, ValueSource<object>> ParseParameters(
 			IReadOnlyList<ValueInfo> values,
-			Dictionary<string, AssemblerValue>? props)
+			IReadOnlyDictionary<string, AssemblerValue> props)
 		{
 			if (props is null || !props.TryGetValue("Parameters", out var raw) || raw is not DictValue dictValue)
 			{
@@ -47,7 +47,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 			return dictValue.Value.ToDictionary(
 				kvp => kvp.Key,
-				kvp => Transformer.CreateValueSource<object>(values, kvp.Value));
+				kvp => Transformer.CreateValueSource<object>(values, kvp.Value, null));
 		}
 	}
 }

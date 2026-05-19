@@ -24,16 +24,16 @@ namespace Assembler.Parsing
 
 		public static Color ToColor(this ColourValue value, IReadOnlyList<ValueInfo> resolvedValues)
 		{
-			if (value.Raw is not null)
+			if (value.Raw is StringValue stringValue)
 			{
-				return ParseRawColour(value.Raw);
+				return ParseRawColour(stringValue.Value);
 			}
 
 			return new Color(
 				FloatHelper.Resolve(value.R, resolvedValues),
 				FloatHelper.Resolve(value.G, resolvedValues),
 				FloatHelper.Resolve(value.B, resolvedValues),
-				value.A is not null ? FloatHelper.Resolve(value.A, resolvedValues) : 1f
+				value.A is not NoValue ? FloatHelper.Resolve(value.A, resolvedValues) : 1f
 			);
 		}
 

@@ -10,7 +10,7 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			AssetRegistry assets,
-			TriggerContext triggerContext = null)
+			TriggerContext triggerContext)
 		{
 			return valueSource switch
 			{
@@ -23,7 +23,7 @@ namespace Assembler.Resolving
 					triggerContext ?? throw new InvalidOperationException(
 						$"TriggerContext required to resolve trigger output '{output.OutputName}'")),
 				None<T> => NullValueProvider<T>.Instance,
-				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource?.GetType()}")
+				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};
 		}
 
@@ -33,7 +33,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext)
 		{
-			var (delegateType, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
+			var (_, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
 
 			var argProviders = new IValueProvider[expressionSource.Arguments.Count];
@@ -122,11 +122,9 @@ namespace Assembler.Resolving
 
 		private sealed class ConstObjectProvider : IValueProvider
 		{
-			public object Value => _value;
+			public object Value { get; }
 
-			private readonly object _value;
-
-			public ConstObjectProvider(object value) => _value = value;
+			public ConstObjectProvider(object value) => Value = value;
 		}
 	}
 }

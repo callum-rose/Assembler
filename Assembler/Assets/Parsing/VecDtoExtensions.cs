@@ -128,7 +128,7 @@ namespace Assembler.Parsing
 			return new Vector3(
 				FloatHelper.Resolve(value.X, resolvedValues),
 				FloatHelper.Resolve(value.Y, resolvedValues),
-				value.Z is not null ? FloatHelper.Resolve(value.Z, resolvedValues) : 0f
+				value.Z is not NoValue ? FloatHelper.Resolve(value.Z, resolvedValues) : 0f
 			);
 		}
 	}

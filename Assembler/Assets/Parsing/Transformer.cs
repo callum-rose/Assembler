@@ -13,7 +13,9 @@ namespace Assembler.Parsing
 		public static GameInfo Transform(GameDto gameDto)
 		{
 			var info = new AboutInfo(gameDto.Game?.Title ?? string.Empty, gameDto.Game?.Description ?? string.Empty);
-			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0, gameDto.World?.BackgroundColor?.ToColor(Array.Empty<ValueInfo>()) ?? Color.black);
+
+			var world = new WorldInfo(gameDto.World?.Dimensionality ?? 0,
+				gameDto.World?.BackgroundColor?.ToColor(Array.Empty<ValueInfo>()) ?? Color.black);
 
 			var physics =
 				new PhysicsInfo(gameDto.Physics?.Gravity?.ToVector3(Array.Empty<ValueInfo>()) ?? new Vector3(0, 0, 0));
@@ -49,8 +51,7 @@ namespace Assembler.Parsing
 					t.Tags ?? new List<string>(),
 					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Position)),
 					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Rotation)),
-					t.Behaviours?.Select(b => CreateBehaviour(values, b)).ToArray() ??
-					Array.Empty<BehaviourInfo>()))
+					t.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, new Dictionary<string, AssemblerValue>())).ToArray()))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
 			var entities = gameDto.Entities.EmptyIfNull().Select(CreateEntityInfo).ToArray();
@@ -82,11 +83,11 @@ namespace Assembler.Parsing
 				else
 				{
 					template = templates.First(t => t.Id == entityDto.Template.Id);
-					parameters = ConvertProps(entityDto.Template.Parameters) ?? new Dictionary<string, AssemblerValue>();
+					parameters = ConvertProps(entityDto.Template.Parameters);
 				}
 
-				var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(values, b, parameters)) ?? Enumerable.Empty<BehaviourInfo>();
-
+				var ownBehaviours = entityDto.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, parameters));
+				
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					values,
@@ -100,7 +101,7 @@ namespace Assembler.Parsing
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
 			BehaviourDto behaviourDto,
-			IReadOnlyDictionary<string, AssemblerValue>? parameters = null)
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
 		{
 			var id = behaviourDto.Id ?? string.Empty;
 			var type = behaviourDto.Type ?? string.Empty;
@@ -119,7 +120,10 @@ namespace Assembler.Parsing
 				parameters);
 
 			return behaviourDto.Tags is { Count: > 0 }
-				? info with { Tags = behaviourDto.Tags.ToArray() }
+				? info with
+				{
+					Tags = behaviourDto.Tags.ToArray()
+				}
 				: info;
 		}
 
@@ -175,8 +179,14 @@ namespace Assembler.Parsing
 		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue? value) =>
 			value is ListValue list
-				? list.Value.Select(item => CreateValueSource<object>(resolvedValues, item)).ToArray()
+				? list.Value.Select(item =>
+					CreateValueSource<object>(resolvedValues, item, new Dictionary<string, AssemblerValue>())).ToArray()
 				: Array.Empty<ValueSource<object>>();
+
+		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
+			AssemblerValue raw,
+			T? fallback = default) =>
+			CreateValueSource(resolvedValues, raw, new Dictionary<string, AssemblerValue>(), fallback);
 
 		/// <summary>
 		/// Wraps a parsed <see cref="AssemblerValue"/> into a <see cref="ValueSource{T}"/>.
@@ -186,21 +196,20 @@ namespace Assembler.Parsing
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
 		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
-			AssemblerValue? raw,
-			T? fallback = default,
-			IReadOnlyDictionary<string, AssemblerValue>? parameters = null) =>
+			AssemblerValue raw,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
+			T? fallback = default) =>
 			raw switch
 			{
-				ParamRef paramRef when parameters is null => new ParameterSource<T>(paramRef.Id),
-				ParamRef paramRef => !parameters.TryGetValue(paramRef.Id, out var paramValue)
-					? throw new ParsingException($"Parameter '{paramRef.Id}' not found")
-					: CreateValueSource(resolvedValues, paramValue, fallback),
+				ParamRef paramRef => parameters.TryGetValue(paramRef.Id, out var paramValue)
+					? CreateValueSource(resolvedValues, paramValue, fallback)
+					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
 					exprRef.Arguments
-						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters: parameters))
+						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters))
 						.ToArray()),
 				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
 					(T)(object)vec.ToVector3(resolvedValues)),
@@ -276,11 +285,11 @@ namespace Assembler.Parsing
 			throw new ParsingException($"Cannot resolve reference '{refDto.Id}'");
 		}
 
-		internal static Dictionary<string, AssemblerValue>? ConvertProps(IReadOnlyDictionary<string, object>? raw)
+		private static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)
 		{
 			if (raw is null)
 			{
-				return null;
+				return new Dictionary<string, AssemblerValue>();
 			}
 
 			var result = new Dictionary<string, AssemblerValue>(raw.Count);
@@ -289,7 +298,7 @@ namespace Assembler.Parsing
 			{
 				var converted = ToAssemblerValue(kvp.Value);
 
-				if (converted is not null)
+				if (converted is not NoValue)
 				{
 					result[kvp.Key] = converted;
 				}
@@ -298,10 +307,10 @@ namespace Assembler.Parsing
 			return result;
 		}
 
-		public static AssemblerValue? ToAssemblerValue(object? raw) =>
+		public static AssemblerValue ToAssemblerValue(object? raw) =>
 			raw switch
 			{
-				null => null,
+				null => NoValue.Instance,
 				AssemblerValue av => av,
 				int i => new IntValue(i),
 				float f => new FloatValue(f),
@@ -313,16 +322,13 @@ namespace Assembler.Parsing
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
 				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
-					(v.Arguments ?? Array.Empty<object>())
-					.Select(a => ToAssemblerValue(a) ??
-					             throw new ParsingException("Null expression argument is not supported"))
-					.ToArray()),
+					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
 				ColourDto v => new ColourValue(ToAssemblerValue(v.R),
 					ToAssemblerValue(v.G),
 					ToAssemblerValue(v.B),
 					ToAssemblerValue(v.A),
-					v.Raw),
+					v.Raw is not null ? new StringValue(v.Raw) : NoValue.Instance),
 				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
 				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
 				_ => throw new ParsingException(
@@ -337,7 +343,7 @@ namespace Assembler.Parsing
 			{
 				var converted = ToAssemblerValue(kvp.Value);
 
-				if (converted is not null)
+				if (converted is not NoValue)
 				{
 					result[kvp.Key] = converted;
 				}
@@ -346,21 +352,7 @@ namespace Assembler.Parsing
 			return result;
 		}
 
-		private static IReadOnlyList<AssemblerValue> ToAssemblerList(IEnumerable<object> list)
-		{
-			var result = new List<AssemblerValue>();
-
-			foreach (var item in list)
-			{
-				var converted = ToAssemblerValue(item);
-
-				if (converted is not null)
-				{
-					result.Add(converted);
-				}
-			}
-
-			return result;
-		}
+		private static IReadOnlyList<AssemblerValue> ToAssemblerList(IEnumerable<object> list) =>
+			list.Select(ToAssemblerValue).Where(converted => converted is not NoValue).ToList();
 	}
 }

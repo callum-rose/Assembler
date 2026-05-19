@@ -17,9 +17,9 @@ namespace Assembler.Parsing
 	internal delegate BehaviourInfo BehaviourFactory(
 		string id,
 		IReadOnlyList<ListenerInfo> listeners,
-		Dictionary<string, AssemblerValue>? props,
+		IReadOnlyDictionary<string, AssemblerValue> props,
 		IReadOnlyList<ValueInfo> resolvedValues,
-		IReadOnlyDictionary<string, AssemblerValue>? parameters);
+		IReadOnlyDictionary<string, AssemblerValue> parameters);
 
 	internal static class BehaviourRegistry
 	{
