@@ -272,12 +272,12 @@ Expressions:
     ArgumentTypes: [ int ]
     ArgumentNames: [ score ]
     ReturnType: string
-    Expression: "\"P1: \" + score.ToString();"
+    Expression: "\"P1: \" + score;"
   - Id: format right score
     ArgumentTypes: [ int ]
     ArgumentNames: [ score ]
     ReturnType: string
-    Expression: "\"P2: \" + score.ToString();"
+    Expression: "\"P2: \" + score;"
 
 Entities:
   - Id: left paddle
