@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Assembler.Resolving;
+
 using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.Resolving
+namespace Assembler.Parsing
 {
 	public enum AnchorPoint { TopLeft, TopRight, BottomLeft, BottomRight, Center }
 
