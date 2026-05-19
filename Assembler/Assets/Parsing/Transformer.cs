@@ -53,7 +53,21 @@ namespace Assembler.Parsing
 					Array.Empty<BehaviourInfo>()))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-			ConcreteEntityInfo Selector(EntityDto entityDto)
+			var entities = gameDto.Entities.EmptyIfNull().Select(CreateEntityInfo).ToArray();
+
+			var gameOverCondition = CreateValueSource<bool>(values, gameDto.GameOverCondition);
+
+			return new GameInfo(info,
+				world,
+				physics,
+				assets,
+				values,
+				expressions,
+				templates,
+				entities,
+				gameOverCondition);
+
+			ConcreteEntityInfo CreateEntityInfo(EntityDto entityDto)
 			{
 				EntityInfo template;
 				Dictionary<string, object> parameters;
@@ -82,20 +96,6 @@ namespace Assembler.Parsing
 					entityDto.Tags,
 					ownBehaviours);
 			}
-
-			var entities = gameDto.Entities.EmptyIfNull().Select(Selector).ToArray();
-
-			var gameOverCondition = CreateValueSource<bool>(values, gameDto.GameOverCondition);
-
-			return new GameInfo(info,
-				world,
-				physics,
-				assets,
-				values,
-				expressions,
-				templates,
-				entities,
-				gameOverCondition);
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
