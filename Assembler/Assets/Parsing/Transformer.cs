@@ -110,11 +110,15 @@ namespace Assembler.Parsing
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
-			return entry.Factory(id,
+			var info = entry.Factory(id,
 				GetListeners(behaviourDto, resolvedValues, parameters),
 				behaviourDto.Properties,
 				resolvedValues,
 				parameters);
+
+			return behaviourDto.Tags is { Count: > 0 }
+				? info with { Tags = behaviourDto.Tags.ToArray() }
+				: info;
 		}
 
 		private static IReadOnlyList<ListenerInfo> GetListeners(BehaviourDto behaviourDto,
@@ -124,6 +128,16 @@ namespace Assembler.Parsing
 				.EmptyIfNull()
 				.Select(l =>
 				{
+					if (l.EntityTag != null || l.BehaviourTag != null)
+					{
+						return new ListenerInfo(new BehaviourDescriptor(string.Empty, l.BehaviourId ?? string.Empty))
+						{
+							OutputMapping = l.Outputs ?? new Dictionary<string, string>(),
+							EntityTag = l.EntityTag,
+							BehaviourTag = l.BehaviourTag
+						};
+					}
+
 					var entityId = l.EntityId switch
 					{
 						ParamRefDto paramRefDto when parameters is null => ParameterEntityIdSentinel +
