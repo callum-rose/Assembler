@@ -8,26 +8,18 @@ namespace Assembler.Parsing
 {
 	public static class TemplateInstantiator
 	{
-		// public static Dictionary<string, object> CreateParameters(string entityId,
-		// 	Dictionary<string, object>? templateParameters = null)
-		// {
-		// 	var parameters = templateParameters ?? new Dictionary<string, object>();
-		// 	parameters["self_id"] = entityId;
-		// 	return parameters;
-		// }
-
 		public static ConcreteEntityInfo Instantiate(EntityInfo template,
 			string entityId,
 			IReadOnlyList<ValueInfo> allValues,
 			ValueSource<Vector3>? position = null,
 			ValueSource<Vector3>? rotation = null,
-			IReadOnlyDictionary<string, object>? parameters = null,
+			IReadOnlyDictionary<string, AssemblerValue>? parameters = null,
 			IEnumerable<string>? additionalTags = null,
 			IEnumerable<BehaviourInfo>? additionalBehaviours = null)
 		{
-			var augmentedParameters = new Dictionary<string, object>(parameters.EmptyIfNull())
+			var augmentedParameters = new Dictionary<string, AssemblerValue>(parameters.EmptyIfNull())
 			{
-				["self_id"] = entityId
+				["self_id"] = new StringValue(entityId)
 			};
 
 			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, augmentedParameters, allValues));
@@ -48,7 +40,7 @@ namespace Assembler.Parsing
 		}
 
 		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues)
 		{
 			return source switch
@@ -64,7 +56,7 @@ namespace Assembler.Parsing
 
 		private static BehaviourInfo SubstituteBehaviour(
 			BehaviourInfo info,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues)
 		{
 			var listeners = SubstituteListeners(info.Listeners, parameters);
@@ -74,7 +66,7 @@ namespace Assembler.Parsing
 
 		private static IReadOnlyList<ListenerInfo> SubstituteListeners(
 			IReadOnlyList<ListenerInfo> listeners,
-			IReadOnlyDictionary<string, object> parameters)
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
 		{
 			if (listeners.Count == 0)
 			{
@@ -82,7 +74,7 @@ namespace Assembler.Parsing
 			}
 
 			var result = new ListenerInfo[listeners.Count];
-			
+
 			for (var i = 0; i < listeners.Count; i++)
 			{
 				var l = listeners[i];
@@ -95,9 +87,9 @@ namespace Assembler.Parsing
 
 				var paramId = l.BehaviourDescriptor.EntityId[Transformer.ParameterEntityIdSentinel.Length..];
 
-				if (parameters.TryGetValue(paramId, out var raw) && raw is string entityId)
+				if (parameters.TryGetValue(paramId, out var raw) && raw is StringValue sv)
 				{
-					result[i] = new ListenerInfo(l.BehaviourDescriptor with { EntityId = entityId })
+					result[i] = new ListenerInfo(l.BehaviourDescriptor with { EntityId = sv.Value })
 					{
 						OutputMapping = l.OutputMapping,
 						EntityTag = l.EntityTag,

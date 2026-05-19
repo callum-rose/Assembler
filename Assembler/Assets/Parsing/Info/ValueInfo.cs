@@ -1,4 +1,4 @@
 namespace Assembler.Parsing.Info
 {
-	public record ValueInfo(string Id, object Value);
+	public record ValueInfo(string Id, AssemblerValue Value);
 }

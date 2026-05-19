@@ -273,7 +273,8 @@ namespace Assembler.Building
 					i.TemplateId.Resolve(vr, cr, ar, tc),
 					i.Position.Resolve(vr, cr, ar, tc),
 					i.Rotation.Resolve(vr, cr, ar, tc),
-					i.Parameters.ToDictionary(kv => kv.Key, kv => kv.Value.Resolve(vr, cr, ar, tc)))));
+					i.Parameters.ToDictionary(kv => kv.Key,
+						kv => (IValueProvider)kv.Value.Resolve(vr, cr, ar, tc)))));
 			},
 			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{

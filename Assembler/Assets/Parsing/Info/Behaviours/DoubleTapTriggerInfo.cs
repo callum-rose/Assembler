@@ -6,13 +6,13 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static DoubleTapTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, object>? props,
+			Dictionary<string, AssemblerValue>? props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, object>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue>? p) =>
 			new(id, listeners);
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, object> parameters,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new DoubleTapTriggerInfo(Id, substitutedListeners);
 	}

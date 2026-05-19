@@ -85,13 +85,19 @@ namespace Assembler.Building
 
 			var newId = $"{SpawnedIdPrefix}{templateId}_{_spawnCounter++}";
 
+			var assemblerParameters = parameters.ToDictionary(
+				kv => kv.Key,
+				kv => Transformer.ToAssemblerValue(kv.Value) ??
+				      throw new InvalidOperationException(
+					      $"Spawn parameter '{kv.Key}' could not be converted to an AssemblerValue"));
+
 			var entity = TemplateInstantiator.Instantiate(
 				template,
 				newId,
 				_allValues,
 				new ConstantSource<Vector3>(position),
 				new ConstantSource<Vector3>(rotation),
-				parameters);
+				assemblerParameters);
 
 			var result = Create(entity);
 			_behaviourRegistry.Register(result);

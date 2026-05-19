@@ -13,6 +13,8 @@ namespace Assembler.Resolving
 			set => throw new InvalidOperationException("Cannot set a trigger output value");
 		}
 
+		object IValueProvider.Value => Value;
+
 		public TriggerOutputProvider(string outputName, TriggerContext context)
 		{
 			_outputName = outputName;
