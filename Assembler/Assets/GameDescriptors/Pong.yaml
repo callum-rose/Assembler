@@ -268,6 +268,16 @@ Expressions:
     ArgumentNames: [ a, b, w ]
     ReturnType: bool
     Expression: "a >= w || b >= w;"
+  - Id: format left score
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ score ]
+    ReturnType: string
+    Expression: "\"P1: \" + score.ToString();"
+  - Id: format right score
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ score ]
+    ReturnType: string
+    Expression: "\"P2: \" + score.ToString();"
 
 Entities:
   - Id: left paddle
@@ -347,6 +357,40 @@ Entities:
         Properties:
           TemplateId: ball_template
           Position: !expr { ExpressionId: random ball initial position }
+
+  - Id: left score display
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: text label
+        Id: score text
+        Properties:
+          Text: !expr
+            ExpressionId: format left score
+            Arguments:
+              - !var left score
+          Rect:
+            Anchor: top-left
+            X: 10
+            Y: 10
+            Width: 100
+            Height: 30
+
+  - Id: right score display
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: text label
+        Id: score text
+        Properties:
+          Text: !expr
+            ExpressionId: format right score
+            Arguments:
+              - !var right score
+          Rect:
+            Anchor: top-right
+            X: -110
+            Y: 10
+            Width: 100
+            Height: 30
 
 GameOverCondition: !expr
   ExpressionId: is game over
