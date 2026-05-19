@@ -15,12 +15,12 @@ namespace Tests.Parsing
 			var registry = new VariableRegistry();
 			registry.Register(new ValueInfo("health", new IntValue(50)));
 
-			var scope = registry.CreateScope();
+			var scope = new EntityVariableScope();
 			scope.Create(new ValueInfo("health", new IntValue(100)));
 
 			Assert.AreEqual(100, registry.Get<int>("health", scope).Value);
 			Assert.AreEqual(50, registry.Get<int>("health").Value);
-			Assert.AreEqual(50, registry.Get<int>("health", registry.CreateScope()).Value);
+			Assert.AreEqual(50, registry.Get<int>("health", new EntityVariableScope()).Value);
 		}
 
 		[Test]
@@ -29,7 +29,7 @@ namespace Tests.Parsing
 			var registry = new VariableRegistry();
 			registry.Register(new ValueInfo("speed", new FloatValue(2.5f)));
 
-			var scope = registry.CreateScope();
+			var scope = new EntityVariableScope();
 			scope.Create(new ValueInfo("health", new IntValue(10)));
 
 			Assert.AreEqual(2.5f, registry.Get<float>("speed", scope).Value);
@@ -40,10 +40,10 @@ namespace Tests.Parsing
 		{
 			var registry = new VariableRegistry();
 
-			var a = registry.CreateScope();
+			var a = new EntityVariableScope();
 			a.Create(new ValueInfo("health", new IntValue(1)));
 
-			var b = registry.CreateScope();
+			var b = new EntityVariableScope();
 			b.Create(new ValueInfo("health", new IntValue(2)));
 
 			var aHealth = registry.Get<int>("health", a);
@@ -62,7 +62,7 @@ namespace Tests.Parsing
 			var registry = new VariableRegistry();
 			registry.Register(new ValueInfo("health", new IntValue(7)));
 
-			var scope = registry.CreateScope();
+			var scope = new EntityVariableScope();
 			scope.Create(new ValueInfo("health", new IntValue(99)));
 
 			scope.Dispose();

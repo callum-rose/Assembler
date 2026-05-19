@@ -10,24 +10,20 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			AssetRegistry assets,
-			TriggerContext? triggerContext = null,
-			EntityVariableScope? scope = null)
+			TriggerContext triggerContext,
+			EntityVariableScope scope)
 		{
 			return valueSource switch
 			{
 				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
 				ValueReferenceSource<T> variableRef => variables.Get<T>(variableRef.VariableId, scope),
-				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(
-					BuildExpressionContainer(expressionRef,
-						variables,
-						expressions,
-						triggerContext ?? throw new InvalidOperationException(
-							$"TriggerContext required to resolve expression '{expressionRef.ExpressionId}'"),
-						scope)),
+				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(BuildExpressionContainer(expressionRef,
+					variables,
+					expressions,
+					triggerContext,
+					scope)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
-				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName,
-					triggerContext ?? throw new InvalidOperationException(
-						$"TriggerContext required to resolve trigger output '{output.OutputName}'")),
+				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName, triggerContext),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};

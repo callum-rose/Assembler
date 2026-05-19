@@ -13,32 +13,24 @@ namespace Assembler.Resolving
 		{
 			_global[valueInfo.Id] = BuildProvider(valueInfo);
 		}
+		
+		public IValueProvider<T> Get<T>(string id) => Get<T>(id, new EntityVariableScope());
 
-		public EntityVariableScope CreateScope() => new();
-
-		public IValueProvider<T> Get<T>(string id) => Get<T>(id, null);
-
-		public IValueProvider<T> Get<T>(string id, EntityVariableScope? scope)
+		public IValueProvider<T> Get<T>(string id, EntityVariableScope scope)
 		{
-			IValueProvider? container = null;
-
-			if (scope != null && scope.TryGet(id, out var local))
+			if (scope.TryGet(id, out var provider) || _global.TryGetValue(id, out provider))
 			{
-				container = local;
+				return provider switch
+				{
+					IValueProvider<T> typedProvider => typedProvider,
+					IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
+						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+					_ => throw new Exception(
+						$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {provider.GetType()}")
+				};
 			}
-			else if (!_global.TryGetValue(id, out container))
-			{
-				throw new Exception($"Variable not registered for id: {id}");
-			}
 
-			return container switch
-			{
-				IValueProvider<T> typedProvider => typedProvider,
-				IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
-					(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
-				_ => throw new Exception(
-					$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}")
-			};
+			throw new Exception($"Variable not registered for id: {id}");
 		}
 
 		internal static IValueProvider BuildProvider(ValueInfo valueInfo)

@@ -44,22 +44,14 @@ namespace Assembler.Building
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo)
 		{
-			var scope = entityInfo.Variables.Count > 0 ? _variables.CreateScope() : null;
-
-			if (scope != null)
-			{
-				foreach (var valueInfo in entityInfo.Variables)
-				{
-					scope.Create(valueInfo);
-				}
-			}
+			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, scope: scope).Value,
-					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, scope: scope).Value.FromEuler()
+					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value,
+					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler()
 				}
 			};
 

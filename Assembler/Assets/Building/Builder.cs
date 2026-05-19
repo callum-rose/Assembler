@@ -14,10 +14,40 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		[MenuItem("Test/Build")]
-		public static void TestBuild()
+		[MenuItem("Test/Build Pong")]
+		public static void BuildPong()
 		{
 			var yaml = File.ReadAllText("Assets/GameDescriptors/Pong.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
+		[MenuItem("Test/Build Snake")]
+		public static void BuildSnake()
+		{
+			var yaml = File.ReadAllText("Assets/GameDescriptors/Snake.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
+		[MenuItem("Test/Build EnemyHealthDemo")]
+		public static void BuildEnemyHealthDemo()
+		{
+			var yaml = File.ReadAllText("Assets/GameDescriptors/EnemyHealthDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
+		[MenuItem("Test/Build SpawnedBubblesDemo")]
+		public static void BuildSpawnedBubblesDemo()
+		{
+			var yaml = File.ReadAllText("Assets/GameDescriptors/SpawnedBubblesDemo.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -69,7 +99,7 @@ namespace Assembler.Building
 				templatesById,
 				gameInfo.Variables,
 				triggerContext);
-			
+
 			var initialisations = new InitialisationQueue();
 
 			foreach (var entityInfo in gameInfo.Entities)

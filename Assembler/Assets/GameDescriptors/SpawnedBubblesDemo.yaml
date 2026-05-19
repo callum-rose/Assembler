@@ -1,0 +1,172 @@
+Game:
+  Title: Spawned Bubbles Demo
+  Description: |
+    Demonstrates dynamic variables on *dynamically spawned* entities. A spawner
+    creates a new "bubble" every second. Each bubble is spawned with a random
+    `lifetime` (computed by an expression at spawn time) which is fed into the
+    template as a !parameter and stored as the bubble's per-entity variable.
+    The bubble's timer trigger reads `!var lifetime`, which the implicit
+    self-scope resolves to *that* bubble's lifetime — so every bubble pops at
+    its own time, independently. A global `bubbles popped` counter shows the
+    chained lookup (local → global fallback) working in the same expression.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#1a1a2e"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  - Id: spawn interval
+    Value: 1.0
+  - Id: bubble size
+    Value: 0.6
+  - Id: rise speed
+    Value: !vec { X: 0, Y: 1.2 }
+  - Id: one
+    Value: 1
+  - Id: camera position
+    Value: !vec { X: 0, Y: 0, Z: -10 }
+  - Id: camera rotation
+    Value: !vec { X: 0, Y: 0, Z: 0 }
+  - Id: camera view
+    Value: "orthographic"
+  - Id: camera size
+    Value: 5
+
+Variables:
+  - Id: bubbles spawned
+    Value: 0
+  - Id: bubbles popped
+    Value: 0
+
+Templates:
+  - Id: bubble_template
+    Tags: [ bubble ]
+    Variables:
+      # Each spawned bubble owns its own `lifetime`, seeded by the
+      # `life_seconds` !parameter that the spawner supplies.
+      - Id: lifetime
+        Value: !parameter life_seconds
+    Behaviours:
+      - Type: sphere gizmo
+        Id: gizmo
+        Properties:
+          Radius: !var bubble size
+          IsWire: false
+          Colour: !colour cyan
+      - Type: velocity
+        Id: rise
+        Properties:
+          Velocity: !var rise speed
+      # The Delay below resolves to THIS bubble's lifetime via the per-entity
+      # scope — not a single shared global. Each bubble pops at its own time.
+      - Type: timer trigger
+        Id: pop timer
+        Properties:
+          Delay: !var lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: increment pop counter
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      # Local `lifetime` is read here, global `bubbles popped` is written:
+      # the chained lookup falls through to the global registry for names not
+      # found in the entity's own scope.
+      - Type: int variable setter
+        Id: increment pop counter
+        Properties:
+          VariableId: !var bubbles popped
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var bubbles popped
+              - !var one
+      - Type: destroy
+        Id: self destruct
+
+Expressions:
+  - Id: int add
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+  - Id: random lifetime
+    ReturnType: float
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "Range(1.5f, 5.0f);"
+  - Id: random spawn position
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "new Vector3(Range(-4f, 4f), -4.5f, 0);"
+  - Id: format stats
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ spawned, popped ]
+    ReturnType: string
+    Expression: "\"Spawned: \" + spawned + \"   Popped: \" + popped;"
+
+Entities:
+  - Id: bubble spawner
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      # Every `spawn interval` seconds, spawn a new bubble at a random X near
+      # the bottom of the screen, with a freshly-rolled random lifetime.
+      - Type: interval trigger
+        Id: tick
+        Properties:
+          Interval: !var spawn interval
+        Listeners:
+          - EntityId: bubble spawner
+            BehaviourId: increment spawn counter
+          - EntityId: bubble spawner
+            BehaviourId: spawn bubble
+      - Type: int variable setter
+        Id: increment spawn counter
+        Properties:
+          VariableId: !var bubbles spawned
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var bubbles spawned
+              - !var one
+      - Type: spawner
+        Id: spawn bubble
+        Properties:
+          TemplateId: bubble_template
+          Position: !expr { ExpressionId: random spawn position }
+          Parameters:
+            # Each spawn evaluates the expression fresh, so every bubble gets
+            # its own random lifetime — which becomes its per-entity variable.
+            life_seconds: !expr { ExpressionId: random lifetime }
+
+  - Id: camera
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      - Type: camera
+        Id: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  - Id: stats display
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: text label
+        Id: label
+        Properties:
+          Text: !expr
+            ExpressionId: format stats
+            Arguments:
+              - !var bubbles spawned
+              - !var bubbles popped
+          FontSize: 28
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 400
+            Height: 50

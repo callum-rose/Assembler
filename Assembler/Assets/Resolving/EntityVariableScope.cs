@@ -8,9 +8,21 @@ namespace Assembler.Resolving
 	{
 		private Dictionary<string, IValueProvider>? _locals = new();
 
+		public static EntityVariableScope Create(IEnumerable<ValueInfo> values)
+		{
+			var scope = new EntityVariableScope();
+
+			foreach (var valueInfo in values)
+			{
+				scope.Create(valueInfo);
+			}
+
+			return scope;
+		}
+
 		public void Create(ValueInfo valueInfo)
 		{
-			if (_locals == null)
+			if (_locals is null)
 			{
 				throw new ObjectDisposedException(nameof(EntityVariableScope));
 			}

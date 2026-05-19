@@ -34,7 +34,7 @@ namespace Assembler.Building
 			IEntitySpawner spawner,
 			AssetRegistry ar,
 			TriggerContext tc,
-			EntityVariableScope? scope);
+			EntityVariableScope scope);
 
 		private readonly static Dictionary<Type, BehaviourBuilder> Builders = new()
 		{
