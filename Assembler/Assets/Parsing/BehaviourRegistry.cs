@@ -169,6 +169,45 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("Size", typeof(Vector3)), new PropDescriptor("IsWire", typeof(bool)),
 					new PropDescriptor("Colour", typeof(Color))
+				}),
+				["text label"] = (TextLabelInfo.Create, new[]
+				{
+					new PropDescriptor("Text", typeof(string)),
+					new PropDescriptor("Label", typeof(string)),
+					new PropDescriptor("FontSize", typeof(int)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["progress bar"] = (ProgressBarInfo.Create, new[]
+				{
+					new PropDescriptor("Value", typeof(float)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["ui image"] = (UIImageInfo.Create, new[]
+				{
+					new PropDescriptor("Colour", typeof(Color)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["ui button"] = (UIButtonInfo.Create, new[]
+				{
+					new PropDescriptor("Label", typeof(string)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["ui toggle"] = (UIToggleInfo.Create, new[]
+				{
+					new PropDescriptor("InitialValue", typeof(bool)),
+					new PropDescriptor("Label", typeof(string)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["ui slider"] = (UISliderInfo.Create, new[]
+				{
+					new PropDescriptor("InitialValue", typeof(float)),
+					new PropDescriptor("MinValue", typeof(float)),
+					new PropDescriptor("MaxValue", typeof(float)),
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
+				}),
+				["ui input field"] = (UIInputFieldInfo.Create, new[]
+				{
+					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
 				})
 			};
 

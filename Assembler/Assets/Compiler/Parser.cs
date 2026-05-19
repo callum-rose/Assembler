@@ -1150,7 +1150,18 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.Plus))
 				{
-					left = Expression.Add(left, ParseMultiplicative());
+					var right = ParseMultiplicative();
+					if (left.Type == typeof(string) || right.Type == typeof(string))
+					{
+						var concat = typeof(string).GetMethod("Concat", new[] { typeof(string), typeof(string) });
+						var l = left.Type == typeof(string) ? left : Expression.Call(left, "ToString", Type.EmptyTypes);
+						var r = right.Type == typeof(string) ? right : Expression.Call(right, "ToString", Type.EmptyTypes);
+						left = Expression.Call(concat, l, r);
+					}
+					else
+					{
+						left = Expression.Add(left, right);
+					}
 				}
 				else if (Match(TokenType.Minus))
 				{

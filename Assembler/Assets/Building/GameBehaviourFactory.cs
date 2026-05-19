@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Audio;
+using Assembler.Behaviours.Debug.UI;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.Movement;
@@ -373,6 +374,77 @@ namespace Assembler.Building
 					i.Size.Resolve(vr, cr, ar, tc),
 					i.IsWire.Resolve(vr, cr, ar, tc),
 					i.Colour.Resolve(vr, cr, ar, tc))));
+			},
+			[typeof(TextLabelInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (TextLabelInfo)info;
+				var b = go.AddComponent<TextLabel>();
+				return (b, lr => b.Initialise(new TextLabelData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.Text.Resolve(vr, cr, ar, tc),
+					i.Label.Resolve(vr, cr, ar, tc),
+					i.FontSize.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(ProgressBarInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (ProgressBarInfo)info;
+				var b = go.AddComponent<ProgressBar>();
+				return (b, lr => b.Initialise(new ProgressBarData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.Value.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(UIImageInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (UIImageInfo)info;
+				var b = go.AddComponent<UIImage>();
+				return (b, lr => b.Initialise(new UIImageData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.Colour.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(UIButtonInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (UIButtonInfo)info;
+				var b = go.AddComponent<UIButton>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new UIButtonData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.Label.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(UIToggleInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (UIToggleInfo)info;
+				var b = go.AddComponent<UIToggle>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new UIToggleData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.InitialValue.Resolve(vr, cr, ar, tc),
+					i.Label.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(UISliderInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (UISliderInfo)info;
+				var b = go.AddComponent<UISlider>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new UISliderData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.InitialValue.Resolve(vr, cr, ar, tc),
+					i.MinValue.Resolve(vr, cr, ar, tc),
+					i.MaxValue.Resolve(vr, cr, ar, tc),
+					i.Rect)));
+			},
+			[typeof(UIInputFieldInfo)] = (go, info, vr, cr, es, ar, tc) =>
+			{
+				var i = (UIInputFieldInfo)info;
+				var b = go.AddComponent<UIInputField>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.Rect)));
 			}
 		};
 
