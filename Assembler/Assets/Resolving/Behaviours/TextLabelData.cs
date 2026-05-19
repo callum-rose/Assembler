@@ -8,12 +8,14 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<string> Text { get; }
 		public IValueProvider<string> Label { get; }
+		public IValueProvider<int> FontSize { get; }
 		public ScreenRect Rect { get; }
 
 		public TextLabelData(string id,
 			IReadOnlyList<Action> listeners,
 			IValueProvider<string> text,
 			IValueProvider<string> label,
-			ScreenRect rect) : base(id, listeners) => (Text, Label, Rect) = (text, label, rect);
+			IValueProvider<int> fontSize,
+			ScreenRect rect) : base(id, listeners) => (Text, Label, FontSize, Rect) = (text, label, fontSize, rect);
 	}
 }

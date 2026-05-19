@@ -383,6 +383,7 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, tc),
 					i.Text.Resolve(vr, cr, ar, tc),
 					i.Label.Resolve(vr, cr, ar, tc),
+					i.FontSize.Resolve(vr, cr, ar, tc),
 					i.Rect)));
 			},
 			[typeof(ProgressBarInfo)] = (go, info, vr, cr, es, ar, tc) =>

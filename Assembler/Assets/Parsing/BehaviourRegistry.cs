@@ -174,6 +174,7 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("Text", typeof(string)),
 					new PropDescriptor("Label", typeof(string)),
+					new PropDescriptor("FontSize", typeof(int)),
 					new PropDescriptor("Rect", typeof(Dictionary<string, object>))
 				}),
 				["progress bar"] = (ProgressBarInfo.Create, new[]

@@ -368,12 +368,13 @@ Entities:
             ExpressionId: format left score
             Arguments:
               - !var left score
+          FontSize: 32
           Rect:
             Anchor: top-left
-            X: 10
-            Y: 10
-            Width: 100
-            Height: 30
+            X: 20
+            Y: 20
+            Width: 200
+            Height: 50
 
   - Id: right score display
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -385,12 +386,13 @@ Entities:
             ExpressionId: format right score
             Arguments:
               - !var right score
+          FontSize: 32
           Rect:
             Anchor: top-right
-            X: -110
-            Y: 10
-            Width: 100
-            Height: 30
+            X: -220
+            Y: 20
+            Width: 200
+            Height: 50
 
 GameOverCondition: !expr
   ExpressionId: is game over

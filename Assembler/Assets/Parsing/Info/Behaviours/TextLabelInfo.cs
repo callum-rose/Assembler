@@ -8,6 +8,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> Text,
 		ValueSource<string> Label,
+		ValueSource<int> FontSize,
 		ScreenRect Rect) : BehaviourInfo(Id, Listeners)
 	{
 		public static TextLabelInfo Create(string id,
@@ -19,6 +20,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("Text"), parameters: p),
 				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
+				Transformer.CreateValueSource<int>(v, props?.GetValueOrDefault("FontSize"), fallback: 0, parameters: p),
 				ScreenRectParser.Parse(props?.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -28,6 +30,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				substitutedListeners,
 				Text.SubstituteParameters(parameters, allValues),
 				Label.SubstituteParameters(parameters, allValues),
+				FontSize.SubstituteParameters(parameters, allValues),
 				Rect);
 	}
 }
