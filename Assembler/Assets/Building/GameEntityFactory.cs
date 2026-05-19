@@ -56,7 +56,7 @@ namespace Assembler.Building
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 
-			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour)>();
+			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
@@ -69,7 +69,7 @@ namespace Assembler.Building
 					_assets,
 					_triggerContext);
 
-				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour));
+				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
 				initialisations.Add(initialise);
 			}
 

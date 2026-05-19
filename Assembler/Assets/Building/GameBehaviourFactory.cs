@@ -401,12 +401,13 @@ namespace Assembler.Building
 			TriggerContext triggerContext) =>
 			listeners.Select(d =>
 			{
+				if (d.IsDynamic)
+					return BuildDynamicAction(d, listenerRegistry, triggerContext);
+
 				var behaviour = listenerRegistry[d.BehaviourDescriptor];
-				
+
 				if (d.OutputMapping.Count == 0)
-				{
 					return (Action)behaviour.Execute;
-				}
 
 				return () =>
 				{
@@ -414,5 +415,23 @@ namespace Assembler.Building
 					behaviour.Execute();
 				};
 			}).ToArray();
+
+		private static Action BuildDynamicAction(ListenerInfo listener,
+			IReadOnlyBehaviourRegistry registry,
+			TriggerContext triggerContext)
+		{
+			return () =>
+			{
+				if (listener.OutputMapping.Count > 0)
+					triggerContext.ApplyMapping(listener.OutputMapping);
+
+				var targets = listener.BehaviourTag != null
+					? registry.GetByBehaviourTag(listener.BehaviourTag, listener.EntityTag)
+					: registry.GetByEntityTagAndBehaviourId(listener.EntityTag!, listener.BehaviourDescriptor.BehaviourId);
+
+				foreach (var behaviour in targets)
+					if (behaviour) behaviour.Execute();
+			};
+		}
 	}
 }

@@ -68,7 +68,8 @@ namespace Assembler.Parsing
 			IReadOnlyList<ValueInfo> allValues)
 		{
 			var listeners = SubstituteListeners(info.Listeners, parameters);
-			return info.SubstituteParameters(listeners, parameters, allValues);
+			var substituted = info.SubstituteParameters(listeners, parameters, allValues);
+			return substituted with { Tags = info.Tags };
 		}
 
 		private static IReadOnlyList<ListenerInfo> SubstituteListeners(
@@ -98,7 +99,9 @@ namespace Assembler.Parsing
 				{
 					result[i] = new ListenerInfo(l.BehaviourDescriptor with { EntityId = entityId })
 					{
-						OutputMapping = l.OutputMapping
+						OutputMapping = l.OutputMapping,
+						EntityTag = l.EntityTag,
+						BehaviourTag = l.BehaviourTag
 					};
 				}
 				else

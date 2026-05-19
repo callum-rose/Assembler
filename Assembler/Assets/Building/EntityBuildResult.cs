@@ -6,11 +6,11 @@ namespace Assembler.Building
 {
 	public class EntityBuildResult
 	{
-		public IReadOnlyList<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour)> Behaviours { get; }
+		public IReadOnlyList<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)> Behaviours { get; }
 		public IReadOnlyList<InitialiseBehaviourEvent> Initialisations { get; }
 
 		public EntityBuildResult(
-			IReadOnlyList<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour)> behaviours,
+			IReadOnlyList<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)> behaviours,
 			IReadOnlyList<InitialiseBehaviourEvent> initialisations)
 		{
 			Behaviours = behaviours;
