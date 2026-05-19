@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<string>(v, props?.GetValueOrDefault("ExpressionId"), parameters: p),
+				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("ExpressionId"), parameters: p),
 				Transformer.ConvertArgumentList(v, props?.GetValueOrDefault("Arguments")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -24,7 +24,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyList<ValueInfo> allValues) =>
 			new ConditionInfo(Id,
 				substitutedListeners,
-				ExpressionId.Substitute(parameters, allValues),
-				Arguments.Select(a => TemplateInstantiator.Substitute<object>(a, parameters, allValues)).ToArray());
+				ExpressionId.SubstituteParameters(parameters, allValues),
+				Arguments.Select(a => TemplateInstantiator.SubstituteParameters<object>(a, parameters, allValues)).ToArray());
 	}
 }

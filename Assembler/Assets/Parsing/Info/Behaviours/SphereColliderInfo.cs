@@ -15,15 +15,15 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<float>(v, props?.GetValueOrDefault("Radius"), parameters: p),
-				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("IsTrigger"), parameters: p));
+				Transformer.CreateValueSource<float>(v, props?.GetValueOrDefault("Radius"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("IsTrigger"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new SphereColliderInfo(Id,
 				substitutedListeners,
-				Radius.Substitute(parameters, allValues),
-				IsTrigger.Substitute(parameters, allValues));
+				Radius.SubstituteParameters(parameters, allValues),
+				IsTrigger.SubstituteParameters(parameters, allValues));
 	}
 }

@@ -42,7 +42,7 @@ namespace Assembler.Building
 			_triggerContext = triggerContext;
 		}
 
-		public EntityBuildResult Create(EntityInfo entityInfo)
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo)
 		{
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -84,13 +84,11 @@ namespace Assembler.Building
 			}
 
 			var newId = $"{SpawnedIdPrefix}{templateId}_{_spawnCounter++}";
-			var parameters = new Dictionary<string, object> { ["self_id"] = newId };
 
 			var entity = TemplateInstantiator.Instantiate(
 				template,
 				newId,
 				new ConstantSource<Vector3>(position),
-				parameters,
 				_allValues);
 
 			var result = Create(entity);

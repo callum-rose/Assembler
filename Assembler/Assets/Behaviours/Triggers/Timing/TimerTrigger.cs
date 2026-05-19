@@ -16,7 +16,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 		{
 			yield return new WaitForSeconds(seconds);
 
-			InvokeListeners();
+			NotifyListeners();
 		}
 	}
 }

@@ -14,11 +14,11 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ConcreteEntityInfo(
 		string Id,
-		EntityInfo Template,
 		IReadOnlyList<string> Tags,
 		ValueSource<Vector3> InitialPosition,
 		ValueSource<Vector3> InitialRotation,
-		IReadOnlyList<BehaviourInfo> Behaviours) : EntityInfo(Id, Template, Tags, InitialPosition, InitialRotation, Behaviours);
+		IReadOnlyList<BehaviourInfo> Behaviours)
+		: EntityInfo(Id, NullEntityInfo.Instance, Tags, InitialPosition, InitialRotation, Behaviours);
 
 	public sealed record NullEntityInfo() : EntityInfo(string.Empty,
 		Instance,

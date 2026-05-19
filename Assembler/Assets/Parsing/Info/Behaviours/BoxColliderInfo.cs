@@ -16,15 +16,15 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Size"), parameters: p),
-				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("IsTrigger"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Size"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("IsTrigger"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new BoxColliderInfo(Id,
 				substitutedListeners,
-				Size.Substitute(parameters, allValues),
-				IsTrigger.Substitute(parameters, allValues));
+				Size.SubstituteParameters(parameters, allValues),
+				IsTrigger.SubstituteParameters(parameters, allValues));
 	}
 }

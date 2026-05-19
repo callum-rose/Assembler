@@ -12,13 +12,13 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<float>(v, props?.GetValueOrDefault("Delay"), parameters: p));
+				Transformer.CreateValueSource<float>(v, props?.GetValueOrDefault("Delay"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TimerTriggerInfo(Id,
 				substitutedListeners,
-				Delay.Substitute(parameters, allValues));
+				Delay.SubstituteParameters(parameters, allValues));
 	}
 }

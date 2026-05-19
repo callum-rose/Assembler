@@ -13,13 +13,13 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Displacement"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Displacement"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TranslateInfo(Id,
 				substitutedListeners,
-				Displacement.Substitute(parameters, allValues));
+				Displacement.SubstituteParameters(parameters, allValues));
 	}
 }

@@ -182,8 +182,10 @@ namespace Assembler.Building
 				var b = go.AddComponent<IntervalTrigger>();
 
 				return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
+					i.Listeners.ToActions(lr, tc),
 					i.Interval.Resolve(vr, cr, ar, tc),
-					i.Listeners.ToActions(lr, tc))));
+					i.Count.Resolve(vr, cr, ar, tc),
+					i.AutoStart.Resolve(vr, cr, ar, tc))));
 			},
 			[typeof(EveryFrameTriggerInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{

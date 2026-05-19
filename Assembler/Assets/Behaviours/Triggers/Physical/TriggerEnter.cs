@@ -12,7 +12,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 				try
 				{
 					TriggerContext.Set("other_position", other.transform.position);
-					InvokeListeners();
+					NotifyListeners();
 				}
 				finally
 				{

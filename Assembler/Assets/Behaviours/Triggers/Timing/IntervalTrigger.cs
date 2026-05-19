@@ -7,9 +7,24 @@ namespace Assembler.Behaviours.Triggers.Timing
 {
 	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
 	{
+		private Coroutine? _currentCoroutine;
+
 		private void Start()
 		{
-			StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
+			Execute();
+		}
+
+		public override void Execute()
+		{
+			bool timerIsRunning = _currentCoroutine is not null;
+
+			if (timerIsRunning)
+			{
+				UnityEngine.Debug.LogWarning("Interval trigger already running. Restarting");
+				StopCoroutine(_currentCoroutine);
+			}
+			
+			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
 		}
 
 		private IEnumerator Routine(float interval, int count)
@@ -18,8 +33,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 			{
 				yield return new WaitForSeconds(interval);
 
-				InvokeListeners();
+				NotifyListeners();
 			}
+
+			_currentCoroutine = null;
 		}
 	}
 }

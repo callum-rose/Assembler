@@ -10,7 +10,7 @@ namespace Assembler.Behaviours.Triggers.Input
 		{
 			if (UnityEngine.Input.GetKeyUp(Data.Key.Value))
 			{
-				InvokeListeners();
+				NotifyListeners();
 			}
 		}
 	}

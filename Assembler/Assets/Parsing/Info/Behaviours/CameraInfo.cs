@@ -15,15 +15,15 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<string>(v, props?.GetValueOrDefault("View"), parameters: p),
-				Transformer.Wrap<float>(v, props?.GetValueOrDefault("Size"), parameters: p));
+				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("View"), parameters: p),
+				Transformer.CreateValueSource<float>(v, props?.GetValueOrDefault("Size"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new CameraInfo(Id,
 				substitutedListeners,
-				View.Substitute(parameters, allValues),
-				Size.Substitute(parameters, allValues));
+				View.SubstituteParameters(parameters, allValues),
+				Size.SubstituteParameters(parameters, allValues));
 	}
 }

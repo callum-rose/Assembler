@@ -10,7 +10,7 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<ValueInfo> Variables,
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,
-		IReadOnlyList<EntityInfo> Entities,
+		IReadOnlyList<ConcreteEntityInfo> Entities,
 		ValueSource<bool> GameOverCondition);
 
 }

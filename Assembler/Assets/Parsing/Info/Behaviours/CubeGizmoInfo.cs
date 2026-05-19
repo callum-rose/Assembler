@@ -17,17 +17,17 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Size"), parameters: p),
-				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("IsWire"), parameters: p),
-				Transformer.Wrap<Color>(v, props?.GetValueOrDefault("Colour"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Size"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("IsWire"), parameters: p),
+				Transformer.CreateValueSource<Color>(v, props?.GetValueOrDefault("Colour"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new CubeGizmoInfo(Id,
 				substitutedListeners,
-				Size.Substitute(parameters, allValues),
-				IsWire.Substitute(parameters, allValues),
-				Colour.Substitute(parameters, allValues));
+				Size.SubstituteParameters(parameters, allValues),
+				IsWire.SubstituteParameters(parameters, allValues),
+				Colour.SubstituteParameters(parameters, allValues));
 	}
 }

@@ -18,17 +18,17 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<AudioClip>(v, props?.GetValueOrDefault("Clip"), parameters: p),
-				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("PlayOnStart"), parameters: p),
-				Transformer.Wrap<bool>(v, props?.GetValueOrDefault("Loop"), parameters: p));
+				Transformer.CreateValueSource<AudioClip>(v, props?.GetValueOrDefault("Clip"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("PlayOnStart"), parameters: p),
+				Transformer.CreateValueSource<bool>(v, props?.GetValueOrDefault("Loop"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new AudioSourceInfo(Id,
 				substitutedListeners,
-				Clip.Substitute(parameters, allValues),
-				PlayOnStart.Substitute(parameters, allValues),
-				Loop.Substitute(parameters, allValues));
+				Clip.SubstituteParameters(parameters, allValues),
+				PlayOnStart.SubstituteParameters(parameters, allValues),
+				Loop.SubstituteParameters(parameters, allValues));
 	}
 }

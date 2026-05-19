@@ -12,13 +12,13 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<string>(v, props?.GetValueOrDefault("Key"), parameters: p));
+				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("Key"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new KeyHoldTriggerInfo(Id,
 				substitutedListeners,
-				Key.Substitute(parameters, allValues));
+				Key.SubstituteParameters(parameters, allValues));
 	}
 }

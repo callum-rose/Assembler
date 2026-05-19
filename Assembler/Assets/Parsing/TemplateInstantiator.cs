@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Extensions;
 using Assembler.Parsing.Info;
 using UnityEngine;
 
@@ -7,27 +8,45 @@ namespace Assembler.Parsing
 {
 	public static class TemplateInstantiator
 	{
-		public static EntityInfo Instantiate(
-			EntityInfo template,
-			string newEntityId,
-			ValueSource<Vector3> overridePosition,
-			IReadOnlyDictionary<string, object> parameters,
-			IReadOnlyList<ValueInfo> allValues)
+		// public static Dictionary<string, object> CreateParameters(string entityId,
+		// 	Dictionary<string, object>? templateParameters = null)
+		// {
+		// 	var parameters = templateParameters ?? new Dictionary<string, object>();
+		// 	parameters["self_id"] = entityId;
+		// 	return parameters;
+		// }
+
+		public static ConcreteEntityInfo Instantiate(EntityInfo template,
+			string entityId,
+			ValueSource<Vector3> position,
+			IReadOnlyList<ValueInfo> allValues,
+			IReadOnlyDictionary<string, object>? parameters = null,
+			ValueSource<Vector3>? rotation = null,
+			IEnumerable<string>? additionalTags = null,
+			IEnumerable<BehaviourInfo>? additionalBehaviours = null)
 		{
-			var behaviours = template.Behaviours
-				.Select(b => SubstituteBehaviour(b, parameters, allValues))
-				.ToArray();
+			var augmentedParameters = new Dictionary<string, object>(parameters.EmptyIfNull())
+			{
+				["self_id"] = entityId
+			};
+			
+			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, augmentedParameters, allValues));
+
+			var behaviours = inheritedBehaviours.Concat(additionalBehaviours.EmptyIfNull()).ToArray();
+
+			var tags = template.Tags.Concat(additionalTags.EmptyIfNull()).ToArray();
+
+			var resolvedRotation = rotation ?? template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
 
 			return new ConcreteEntityInfo(
-				newEntityId,
-				NullEntityInfo.Instance,
-				template.Tags,
-				overridePosition,
-				template.InitialRotation.Substitute(parameters, allValues),
+				entityId,
+				tags,
+				position,
+				resolvedRotation,
 				behaviours);
 		}
 
-		public static ValueSource<T> Substitute<T>(this ValueSource<T> source,
+		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues)
 		{
@@ -35,14 +54,14 @@ namespace Assembler.Parsing
 			{
 				ParameterSource<T> p => !parameters.TryGetValue(p.ParameterId, out var raw)
 					? throw new ParsingException($"Parameter '{p.ParameterId}' not supplied during template instantiation")
-					: Transformer.Wrap<T>(allValues, raw, parameters: parameters),
+					: Transformer.CreateValueSource<T>(allValues, raw, parameters: parameters),
 				ExpressionSource<T> e => new ExpressionSource<T>(e.ExpressionId,
-					e.Arguments.Select(a => a.Substitute(parameters, allValues)).ToArray()),
+					e.Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray()),
 				_ => source
 			};
 		}
 
-		public static BehaviourInfo SubstituteBehaviour(
+		private static BehaviourInfo SubstituteBehaviour(
 			BehaviourInfo info,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues)
@@ -72,7 +91,7 @@ namespace Assembler.Parsing
 					continue;
 				}
 
-				var paramId = l.BehaviourDescriptor.EntityId.Substring(Transformer.ParameterEntityIdSentinel.Length);
+				var paramId = l.BehaviourDescriptor.EntityId[Transformer.ParameterEntityIdSentinel.Length..];
 
 				if (parameters.TryGetValue(paramId, out var raw) && raw is string entityId)
 				{

@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 		{
 			if (Data.Condition.Value)
 			{
-				InvokeListeners();
+				NotifyListeners();
 			}
 		}
 	}

@@ -16,15 +16,15 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, object>? p) =>
 			new(id,
 				listeners,
-				Transformer.Wrap<string>(v, props?.GetValueOrDefault("TemplateId")),
-				Transformer.Wrap<Vector3>(v, props?.GetValueOrDefault("Position")));
+				Transformer.CreateValueSource<string>(v, props?.GetValueOrDefault("TemplateId")),
+				Transformer.CreateValueSource<Vector3>(v, props?.GetValueOrDefault("Position")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, object> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
 			new SpawnerInfo(Id,
 				substitutedListeners,
-				TemplateId.Substitute(parameters, allValues),
-				Position.Substitute(parameters, allValues));
+				TemplateId.SubstituteParameters(parameters, allValues),
+				Position.SubstituteParameters(parameters, allValues));
 	}
 }

@@ -27,18 +27,12 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
-			var variables = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
+			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
-			foreach (var valueDto in gameDto.Constants ?? Enumerable.Empty<ValueDto>())
+			foreach (var valueDto in gameDto.Constants.EmptyIfNull().Concat(gameDto.Variables.EmptyIfNull()))
 			{
-				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
-				variables.Add(value);
-			}
-
-			foreach (var valueDto in gameDto.Variables ?? Enumerable.Empty<ValueDto>())
-			{
-				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(variables, valueDto.Value));
-				variables.Add(value);
+				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(values, valueDto.Value));
+				values.Add(value);
 			}
 
 			var expressions = gameDto.Expressions?.Select(e => new ExpressionInfo(e.Id ?? string.Empty,
@@ -52,57 +46,52 @@ namespace Assembler.Parsing
 			var templates = gameDto.Templates?
 				.Select(t => new ConcreteEntityInfo(
 					t.Id ?? string.Empty,
-					NullEntityInfo.Instance,
 					t.Tags ?? new List<string>(),
-					Wrap<Vector3>(variables, t.Position),
-					Wrap<Vector3>(variables, t.Rotation),
-					t.Behaviours?.Select(b => CreateBehaviour(variables, b)).ToArray() ??
+					CreateValueSource<Vector3>(values, t.Position),
+					CreateValueSource<Vector3>(values, t.Rotation),
+					t.Behaviours?.Select(b => CreateBehaviour(values, b)).ToArray() ??
 					Array.Empty<BehaviourInfo>()))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-			var entities = gameDto.Entities?.Select(entityDto =>
+			ConcreteEntityInfo Selector(EntityDto entityDto)
+			{
+				EntityInfo template;
+				Dictionary<string, object> parameters;
+
+				var entityId = entityDto.Id ?? string.Empty;
+
+				if (entityDto.Template is null)
 				{
-					EntityInfo template;
-					Dictionary<string, object> parameters;
+					template = NullEntityInfo.Instance;
+					parameters = new Dictionary<string, object>();
+				}
+				else
+				{
+					template = templates.First(t => t.Id == entityDto.Template.Id);
+					parameters = entityDto.Template.Parameters ?? new Dictionary<string, object>();
+				}
 
-					var entityId = entityDto.Id ?? string.Empty;
+				var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(values, b, parameters)) ?? Enumerable.Empty<BehaviourInfo>();
 
-					if (entityDto.Template is null)
-					{
-						template = NullEntityInfo.Instance;
-						parameters = new Dictionary<string, object>();
-					}
-					else
-					{
-						template = templates.First(t => t.Id == entityDto.Template.Id);
+				return TemplateInstantiator.Instantiate(template,
+					entityId,
+					CreateValueSource<Vector3>(values, entityDto.Position, parameters: parameters),
+					values,
+					parameters,
+					CreateValueSource<Vector3>(values, entityDto.Rotation, parameters: parameters),
+					entityDto.Tags,
+					ownBehaviours);
+			}
 
-						parameters = entityDto.Template.Parameters ?? new Dictionary<string, object>();
-						parameters.Add("self_id", entityId);
-					}
+			var entities = gameDto.Entities.EmptyIfNull().Select(Selector).ToArray();
 
-					var ownBehaviours = entityDto.Behaviours?.Select(b => CreateBehaviour(variables, b, parameters))
-					                    ?? Enumerable.Empty<BehaviourInfo>();
-
-					var inheritedBehaviours = template is NullEntityInfo
-						? Enumerable.Empty<BehaviourInfo>()
-						: template.Behaviours.Select(b => TemplateInstantiator.SubstituteBehaviour(b, parameters, variables));
-
-					return new ConcreteEntityInfo(entityId,
-						template,
-						(entityDto.Tags ?? Enumerable.Empty<string>()).Concat(template.Tags).ToList(),
-						Wrap<Vector3>(variables, entityDto.Position, parameters: parameters),
-						Wrap<Vector3>(variables, entityDto.Rotation, parameters: parameters),
-						inheritedBehaviours.Concat(ownBehaviours).ToArray());
-				})
-				.ToArray() ?? Array.Empty<EntityInfo>();
-
-			var gameOverCondition = Wrap<bool>(variables, gameDto.GameOverCondition);
+			var gameOverCondition = CreateValueSource<bool>(values, gameDto.GameOverCondition);
 
 			return new GameInfo(info,
 				world,
 				physics,
 				assets,
-				variables,
+				values,
 				expressions,
 				templates,
 				entities,
@@ -164,7 +153,7 @@ namespace Assembler.Parsing
 		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
 			object? obj) =>
 			obj is List<object> list
-				? list.Select(item => Wrap<object>(resolvedValues, item)).ToArray()
+				? list.Select(item => CreateValueSource<object>(resolvedValues, item)).ToArray()
 				: Array.Empty<ValueSource<object>>();
 
 		/// <summary>
@@ -174,7 +163,7 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		internal static ValueSource<T> Wrap<T>(IReadOnlyList<ValueInfo> resolvedValues,
+		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
 			object? raw,
 			T? fallback = default,
 			IReadOnlyDictionary<string, object>? parameters = null) =>
@@ -183,14 +172,14 @@ namespace Assembler.Parsing
 				ParamRefDto paramRefDto when parameters is null => new ParameterSource<T>(paramRefDto.Id ?? string.Empty),
 				ParamRefDto paramRefDto => !parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var paramValue)
 					? throw new ParsingException($"Parameter '{paramRefDto.Id}' not found")
-					: Wrap(resolvedValues, paramValue, fallback),
+					: CreateValueSource(resolvedValues, paramValue, fallback),
 				AssetRefDto assetRefDto => new AssetSource<T>(assetRefDto.Id ?? string.Empty),
 				OutputRefDto outputRefDto => new TriggerOutputSource<T>(outputRefDto.Id ?? string.Empty),
 				VarRefDto varRefDto => new ValueReferenceSource<T>(varRefDto.Id ?? string.Empty),
 				ExprRefDto exprRefDto => new ExpressionSource<T>(exprRefDto.ExpressionId ?? string.Empty,
 					exprRefDto.Arguments
 						.EmptyIfNull()
-						.Select(a => Wrap<object>(resolvedValues, a, parameters: parameters)).ToArray()),
+						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters: parameters)).ToArray()),
 				VecDto vecDto when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
 					(T)(object)vecDto.ToVector3(resolvedValues)),
 				VecDto vecDto when typeof(T) == typeof(Vector2) => new ConstantSource<T>(

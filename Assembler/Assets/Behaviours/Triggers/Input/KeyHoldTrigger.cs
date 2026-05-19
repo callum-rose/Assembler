@@ -22,7 +22,7 @@ namespace Assembler.Behaviours.Triggers.Input
 			
 			if (UnityEngine.Input.GetKey(keyCode))
 			{
-				InvokeListeners();
+				NotifyListeners();
 			}
 		}
 	}
