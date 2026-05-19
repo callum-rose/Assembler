@@ -89,10 +89,10 @@ namespace Assembler.Parsing
 
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
-					CreateValueSource<Vector3>(values, entityDto.Position, parameters: parameters),
 					values,
-					parameters,
+					CreateValueSource<Vector3>(values, entityDto.Position, parameters: parameters),
 					CreateValueSource<Vector3>(values, entityDto.Rotation, parameters: parameters),
+					parameters,
 					entityDto.Tags,
 					ownBehaviours);
 			}

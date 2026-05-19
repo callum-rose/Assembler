@@ -113,7 +113,10 @@ namespace Assembler.Parsing
 				}),
 				["spawner"] = (SpawnerInfo.Create, new[]
 				{
-					new PropDescriptor("TemplateId", typeof(string)), new PropDescriptor("Position", typeof(Vector3))
+					new PropDescriptor("TemplateId", typeof(string)),
+					new PropDescriptor("Position", typeof(Vector3)),
+					new PropDescriptor("Rotation", typeof(Vector3)),
+					new PropDescriptor("Parameters", typeof(Dictionary<string, object>))
 				}),
 				["destroy"] = (DestroyInfo.Create, Array.Empty<PropDescriptor>()),
 				["position setter"] = (SetPositionInfo.Create, new[]

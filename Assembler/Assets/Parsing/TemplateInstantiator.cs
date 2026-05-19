@@ -18,10 +18,10 @@ namespace Assembler.Parsing
 
 		public static ConcreteEntityInfo Instantiate(EntityInfo template,
 			string entityId,
-			ValueSource<Vector3> position,
 			IReadOnlyList<ValueInfo> allValues,
-			IReadOnlyDictionary<string, object>? parameters = null,
+			ValueSource<Vector3>? position = null,
 			ValueSource<Vector3>? rotation = null,
+			IReadOnlyDictionary<string, object>? parameters = null,
 			IEnumerable<string>? additionalTags = null,
 			IEnumerable<BehaviourInfo>? additionalBehaviours = null)
 		{
@@ -29,19 +29,20 @@ namespace Assembler.Parsing
 			{
 				["self_id"] = entityId
 			};
-			
+
 			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, augmentedParameters, allValues));
 
 			var behaviours = inheritedBehaviours.Concat(additionalBehaviours.EmptyIfNull()).ToArray();
 
 			var tags = template.Tags.Concat(additionalTags.EmptyIfNull()).ToArray();
 
+			var resolvedPosition = position ?? template.InitialPosition.SubstituteParameters(augmentedParameters, allValues);
 			var resolvedRotation = rotation ?? template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
 
 			return new ConcreteEntityInfo(
 				entityId,
 				tags,
-				position,
+				resolvedPosition,
 				resolvedRotation,
 				behaviours);
 		}

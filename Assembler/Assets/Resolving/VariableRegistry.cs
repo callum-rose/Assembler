@@ -34,9 +34,9 @@ namespace Assembler.Resolving
 
 			return container switch
 			{
-				IValueProvider<T> typedContainer => typedContainer,
-				IValueProvider<int> intContainer when typeof(T) == typeof(float) =>
-					(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intContainer, i => i),
+				IValueProvider<T> typedProvider => typedProvider,
+				IValueProvider<int> intProvider when typeof(T) == typeof(float) => (IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+				IValueProvider<object> objectProvider => (IValueProvider<T>)objectProvider,
 				_ => throw new Exception($"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {container.GetType()}")
 			};
 		}

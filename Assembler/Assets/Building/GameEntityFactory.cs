@@ -76,7 +76,7 @@ namespace Assembler.Building
 			return new EntityBuildResult(behaviours, initialisations);
 		}
 
-		public void Spawn(string templateId, Vector3 position)
+		public void Spawn(string templateId, Vector3 position, Vector3 rotation, IReadOnlyDictionary<string, object> parameters)
 		{
 			if (!_templates.TryGetValue(templateId, out var template))
 			{
@@ -88,8 +88,10 @@ namespace Assembler.Building
 			var entity = TemplateInstantiator.Instantiate(
 				template,
 				newId,
+				_allValues,
 				new ConstantSource<Vector3>(position),
-				_allValues);
+				new ConstantSource<Vector3>(rotation),
+				parameters);
 
 			var result = Create(entity);
 			_behaviourRegistry.Register(result);

@@ -271,7 +271,9 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new SpawnerData(i.Id,
 					i.Listeners.ToActions(lr, tc),
 					i.TemplateId.Resolve(vr, cr, ar, tc),
-					i.Position.Resolve(vr, cr, ar, tc))));
+					i.Position.Resolve(vr, cr, ar, tc),
+					i.Rotation.Resolve(vr, cr, ar, tc),
+					i.Parameters.ToDictionary(kv => kv.Key, kv => kv.Value.Resolve(vr, cr, ar, tc)))));
 			},
 			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar, tc) =>
 			{
