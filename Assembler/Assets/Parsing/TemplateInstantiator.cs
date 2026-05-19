@@ -11,9 +11,9 @@ namespace Assembler.Parsing
 		public static ConcreteEntityInfo Instantiate(EntityInfo template,
 			string entityId,
 			IReadOnlyList<ValueInfo> allValues,
-			ValueSource<Vector3>? position = null,
-			ValueSource<Vector3>? rotation = null,
-			IReadOnlyDictionary<string, AssemblerValue>? parameters = null,
+			ValueSource<Vector3> position,
+			ValueSource<Vector3> rotation,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IEnumerable<string>? additionalTags = null,
 			IEnumerable<BehaviourInfo>? additionalBehaviours = null)
 		{
@@ -28,8 +28,13 @@ namespace Assembler.Parsing
 
 			var tags = template.Tags.Concat(additionalTags.EmptyIfNull()).ToArray();
 
-			var resolvedPosition = position ?? template.InitialPosition.SubstituteParameters(augmentedParameters, allValues);
-			var resolvedRotation = rotation ?? template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
+			var resolvedPosition = position is not None<Vector3>
+				? position
+				: template.InitialPosition.SubstituteParameters(augmentedParameters, allValues);
+
+			var resolvedRotation = rotation is not None<Vector3>
+				? rotation
+				: template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
 
 			return new ConcreteEntityInfo(
 				entityId,
@@ -41,9 +46,8 @@ namespace Assembler.Parsing
 
 		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues)
-		{
-			return source switch
+			IReadOnlyList<ValueInfo> allValues) =>
+			source switch
 			{
 				ParameterSource<T> p => !parameters.TryGetValue(p.ParameterId, out var raw)
 					? throw new ParsingException($"Parameter '{p.ParameterId}' not supplied during template instantiation")
@@ -52,7 +56,6 @@ namespace Assembler.Parsing
 					e.Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray()),
 				_ => source
 			};
-		}
 
 		private static BehaviourInfo SubstituteBehaviour(
 			BehaviourInfo info,
@@ -61,7 +64,11 @@ namespace Assembler.Parsing
 		{
 			var listeners = SubstituteListeners(info.Listeners, parameters);
 			var substituted = info.SubstituteParameters(listeners, parameters, allValues);
-			return substituted with { Tags = info.Tags };
+
+			return substituted with
+			{
+				Tags = info.Tags
+			};
 		}
 
 		private static IReadOnlyList<ListenerInfo> SubstituteListeners(
@@ -89,11 +96,12 @@ namespace Assembler.Parsing
 
 				if (parameters.TryGetValue(paramId, out var raw) && raw is StringValue sv)
 				{
-					result[i] = new ListenerInfo(l.BehaviourDescriptor with { EntityId = sv.Value })
+					result[i] = new ListenerInfo(l.BehaviourDescriptor with
 					{
-						OutputMapping = l.OutputMapping,
-						EntityTag = l.EntityTag,
-						BehaviourTag = l.BehaviourTag
+						EntityId = sv.Value
+					})
+					{
+						OutputMapping = l.OutputMapping, EntityTag = l.EntityTag, BehaviourTag = l.BehaviourTag
 					};
 				}
 				else

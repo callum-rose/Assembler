@@ -87,9 +87,7 @@ namespace Assembler.Building
 
 			var assemblerParameters = parameters.ToDictionary(
 				kv => kv.Key,
-				kv => Transformer.ToAssemblerValue(kv.Value) ??
-				      throw new InvalidOperationException(
-					      $"Spawn parameter '{kv.Key}' could not be converted to an AssemblerValue"));
+				kv => Transformer.ToAssemblerValue(kv.Value));
 
 			var entity = TemplateInstantiator.Instantiate(
 				template,

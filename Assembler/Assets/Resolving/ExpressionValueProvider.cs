@@ -10,7 +10,7 @@ namespace Assembler.Resolving
 			set => throw new InvalidOperationException("ExpressionContainerProvider cannot have its value set");
 		}
 
-		object IValueProvider.Value => Value;
+		object IValueProvider.Value => Value!;
 
 		private readonly Func<T> _func;
 

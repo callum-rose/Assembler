@@ -10,7 +10,7 @@ namespace Assembler.Resolving
 			set => throw new InvalidOperationException("MappedValueProvider cannot have its value set");
 		}
 
-		object IValueProvider.Value => Value;
+		object IValueProvider.Value => Value!;
 
 		private readonly IValueProvider<TInput> _innerProvider;
 		private readonly Func<TInput, TOutput> _func;

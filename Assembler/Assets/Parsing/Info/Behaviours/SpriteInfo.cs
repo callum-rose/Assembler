@@ -12,13 +12,13 @@ namespace Assembler.Parsing.Info.Behaviours
 	{
 		public static SpriteInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
-			Dictionary<string, AssemblerValue>? props,
+			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue>? p) =>
+			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Sprite>(v, props?.GetValueOrDefault("Sprite"), parameters: p),
-				Transformer.CreateValueSource<Vector2>(v, props?.GetValueOrDefault("Size"), parameters: p));
+				Transformer.CreateValueSource<Sprite>(v, props.GetValueOrDefault("Sprite"), parameters: p),
+				Transformer.CreateValueSource<Vector2>(v, props.GetValueOrDefault("Size"), parameters: p));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
