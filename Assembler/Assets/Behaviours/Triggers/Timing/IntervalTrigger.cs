@@ -8,10 +8,30 @@ namespace Assembler.Behaviours.Triggers.Timing
 	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
 	{
 		private Coroutine? _currentCoroutine;
+		private bool _started;
 
 		private void Start()
 		{
+			if (_started) return;
+			_started = true;
 			Execute();
+		}
+
+		public override void OnPostInitialise()
+		{
+			if (_started) return;
+			_started = true;
+			Execute();
+		}
+
+		public override void OnDespawn()
+		{
+			if (_currentCoroutine != null)
+			{
+				StopCoroutine(_currentCoroutine);
+				_currentCoroutine = null;
+			}
+			_started = false;
 		}
 
 		public override void Execute()

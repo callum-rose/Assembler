@@ -21,6 +21,10 @@ namespace Assembler.Behaviours
 
 		public abstract void Execute();
 
+		public virtual void OnDespawn() { }
+
+		public virtual void OnPostInitialise() { }
+
 		protected void SetBase(BehaviourData behaviourData) => (Id, _listeners) = (behaviourData.Id, behaviourData.Listeners);
 
 		protected void NotifyListeners()

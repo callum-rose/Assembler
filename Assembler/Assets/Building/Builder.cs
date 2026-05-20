@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Assembler.Building.Pooling;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
@@ -119,6 +120,8 @@ namespace Assembler.Building
 
 			var triggerContext = new TriggerContext();
 
+			var entityPool = new EntityPool();
+
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,
@@ -126,7 +129,8 @@ namespace Assembler.Building
 				assetRegistry,
 				templatesById,
 				gameInfo.Variables,
-				triggerContext);
+				triggerContext,
+				entityPool);
 
 			var initialisations = new InitialisationQueue();
 

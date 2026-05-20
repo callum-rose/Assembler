@@ -35,163 +35,167 @@ namespace Assembler.Building
 			IEntitySpawner spawner,
 			AssetRegistry ar,
 			TriggerContext tc,
-			EntityVariableScope scope);
+			EntityVariableScope scope,
+			GameBehaviour? existing);
+
+		private static T GetOrAdd<T>(GameObject go, GameBehaviour? existing) where T : GameBehaviour =>
+			existing as T ?? go.AddComponent<T>();
 
 		private readonly static Dictionary<Type, BehaviourBuilder> Builders = new()
 		{
-			[typeof(BoxColliderInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(BoxColliderInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (BoxColliderInfo)info;
-				var b = go.AddComponent<AutoAddBoxColliderBehaviour>();
+				var b = GetOrAdd<AutoAddBoxColliderBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new BoxColliderData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Size.Resolve(vr, cr, ar, tc, scope),
 					i.IsTrigger.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(SphereColliderInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SphereColliderInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SphereColliderInfo)info;
-				var b = go.AddComponent<AutoAddSphereColliderBehaviour>();
+				var b = GetOrAdd<AutoAddSphereColliderBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new SphereColliderData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Radius.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(RigidbodyInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(RigidbodyInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (RigidbodyInfo)info;
-				var b = go.AddComponent<RigidbodyBehaviour>();
+				var b = GetOrAdd<RigidbodyBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new RigidbodyData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))
 				{
 					UseGravity = i.UseGravity.Resolve(vr, cr, ar, tc, scope)
 				}));
 			},
-			[typeof(VelocityInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VelocityInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VelocityInfo)info;
-				var b = go.AddComponent<Velocity>();
+				var b = GetOrAdd<Velocity>(go, existing);
 
 				return (b, lr => b.Initialise(new VelocityData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Velocity.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(TranslateInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TranslateInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TranslateInfo)info;
-				var b = go.AddComponent<Translate>();
+				var b = GetOrAdd<Translate>(go, existing);
 
 				return (b, lr => b.Initialise(new TranslateData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Displacement.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(SetPositionInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SetPositionInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SetPositionInfo)info;
-				var b = go.AddComponent<SetPosition>();
+				var b = GetOrAdd<SetPosition>(go, existing);
 
 				return (b, lr => b.Initialise(new SetPositionData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.ValueExpression.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(KeyHoldTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(KeyHoldTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (KeyHoldTriggerInfo)info;
-				var b = go.AddComponent<KeyHoldTrigger>();
+				var b = GetOrAdd<KeyHoldTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new KeyHoldTriggerData(i.Id,
 					i.Key.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(KeyDownTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(KeyDownTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (KeyDownTriggerInfo)info;
-				var b = go.AddComponent<KeyDownTrigger>();
+				var b = GetOrAdd<KeyDownTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new KeyDownTriggerData(i.Id,
 					i.Key.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(KeyUpTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(KeyUpTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (KeyUpTriggerInfo)info;
-				var b = go.AddComponent<KeyUpTrigger>();
+				var b = GetOrAdd<KeyUpTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
 					i.Key.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(TapTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TapTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TapTriggerInfo)info;
-				var b = go.AddComponent<Tap>();
+				var b = GetOrAdd<Tap>(go, existing);
 				return (b, lr => b.Initialise(new TapTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(DoubleTapTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(DoubleTapTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (DoubleTapTriggerInfo)info;
-				var b = go.AddComponent<DoubleTap>();
+				var b = GetOrAdd<DoubleTap>(go, existing);
 				return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(LongPressTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(LongPressTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (LongPressTriggerInfo)info;
-				var b = go.AddComponent<LongPress>();
+				var b = GetOrAdd<LongPress>(go, existing);
 				return (b, lr => b.Initialise(new LongPressTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(SwipeTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SwipeTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SwipeTriggerInfo)info;
-				var b = go.AddComponent<Swipe>();
+				var b = GetOrAdd<Swipe>(go, existing);
 				return (b, lr => b.Initialise(new SwipeTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(DragTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(DragTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (DragTriggerInfo)info;
-				var b = go.AddComponent<Drag>();
+				var b = GetOrAdd<Drag>(go, existing);
 				return (b, lr => b.Initialise(new DragTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(PinchTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(PinchTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (PinchTriggerInfo)info;
-				var b = go.AddComponent<Pinch>();
+				var b = GetOrAdd<Pinch>(go, existing);
 				return (b, lr => b.Initialise(new PinchTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(RotateTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(RotateTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (RotateTriggerInfo)info;
-				var b = go.AddComponent<Rotate>();
+				var b = GetOrAdd<Rotate>(go, existing);
 				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (OnStartTriggerInfo)info;
-				var b = go.AddComponent<OnStartTrigger>();
+				var b = GetOrAdd<OnStartTrigger>(go, existing);
 				return (b, lr => b.Initialise(new OnStartTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(TimerTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TimerTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TimerTriggerInfo)info;
-				var b = go.AddComponent<TimerTrigger>();
+				var b = GetOrAdd<TimerTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
 					i.Delay.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(DeferredTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(DeferredTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (DeferredTriggerInfo)info;
-				var b = go.AddComponent<DeferredTrigger>();
+				var b = GetOrAdd<DeferredTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new DeferredTriggerData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Delay.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(IntervalTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(IntervalTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (IntervalTriggerInfo)info;
-				var b = go.AddComponent<IntervalTrigger>();
+				var b = GetOrAdd<IntervalTrigger>(go, existing);
 
 				return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -199,85 +203,85 @@ namespace Assembler.Building
 					i.Count.Resolve(vr, cr, ar, tc, scope),
 					i.AutoStart.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(EveryFrameTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(EveryFrameTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (EveryFrameTriggerInfo)info;
-				var b = go.AddComponent<EveryFrameTrigger>();
+				var b = GetOrAdd<EveryFrameTrigger>(go, existing);
 				return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(CollisionEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(CollisionEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (CollisionEnterTriggerInfo)info;
-				var b = go.AddComponent<CollisionEnter>();
+				var b = GetOrAdd<CollisionEnter>(go, existing);
 				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(CollisionExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(CollisionExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (CollisionExitTriggerInfo)info;
-				var b = go.AddComponent<CollisionExit>();
+				var b = GetOrAdd<CollisionExit>(go, existing);
 				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionExitTriggerData(i.Id,
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(CollisionStayTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(CollisionStayTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (CollisionStayTriggerInfo)info;
-				var b = go.AddComponent<CollisionStay>();
+				var b = GetOrAdd<CollisionStay>(go, existing);
 				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new CollisionStayTriggerData(i.Id,
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(TriggerEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TriggerEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TriggerEnterTriggerInfo)info;
-				var b = go.AddComponent<TriggerEnter>();
+				var b = GetOrAdd<TriggerEnter>(go, existing);
 				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new TriggerEnterTriggerData(i.Id,
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(TriggerExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TriggerExitTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TriggerExitTriggerInfo)info;
-				var b = go.AddComponent<TriggerExit>();
+				var b = GetOrAdd<TriggerExit>(go, existing);
 				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new TriggerExitTriggerData(i.Id,
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(ConditionTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ConditionTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ConditionTriggerInfo)info;
-				var b = go.AddComponent<Condition>();
+				var b = GetOrAdd<Condition>(go, existing);
 
 				return (b, lr => b.Initialise(new ConditionData(i.Id,
 					i.Condition.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(CameraInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(CameraInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (CameraInfo)info;
-				var b = go.AddComponent<CameraBehaviour>();
+				var b = GetOrAdd<CameraBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new CameraData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.View.Resolve(vr, cr, ar, tc, scope),
 					i.Size.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(SpawnerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SpawnerInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SpawnerInfo)info;
-				var b = go.AddComponent<SpawnerBehaviour>();
+				var b = GetOrAdd<SpawnerBehaviour>(go, existing);
 				b.Spawner = es;
 
 				return (b, lr => b.Initialise(new SpawnerData(i.Id,
@@ -288,56 +292,57 @@ namespace Assembler.Building
 					i.Parameters.ToDictionary(kv => kv.Key,
 						kv => (IValueProvider)kv.Value.Resolve(vr, cr, ar, tc, scope)))));
 			},
-			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(DestroyInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (DestroyInfo)info;
-				var b = go.AddComponent<DestroyBehaviour>();
+				var b = GetOrAdd<DestroyBehaviour>(go, existing);
+				b.Spawner = es;
 				return (b, lr => b.Initialise(new DestroyData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(VariableSetterInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VariableSetterInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VariableSetterInfo<Vector3>)info;
-				var b = go.AddComponent<Vector3Setter>();
+				var b = GetOrAdd<Vector3Setter>(go, existing);
 
 				return (b, lr => b.Initialise(new VariableSetterData<Vector3>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(VariableSetterInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VariableSetterInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VariableSetterInfo<int>)info;
-				var b = go.AddComponent<IntSetter>();
+				var b = GetOrAdd<IntSetter>(go, existing);
 
 				return (b, lr => b.Initialise(new VariableSetterData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(VariableSetterInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VariableSetterInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VariableSetterInfo<float>)info;
-				var b = go.AddComponent<FloatSetter>();
+				var b = GetOrAdd<FloatSetter>(go, existing);
 
 				return (b, lr => b.Initialise(new VariableSetterData<float>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(VariableSetterInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VariableSetterInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VariableSetterInfo<bool>)info;
-				var b = go.AddComponent<BoolSetter>();
+				var b = GetOrAdd<BoolSetter>(go, existing);
 
 				return (b, lr => b.Initialise(new VariableSetterData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(VariableSetterInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(VariableSetterInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (VariableSetterInfo<string>)info;
-				var b = go.AddComponent<StringSetter>();
+				var b = GetOrAdd<StringSetter>(go, existing);
 
 				return (b, lr => b.Initialise(new VariableSetterData<string>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -346,247 +351,247 @@ namespace Assembler.Building
 			},
 
 			// --- List operations: Vector3 ---
-			[typeof(ListAddInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<Vector3>)info;
-				var b = go.AddComponent<Vector3ListAdd>();
+				var b = GetOrAdd<Vector3ListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<Vector3>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<Vector3>)info;
-				var b = go.AddComponent<Vector3ListRemoveAt>();
+				var b = GetOrAdd<Vector3ListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<Vector3>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<Vector3>)info;
-				var b = go.AddComponent<Vector3ListSetAt>();
+				var b = GetOrAdd<Vector3ListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<Vector3>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<Vector3>)info;
-				var b = go.AddComponent<Vector3ListClear>();
+				var b = GetOrAdd<Vector3ListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<Vector3>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
 			// --- List operations: int ---
-			[typeof(ListAddInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<int>)info;
-				var b = go.AddComponent<IntListAdd>();
+				var b = GetOrAdd<IntListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<int>)info;
-				var b = go.AddComponent<IntListRemoveAt>();
+				var b = GetOrAdd<IntListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<int>)info;
-				var b = go.AddComponent<IntListSetAt>();
+				var b = GetOrAdd<IntListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<int>)info;
-				var b = go.AddComponent<IntListClear>();
+				var b = GetOrAdd<IntListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
 			// --- List operations: float ---
-			[typeof(ListAddInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<float>)info;
-				var b = go.AddComponent<FloatListAdd>();
+				var b = GetOrAdd<FloatListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<float>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<float>)info;
-				var b = go.AddComponent<FloatListRemoveAt>();
+				var b = GetOrAdd<FloatListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<float>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<float>)info;
-				var b = go.AddComponent<FloatListSetAt>();
+				var b = GetOrAdd<FloatListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<float>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<float>)info;
-				var b = go.AddComponent<FloatListClear>();
+				var b = GetOrAdd<FloatListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<float>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
 			// --- List operations: bool ---
-			[typeof(ListAddInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<bool>)info;
-				var b = go.AddComponent<BoolListAdd>();
+				var b = GetOrAdd<BoolListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<bool>)info;
-				var b = go.AddComponent<BoolListRemoveAt>();
+				var b = GetOrAdd<BoolListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<bool>)info;
-				var b = go.AddComponent<BoolListSetAt>();
+				var b = GetOrAdd<BoolListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<bool>)info;
-				var b = go.AddComponent<BoolListClear>();
+				var b = GetOrAdd<BoolListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
 			// --- List operations: string ---
-			[typeof(ListAddInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<string>)info;
-				var b = go.AddComponent<StringListAdd>();
+				var b = GetOrAdd<StringListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<string>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<string>)info;
-				var b = go.AddComponent<StringListRemoveAt>();
+				var b = GetOrAdd<StringListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<string>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<string>)info;
-				var b = go.AddComponent<StringListSetAt>();
+				var b = GetOrAdd<StringListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<string>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<string>)info;
-				var b = go.AddComponent<StringListClear>();
+				var b = GetOrAdd<StringListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<string>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
 			// --- List operations: Color ---
-			[typeof(ListAddInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListAddInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListAddInfo<Color>)info;
-				var b = go.AddComponent<ColourListAdd>();
+				var b = GetOrAdd<ColourListAdd>(go, existing);
 				return (b, lr => b.Initialise(new ListAddData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListRemoveAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListRemoveAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListRemoveAtInfo<Color>)info;
-				var b = go.AddComponent<ColourListRemoveAt>();
+				var b = GetOrAdd<ColourListRemoveAt>(go, existing);
 				return (b, lr => b.Initialise(new ListRemoveAtData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListSetAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListSetAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListSetAtInfo<Color>)info;
-				var b = go.AddComponent<ColourListSetAt>();
+				var b = GetOrAdd<ColourListSetAt>(go, existing);
 				return (b, lr => b.Initialise(new ListSetAtData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope),
 					i.Index.Resolve(vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(ListClearInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ListClearInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ListClearInfo<Color>)info;
-				var b = go.AddComponent<ColourListClear>();
+				var b = GetOrAdd<ColourListClear>(go, existing);
 				return (b, lr => b.Initialise(new ListClearData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.List.Resolve(vr, cr, ar, tc, scope))));
 			},
 
-			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SpriteInfo)info;
-				var b = go.AddComponent<SpriteBehaviour>();
+				var b = GetOrAdd<SpriteBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new SpriteData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Sprite.Resolve(vr, cr, ar, tc, scope),
 					i.Size.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(AudioSourceInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(AudioSourceInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (AudioSourceInfo)info;
-				var b = go.AddComponent<AudioSourceBehaviour>();
+				var b = GetOrAdd<AudioSourceBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new AudioSourceData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -594,10 +599,10 @@ namespace Assembler.Building
 					i.PlayOnStart.Resolve(vr, cr, ar, tc, scope),
 					i.Loop.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(SphereGizmoInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(SphereGizmoInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (SphereGizmoInfo)info;
-				var b = go.AddComponent<SphereGizmoBehaviour>();
+				var b = GetOrAdd<SphereGizmoBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new SphereGizmoData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -605,10 +610,10 @@ namespace Assembler.Building
 					i.IsWire.Resolve(vr, cr, ar, tc, scope),
 					i.Colour.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(CubeGizmoInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(CubeGizmoInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (CubeGizmoInfo)info;
-				var b = go.AddComponent<CubeGizmoBehaviour>();
+				var b = GetOrAdd<CubeGizmoBehaviour>(go, existing);
 
 				return (b, lr => b.Initialise(new CubeGizmoData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -616,10 +621,10 @@ namespace Assembler.Building
 					i.IsWire.Resolve(vr, cr, ar, tc, scope),
 					i.Colour.Resolve(vr, cr, ar, tc, scope))));
 			},
-			[typeof(TextLabelInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(TextLabelInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (TextLabelInfo)info;
-				var b = go.AddComponent<TextLabel>();
+				var b = GetOrAdd<TextLabel>(go, existing);
 				return (b, lr => b.Initialise(new TextLabelData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Text.Resolve(vr, cr, ar, tc, scope),
@@ -627,38 +632,38 @@ namespace Assembler.Building
 					i.FontSize.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(ProgressBarInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ProgressBarInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (ProgressBarInfo)info;
-				var b = go.AddComponent<ProgressBar>();
+				var b = GetOrAdd<ProgressBar>(go, existing);
 				return (b, lr => b.Initialise(new ProgressBarData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Value.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(UIImageInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(UIImageInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (UIImageInfo)info;
-				var b = go.AddComponent<UIImage>();
+				var b = GetOrAdd<UIImage>(go, existing);
 				return (b, lr => b.Initialise(new UIImageData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Colour.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(UIButtonInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(UIButtonInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (UIButtonInfo)info;
-				var b = go.AddComponent<UIButton>();
+				var b = GetOrAdd<UIButton>(go, existing);
 				b.TriggerContext = tc;
 				return (b, lr => b.Initialise(new UIButtonData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Label.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(UIToggleInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(UIToggleInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (UIToggleInfo)info;
-				var b = go.AddComponent<UIToggle>();
+				var b = GetOrAdd<UIToggle>(go, existing);
 				b.TriggerContext = tc;
 				return (b, lr => b.Initialise(new UIToggleData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -666,10 +671,10 @@ namespace Assembler.Building
 					i.Label.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(UISliderInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(UISliderInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (UISliderInfo)info;
-				var b = go.AddComponent<UISlider>();
+				var b = GetOrAdd<UISlider>(go, existing);
 				b.TriggerContext = tc;
 				return (b, lr => b.Initialise(new UISliderData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -678,10 +683,10 @@ namespace Assembler.Building
 					i.MaxValue.Resolve(vr, cr, ar, tc, scope),
 					i.Rect)));
 			},
-			[typeof(UIInputFieldInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(UIInputFieldInfo)] = (go, info, vr, cr, es, ar, tc, scope, existing) =>
 			{
 				var i = (UIInputFieldInfo)info;
-				var b = go.AddComponent<UIInputField>();
+				var b = GetOrAdd<UIInputField>(go, existing);
 				b.TriggerContext = tc;
 				return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
@@ -697,7 +702,8 @@ namespace Assembler.Building
 			IEntitySpawner entitySpawner,
 			AssetRegistry assets,
 			TriggerContext triggerContext,
-			EntityVariableScope? scope = null)
+			EntityVariableScope? scope = null,
+			GameBehaviour? existing = null)
 		{
 			return Builders.TryGetValue(behaviourInfo.GetType(), out var builder)
 				? builder(gameObject,
@@ -707,7 +713,8 @@ namespace Assembler.Building
 					entitySpawner,
 					assets,
 					triggerContext,
-					scope)
+					scope,
+					existing)
 				: throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 		}
 

@@ -14,9 +14,14 @@ namespace Assembler.Behaviours.Triggers.Timing
 			IEnumerator Routine()
 			{
 				yield return new WaitForSeconds(Data.Delay.Value);
-				
+
 				NotifyListeners();
 			}
+		}
+
+		public override void OnDespawn()
+		{
+			StopAllCoroutines();
 		}
 	}
 }

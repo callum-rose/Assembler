@@ -43,6 +43,22 @@ namespace Assembler.Building
 			}
 		}
 
+		public void Unregister(string entityId)
+		{
+			var toRemove = _behaviours.Keys.Where(k => k.EntityId == entityId).ToArray();
+			var removedBehaviours = new HashSet<GameBehaviour>();
+			foreach (var key in toRemove)
+			{
+				removedBehaviours.Add(_behaviours[key]);
+				_behaviours.Remove(key);
+			}
+
+			foreach (var list in _behavioursByTag.Values)
+			{
+				list.RemoveAll(b => removedBehaviours.Contains(b));
+			}
+		}
+
 		public IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null)
 		{
 			if (!_behavioursByTag.TryGetValue(behaviourTag, out var list))
