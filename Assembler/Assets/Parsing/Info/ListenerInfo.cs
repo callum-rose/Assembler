@@ -9,8 +9,10 @@ namespace Assembler.Parsing.Info
 
 	public sealed record DirectListenerInfo(BehaviourDescriptor BehaviourDescriptor) : ListenerInfo;
 
-	public sealed record TaggedListenerInfo(
-		ValueSource<string>? EntityTag,
-		ValueSource<string>? BehaviourTag,
+	public sealed record EntityTaggedListenerInfo(
+		ValueSource<string> EntityTag,
 		string? BehaviourId) : ListenerInfo;
+
+	public sealed record BehaviourTaggedListenerInfo(
+		ValueSource<string> BehaviourTag) : ListenerInfo;
 }

@@ -185,16 +185,29 @@ namespace Assembler.Parsing
 				{
 					var outputs = l.Outputs ?? new Dictionary<string, string>();
 
-					if (l.EntityTag != null || l.BehaviourTag != null)
+					if (l.EntityTag != null && l.BehaviourTag != null)
 					{
-						var entityTag = l.EntityTag != null
-							? CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters)
-							: null;
-						var behaviourTag = l.BehaviourTag != null
-							? CreateValueSource<string>(variables, ToAssemblerValue(l.BehaviourTag), parameters)
-							: null;
+						throw new ParsingException(
+							"A listener cannot declare both EntityTag and BehaviourTag. " +
+							"Pick one: EntityTag (+ BehaviourId) targets behaviours on entities with that tag; " +
+							"BehaviourTag targets all behaviours carrying that tag.");
+					}
 
-						return (ListenerInfo)new TaggedListenerInfo(entityTag, behaviourTag, l.BehaviourId)
+					if (l.EntityTag != null)
+					{
+						var entityTag = CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters);
+
+						return (ListenerInfo)new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
+						{
+							OutputMapping = outputs
+						};
+					}
+
+					if (l.BehaviourTag != null)
+					{
+						var behaviourTag = CreateValueSource<string>(variables, ToAssemblerValue(l.BehaviourTag), parameters);
+
+						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag)
 						{
 							OutputMapping = outputs
 						};

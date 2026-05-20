@@ -712,7 +712,14 @@ namespace Assembler.Building
 			listeners.Select(l => l switch
 			{
 				DirectListenerInfo direct => BuildDirectAction(direct, listenerRegistry, triggerContext),
-				TaggedListenerInfo tagged => BuildTaggedAction(tagged,
+				EntityTaggedListenerInfo entityTagged => BuildEntityTaggedAction(entityTagged,
+					listenerRegistry,
+					variables,
+					expressions,
+					assets,
+					triggerContext,
+					scope),
+				BehaviourTaggedListenerInfo behaviourTagged => BuildBehaviourTaggedAction(behaviourTagged,
 					listenerRegistry,
 					variables,
 					expressions,
@@ -740,7 +747,7 @@ namespace Assembler.Building
 			};
 		}
 
-		private static Action BuildTaggedAction(TaggedListenerInfo listener,
+		private static Action BuildEntityTaggedAction(EntityTaggedListenerInfo listener,
 			IReadOnlyBehaviourRegistry registry,
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
@@ -748,8 +755,7 @@ namespace Assembler.Building
 			TriggerContext triggerContext,
 			EntityVariableScope scope)
 		{
-			var entityTagProvider = listener.EntityTag?.Resolve(variables, expressions, assets, triggerContext, scope);
-			var behaviourTagProvider = listener.BehaviourTag?.Resolve(variables, expressions, assets, triggerContext, scope);
+			var entityTagProvider = listener.EntityTag.Resolve(variables, expressions, assets, triggerContext, scope);
 			var behaviourId = listener.BehaviourId;
 
 			return () =>
@@ -759,32 +765,54 @@ namespace Assembler.Building
 					triggerContext.ApplyMapping(listener.OutputMapping);
 				}
 
-				var entityTag = entityTagProvider?.Value;
-				var behaviourTag = behaviourTagProvider?.Value;
-
-				IReadOnlyList<GameBehaviour> targets;
-
-				if (behaviourTag != null)
-				{
-					targets = registry.GetByBehaviourTag(behaviourTag, entityTag);
-				}
-				else if (entityTag != null && !string.IsNullOrEmpty(behaviourId))
-				{
-					targets = registry.GetByEntityTagAndBehaviourId(entityTag, behaviourId);
-				}
-				else
+				var entityTag = entityTagProvider.Value;
+				if (entityTag == null || string.IsNullOrEmpty(behaviourId))
 				{
 					return;
 				}
 
-				foreach (var behaviour in targets)
-				{
-					if (behaviour)
-					{
-						behaviour.Execute();
-					}
-				}
+				var targets = registry.GetByEntityTagAndBehaviourId(entityTag, behaviourId);
+				InvokeAll(targets);
 			};
+		}
+
+		private static Action BuildBehaviourTaggedAction(BehaviourTaggedListenerInfo listener,
+			IReadOnlyBehaviourRegistry registry,
+			VariableRegistry variables,
+			CompiledExpressionsRegistry expressions,
+			AssetRegistry assets,
+			TriggerContext triggerContext,
+			EntityVariableScope scope)
+		{
+			var behaviourTagProvider = listener.BehaviourTag.Resolve(variables, expressions, assets, triggerContext, scope);
+
+			return () =>
+			{
+				if (listener.OutputMapping.Count > 0)
+				{
+					triggerContext.ApplyMapping(listener.OutputMapping);
+				}
+
+				var behaviourTag = behaviourTagProvider.Value;
+				if (behaviourTag == null)
+				{
+					return;
+				}
+
+				var targets = registry.GetByBehaviourTag(behaviourTag);
+				InvokeAll(targets);
+			};
+		}
+
+		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
+		{
+			foreach (var behaviour in targets)
+			{
+				if (behaviour)
+				{
+					behaviour.Execute();
+				}
+			}
 		}
 	}
 }
