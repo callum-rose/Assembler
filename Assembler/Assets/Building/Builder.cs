@@ -18,7 +18,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build Pong")]
 		public static void BuildPong()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/Pong.yaml");
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Pong.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -28,7 +28,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build Snake")]
 		public static void BuildSnake()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/Snake 2.yaml");
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Snake 2.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -38,7 +38,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build EnemyHealthDemo")]
 		public static void BuildEnemyHealthDemo()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/EnemyHealthDemo.yaml");
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/EnemyHealthDemo.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -48,7 +48,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build SpawnedBubblesDemo")]
 		public static void BuildSpawnedBubblesDemo()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/SpawnedBubblesDemo.yaml");
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/SpawnedBubblesDemo.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
@@ -58,7 +58,17 @@ namespace Assembler.Building
 		[MenuItem("Test/Build TaggedListenerDemo")]
 		public static void BuildTaggedListenerDemo()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/TaggedListenerDemo.yaml");
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/TaggedListenerDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}		
+		
+		[MenuItem("Test/Build Asteroids")]
+		public static void BuildAsteroids()
+		{
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Asteroids.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);

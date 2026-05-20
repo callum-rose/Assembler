@@ -1,0 +1,505 @@
+Game:
+  Title: Asteroids
+  Description: >
+    Classic Asteroids. A/D rotates the ship, W adds thrust in the facing direction
+    (momentum persists), S brakes, Space fires a bullet. Destroy asteroids for
+    points. Colliding with an asteroid costs a life. Reach 15 points to win;
+    lose all 3 lives and it's game over.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#000010"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # Scoring / lives
+  initial score: 0
+  initial lives: 3
+  score per asteroid: 1
+  life cost: 1
+  score to win: 15
+  zero int: 0
+
+  # Ship
+  ship size: !vec { X: 0.45, Y: 0.45 }
+  ship start position: !vec { X: 0, Y: 0 }
+  ship initial facing: !vec { X: 0, Y: 1 }
+  ship initial velocity: !vec { X: 0, Y: 0 }
+  thrust impulse: 0.03
+  brake velocity: !vec { X: 0, Y: 0 }
+
+  # Bullet
+  bullet size: !vec { X: 0.15, Y: 0.15 }
+  bullet speed: 9.0
+  bullet lifetime: 1.2
+
+  # Asteroid
+  asteroid radius: 0.45
+  asteroid size: !vec { X: 0.9, Y: 0.9 }
+  asteroid speed: 2.0
+  asteroid lifetime: 6.0
+  asteroid spawn interval: 1.2
+
+  # Arena bounds (kill zone for ship straying off-screen handled by life loss via asteroid only)
+  half arena: 7.5
+
+  # Camera
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 7
+
+Variables:
+  score: !var initial score
+  lives: !var initial lives
+  is dead: false
+  ship position: !var ship start position
+  ship velocity: !var ship initial velocity
+  ship facing: !var ship initial facing
+
+Expressions:
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+
+  int sub:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a - b;"
+
+  int greater or equal:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: bool
+    Expression: "a >= b;"
+
+  int less or equal:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: bool
+    Expression: "a <= b;"
+
+  is game over:
+    ArgumentTypes: [ int, int, bool ]
+    ArgumentNames: [ score, target, dead ]
+    ReturnType: bool
+    Expression: "score >= target || dead;"
+
+  # Rotate a 2D vector counter-clockwise by 12 degrees (0.2094 rad)
+  rotate left:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ v ]
+    ReturnType: vector
+    Expression: |
+      float c = UnityEngine.Mathf.Cos(0.2094f);
+      float s = UnityEngine.Mathf.Sin(0.2094f);
+      return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
+
+  # Rotate a 2D vector clockwise by 12 degrees
+  rotate right:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ v ]
+    ReturnType: vector
+    Expression: |
+      float c = UnityEngine.Mathf.Cos(-0.2094f);
+      float s = UnityEngine.Mathf.Sin(-0.2094f);
+      return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
+
+  # vel + facing * impulse
+  apply thrust:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ vel, facing, impulse ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(vel.x + facing.x * impulse, vel.y + facing.y * impulse, 0f);
+
+  # pos + vel * dt (per-frame integration for position tracking)
+  integrate position:
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ pos, vel ]
+    ReturnType: vector
+    Expression: |
+      float dt = UnityEngine.Time.deltaTime;
+      return new UnityEngine.Vector3(pos.x + vel.x * dt, pos.y + vel.y * dt, 0f);
+
+  # facing * speed
+  scale vec:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ v, k ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(v.x * k, v.y * k, 0f);
+
+  # Random spawn point on a circle of radius 6.8 around origin
+  random asteroid position:
+    ReturnType: vector
+    Expression: |
+      float angle = UnityEngine.Random.Range(0f, 6.2832f);
+      float r = 6.8f;
+      return new UnityEngine.Vector3(UnityEngine.Mathf.Cos(angle) * r, UnityEngine.Mathf.Sin(angle) * r, 0f);
+
+  # Random velocity vector aimed roughly toward the centre, with jitter
+  random asteroid velocity:
+    ArgumentTypes: [ float ]
+    ArgumentNames: [ speed ]
+    ReturnType: vector
+    Expression: |
+      float angle = UnityEngine.Random.Range(0f, 6.2832f);
+      return new UnityEngine.Vector3(UnityEngine.Mathf.Cos(angle) * speed, UnityEngine.Mathf.Sin(angle) * speed, 0f);
+
+  format score:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ s ]
+    ReturnType: string
+    Expression: "\"Score: \" + s;"
+
+  format lives:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ l ]
+    ReturnType: string
+    Expression: "\"Lives: \" + l;"
+
+Templates:
+  bullet_template:
+    Tags: [ bullet ]
+    Variables:
+      bullet velocity: !parameter initial_velocity
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var bullet size
+          IsWire: false
+          Colour: !colour yellow
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var bullet size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var bullet velocity
+      asteroid hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ asteroid ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var bullet lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+  asteroid_template:
+    Tags: [ asteroid ]
+    Variables:
+      asteroid velocity: !parameter initial_velocity
+    Behaviours:
+      gizmo:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var asteroid radius
+          Colour: !colour grey
+      collider:
+        Type: sphere collider
+        Properties:
+          Radius: !var asteroid radius
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var asteroid velocity
+      bullet hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ bullet ]
+        Listeners:
+          - EntityId: score tracker
+            BehaviourId: increment score
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      ship hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ ship ]
+        Listeners:
+          - EntityId: life tracker
+            BehaviourId: decrement lives
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var asteroid lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+Entities:
+  # --- Ship ---
+  ship:
+    Tags: [ ship ]
+    Position: !var ship start position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var ship size
+          IsWire: false
+          Colour: !colour green
+      facing indicator:
+        Type: sphere gizmo
+        Properties:
+          Radius: 0.12
+          IsWire: false
+          Colour: !colour yellow
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var ship size
+          IsTrigger: true
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var ship velocity
+
+      # --- Per-frame position tracking (for bullet spawn position) ---
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: ship
+            BehaviourId: track position
+      track position:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship position
+          Value: !expr
+            ExpressionId: integrate position
+            Arguments:
+              - !var ship position
+              - !var ship velocity
+
+      # --- Rotation (A / D) ---
+      rotate left key:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: ship
+            BehaviourId: rotate left
+      rotate left:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship facing
+          Value: !expr
+            ExpressionId: rotate left
+            Arguments:
+              - !var ship facing
+
+      rotate right key:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: ship
+            BehaviourId: rotate right
+      rotate right:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship facing
+          Value: !expr
+            ExpressionId: rotate right
+            Arguments:
+              - !var ship facing
+
+      # --- Thrust (W held) ---
+      thrust key:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: ship
+            BehaviourId: apply thrust
+      apply thrust:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship velocity
+          Value: !expr
+            ExpressionId: apply thrust
+            Arguments:
+              - !var ship velocity
+              - !var ship facing
+              - !var thrust impulse
+
+      # --- Brake (S down) ---
+      brake key:
+        Type: key down trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: ship
+            BehaviourId: brake
+      brake:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship velocity
+          Value: !var brake velocity
+
+      # --- Fire (Space) ---
+      fire key:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - EntityId: ship
+            BehaviourId: fire bullet
+      fire bullet:
+        Type: spawner
+        Properties:
+          TemplateId: bullet_template
+          Position: !var ship position
+          Parameters:
+            initial_velocity: !expr
+              ExpressionId: scale vec
+              Arguments:
+                - !var ship facing
+                - !var bullet speed
+
+  # --- Score tracker ---
+  score tracker:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      increment score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var score per asteroid
+
+  # --- Life tracker ---
+  life tracker:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      decrement lives:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lives
+          Value: !expr
+            ExpressionId: int sub
+            Arguments:
+              - !var lives
+              - !var life cost
+      death check:
+        Type: condition trigger
+        Properties:
+          Condition: !expr
+            ExpressionId: int less or equal
+            Arguments:
+              - !var lives
+              - !var zero int
+        Listeners:
+          - EntityId: life tracker
+            BehaviourId: set dead
+      set dead:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var is dead
+          Value: true
+
+  # --- Asteroid spawner ---
+  asteroid spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var asteroid spawn interval
+        Listeners:
+          - EntityId: asteroid spawner
+            BehaviourId: spawn asteroid
+      spawn asteroid:
+        Type: spawner
+        Properties:
+          TemplateId: asteroid_template
+          Position: !expr { ExpressionId: random asteroid position }
+          Parameters:
+            initial_velocity: !expr
+              ExpressionId: random asteroid velocity
+              Arguments:
+                - !var asteroid speed
+
+  # --- Camera ---
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  # --- HUD ---
+  score display:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format score
+            Arguments:
+              - !var score
+          FontSize: 28
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 200
+            Height: 50
+
+  lives display:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format lives
+            Arguments:
+              - !var lives
+          FontSize: 28
+          Rect:
+            Anchor: top-right
+            X: -200
+            Y: 20
+            Width: 180
+            Height: 50
+
+GameOverCondition: !expr
+  ExpressionId: is game over
+  Arguments:
+    - !var score
+    - !var score to win
+    - !var is dead
