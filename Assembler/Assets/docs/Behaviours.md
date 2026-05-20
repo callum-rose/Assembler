@@ -130,6 +130,8 @@ No properties.
 |----------|------|
 | TemplateId | `System.String` |
 | Position | `UnityEngine.Vector3` |
+| Rotation | `UnityEngine.Vector3` |
+| Parameters | `System.Collections.Generic.Dictionary`2[System.String,Assembler.Parsing.Info.AssemblerValue]` |
 
 ## `destroy`
 No properties.
@@ -206,4 +208,50 @@ No properties.
 | Size | `UnityEngine.Vector3` |
 | IsWire | `System.Boolean` |
 | Colour | `UnityEngine.Color` |
+
+## `text label`
+| Property | Type |
+|----------|------|
+| Text | `System.String` |
+| Label | `System.String` |
+| FontSize | `System.Int32` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `progress bar`
+| Property | Type |
+|----------|------|
+| Value | `System.Single` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `ui image`
+| Property | Type |
+|----------|------|
+| Colour | `UnityEngine.Color` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `ui button`
+| Property | Type |
+|----------|------|
+| Label | `System.String` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `ui toggle`
+| Property | Type |
+|----------|------|
+| InitialValue | `System.Boolean` |
+| Label | `System.String` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `ui slider`
+| Property | Type |
+|----------|------|
+| InitialValue | `System.Single` |
+| MinValue | `System.Single` |
+| MaxValue | `System.Single` |
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
+
+## `ui input field`
+| Property | Type |
+|----------|------|
+| Rect | `System.Collections.Generic.Dictionary`2[System.String,System.Object]` |
 
