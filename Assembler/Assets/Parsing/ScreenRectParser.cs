@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using Assembler.Parsing.Info;
 
 namespace Assembler.Parsing
 {
@@ -7,8 +8,16 @@ namespace Assembler.Parsing
 	{
 		internal static ScreenRect Parse(object? raw)
 		{
+			IReadOnlyDictionary<string, AssemblerValue>? dict = raw switch
+			{
+				DictValue dv => dv.Value,
+				_ => null
+			};
+
 			string Get(string key)
 			{
+				if (dict != null && dict.TryGetValue(key, out var av))
+					return AssemblerValueToString(av);
 				if (raw is Dictionary<object, object> d1 && d1.TryGetValue(key, out var v1))
 					return v1?.ToString() ?? string.Empty;
 				if (raw is Dictionary<string, object> d2 && d2.TryGetValue(key, out var v2))
@@ -39,5 +48,14 @@ namespace Assembler.Parsing
 				Height = GetFloat("Height")
 			};
 		}
+
+		private static string AssemblerValueToString(AssemblerValue value) => value switch
+		{
+			StringValue s => s.Value,
+			IntValue i => i.Value.ToString(CultureInfo.InvariantCulture),
+			FloatValue f => f.Value.ToString(CultureInfo.InvariantCulture),
+			BoolValue b => b.Value.ToString(),
+			_ => string.Empty
+		};
 	}
 }
