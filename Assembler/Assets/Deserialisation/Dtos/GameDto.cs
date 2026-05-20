@@ -8,11 +8,11 @@ namespace Assembler.Deserialisation.Dtos
         public WorldDto? World { get; init; }
         public PhysicsDto? Physics { get; init; }
         public List<AssetDto>? Assets { get; init; }
-        public List<ValueDto>? Constants { get; init; }
-        public List<ValueDto>? Variables { get; init; }
-        public List<ExpressionDto>? Expressions { get; init; }
-        public List<EntityDto>? Templates { get; init; }
-        public List<EntityDto>? Entities { get; init; }
+        public Dictionary<string, object>? Constants { get; init; }
+        public Dictionary<string, object>? Variables { get; init; }
+        public Dictionary<string, ExpressionDto>? Expressions { get; init; }
+        public Dictionary<string, EntityDto>? Templates { get; init; }
+        public Dictionary<string, EntityDto>? Entities { get; init; }
         public object? GameOverCondition { get; init; }
     }
 }

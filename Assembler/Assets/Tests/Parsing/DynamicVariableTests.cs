@@ -75,17 +75,16 @@ namespace Tests.Parsing
 		{
 			var yaml = @"
 Templates:
-  - Id: enemy
+  enemy:
     Variables:
-      - Id: health
-        Value: 100
-      - Id: speed
-        Value: !parameter spawn_speed
+      health: 100
+      speed: !parameter spawn_speed
 Entities:
-  - Id: goblin
-    Template: enemy
-    Parameters:
-      spawn_speed: 3
+  goblin:
+    Template:
+      Id: enemy
+      Parameters:
+        spawn_speed: 3
 ";
 
 			var parser = new GameFileParser();
