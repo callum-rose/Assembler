@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -48,4 +49,14 @@ namespace Assembler.Parsing.Info
 	public sealed record DictValue(IReadOnlyDictionary<string, AssemblerValue> Value) : AssemblerValue;
 
 	public sealed record ListValue(IReadOnlyList<AssemblerValue> Value) : AssemblerValue;
+
+	/// <summary>
+	/// A list value with a known element CLR type — produced by typed YAML tags
+	/// like <c>!vec []</c>, <c>!colour []</c>, <c>!int []</c>, <c>!float []</c>,
+	/// <c>!bool []</c>, <c>!string []</c>. Items are pre-resolved primitive
+	/// AssemblerValues (e.g. <see cref="Vector3Value"/>, <see cref="IntValue"/>)
+	/// so the variable registry can allocate a typed backing list (<c>List&lt;T&gt;</c>)
+	/// without having to infer element types.
+	/// </summary>
+	public sealed record TypedListValue(Type ElementType, IReadOnlyList<AssemblerValue> Items) : AssemblerValue;
 }

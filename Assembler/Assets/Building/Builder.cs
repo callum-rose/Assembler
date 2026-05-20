@@ -8,6 +8,7 @@ using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEditor;
+using Color = UnityEngine.Color;
 using Vector3 = UnityEngine.Vector3;
 
 namespace Assembler.Building
@@ -63,7 +64,14 @@ namespace Assembler.Building
 				["int"] = typeof(int),
 				["string"] = typeof(string),
 				["bool"] = typeof(bool),
-				["vector"] = typeof(Vector3)
+				["vector"] = typeof(Vector3),
+				["colour"] = typeof(Color),
+				["vector list"] = typeof(IList<Vector3>),
+				["int list"] = typeof(IList<int>),
+				["float list"] = typeof(IList<float>),
+				["bool list"] = typeof(IList<bool>),
+				["string list"] = typeof(IList<string>),
+				["colour list"] = typeof(IList<Color>)
 			};
 
 			var variableRegistry = new VariableRegistry();

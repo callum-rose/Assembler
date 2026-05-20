@@ -44,8 +44,52 @@ namespace Assembler.Resolving
 				Vector2Value vec2 => new ValueProvider<Vector2>(vec2.Value),
 				Vector3Value vec3 => new ValueProvider<Vector3>(vec3.Value),
 				ColorValue c => new ValueProvider<Color>(c.Value),
+				TypedListValue typed => BuildListProvider(typed),
 				_ => throw new Exception(
 					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
+			};
+		}
+
+		private static IValueProvider BuildListProvider(TypedListValue typed)
+		{
+			if (typed.ElementType == typeof(int)) return BuildListProvider<int>(typed);
+			if (typed.ElementType == typeof(float)) return BuildListProvider<float>(typed);
+			if (typed.ElementType == typeof(bool)) return BuildListProvider<bool>(typed);
+			if (typed.ElementType == typeof(string)) return BuildListProvider<string>(typed);
+			if (typed.ElementType == typeof(Vector2)) return BuildListProvider<Vector2>(typed);
+			if (typed.ElementType == typeof(Vector3)) return BuildListProvider<Vector3>(typed);
+			if (typed.ElementType == typeof(Color)) return BuildListProvider<Color>(typed);
+
+			throw new Exception($"Unsupported list element type: {typed.ElementType}");
+		}
+
+		private static IValueProvider BuildListProvider<T>(TypedListValue typed)
+		{
+			var list = new List<T>(typed.Items.Count);
+
+			foreach (var item in typed.Items)
+			{
+				list.Add(UnwrapTo<T>(item));
+			}
+
+			// Storing as IList<T> so consumers can mutate via IList<T>.Add/RemoveAt/indexer
+			// while the runtime instance remains the same List<T>.
+			return new ValueProvider<IList<T>>(list);
+		}
+
+		private static T UnwrapTo<T>(AssemblerValue value)
+		{
+			return value switch
+			{
+				IntValue i when typeof(T) == typeof(int) => (T)(object)i.Value,
+				IntValue i when typeof(T) == typeof(float) => (T)(object)(float)i.Value,
+				FloatValue f when typeof(T) == typeof(float) => (T)(object)f.Value,
+				BoolValue b when typeof(T) == typeof(bool) => (T)(object)b.Value,
+				StringValue s when typeof(T) == typeof(string) => (T)(object)s.Value,
+				Vector2Value v when typeof(T) == typeof(Vector2) => (T)(object)v.Value,
+				Vector3Value v when typeof(T) == typeof(Vector3) => (T)(object)v.Value,
+				ColorValue c when typeof(T) == typeof(Color) => (T)(object)c.Value,
+				_ => throw new Exception($"Cannot unwrap {value.GetType().Name} to {typeof(T).Name}")
 			};
 		}
 	}

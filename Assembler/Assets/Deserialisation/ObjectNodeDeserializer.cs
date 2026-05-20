@@ -32,6 +32,26 @@ namespace Assembler.Deserialisation
 					value = nestedObjectDeserializer(reader, typeof(ColourDto));
 					return true;
 
+				case Scalar scalar when scalar.Tag == "!int":
+					reader.MoveNext();
+					value = int.Parse(scalar.Value);
+					return true;
+
+				case Scalar scalar when scalar.Tag == "!float":
+					reader.MoveNext();
+					value = float.Parse(scalar.Value, System.Globalization.CultureInfo.InvariantCulture);
+					return true;
+
+				case Scalar scalar when scalar.Tag == "!bool":
+					reader.MoveNext();
+					value = bool.Parse(scalar.Value);
+					return true;
+
+				case Scalar scalar when scalar.Tag == "!string":
+					reader.MoveNext();
+					value = scalar.Value;
+					return true;
+
 				case Scalar scalar:
 					reader.MoveNext();
 					value = ParseScalar(scalar);
@@ -62,6 +82,96 @@ namespace Assembler.Deserialisation
 					}
 
 					value = dict;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!vec":
+				{
+					var list = new List<VecDto>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var item = nestedObjectDeserializer(reader, typeof(VecDto));
+						list.Add((VecDto)item!);
+					}
+
+					value = list;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!colour":
+				{
+					var list = new List<ColourDto>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var item = nestedObjectDeserializer(reader, typeof(ColourDto));
+						list.Add((ColourDto)item!);
+					}
+
+					value = list;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!int":
+				{
+					var list = new List<int>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var s = reader.Consume<Scalar>();
+						list.Add(int.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
+					}
+
+					value = list;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!float":
+				{
+					var list = new List<float>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var s = reader.Consume<Scalar>();
+						list.Add(float.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
+					}
+
+					value = list;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!bool":
+				{
+					var list = new List<bool>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var s = reader.Consume<Scalar>();
+						list.Add(bool.Parse(s.Value));
+					}
+
+					value = list;
+					return true;
+				}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!string":
+				{
+					var list = new List<string>();
+					reader.MoveNext();
+
+					while (!reader.TryConsume<SequenceEnd>(out _))
+					{
+						var s = reader.Consume<Scalar>();
+						list.Add(s.Value);
+					}
+
+					value = list;
 					return true;
 				}
 
