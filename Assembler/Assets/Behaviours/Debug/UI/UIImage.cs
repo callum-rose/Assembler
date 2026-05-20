@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
+	/// <summary>Draws a solid-coloured rectangle on-screen. Useful as a simple HUD backdrop or indicator.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Colour: Fill colour.
+	///   Rect: Screen-space rectangle.
+	/// </remarks>
 	public class UIImage : GameBehaviour<UIImageData>
 	{
 		private Texture2D _tex;

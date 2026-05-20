@@ -5,6 +5,15 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
+	/// <summary>Draws a toggle (checkbox). Fires listeners whenever the toggle's state changes.</summary>
+	/// <remarks>
+	/// Properties:
+	///   InitialValue: Starting checked/unchecked state.
+	///   Label: Caption shown next to the toggle.
+	///   Rect: Screen-space rectangle.
+	/// Outputs:
+	///   value [bool]: The new toggle state after the change.
+	/// </remarks>
 	public class UIToggle : Trigger<UIToggleData>
 	{
 		private bool _current;

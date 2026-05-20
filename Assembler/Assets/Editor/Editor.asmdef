@@ -2,9 +2,18 @@
     "name": "Editor",
     "rootNamespace": "",
     "references": [
-        "Scripts"
+        "Scripts",
+        "Assembler.Parsing",
+        "Assembler.Parsing.Phase1",
+        "Assembler.Parsing.Phase2",
+        "Assembler.Parsing.Phase3",
+        "Assembler.Building",
+        "Assembler.Behaviours",
+        "Assembler.Core"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

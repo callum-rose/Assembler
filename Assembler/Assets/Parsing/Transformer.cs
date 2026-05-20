@@ -155,14 +155,14 @@ namespace Assembler.Parsing
 		{
 			var type = behaviourDto.Type ?? string.Empty;
 
-			if (!BehaviourRegistry.All.TryGetValue(type, out var entry))
+			if (!BehaviourRegistry.All.TryGetValue(type, out var factory))
 			{
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
 			var props = ConvertProps(behaviourDto.Properties);
 
-			var info = entry.Factory(id,
+			var info = factory(id,
 				GetListeners(behaviourDto, resolvedValues, parameters),
 				props,
 				resolvedValues,

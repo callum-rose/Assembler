@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
+	/// <summary>Draws a horizontal fill bar; the filled fraction is Value clamped to [0, 1].</summary>
+	/// <remarks>
+	/// Properties:
+	///   Value: Progress in [0, 1]. Re-read each frame.
+	///   Rect: Screen-space rectangle.
+	/// </remarks>
 	public class ProgressBar : GameBehaviour<ProgressBarData>
 	{
 		public override void Execute() { }
