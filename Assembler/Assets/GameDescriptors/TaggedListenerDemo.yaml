@@ -3,7 +3,7 @@ Game:
   Description: |
     Demonstrates dynamic tag-resolved listeners. A spawner creates new enemies
     every couple of seconds, each tagged `enemy`. A single "boss" entity is
-    tagged `boss`. Press 1 or 2 to switch the currently-targeted tag, then
+    tagged `boss`. Press Q or E to switch the currently-targeted tag, then
     press Space to damage *every* entity matching that tag — including ones
     spawned after the listener was wired up. The damage broadcaster's listener
     uses `EntityTag: !var target tag`, so the dispatch set is resolved at the
@@ -31,8 +31,8 @@ Constants:
   enemy tag: "enemy"
   boss tag: "boss"
   fire key: "space"
-  target enemies key: "1"
-  target boss key: "2"
+  target enemies key: "q"
+  target boss key: "e"
 
 Variables:
   target tag: "enemy"
@@ -227,7 +227,7 @@ Entities:
       instructions:
         Type: text label
         Properties:
-          Text: "1 = target enemies   2 = target boss   Space = damage"
+          Text: "Q = target enemies   E = target boss   Space = damage"
           FontSize: 18
           Rect:
             Anchor: top-left
