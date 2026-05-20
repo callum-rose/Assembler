@@ -18,6 +18,8 @@ namespace Assembler.Compiler.Compiler
 		private readonly Stack<LabelTarget> _continueLabels = new();
 		private readonly Dictionary<string, Type> _registeredTypes = new();
 		private readonly Stack<ParameterExpression> _lambdaParameters = new();
+		private LabelTarget? _returnLabel;
+		private Type _returnType = typeof(void);
 
 		public Parser(List<Token> tokens)
 		{
@@ -89,7 +91,13 @@ namespace Assembler.Compiler.Compiler
 
 		public Expression ParseMethodBody(Dictionary<string, Type> parameters)
 		{
-			PreprocessEarlyReturns();
+			return ParseMethodBody(parameters, typeof(void));
+		}
+
+		public Expression ParseMethodBody(Dictionary<string, Type> parameters, Type returnType)
+		{
+			_returnType = returnType;
+			_returnLabel = Expression.Label(returnType, "methodReturn");
 
 			foreach (var param in parameters.Where(p => !_variables.ContainsKey(p.Key)))
 			{
@@ -112,23 +120,33 @@ namespace Assembler.Compiler.Compiler
 				}
 			}
 
-			// If last statement returns a value, use it
-			if (statements.Count > 0 && statements[^1].Type != typeof(void))
+			if (returnType == typeof(void))
 			{
+				statements.Add(Expression.Label(_returnLabel));
+
 				if (_declaredVariables.Count > 0)
 				{
-					return Expression.Block(statements[^1].Type, _declaredVariables, statements);
+					return Expression.Block(_declaredVariables, statements);
 				}
 
-				return statements.Count == 1 ? statements[0] : Expression.Block(statements[^1].Type, statements);
+				return statements.Count == 1 ? statements[0] : Expression.Block(statements);
 			}
+
+			// If the last statement is a value of the return type, treat it as an implicit return.
+			if (statements.Count > 0 && statements[^1].Type != typeof(void))
+			{
+				var last = statements[^1];
+				statements[^1] = Expression.Return(_returnLabel, last, returnType);
+			}
+
+			statements.Add(Expression.Label(_returnLabel, Expression.Default(returnType)));
 
 			if (_declaredVariables.Count > 0)
 			{
-				return Expression.Block(_declaredVariables, statements);
+				return Expression.Block(returnType, _declaredVariables, statements);
 			}
 
-			return statements.Count == 1 ? statements[0] : Expression.Block(statements);
+			return Expression.Block(returnType, statements);
 		}
 
 		/// <summary>
@@ -416,7 +434,7 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			var paramDict = new Dictionary<string, Type>();
-			var body = methodParser.ParseMethodBody(paramDict);
+			var body = methodParser.ParseMethodBody(paramDict, returnType);
 
 			// Handle void return
 			if (returnType == typeof(void))
@@ -957,15 +975,20 @@ namespace Assembler.Compiler.Compiler
 		{
 			Expect(TokenType.Return);
 
+			if (_returnLabel == null)
+			{
+				throw new Exception("'return' is only valid inside a method body.");
+			}
+
 			if (Match(TokenType.Semicolon))
 			{
-				return Expression.Empty();
+				return Expression.Return(_returnLabel);
 			}
 
 			var value = ParseExpression();
 			Expect(TokenType.Semicolon);
 
-			return value;
+			return Expression.Return(_returnLabel, value, _returnType);
 		}
 
 		private Expression ParseBreak()
