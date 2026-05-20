@@ -5,6 +5,13 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
+	/// <summary>Draws a text input field. Fires listeners when the user presses Enter to submit the typed text.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Rect: Screen-space rectangle.
+	/// Outputs:
+	///   text [string]: The submitted text. The field is cleared after submission.
+	/// </remarks>
 	public class UIInputField : Trigger<UIInputFieldData>
 	{
 		private string _text = string.Empty;

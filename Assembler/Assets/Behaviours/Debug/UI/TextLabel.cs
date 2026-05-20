@@ -4,6 +4,14 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
+	/// <summary>Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Text: Dynamic body text (re-read each frame; bind to a variable to display live values).
+	///   Label: Optional static prefix shown before Text (e.g. "Score: ").
+	///   FontSize: Font size in pixels.
+	///   Rect: Screen-space rectangle (see ScreenRect format).
+	/// </remarks>
 	public class TextLabel : GameBehaviour<TextLabelData>
 	{
 		private GUIStyle _style;
