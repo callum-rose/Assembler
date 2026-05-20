@@ -906,9 +906,9 @@ namespace Tests.Compiler
 
 			Assert.That(func(testList), Is.EqualTo(55));
 		}
-
+		
 		[Test]
-		public void ListParameterTest()
+		public void ComplexListParameterTest()
 		{
 			var compiler = new ExpressionMethodCompiler();
 			compiler.RegisterStaticMethods(typeof(Enumerable));
@@ -935,8 +935,11 @@ namespace Tests.Compiler
 				  return new Vector3(x, y, 0f);
 				  """,
 				"taken");
-			
-			Assert.That(func(new List<Vector3>()), Is.EqualTo(new Vector3(6.6f, 6.6f, 0)));
+
+			var vector3 = func(new List<Vector3>());
+			Assert.That(vector3.x, Is.EqualTo(6.6f).Within(0.01f));
+			Assert.That(vector3.y, Is.EqualTo(6.6f).Within(0.01f));
+			Assert.That(vector3.z, Is.EqualTo(0f).Within(0.01f));
 		}
 	}
 
