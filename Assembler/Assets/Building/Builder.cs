@@ -28,7 +28,7 @@ namespace Assembler.Building
 		[MenuItem("Test/Build Snake")]
 		public static void BuildSnake()
 		{
-			var yaml = File.ReadAllText("Assets/GameDescriptors/Snake.yaml");
+			var yaml = File.ReadAllText("Assets/GameDescriptors/Snake 2.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
