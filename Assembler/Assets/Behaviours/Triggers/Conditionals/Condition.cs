@@ -3,6 +3,11 @@ using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Triggers.Conditionals
 {
+	/// <summary>Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Condition: Boolean expression checked on each Execute call.
+	/// </remarks>
 	public class Condition : Trigger<ConditionData>
 	{
 		public override void Execute()

@@ -5,8 +5,8 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record VariableSetterInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<T> ValueToSet,
-		ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners)
+		[property: YamlName("VariableId")] ValueSource<T> ValueToSet,
+		[property: YamlName("Value")] ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners)
 	{
 		public static VariableSetterInfo<T> Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,

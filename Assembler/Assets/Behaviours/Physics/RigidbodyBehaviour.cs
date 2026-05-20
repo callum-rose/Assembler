@@ -4,6 +4,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Physics
 {
+	/// <summary>Adds a Unity Rigidbody to the entity so it participates in physics simulation.</summary>
+	/// <remarks>
+	/// Properties:
+	///   UseGravity: When true the rigidbody is affected by gravity.
+	/// </remarks>
 	public sealed class RigidbodyBehaviour : GameBehaviour<RigidbodyData>
 	{
 		private Rigidbody _rigidbody;
