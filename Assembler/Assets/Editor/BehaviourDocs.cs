@@ -7,16 +7,16 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Assembler.Building;
-using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using UnityEditor;
 using UnityEngine;
+using BehaviourRegistry = Assembler.Parsing.BehaviourRegistry;
 
-namespace Assembler.EditorTools
+namespace Editor
 {
 	public static class BehaviourDocs
 	{
-		private static readonly string[] CandidateXmlPaths =
+		private readonly static string[] CandidateXmlPaths =
 		{
 			"Temp/Assembler.Behaviours.xml",
 			"Library/ScriptAssemblies/Assembler.Behaviours.xml",
@@ -45,7 +45,7 @@ namespace Assembler.EditorTools
 			}
 		}
 
-		public static string GenerateMarkdown()
+		private static string GenerateMarkdown()
 		{
 			var membersByKey = LoadXmlDocMembers();
 			var sb = new StringBuilder();
@@ -80,7 +80,7 @@ namespace Assembler.EditorTools
 				sb.AppendLine($"## `{name}`");
 				if (!string.IsNullOrWhiteSpace(summary))
 				{
-					sb.AppendLine(summary.Trim());
+					sb.AppendLine(summary!.Trim());
 				}
 				else
 				{
@@ -169,7 +169,7 @@ namespace Assembler.EditorTools
 				var nameAttr = m.Attribute("name")?.Value;
 				if (!string.IsNullOrEmpty(nameAttr))
 				{
-					result[nameAttr] = m;
+					result[nameAttr!] = m;
 				}
 			}
 
@@ -238,14 +238,14 @@ namespace Assembler.EditorTools
 
 		private sealed record PropDoc(string? TypeOverride, string? Description);
 
-		private static readonly Regex SectionHeader =
+		private readonly static Regex SectionHeader =
 			new(@"^\s*(Properties|Outputs)\s*:\s*$", RegexOptions.IgnoreCase);
 
 		// Line forms accepted:
 		//   Name: description
 		//   Name [TypeOverride]: description
 		// Anything else is ignored.
-		private static readonly Regex EntryLine =
+		private readonly static Regex EntryLine =
 			new(@"^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*(\[(?<type>[^\]]+)\])?\s*:\s*(?<desc>.*?)\s*$");
 
 		private static (Dictionary<string, PropDoc> Properties, List<(string Name, PropDoc Doc)> Outputs)
@@ -370,7 +370,7 @@ namespace Assembler.EditorTools
 		// Type rendering
 		// ----------------------------------------------------------------------
 
-		private static readonly Dictionary<Type, string> PrimitiveNames = new()
+		private readonly static Dictionary<Type, string> PrimitiveNames = new()
 		{
 			[typeof(bool)] = "bool",
 			[typeof(byte)] = "byte",
