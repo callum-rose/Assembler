@@ -80,3 +80,13 @@ Building uses deferred initialization. `GameBehaviourFactory.Create()` returns a
 ### Game Definitions
 
 Example YAML game files (`Pong.yaml`, `Snake.yaml`) are in `Assets/GameDescriptors/`. They define: metadata, assets, constants, variables, templates, entities (with behaviours and listeners), and expressions.
+
+## Workflow
+
+### Git Worktrees
+
+Use worktrees only for initial parallel work when the user is on a different branch. For follow-up work on a branch the user already has checked out, work directly in the main repo.
+
+- **Before starting parallel work**: Check if the required worktree exists and create it if it doesn't.
+- **After finishing**: Commit all changes, then delete the worktree so the user can checkout the branch in the main repo to verify in Unity.
+- **Follow-up work**: If the user requests more changes and is already on the branch, work directly in the main project directory — no worktree needed.
