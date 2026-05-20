@@ -73,6 +73,10 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("Delay", typeof(float))
 				}),
+				["deferred trigger"] = (DeferredTriggerInfo.Create, new[]
+				{
+					new PropDescriptor("Delay", typeof(float))
+				}),
 				["on start trigger"] = (OnStartTriggerInfo.Create, Array.Empty<PropDescriptor>()),
 				["interval trigger"] = (IntervalTriggerInfo.Create, new[]
 				{

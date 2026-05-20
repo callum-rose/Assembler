@@ -179,6 +179,15 @@ namespace Assembler.Building
 					i.Delay.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
+			[typeof(DeferredTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (DeferredTriggerInfo)info;
+				var b = go.AddComponent<DeferredTrigger>();
+
+				return (b, lr => b.Initialise(new DeferredTriggerData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Delay.Resolve(vr, cr, ar, tc, scope))));
+			},
 			[typeof(IntervalTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
 				var i = (IntervalTriggerInfo)info;
