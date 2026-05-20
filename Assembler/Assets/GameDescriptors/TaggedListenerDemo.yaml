@@ -1,50 +1,43 @@
 Game:
-  Title: Tagged Listener Demo
+  Title: Dynamic Tag Listener Demo
   Description: |
-    Demonstrates dynamic tag-resolved listeners. A spawner creates new enemies
-    every couple of seconds, each tagged `enemy`. A single "boss" entity is
-    tagged `boss`. Press Q or E to switch the currently-targeted tag, then
-    press Space to damage *every* entity matching that tag — including ones
-    spawned after the listener was wired up. The damage broadcaster's listener
-    uses `EntityTag: !var target tag`, so the dispatch set is resolved at the
-    moment Space is pressed, against whatever entities exist right then.
+    Red enemies spawn at random positions every half-second. Press SPACE
+    to destroy every enemy currently alive. The Space-key listener was
+    wired up at game start, but it still hits enemies that spawned long
+    after — its target set is resolved at notify-time by the `enemy`
+    tag, not baked in at build-time. The tag itself is read from a
+    variable (`EntityTag: !var target tag`) to show that the tag can
+    be any ValueSource, not just a literal.
 
 World:
   Dimensionality: 2
-  BackgroundColor: "#101820"
+  BackgroundColor: "#0d1117"
 
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
-  spawn interval: 2.0
+  spawn interval: 0.5
   enemy size: !vec { X: 0.6, Y: 0.6 }
-  boss size: !vec { X: 1.4, Y: 1.4 }
-  stopped: !vec { X: 0, Y: 0 }
-  damage per hit: 1
+  fire key: "space"
   one: 1
-  zero: 0
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera rotation: !vec { X: 0, Y: 0, Z: 0 }
   camera view: "orthographic"
   camera size: 5
-  enemy tag: "enemy"
-  boss tag: "boss"
-  fire key: "space"
-  target enemies key: "q"
-  target boss key: "e"
 
 Variables:
+  # The tag the SPACE-key listener will broadcast to.
+  # Stored as a variable so the listener uses `!var target tag` —
+  # demonstrating that EntityTag is a full ValueSource<string>.
   target tag: "enemy"
-  enemies killed: 0
-  boss hp: 5
+  enemies spawned: 0
+  enemies destroyed: 0
+  zap count: 0
 
 Templates:
   enemy_template:
     Tags: [ enemy ]
-    Variables:
-      # Each enemy owns its own hp.
-      hp: 2
     Behaviours:
       gizmo:
         Type: cube gizmo
@@ -52,39 +45,16 @@ Templates:
           Size: !var enemy size
           IsWire: false
           Colour: !colour red
-      # Tagged on the BEHAVIOUR (separate from the entity tag) so that the
-      # damage broadcaster can address it by behaviour id alone, scoped by
-      # the entity tag.
-      take damage:
+      # The two behaviours the broadcaster targets, by behaviour id,
+      # on every entity tagged `enemy`.
+      count as destroyed:
         Type: int variable setter
         Properties:
-          VariableId: !var hp
-          Value: !expr
-            ExpressionId: int sub
-            Arguments:
-              - !var hp
-              - !var damage per hit
-      death check:
-        Type: condition trigger
-        Properties:
-          Condition: !expr
-            ExpressionId: int less or equal
-            Arguments:
-              - !var hp
-              - !var zero
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: on death
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
-      on death:
-        Type: int variable setter
-        Properties:
-          VariableId: !var enemies killed
+          VariableId: !var enemies destroyed
           Value: !expr
             ExpressionId: int add
             Arguments:
-              - !var enemies killed
+              - !var enemies destroyed
               - !var one
       self destruct:
         Type: destroy
@@ -100,21 +70,21 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
   random spawn position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Vector3(Range(-4f, 4f), Range(-2f, 3f), 0);"
-  format hud:
-    ArgumentTypes: [ string, int, int ]
-    ArgumentNames: [ tag, killed, bossHp ]
+    Expression: "new Vector3(Range(-4f, 4f), Range(-3f, 3f), 0);"
+  format alive:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ spawned, destroyed ]
     ReturnType: string
-    Expression: "\"Targeting: \" + tag + \"   Kills: \" + killed + \"   Boss HP: \" + bossHp;"
+    Expression: "\"Alive now: \" + (spawned - destroyed);"
+  format totals:
+    ArgumentTypes: [ int, int, int ]
+    ArgumentNames: [ spawned, destroyed, zaps ]
+    ReturnType: string
+    Expression: "\"Spawned: \" + spawned + \"     Destroyed: \" + destroyed + \"     Zaps: \" + zaps;"
 
 Entities:
   enemy spawner:
@@ -126,73 +96,50 @@ Entities:
           Interval: !var spawn interval
         Listeners:
           - EntityId: enemy spawner
+            BehaviourId: count spawn
+          - EntityId: enemy spawner
             BehaviourId: spawn enemy
+      count spawn:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies spawned
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var enemies spawned
+              - !var one
       spawn enemy:
         Type: spawner
         Properties:
           TemplateId: enemy_template
           Position: !expr { ExpressionId: random spawn position }
 
-  boss:
-    Tags: [ boss ]
-    Position: !vec { X: 0, Y: -3.5 }
-    Behaviours:
-      gizmo:
-        Type: cube gizmo
-        Properties:
-          Size: !var boss size
-          IsWire: false
-          Colour: !colour magenta
-      # Same behaviour id as enemies' damage receiver, so the broadcaster
-      # only needs to know the behaviour id — the entity tag selects which
-      # ones actually receive the call.
-      take damage:
-        Type: int variable setter
-        Properties:
-          VariableId: !var boss hp
-          Value: !expr
-            ExpressionId: int sub
-            Arguments:
-              - !var boss hp
-              - !var damage per hit
-
-  player input:
+  # The whole point of the demo lives in this one entity.
+  # `fire` is a tagged listener: one keypress destroys every enemy
+  # currently tagged with whatever `target tag` resolves to, even
+  # though none of those enemies existed when this entity was built.
+  zapper:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      # Switch the currently-targeted tag with 1 / 2.
-      press 1:
-        Type: key down trigger
-        Properties: { Key: !var target enemies key }
-        Listeners:
-          - EntityId: player input
-            BehaviourId: target enemies
-      target enemies:
-        Type: string variable setter
-        Properties:
-          VariableId: !var target tag
-          Value: !var enemy tag
-      press 2:
-        Type: key down trigger
-        Properties: { Key: !var target boss key }
-        Listeners:
-          - EntityId: player input
-            BehaviourId: target boss
-      target boss:
-        Type: string variable setter
-        Properties:
-          VariableId: !var target tag
-          Value: !var boss tag
-
-      # Space broadcasts damage to every entity whose tag matches the
-      # currently-selected `target tag` variable. Resolved at notify-time:
-      # newly-spawned enemies are picked up automatically, and switching
-      # `target tag` between fires redirects the broadcast.
       fire:
         Type: key down trigger
         Properties: { Key: !var fire key }
         Listeners:
+          - EntityId: zapper
+            BehaviourId: count zap
           - EntityTag: !var target tag
-            BehaviourId: take damage
+            BehaviourId: count as destroyed
+          - EntityTag: !var target tag
+            BehaviourId: self destruct
+      count zap:
+        Type: int variable setter
+        Properties:
+          VariableId: !var zap count
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var zap count
+              - !var one
 
   camera:
     Tags: [ camera ]
@@ -208,30 +155,45 @@ Entities:
   hud:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      label:
+      title:
         Type: text label
         Properties:
-          Text: !expr
-            ExpressionId: format hud
-            Arguments:
-              - !var target tag
-              - !var enemies killed
-              - !var boss hp
-          FontSize: 24
+          Text: "Press SPACE to destroy all red enemies"
+          FontSize: 26
           Rect:
             Anchor: top-left
             X: 20
             Y: 20
-            Width: 500
-            Height: 50
-      instructions:
+            Width: 600
+            Height: 40
+      alive:
         Type: text label
         Properties:
-          Text: "Q = target enemies   E = target boss   Space = damage"
-          FontSize: 18
+          Text: !expr
+            ExpressionId: format alive
+            Arguments:
+              - !var enemies spawned
+              - !var enemies destroyed
+          FontSize: 22
           Rect:
             Anchor: top-left
             X: 20
             Y: 60
-            Width: 500
-            Height: 40
+            Width: 400
+            Height: 30
+      totals:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format totals
+            Arguments:
+              - !var enemies spawned
+              - !var enemies destroyed
+              - !var zap count
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 90
+            Width: 600
+            Height: 30
