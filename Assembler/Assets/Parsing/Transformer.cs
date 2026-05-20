@@ -183,13 +183,20 @@ namespace Assembler.Parsing
 				.EmptyIfNull()
 				.Select(l =>
 				{
+					var outputs = l.Outputs ?? new Dictionary<string, string>();
+
 					if (l.EntityTag != null || l.BehaviourTag != null)
 					{
-						return new ListenerInfo(new BehaviourDescriptor(string.Empty, l.BehaviourId ?? string.Empty))
+						var entityTag = l.EntityTag != null
+							? CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters)
+							: null;
+						var behaviourTag = l.BehaviourTag != null
+							? CreateValueSource<string>(variables, ToAssemblerValue(l.BehaviourTag), parameters)
+							: null;
+
+						return (ListenerInfo)new TaggedListenerInfo(entityTag, behaviourTag, l.BehaviourId)
 						{
-							OutputMapping = l.Outputs ?? new Dictionary<string, string>(),
-							EntityTag = l.EntityTag,
-							BehaviourTag = l.BehaviourTag
+							OutputMapping = outputs
 						};
 					}
 
@@ -206,9 +213,9 @@ namespace Assembler.Parsing
 
 					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
 
-					return new ListenerInfo(behaviourDescriptor)
+					return new DirectListenerInfo(behaviourDescriptor)
 					{
-						OutputMapping = l.Outputs ?? new Dictionary<string, string>()
+						OutputMapping = outputs
 					};
 				})
 				.ToArray();
