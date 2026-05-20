@@ -182,6 +182,150 @@ No properties.
 | VariableId | `System.String` |
 | Value | `System.String` |
 
+## `vector list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Vector3]` |
+| Value | `UnityEngine.Vector3` |
+
+## `vector list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Vector3]` |
+| Index | `System.Int32` |
+
+## `vector list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Vector3]` |
+| Index | `System.Int32` |
+| Value | `UnityEngine.Vector3` |
+
+## `vector list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Vector3]` |
+
+## `int list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Int32]` |
+| Value | `System.Int32` |
+
+## `int list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Int32]` |
+| Index | `System.Int32` |
+
+## `int list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Int32]` |
+| Index | `System.Int32` |
+| Value | `System.Int32` |
+
+## `int list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Int32]` |
+
+## `float list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Single]` |
+| Value | `System.Single` |
+
+## `float list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Single]` |
+| Index | `System.Int32` |
+
+## `float list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Single]` |
+| Index | `System.Int32` |
+| Value | `System.Single` |
+
+## `float list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Single]` |
+
+## `bool list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Boolean]` |
+| Value | `System.Boolean` |
+
+## `bool list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Boolean]` |
+| Index | `System.Int32` |
+
+## `bool list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Boolean]` |
+| Index | `System.Int32` |
+| Value | `System.Boolean` |
+
+## `bool list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.Boolean]` |
+
+## `string list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.String]` |
+| Value | `System.String` |
+
+## `string list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.String]` |
+| Index | `System.Int32` |
+
+## `string list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.String]` |
+| Index | `System.Int32` |
+| Value | `System.String` |
+
+## `string list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[System.String]` |
+
+## `colour list add`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Color]` |
+| Value | `UnityEngine.Color` |
+
+## `colour list remove at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Color]` |
+| Index | `System.Int32` |
+
+## `colour list set at`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Color]` |
+| Index | `System.Int32` |
+| Value | `UnityEngine.Color` |
+
+## `colour list clear`
+| Property | Type |
+|----------|------|
+| List | `System.Collections.Generic.IList`1[UnityEngine.Color]` |
+
 ## `sprite`
 | Property | Type |
 |----------|------|
