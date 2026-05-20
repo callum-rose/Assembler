@@ -10,148 +10,118 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
-  - Id: initial score
-    Value: 0
-  - Id: left paddle initial position
-    Value: !vec { X: -5, Y: 0 }
-  - Id: right paddle initial position
-    Value: !vec { X: 5, Y: 0 }
-  - Id: paddle up speed
-    Value: 5
-  - Id: paddle down speed
-    Value: -5
-  - Id: left paddle up key
-    Value: "w"
-  - Id: left paddle down key
-    Value: "s"
-  - Id: right paddle up key
-    Value: "up"
-  - Id: right paddle down key
-    Value: "down"
-  - Id: upper wall position
-    Value: !vec { X: 0, Y: 3 }
-  - Id: lower wall position
-    Value: !vec { X: 0, Y: -3 }
-  - Id: left goal position
-    Value: !vec { X: -6, Y: 0 }
-  - Id: right goal position
-    Value: !vec { X: 6, Y: 0 }
-  - Id: goal size
-    Value: !vec { X: 0.2, Y: 6 }
-  - Id: wall width
-    Value: 12.2
-  - Id: wall height
-    Value: 0.2
-  - Id: paddle height
-    Value: 1.0
-  - Id: paddle width
-    Value: 0.2
-  - Id: ball radius
-    Value: 0.2
-  - Id: score per goal
-    Value: 1
-  - Id: score to win
-    Value: 5
-  - Id: camera position
-    Value: !vec { X: 0, Y: 0, Z: -10 }
-  - Id: camera rotation
-    Value: !vec { X: 0, Y: 0, Z: 0 }
-  - Id: camera view
-    Value: "orthographic"
-  - Id: camera size
-    Value: 4
-  - Id: paddle bounce factor
-    Value: 8
+  initial score: 0
+  left paddle initial position: !vec { X: -5, Y: 0 }
+  right paddle initial position: !vec { X: 5, Y: 0 }
+  paddle up speed: 5
+  paddle down speed: -5
+  left paddle up key: "w"
+  left paddle down key: "s"
+  right paddle up key: "up"
+  right paddle down key: "down"
+  upper wall position: !vec { X: 0, Y: 3 }
+  lower wall position: !vec { X: 0, Y: -3 }
+  left goal position: !vec { X: -6, Y: 0 }
+  right goal position: !vec { X: 6, Y: 0 }
+  goal size: !vec { X: 0.2, Y: 6 }
+  wall width: 12.2
+  wall height: 0.2
+  paddle height: 1.0
+  paddle width: 0.2
+  ball radius: 0.2
+  score per goal: 1
+  score to win: 5
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 4
+  paddle bounce factor: 8
 
 Variables:
-  - Id: left score
-    Value: !var initial score
-  - Id: right score
-    Value: !var initial score
-  - Id: ball velocity
-    Value: !vec { X: 3, Y: 3 }
+  left score: !var initial score
+  right score: !var initial score
+  ball velocity: !vec { X: 3, Y: 3 }
 
 Templates:
-  - Id: paddle_template
+  paddle_template:
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !vec
             X: !var paddle width
             Y: !var paddle height
           IsWire: false
           Colour: !colour red
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !vec
             X: !var paddle width
             Y: !var paddle height
           IsTrigger: false
-      - Type: key hold trigger
-        Id: up key trigger
+      up key trigger:
+        Type: key hold trigger
         Properties:
           Key: !parameter up_key
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move up
-      - Type: velocity
-        Id: move up
+      move up:
+        Type: velocity
         Properties:
           Velocity: !vec
             X: 0
             Y: !var paddle up speed
-      - Type: key hold trigger
-        Id: down key trigger
+      down key trigger:
+        Type: key hold trigger
         Properties:
           Key: !parameter down_key
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move down
-      - Type: velocity
-        Id: move down
+      move down:
+        Type: velocity
         Properties:
           Velocity: !vec
             X: 0
             Y: !var paddle down speed
-  - Id: wall_template
-    Tags:
-      - wall
+
+  wall_template:
+    Tags: [ wall ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !vec
             X: !var wall width
             Y: !var wall height
           IsWire: false
           Colour: !colour white
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !vec
             X: !var wall width
             Y: !var wall height
-  - Id: goal_template
-    Tags:
-      - goal
+
+  goal_template:
+    Tags: [ goal ]
     Behaviours:
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var goal size
           IsTrigger: true
-      - Type: trigger enter trigger
-        Id: goal trigger
+      goal trigger:
+        Type: trigger enter trigger
         Properties:
-          TagsToDetect:
-            - ball
+          TagsToDetect: [ ball ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: score incrementer
-      - Type: int variable setter
-        Id: score incrementer
+      score incrementer:
+        Type: int variable setter
         Properties:
           VariableId: !parameter score_var
           Value: !expr
@@ -159,30 +129,30 @@ Templates:
             Arguments:
               - !parameter score_var
               - !var score per goal
-  - Id: ball_template
-    Tags:
-      - ball
+
+  ball_template:
+    Tags: [ ball ]
     Behaviours:
-      - Type: sphere gizmo
-        Id: gizmo
+      gizmo:
+        Type: sphere gizmo
         Properties:
           Radius: !var ball radius
           IsWire: false
           Colour: !colour blue
-      - Type: sphere collider
-        Id: sphere collider
+      sphere collider:
+        Type: sphere collider
         Properties:
           Radius: !var ball radius
-      - Type: rigidbody
-        Id: rigidbody
+      rigidbody:
+        Type: rigidbody
         Properties:
           UseGravity: false
-      - Type: velocity
-        Id: velocity
+      velocity:
+        Type: velocity
         Properties:
           Velocity: !var ball velocity
-      - Type: collision enter trigger
-        Id: paddle collision trigger
+      paddle collision trigger:
+        Type: collision enter trigger
         Properties:
           TagsToDetect:
             - left paddle
@@ -193,8 +163,8 @@ Templates:
             Outputs:
               contact_point: hit_point
               other_position: paddle_position
-      - Type: vector variable setter
-        Id: paddle bounce velocity setter
+      paddle bounce velocity setter:
+        Type: vector variable setter
         Properties:
           VariableId: !var ball velocity
           Value: !expr
@@ -204,16 +174,16 @@ Templates:
               - !output hit_point
               - !output paddle_position
               - !var paddle bounce factor
-      - Type: collision enter trigger
-        Id: wall collision trigger
+      wall collision trigger:
+        Type: collision enter trigger
         Properties:
           TagsToDetect:
             - wall
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: wall bounce velocity setter
-      - Type: vector variable setter
-        Id: wall bounce velocity setter
+      wall bounce velocity setter:
+        Type: vector variable setter
         Properties:
           VariableId: !var ball velocity
           Value: !expr
@@ -221,8 +191,8 @@ Templates:
             Arguments:
               - !var ball velocity
               - !vec { X: 1, Y: -1 }
-      - Type: trigger enter trigger
-        Id: goal detector
+      goal detector:
+        Type: trigger enter trigger
         Properties:
           TagsToDetect:
             - goal
@@ -231,56 +201,56 @@ Templates:
             BehaviourId: self destructor
           - EntityId: ball spawner
             BehaviourId: spawn ball
-      - Type: destroy
-        Id: self destructor
+      self destructor:
+        Type: destroy
 
 Expressions:
-  - Id: paddle bounce
+  paddle bounce:
     ArgumentTypes: [ vector, vector, vector, float ]
     ArgumentNames: [ ball_vel, hit_point, paddle_pos, factor ]
     ReturnType: vector
-    Expression: "var speed = ball_vel.magnitude; 
-      var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f); 
-      var norm = dir.normalized; 
+    Expression: "var speed = ball_vel.magnitude;
+      var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
+      var norm = dir.normalized;
       new UnityEngine.Vector3(norm.x * speed, norm.y * speed, 0f);"
-  - Id: vec multiply
+  vec multiply:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ a, b ]
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(a.x * b.x, a.y * b.y, a.z * b.z);"
-  - Id: int add
+  int add:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
-  - Id: int greater or equal
+  int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
-  - Id: random ball initial position
+  random ball initial position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     RegisterTypeStatics: [ UnityEngine.Random ]
     Expression: "new Vector3(0, Range(-2f, 2f), 0);"
-  - Id: is game over
+  is game over:
     ArgumentTypes: [ int, int, int ]
     ArgumentNames: [ a, b, w ]
     ReturnType: bool
     Expression: "a >= w || b >= w;"
-  - Id: format left score
+  format left score:
     ArgumentTypes: [ int ]
     ArgumentNames: [ score ]
     ReturnType: string
     Expression: "\"P1: \" + score;"
-  - Id: format right score
+  format right score:
     ArgumentTypes: [ int ]
     ArgumentNames: [ score ]
     ReturnType: string
     Expression: "\"P2: \" + score;"
 
 Entities:
-  - Id: left paddle
+  left paddle:
     Template:
       Id: paddle_template
       Parameters:
@@ -288,7 +258,7 @@ Entities:
         down_key: !var left paddle down key
     Tags: [ left paddle ]
     Position: !var left paddle initial position
-  - Id: right paddle
+  right paddle:
     Template:
       Id: paddle_template
       Parameters:
@@ -296,73 +266,73 @@ Entities:
         down_key: !var right paddle down key
     Tags: [ right paddle ]
     Position: !var right paddle initial position
-  - Id: upper wall
+  upper wall:
     Template: { Id: wall_template }
     Position: !var upper wall position
-  - Id: lower wall
+  lower wall:
     Template: { Id: wall_template }
     Position: !var lower wall position
-  - Id: left goal
+  left goal:
     Template:
       Id: goal_template
       Parameters:
         score_var: !var right score
     Position: !var left goal position
-  - Id: right goal
+  right goal:
     Template:
       Id: goal_template
       Parameters:
         score_var: !var left score
     Position: !var right goal position
-  - Id: camera
+  camera:
     Tags:
       - camera
     Position: !var camera position
     Rotation: !var camera rotation
     Behaviours:
-      - Type: camera
-        Id: camera
+      camera:
+        Type: camera
         Properties:
           View: !var camera view
           Size: !var camera size
-  - Id: win condition checker
+  win condition checker:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: condition trigger
-        Id: left score win condition trigger
+      left score win condition trigger:
+        Type: condition trigger
         Properties:
           Condition: !expr
             ExpressionId: int greater or equal
             Arguments:
               - !var left score
               - !var score to win
-      - Type: condition trigger
-        Id: right score win condition trigger
+      right score win condition trigger:
+        Type: condition trigger
         Properties:
           Condition: !expr
             ExpressionId: int greater or equal
             Arguments:
               - !var right score
               - !var score to win
-  - Id: ball spawner
+  ball spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: on start trigger
-        Id: initial spawn trigger
+      initial spawn trigger:
+        Type: on start trigger
         Listeners:
           - EntityId: ball spawner
             BehaviourId: spawn ball
-      - Type: spawner
-        Id: spawn ball
+      spawn ball:
+        Type: spawner
         Properties:
           TemplateId: ball_template
           Position: !expr { ExpressionId: random ball initial position }
 
-  - Id: left score display
+  left score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: text label
-        Id: score text
+      score text:
+        Type: text label
         Properties:
           Text: !expr
             ExpressionId: format left score
@@ -376,11 +346,11 @@ Entities:
             Width: 200
             Height: 50
 
-  - Id: right score display
+  right score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: text label
-        Id: score text
+      score text:
+        Type: text label
         Properties:
           Text: !expr
             ExpressionId: format right score

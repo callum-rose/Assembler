@@ -31,31 +31,36 @@ namespace Assembler.Parsing
 
 			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
-			foreach (var valueDto in gameDto.Constants.EmptyIfNull().Concat(gameDto.Variables.EmptyIfNull()))
+			var allValues = (gameDto.Constants ?? new Dictionary<string, object>())
+				.Concat(gameDto.Variables ?? new Dictionary<string, object>());
+
+			foreach (var kvp in allValues)
 			{
-				var value = new ValueInfo(valueDto.Id ?? string.Empty, Convert(values, valueDto.Value));
-				values.Add(value);
+				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value)));
 			}
 
-			var expressions = gameDto.Expressions?.Select(e => new ExpressionInfo(e.Id ?? string.Empty,
-				(e.ArgumentTypes ?? Array.Empty<string>())
-				.Zip(e.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
-				e.ReturnType ?? string.Empty,
-				e.RegisterTypes ?? Array.Empty<string>(),
-				e.RegisterTypeStatics ?? Array.Empty<string>(),
-				e.Expression ?? string.Empty)).ToArray();
+			var expressions = gameDto.Expressions?.Select(kvp => new ExpressionInfo(kvp.Key,
+				(kvp.Value.ArgumentTypes ?? Array.Empty<string>())
+				.Zip(kvp.Value.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
+				kvp.Value.ReturnType ?? string.Empty,
+				kvp.Value.RegisterTypes ?? Array.Empty<string>(),
+				kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
+				kvp.Value.Expression ?? string.Empty)).ToArray();
 
 			var templates = gameDto.Templates?
-				.Select(t => new ConcreteEntityInfo(
-					t.Id ?? string.Empty,
-					t.Tags ?? new List<string>(),
-					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Position)),
-					CreateValueSource<Vector3>(values, ToAssemblerValue(t.Rotation)),
-					t.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, new Dictionary<string, AssemblerValue>())).ToArray(),
-					CreateEntityVariables(t.Variables)))
+				.Select(kvp => new ConcreteEntityInfo(
+					kvp.Key,
+					kvp.Value.Tags ?? new List<string>(),
+					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
+					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
+					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
+						.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
+						.ToArray(),
+					CreateEntityVariables(kvp.Value.Variables)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-			var entities = gameDto.Entities.EmptyIfNull().Select(CreateEntityInfo).ToArray();
+			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
+				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
 
 			var gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
 
@@ -69,12 +74,10 @@ namespace Assembler.Parsing
 				entities,
 				gameOverCondition);
 
-			ConcreteEntityInfo CreateEntityInfo(EntityDto entityDto)
+			ConcreteEntityInfo CreateEntityInfo(string entityId, EntityDto entityDto)
 			{
 				EntityInfo template;
 				Dictionary<string, AssemblerValue> parameters;
-
-				var entityId = entityDto.Id ?? string.Empty;
 
 				if (entityDto.Template is null)
 				{
@@ -87,7 +90,8 @@ namespace Assembler.Parsing
 					parameters = ConvertProps(entityDto.Template.Parameters);
 				}
 
-				var ownBehaviours = entityDto.Behaviours.EmptyIfNull().Select(b => CreateBehaviour(values, b, parameters));
+				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
+					.Select(b => CreateBehaviour(values, b.Key, b.Value, parameters));
 
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
@@ -101,7 +105,7 @@ namespace Assembler.Parsing
 			}
 		}
 
-		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyList<ValueDto>? variables)
+		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)
 		{
 			if (variables == null || variables.Count == 0)
 			{
@@ -109,11 +113,11 @@ namespace Assembler.Parsing
 			}
 
 			var result = new ValueInfo[variables.Count];
+			var i = 0;
 
-			for (var i = 0; i < variables.Count; i++)
+			foreach (var kvp in variables)
 			{
-				var v = variables[i];
-				result[i] = new ValueInfo(v.Id ?? string.Empty, ToAssemblerValue(v.Value));
+				result[i++] = new ValueInfo(kvp.Key, ToAssemblerValue(kvp.Value));
 			}
 
 			return result;
@@ -145,10 +149,10 @@ namespace Assembler.Parsing
 		}
 
 		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
+			string id,
 			BehaviourDto behaviourDto,
 			IReadOnlyDictionary<string, AssemblerValue> parameters)
 		{
-			var id = behaviourDto.Id ?? string.Empty;
 			var type = behaviourDto.Type ?? string.Empty;
 
 			if (!BehaviourRegistry.All.TryGetValue(type, out var entry))

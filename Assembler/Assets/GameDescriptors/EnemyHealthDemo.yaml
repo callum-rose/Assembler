@@ -15,76 +15,56 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
-  - Id: player up key
-    Value: "w"
-  - Id: player down key
-    Value: "s"
-  - Id: player left key
-    Value: "a"
-  - Id: player right key
-    Value: "d"
-  - Id: player speed
-    Value: 4
-  - Id: damage per hit
-    Value: 1
-  - Id: zero
-    Value: 0
-  - Id: player size
-    Value: !vec { X: 0.6, Y: 0.6 }
-  - Id: enemy size
-    Value: !vec { X: 0.8, Y: 0.8 }
-  - Id: stopped
-    Value: !vec { X: 0, Y: 0 }
-  - Id: player up vel
-    Value: !vec { X: 0, Y: 4 }
-  - Id: player down vel
-    Value: !vec { X: 0, Y: -4 }
-  - Id: player left vel
-    Value: !vec { X: -4, Y: 0 }
-  - Id: player right vel
-    Value: !vec { X: 4, Y: 0 }
-  - Id: camera position
-    Value: !vec { X: 0, Y: 0, Z: -10 }
-  - Id: camera rotation
-    Value: !vec { X: 0, Y: 0, Z: 0 }
-  - Id: camera view
-    Value: "orthographic"
-  - Id: camera size
-    Value: 5
+  player up key: "w"
+  player down key: "s"
+  player left key: "a"
+  player right key: "d"
+  player speed: 4
+  damage per hit: 1
+  zero: 0
+  player size: !vec { X: 0.6, Y: 0.6 }
+  enemy size: !vec { X: 0.8, Y: 0.8 }
+  stopped: !vec { X: 0, Y: 0 }
+  player up vel: !vec { X: 0, Y: 4 }
+  player down vel: !vec { X: 0, Y: -4 }
+  player left vel: !vec { X: -4, Y: 0 }
+  player right vel: !vec { X: 4, Y: 0 }
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
 
 Variables:
-  - Id: enemies remaining
-    Value: 3
+  enemies remaining: 3
 
 Templates:
-  - Id: enemy_template
+  enemy_template:
     Tags: [ enemy ]
     Variables:
       # Each spawned enemy gets its OWN `health`, seeded by the
       # `initial_health` parameter supplied at instantiation.
-      - Id: health
-        Value: !parameter initial_health
+      health: !parameter initial_health
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var enemy size
           IsWire: false
           Colour: !colour red
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var enemy size
           IsTrigger: true
-      - Type: trigger enter trigger
-        Id: player hit detector
+      player hit detector:
+        Type: trigger enter trigger
         Properties:
           TagsToDetect: [ player ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: take damage
-      - Type: int variable setter
-        Id: take damage
+      take damage:
+        Type: int variable setter
         # !var health resolves to THIS entity's `health`, not a global one,
         # because the per-entity scope shadows the global registry.
         Properties:
@@ -94,8 +74,8 @@ Templates:
             Arguments:
               - !var health
               - !var damage per hit
-      - Type: condition trigger
-        Id: death check
+      death check:
+        Type: condition trigger
         Properties:
           Condition: !expr
             ExpressionId: int less or equal
@@ -107,8 +87,8 @@ Templates:
             BehaviourId: on death decrement counter
           - EntityId: !parameter self_id
             BehaviourId: self destruct
-      - Type: int variable setter
-        Id: on death decrement counter
+      on death decrement counter:
+        Type: int variable setter
         Properties:
           VariableId: !var enemies remaining
           Value: !expr
@@ -116,131 +96,128 @@ Templates:
             Arguments:
               - !var enemies remaining
               - !var damage per hit
-      - Type: destroy
-        Id: self destruct
+      self destruct:
+        Type: destroy
 
-  - Id: player_template
+  player_template:
     Tags: [ player ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var player size
           IsWire: false
           Colour: !colour green
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var player size
           IsTrigger: true
-      - Type: rigidbody
-        Id: rigidbody
+      rigidbody:
+        Type: rigidbody
         Properties:
           UseGravity: false
-      # WASD movement: holding a key sets velocity in that direction;
-      # releasing all keys is handled by the per-key release triggers below.
-      - Type: key hold trigger
-        Id: up hold
+      # WASD movement: holding a key sets velocity in that direction.
+      up hold:
+        Type: key hold trigger
         Properties: { Key: !var player up key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go up
-      - Type: velocity
-        Id: go up
+      go up:
+        Type: velocity
         Properties: { Velocity: !var player up vel }
-      - Type: key hold trigger
-        Id: down hold
+      down hold:
+        Type: key hold trigger
         Properties: { Key: !var player down key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go down
-      - Type: velocity
-        Id: go down
+      go down:
+        Type: velocity
         Properties: { Velocity: !var player down vel }
-      - Type: key hold trigger
-        Id: left hold
+      left hold:
+        Type: key hold trigger
         Properties: { Key: !var player left key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go left
-      - Type: velocity
-        Id: go left
+      go left:
+        Type: velocity
         Properties: { Velocity: !var player left vel }
-      - Type: key hold trigger
-        Id: right hold
+      right hold:
+        Type: key hold trigger
         Properties: { Key: !var player right key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go right
-      - Type: velocity
-        Id: go right
+      go right:
+        Type: velocity
         Properties: { Velocity: !var player right vel }
 
 Expressions:
-  - Id: int sub
+  int sub:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  - Id: int less or equal
+  int less or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a <= b;"
-  - Id: int equal zero
+  int equal zero:
     ArgumentTypes: [ int ]
     ArgumentNames: [ a ]
     ReturnType: bool
     Expression: "a <= 0;"
-  - Id: format remaining
+  format remaining:
     ArgumentTypes: [ int ]
     ArgumentNames: [ n ]
     ReturnType: string
     Expression: "\"Enemies remaining: \" + n;"
 
 Entities:
-  - Id: player
+  player:
     Template: { Id: player_template }
     Position: !vec { X: 0, Y: 0 }
 
-  # Three enemies sharing one template, but each gets its OWN `health` —
-  # 1 HP, 2 HP, 3 HP respectively. Walk into each to see them disappear
-  # after a different number of bumps.
-  - Id: weak enemy
+  # Three enemies sharing one template, but each gets its OWN `health`.
+  weak enemy:
     Template:
       Id: enemy_template
       Parameters:
         initial_health: 1
     Position: !vec { X: -3, Y: 2 }
-  - Id: medium enemy
+  medium enemy:
     Template:
       Id: enemy_template
       Parameters:
         initial_health: 2
     Position: !vec { X: 0, Y: 2 }
-  - Id: tough enemy
+  tough enemy:
     Template:
       Id: enemy_template
       Parameters:
         initial_health: 3
     Position: !vec { X: 3, Y: 2 }
 
-  - Id: camera
+  camera:
     Tags: [ camera ]
     Position: !var camera position
     Rotation: !var camera rotation
     Behaviours:
-      - Type: camera
-        Id: camera
+      camera:
+        Type: camera
         Properties:
           View: !var camera view
           Size: !var camera size
 
-  - Id: remaining display
+  remaining display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: text label
-        Id: label
+      label:
+        Type: text label
         Properties:
           Text: !expr
             ExpressionId: format remaining

@@ -15,16 +15,18 @@ namespace Tests.Parsing
 		{
 			var yaml = @"
 Templates:
-  - Id: paddle_template
+  paddle_template:
     Behaviours:
-      - Type: translate
+      translate:
+        Type: translate
         Properties:
           Displacement: !parameter speed
 Entities:
-  - Id: left paddle
-    Template: paddle_template
-    Parameters:
-      speed: !vec { X: 0, Y: 2 }
+  left paddle:
+    Template:
+      Id: paddle_template
+      Parameters:
+        speed: !vec { X: 0, Y: 2 }
 ";
 
 			var parser = new GameFileParser();
@@ -50,12 +52,12 @@ Entities:
 		{
 			var yaml = @"
 Templates:
-  - Id: paddle_template
+  paddle_template:
     Position: !vec { X: 0, Y: 0 }
     Tags: [ paddle ]
 Entities:
-  - Id: right paddle
-    Template: paddle_template
+  right paddle:
+    Template: { Id: paddle_template }
     Position: !vec { X: 5, Y: 0 }
     Tags: [ right_paddle ]
 ";
