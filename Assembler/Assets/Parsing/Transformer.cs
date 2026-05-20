@@ -183,13 +183,33 @@ namespace Assembler.Parsing
 				.EmptyIfNull()
 				.Select(l =>
 				{
-					if (l.EntityTag != null || l.BehaviourTag != null)
+					var outputs = l.Outputs ?? new Dictionary<string, string>();
+
+					if (l.EntityTag != null && l.BehaviourTag != null)
 					{
-						return new ListenerInfo(new BehaviourDescriptor(string.Empty, l.BehaviourId ?? string.Empty))
+						throw new ParsingException(
+							"A listener cannot declare both EntityTag and BehaviourTag. " +
+							"Pick one: EntityTag (+ BehaviourId) targets behaviours on entities with that tag; " +
+							"BehaviourTag targets all behaviours carrying that tag.");
+					}
+
+					if (l.EntityTag != null)
+					{
+						var entityTag = CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters);
+
+						return (ListenerInfo)new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
 						{
-							OutputMapping = l.Outputs ?? new Dictionary<string, string>(),
-							EntityTag = l.EntityTag,
-							BehaviourTag = l.BehaviourTag
+							OutputMapping = outputs
+						};
+					}
+
+					if (l.BehaviourTag != null)
+					{
+						var behaviourTag = CreateValueSource<string>(variables, ToAssemblerValue(l.BehaviourTag), parameters);
+
+						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag)
+						{
+							OutputMapping = outputs
 						};
 					}
 
@@ -206,9 +226,9 @@ namespace Assembler.Parsing
 
 					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
 
-					return new ListenerInfo(behaviourDescriptor)
+					return new DirectListenerInfo(behaviourDescriptor)
 					{
-						OutputMapping = l.Outputs ?? new Dictionary<string, string>()
+						OutputMapping = outputs
 					};
 				})
 				.ToArray();

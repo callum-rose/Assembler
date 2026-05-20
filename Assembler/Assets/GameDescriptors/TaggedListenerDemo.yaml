@@ -1,0 +1,231 @@
+Game:
+  Title: Dynamic Tag Listener Demo
+  Description: |
+    Red enemies spawn at random positions every half-second.
+
+      SPACE  — destroys every enemy currently alive.
+               Uses an EntityTag listener (`EntityTag: !var target tag,
+               BehaviourId: ...`), so it targets a specific behaviour
+               on every entity carrying that tag.
+
+      F      — scores 1 point per alive enemy (no destruction).
+               Uses a BehaviourTag listener (`BehaviourTag: scoreable`),
+               which targets every behaviour carrying that tag directly,
+               with no entity reference at all.
+
+    Both listeners were wired up at game start but pick up enemies
+    that spawn long after — their target sets are resolved at
+    notify-time, not build-time.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0d1117"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  spawn interval: 0.5
+  enemy size: !vec { X: 0.6, Y: 0.6 }
+  fire key: "space"
+  score key: "f"
+  scoreable tag: "scoreable"
+  one: 1
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  # The tag the SPACE-key listener will broadcast to.
+  # Stored as a variable so the listener uses `!var target tag` —
+  # demonstrating that EntityTag is a full ValueSource<string>.
+  target tag: "enemy"
+  enemies spawned: 0
+  enemies destroyed: 0
+  zap count: 0
+  score: 0
+
+Templates:
+  enemy_template:
+    Tags: [ enemy ]
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var enemy size
+          IsWire: false
+          Colour: !colour red
+      # The two behaviours the broadcaster targets, by behaviour id,
+      # on every entity tagged `enemy`.
+      count as destroyed:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies destroyed
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var enemies destroyed
+              - !var one
+      self destruct:
+        Type: destroy
+      # Behaviour tag — the F-key listener finds this by tag alone,
+      # without referencing the entity or even a behaviour id.
+      score me:
+        Tags: [ scoreable ]
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var one
+
+Expressions:
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+  int sub:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a - b;"
+  random spawn position:
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "new Vector3(Range(-4f, 4f), Range(-3f, 3f), 0);"
+  format alive:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ spawned, destroyed ]
+    ReturnType: string
+    Expression: "\"Alive now: \" + (spawned - destroyed);"
+  format totals:
+    ArgumentTypes: [ int, int, int, int ]
+    ArgumentNames: [ spawned, destroyed, zaps, score ]
+    ReturnType: string
+    Expression: "\"Spawned: \" + spawned + \"     Destroyed: \" + destroyed + \"     Zaps: \" + zaps + \"     Score: \" + score;"
+
+Entities:
+  enemy spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var spawn interval
+        Listeners:
+          - EntityId: enemy spawner
+            BehaviourId: count spawn
+          - EntityId: enemy spawner
+            BehaviourId: spawn enemy
+      count spawn:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies spawned
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var enemies spawned
+              - !var one
+      spawn enemy:
+        Type: spawner
+        Properties:
+          TemplateId: enemy_template
+          Position: !expr { ExpressionId: random spawn position }
+
+  # The whole point of the demo lives in this one entity.
+  # `fire` is a tagged listener: one keypress destroys every enemy
+  # currently tagged with whatever `target tag` resolves to, even
+  # though none of those enemies existed when this entity was built.
+  zapper:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      fire:
+        Type: key down trigger
+        Properties: { Key: !var fire key }
+        Listeners:
+          - EntityId: zapper
+            BehaviourId: count zap
+          - EntityTag: !var target tag
+            BehaviourId: count as destroyed
+          - EntityTag: !var target tag
+            BehaviourId: self destruct
+      count zap:
+        Type: int variable setter
+        Properties:
+          VariableId: !var zap count
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var zap count
+              - !var one
+
+      # F-key uses a BehaviourTag listener — pure behaviour-tag dispatch.
+      # No entity is mentioned; every behaviour tagged `scoreable` runs.
+      score all:
+        Type: key down trigger
+        Properties: { Key: !var score key }
+        Listeners:
+          - BehaviourTag: !var scoreable tag
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      title:
+        Type: text label
+        Properties:
+          Text: "SPACE = destroy all enemies     F = score per alive enemy"
+          FontSize: 22
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 700
+            Height: 40
+      alive:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format alive
+            Arguments:
+              - !var enemies spawned
+              - !var enemies destroyed
+          FontSize: 22
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 60
+            Width: 400
+            Height: 30
+      totals:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format totals
+            Arguments:
+              - !var enemies spawned
+              - !var enemies destroyed
+              - !var zap count
+              - !var score
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 90
+            Width: 600
+            Height: 30

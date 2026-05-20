@@ -73,6 +73,8 @@ namespace Assembler.Building
 					_triggerContext,
 					scope);
 
+				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
+
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
 				initialisations.Add(initialise);
 			}

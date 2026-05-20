@@ -107,22 +107,28 @@ namespace Assembler.Parsing
 			{
 				var l = listeners[i];
 
-				if (!l.BehaviourDescriptor.EntityId.StartsWith(Transformer.ParameterEntityIdSentinel))
+				if (l is not DirectListenerInfo direct)
 				{
 					result[i] = l;
 					continue;
 				}
 
-				var paramId = l.BehaviourDescriptor.EntityId[Transformer.ParameterEntityIdSentinel.Length..];
+				if (!direct.BehaviourDescriptor.EntityId.StartsWith(Transformer.ParameterEntityIdSentinel))
+				{
+					result[i] = direct;
+					continue;
+				}
+
+				var paramId = direct.BehaviourDescriptor.EntityId[Transformer.ParameterEntityIdSentinel.Length..];
 
 				if (parameters.TryGetValue(paramId, out var raw) && raw is StringValue sv)
 				{
-					result[i] = new ListenerInfo(l.BehaviourDescriptor with
+					result[i] = new DirectListenerInfo(direct.BehaviourDescriptor with
 					{
 						EntityId = sv.Value
 					})
 					{
-						OutputMapping = l.OutputMapping, EntityTag = l.EntityTag, BehaviourTag = l.BehaviourTag
+						OutputMapping = direct.OutputMapping
 					};
 				}
 				else

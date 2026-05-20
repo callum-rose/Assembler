@@ -55,6 +55,16 @@ namespace Assembler.Building
 			Build(gameInfo);
 		}
 
+		[MenuItem("Test/Build TaggedListenerDemo")]
+		public static void BuildTaggedListenerDemo()
+		{
+			var yaml = File.ReadAllText("Assets/GameDescriptors/TaggedListenerDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
 		public static void Build(GameInfo gameInfo)
 		{
 			// 1. Initialize variables and expressions

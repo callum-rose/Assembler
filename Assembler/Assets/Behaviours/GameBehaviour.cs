@@ -7,8 +7,16 @@ namespace Assembler.Behaviours
 {
 	public abstract class GameBehaviour : MonoBehaviour
 	{
+		[SerializeField] private string[] tags = Array.Empty<string>();
+
+		public string[] Tags
+		{
+			get => tags;
+			set => tags = value;
+		}
+
 		protected string Id { get; private set; }
-		
+
 		private IReadOnlyList<Action> _listeners;
 
 		public abstract void Execute();
