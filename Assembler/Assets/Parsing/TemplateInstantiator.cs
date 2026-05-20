@@ -16,12 +16,21 @@ namespace Assembler.Parsing
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IEnumerable<string>? additionalTags = null,
 			IEnumerable<BehaviourInfo>? additionalBehaviours = null,
-			IReadOnlyList<ValueInfo>? additionalVariables = null)
+			IReadOnlyList<ValueInfo>? additionalVariables = null,
+			IReadOnlyDictionary<string, object>? runtimeParameters = null)
 		{
 			var augmentedParameters = new Dictionary<string, AssemblerValue>(parameters.EmptyIfNull())
 			{
 				["self_id"] = new StringValue(entityId)
 			};
+
+			if (runtimeParameters != null)
+			{
+				foreach (var kvp in runtimeParameters)
+				{
+					augmentedParameters[kvp.Key] = AdaptRuntimeParameter(kvp.Key, kvp.Value);
+				}
+			}
 
 			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, augmentedParameters, allValues));
 
@@ -63,6 +72,27 @@ namespace Assembler.Parsing
 				VecValue vec => new Vector3Value(vec.ToVector3(allValues)),
 				ColourValue col => new ColorValue(col.ToColor(allValues)),
 				_ => value
+			};
+
+		// Adapts a value resolved at runtime (e.g. by an expression in a spawner's Parameters)
+		// into the already-flattened AssemblerValue subtype the rest of the instantiation
+		// machinery expects. The DTO-stage Transformer.ToAssemblerValue intentionally rejects
+		// these runtime types — this adapter is the building-stage entry point for them.
+		private static AssemblerValue AdaptRuntimeParameter(string key, object? value) =>
+			value switch
+			{
+				null => NoValue.Instance,
+				AssemblerValue av => av,
+				int i => new IntValue(i),
+				float f => new FloatValue(f),
+				double d => new FloatValue((float)d),
+				bool b => new BoolValue(b),
+				string s => new StringValue(s),
+				Vector3 v => new Vector3Value(v),
+				Vector2 v => new Vector2Value(v),
+				Color c => new ColorValue(c),
+				_ => throw new ParsingException(
+					$"Cannot adapt runtime parameter '{key}' (type {value.GetType()}) for template instantiation")
 			};
 
 		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,

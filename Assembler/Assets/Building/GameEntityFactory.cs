@@ -91,17 +91,14 @@ namespace Assembler.Building
 
 			var newId = $"{SpawnedIdPrefix}{templateId}_{_spawnCounter++}";
 
-			var assemblerParameters = parameters.ToDictionary(
-				kv => kv.Key,
-				kv => Transformer.ToAssemblerValue(kv.Value));
-
 			var entity = TemplateInstantiator.Instantiate(
 				template,
 				newId,
 				_allValues,
 				new ConstantSource<Vector3>(position),
 				new ConstantSource<Vector3>(rotation),
-				assemblerParameters);
+				parameters: new Dictionary<string, AssemblerValue>(),
+				runtimeParameters: parameters);
 
 			var result = Create(entity);
 			_behaviourRegistry.Register(result);
