@@ -77,7 +77,7 @@ namespace Assembler.Compiler.Compiler
 				parser.RegisterParameter(paramExpr);
 			}
 
-			var body = parser.ParseMethodBody(new Dictionary<string, Type>());
+			var body = parser.ParseMethodBody(new Dictionary<string, Type>(), returnType);
 
 			delegateType = GetDelegateType(returnType, parameters.Select(p => p.type).ToArray());
 			var lambda = Expression.Lambda(delegateType, body, paramExprs);

@@ -4,6 +4,7 @@ using System.Linq;
 using Assembler.Compiler.Compiler;
 using NUnit.Framework;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Tests.Compiler
 {
@@ -904,6 +905,41 @@ namespace Tests.Compiler
 			};
 
 			Assert.That(func(testList), Is.EqualTo(55));
+		}
+		
+		[Test]
+		public void ComplexListParameterTest()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Enumerable));
+			compiler.RegisterStaticMethods(typeof(Mathf));
+			compiler.RegisterType(typeof(Vector3));
+
+			var func = compiler.CompileFunc<IList<Vector3>, Vector3>(
+				$$"""
+				  float halfArena = 6.6f;
+				  float cell = 0.6f;
+				  int attempts = 0;
+				  float x = 0f;
+				  float y = 0f;
+				  while (attempts < 50)
+				  {
+				      x = Round(halfArena / cell) * cell;
+				      y = Round(halfArena / cell) * cell;
+				      float fx = x;
+				      float fy = y;
+				      bool clash = taken.Any(p => p.x == fx && p.y == fy);
+				      if (!clash) { return new Vector3(x, y, 0f); }
+				      attempts++;
+				  }
+				  return new Vector3(x, y, 0f);
+				  """,
+				"taken");
+
+			var vector3 = func(new List<Vector3>());
+			Assert.That(vector3.x, Is.EqualTo(6.6f).Within(0.01f));
+			Assert.That(vector3.y, Is.EqualTo(6.6f).Within(0.01f));
+			Assert.That(vector3.z, Is.EqualTo(0f).Within(0.01f));
 		}
 	}
 

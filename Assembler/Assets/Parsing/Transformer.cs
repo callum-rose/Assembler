@@ -269,10 +269,103 @@ namespace Assembler.Parsing
 					(T)(object)new Vector2(v3.Value.x, v3.Value.y)),
 				Vector2Value v2 when typeof(T) == typeof(Vector2) => new ConstantSource<T>((T)(object)v2.Value),
 				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
+				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
+					new ConstantSource<T>((T)BuildTypedList(typed)),
+				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
+					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!, resolvedValues, parameters)),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
 			};
+
+		private static bool IsAssignableList(Type t, Type elementType)
+		{
+			if (!t.IsGenericType)
+			{
+				return false;
+			}
+
+			var genericDef = t.GetGenericTypeDefinition();
+
+			if (genericDef != typeof(IList<>) &&
+			    genericDef != typeof(IReadOnlyList<>) &&
+			    genericDef != typeof(IEnumerable<>) &&
+			    genericDef != typeof(List<>))
+			{
+				return false;
+			}
+
+			return t.GetGenericArguments()[0] == elementType;
+		}
+
+		private static bool TryGetListElementType(Type t, out Type? elementType)
+		{
+			elementType = null;
+
+			if (!t.IsGenericType)
+			{
+				return false;
+			}
+
+			var genericDef = t.GetGenericTypeDefinition();
+
+			if (genericDef != typeof(IList<>) &&
+			    genericDef != typeof(IReadOnlyList<>) &&
+			    genericDef != typeof(IEnumerable<>) &&
+			    genericDef != typeof(List<>))
+			{
+				return false;
+			}
+
+			elementType = t.GetGenericArguments()[0];
+			return true;
+		}
+
+		private static object BuildTypedList(TypedListValue typed)
+		{
+			var listType = typeof(List<>).MakeGenericType(typed.ElementType);
+			var list = (System.Collections.IList)Activator.CreateInstance(listType, typed.Items.Count);
+
+			foreach (var item in typed.Items)
+			{
+				list.Add(UnwrapPrimitive(item, typed.ElementType));
+			}
+
+			return list;
+		}
+
+		private static object BuildListFromUntyped(ListValue list,
+			Type elementType,
+			IReadOnlyList<ValueInfo> resolvedValues,
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		{
+			var listType = typeof(List<>).MakeGenericType(elementType);
+			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
+
+			foreach (var item in list.Value)
+			{
+				result.Add(UnwrapPrimitive(item, elementType));
+			}
+
+			return result;
+		}
+
+		private static object UnwrapPrimitive(AssemblerValue value, Type expectedType)
+		{
+			return value switch
+			{
+				IntValue i when expectedType == typeof(int) => i.Value,
+				IntValue i when expectedType == typeof(float) => (float)i.Value,
+				FloatValue f when expectedType == typeof(float) => f.Value,
+				BoolValue b when expectedType == typeof(bool) => b.Value,
+				StringValue s when expectedType == typeof(string) => s.Value,
+				Vector2Value v when expectedType == typeof(Vector2) => v.Value,
+				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
+				ColorValue c when expectedType == typeof(Color) => c.Value,
+				_ => throw new ParsingException(
+					$"List element {value.GetType().Name} cannot be coerced to {expectedType.Name}")
+			};
+		}
 
 		private static T CoerceConstant<T>(AssemblerValue value)
 		{
@@ -314,6 +407,18 @@ namespace Assembler.Parsing
 				double d => new FloatValue((float)d),
 				bool b => new BoolValue(b),
 				string s => new StringValue(s),
+				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
+					vecList.ConvertAll(v => (AssemblerValue)new Vector3Value(v.ToVector3(resolvedValues)))),
+				List<ColourDto> colourList => new TypedListValue(typeof(Color),
+					colourList.ConvertAll(c => (AssemblerValue)new ColorValue(c.ToColor(resolvedValues)))),
+				List<int> intList => new TypedListValue(typeof(int),
+					intList.ConvertAll(i => (AssemblerValue)new IntValue(i))),
+				List<float> floatList => new TypedListValue(typeof(float),
+					floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f))),
+				List<bool> boolList => new TypedListValue(typeof(bool),
+					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
+				List<string> stringList => new TypedListValue(typeof(string),
+					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
 				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
 				_ => throw new ParsingException("Cannot convert null to a value")
 			};
@@ -375,6 +480,18 @@ namespace Assembler.Parsing
 					ToAssemblerValue(v.B),
 					ToAssemblerValue(v.A),
 					v.Raw is not null ? new StringValue(v.Raw) : NoValue.Instance),
+				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
+					vecList.ConvertAll(v => ToAssemblerValue(v))),
+				List<ColourDto> colourList => new TypedListValue(typeof(Color),
+					colourList.ConvertAll(c => ToAssemblerValue(c))),
+				List<int> intList => new TypedListValue(typeof(int),
+					intList.ConvertAll(i => (AssemblerValue)new IntValue(i))),
+				List<float> floatList => new TypedListValue(typeof(float),
+					floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f))),
+				List<bool> boolList => new TypedListValue(typeof(bool),
+					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
+				List<string> stringList => new TypedListValue(typeof(string),
+					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
 				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
 				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
 				_ => throw new ParsingException(

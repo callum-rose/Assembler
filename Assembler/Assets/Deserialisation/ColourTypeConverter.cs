@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Assembler.Deserialisation.Dtos;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -15,6 +16,19 @@ namespace Assembler.Deserialisation
 			if (parser.TryConsume<Scalar>(out var scalar))
 			{
 				return new ColourDto { Raw = scalar.Value };
+			}
+
+			if (parser.Accept<SequenceStart>(out _))
+			{
+				parser.Consume<SequenceStart>();
+				var list = new List<ColourDto>();
+
+				while (!parser.TryConsume<SequenceEnd>(out _))
+				{
+					list.Add((ColourDto)ReadYaml(parser, type, rootDeserializer));
+				}
+
+				return list;
 			}
 
 			parser.Consume<MappingStart>();

@@ -6,6 +6,7 @@ using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Debug.UI;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
+using Assembler.Behaviours.ListOperations;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Spawners;
@@ -334,6 +335,235 @@ namespace Assembler.Building
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope))));
 			},
+
+			// --- List operations: Vector3 ---
+			[typeof(ListAddInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListClear>();
+				return (b, lr => b.Initialise(new ListClearData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
+			// --- List operations: int ---
+			[typeof(ListAddInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<int>)info;
+				var b = go.AddComponent<IntListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<int>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<int>)info;
+				var b = go.AddComponent<IntListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<int>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<int>)info;
+				var b = go.AddComponent<IntListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<int>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<int>)info;
+				var b = go.AddComponent<IntListClear>();
+				return (b, lr => b.Initialise(new ListClearData<int>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
+			// --- List operations: float ---
+			[typeof(ListAddInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<float>)info;
+				var b = go.AddComponent<FloatListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<float>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<float>)info;
+				var b = go.AddComponent<FloatListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<float>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<float>)info;
+				var b = go.AddComponent<FloatListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<float>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<float>)info;
+				var b = go.AddComponent<FloatListClear>();
+				return (b, lr => b.Initialise(new ListClearData<float>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
+			// --- List operations: bool ---
+			[typeof(ListAddInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<bool>)info;
+				var b = go.AddComponent<BoolListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<bool>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<bool>)info;
+				var b = go.AddComponent<BoolListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<bool>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<bool>)info;
+				var b = go.AddComponent<BoolListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<bool>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<bool>)info;
+				var b = go.AddComponent<BoolListClear>();
+				return (b, lr => b.Initialise(new ListClearData<bool>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
+			// --- List operations: string ---
+			[typeof(ListAddInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<string>)info;
+				var b = go.AddComponent<StringListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<string>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<string>)info;
+				var b = go.AddComponent<StringListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<string>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<string>)info;
+				var b = go.AddComponent<StringListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<string>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<string>)info;
+				var b = go.AddComponent<StringListClear>();
+				return (b, lr => b.Initialise(new ListClearData<string>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
+			// --- List operations: Color ---
+			[typeof(ListAddInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListAddInfo<Color>)info;
+				var b = go.AddComponent<ColourListAdd>();
+				return (b, lr => b.Initialise(new ListAddData<Color>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListRemoveAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListRemoveAtInfo<Color>)info;
+				var b = go.AddComponent<ColourListRemoveAt>();
+				return (b, lr => b.Initialise(new ListRemoveAtData<Color>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListSetAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListSetAtInfo<Color>)info;
+				var b = go.AddComponent<ColourListSetAt>();
+				return (b, lr => b.Initialise(new ListSetAtData<Color>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope),
+					i.Index.Resolve(vr, cr, ar, tc, scope),
+					i.Value.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ListClearInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ListClearInfo<Color>)info;
+				var b = go.AddComponent<ColourListClear>();
+				return (b, lr => b.Initialise(new ListClearData<Color>(i.Id,
+					i.Listeners.ToActions(lr, tc),
+					i.List.Resolve(vr, cr, ar, tc, scope))));
+			},
+
 			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
 				var i = (SpriteInfo)info;

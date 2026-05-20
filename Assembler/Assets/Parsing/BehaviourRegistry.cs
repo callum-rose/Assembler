@@ -151,6 +151,122 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("VariableId", typeof(string)), new PropDescriptor("Value", typeof(string))
 				}),
+
+				// --- List operations ---
+				["vector list add"] = (ListAddInfo<Vector3>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Vector3>)), new PropDescriptor("Value", typeof(Vector3))
+				}),
+				["vector list remove at"] = (ListRemoveAtInfo<Vector3>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Vector3>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["vector list set at"] = (ListSetAtInfo<Vector3>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Vector3>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(Vector3))
+				}),
+				["vector list clear"] = (ListClearInfo<Vector3>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Vector3>))
+				}),
+
+				["int list add"] = (ListAddInfo<int>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<int>)), new PropDescriptor("Value", typeof(int))
+				}),
+				["int list remove at"] = (ListRemoveAtInfo<int>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<int>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["int list set at"] = (ListSetAtInfo<int>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<int>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(int))
+				}),
+				["int list clear"] = (ListClearInfo<int>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<int>))
+				}),
+
+				["float list add"] = (ListAddInfo<float>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<float>)), new PropDescriptor("Value", typeof(float))
+				}),
+				["float list remove at"] = (ListRemoveAtInfo<float>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<float>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["float list set at"] = (ListSetAtInfo<float>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<float>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(float))
+				}),
+				["float list clear"] = (ListClearInfo<float>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<float>))
+				}),
+
+				["bool list add"] = (ListAddInfo<bool>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<bool>)), new PropDescriptor("Value", typeof(bool))
+				}),
+				["bool list remove at"] = (ListRemoveAtInfo<bool>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<bool>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["bool list set at"] = (ListSetAtInfo<bool>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<bool>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(bool))
+				}),
+				["bool list clear"] = (ListClearInfo<bool>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<bool>))
+				}),
+
+				["string list add"] = (ListAddInfo<string>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<string>)), new PropDescriptor("Value", typeof(string))
+				}),
+				["string list remove at"] = (ListRemoveAtInfo<string>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<string>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["string list set at"] = (ListSetAtInfo<string>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<string>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(string))
+				}),
+				["string list clear"] = (ListClearInfo<string>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<string>))
+				}),
+
+				["colour list add"] = (ListAddInfo<Color>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Color>)), new PropDescriptor("Value", typeof(Color))
+				}),
+				["colour list remove at"] = (ListRemoveAtInfo<Color>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Color>)), new PropDescriptor("Index", typeof(int))
+				}),
+				["colour list set at"] = (ListSetAtInfo<Color>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Color>)),
+					new PropDescriptor("Index", typeof(int)),
+					new PropDescriptor("Value", typeof(Color))
+				}),
+				["colour list clear"] = (ListClearInfo<Color>.Create, new[]
+				{
+					new PropDescriptor("List", typeof(IList<Color>))
+				}),
+
 				["sprite"] = (SpriteInfo.Create, new[]
 				{
 					new PropDescriptor("Sprite", typeof(Sprite)), new PropDescriptor("Size", typeof(Vector2))

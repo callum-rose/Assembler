@@ -18,6 +18,14 @@ namespace Assembler.Resolving
 		{
 			_typeRegistry = typeRegistry;
 			_compiler = compiler;
+
+			// Globally register LINQ extension methods so expressions can use
+			// .Any/.Where/.Select/.Count etc. on IList<T> arguments without
+			// per-expression RegisterTypeStatics. Also register Color so it's
+			// constructible from any expression that consumes the new "colour"
+			// argument type.
+			_compiler.RegisterStaticMethods(typeof(System.Linq.Enumerable));
+			_compiler.RegisterType(typeof(UnityEngine.Color));
 		}
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)

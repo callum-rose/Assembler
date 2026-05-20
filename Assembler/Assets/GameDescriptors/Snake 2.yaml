@@ -1,0 +1,567 @@
+Game:
+  Title: Snake 2
+  Description: >
+    Classic Snake. Use WASD to change direction. The snake moves one cell every
+    interval, leaving body segments behind it. Eat food to grow longer and gain
+    points. Hit a wall or your own tail and it's game over. Reach 10 points to
+    win.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#000000"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # Scoring
+  - Id: initial score
+    Value: 0
+  - Id: score per food
+    Value: 1
+  - Id: score to win
+    Value: 10
+
+  # Grid / movement
+  - Id: cell size
+    Value: 0.6
+  - Id: step interval
+    Value: 0.15
+  - Id: initial segment lifetime
+    Value: 0.75
+
+  # Directions (one cell per step)
+  - Id: dir up
+    Value: !vec { X: 0, Y: 0.6 }
+  - Id: dir down
+    Value: !vec { X: 0, Y: -0.6 }
+  - Id: dir left
+    Value: !vec { X: -0.6, Y: 0 }
+  - Id: dir right
+    Value: !vec { X: 0.6, Y: 0 }
+  - Id: zero vec
+    Value: !vec { X: 0, Y: 0 }
+
+  # Starting state
+  - Id: head start position
+    Value: !vec { X: 0, Y: 0 }
+  - Id: initial direction
+    Value: !vec { X: 0.6, Y: 0 }
+
+  # Sizes
+  - Id: head size
+    Value: !vec { X: 0.55, Y: 0.55 }
+  - Id: segment size
+    Value: !vec { X: 0.5, Y: 0.5 }
+  - Id: food size
+    Value: !vec { X: 0.5, Y: 0.5 }
+  - Id: horizontal wall size
+    Value: !vec { X: 15.6, Y: 0.6 }
+  - Id: vertical wall size
+    Value: !vec { X: 0.6, Y: 15.6 }
+
+  # Wall positions
+  - Id: top wall position
+    Value: !vec { X: 0, Y: 7.5 }
+  - Id: bottom wall position
+    Value: !vec { X: 0, Y: -7.5 }
+  - Id: left wall position
+    Value: !vec { X: -7.5, Y: 0 }
+  - Id: right wall position
+    Value: !vec { X: 7.5, Y: 0 }
+
+  # Camera
+  - Id: camera position
+    Value: !vec { X: 0, Y: 0, Z: -10 }
+  - Id: camera rotation
+    Value: !vec { X: 0, Y: 0, Z: 0 }
+  - Id: camera view
+    Value: "orthographic"
+  - Id: camera size
+    Value: 8
+
+  # Colours referenced by name via !colour <name> (see Pong for the pattern)
+
+Variables:
+  - Id: score
+    Value: !var initial score
+
+  # Direction the snake will move on the next step. Updated by WASD input.
+  - Id: direction
+    Value: !var initial direction
+
+  # Tracks the head's logical grid position so spawners can place segments
+  # at the snake's *previous* cell each tick (the spawner Position is a value
+  # provider, so we can drive it from this variable).
+  - Id: head pos
+    Value: !var head start position
+
+  # Where the head was on the previous tick — this is where new segments
+  # spawn (one cell behind the head, so the head never overlaps its own
+  # freshly-spawned tail piece).
+  - Id: prev head pos
+    Value: !var head start position
+
+  # Lifetime applied to each spawned tail segment. Eating food extends this
+  # so segments persist longer, making the snake effectively longer.
+  - Id: segment lifetime
+    Value: !var initial segment lifetime
+
+  # Game over flag — set when the snake hits a wall or its own tail.
+  - Id: is dead
+    Value: false
+
+  # Positions currently occupied by snake body segments. Updated each step:
+  # the previous head cell is appended when a segment spawns, the oldest entry
+  # is removed when a segment expires. The food-spawn expression reads this
+  # to avoid placing food on top of the snake.
+  - Id: segment positions
+    Value: !vec []
+
+Expressions:
+  - Id: int add
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+
+  - Id: float add
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ a, b ]
+    ReturnType: float
+    Expression: "a + b;"
+
+  - Id: vec add
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ a, b ]
+    ReturnType: vector
+    Expression: "new UnityEngine.Vector3(a.x + b.x, a.y + b.y, a.z + b.z);"
+
+  - Id: int greater or equal
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: bool
+    Expression: "a >= b;"
+
+  - Id: is game over
+    ArgumentTypes: [ int, int, bool ]
+    ArgumentNames: [ score, target, dead ]
+    ReturnType: bool
+    Expression: "score >= target || dead;"
+
+  # Random food position snapped to the cell grid, within the arena bounds.
+  # Takes the list of cells currently occupied by the snake so food never
+  # spawns inside the body. Bails out after 50 attempts if the snake fills
+  # the arena (in practice this never happens at score-to-win = 10).
+  - Id: next food position
+    ArgumentTypes: [ vector list ]
+    ArgumentNames: [ taken ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    RegisterTypeStatics: [ UnityEngine.Random, UnityEngine.Mathf ]
+    Expression: >
+      float halfArena = 6.6f;
+      float cell = 0.6f;
+      int attempts = 0;
+      float x = 0f;
+      float y = 0f;
+      while (attempts < 50)
+      {
+          x = Round(Range(-halfArena, halfArena) / cell) * cell;
+          y = Round(Range(-halfArena, halfArena) / cell) * cell;
+          float fx = x;
+          float fy = y;
+          bool clash = taken.Any(p => p.x == fx && p.y == fy);
+          if (!clash) { return new Vector3(x, y, 0f); }
+          attempts++;
+      }
+      return new Vector3(x, y, 0f);
+
+  - Id: format score
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ s ]
+    ReturnType: string
+    Expression: "\"Score: \" + s;"
+
+Templates:
+  - Id: h_wall_template
+    Tags:
+      - wall
+    Behaviours:
+      - Type: cube gizmo
+        Id: gizmo
+        Properties:
+          Size: !var horizontal wall size
+          IsWire: false
+          Colour: !colour white
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !var horizontal wall size
+          IsTrigger: false
+
+  - Id: v_wall_template
+    Tags:
+      - wall
+    Behaviours:
+      - Type: cube gizmo
+        Id: gizmo
+        Properties:
+          Size: !var vertical wall size
+          IsWire: false
+          Colour: !colour white
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !var vertical wall size
+          IsTrigger: false
+
+  # Body segment — spawned at the head's *previous* cell each step.
+  # Has a timer trigger that destroys it after `segment lifetime` seconds,
+  # creating the tail. Effective length = segment lifetime / step interval.
+  - Id: segment_template
+    Tags:
+      - segment
+    Behaviours:
+      - Type: cube gizmo
+        Id: gizmo
+        Properties:
+          Size: !var segment size
+          IsWire: false
+          Colour: !colour green
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !var segment size
+          IsTrigger: true
+      - Type: timer trigger
+        Id: lifetime timer
+        Properties:
+          Delay: !var segment lifetime
+        Listeners:
+          # Untrack first (segments expire FIFO, so index 0 is always the one
+          # currently expiring), then destroy the GameObject.
+          - EntityId: segment manager
+            BehaviourId: untrack oldest segment
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      - Type: destroy
+        Id: self destruct
+
+  # Food — visually a yellow square. On contact with the head it hides,
+  # then food manager spawns the next piece and score is incremented.
+  # Has a rigidbody so trigger detection works reliably even though the
+  # head moves via transform-driven `translate`.
+  - Id: food_template
+    Tags:
+      - food
+    Behaviours:
+      - Type: cube gizmo
+        Id: gizmo
+        Properties:
+          Size: !var food size
+          IsWire: false
+          Colour: !colour yellow
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !var food size
+          IsTrigger: true
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+      - Type: trigger enter trigger
+        Id: eaten trigger
+        Properties:
+          TagsToDetect:
+            - head
+        Listeners:
+          - EntityId: food manager
+            BehaviourId: spawn next food
+          - EntityId: score tracker
+            BehaviourId: increment score
+          - EntityId: segment manager
+            BehaviourId: grow snake
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      - Type: destroy
+        Id: self destruct
+
+Entities:
+  # --- Walls ---
+  - Id: top wall
+    Template: { Id: h_wall_template }
+    Position: !var top wall position
+
+  - Id: bottom wall
+    Template: { Id: h_wall_template }
+    Position: !var bottom wall position
+
+  - Id: left wall
+    Template: { Id: v_wall_template }
+    Position: !var left wall position
+
+  - Id: right wall
+    Template: { Id: v_wall_template }
+    Position: !var right wall position
+
+  # --- Snake Head ---
+  - Id: snake head
+    Tags:
+      - head
+    Position: !var head start position
+    Behaviours:
+      - Type: cube gizmo
+        Id: gizmo
+        Properties:
+          Size: !var head size
+          IsWire: false
+          Colour: !colour red
+
+      - Type: box collider
+        Id: box collider
+        Properties:
+          Size: !var head size
+          IsTrigger: false
+
+      - Type: rigidbody
+        Id: rigidbody
+        Properties:
+          UseGravity: false
+
+      # Stepped movement: every interval, record current head pos as the
+      # previous cell, advance the logical head pos by direction, move the
+      # transform, then spawn a segment at the previous cell.
+      # Listener order matters — segment manager fires LAST so it reads the
+      # updated `prev head pos` variable.
+      - Type: interval trigger
+        Id: step timer
+        Properties:
+          Interval: !var step interval
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: record prev pos
+          - EntityId: snake head
+            BehaviourId: advance head pos
+          - EntityId: snake head
+            BehaviourId: step move
+          - EntityId: segment manager
+            BehaviourId: spawn segment
+          # After spawning the visible segment, record its position so the
+          # food-spawn expression can avoid placing food there.
+          - EntityId: segment manager
+            BehaviourId: track segment position
+
+      - Type: vector variable setter
+        Id: record prev pos
+        Properties:
+          VariableId: !var prev head pos
+          Value: !var head pos
+
+      - Type: vector variable setter
+        Id: advance head pos
+        Properties:
+          VariableId: !var head pos
+          Value: !expr
+            ExpressionId: vec add
+            Arguments:
+              - !var head pos
+              - !var direction
+
+      - Type: translate
+        Id: step move
+        Properties:
+          Displacement: !var direction
+
+      # Direction input — key down (one event per press)
+      - Type: key down trigger
+        Id: up key
+        Properties:
+          Key: "w"
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: set dir up
+      - Type: vector variable setter
+        Id: set dir up
+        Properties:
+          VariableId: !var direction
+          Value: !var dir up
+
+      - Type: key down trigger
+        Id: down key
+        Properties:
+          Key: "s"
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: set dir down
+      - Type: vector variable setter
+        Id: set dir down
+        Properties:
+          VariableId: !var direction
+          Value: !var dir down
+
+      - Type: key down trigger
+        Id: left key
+        Properties:
+          Key: "a"
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: set dir left
+      - Type: vector variable setter
+        Id: set dir left
+        Properties:
+          VariableId: !var direction
+          Value: !var dir left
+
+      - Type: key down trigger
+        Id: right key
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: snake head
+            BehaviourId: set dir right
+      - Type: vector variable setter
+        Id: set dir right
+        Properties:
+          VariableId: !var direction
+          Value: !var dir right
+
+      # Death triggers — wall collision (solid) or tail trigger sets is dead.
+      - Type: collision enter trigger
+        Id: wall hit
+        Properties:
+          TagsToDetect:
+            - wall
+        Listeners:
+          - EntityId: game manager
+            BehaviourId: set dead
+
+      - Type: trigger enter trigger
+        Id: self hit
+        Properties:
+          TagsToDetect:
+            - segment
+        Listeners:
+          - EntityId: game manager
+            BehaviourId: set dead
+
+  # --- Segment Manager ---
+  # Spawns a segment at the head's *previous* cell each tick. The segment
+  # auto-destroys after `segment lifetime` seconds, so the tail trails the
+  # head and naturally shortens at the back. Eating food increases the
+  # lifetime, effectively growing the snake.
+  - Id: segment manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: spawner
+        Id: spawn segment
+        Properties:
+          TemplateId: segment_template
+          Position: !var prev head pos
+
+      - Type: vector list add
+        Id: track segment position
+        Properties:
+          List: !var segment positions
+          Value: !var prev head pos
+
+      - Type: vector list remove at
+        Id: untrack oldest segment
+        Properties:
+          List: !var segment positions
+          Index: 0
+
+      - Type: float variable setter
+        Id: grow snake
+        Properties:
+          VariableId: !var segment lifetime
+          Value: !expr
+            ExpressionId: float add
+            Arguments:
+              - !var segment lifetime
+              - !var step interval
+
+  # --- Score Tracker ---
+  - Id: score tracker
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: int variable setter
+        Id: increment score
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var score per food
+
+  # --- Food Manager ---
+  # Spawns first food on start, then a new piece each time the current one
+  # is eaten. Position is re-evaluated each spawn via the random expression.
+  - Id: food manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: on start trigger
+        Id: on start
+        Listeners:
+          - EntityId: food manager
+            BehaviourId: spawn next food
+
+      - Type: spawner
+        Id: spawn next food
+        Properties:
+          TemplateId: food_template
+          Position: !expr
+            ExpressionId: next food position
+            Arguments:
+              - !var segment positions
+
+  # --- Game Manager ---
+  - Id: game manager
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: bool variable setter
+        Id: set dead
+        Properties:
+          VariableId: !var is dead
+          Value: true
+
+  # --- Score Display ---
+  - Id: score display
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: text label
+        Id: score text
+        Properties:
+          Text: !expr
+            ExpressionId: format score
+            Arguments:
+              - !var score
+          FontSize: 32
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 200
+            Height: 50
+
+  # --- Camera ---
+  - Id: camera
+    Tags:
+      - camera
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      - Type: camera
+        Id: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+GameOverCondition: !expr
+  ExpressionId: is game over
+  Arguments:
+    - !var score
+    - !var score to win
+    - !var is dead
