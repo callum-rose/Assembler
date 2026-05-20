@@ -50,7 +50,13 @@ All behaviours are registered in `BehaviourRegistry.All` (`Assets/Parsing/Behavi
 - A **Data class** (e.g., `VelocityData`) in `Assets/Resolving/Behaviours/` — holds `IValueProvider<T>` properties for runtime, extends `BehaviourData`
 - A **MonoBehaviour** (e.g., `Velocity`) in `Assets/Behaviours/` — extends `GameBehaviour<TData>`, the actual Unity component
 
-Behaviours communicate via a listener/observer pattern: triggers notify downstream behaviours through `Action` delegates.
+Behaviours communicate via a listener/observer pattern: triggers notify downstream behaviours through `Action` delegates. `ListenerInfo` has three variants (`Assets/Parsing/Info/ListenerInfo.cs`):
+
+- `DirectListenerInfo` — targets a specific behaviour by `BehaviourDescriptor` (entity ID + behaviour ID)
+- `EntityTaggedListenerInfo` — targets behaviours on any entity matching an entity tag (optionally filtered by behaviour ID)
+- `BehaviourTaggedListenerInfo` — targets any behaviour matching a behaviour tag, regardless of entity
+
+Tag values are `ValueSource<string>`, so they can be constants, references, or expressions resolved at runtime. See `Assets/GameDescriptors/TaggedListenerDemo.yaml` for example usage.
 
 ### Two-Phase Initialization
 
@@ -79,7 +85,9 @@ Building uses deferred initialization. `GameBehaviourFactory.Create()` returns a
 
 ### Game Definitions
 
-Example YAML game files (`Pong.yaml`, `Snake.yaml`) are in `Assets/GameDescriptors/`. They define: metadata, assets, constants, variables, templates, entities (with behaviours and listeners), and expressions.
+Example YAML game files are in `Assets/GameDescriptors/` (e.g. `Pong.yaml`, `Snake.yaml`, `Snake 2.yaml`, `TaggedListenerDemo.yaml`). They define: metadata, assets, constants, variables (including list-typed variables, e.g. `!vec []` for empty vector lists), templates, entities (with behaviours and listeners), and expressions.
+
+IDs for definitions (entities, behaviours, templates, variables, etc.) are promoted to YAML keys at the definition site rather than being a separate `id:` property — i.e. the mapping key *is* the identifier.
 
 ## Workflow
 
