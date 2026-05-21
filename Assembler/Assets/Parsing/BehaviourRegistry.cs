@@ -96,6 +96,7 @@ namespace Assembler.Parsing
 				["audio source"] = AudioSourceInfo.Create,
 				["sphere gizmo"] = SphereGizmoInfo.Create,
 				["cube gizmo"] = CubeGizmoInfo.Create,
+				["line gizmo"] = LineGizmoInfo.Create,
 				["text label"] = TextLabelInfo.Create,
 				["progress bar"] = ProgressBarInfo.Create,
 				["ui image"] = UIImageInfo.Create,

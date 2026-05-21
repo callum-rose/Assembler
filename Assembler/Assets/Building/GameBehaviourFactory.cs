@@ -653,6 +653,17 @@ namespace Assembler.Building
 					i.IsWire.Resolve(vr, cr, ar, tc, scope),
 					i.Colour.Resolve(vr, cr, ar, tc, scope))));
 			},
+			[typeof(LineGizmoInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (LineGizmoInfo)info;
+				var b = go.AddComponent<LineGizmoBehaviour>();
+
+				return (b, lr => b.Initialise(new LineGizmoData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Start.Resolve(vr, cr, ar, tc, scope),
+					i.End.Resolve(vr, cr, ar, tc, scope),
+					i.Colour.Resolve(vr, cr, ar, tc, scope))));
+			},
 			[typeof(TextLabelInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
 				var i = (TextLabelInfo)info;
@@ -794,6 +805,7 @@ namespace Assembler.Building
 			[typeof(AudioSourceInfo)] = typeof(AudioSourceBehaviour),
 			[typeof(SphereGizmoInfo)] = typeof(SphereGizmoBehaviour),
 			[typeof(CubeGizmoInfo)] = typeof(CubeGizmoBehaviour),
+			[typeof(LineGizmoInfo)] = typeof(LineGizmoBehaviour),
 			[typeof(TextLabelInfo)] = typeof(TextLabel),
 			[typeof(ProgressBarInfo)] = typeof(ProgressBar),
 			[typeof(UIImageInfo)] = typeof(UIImage),
