@@ -17,7 +17,10 @@ namespace Assembler.Behaviours.Audio
 
 		protected override void OnInitialise(AudioSourceData data)
 		{
-			_audioSource = gameObject.GetComponent<AudioSource>() ?? gameObject.AddComponent<AudioSource>();
+			if (!gameObject.TryGetComponent(out _audioSource))
+			{
+				_audioSource = gameObject.AddComponent<AudioSource>();
+			}
 			_audioSource.clip = data.Clip.Value;
 			_audioSource.loop = data.Loop.Value;
 

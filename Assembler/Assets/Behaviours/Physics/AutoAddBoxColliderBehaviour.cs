@@ -16,7 +16,10 @@ namespace Assembler.Behaviours.Physics
 		
 		protected override void OnInitialise(BoxColliderData data)
 		{
-			_boxCollider = gameObject.GetComponent<BoxCollider>() ?? gameObject.AddComponent<BoxCollider>();
+			if (!gameObject.TryGetComponent(out _boxCollider))
+			{
+				_boxCollider = gameObject.AddComponent<BoxCollider>();
+			}
 			data.Size.UseIfValueExists(v => _boxCollider.size = v);
 			data.IsTrigger.UseIfValueExists(v => _boxCollider.isTrigger = v);
 		}

@@ -15,7 +15,10 @@ namespace Assembler.Behaviours.Physics
 
 		protected override void OnInitialise(RigidbodyData data)
 		{
-			_rigidbody = gameObject.GetComponent<Rigidbody>() ?? gameObject.AddComponent<Rigidbody>();
+			if (!gameObject.TryGetComponent(out _rigidbody))
+			{
+				_rigidbody = gameObject.AddComponent<Rigidbody>();
+			}
 			_rigidbody.linearVelocity = Vector3.zero;
 			_rigidbody.angularVelocity = Vector3.zero;
 			data.IsKinematic.UseIfValueExists(v => _rigidbody.isKinematic = v);
