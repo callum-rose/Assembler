@@ -23,6 +23,14 @@ namespace Assembler.Parsing
 
 	internal static class BehaviourRegistry
 	{
+		private readonly static PropDescriptor[] AnimationProps =
+		{
+			new("Start", typeof(Vector3)),
+			new("End", typeof(Vector3)),
+			new("Duration", typeof(float)),
+			new("Easing", typeof(string))
+		};
+
 		internal readonly static IReadOnlyDictionary<string, (BehaviourFactory Factory, PropDescriptor[] Props)> All =
 			new Dictionary<string, (BehaviourFactory, PropDescriptor[])>
 			{
@@ -46,6 +54,9 @@ namespace Assembler.Parsing
 				{
 					new PropDescriptor("Displacement", typeof(Vector3))
 				}),
+				["move animation"] = (MoveAnimationInfo.Create, AnimationProps),
+				["scale animation"] = (ScaleAnimationInfo.Create, AnimationProps),
+				["rotate animation"] = (RotateAnimationInfo.Create, AnimationProps),
 				["key hold trigger"] = (KeyHoldTriggerInfo.Create, new[]
 				{
 					new PropDescriptor("Key", typeof(string))

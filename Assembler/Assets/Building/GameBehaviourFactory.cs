@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Debug.UI;
 using Assembler.Behaviours.Camera;
@@ -85,6 +86,42 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new TranslateData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Displacement.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(MoveAnimationInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (MoveAnimationInfo)info;
+				var b = go.AddComponent<MoveAnimation>();
+
+				return (b, lr => b.Initialise(new TransformAnimationData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Start.Resolve(vr, cr, ar, tc, scope),
+					i.End.Resolve(vr, cr, ar, tc, scope),
+					i.Duration.Resolve(vr, cr, ar, tc, scope),
+					i.Easing.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(ScaleAnimationInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (ScaleAnimationInfo)info;
+				var b = go.AddComponent<ScaleAnimation>();
+
+				return (b, lr => b.Initialise(new TransformAnimationData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Start.Resolve(vr, cr, ar, tc, scope),
+					i.End.Resolve(vr, cr, ar, tc, scope),
+					i.Duration.Resolve(vr, cr, ar, tc, scope),
+					i.Easing.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(RotateAnimationInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (RotateAnimationInfo)info;
+				var b = go.AddComponent<RotateAnimation>();
+
+				return (b, lr => b.Initialise(new TransformAnimationData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Start.Resolve(vr, cr, ar, tc, scope),
+					i.End.Resolve(vr, cr, ar, tc, scope),
+					i.Duration.Resolve(vr, cr, ar, tc, scope),
+					i.Easing.Resolve(vr, cr, ar, tc, scope))));
 			},
 			[typeof(SetPositionInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
