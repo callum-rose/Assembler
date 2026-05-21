@@ -85,6 +85,16 @@ namespace Assembler.Building
 			Build(gameInfo);
 		}
 
+		[MenuItem("Test/Build HierarchyDemo")]
+		public static void BuildHierarchyDemo()
+		{
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/HierarchyDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
 		public static void Build(GameInfo gameInfo)
 		{
 			// 1. Initialize variables and expressions
