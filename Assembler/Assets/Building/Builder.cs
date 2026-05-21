@@ -134,6 +134,7 @@ namespace Assembler.Building
 
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
+			var entityRegistry = new EntityRegistry();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
@@ -144,6 +145,7 @@ namespace Assembler.Building
 				compiledExpressionsRegistry,
 				behaviourRegistry,
 				assetRegistry,
+				entityRegistry,
 				templatesById,
 				gameInfo.Variables,
 				triggerContext);

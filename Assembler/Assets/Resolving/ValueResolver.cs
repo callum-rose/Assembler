@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Assembler.Parsing.Info;
+using UnityEngine;
 
 namespace Assembler.Resolving
 {
@@ -11,7 +12,8 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			AssetRegistry assets,
 			TriggerContext triggerContext,
-			EntityVariableScope scope)
+			EntityVariableScope scope,
+			EntityRegistry entities)
 		{
 			return valueSource switch
 			{
@@ -21,8 +23,11 @@ namespace Assembler.Resolving
 					variables,
 					expressions,
 					triggerContext,
-					scope)),
+					scope,
+					entities)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
+				EntityPositionSource ep when typeof(T) == typeof(Vector3) =>
+					(IValueProvider<T>)(object)new TransformPositionProvider(entities.Get(ep.EntityId)),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName, triggerContext),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
@@ -34,7 +39,8 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
-			EntityVariableScope? scope)
+			EntityVariableScope? scope,
+			EntityRegistry entities)
 		{
 			var (_, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
@@ -50,7 +56,8 @@ namespace Assembler.Resolving
 					variables,
 					expressions,
 					triggerContext,
-					scope);
+					scope,
+					entities);
 			}
 
 			return InvokeWithArgs;
@@ -85,10 +92,11 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
-			EntityVariableScope? scope)
+			EntityVariableScope? scope,
+			EntityRegistry entities)
 		{
 			var wrapperType = valueSource.GetType();
-			var innerType = wrapperType.GetGenericArguments()[0];
+			var innerType = wrapperType.IsGenericType ? wrapperType.GetGenericArguments()[0] : expectedType;
 			var typeForResolve = innerType == typeof(object) ? expectedType : innerType;
 
 			var method = typeof(ValueResolver).GetMethod(nameof(ResolveTyped),
@@ -97,7 +105,7 @@ namespace Assembler.Resolving
 			return (IValueProvider)method.Invoke(null,
 				new object?[]
 				{
-					valueSource, variables, expressions, triggerContext, scope
+					valueSource, variables, expressions, triggerContext, scope, entities
 				});
 		}
 
@@ -106,7 +114,8 @@ namespace Assembler.Resolving
 			VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
-			EntityVariableScope? scope)
+			EntityVariableScope? scope,
+			EntityRegistry entities)
 		{
 			return wrapperBoxed switch
 			{
@@ -115,7 +124,9 @@ namespace Assembler.Resolving
 				ValueReferenceSource<T> v => variables.Get<T>(v.VariableId, scope),
 				ValueReferenceSource<object> vo => variables.Get<T>(vo.VariableId, scope),
 				ExpressionSource<T> e => new ExpressionValueProvider<T>(
-					BuildExpressionContainer(e, variables, expressions, triggerContext, scope)),
+					BuildExpressionContainer(e, variables, expressions, triggerContext, scope, entities)),
+				EntityPositionSource ep when typeof(T) == typeof(Vector3) =>
+					new TransformPositionProvider(entities.Get(ep.EntityId)),
 				TriggerOutputSource<T> o => new TriggerOutputProvider<T>(o.OutputName,
 					triggerContext ?? throw new InvalidOperationException(
 						$"TriggerContext required to resolve trigger output '{o.OutputName}'")),

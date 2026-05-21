@@ -40,6 +40,8 @@ namespace Assembler.Parsing.Info
 
 	public sealed record AssetRef(string Id) : AssemblerRef(Id);
 
+	public sealed record EntityPositionRef(string Id) : AssemblerRef(Id);
+
 	public sealed record OutputRef(string Id) : AssemblerRef(Id);
 
 	public sealed record ParamRef(string Id) : AssemblerRef(Id);

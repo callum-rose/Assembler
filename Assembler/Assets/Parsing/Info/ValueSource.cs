@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Assembler.Parsing.Info
 {
@@ -20,6 +21,8 @@ namespace Assembler.Parsing.Info
 	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>;
 
 	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;
+
+	public sealed record EntityPositionSource(string EntityId) : ValueSource<Vector3>;
 
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
 }
