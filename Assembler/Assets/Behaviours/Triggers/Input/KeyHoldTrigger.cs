@@ -4,6 +4,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Input
 {
+	/// <summary>Fires every frame while the named key is held down.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Key: One of "w", "a", "s", "d", "up", "down", "left", "right".
+	/// </remarks>
 	public class KeyHoldTrigger : InputTrigger<KeyHoldTriggerData>
 	{
 		private void Update()

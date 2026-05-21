@@ -9,8 +9,8 @@ description: >
 
 # Adding a New Behaviour to Assembler
 
-Every behaviour requires **5 coordinated changes** across 4 locations. All 5 must be created together
-or the pipeline will fail. Follow each step exactly, matching the code style shown.
+Every behaviour requires **6 coordinated changes** across 5 locations. All 6 must be created together
+or the pipeline (and/or doc generation) will fail. Follow each step exactly, matching the code style shown.
 
 > **Critical**: Use tabs for indentation in all files. Match the existing code style precisely.
 
@@ -98,7 +98,18 @@ namespace Assembler.Parsing.Info.Behaviours
 - Each property is `ValueSource<T>`.
 - `Create` signature is always: `(string id, IReadOnlyList<ListenerInfo> listeners, IReadOnlyDictionary<string, AssemblerValue> props, IReadOnlyList<ValueInfo> v, IReadOnlyDictionary<string, AssemblerValue> p)`.
 - Use `Transformer.CreateValueSource<T>(v, props.GetValueOrDefault("PropName"), parameters: p)` for each property.
-- The string passed to `GetValueOrDefault` must **exactly match** the `PropDescriptor` name in the registry (Step 4).
+- **Default convention:** the record property name *is* the YAML key. Doc generation reflects the record's primary-ctor params to build the property list — so prefer matching the YAML key to the property name (e.g. record param `Velocity` ↔ YAML key `Velocity`).
+- **`[YamlName]` override:** if the YAML key cannot match the record property name (e.g. `VariableSetterInfo`'s `ValueToSet` is exposed in YAML as `VariableId`), annotate the param with `[property: YamlName("YamlKey")]`:
+
+  ```csharp
+  public record VariableSetterInfo<T>(
+      string Id,
+      IReadOnlyList<ListenerInfo> Listeners,
+      [property: YamlName("VariableId")] ValueSource<T> ValueToSet,
+      [property: YamlName("Value")] ValueSource<T> ValueToGet) : BehaviourInfo(Id, Listeners) { ... }
+  ```
+
+  Doc-gen reads the attribute via reflection; the YAML key in `props.GetValueOrDefault("...")` must still match what `[YamlName]` declares. `YamlNameAttribute` lives in `Assembler.Parsing.Info`.
 - `SubstituteParameters` calls `.SubstituteParameters(parameters, allValues)` on every `ValueSource<T>` property.
 - For triggers, the Info record is identical in structure — it still extends `BehaviourInfo`, not a trigger-specific base.
 
@@ -158,7 +169,7 @@ namespace Assembler.Resolving.Behaviours
 
 ---
 
-## Step 3 — MonoBehaviour
+## Step 3 — MonoBehaviour (with XML doc comments)
 
 **Location:** `Assets/Behaviours/<Subcategory>/<Name>.cs`
 **Namespace:** `Assembler.Behaviours.<Subcategory>`
@@ -166,6 +177,39 @@ namespace Assembler.Resolving.Behaviours
 Subcategories: `Movement`, `Physics`, `Camera`, `Sprites`, `Audio`, `Spawners`, `Debug`, `Debug.UI`,
 `VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`, `Triggers.Conditionals`,
 `Triggers.Physical`.
+
+> **The MonoBehaviour is the documentation home.** `Assembler > Generate Behaviour Docs` reads the
+> `<summary>` and `<remarks>` XML doc comments above the class declaration to build the AI-facing
+> [`Assets/docs/Behaviours.md`](../../docs/Behaviours.md). **Author docs here, not on the Info record.**
+> Doc-gen validates the property set: any Info property missing from your `Properties:` block (or any
+> extra `Properties:` entry not on Info) emits a warning in the Editor console and in the markdown.
+
+### Doc-comment contract
+
+Every MonoBehaviour declares (above `public class ...`):
+
+```csharp
+/// <summary>One-sentence behaviour description.</summary>
+/// <remarks>
+/// Properties:
+///   PropName: human description.
+///   AnotherProp [TypeOverride]: description; bracketed type overrides the rendered .NET type.
+/// Outputs:
+///   output_name [Type]: description.
+/// </remarks>
+```
+
+- **`<summary>`** — required. One sentence on what the behaviour does.
+- **`Properties:` block** — one line per Info property. Names must match the YAML keys (i.e. record
+  property names, or the `[YamlName]` override if present). The block must be present even if empty
+  (`Properties:` on its own line is fine for behaviours with no properties — emit it so the parser knows).
+- **`Outputs:` block** — only required when the MonoBehaviour publishes outputs via
+  `TriggerContext.Set("name", value)` (e.g. physical triggers, UI controls). Names must match the
+  literal strings passed to `TriggerContext.Set`. The bracketed type is part of the doc — output
+  types are not otherwise discoverable from the Info record.
+- **Generic bases:** author the doc once on the generic base (e.g. `VariableSetterBehaviour<T>`,
+  `ListAddBehaviour<T>`) — closed subclasses (`Vector3Setter`, `IntListAdd`, …) inherit it via the
+  doc-walker climbing `BaseType`. Don't repeat the doc on each closed type.
 
 ### Regular behaviour
 
@@ -176,6 +220,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
 {
+	/// <summary>Moves the entity each frame by <c>Velocity * deltaTime</c>.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Velocity: World-space velocity in units per second.
+	/// </remarks>
 	public class Velocity : GameBehaviour<VelocityData>
 	{
 		private void Update()
@@ -201,6 +250,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
+	/// <summary>Fires once after a delay (starts the countdown on entity start, or on Execute).</summary>
+	/// <remarks>
+	/// Properties:
+	///   Delay: Seconds to wait before notifying listeners.
+	/// </remarks>
 	public class TimerTrigger : TimingTrigger<TimerTriggerData>
 	{
 		private void Start()
@@ -222,6 +276,44 @@ namespace Assembler.Behaviours.Triggers.Timing
 }
 ```
 
+### Physical trigger that publishes outputs
+
+```csharp
+using UnityEngine;
+
+namespace Assembler.Behaviours.Triggers.Physical
+{
+	/// <summary>Fires when a non-trigger collision begins with another entity matching TagsToDetect.</summary>
+	/// <remarks>
+	/// Properties:
+	///   TagsToDetect: Only fire when the other entity has at least one of these tags.
+	/// Outputs:
+	///   contact_point [Vector3]: World-space point of first contact.
+	///   other_position [Vector3]: Other entity's world position at the moment of collision.
+	/// </remarks>
+	public class CollisionEnter : PhysicalTrigger
+	{
+		private void OnCollisionEnter(Collision other)
+		{
+			if (IsOtherRelevant(other.gameObject))
+			{
+				TriggerContext.Push();
+				try
+				{
+					TriggerContext.Set("contact_point", other.contacts[0].point);
+					TriggerContext.Set("other_position", other.transform.position);
+					NotifyListeners();
+				}
+				finally
+				{
+					TriggerContext.Pop();
+				}
+			}
+		}
+	}
+}
+```
+
 ### Input trigger
 
 ```csharp
@@ -230,6 +322,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Input
 {
+	/// <summary>Fires every frame while the named key is held down.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Key: One of "w", "a", "s", "d", "up", "down", "left", "right".
+	/// </remarks>
 	public class KeyHoldTrigger : InputTrigger<KeyHoldTriggerData>
 	{
 		private void Update()
@@ -267,20 +364,13 @@ namespace Assembler.Behaviours.Triggers.Input
 **Add to:** The `All` dictionary inside `BehaviourRegistry`.
 
 ```csharp
-["yaml key name"] = (YourInfo.Create, new[]
-{
-	new PropDescriptor("PropertyName", typeof(PropertyType)),
-	new PropDescriptor("AnotherProp", typeof(AnotherType))
-}),
+["yaml key name"] = YourInfo.Create,
 ```
 
 ### Rules
 
 - The dictionary key is the **YAML behaviour name** — lowercase, with spaces (e.g. `"timer trigger"`, `"key hold trigger"`).
-- The first tuple element is the Info's static `Create` method reference.
-- The second element is a `PropDescriptor[]` — one per property. Use `Array.Empty<PropDescriptor>()` if no properties.
-- `PropDescriptor` name strings must **exactly match** the strings used in `props.GetValueOrDefault("...")` in the Info's `Create` method.
-- Common property types: `typeof(Vector3)`, `typeof(float)`, `typeof(int)`, `typeof(bool)`, `typeof(string)`, `typeof(Color)`, `typeof(Sprite)`, `typeof(AudioClip)`, `typeof(string[])`, `typeof(object[])`, `typeof(Dictionary<string, AssemblerValue>)`.
+- The value is just the Info's static `Create` method reference. **No more `PropDescriptor[]`** — property names and types come from reflecting the Info record at doc-gen time (see Step 1's `[YamlName]` rules).
 
 ---
 
@@ -348,15 +438,50 @@ namespace Assembler.Behaviours.Triggers.Input
 
 ---
 
+## Step 6 — Doc-gen Mapping (`MonoBehaviourByInfo`)
+
+**Location:** `Assets/Building/GameBehaviourFactory.cs`
+**Add to:** The `MonoBehaviourByInfo` dictionary (immediately after `Builders`).
+
+```csharp
+[typeof(YourInfo)] = typeof(YourBehaviour),
+```
+
+For generic Info records (like `VariableSetterInfo<T>` and `ListAddInfo<T>`) — one entry per closed
+generic instantiation that the registry exposes, each pointing at its non-generic MonoBehaviour
+subclass:
+
+```csharp
+[typeof(VariableSetterInfo<Vector3>)] = typeof(Vector3Setter),
+[typeof(VariableSetterInfo<int>)] = typeof(IntSetter),
+```
+
+### Rules
+
+- This map is what `Assets/Editor/BehaviourDocs.cs` uses to look up the MonoBehaviour for each Info
+  type. Missing entries surface as `no MonoBehaviour mapping` warnings in the generated doc.
+- For generic MonoBehaviours: still map to the **closed non-generic subclass** (e.g. `Vector3Setter`),
+  not the open generic base — the doc-walker climbs `BaseType` automatically to find the docs on the
+  generic base.
+- This is doc-gen wiring only; runtime construction goes through `Builders` (Step 5).
+
+---
+
 ## Checklist
 
-When adding a new behaviour, create/modify these 5 things in order:
+When adding a new behaviour, create/modify these 6 things in order:
 
-1. `Assets/Parsing/Info/Behaviours/<Name>Info.cs` — Info record with `Create` and `SubstituteParameters`
+1. `Assets/Parsing/Info/Behaviours/<Name>Info.cs` — Info record with `Create` and `SubstituteParameters` (with `[YamlName]` if YAML key ≠ property name)
 2. `Assets/Resolving/Behaviours/<Name>Data.cs` — Data class with `IValueProvider<T>` properties
-3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour with `Execute()` override
-4. `Assets/Parsing/BehaviourRegistry.cs` — Add entry to `All` dictionary
+3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour with `Execute()` override **and `<summary>` + `<remarks>` doc comments**
+4. `Assets/Parsing/BehaviourRegistry.cs` — Add `["yaml key"] = YourInfo.Create` to `All`
 5. `Assets/Building/GameBehaviourFactory.cs` — Add entry to `Builders` dictionary
+6. `Assets/Building/GameBehaviourFactory.cs` — Add entry to `MonoBehaviourByInfo` for doc generation
 
-**Do not forget any step.** A missing registry or builder entry will cause a runtime error when the YAML
-references the behaviour.
+**Do not forget any step.** A missing registry or builder entry will cause a runtime error when the
+YAML references the behaviour; a missing `MonoBehaviourByInfo` entry or missing/mismatched doc comments
+will produce warnings when running `Assembler > Generate Behaviour Docs` but won't break runtime.
+
+After adding the behaviour, run `Assembler > Generate Behaviour Docs` from the Unity Editor menu and
+confirm there are no warnings about your new behaviour in the console or the `## Doc-gen warnings`
+section of [`Assets/docs/Behaviours.md`](../../docs/Behaviours.md).

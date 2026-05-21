@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Sprites
 {
+	/// <summary>Renders a 2D sprite as a child of the entity, optionally rescaled to <c>Size</c>.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Sprite: Asset reference to the sprite to display.
+	///   Size: Target world-space size in units; the sprite is scaled to fit.
+	/// </remarks>
 	public class SpriteBehaviour : GameBehaviour<SpriteData>
 	{
 		protected override void OnInitialise(SpriteData data)

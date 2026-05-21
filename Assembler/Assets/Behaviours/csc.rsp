@@ -1,1 +1,3 @@
 -nullable:enable
+-doc:Temp/Assembler.Behaviours.xml
+-nowarn:1591

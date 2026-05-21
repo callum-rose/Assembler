@@ -3,7 +3,10 @@ using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record SetPositionInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<Vector3> ValueExpression)
+	public record SetPositionInfo(
+		string Id,
+		IReadOnlyList<ListenerInfo> Listeners,
+		[property: YamlName("Position")] ValueSource<Vector3> ValueExpression)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static SetPositionInfo Create(string id,
