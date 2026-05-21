@@ -25,7 +25,21 @@ namespace Assembler.Building
 		private readonly TriggerContext _triggerContext;
 		private readonly EntityPool _pool;
 
+		private readonly Dictionary<GameEntity, ActiveEntry> _active = new();
+
 		private int _spawnCounter;
+
+		private readonly struct ActiveEntry
+		{
+			public ActiveEntry(string entityId, string? templateId)
+			{
+				EntityId = entityId;
+				TemplateId = templateId;
+			}
+
+			public string EntityId { get; }
+			public string? TemplateId { get; }
+		}
 
 		public GameEntityFactory(VariableRegistry variables,
 			CompiledExpressionsRegistry expressions,
@@ -48,6 +62,11 @@ namespace Assembler.Building
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo)
 		{
+			return Create(entityInfo, templateId: null);
+		}
+
+		private EntityBuildResult Create(ConcreteEntityInfo entityInfo, string? templateId)
+		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
 			var gameObject = new GameObject(entityInfo.Id)
@@ -62,13 +81,13 @@ namespace Assembler.Building
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
-			gameEntity.EntityId = entityInfo.Id;
 
-			return BuildBehaviours(gameObject, gameEntity, entityInfo, scope, existingBehaviours: null);
+			_active[gameEntity] = new ActiveEntry(entityInfo.Id, templateId);
+
+			return BuildBehaviours(gameObject, entityInfo, scope, existingBehaviours: null);
 		}
 
 		private EntityBuildResult BuildBehaviours(GameObject gameObject,
-			GameEntity gameEntity,
 			ConcreteEntityInfo entityInfo,
 			EntityVariableScope scope,
 			IReadOnlyList<GameBehaviour>? existingBehaviours)
@@ -127,14 +146,7 @@ namespace Assembler.Building
 			}
 			else
 			{
-				result = Create(entityInfo);
-				var gameEntity = result.Behaviours.Count > 0
-					? result.Behaviours[0].Behaviour.GetComponent<GameEntity>()
-					: null;
-				if (gameEntity != null)
-				{
-					gameEntity.TemplateId = templateId;
-				}
+				result = Create(entityInfo, templateId);
 			}
 
 			_behaviourRegistry.Register(result);
@@ -170,27 +182,29 @@ namespace Assembler.Building
 
 			gameEntity.VariableScope = scope;
 			gameEntity.Tags = entityInfo.Tags.ToArray();
-			gameEntity.TemplateId = templateId;
-			gameEntity.EntityId = entityInfo.Id;
-			pooled.Entity.gameObject.name = entityInfo.Id;
+			gameEntity.gameObject.name = entityInfo.Id;
 
-			pooled.Entity.gameObject.transform.SetParent(null, worldPositionStays: false);
-			pooled.Entity.gameObject.transform.SetPositionAndRotation(
+			_active[gameEntity] = new ActiveEntry(entityInfo.Id, templateId);
+
+			gameEntity.gameObject.transform.SetParent(null, worldPositionStays: false);
+			gameEntity.gameObject.transform.SetPositionAndRotation(
 				entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value,
 				entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler());
 
-			return BuildBehaviours(pooled.Entity.gameObject, gameEntity, entityInfo, scope, pooled.Behaviours);
+			return BuildBehaviours(gameEntity.gameObject, entityInfo, scope, pooled.Behaviours);
 		}
 
 		public void Despawn(GameEntity entity)
 		{
 			if (entity == null) return;
 
-			var gameObject = entity.gameObject;
-			var entityId = entity.EntityId;
-			var templateId = entity.TemplateId;
+			if (!_active.Remove(entity, out var info))
+			{
+				UnityEngine.Object.Destroy(entity.gameObject);
+				return;
+			}
 
-			var behaviours = gameObject.GetComponents<GameBehaviour>();
+			var behaviours = entity.gameObject.GetComponents<GameBehaviour>();
 
 			foreach (var b in behaviours)
 			{
@@ -204,21 +218,18 @@ namespace Assembler.Building
 				}
 			}
 
-			if (entityId != null)
-			{
-				_behaviourRegistry.Unregister(entityId);
-			}
+			_behaviourRegistry.Unregister(info.EntityId);
 
 			entity.VariableScope?.Dispose();
 			entity.VariableScope = null;
 
-			if (string.IsNullOrEmpty(templateId))
+			if (string.IsNullOrEmpty(info.TemplateId))
 			{
-				UnityEngine.Object.Destroy(gameObject);
+				UnityEngine.Object.Destroy(entity.gameObject);
 				return;
 			}
 
-			_pool.Return(templateId, new PooledEntity(entity, behaviours));
+			_pool.Return(info.TemplateId, new PooledEntity(entity, behaviours));
 		}
 	}
 }

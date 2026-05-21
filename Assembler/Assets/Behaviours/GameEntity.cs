@@ -14,10 +14,6 @@ namespace Assembler.Behaviours
 			set => tags = value;
 		}
 
-		// public string? TemplateId { get; set; }
-		//
-		// public string? EntityId { get; set; }
-
 		public EntityVariableScope? VariableScope { get; set; }
 
 		private void OnDestroy()
