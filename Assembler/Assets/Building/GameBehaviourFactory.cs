@@ -23,6 +23,7 @@ using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
+using Rotate = Assembler.Behaviours.Rotation.Rotate;
 
 namespace Assembler.Building
 {
@@ -227,8 +228,8 @@ namespace Assembler.Building
 			[typeof(RotateTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
 				var i = (RotateTriggerInfo)info;
-				var b = go.AddComponent<Rotate>();
-				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er))));
+				var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Rotate>();
+				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
 			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
