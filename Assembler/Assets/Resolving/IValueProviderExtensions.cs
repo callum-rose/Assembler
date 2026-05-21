@@ -11,5 +11,8 @@ namespace Assembler.Resolving
 				action(provider.Value);
 			}
 		}
+
+		public static T ValueOr<T>(this IValueProvider<T> provider, T defaultValue) =>
+			provider is NullValueProvider<T> ? defaultValue : provider.Value;
 	}
 }

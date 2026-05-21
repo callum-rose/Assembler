@@ -1,0 +1,77 @@
+Game:
+  Title: Animations Demo
+  Description: |
+    Demonstrates the move / scale / rotate animation behaviours backed by DOTween.
+    On start, a square pops in (scale 0 -> 1 with OutBack), then drifts upward
+    (InOutSine) when the pop completes, then spins (Linear) when the drift
+    completes. Start state is omitted on the move/rotate steps so they tween
+    from the entity's current transform value.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
+
+Entities:
+  logo:
+    Position: !vec { X: 0, Y: -1, Z: 0 }
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour cyan
+
+      start:
+        Type: on start trigger
+        Listeners:
+          - EntityId: logo
+            BehaviourId: pop in
+
+      pop in:
+        Type: scale animation
+        Properties:
+          Start: !vec { X: 0, Y: 0, Z: 0 }
+          End: !vec { X: 1, Y: 1, Z: 1 }
+          Duration: 0.5
+          Easing: OutBack
+        Listeners:
+          - EntityId: logo
+            BehaviourId: drift up
+
+      drift up:
+        Type: move animation
+        Properties:
+          End: !vec { X: 0, Y: 2, Z: 0 }
+          Duration: 1.5
+          Easing: InOutSine
+        Listeners:
+          - EntityId: logo
+            BehaviourId: spin
+
+      spin:
+        Type: rotate animation
+        Properties:
+          End: !vec { X: 0, Y: 0, Z: 360 }
+          Duration: 2.0
+          Easing: Linear
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
