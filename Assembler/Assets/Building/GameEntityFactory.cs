@@ -84,39 +84,54 @@ namespace Assembler.Building
 
 			_active[gameEntity] = new ActiveEntry(entityInfo.Id, templateId);
 
-			return BuildBehaviours(gameObject, entityInfo, scope, existingBehaviours: null);
+			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
+			var initialisations = new List<InitialiseBehaviourEvent>();
+
+			foreach (var behaviourInfo in entityInfo.Behaviours)
+			{
+				var gameBehaviour = GameBehaviourFactory.Instantiate(gameObject, behaviourInfo);
+				AppendBehaviour(gameBehaviour, behaviourInfo, entityInfo.Id, scope, behaviours, initialisations);
+			}
+
+			return new EntityBuildResult(behaviours, initialisations);
 		}
 
-		private EntityBuildResult BuildBehaviours(GameObject gameObject,
+		private EntityBuildResult InitialiseBehaviours(GameEntity gameEntity,
+			IReadOnlyList<GameBehaviour> existingBehaviours,
 			ConcreteEntityInfo entityInfo,
-			EntityVariableScope scope,
-			IReadOnlyList<GameBehaviour>? existingBehaviours)
+			EntityVariableScope scope)
 		{
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			for (var i = 0; i < entityInfo.Behaviours.Count; i++)
 			{
-				var behaviourInfo = entityInfo.Behaviours[i];
-				var existing = existingBehaviours != null && i < existingBehaviours.Count ? existingBehaviours[i] : null;
-
-				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject,
-					behaviourInfo,
-					_variables,
-					_expressions,
-					this,
-					_assets,
-					_triggerContext,
-					scope,
-					existing);
-
-				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
-
-				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
-				initialisations.Add(initialise);
+				AppendBehaviour(existingBehaviours[i], entityInfo.Behaviours[i], entityInfo.Id, scope, behaviours, initialisations);
 			}
 
 			return new EntityBuildResult(behaviours, initialisations);
+		}
+
+		private void AppendBehaviour(GameBehaviour gameBehaviour,
+			BehaviourInfo behaviourInfo,
+			string entityId,
+			EntityVariableScope scope,
+			List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)> behaviours,
+			List<InitialiseBehaviourEvent> initialisations)
+		{
+			gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
+
+			var initialise = GameBehaviourFactory.BuildInitialise(gameBehaviour,
+				behaviourInfo,
+				_variables,
+				_expressions,
+				this,
+				_assets,
+				_triggerContext,
+				scope);
+
+			behaviours.Add((new BehaviourDescriptor(entityId, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
+			initialisations.Add(initialise);
 		}
 
 		public void Spawn(string templateId, Vector3 position, Vector3 rotation, IReadOnlyDictionary<string, object> parameters)
@@ -138,8 +153,8 @@ namespace Assembler.Building
 				runtimeParameters: parameters);
 
 			bool wasPooled = _pool.TryRent(templateId, out var pooled);
-			var result = wasPooled ? 
-				Rehydrate(pooled, entityInfo, templateId) : 
+			var result = wasPooled ?
+				Rehydrate(pooled, entityInfo, templateId) :
 				Create(entityInfo, templateId);
 
 			_behaviourRegistry.Register(result);
@@ -184,7 +199,7 @@ namespace Assembler.Building
 				entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value,
 				entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler());
 
-			return BuildBehaviours(gameEntity.gameObject, entityInfo, scope, pooled.Behaviours);
+			return InitialiseBehaviours(gameEntity, pooled.Behaviours, entityInfo, scope);
 		}
 
 		public void Despawn(GameEntity entity)
