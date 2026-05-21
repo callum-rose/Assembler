@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games declaratively via YAML configuration files. Games are described as entities with composable behaviours, and a multi-stage pipeline transforms YAML into executable Unity GameObjects.
 
+## Code Conventions
+
+- **Nullable reference types** are enabled project-wide (`Assets/Parsing/csc.rsp`). All new and modified code must respect nullable annotations — use `?` for nullable references, avoid `null!` suppression unless justified, and handle nullability properly.
+
 ## Build & Test
 
 This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5f1.
