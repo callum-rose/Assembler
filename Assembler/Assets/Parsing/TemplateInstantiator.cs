@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Extensions;
@@ -17,6 +18,7 @@ namespace Assembler.Parsing
 			IEnumerable<string>? additionalTags = null,
 			IEnumerable<BehaviourInfo>? additionalBehaviours = null,
 			IReadOnlyList<ValueInfo>? additionalVariables = null,
+			IReadOnlyList<ChildEntityInfo>? additionalChildren = null,
 			IReadOnlyDictionary<string, object>? runtimeParameters = null)
 		{
 			var augmentedParameters = new Dictionary<string, AssemblerValue>(parameters.EmptyIfNull())
@@ -57,13 +59,60 @@ namespace Assembler.Parsing
 				.Concat(flattenedAdditional)
 				.ToArray();
 
+			var inheritedChildren = template.Children
+				.Select(c => SubstituteChild(c, augmentedParameters, allValues));
+
+			var addedChildren = (additionalChildren ?? (IEnumerable<ChildEntityInfo>)Array.Empty<ChildEntityInfo>())
+				.Select(c => SubstituteChild(c, augmentedParameters, allValues));
+
+			var children = inheritedChildren.Concat(addedChildren).ToArray();
+
 			return new ConcreteEntityInfo(
 				entityId,
 				tags,
 				resolvedPosition,
 				resolvedRotation,
 				behaviours,
-				variables);
+				variables,
+				children);
+		}
+
+		private static ChildEntityInfo SubstituteChild(ChildEntityInfo child,
+			IReadOnlyDictionary<string, AssemblerValue> parameters,
+			IReadOnlyList<ValueInfo> allValues)
+		{
+			var substitutedParameters = new Dictionary<string, AssemblerValue>(child.Parameters.Count);
+
+			foreach (var kvp in child.Parameters)
+			{
+				substitutedParameters[kvp.Key] = Transformer.SubstituteAssemblerValue(kvp.Value, parameters);
+			}
+
+			var substitutedBehaviours = child.Behaviours
+				.Select(b => SubstituteBehaviour(b, parameters, allValues))
+				.ToArray();
+
+			var substitutedPosition = child.InitialPosition.SubstituteParameters(parameters, allValues);
+			var substitutedRotation = child.InitialRotation.SubstituteParameters(parameters, allValues);
+
+			var substitutedVariables = child.Variables
+				.Select(v => new ValueInfo(v.Id,
+					FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, parameters), allValues)))
+				.ToArray();
+
+			var substitutedChildren = child.Children
+				.Select(c => SubstituteChild(c, parameters, allValues))
+				.ToArray();
+
+			return child with
+			{
+				Parameters = substitutedParameters,
+				Behaviours = substitutedBehaviours,
+				InitialPosition = substitutedPosition,
+				InitialRotation = substitutedRotation,
+				Variables = substitutedVariables,
+				Children = substitutedChildren
+			};
 		}
 
 		private static AssemblerValue FlattenAssemblerValue(AssemblerValue value, IReadOnlyList<ValueInfo> allValues) =>

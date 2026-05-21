@@ -50,10 +50,16 @@ namespace Assembler.Parsing
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
 					.ToArray(),
-					CreateEntityVariables(kvp.Value.Variables)))
+					CreateEntityVariables(kvp.Value.Variables),
+					BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
+			var topLevelEntityDtos = gameDto.Entities ?? new Dictionary<string, EntityDto>();
+			var claimedChildIds = new HashSet<string>();
+			CollectClaimedStaticChildIds(topLevelEntityDtos, claimedChildIds);
+
+			var entities = topLevelEntityDtos
+				.Where(kvp => !claimedChildIds.Contains(kvp.Key))
 				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
 
 			var gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
@@ -96,6 +102,8 @@ namespace Assembler.Parsing
 				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(values, b.Key, b.Value, parameters));
 
+				var children = BuildStaticChildren(values, entityDto.Children, entityId, topLevelEntityDtos);
+
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					values,
@@ -104,8 +112,160 @@ namespace Assembler.Parsing
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
-					CreateEntityVariables(entityDto.Variables));
+					CreateEntityVariables(entityDto.Variables),
+					additionalChildren: children);
 			}
+		}
+
+		private static void CollectClaimedStaticChildIds(IReadOnlyDictionary<string, EntityDto> entities,
+			HashSet<string> claimed)
+		{
+			foreach (var (parentId, entity) in entities)
+			{
+				CollectClaimedFrom(entity, parentId, entities, claimed, new HashSet<string> { parentId });
+			}
+		}
+
+		private static void CollectClaimedFrom(EntityDto entity,
+			string ownerId,
+			IReadOnlyDictionary<string, EntityDto> topLevel,
+			HashSet<string> claimed,
+			HashSet<string> visiting)
+		{
+			if (entity.Children == null)
+			{
+				return;
+			}
+
+			foreach (var child in entity.Children)
+			{
+				if (child.Ref == null)
+				{
+					if (child.Entity != null)
+					{
+						CollectClaimedFrom(child.Entity, ownerId, topLevel, claimed, visiting);
+					}
+
+					continue;
+				}
+
+				var refId = child.Ref;
+
+				if (refId == ownerId || visiting.Contains(refId))
+				{
+					throw new ParsingException($"Cycle detected involving entity '{refId}' as a child");
+				}
+
+				if (!topLevel.TryGetValue(refId, out var refDto))
+				{
+					throw new ParsingException(
+						$"Entity '{ownerId}' references unknown child entity id '{refId}'");
+				}
+
+				if (!claimed.Add(refId))
+				{
+					throw new ParsingException(
+						$"Entity '{refId}' is referenced as a child by more than one parent");
+				}
+
+				visiting.Add(refId);
+				CollectClaimedFrom(refDto, refId, topLevel, claimed, visiting);
+				visiting.Remove(refId);
+			}
+		}
+
+		private static IReadOnlyList<ChildEntityInfo> BuildTemplateChildren(IReadOnlyList<ValueInfo> values,
+			List<EntityChildDto>? children,
+			string templateId) =>
+			BuildChildList(values, children, $"template '{templateId}'", topLevelEntities: null);
+
+		private static IReadOnlyList<ChildEntityInfo> BuildStaticChildren(IReadOnlyList<ValueInfo> values,
+			List<EntityChildDto>? children,
+			string parentDescription,
+			IReadOnlyDictionary<string, EntityDto> topLevelEntities) =>
+			BuildChildList(values, children, parentDescription, topLevelEntities);
+
+		private static IReadOnlyList<ChildEntityInfo> BuildChildList(IReadOnlyList<ValueInfo> values,
+			List<EntityChildDto>? children,
+			string parentDescription,
+			IReadOnlyDictionary<string, EntityDto>? topLevelEntities)
+		{
+			if (children == null || children.Count == 0)
+			{
+				return Array.Empty<ChildEntityInfo>();
+			}
+
+			var result = new ChildEntityInfo[children.Count];
+
+			for (var i = 0; i < children.Count; i++)
+			{
+				var child = children[i];
+
+				if (child.Ref != null)
+				{
+					if (topLevelEntities == null)
+					{
+						throw new ParsingException(
+							$"Child of '{parentDescription}' (entry {i}) is a string ref ('{child.Ref}'). " +
+							"String refs are only allowed in static entity children.");
+					}
+
+					if (!topLevelEntities.TryGetValue(child.Ref, out var refDto))
+					{
+						throw new ParsingException(
+							$"'{parentDescription}' references unknown child entity id '{child.Ref}'");
+					}
+
+					result[i] = BuildChildFromEntityDto(values, refDto, i, topLevelEntities,
+						absoluteId: child.Ref,
+						idSuffix: child.Ref);
+					continue;
+				}
+
+				if (child.Entity is null)
+				{
+					throw new ParsingException($"'{parentDescription}' child entry {i} is empty");
+				}
+
+				result[i] = BuildChildFromEntityDto(values, child.Entity, i, topLevelEntities);
+			}
+
+			return result;
+		}
+
+		private static ChildEntityInfo BuildChildFromEntityDto(IReadOnlyList<ValueInfo> values,
+			EntityDto dto,
+			int index,
+			IReadOnlyDictionary<string, EntityDto>? topLevelEntities,
+			string? absoluteId = null,
+			string? idSuffix = null)
+		{
+			var templateRefId = dto.Template?.Id;
+			var resolvedSuffix = idSuffix ??
+			                     (templateRefId != null ? $"{templateRefId}_{index}" : $"child_{index}");
+
+			var ownParams = ConvertProps(dto.Template?.Parameters);
+
+			var ownBehaviours = (dto.Behaviours ?? new Dictionary<string, BehaviourDto>())
+				.Select(b => CreateBehaviour(values, b.Key, b.Value, ownParams))
+				.ToArray();
+
+			var position = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Position), parameters: ownParams);
+			var rotation = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Rotation), parameters: ownParams);
+
+			var nestedChildren = BuildChildList(values, dto.Children, absoluteId ?? resolvedSuffix, topLevelEntities);
+
+			return new ChildEntityInfo(
+				resolvedSuffix,
+				absoluteId,
+				templateRefId,
+				ownParams,
+				dto.Tags?.ToArray() ?? Array.Empty<string>(),
+				position,
+				rotation,
+				ownBehaviours,
+				CreateEntityVariables(dto.Variables),
+				nestedChildren);
 		}
 
 		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)

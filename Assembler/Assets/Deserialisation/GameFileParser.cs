@@ -23,6 +23,7 @@ namespace Assembler.Deserialisation
 			.WithTypeConverter(new ParamTypeConverter())
 			.WithTypeConverter(new AssetTypeConverter())
 			.WithTypeConverter(new OutputTypeConverter())
+			.WithTypeConverter(new EntityChildTypeConverter())
 			.WithNodeDeserializer(
 				new ObjectNodeDeserializer(),
 				where => where.Before<TypeConverterNodeDeserializer>())
