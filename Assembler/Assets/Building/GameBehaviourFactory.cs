@@ -866,11 +866,6 @@ namespace Assembler.Building
 				}
 
 				var entityTag = entityTagProvider.Value;
-				if (entityTag == null || string.IsNullOrEmpty(behaviourId))
-				{
-					return;
-				}
-
 				var targets = registry.GetByEntityTagAndBehaviourId(entityTag, behaviourId);
 				InvokeAll(targets);
 			};
@@ -894,11 +889,6 @@ namespace Assembler.Building
 				}
 
 				var behaviourTag = behaviourTagProvider.Value;
-				if (behaviourTag == null)
-				{
-					return;
-				}
-
 				var targets = registry.GetByBehaviourTag(behaviourTag);
 				InvokeAll(targets);
 			};

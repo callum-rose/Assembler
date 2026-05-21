@@ -11,7 +11,7 @@ namespace Assembler.Parsing.Info
 
 	public sealed record EntityTaggedListenerInfo(
 		ValueSource<string> EntityTag,
-		string? BehaviourId) : ListenerInfo;
+		string BehaviourId) : ListenerInfo;
 
 	public sealed record BehaviourTaggedListenerInfo(
 		ValueSource<string> BehaviourTag) : ListenerInfo;

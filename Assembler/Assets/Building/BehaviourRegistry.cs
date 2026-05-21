@@ -31,14 +31,17 @@ namespace Assembler.Building
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviours = new();
 		private readonly Dictionary<string, List<GameBehaviour>> _behavioursByTag = new();
 
-		public void Register(BehaviourDescriptor descriptor, GameBehaviour behaviour, IReadOnlyList<string>? behaviourTags = null)
-		{
+		public void Register(BehaviourDescriptor descriptor, GameBehaviour behaviour, IReadOnlyList<string> behaviourTags)
+		{ 
 			_behaviours.Add(descriptor, behaviour);
-			if (behaviourTags == null) return;
+
 			foreach (var tag in behaviourTags)
 			{
 				if (!_behavioursByTag.TryGetValue(tag, out var list))
+				{
 					_behavioursByTag[tag] = list = new List<GameBehaviour>();
+				}
+
 				list.Add(behaviour);
 			}
 		}
@@ -55,14 +58,16 @@ namespace Assembler.Building
 
 			foreach (var list in _behavioursByTag.Values)
 			{
-				list.RemoveAll(b => removedBehaviours.Contains(b));
+				list.RemoveAll(removedBehaviours.Contains);
 			}
 		}
 
 		public IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null)
 		{
 			if (!_behavioursByTag.TryGetValue(behaviourTag, out var list))
+			{
 				return Array.Empty<GameBehaviour>();
+			}
 
 			return entityTag == null
 				? list.Where(b => b).ToArray()
@@ -74,6 +79,7 @@ namespace Assembler.Building
 			return _behaviours
 				.Where(kv => kv.Key.BehaviourId == behaviourId
 				             && kv.Value
+				             // TODO Null coalescing may be an issue
 				             && kv.Value.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
 				.Select(kv => kv.Value)
 				.ToArray();

@@ -197,7 +197,7 @@ namespace Assembler.Parsing
 					{
 						var entityTag = CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters);
 
-						return (ListenerInfo)new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId ?? string.Empty)
 						{
 							OutputMapping = outputs
 						};
