@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Assembler.Resolving.Behaviours
 {
-	public sealed class ConditionData : TriggerData
+	public sealed class ConditionGateData : TriggerData
 	{
 		public IValueProvider<bool> Condition { get; }
 
-		public ConditionData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners) :
+		public ConditionGateData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners) :
 			base(id, listeners)
 		{
 			Condition = condition;

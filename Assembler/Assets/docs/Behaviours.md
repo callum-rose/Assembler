@@ -268,7 +268,7 @@ Adds a Unity Camera component to the entity; chooses orthographic vs perspective
 | View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
 | Size | float | Orthographic size in world units (only used when View = "orthographic"). |
 
-## `condition trigger`
+## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
 
 ### Properties

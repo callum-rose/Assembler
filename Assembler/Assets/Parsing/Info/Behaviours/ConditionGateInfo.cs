@@ -2,10 +2,10 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record ConditionTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<bool> Condition)
+	public record ConditionGateInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<bool> Condition)
 		: BehaviourInfo(Id, Listeners)
 	{
-		public static ConditionTriggerInfo Create(string id,
+		public static ConditionGateInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
 			IReadOnlyList<ValueInfo> v,
@@ -17,7 +17,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues) =>
-			new ConditionTriggerInfo(Id,
+			new ConditionGateInfo(Id,
 				substitutedListeners,
 				Condition.SubstituteParameters(parameters, allValues));
 	}

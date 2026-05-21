@@ -292,12 +292,12 @@ namespace Assembler.Building
 					i.TagsToDetect,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
-			[typeof(ConditionTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			[typeof(ConditionGateInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
-				var i = (ConditionTriggerInfo)info;
-				var b = go.AddComponent<Condition>();
+				var i = (ConditionGateInfo)info;
+				var b = go.AddComponent<ConditionGate>();
 
-				return (b, lr => b.Initialise(new ConditionData(i.Id,
+				return (b, lr => b.Initialise(new ConditionGateData(i.Id,
 					i.Condition.Resolve(vr, cr, ar, tc, scope),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
 			},
@@ -768,7 +768,7 @@ namespace Assembler.Building
 			[typeof(CollisionStayTriggerInfo)] = typeof(CollisionStay),
 			[typeof(TriggerEnterTriggerInfo)] = typeof(TriggerEnter),
 			[typeof(TriggerExitTriggerInfo)] = typeof(TriggerExit),
-			[typeof(ConditionTriggerInfo)] = typeof(Condition),
+			[typeof(ConditionGateInfo)] = typeof(ConditionGate),
 			[typeof(CameraInfo)] = typeof(CameraBehaviour),
 			[typeof(SpawnerInfo)] = typeof(SpawnerBehaviour),
 			[typeof(DestroyInfo)] = typeof(DestroyBehaviour),
