@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Assembler.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Building.Pooling
@@ -7,6 +6,7 @@ namespace Assembler.Building.Pooling
 	public sealed class EntityPool
 	{
 		private readonly Dictionary<string, Stack<PooledEntity>> _stacks = new();
+		private readonly Dictionary<string, Transform> _subRoots = new();
 		private Transform? _root;
 
 		public bool TryRent(string templateId, out PooledEntity pooled)
@@ -24,7 +24,7 @@ namespace Assembler.Building.Pooling
 		public void Return(string templateId, PooledEntity pooled)
 		{
 			pooled.GameObject.SetActive(false);
-			pooled.GameObject.transform.SetParent(GetRoot(), worldPositionStays: false);
+			pooled.GameObject.transform.SetParent(GetSubRoot(templateId), worldPositionStays: false);
 
 			if (!_stacks.TryGetValue(templateId, out var stack))
 			{
@@ -32,6 +32,16 @@ namespace Assembler.Building.Pooling
 			}
 
 			stack.Push(pooled);
+		}
+
+		private Transform GetSubRoot(string templateId)
+		{
+			if (_subRoots.TryGetValue(templateId, out var sub)) return sub;
+
+			var go = new GameObject(templateId);
+			go.transform.SetParent(GetRoot(), worldPositionStays: false);
+			_subRoots[templateId] = go.transform;
+			return go.transform;
 		}
 
 		private Transform GetRoot()
