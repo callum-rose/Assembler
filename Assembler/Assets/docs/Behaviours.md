@@ -610,6 +610,17 @@ Debug-draws a cube gizmo at the entity's position in the Scene view.
 | IsWire | bool | When true draws an outline; when false draws a filled cube. |
 | Colour | Color | Gizmo colour. |
 
+## `line gizmo`
+Debug-draws a line gizmo between two points in the entity's local transform space.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Start | Vector3 | Line start point in local transform space. |
+| End | Vector3 | Line end point in local transform space. |
+| Colour | Color | Gizmo colour. |
+
 ## `text label`
 Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.
 
@@ -706,6 +717,9 @@ Draws a text input field. Fires listeners when the user presses Enter to submit 
 
 ## Doc-gen warnings
 
+- `move animation`: no MonoBehaviour mapping for `MoveAnimationInfo` (skipped).
+- `scale animation`: no MonoBehaviour mapping for `ScaleAnimationInfo` (skipped).
+- `rotate animation`: no MonoBehaviour mapping for `RotateAnimationInfo` (skipped).
 - `condition`: no MonoBehaviour mapping for `ConditionInfo` (skipped).
 - `trigger stay trigger`: no MonoBehaviour mapping for `TriggerStayTriggerInfo` (skipped).
 - `when all`: no MonoBehaviour mapping for `WhenAllInfo` (skipped).
