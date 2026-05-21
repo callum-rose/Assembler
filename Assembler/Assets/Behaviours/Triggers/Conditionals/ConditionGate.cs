@@ -8,7 +8,7 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 	/// Properties:
 	///   Condition: Boolean expression checked on each Execute call.
 	/// </remarks>
-	public class Condition : Trigger<ConditionData>
+	public class ConditionGate : Trigger<ConditionGateData>
 	{
 		public override void Execute()
 		{

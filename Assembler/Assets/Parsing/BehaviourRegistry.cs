@@ -55,7 +55,7 @@ namespace Assembler.Parsing
 				["destroy"] = DestroyInfo.Create,
 				["position setter"] = SetPositionInfo.Create,
 				["camera"] = CameraInfo.Create,
-				["condition trigger"] = ConditionTriggerInfo.Create,
+				["condition gate"] = ConditionGateInfo.Create,
 				["vector variable setter"] = VariableSetterInfo<Vector3>.Create,
 				["int variable setter"] = VariableSetterInfo<int>.Create,
 				["float variable setter"] = VariableSetterInfo<float>.Create,

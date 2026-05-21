@@ -298,16 +298,16 @@ Entities:
   win condition checker:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      left score win condition trigger:
-        Type: condition trigger
+      left score win condition gate:
+        Type: condition gate
         Properties:
           Condition: !expr
             ExpressionId: int greater or equal
             Arguments:
               - !var left score
               - !var score to win
-      right score win condition trigger:
-        Type: condition trigger
+      right score win condition gate:
+        Type: condition gate
         Properties:
           Condition: !expr
             ExpressionId: int greater or equal

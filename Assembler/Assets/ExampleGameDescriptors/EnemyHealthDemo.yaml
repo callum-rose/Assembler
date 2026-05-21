@@ -75,7 +75,7 @@ Templates:
               - !var health
               - !var damage per hit
       death check:
-        Type: condition trigger
+        Type: condition gate
         Properties:
           Condition: !expr
             ExpressionId: int less or equal

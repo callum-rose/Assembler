@@ -336,8 +336,8 @@ Entities:
           VariableId: !var is dead
           Value: true
 
-      win condition trigger:
-        Type: condition trigger
+      win condition gate:
+        Type: condition gate
         Properties:
           Condition: !expr
             ExpressionId: int greater or equal
