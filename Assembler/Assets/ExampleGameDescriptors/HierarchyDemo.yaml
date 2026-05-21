@@ -1,0 +1,176 @@
+Game:
+  Title: Hierarchy Demo
+  Description: |
+    Demonstrates the `Children` field on entities and templates, replicating
+    Unity's parent/child relationships declaratively.
+
+      * The `ship` entity is a static parent that drifts to the right. Its
+        children include:
+          - an inline child with an explicit `Id: bridge` so it could be
+            referenced by listeners,
+          - an inline anonymous turret with its own nested child (the barrel),
+          - two inline wings.
+        All children move with the ship because they're parented under it.
+
+      * The `drone spawner` periodically spawns `drone` template instances.
+        Each drone template declares a child `thruster trail` template and
+        forwards its `colour` parameter into the trail's `tint` parameter, so
+        each spawned drone's trail is tinted the same colour as its body. The
+        trail is parented under the drone, so it follows along.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0a0a1a"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  ship velocity: !vec { X: 0.5, Y: 0 }
+  drone velocity: !vec { X: 0, Y: 1.6 }
+  drone spawn interval: 1.0
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
+
+Templates:
+  drone:
+    Tags: [ drone ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.3, Y: 0.3, Z: 0.3 }
+          IsWire: false
+          Colour: !parameter colour
+      thrust:
+        Type: velocity
+        Properties:
+          Velocity: !var drone velocity
+    Children:
+      # Child template instance. The drone's `colour` parameter is forwarded
+      # into the trail's `tint` parameter — demonstrating parameter pass-
+      # through across template levels.
+      - Template:
+          Id: thruster trail
+          Parameters:
+            tint: !parameter colour
+
+  thruster trail:
+    Tags: [ trail ]
+    # Local offset — rendered just "below" the drone (which thrusts upward).
+    Position: !vec { X: 0, Y: -0.35, Z: 0 }
+    Behaviours:
+      glow:
+        Type: sphere gizmo
+        Properties:
+          Radius: 0.12
+          IsWire: false
+          Colour: !parameter tint
+
+Expressions:
+  random colour:
+    ReturnType: colour
+    RegisterTypes: [ UnityEngine.Color ]
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "new Color(Range(0.4f, 1.0f), Range(0.4f, 1.0f), Range(0.4f, 1.0f), 1f);"
+  random spawn x:
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    RegisterTypeStatics: [ UnityEngine.Random ]
+    Expression: "new Vector3(Range(-3.5f, 3.5f), -4.5f, 0);"
+
+Entities:
+  ship:
+    Position: !vec { X: -3, Y: 0, Z: 0 }
+    Behaviours:
+      hull:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1.5, Y: 0.6, Z: 0.6 }
+          IsWire: false
+          Colour: !colour { R: 0.3, G: 0.4, B: 0.6, A: 1 }
+      cruise:
+        Type: velocity
+        Properties:
+          Velocity: !var ship velocity
+    Children:
+      # Inline child with an explicit Id — addressable by listeners as `bridge`.
+      - Id: bridge
+        Position: !vec { X: -0.4, Y: 0.4, Z: 0 }
+        Behaviours:
+          dome:
+            Type: sphere gizmo
+            Properties:
+              Radius: 0.22
+              IsWire: false
+              Colour: !colour cyan
+
+      # Inline anonymous child: a turret on top of the ship, with its own
+      # nested child (the barrel). Two levels deep.
+      - Position: !vec { X: 0.2, Y: 0.45, Z: 0 }
+        Behaviours:
+          base:
+            Type: cube gizmo
+            Properties:
+              Size: !vec { X: 0.35, Y: 0.3, Z: 0.35 }
+              IsWire: false
+              Colour: !colour { R: 0.55, G: 0.55, B: 0.65, A: 1 }
+        Children:
+          - Position: !vec { X: 0.25, Y: 0, Z: 0 }
+            Behaviours:
+              barrel:
+                Type: cube gizmo
+                Properties:
+                  Size: !vec { X: 0.4, Y: 0.12, Z: 0.12 }
+                  IsWire: false
+                  Colour: !colour { R: 0.2, G: 0.2, B: 0.25, A: 1 }
+
+      # Inline anonymous wings, positioned via local offsets.
+      - Position: !vec { X: -0.3, Y: 0.45, Z: 0 }
+        Behaviours:
+          wing:
+            Type: cube gizmo
+            Properties:
+              Size: !vec { X: 0.4, Y: 0.1, Z: 0.4 }
+              IsWire: false
+              Colour: !colour { R: 0.2, G: 0.3, B: 0.5, A: 1 }
+      - Position: !vec { X: -0.3, Y: -0.45, Z: 0 }
+        Behaviours:
+          wing:
+            Type: cube gizmo
+            Properties:
+              Size: !vec { X: 0.4, Y: 0.1, Z: 0.4 }
+              IsWire: false
+              Colour: !colour { R: 0.2, G: 0.3, B: 0.5, A: 1 }
+
+  drone spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var drone spawn interval
+        Listeners:
+          - EntityId: drone spawner
+            BehaviourId: spawn
+      spawn:
+        Type: spawner
+        Properties:
+          TemplateId: drone
+          Position: !expr { ExpressionId: random spawn x }
+          Parameters:
+            colour: !expr { ExpressionId: random colour }
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

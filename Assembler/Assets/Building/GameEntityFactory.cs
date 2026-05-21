@@ -42,7 +42,9 @@ namespace Assembler.Building
 			_triggerContext = triggerContext;
 		}
 
-		public EntityBuildResult Create(ConcreteEntityInfo entityInfo)
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, null);
+
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent)
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
@@ -54,6 +56,11 @@ namespace Assembler.Building
 					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler()
 				}
 			};
+
+			if (parent != null)
+			{
+				gameObject.transform.SetParent(parent, worldPositionStays: false);
+			}
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
@@ -77,6 +84,43 @@ namespace Assembler.Building
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
 				initialisations.Add(initialise);
+			}
+
+			foreach (var child in entityInfo.Children)
+			{
+				var childId = child.AbsoluteId ?? $"{entityInfo.Id}/{child.IdSuffix}";
+
+				EntityInfo childTemplate;
+
+				if (child.TemplateRefId != null)
+				{
+					if (!_templates.TryGetValue(child.TemplateRefId, out childTemplate!))
+					{
+						throw new InvalidOperationException(
+							$"Child '{childId}' references unknown template id '{child.TemplateRefId}'");
+					}
+				}
+				else
+				{
+					childTemplate = NullEntityInfo.Instance;
+				}
+
+				var resolvedChild = TemplateInstantiator.Instantiate(
+					childTemplate,
+					childId,
+					_allValues,
+					child.InitialPosition,
+					child.InitialRotation,
+					child.Parameters,
+					child.Tags,
+					child.Behaviours,
+					child.Variables,
+					child.Children);
+
+				var childResult = Create(resolvedChild, gameObject.transform);
+
+				behaviours.AddRange(childResult.Behaviours);
+				initialisations.AddRange(childResult.Initialisations);
 			}
 
 			return new EntityBuildResult(behaviours, initialisations);

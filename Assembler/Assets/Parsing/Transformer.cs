@@ -50,7 +50,8 @@ namespace Assembler.Parsing
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
 					.ToArray(),
-					CreateEntityVariables(kvp.Value.Variables)))
+					CreateEntityVariables(kvp.Value.Variables),
+					BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
 			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
@@ -96,6 +97,8 @@ namespace Assembler.Parsing
 				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(values, b.Key, b.Value, parameters));
 
+				var children = BuildChildren(values, entityDto.Children, entityId);
+
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					values,
@@ -104,8 +107,67 @@ namespace Assembler.Parsing
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
-					CreateEntityVariables(entityDto.Variables));
+					CreateEntityVariables(entityDto.Variables),
+					additionalChildren: children);
 			}
+		}
+
+		private static IReadOnlyList<ChildEntityInfo> BuildTemplateChildren(IReadOnlyList<ValueInfo> values,
+			List<EntityDto>? children,
+			string templateId) =>
+			BuildChildren(values, children, $"template '{templateId}'");
+
+		private static IReadOnlyList<ChildEntityInfo> BuildChildren(IReadOnlyList<ValueInfo> values,
+			List<EntityDto>? children,
+			string parentDescription)
+		{
+			if (children == null || children.Count == 0)
+			{
+				return Array.Empty<ChildEntityInfo>();
+			}
+
+			var result = new ChildEntityInfo[children.Count];
+
+			for (var i = 0; i < children.Count; i++)
+			{
+				result[i] = BuildChild(values, children[i], i, parentDescription);
+			}
+
+			return result;
+		}
+
+		private static ChildEntityInfo BuildChild(IReadOnlyList<ValueInfo> values,
+			EntityDto dto,
+			int index,
+			string parentDescription)
+		{
+			var templateRefId = dto.Template?.Id;
+			var explicitId = dto.Id;
+			var idSuffix = explicitId ??
+			               (templateRefId != null ? $"{templateRefId}_{index}" : $"child_{index}");
+
+			var ownParams = ConvertProps(dto.Template?.Parameters);
+
+			var ownBehaviours = (dto.Behaviours ?? new Dictionary<string, BehaviourDto>())
+				.Select(b => CreateBehaviour(values, b.Key, b.Value, ownParams))
+				.ToArray();
+
+			var position = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Position), parameters: ownParams);
+			var rotation = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Rotation), parameters: ownParams);
+
+			var nestedChildren = BuildChildren(values, dto.Children, explicitId ?? $"{parentDescription}[{index}]");
+
+			return new ChildEntityInfo(
+				idSuffix,
+				explicitId,
+				templateRefId,
+				ownParams,
+				dto.Tags?.ToArray() ?? Array.Empty<string>(),
+				position,
+				rotation,
+				ownBehaviours,
+				CreateEntityVariables(dto.Variables),
+				nestedChildren);
 		}
 
 		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)

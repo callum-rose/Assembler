@@ -11,7 +11,8 @@ namespace Assembler.Parsing.Info
 		ValueSource<Vector3> InitialPosition,
 		ValueSource<Vector3> InitialRotation,
 		IReadOnlyList<BehaviourInfo> Behaviours,
-		IReadOnlyList<ValueInfo> Variables);
+		IReadOnlyList<ValueInfo> Variables,
+		IReadOnlyList<ChildEntityInfo> Children);
 
 	public sealed record ConcreteEntityInfo(
 		string Id,
@@ -19,8 +20,9 @@ namespace Assembler.Parsing.Info
 		ValueSource<Vector3> InitialPosition,
 		ValueSource<Vector3> InitialRotation,
 		IReadOnlyList<BehaviourInfo> Behaviours,
-		IReadOnlyList<ValueInfo> Variables)
-		: EntityInfo(Id, NullEntityInfo.Instance, Tags, InitialPosition, InitialRotation, Behaviours, Variables);
+		IReadOnlyList<ValueInfo> Variables,
+		IReadOnlyList<ChildEntityInfo> Children)
+		: EntityInfo(Id, NullEntityInfo.Instance, Tags, InitialPosition, InitialRotation, Behaviours, Variables, Children);
 
 	public sealed record NullEntityInfo() : EntityInfo(string.Empty,
 		Instance,
@@ -28,7 +30,8 @@ namespace Assembler.Parsing.Info
 		None<Vector3>.Instance,
 		None<Vector3>.Instance,
 		Array.Empty<BehaviourInfo>(),
-		Array.Empty<ValueInfo>())
+		Array.Empty<ValueInfo>(),
+		Array.Empty<ChildEntityInfo>())
 	{
 		public readonly static NullEntityInfo Instance = new();
 	}
