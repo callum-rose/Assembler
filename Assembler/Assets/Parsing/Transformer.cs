@@ -39,13 +39,7 @@ namespace Assembler.Parsing
 				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value)));
 			}
 
-			var expressions = gameDto.Expressions?.Select(kvp => new ExpressionInfo(kvp.Key,
-				(kvp.Value.ArgumentTypes ?? Array.Empty<string>())
-				.Zip(kvp.Value.ArgumentNames ?? Array.Empty<string>(), (type, name) => (type, name)).ToArray(),
-				kvp.Value.ReturnType ?? string.Empty,
-				kvp.Value.RegisterTypes ?? Array.Empty<string>(),
-				kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
-				kvp.Value.Expression ?? string.Empty)).ToArray();
+			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
 
 			var templates = gameDto.Templates?
 				.Select(kvp => new ConcreteEntityInfo(
@@ -54,8 +48,8 @@ namespace Assembler.Parsing
 					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
 					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
-						.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
-						.ToArray(),
+					.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
+					.ToArray(),
 					CreateEntityVariables(kvp.Value.Variables)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
@@ -73,6 +67,15 @@ namespace Assembler.Parsing
 				templates,
 				entities,
 				gameOverCondition);
+
+			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
+				new(kvp.Key,
+					kvp.Value.ArgumentTypes.EmptyIfNull()
+						.Zip(kvp.Value.ArgumentNames.EmptyIfNull(), (type, name) => (type, name)).ToArray(),
+					kvp.Value.ReturnType ?? string.Empty,
+					kvp.Value.RegisterTypes ?? Array.Empty<string>(),
+					kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
+					kvp.Value.Expression ?? string.Empty);
 
 			ConcreteEntityInfo CreateEntityInfo(string entityId, EntityDto entityDto)
 			{

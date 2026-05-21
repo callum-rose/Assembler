@@ -4,7 +4,10 @@ namespace Assembler.Behaviours.Animations
 {
 	public sealed class ScaleAnimation : TransformAnimation
 	{
-		protected override Vector3 ReadCurrent() => transform.localScale;
-		protected override void Apply(Vector3 value) => transform.localScale = value;
+		protected override Vector3 Current
+		{
+			get => transform.localScale;
+			set => transform.localScale = value;
+		}
 	}
 }

@@ -1,4 +1,3 @@
-using System;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using DG.Tweening;
@@ -8,35 +7,24 @@ namespace Assembler.Behaviours.Animations
 {
 	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>
 	{
-		private Tween _activeTween;
+		private Tween? _activeTween;
 
-		protected abstract Vector3 ReadCurrent();
-		protected abstract void Apply(Vector3 value);
+		protected abstract Vector3 Current { get; set; }
 
 		public override void Execute()
 		{
 			_activeTween?.Kill();
 
-			var hasExplicitStart = Data.Start is not NullValueProvider<Vector3>;
-			var start = hasExplicitStart ? Data.Start.Value : ReadCurrent();
+			var start = Data.Start.ValueOr(Current);
 			var end = Data.End.Value;
 			var duration = Mathf.Max(0f, Data.Duration.Value);
-			var ease = ParseEase(Data.Easing is NullValueProvider<string> ? null : Data.Easing.Value);
+			var ease = ParseEase(Data.Easing.ValueOr(string.Empty));
 
-			if (hasExplicitStart)
-			{
-				Apply(start);
-			}
-
-			var current = start;
+			Current = start;
 
 			_activeTween = DOTween.To(
-					() => current,
-					v =>
-					{
-						current = v;
-						Apply(v);
-					},
+					() => Current,
+					v => Current = v,
 					end,
 					duration)
 				.SetEase(ease)
@@ -48,21 +36,46 @@ namespace Assembler.Behaviours.Animations
 				});
 		}
 
-		private static Ease ParseEase(string name)
-		{
-			if (string.IsNullOrEmpty(name))
+		private static Ease ParseEase(string name) =>
+			name.ToLower().Replace(" ", "") switch
 			{
-				return Ease.Linear;
-			}
-
-			if (Enum.TryParse<Ease>(name, ignoreCase: true, out var ease))
-			{
-				return ease;
-			}
-
-			Debug.LogWarning($"Unknown easing '{name}', falling back to Linear.");
-			return Ease.Linear;
-		}
+				"linear" => Ease.Linear,
+				"insine" => Ease.InSine,
+				"outsine" => Ease.OutSine,
+				"inoutsine" => Ease.InOutSine,
+				"inquad" => Ease.InQuad,
+				"outquad" => Ease.OutQuad,
+				"inoutquad" => Ease.InOutQuad,
+				"incubic" => Ease.InCubic,
+				"outcubic" => Ease.OutCubic,
+				"inoutcubic" => Ease.InOutCubic,
+				"inquart" => Ease.InQuart,
+				"outquart" => Ease.OutQuart,
+				"inoutquart" => Ease.InOutQuart,
+				"inquint" => Ease.InQuint,
+				"outquint" => Ease.OutQuint,
+				"inoutquint" => Ease.InOutQuint,
+				"inexpo" => Ease.InExpo,
+				"outexpo" => Ease.OutExpo,
+				"inoutexpo" => Ease.InOutExpo,
+				"incirc" => Ease.InCirc,
+				"outcirc" => Ease.OutCirc,
+				"inoutcirc" => Ease.InOutCirc,
+				"inelastic" => Ease.InElastic,
+				"outelastic" => Ease.OutElastic,
+				"inoutelastic" => Ease.InOutElastic,
+				"inback" => Ease.InBack,
+				"outback" => Ease.OutBack,
+				"inoutback" => Ease.InOutBack,
+				"inbounce" => Ease.InBounce,
+				"outbounce" => Ease.OutBounce,
+				"inoutbounce" => Ease.InOutBounce,
+				"flash" => Ease.Flash,
+				"inflash" => Ease.InFlash,
+				"outflash" => Ease.OutFlash,
+				"inoutflash" => Ease.InOutFlash,
+				_ => Ease.InOutSine
+			};
 
 		private void OnDestroy()
 		{
