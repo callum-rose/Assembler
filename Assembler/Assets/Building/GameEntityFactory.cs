@@ -119,12 +119,11 @@ namespace Assembler.Building
 				runtimeParameters: parameters);
 
 			EntityBuildResult result;
-			bool isRehydrated;
+			bool wasPooled = _pool.TryRent(templateId, out var pooled);
 
-			if (_pool.TryRent(templateId, out var pooled))
+			if (wasPooled)
 			{
-				result = Rehydrate(pooled, entityInfo, templateId, position, rotation);
-				isRehydrated = true;
+				result = Rehydrate(pooled, entityInfo, templateId);
 			}
 			else
 			{
@@ -136,7 +135,6 @@ namespace Assembler.Building
 				{
 					gameEntity.TemplateId = templateId;
 				}
-				isRehydrated = false;
 			}
 
 			_behaviourRegistry.Register(result);
@@ -146,9 +144,9 @@ namespace Assembler.Building
 				init(_behaviourRegistry);
 			}
 
-			if (isRehydrated)
+			if (wasPooled)
 			{
-				pooled.GameObject.SetActive(true);
+				pooled.Entity.gameObject.SetActive(true);
 
 				foreach (var (_, behaviour, _) in result.Behaviours)
 				{
@@ -164,13 +162,8 @@ namespace Assembler.Building
 			}
 		}
 
-		private EntityBuildResult Rehydrate(PooledEntity pooled,
-			ConcreteEntityInfo entityInfo,
-			string templateId,
-			Vector3 position,
-			Vector3 rotation)
+		private EntityBuildResult Rehydrate(PooledEntity pooled, ConcreteEntityInfo entityInfo, string templateId)
 		{
-			var gameObject = pooled.GameObject;
 			var gameEntity = pooled.Entity;
 
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
@@ -179,16 +172,14 @@ namespace Assembler.Building
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.TemplateId = templateId;
 			gameEntity.EntityId = entityInfo.Id;
-			gameObject.name = entityInfo.Id;
+			pooled.Entity.gameObject.name = entityInfo.Id;
 
-			gameObject.transform.SetParent(null, worldPositionStays: false);
-			gameObject.transform.SetPositionAndRotation(
+			pooled.Entity.gameObject.transform.SetParent(null, worldPositionStays: false);
+			pooled.Entity.gameObject.transform.SetPositionAndRotation(
 				entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value,
 				entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler());
 
-			var result = BuildBehaviours(gameObject, gameEntity, entityInfo, scope, pooled.Behaviours);
-
-			return result;
+			return BuildBehaviours(pooled.Entity.gameObject, gameEntity, entityInfo, scope, pooled.Behaviours);
 		}
 
 		public void Despawn(GameEntity entity)
@@ -227,7 +218,7 @@ namespace Assembler.Building
 				return;
 			}
 
-			_pool.Return(templateId, new PooledEntity(gameObject, entity, behaviours));
+			_pool.Return(templateId, new PooledEntity(entity, behaviours));
 		}
 	}
 }

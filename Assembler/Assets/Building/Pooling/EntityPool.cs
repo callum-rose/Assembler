@@ -23,12 +23,13 @@ namespace Assembler.Building.Pooling
 
 		public void Return(string templateId, PooledEntity pooled)
 		{
-			pooled.GameObject.SetActive(false);
-			pooled.GameObject.transform.SetParent(GetSubRoot(templateId), worldPositionStays: false);
+			pooled.Entity.gameObject.SetActive(false);
+			pooled.Entity.gameObject.transform.SetParent(GetSubRoot(templateId), worldPositionStays: false);
 
 			if (!_stacks.TryGetValue(templateId, out var stack))
 			{
-				_stacks[templateId] = stack = new Stack<PooledEntity>();
+				stack = new Stack<PooledEntity>();
+				_stacks[templateId] = stack;
 			}
 
 			stack.Push(pooled);
@@ -36,7 +37,10 @@ namespace Assembler.Building.Pooling
 
 		private Transform GetSubRoot(string templateId)
 		{
-			if (_subRoots.TryGetValue(templateId, out var sub)) return sub;
+			if (_subRoots.TryGetValue(templateId, out var sub))
+			{
+				return sub;
+			}
 
 			var go = new GameObject(templateId);
 			go.transform.SetParent(GetRoot(), worldPositionStays: false);
@@ -46,7 +50,10 @@ namespace Assembler.Building.Pooling
 
 		private Transform GetRoot()
 		{
-			if (_root != null) return _root;
+			if (_root != null)
+			{
+				return _root;
+			}
 
 			var go = new GameObject("[EntityPool]");
 			go.SetActive(false);
