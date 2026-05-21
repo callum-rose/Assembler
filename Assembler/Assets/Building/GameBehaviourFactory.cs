@@ -10,6 +10,7 @@ using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.ListOperations;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
+using Assembler.Behaviours.Rotation;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Sprites;
 using Assembler.Behaviours.Triggers.Conditionals;
@@ -86,6 +87,33 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new TranslateData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
 					i.Displacement.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(AngularVelocityInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (AngularVelocityInfo)info;
+				var b = go.AddComponent<AngularVelocity>();
+
+				return (b, lr => b.Initialise(new AngularVelocityData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.AngularVelocity.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(RotateInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (RotateInfo)info;
+				var b = go.AddComponent<Rotate>();
+
+				return (b, lr => b.Initialise(new RotateData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.Displacement.Resolve(vr, cr, ar, tc, scope))));
+			},
+			[typeof(SetRotationInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+			{
+				var i = (SetRotationInfo)info;
+				var b = go.AddComponent<SetRotation>();
+
+				return (b, lr => b.Initialise(new SetRotationData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
+					i.ValueExpression.Resolve(vr, cr, ar, tc, scope))));
 			},
 			[typeof(MoveAnimationInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
 			{
@@ -748,6 +776,9 @@ namespace Assembler.Building
 			[typeof(VelocityInfo)] = typeof(Velocity),
 			[typeof(TranslateInfo)] = typeof(Translate),
 			[typeof(SetPositionInfo)] = typeof(SetPosition),
+			[typeof(AngularVelocityInfo)] = typeof(AngularVelocity),
+			[typeof(RotateInfo)] = typeof(Rotate),
+			[typeof(SetRotationInfo)] = typeof(SetRotation),
 			[typeof(KeyHoldTriggerInfo)] = typeof(KeyHoldTrigger),
 			[typeof(KeyDownTriggerInfo)] = typeof(KeyDownTrigger),
 			[typeof(KeyUpTriggerInfo)] = typeof(KeyUpTrigger),
