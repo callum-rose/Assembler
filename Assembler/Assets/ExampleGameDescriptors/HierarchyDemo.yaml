@@ -6,8 +6,8 @@ Game:
 
       * The `ship` entity is a static parent that drifts to the right. Its
         children include:
-          - a string-ref to the top-level `bridge` entity (re-parented under
-            the ship, removed from the scene root),
+          - an inline child with an explicit `Id: bridge` so it could be
+            referenced by listeners,
           - an inline anonymous turret with its own nested child (the barrel),
           - two inline wings.
         All children move with the ship because they're parented under it.
@@ -97,8 +97,16 @@ Entities:
         Properties:
           Velocity: !var ship velocity
     Children:
-      # String ref → claims the top-level `bridge` entity as a child.
-      - bridge
+      # Inline child with an explicit Id — addressable by listeners as `bridge`.
+      - Id: bridge
+        Position: !vec { X: -0.4, Y: 0.4, Z: 0 }
+        Behaviours:
+          dome:
+            Type: sphere gizmo
+            Properties:
+              Radius: 0.22
+              IsWire: false
+              Colour: !colour cyan
 
       # Inline anonymous child: a turret on top of the ship, with its own
       # nested child (the barrel). Two levels deep.
@@ -137,18 +145,6 @@ Entities:
               Size: !vec { X: 0.4, Y: 0.1, Z: 0.4 }
               IsWire: false
               Colour: !colour { R: 0.2, G: 0.3, B: 0.5, A: 1 }
-
-  # Declared at top level, but claimed as a child of `ship` above. Will NOT
-  # appear at the scene root — only as a child of `ship`.
-  bridge:
-    Position: !vec { X: -0.4, Y: 0.4, Z: 0 }
-    Behaviours:
-      dome:
-        Type: sphere gizmo
-        Properties:
-          Radius: 0.22
-          IsWire: false
-          Colour: !colour cyan
 
   drone spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
