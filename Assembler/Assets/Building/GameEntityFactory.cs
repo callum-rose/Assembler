@@ -137,17 +137,10 @@ namespace Assembler.Building
 				parameters: new Dictionary<string, AssemblerValue>(),
 				runtimeParameters: parameters);
 
-			EntityBuildResult result;
 			bool wasPooled = _pool.TryRent(templateId, out var pooled);
-
-			if (wasPooled)
-			{
-				result = Rehydrate(pooled, entityInfo, templateId);
-			}
-			else
-			{
-				result = Create(entityInfo, templateId);
-			}
+			var result = wasPooled ? 
+				Rehydrate(pooled, entityInfo, templateId) : 
+				Create(entityInfo, templateId);
 
 			_behaviourRegistry.Register(result);
 
