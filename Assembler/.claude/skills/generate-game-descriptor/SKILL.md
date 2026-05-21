@@ -65,9 +65,10 @@ Game:
 - `Gravity`: a `!vec`. Use `{ X: 0, Y: 0 }` to disable gravity (typical for top-down or arcade games).
 
 ### `Constants`
-A map of `id → value`. Constants are compile-time named values referenced via `!var <id>` or
-`!const <id>`. Use these for any literal that appears more than once, or that the player might want
-to tune (speeds, sizes, key bindings, colours, starting positions).
+A map of `id → value`. Constants are compile-time named values referenced via `!var <id>` (the same
+tag used for Variables — the resolver looks up Variables first, then falls back to Constants). Use
+these for any literal that appears more than once, or that the player might want to tune (speeds,
+sizes, key bindings, colours, starting positions).
 
 Names may contain spaces — the **YAML mapping key is the identifier**.
 
@@ -80,7 +81,7 @@ Constants:
 
 ### `Variables`
 A map of `id → initial value`. Variables are mutable at runtime; behaviours like `*_variable_setter`
-write to them, and `!var <id>` reads them. The initial value can be a literal, another `!var`/`!const`
+write to them, and `!var <id>` reads them. The initial value can be a literal, another `!var`
 reference, an `!expr`, or `!parameter` (inside a template).
 
 ```yaml
@@ -138,8 +139,7 @@ as shown.
 |---|---|---|
 | `!vec` | `!vec { X: 0, Y: 0, Z: 0 }` (Z optional) | Vector literal. Z defaults to 0 for 2D games. |
 | `!colour` | `!colour red` or `!colour { R: 1, G: 0, B: 0 }` | Named colour (`red`, `blue`, `white`, `cyan`, `grey`, …) or RGB literal. |
-| `!var` | `!var some name` | Reads a value by id. Resolves against per-entity variables first, then global Variables, then Constants. |
-| `!const` | `!const some name` | Reads a Constant by id. Interchangeable with `!var` for constants in most contexts. |
+| `!var` | `!var some name` | Reads a value by id. Resolves against per-entity variables first, then global Variables, then Constants. This is the only read tag — there is no separate `!const` form. |
 | `!parameter` | `!parameter slot_name` | Inside a template, refers to a parameter slot supplied at instantiation. `!parameter self_id` is the special implicit slot for the entity's own id (use when a template behaviour needs to refer to "this entity"). |
 | `!expr` | `!expr { ExpressionId: …, Arguments: [ … ] }` | Calls a named expression from the `Expressions:` section. |
 | `!output` | `!output local_name` | Reads a trigger output that was bound by an upstream listener (see **Trigger outputs**). |
@@ -173,8 +173,8 @@ entity id:
   offer, **stop and tell the user** — see **Offering feedback** below.
 - **`Properties:`** are whatever that behaviour declares. Property names match the catalogue exactly
   (PascalCase). Types match too: pass a `Vector3` to a `Vector3` property, a `bool` to a `bool`, etc.
-- Property values can be literals, `!var`/`!const`/`!parameter`/`!expr`/`!output` — any expression
-  the loader supports.
+- Property values can be literals, `!var`/`!parameter`/`!expr`/`!output` — any expression the loader
+  supports.
 
 ---
 
@@ -207,7 +207,7 @@ Listeners:
 
 The set of matching entities is resolved **at notify time**, not at build time, so entities spawned
 later are still picked up. `EntityTag` is a full `ValueSource<string>` — it can be a literal, a
-`!var`, a `!const`, or an `!expr`.
+`!var`, or an `!expr`.
 
 ### Behaviour-tag listener — target every behaviour carrying a tag
 
@@ -349,7 +349,7 @@ These are conventions, not rules. Reach for them when they fit.
   for continuous actions.
 - **`on start trigger`** to seed initial state (spawn first food, fire first asteroid, play a start
   sound).
-- **`interval trigger`** for ticking gameplay (snake step, asteroid spawn, score-per-second).
+- **`interval trigger`** for ticking gameplay (asteroid spawn, score-per-second, periodic checks).
 - **`condition trigger`** as a gate: a periodic upstream trigger fires it, it forwards only when the
   expression is true. Use this for win/lose checks polled against variables.
 - **Spawner + per-entity Variables** for objects with individual state (enemy health, bullet
@@ -372,7 +372,7 @@ Run through this before handing a descriptor back:
 - [ ] Every `Type:` value exists verbatim in [`Behaviours.md`](../../../Assets/docs/Behaviours.md).
 - [ ] Every `Properties:` key matches the catalogue's property name exactly (PascalCase).
 - [ ] Every property's value type matches the catalogue.
-- [ ] Every `!var` / `!const` / `!parameter` id resolves to something declared somewhere reachable.
+- [ ] Every `!var` / `!parameter` id resolves to something declared somewhere reachable.
 - [ ] Every `EntityId` refers to an entity that exists (in `Entities:` or a `Template:` containing
       this behaviour).
 - [ ] Every `BehaviourId` refers to a behaviour declared on the named entity (or named template).
