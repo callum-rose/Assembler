@@ -90,24 +90,24 @@ Expressions:
     ReturnType: bool
     Expression: "score >= target || dead;"
 
-  # Rotate a 2D vector counter-clockwise by 12 degrees (0.2094 rad)
+  # Rotate a 2D vector counter-clockwise by 1 degree (0.0175 rad)
   rotate left:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ v ]
     ReturnType: vector
     Expression: |
-      float c = UnityEngine.Mathf.Cos(0.2094f);
-      float s = UnityEngine.Mathf.Sin(0.2094f);
+      float c = UnityEngine.Mathf.Cos(0.0175f);
+      float s = UnityEngine.Mathf.Sin(0.0175f);
       return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
 
-  # Rotate a 2D vector clockwise by 12 degrees
+  # Rotate a 2D vector clockwise by 1 degree
   rotate right:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ v ]
     ReturnType: vector
     Expression: |
-      float c = UnityEngine.Mathf.Cos(-0.2094f);
-      float s = UnityEngine.Mathf.Sin(-0.2094f);
+      float c = UnityEngine.Mathf.Cos(-0.0175f);
+      float s = UnityEngine.Mathf.Sin(-0.0175f);
       return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
 
   # vel + facing * impulse
@@ -274,6 +274,12 @@ Entities:
         Properties:
           Radius: 0.12
           IsWire: false
+          Colour: !colour yellow
+      facing line:
+        Type: line gizmo
+        Properties:
+          Start: !vec { X: 0, Y: 0 }
+          End: !var ship facing
           Colour: !colour yellow
       collider:
         Type: box collider
