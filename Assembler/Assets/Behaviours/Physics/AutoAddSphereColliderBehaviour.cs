@@ -13,13 +13,14 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
 	{
 		private SphereCollider _sphereCollider;
-		
+
+		private void Awake()
+		{
+			_sphereCollider = gameObject.AddComponent<SphereCollider>();
+		}
+
 		protected override void OnInitialise(SphereColliderData data)
 		{
-			if (!gameObject.TryGetComponent(out _sphereCollider))
-			{
-				_sphereCollider = gameObject.AddComponent<SphereCollider>();
-			}
 			data.Radius.UseIfValueExists(v => _sphereCollider.radius = v);
 			data.IsTrigger.UseIfValueExists(v => _sphereCollider.isTrigger = v);
 		}

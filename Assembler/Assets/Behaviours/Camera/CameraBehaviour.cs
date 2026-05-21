@@ -11,14 +11,17 @@ namespace Assembler.Behaviours.Camera
 	/// </remarks>
 	public class CameraBehaviour : GameBehaviour<CameraData>
 	{
+		private UnityEngine.Camera _camera;
+
+		private void Awake()
+		{
+			_camera = gameObject.AddComponent<UnityEngine.Camera>();
+		}
+
 		protected override void OnInitialise(CameraData data)
 		{
-			if (!gameObject.TryGetComponent<UnityEngine.Camera>(out var camera))
-			{
-				camera = gameObject.AddComponent<UnityEngine.Camera>();
-			}
-			data.Perspective.UseIfValueExists(v => camera.orthographic = v == "orthographic");
-			data.Size.UseIfValueExists(v => camera.orthographicSize = v);
+			data.Perspective.UseIfValueExists(v => _camera.orthographic = v == "orthographic");
+			data.Size.UseIfValueExists(v => _camera.orthographicSize = v);
 		}
 
 		public override void Execute()

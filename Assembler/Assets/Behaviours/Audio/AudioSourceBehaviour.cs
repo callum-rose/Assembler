@@ -15,12 +15,13 @@ namespace Assembler.Behaviours.Audio
 	{
 		private AudioSource _audioSource;
 
+		private void Awake()
+		{
+			_audioSource = gameObject.AddComponent<AudioSource>();
+		}
+
 		protected override void OnInitialise(AudioSourceData data)
 		{
-			if (!gameObject.TryGetComponent(out _audioSource))
-			{
-				_audioSource = gameObject.AddComponent<AudioSource>();
-			}
 			_audioSource.clip = data.Clip.Value;
 			_audioSource.loop = data.Loop.Value;
 

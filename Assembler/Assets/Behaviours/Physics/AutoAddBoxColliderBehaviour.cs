@@ -13,13 +13,14 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddBoxColliderBehaviour : GameBehaviour<BoxColliderData>
 	{
 		private BoxCollider _boxCollider;
-		
+
+		private void Awake()
+		{
+			_boxCollider = gameObject.AddComponent<BoxCollider>();
+		}
+
 		protected override void OnInitialise(BoxColliderData data)
 		{
-			if (!gameObject.TryGetComponent(out _boxCollider))
-			{
-				_boxCollider = gameObject.AddComponent<BoxCollider>();
-			}
 			data.Size.UseIfValueExists(v => _boxCollider.size = v);
 			data.IsTrigger.UseIfValueExists(v => _boxCollider.isTrigger = v);
 		}
