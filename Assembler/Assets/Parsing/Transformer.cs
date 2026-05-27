@@ -36,7 +36,7 @@ namespace Assembler.Parsing
 
 			foreach (var kvp in allValues)
 			{
-				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value)));
+				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value, kvp.Key)));
 			}
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
@@ -485,32 +485,74 @@ namespace Assembler.Parsing
 				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")
 			};
 
-		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj) =>
-			obj switch
+		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj, string? name = null)
+		{
+			switch (obj)
 			{
-				VecDto vecDto => new Vector3Value(vecDto.ToVector3(resolvedValues)),
-				ColourDto colourDto => new ColorValue(colourDto.ToColor(resolvedValues)),
-				RefDto refDto => ResolveRef(refDto, resolvedValues),
-				int i => new IntValue(i),
-				float f => new FloatValue(f),
-				double d => new FloatValue((float)d),
-				bool b => new BoolValue(b),
-				string s => new StringValue(s),
-				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
-					vecList.ConvertAll(v => (AssemblerValue)new Vector3Value(v.ToVector3(resolvedValues)))),
-				List<ColourDto> colourList => new TypedListValue(typeof(Color),
-					colourList.ConvertAll(c => (AssemblerValue)new ColorValue(c.ToColor(resolvedValues)))),
-				List<int> intList => new TypedListValue(typeof(int),
-					intList.ConvertAll(i => (AssemblerValue)new IntValue(i))),
-				List<float> floatList => new TypedListValue(typeof(float),
-					floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f))),
-				List<bool> boolList => new TypedListValue(typeof(bool),
-					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
-				List<string> stringList => new TypedListValue(typeof(string),
-					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
-				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
-				_ => throw new ParsingException("Cannot convert null to a value")
-			};
+				case VecDto vecDto: return new Vector3Value(vecDto.ToVector3(resolvedValues));
+				case ColourDto colourDto: return new ColorValue(colourDto.ToColor(resolvedValues));
+				case RefDto refDto: return ResolveRef(refDto, resolvedValues);
+				case int i: return new IntValue(i);
+				case float f: return new FloatValue(f);
+				case double d: return new FloatValue((float)d);
+				case bool b: return new BoolValue(b);
+				case string s: return new StringValue(s);
+				case List<VecDto> vecList:
+					return new TypedListValue(typeof(Vector3),
+						vecList.ConvertAll(v => (AssemblerValue)new Vector3Value(v.ToVector3(resolvedValues))));
+				case List<ColourDto> colourList:
+					return new TypedListValue(typeof(Color),
+						colourList.ConvertAll(c => (AssemblerValue)new ColorValue(c.ToColor(resolvedValues))));
+				case List<int> intList:
+					return new TypedListValue(typeof(int),
+						intList.ConvertAll(i => (AssemblerValue)new IntValue(i)));
+				case List<float> floatList:
+					return new TypedListValue(typeof(float),
+						floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f)));
+				case List<bool> boolList:
+					return new TypedListValue(typeof(bool),
+						boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b)));
+				case List<string> stringList:
+					return new TypedListValue(typeof(string),
+						stringList.ConvertAll(s => (AssemblerValue)new StringValue(s)));
+				case null:
+					throw new ParsingException(
+						$"Cannot convert null to a value{FormatNameContext(name)}");
+				default:
+					throw new ParsingException(
+						$"Cannot convert value of type {obj.GetType()} to a value{FormatNameContext(name)}" +
+						DescribeListContents(obj));
+			}
+		}
+
+		private static string FormatNameContext(string? name) =>
+			string.IsNullOrEmpty(name) ? string.Empty : $" (while converting '{name}')";
+
+		private static string DescribeListContents(object obj)
+		{
+			if (obj is not System.Collections.IEnumerable enumerable || obj is string)
+			{
+				return string.Empty;
+			}
+
+			var elementTypes = new HashSet<string>();
+			var count = 0;
+
+			foreach (var item in enumerable)
+			{
+				count++;
+				elementTypes.Add(item?.GetType().Name ?? "null");
+
+				if (count >= 8)
+				{
+					break;
+				}
+			}
+
+			return elementTypes.Count == 0
+				? " (empty collection)"
+				: $" (collection element types: [{string.Join(", ", elementTypes)}])";
+		}
 
 		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues)
 		{
