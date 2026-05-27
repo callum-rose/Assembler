@@ -1,0 +1,17 @@
+{
+    "name": "Assembler.Generation.Runtime",
+    "rootNamespace": "Assembler.Generation.Runtime",
+    "references": [
+        "Assembler.Generation",
+        "Assembler.Generation.Verification"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
