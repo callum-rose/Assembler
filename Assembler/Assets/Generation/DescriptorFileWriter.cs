@@ -30,7 +30,7 @@ namespace Assembler.Generation
 			File.WriteAllText(fullPath, yaml);
 		}
 
-		internal static string BuildFileName(string? title)
+		public static string BuildFileName(string? title)
 		{
 			var sanitised = Sanitise(title);
 			if (string.IsNullOrEmpty(sanitised))
@@ -40,7 +40,7 @@ namespace Assembler.Generation
 			return sanitised + ".yaml";
 		}
 
-		internal static string Sanitise(string? title)
+		public static string Sanitise(string? title)
 		{
 			if (string.IsNullOrWhiteSpace(title))
 			{
