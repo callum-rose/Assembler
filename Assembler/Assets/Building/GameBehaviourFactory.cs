@@ -449,6 +449,15 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListLengthInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: int ---
 			[typeof(ListAddInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -486,6 +495,15 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListLengthInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<int>)info;
+				var b = go.AddComponent<IntListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<int>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			// --- List operations: float ---
@@ -525,6 +543,15 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListLengthInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<float>)info;
+				var b = go.AddComponent<FloatListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<float>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: bool ---
 			[typeof(ListAddInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -562,6 +589,15 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListLengthInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<bool>)info;
+				var b = go.AddComponent<BoolListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<bool>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			// --- List operations: string ---
@@ -601,6 +637,15 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListLengthInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<string>)info;
+				var b = go.AddComponent<StringListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<string>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: Color ---
 			[typeof(ListAddInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -638,6 +683,15 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListLengthInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListLengthInfo<Color>)info;
+				var b = go.AddComponent<ColourListLength>();
+				return (b, lr => b.Initialise(new ListLengthData<Color>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Length.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -814,26 +868,32 @@ namespace Assembler.Building
 			[typeof(ListRemoveAtInfo<Vector3>)] = typeof(Vector3ListRemoveAt),
 			[typeof(ListSetAtInfo<Vector3>)] = typeof(Vector3ListSetAt),
 			[typeof(ListClearInfo<Vector3>)] = typeof(Vector3ListClear),
+			[typeof(ListLengthInfo<Vector3>)] = typeof(Vector3ListLength),
 			[typeof(ListAddInfo<int>)] = typeof(IntListAdd),
 			[typeof(ListRemoveAtInfo<int>)] = typeof(IntListRemoveAt),
 			[typeof(ListSetAtInfo<int>)] = typeof(IntListSetAt),
 			[typeof(ListClearInfo<int>)] = typeof(IntListClear),
+			[typeof(ListLengthInfo<int>)] = typeof(IntListLength),
 			[typeof(ListAddInfo<float>)] = typeof(FloatListAdd),
 			[typeof(ListRemoveAtInfo<float>)] = typeof(FloatListRemoveAt),
 			[typeof(ListSetAtInfo<float>)] = typeof(FloatListSetAt),
 			[typeof(ListClearInfo<float>)] = typeof(FloatListClear),
+			[typeof(ListLengthInfo<float>)] = typeof(FloatListLength),
 			[typeof(ListAddInfo<bool>)] = typeof(BoolListAdd),
 			[typeof(ListRemoveAtInfo<bool>)] = typeof(BoolListRemoveAt),
 			[typeof(ListSetAtInfo<bool>)] = typeof(BoolListSetAt),
 			[typeof(ListClearInfo<bool>)] = typeof(BoolListClear),
+			[typeof(ListLengthInfo<bool>)] = typeof(BoolListLength),
 			[typeof(ListAddInfo<string>)] = typeof(StringListAdd),
 			[typeof(ListRemoveAtInfo<string>)] = typeof(StringListRemoveAt),
 			[typeof(ListSetAtInfo<string>)] = typeof(StringListSetAt),
 			[typeof(ListClearInfo<string>)] = typeof(StringListClear),
+			[typeof(ListLengthInfo<string>)] = typeof(StringListLength),
 			[typeof(ListAddInfo<Color>)] = typeof(ColourListAdd),
 			[typeof(ListRemoveAtInfo<Color>)] = typeof(ColourListRemoveAt),
 			[typeof(ListSetAtInfo<Color>)] = typeof(ColourListSetAt),
 			[typeof(ListClearInfo<Color>)] = typeof(ColourListClear),
+			[typeof(ListLengthInfo<Color>)] = typeof(ColourListLength),
 			[typeof(SpriteInfo)] = typeof(SpriteBehaviour),
 			[typeof(AudioSourceInfo)] = typeof(AudioSourceBehaviour),
 			[typeof(SphereGizmoInfo)] = typeof(SphereGizmoBehaviour),

@@ -69,31 +69,37 @@ namespace Assembler.Parsing
 				["vector list remove at"] = ListRemoveAtInfo<Vector3>.Create,
 				["vector list set at"] = ListSetAtInfo<Vector3>.Create,
 				["vector list clear"] = ListClearInfo<Vector3>.Create,
+				["vector list length"] = ListLengthInfo<Vector3>.Create,
 
 				["int list add"] = ListAddInfo<int>.Create,
 				["int list remove at"] = ListRemoveAtInfo<int>.Create,
 				["int list set at"] = ListSetAtInfo<int>.Create,
 				["int list clear"] = ListClearInfo<int>.Create,
+				["int list length"] = ListLengthInfo<int>.Create,
 
 				["float list add"] = ListAddInfo<float>.Create,
 				["float list remove at"] = ListRemoveAtInfo<float>.Create,
 				["float list set at"] = ListSetAtInfo<float>.Create,
 				["float list clear"] = ListClearInfo<float>.Create,
+				["float list length"] = ListLengthInfo<float>.Create,
 
 				["bool list add"] = ListAddInfo<bool>.Create,
 				["bool list remove at"] = ListRemoveAtInfo<bool>.Create,
 				["bool list set at"] = ListSetAtInfo<bool>.Create,
 				["bool list clear"] = ListClearInfo<bool>.Create,
+				["bool list length"] = ListLengthInfo<bool>.Create,
 
 				["string list add"] = ListAddInfo<string>.Create,
 				["string list remove at"] = ListRemoveAtInfo<string>.Create,
 				["string list set at"] = ListSetAtInfo<string>.Create,
 				["string list clear"] = ListClearInfo<string>.Create,
+				["string list length"] = ListLengthInfo<string>.Create,
 
 				["colour list add"] = ListAddInfo<Color>.Create,
 				["colour list remove at"] = ListRemoveAtInfo<Color>.Create,
 				["colour list set at"] = ListSetAtInfo<Color>.Create,
 				["colour list clear"] = ListClearInfo<Color>.Create,
+				["colour list length"] = ListLengthInfo<Color>.Create,
 
 				["sprite"] = SpriteInfo.Create,
 				["audio source"] = AudioSourceInfo.Create,
