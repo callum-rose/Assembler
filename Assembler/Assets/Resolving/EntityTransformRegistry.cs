@@ -9,13 +9,11 @@ namespace Assembler.Resolving
 
 		public void Register(string id, Transform transform)
 		{
-			if (_transforms.ContainsKey(id))
+			if (!_transforms.TryAdd(id, transform))
 			{
 				throw new System.InvalidOperationException(
 					$"Entity id '{id}' is already registered. Entity ids must be unique across the game.");
 			}
-
-			_transforms[id] = transform;
 		}
 
 		public Transform Get(string id)
@@ -28,8 +26,5 @@ namespace Assembler.Resolving
 
 			return transform;
 		}
-
-		public bool TryGet(string id, out Transform? transform) =>
-			_transforms.TryGetValue(id, out transform);
 	}
 }
