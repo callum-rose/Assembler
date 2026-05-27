@@ -508,6 +508,10 @@ namespace Assembler.Parsing
 					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
 				List<string> stringList => new TypedListValue(typeof(string),
 					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
+				List<object> objList when objList.Count == 0 => throw new ParsingException(
+					"Cannot convert an untyped empty list '[]' to a Variable value. " +
+					"Use a typed list tag to declare the element type, e.g. '!colour []', " +
+					"'!int []', '!float []', '!bool []', '!string []', or '!vec []'."),
 				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
 				_ => throw new ParsingException("Cannot convert null to a value")
 			};
@@ -583,6 +587,10 @@ namespace Assembler.Parsing
 				List<string> stringList => new TypedListValue(typeof(string),
 					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
 				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
+				List<object> objList when objList.Count == 0 => throw new ParsingException(
+					"Cannot convert an untyped empty list '[]' to a Variable value. " +
+					"Use a typed list tag to declare the element type, e.g. '!colour []', " +
+					"'!int []', '!float []', '!bool []', '!string []', or '!vec []'."),
 				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
 				_ => throw new ParsingException(
 					$"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
