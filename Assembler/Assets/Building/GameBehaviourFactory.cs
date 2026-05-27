@@ -229,7 +229,7 @@ namespace Assembler.Building
 			{
 				var i = (RotateTriggerInfo)info;
 				var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Rotate>();
-				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
+				return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er))));
 			},
 			[typeof(OnStartTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{

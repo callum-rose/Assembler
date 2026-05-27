@@ -26,7 +26,7 @@ namespace Assembler.Resolving
 					scope,
 					entities)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
-				EntityPositionSource ep when typeof(T) == typeof(Vector3) =>
+				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPositionProvider(entities.Get(ep.EntityId)),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName, triggerContext),
 				None<T> => NullValueProvider<T>.Instance,
@@ -125,7 +125,9 @@ namespace Assembler.Resolving
 				ValueReferenceSource<object> vo => variables.Get<T>(vo.VariableId, scope),
 				ExpressionSource<T> e => new ExpressionValueProvider<T>(
 					BuildExpressionContainer(e, variables, expressions, triggerContext, scope, entities)),
-				EntityPositionSource ep when typeof(T) == typeof(Vector3) =>
+				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
+					new TransformPositionProvider(entities.Get(ep.EntityId)),
+				EntityPositionSource<object> ep when typeof(T) == typeof(Vector3) =>
 					new TransformPositionProvider(entities.Get(ep.EntityId)),
 				TriggerOutputSource<T> o => new TriggerOutputProvider<T>(o.OutputName,
 					triggerContext ?? throw new InvalidOperationException(

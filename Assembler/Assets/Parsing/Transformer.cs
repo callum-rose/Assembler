@@ -336,8 +336,8 @@ namespace Assembler.Parsing
 					? CreateValueSource(resolvedValues, paramValue, fallback)
 					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
-				EntityPositionRef entityPositionRef when typeof(T) == typeof(Vector3) =>
-					(ValueSource<T>)(object)new EntityPositionSource(entityPositionRef.Id),
+				EntityPositionRef entityPositionRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
+					new EntityPositionSource<T>(entityPositionRef.Id),
 				EntityPositionRef entityPositionRef => throw new ParsingException(
 					$"!entity_position '{entityPositionRef.Id}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
