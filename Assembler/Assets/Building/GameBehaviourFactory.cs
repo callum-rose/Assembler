@@ -259,6 +259,7 @@ namespace Assembler.Building
 			{
 				var i = (IntervalTriggerInfo)info;
 				var b = go.AddComponent<IntervalTrigger>();
+				b.TriggerContext = tc;
 
 				return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
