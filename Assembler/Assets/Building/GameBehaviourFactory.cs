@@ -411,6 +411,36 @@ namespace Assembler.Building
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(VariableAdjustInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (VariableAdjustInfo<int>)info;
+				var b = go.AddComponent<IntAdjust>();
+
+				return (b, lr => b.Initialise(new VariableAdjustData<int>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
+					i.Delta.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(VariableAdjustInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (VariableAdjustInfo<float>)info;
+				var b = go.AddComponent<FloatAdjust>();
+
+				return (b, lr => b.Initialise(new VariableAdjustData<float>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
+					i.Delta.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(VariableAdjustInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (VariableAdjustInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3Adjust>();
+
+				return (b, lr => b.Initialise(new VariableAdjustData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
+					i.Delta.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: Vector3 ---
 			[typeof(ListAddInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -810,6 +840,9 @@ namespace Assembler.Building
 			[typeof(VariableSetterInfo<float>)] = typeof(FloatSetter),
 			[typeof(VariableSetterInfo<bool>)] = typeof(BoolSetter),
 			[typeof(VariableSetterInfo<string>)] = typeof(StringSetter),
+			[typeof(VariableAdjustInfo<int>)] = typeof(IntAdjust),
+			[typeof(VariableAdjustInfo<float>)] = typeof(FloatAdjust),
+			[typeof(VariableAdjustInfo<Vector3>)] = typeof(Vector3Adjust),
 			[typeof(ListAddInfo<Vector3>)] = typeof(Vector3ListAdd),
 			[typeof(ListRemoveAtInfo<Vector3>)] = typeof(Vector3ListRemoveAt),
 			[typeof(ListSetAtInfo<Vector3>)] = typeof(Vector3ListSetAt),

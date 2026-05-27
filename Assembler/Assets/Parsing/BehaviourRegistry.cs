@@ -65,6 +65,10 @@ namespace Assembler.Parsing
 				["bool variable setter"] = VariableSetterInfo<bool>.Create,
 				["string variable setter"] = VariableSetterInfo<string>.Create,
 
+				["int variable adjust"] = VariableAdjustInfo<int>.Create,
+				["float variable adjust"] = VariableAdjustInfo<float>.Create,
+				["vector variable adjust"] = VariableAdjustInfo<Vector3>.Create,
+
 				["vector list add"] = ListAddInfo<Vector3>.Create,
 				["vector list remove at"] = ListRemoveAtInfo<Vector3>.Create,
 				["vector list set at"] = ListSetAtInfo<Vector3>.Create,
