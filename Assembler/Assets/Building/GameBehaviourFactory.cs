@@ -411,6 +411,17 @@ namespace Assembler.Building
 					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
 					i.ValueToGet.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(FormatStringSetterInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (FormatStringSetterInfo)info;
+				var b = go.AddComponent<FormatStringSetter>();
+
+				return (b, lr => b.Initialise(new FormatStringSetterData(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.ValueToSet.Resolve(vr, cr, ar, tc, scope, er),
+					i.Format.Resolve(vr, cr, ar, tc, scope, er),
+					i.Arguments.Select(a => (IValueProvider)a.Resolve(vr, cr, ar, tc, scope, er)).ToArray())));
+			},
 
 			// --- List operations: Vector3 ---
 			[typeof(ListAddInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -810,6 +821,7 @@ namespace Assembler.Building
 			[typeof(VariableSetterInfo<float>)] = typeof(FloatSetter),
 			[typeof(VariableSetterInfo<bool>)] = typeof(BoolSetter),
 			[typeof(VariableSetterInfo<string>)] = typeof(StringSetter),
+			[typeof(FormatStringSetterInfo)] = typeof(FormatStringSetter),
 			[typeof(ListAddInfo<Vector3>)] = typeof(Vector3ListAdd),
 			[typeof(ListRemoveAtInfo<Vector3>)] = typeof(Vector3ListRemoveAt),
 			[typeof(ListSetAtInfo<Vector3>)] = typeof(Vector3ListSetAt),
