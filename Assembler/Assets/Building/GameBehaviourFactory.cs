@@ -441,6 +441,16 @@ namespace Assembler.Building
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListGetAtInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 			[typeof(ListClearInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
 				var i = (ListClearInfo<Vector3>)info;
@@ -478,6 +488,16 @@ namespace Assembler.Building
 					i.List.Resolve(vr, cr, ar, tc, scope, er),
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListGetAtInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<int>)info;
+				var b = go.AddComponent<IntListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<int>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 			[typeof(ListClearInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
@@ -517,6 +537,16 @@ namespace Assembler.Building
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListGetAtInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<float>)info;
+				var b = go.AddComponent<FloatListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<float>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 			[typeof(ListClearInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
 				var i = (ListClearInfo<float>)info;
@@ -554,6 +584,16 @@ namespace Assembler.Building
 					i.List.Resolve(vr, cr, ar, tc, scope, er),
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListGetAtInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<bool>)info;
+				var b = go.AddComponent<BoolListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<bool>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 			[typeof(ListClearInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
@@ -593,6 +633,16 @@ namespace Assembler.Building
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListGetAtInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<string>)info;
+				var b = go.AddComponent<StringListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<string>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 			[typeof(ListClearInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
 				var i = (ListClearInfo<string>)info;
@@ -630,6 +680,16 @@ namespace Assembler.Building
 					i.List.Resolve(vr, cr, ar, tc, scope, er),
 					i.Index.Resolve(vr, cr, ar, tc, scope, er),
 					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListGetAtInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListGetAtInfo<Color>)info;
+				var b = go.AddComponent<ColourListGetAt>();
+				b.TriggerContext = tc;
+				return (b, lr => b.Initialise(new ListGetAtData<Color>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Index.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 			[typeof(ListClearInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
@@ -813,26 +873,32 @@ namespace Assembler.Building
 			[typeof(ListAddInfo<Vector3>)] = typeof(Vector3ListAdd),
 			[typeof(ListRemoveAtInfo<Vector3>)] = typeof(Vector3ListRemoveAt),
 			[typeof(ListSetAtInfo<Vector3>)] = typeof(Vector3ListSetAt),
+			[typeof(ListGetAtInfo<Vector3>)] = typeof(Vector3ListGetAt),
 			[typeof(ListClearInfo<Vector3>)] = typeof(Vector3ListClear),
 			[typeof(ListAddInfo<int>)] = typeof(IntListAdd),
 			[typeof(ListRemoveAtInfo<int>)] = typeof(IntListRemoveAt),
 			[typeof(ListSetAtInfo<int>)] = typeof(IntListSetAt),
+			[typeof(ListGetAtInfo<int>)] = typeof(IntListGetAt),
 			[typeof(ListClearInfo<int>)] = typeof(IntListClear),
 			[typeof(ListAddInfo<float>)] = typeof(FloatListAdd),
 			[typeof(ListRemoveAtInfo<float>)] = typeof(FloatListRemoveAt),
 			[typeof(ListSetAtInfo<float>)] = typeof(FloatListSetAt),
+			[typeof(ListGetAtInfo<float>)] = typeof(FloatListGetAt),
 			[typeof(ListClearInfo<float>)] = typeof(FloatListClear),
 			[typeof(ListAddInfo<bool>)] = typeof(BoolListAdd),
 			[typeof(ListRemoveAtInfo<bool>)] = typeof(BoolListRemoveAt),
 			[typeof(ListSetAtInfo<bool>)] = typeof(BoolListSetAt),
+			[typeof(ListGetAtInfo<bool>)] = typeof(BoolListGetAt),
 			[typeof(ListClearInfo<bool>)] = typeof(BoolListClear),
 			[typeof(ListAddInfo<string>)] = typeof(StringListAdd),
 			[typeof(ListRemoveAtInfo<string>)] = typeof(StringListRemoveAt),
 			[typeof(ListSetAtInfo<string>)] = typeof(StringListSetAt),
+			[typeof(ListGetAtInfo<string>)] = typeof(StringListGetAt),
 			[typeof(ListClearInfo<string>)] = typeof(StringListClear),
 			[typeof(ListAddInfo<Color>)] = typeof(ColourListAdd),
 			[typeof(ListRemoveAtInfo<Color>)] = typeof(ColourListRemoveAt),
 			[typeof(ListSetAtInfo<Color>)] = typeof(ColourListSetAt),
+			[typeof(ListGetAtInfo<Color>)] = typeof(ColourListGetAt),
 			[typeof(ListClearInfo<Color>)] = typeof(ColourListClear),
 			[typeof(SpriteInfo)] = typeof(SpriteBehaviour),
 			[typeof(AudioSourceInfo)] = typeof(AudioSourceBehaviour),
