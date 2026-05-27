@@ -700,7 +700,7 @@ namespace Assembler.Building
 				var b = go.AddComponent<TextLabel>();
 				return (b, lr => b.Initialise(new TextLabelData(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
-					i.Text.Resolve(vr, cr, ar, tc, scope, er),
+					StringifiedValueResolver.Resolve(i.Text, i.KnownValues, vr, cr, ar, tc, scope, er),
 					i.Label.Resolve(vr, cr, ar, tc, scope, er),
 					i.FontSize.Resolve(vr, cr, ar, tc, scope, er),
 					i.Rect)));

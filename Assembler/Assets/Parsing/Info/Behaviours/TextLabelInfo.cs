@@ -6,7 +6,8 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record TextLabelInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<string> Text,
+		AssemblerValue Text,
+		IReadOnlyList<ValueInfo> KnownValues,
 		ValueSource<string> Label,
 		ValueSource<int> FontSize,
 		ScreenRect Rect) : BehaviourInfo(Id, Listeners)
@@ -18,7 +19,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, AssemblerValue> p) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("Text"), parameters: p),
+				SubstituteRaw(props.GetValueOrDefault("Text"), p),
+				v,
 				Transformer.CreateValueSource(v, props.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
 				Transformer.CreateValueSource(v, props.GetValueOrDefault("FontSize"), fallback: 0, parameters: p),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
@@ -28,9 +30,21 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyList<ValueInfo> allValues) =>
 			new TextLabelInfo(Id,
 				substitutedListeners,
-				Text.SubstituteParameters(parameters, allValues),
+				SubstituteRaw(Text, parameters),
+				allValues,
 				Label.SubstituteParameters(parameters, allValues),
 				FontSize.SubstituteParameters(parameters, allValues),
 				Rect);
+
+		private static AssemblerValue SubstituteRaw(AssemblerValue raw,
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		{
+			if (raw is ParamRef paramRef && parameters.TryGetValue(paramRef.Id, out var supplied))
+			{
+				return supplied;
+			}
+
+			return raw;
+		}
 	}
 }

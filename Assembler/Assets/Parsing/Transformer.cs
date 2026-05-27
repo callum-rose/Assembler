@@ -314,7 +314,7 @@ namespace Assembler.Parsing
 					CreateValueSource<object>(resolvedValues, item, new Dictionary<string, AssemblerValue>())).ToArray()
 				: Array.Empty<ValueSource<object>>();
 
-		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
+		public static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue raw,
 			T? fallback = default) =>
 			CreateValueSource(resolvedValues, raw, new Dictionary<string, AssemblerValue>(), fallback);
@@ -326,7 +326,7 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
+		public static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue raw,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			T? fallback = default) =>

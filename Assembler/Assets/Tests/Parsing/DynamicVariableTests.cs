@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
@@ -68,6 +69,111 @@ namespace Tests.Parsing
 			scope.Dispose();
 
 			Assert.AreEqual(7, registry.Get<int>("health", scope).Value);
+		}
+
+		[Test]
+		public void StringifiedValueResolver_BindsIntVariableAsLiveString()
+		{
+			// Models the text-label use-case: an int variable (e.g. `score`) bound
+			// directly into a text-label.Text slot (typed as string) without an
+			// intermediate string variable. The resolved provider must reflect
+			// live mutations to the int.
+			var values = new List<ValueInfo>
+			{
+				new("score", new IntValue(0))
+			};
+
+			var registry = new VariableRegistry();
+			registry.Register(values[0]);
+
+			var raw = new VarRef("score");
+
+			var provider = StringifiedValueResolver.Resolve(
+				raw,
+				values,
+				registry,
+				expressions: null,
+				assets: null,
+				triggerContext: null,
+				scope: new EntityVariableScope(),
+				entityTransforms: null);
+
+			Assert.AreEqual("0", provider.Value);
+
+			registry.Get<int>("score").Value = 42;
+			Assert.AreEqual("42", provider.Value, "Provider should reflect live updates to the int variable.");
+
+			registry.Get<int>("score").Value = -7;
+			Assert.AreEqual("-7", provider.Value);
+		}
+
+		[Test]
+		public void StringifiedValueResolver_PassesThroughStringConstants()
+		{
+			var values = new List<ValueInfo>();
+			var registry = new VariableRegistry();
+
+			var provider = StringifiedValueResolver.Resolve(
+				new StringValue("hello"),
+				values,
+				registry,
+				expressions: null,
+				assets: null,
+				triggerContext: null,
+				scope: new EntityVariableScope(),
+				entityTransforms: null);
+
+			Assert.AreEqual("hello", provider.Value);
+		}
+
+		[Test]
+		public void StringifiedValueResolver_StringifiesFloatConstants()
+		{
+			var values = new List<ValueInfo>();
+			var registry = new VariableRegistry();
+
+			var provider = StringifiedValueResolver.Resolve(
+				new FloatValue(3.5f),
+				values,
+				registry,
+				expressions: null,
+				assets: null,
+				triggerContext: null,
+				scope: new EntityVariableScope(),
+				entityTransforms: null);
+
+			Assert.AreEqual(3.5f.ToString(), provider.Value);
+		}
+
+		[Test]
+		public void TextLabelInfo_ParsesNonStringTextProperty()
+		{
+			var yaml = @"
+Variables:
+  score: 0
+Entities:
+  hud:
+    Behaviours:
+      score_label:
+        Type: text label
+        Properties:
+          Text: !var score
+          Label: ""Score: ""
+          FontSize: 24
+          Rect: { X: 0, Y: 0, Width: 200, Height: 32 }
+";
+
+			var parser = new GameFileParser();
+			var gameDto = parser.Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+
+			var hud = gameInfo.Entities.Single();
+			var label = hud.Behaviours.OfType<Assembler.Parsing.Info.Behaviours.TextLabelInfo>().Single();
+
+			// The Text slot now carries the raw AssemblerValue so the factory can
+			// determine the inner type at resolve time and stringify if necessary.
+			Assert.IsInstanceOf<VarRef>(label.Text);
+			Assert.AreEqual("score", ((VarRef)label.Text).Id);
 		}
 
 		[Test]
