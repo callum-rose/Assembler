@@ -331,6 +331,15 @@ namespace Assembler.Building
 					i.Condition.Resolve(vr, cr, ar, tc, scope, er),
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ExclusiveTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ExclusiveTriggerInfo)info;
+				var b = go.AddComponent<ExclusiveTrigger>();
+
+				return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
+					i.Group.Resolve(vr, cr, ar, tc, scope, er),
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er))));
+			},
 			[typeof(CameraInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
 			{
 				var i = (CameraInfo)info;
@@ -802,6 +811,7 @@ namespace Assembler.Building
 			[typeof(TriggerEnterTriggerInfo)] = typeof(TriggerEnter),
 			[typeof(TriggerExitTriggerInfo)] = typeof(TriggerExit),
 			[typeof(ConditionGateInfo)] = typeof(ConditionGate),
+			[typeof(ExclusiveTriggerInfo)] = typeof(ExclusiveTrigger),
 			[typeof(CameraInfo)] = typeof(CameraBehaviour),
 			[typeof(SpawnerInfo)] = typeof(SpawnerBehaviour),
 			[typeof(DestroyInfo)] = typeof(DestroyBehaviour),
