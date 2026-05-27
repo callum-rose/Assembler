@@ -449,6 +449,16 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListFillInfo<Vector3>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<Vector3>)info;
+				var b = go.AddComponent<Vector3ListFill>();
+				return (b, lr => b.Initialise(new ListFillData<Vector3>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: int ---
 			[typeof(ListAddInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -486,6 +496,16 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<int>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListFillInfo<int>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<int>)info;
+				var b = go.AddComponent<IntListFill>();
+				return (b, lr => b.Initialise(new ListFillData<int>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			// --- List operations: float ---
@@ -525,6 +545,16 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListFillInfo<float>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<float>)info;
+				var b = go.AddComponent<FloatListFill>();
+				return (b, lr => b.Initialise(new ListFillData<float>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: bool ---
 			[typeof(ListAddInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -562,6 +592,16 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<bool>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListFillInfo<bool>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<bool>)info;
+				var b = go.AddComponent<BoolListFill>();
+				return (b, lr => b.Initialise(new ListFillData<bool>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			// --- List operations: string ---
@@ -601,6 +641,16 @@ namespace Assembler.Building
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
 			},
+			[typeof(ListFillInfo<string>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<string>)info;
+				var b = go.AddComponent<StringListFill>();
+				return (b, lr => b.Initialise(new ListFillData<string>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
+			},
 
 			// --- List operations: Color ---
 			[typeof(ListAddInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -638,6 +688,16 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<Color>(i.Id,
 					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
 					i.List.Resolve(vr, cr, ar, tc, scope, er))));
+			},
+			[typeof(ListFillInfo<Color>)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
+			{
+				var i = (ListFillInfo<Color>)info;
+				var b = go.AddComponent<ColourListFill>();
+				return (b, lr => b.Initialise(new ListFillData<Color>(i.Id,
+					i.Listeners.ToActions(lr, vr, cr, ar, tc, scope, er),
+					i.List.Resolve(vr, cr, ar, tc, scope, er),
+					i.Count.Resolve(vr, cr, ar, tc, scope, er),
+					i.Value.Resolve(vr, cr, ar, tc, scope, er))));
 			},
 
 			[typeof(SpriteInfo)] = (go, info, vr, cr, es, ar, tc, scope, er) =>
@@ -814,26 +874,32 @@ namespace Assembler.Building
 			[typeof(ListRemoveAtInfo<Vector3>)] = typeof(Vector3ListRemoveAt),
 			[typeof(ListSetAtInfo<Vector3>)] = typeof(Vector3ListSetAt),
 			[typeof(ListClearInfo<Vector3>)] = typeof(Vector3ListClear),
+			[typeof(ListFillInfo<Vector3>)] = typeof(Vector3ListFill),
 			[typeof(ListAddInfo<int>)] = typeof(IntListAdd),
 			[typeof(ListRemoveAtInfo<int>)] = typeof(IntListRemoveAt),
 			[typeof(ListSetAtInfo<int>)] = typeof(IntListSetAt),
 			[typeof(ListClearInfo<int>)] = typeof(IntListClear),
+			[typeof(ListFillInfo<int>)] = typeof(IntListFill),
 			[typeof(ListAddInfo<float>)] = typeof(FloatListAdd),
 			[typeof(ListRemoveAtInfo<float>)] = typeof(FloatListRemoveAt),
 			[typeof(ListSetAtInfo<float>)] = typeof(FloatListSetAt),
 			[typeof(ListClearInfo<float>)] = typeof(FloatListClear),
+			[typeof(ListFillInfo<float>)] = typeof(FloatListFill),
 			[typeof(ListAddInfo<bool>)] = typeof(BoolListAdd),
 			[typeof(ListRemoveAtInfo<bool>)] = typeof(BoolListRemoveAt),
 			[typeof(ListSetAtInfo<bool>)] = typeof(BoolListSetAt),
 			[typeof(ListClearInfo<bool>)] = typeof(BoolListClear),
+			[typeof(ListFillInfo<bool>)] = typeof(BoolListFill),
 			[typeof(ListAddInfo<string>)] = typeof(StringListAdd),
 			[typeof(ListRemoveAtInfo<string>)] = typeof(StringListRemoveAt),
 			[typeof(ListSetAtInfo<string>)] = typeof(StringListSetAt),
 			[typeof(ListClearInfo<string>)] = typeof(StringListClear),
+			[typeof(ListFillInfo<string>)] = typeof(StringListFill),
 			[typeof(ListAddInfo<Color>)] = typeof(ColourListAdd),
 			[typeof(ListRemoveAtInfo<Color>)] = typeof(ColourListRemoveAt),
 			[typeof(ListSetAtInfo<Color>)] = typeof(ColourListSetAt),
 			[typeof(ListClearInfo<Color>)] = typeof(ColourListClear),
+			[typeof(ListFillInfo<Color>)] = typeof(ColourListFill),
 			[typeof(SpriteInfo)] = typeof(SpriteBehaviour),
 			[typeof(AudioSourceInfo)] = typeof(AudioSourceBehaviour),
 			[typeof(SphereGizmoInfo)] = typeof(SphereGizmoBehaviour),
