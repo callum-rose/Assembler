@@ -111,6 +111,16 @@ Fires on a two-finger rotate gesture.
 
 No properties.
 
+## `condition`
+Evaluates an expression against the supplied Arguments and forwards to listeners only when the result is true. Use this when a gate's condition is itself a reusable expression (declared elsewhere by `ExpressionId`) rather than an inline boolean — for inline boolean conditions, prefer `condition gate`.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| ExpressionId | string | Reference to a compiled boolean expression (declared in the `expressions:` section). The expression is evaluated each time an upstream listener fires this behaviour. |
+| Arguments | object[] | Positional arguments passed to the referenced expression. Each entry may be a constant, variable reference, or another expression result. |
+
 ## `timer trigger`
 Fires once after a delay (starts the countdown on entity start, or on Execute).
 
@@ -231,6 +241,24 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 | contact_normal | Vector3 | Surface normal at the contact point. |
 | other_velocity | Vector3 | Other body's linear velocity (zero if no Rigidbody). |
 | other_position | Vector3 | Other entity's world position. |
+
+## `when all`
+Listener fan-in: fires its listeners only after **every** trigger named in `TriggerIds` has fired at least once. Useful for "do X once all of A, B and C have happened" gating. Each `TriggerIds` entry is the `id` of another trigger (or trigger-like) behaviour defined on the same entity or game.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TriggerIds | string[] | Ids of upstream triggers to wait on. Listeners fire once after the last id in the set has been observed. |
+
+## `when any`
+Listener fan-in: fires its listeners as soon as **any** trigger named in `TriggerIds` fires. Equivalent to subscribing the same listener to every id in the set, but expressed as a single named node so multiple downstream behaviours can share it.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TriggerIds | string[] | Ids of upstream triggers to listen to. Listeners fire whenever any one of them fires. |
 
 ## `spawner`
 Spawns an instance of a named template at a position when Executed.
@@ -720,7 +748,4 @@ Draws a text input field. Fires listeners when the user presses Enter to submit 
 - `move animation`: no MonoBehaviour mapping for `MoveAnimationInfo` (skipped).
 - `scale animation`: no MonoBehaviour mapping for `ScaleAnimationInfo` (skipped).
 - `rotate animation`: no MonoBehaviour mapping for `RotateAnimationInfo` (skipped).
-- `condition`: no MonoBehaviour mapping for `ConditionInfo` (skipped).
 - `trigger stay trigger`: no MonoBehaviour mapping for `TriggerStayTriggerInfo` (skipped).
-- `when all`: no MonoBehaviour mapping for `WhenAllInfo` (skipped).
-- `when any`: no MonoBehaviour mapping for `WhenAnyInfo` (skipped).

@@ -65,14 +65,29 @@ namespace Editor
 					continue;
 				}
 
-				if (!GameBehaviourFactory.MonoBehaviourByInfo.TryGetValue(infoType, out var monoType))
+				Type? monoType = null;
+				string? summary;
+				Dictionary<string, PropDoc> propsDocs;
+				List<(string Name, PropDoc Doc)> outputsDocs;
+
+				if (GameBehaviourFactory.MonoBehaviourByInfo.TryGetValue(infoType, out var resolvedMonoType))
+				{
+					monoType = resolvedMonoType;
+					summary = FindSummary(monoType, membersByKey);
+					(propsDocs, outputsDocs) = FindRemarksSections(monoType, membersByKey);
+				}
+				else if (HandAuthoredDocs.TryGetValue(name, out var handDoc))
+				{
+					summary = handDoc.Summary;
+					propsDocs = handDoc.Properties.ToDictionary(p => p.Key, p => p.Value);
+					outputsDocs = new List<(string, PropDoc)>();
+				}
+				else
 				{
 					warnings.Add($"`{name}`: no MonoBehaviour mapping for `{infoType.Name}` (skipped).");
 					continue;
 				}
 
-				var summary = FindSummary(monoType, membersByKey);
-				var (propsDocs, outputsDocs) = FindRemarksSections(monoType, membersByKey);
 				var infoProps = GetInfoProperties(infoType);
 
 				ValidateProps(name, infoType, monoType, infoProps, propsDocs, warnings);
@@ -84,7 +99,7 @@ namespace Editor
 				}
 				else
 				{
-					sb.AppendLine("_No summary — add `<summary>` on " + monoType.Name + "._");
+					sb.AppendLine("_No summary — add `<summary>` on " + (monoType?.Name ?? infoType.Name) + "._");
 				}
 				sb.AppendLine();
 
@@ -345,26 +360,67 @@ namespace Editor
 		private static void ValidateProps(
 			string behaviourName,
 			Type infoType,
-			Type monoType,
+			Type? monoType,
 			IReadOnlyList<InfoProp> infoProps,
 			Dictionary<string, PropDoc> propsDocs,
 			List<string> warnings)
 		{
 			var infoNames = new HashSet<string>(infoProps.Select(p => p.YamlName));
 			var docNames = new HashSet<string>(propsDocs.Keys);
+			var docSource = monoType?.Name ?? $"hand-authored doc for `{behaviourName}`";
 
 			foreach (var missing in infoNames.Except(docNames))
 			{
 				warnings.Add(
-					$"`{behaviourName}`: property `{missing}` on `{infoType.Name}` is missing from `{monoType.Name}`'s `Properties:` block.");
+					$"`{behaviourName}`: property `{missing}` on `{infoType.Name}` is missing from {docSource}'s `Properties:` block.");
 			}
 
 			foreach (var extra in docNames.Except(infoNames))
 			{
 				warnings.Add(
-					$"`{behaviourName}`: `{monoType.Name}` documents `{extra}` in its `Properties:` block but `{infoType.Name}` has no such property.");
+					$"`{behaviourName}`: {docSource} documents `{extra}` in its `Properties:` block but `{infoType.Name}` has no such property.");
 			}
 		}
+
+		// ----------------------------------------------------------------------
+		// Hand-authored docs (fallback for behaviours that don't have a single
+		// MonoBehaviour to attach XML comments to — e.g. listener fan-in nodes
+		// like `when all` / `when any` or pure logic gates like `condition`).
+		//
+		// Property names here must match the YAML keys that the corresponding
+		// Info record exposes (i.e. the record's primary-ctor parameter names,
+		// or the `[YamlName(...)]` override). Doc-gen still reflects the Info
+		// for the property *type*; this map only supplies the summary and the
+		// per-property/per-output human descriptions.
+		// ----------------------------------------------------------------------
+
+		private sealed record HandAuthoredDoc(
+			string Summary,
+			IReadOnlyDictionary<string, PropDoc> Properties);
+
+		private readonly static IReadOnlyDictionary<string, HandAuthoredDoc> HandAuthoredDocs =
+			new Dictionary<string, HandAuthoredDoc>
+			{
+				["condition"] = new HandAuthoredDoc(
+					"Evaluates an expression against the supplied Arguments and forwards to listeners only when the result is true. Use this when a gate's condition is itself a reusable expression (declared elsewhere by `ExpressionId`) rather than an inline boolean — for inline boolean conditions, prefer `condition gate`.",
+					new Dictionary<string, PropDoc>
+					{
+						["ExpressionId"] = new(null, "Reference to a compiled boolean expression (declared in the `expressions:` section). The expression is evaluated each time an upstream listener fires this behaviour."),
+						["Arguments"] = new("object[]", "Positional arguments passed to the referenced expression. Each entry may be a constant, variable reference, or another expression result."),
+					}),
+				["when all"] = new HandAuthoredDoc(
+					"Listener fan-in: fires its listeners only after **every** trigger named in `TriggerIds` has fired at least once. Useful for \"do X once all of A, B and C have happened\" gating. Each `TriggerIds` entry is the `id` of another trigger (or trigger-like) behaviour defined on the same entity or game.",
+					new Dictionary<string, PropDoc>
+					{
+						["TriggerIds"] = new("string[]", "Ids of upstream triggers to wait on. Listeners fire once after the last id in the set has been observed."),
+					}),
+				["when any"] = new HandAuthoredDoc(
+					"Listener fan-in: fires its listeners as soon as **any** trigger named in `TriggerIds` fires. Equivalent to subscribing the same listener to every id in the set, but expressed as a single named node so multiple downstream behaviours can share it.",
+					new Dictionary<string, PropDoc>
+					{
+						["TriggerIds"] = new("string[]", "Ids of upstream triggers to listen to. Listeners fire whenever any one of them fires."),
+					}),
+			};
 
 		// ----------------------------------------------------------------------
 		// Type rendering
