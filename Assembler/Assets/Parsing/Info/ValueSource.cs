@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assembler.Parsing.Info
 {
@@ -45,30 +46,19 @@ namespace Assembler.Parsing.Info
 	{
 		public override ValueSource<T> SubstituteParameters(
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues)
-		{
-			var substituted = new IValueSourceArg[Arguments.Count];
-			for (int i = 0; i < Arguments.Count; i++)
-			{
-				substituted[i] = Arguments[i].SubstituteParameters(parameters, allValues);
-			}
-			return new ExpressionSource<T>(ExpressionId, substituted);
-		}
+			IReadOnlyList<ValueInfo> allValues) =>
+			new ExpressionSource<T>(ExpressionId,
+				Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray());
 	}
 
 	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>
 	{
 		public override ValueSource<T> SubstituteParameters(
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues)
-		{
-			if (!parameters.TryGetValue(ParameterId, out var raw))
-			{
-				throw new ParsingException(
-					$"Parameter '{ParameterId}' not supplied during template instantiation");
-			}
-			return Transformer.CreateValueSource<T>(allValues, raw, parameters: parameters);
-		}
+			IReadOnlyList<ValueInfo> allValues) =>
+			parameters.TryGetValue(ParameterId, out var raw)
+				? Transformer.CreateValueSource<T>(allValues, raw, parameters: parameters)
+				: throw new ParsingException($"Parameter '{ParameterId}' not supplied during template instantiation");
 	}
 
 	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;

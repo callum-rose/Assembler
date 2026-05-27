@@ -6,7 +6,7 @@ namespace Assembler.Parsing
 {
 	public static class BuiltInTypeRegistry
 	{
-		public static readonly IReadOnlyDictionary<string, Type> Default = new Dictionary<string, Type>
+		public readonly static IReadOnlyDictionary<string, Type> Default = new Dictionary<string, Type>
 		{
 			["float"] = typeof(float),
 			["int"] = typeof(int),

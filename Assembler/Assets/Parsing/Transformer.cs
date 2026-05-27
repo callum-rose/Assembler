@@ -14,22 +14,16 @@ namespace Assembler.Parsing
 		[ThreadStatic] private static IReadOnlyDictionary<string, ExpressionInfo>? _currentExpressionsById;
 		[ThreadStatic] private static IReadOnlyDictionary<string, Type>? _currentTypeRegistry;
 
-		private static readonly MethodInfo CreateValueSourceForArgOpenGeneric =
+		private readonly static MethodInfo CreateValueSourceForArgOpenGeneric =
 			typeof(Transformer).GetMethod(nameof(CreateValueSourceForArg),
 				BindingFlags.NonPublic | BindingFlags.Static)!;
 
-		private static readonly Dictionary<Type, MethodInfo> CreateValueSourceCache = new();
+		private readonly static Dictionary<Type, MethodInfo> CreateValueSourceCache = new();
 
 		private static ValueSource<T> CreateValueSourceForArg<T>(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue raw,
-			IReadOnlyDictionary<string, AssemblerValue> parameters)
-		{
-			if (raw is NoValue || raw is null)
-			{
-				return None<T>.Instance;
-			}
-			return CreateValueSource<T>(resolvedValues, raw, parameters);
-		}
+			IReadOnlyDictionary<string, AssemblerValue> parameters) =>
+			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(resolvedValues, raw, parameters);
 
 		public static GameInfo Transform(GameDto gameDto)
 		{
@@ -65,9 +59,10 @@ namespace Assembler.Parsing
 			_currentExpressionsById = expressions.ToDictionary(e => e.Id);
 			_currentTypeRegistry = BuiltInTypeRegistry.Default;
 
-			ConcreteEntityInfo[] templates = Array.Empty<ConcreteEntityInfo>();
-			ConcreteEntityInfo[] entities = Array.Empty<ConcreteEntityInfo>();
-			ValueSource<bool> gameOverCondition = None<bool>.Instance;
+			ConcreteEntityInfo[] templates;
+			ConcreteEntityInfo[] entities;
+			ValueSource<bool> gameOverCondition;
+
 			try
 			{
 				templates = gameDto.Templates?
@@ -77,8 +72,8 @@ namespace Assembler.Parsing
 						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
 						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
 						(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
-							.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
-							.ToArray(),
+						.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
+						.ToArray(),
 						CreateEntityVariables(kvp.Value.Variables),
 						BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
 					.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
@@ -178,6 +173,7 @@ namespace Assembler.Parsing
 		{
 			var templateRefId = dto.Template?.Id;
 			var explicitId = dto.Id;
+
 			var idSuffix = explicitId ??
 			               (templateRefId != null ? $"{templateRefId}_{index}" : $"child_{index}");
 
@@ -205,7 +201,7 @@ namespace Assembler.Parsing
 				nestedChildren);
 		}
 
-		internal static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)
+		private static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)
 		{
 			if (variables == null || variables.Count == 0)
 			{
@@ -285,7 +281,7 @@ namespace Assembler.Parsing
 				{
 					var outputs = l.Outputs ?? new Dictionary<string, string>();
 
-					if (l.EntityTag != null && l.BehaviourTag != null)
+					if (l is { EntityTag: not null, BehaviourTag: not null })
 					{
 						throw new ParsingException(
 							"A listener cannot declare both EntityTag and BehaviourTag. " +
@@ -297,7 +293,7 @@ namespace Assembler.Parsing
 					{
 						var entityTag = CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters);
 
-						return (ListenerInfo)new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
 						{
 							OutputMapping = outputs
 						};
@@ -366,8 +362,9 @@ namespace Assembler.Parsing
 			var expressionsById = _currentExpressionsById;
 			var typeRegistry = _currentTypeRegistry;
 
-			if (expressionsById == null || typeRegistry == null
-				|| !expressionsById.TryGetValue(exprRef.ExpressionId, out var info))
+			if (expressionsById == null || 
+			    typeRegistry == null || 
+			    !expressionsById.TryGetValue(exprRef.ExpressionId, out var info))
 			{
 				throw new ParsingException(
 					$"Cannot resolve argument types for expression '{exprRef.ExpressionId}'. " +
@@ -382,9 +379,11 @@ namespace Assembler.Parsing
 			}
 
 			var args = new IValueSourceArg[exprRef.Arguments.Count];
+
 			for (int i = 0; i < exprRef.Arguments.Count; i++)
 			{
 				var typeName = info.Arguments[i].type;
+
 				if (!typeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
@@ -398,7 +397,10 @@ namespace Assembler.Parsing
 				}
 
 				args[i] = (IValueSourceArg)typed.Invoke(null,
-					new object?[] { resolvedValues, exprRef.Arguments[i], parameters })!;
+					new object?[]
+					{
+						resolvedValues, exprRef.Arguments[i], parameters
+					})!;
 			}
 
 			return args;
@@ -444,7 +446,7 @@ namespace Assembler.Parsing
 				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
 					new ConstantSource<T>((T)BuildTypedList(typed)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
-					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!, resolvedValues, parameters)),
+					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!)),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
@@ -506,10 +508,7 @@ namespace Assembler.Parsing
 			return list;
 		}
 
-		private static object BuildListFromUntyped(ListValue list,
-			Type elementType,
-			IReadOnlyList<ValueInfo> resolvedValues,
-			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		private static object BuildListFromUntyped(ListValue list, Type elementType)
 		{
 			var listType = typeof(List<>).MakeGenericType(elementType);
 			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
@@ -580,17 +579,17 @@ namespace Assembler.Parsing
 				bool b => new BoolValue(b),
 				string s => new StringValue(s),
 				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
-					vecList.ConvertAll(v => (AssemblerValue)new Vector3Value(v.ToVector3(resolvedValues)))),
+					vecList.ConvertAll<AssemblerValue>(v => new Vector3Value(v.ToVector3(resolvedValues)))),
 				List<ColourDto> colourList => new TypedListValue(typeof(Color),
-					colourList.ConvertAll(c => (AssemblerValue)new ColorValue(c.ToColor(resolvedValues)))),
+					colourList.ConvertAll<AssemblerValue>(c => new ColorValue(c.ToColor(resolvedValues)))),
 				List<int> intList => new TypedListValue(typeof(int),
-					intList.ConvertAll(i => (AssemblerValue)new IntValue(i))),
+					intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
 				List<float> floatList => new TypedListValue(typeof(float),
-					floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f))),
+					floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
 				List<bool> boolList => new TypedListValue(typeof(bool),
-					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
+					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
 				List<string> stringList => new TypedListValue(typeof(string),
-					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
+					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
 				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
 				_ => throw new ParsingException("Cannot convert null to a value")
 			};
@@ -630,7 +629,7 @@ namespace Assembler.Parsing
 			return result;
 		}
 
-		public static AssemblerValue ToAssemblerValue(object? raw) =>
+		private static AssemblerValue ToAssemblerValue(object? raw) =>
 			raw switch
 			{
 				null => NoValue.Instance,
@@ -645,30 +644,18 @@ namespace Assembler.Parsing
 				EntityPositionRefDto v => new EntityPositionRef(v.Id ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
-				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
-					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty, v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
-				ColourDto v => new ColourValue(ToAssemblerValue(v.R),
-					ToAssemblerValue(v.G),
-					ToAssemblerValue(v.B),
-					ToAssemblerValue(v.A),
-					v.Raw is not null ? new StringValue(v.Raw) : NoValue.Instance),
-				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
-					vecList.ConvertAll(v => ToAssemblerValue(v))),
-				List<ColourDto> colourList => new TypedListValue(typeof(Color),
-					colourList.ConvertAll(c => ToAssemblerValue(c))),
-				List<int> intList => new TypedListValue(typeof(int),
-					intList.ConvertAll(i => (AssemblerValue)new IntValue(i))),
-				List<float> floatList => new TypedListValue(typeof(float),
-					floatList.ConvertAll(f => (AssemblerValue)new FloatValue(f))),
-				List<bool> boolList => new TypedListValue(typeof(bool),
-					boolList.ConvertAll(b => (AssemblerValue)new BoolValue(b))),
-				List<string> stringList => new TypedListValue(typeof(string),
-					stringList.ConvertAll(s => (AssemblerValue)new StringValue(s))),
+				ColourDto v => new ColourValue(ToAssemblerValue(v.R), ToAssemblerValue(v.G), ToAssemblerValue(v.B), ToAssemblerValue(v.A), v.Raw is null ? NoValue.Instance : new StringValue(v.Raw)),
+				List<VecDto> vecList => new TypedListValue(typeof(Vector3), vecList.ConvertAll(ToAssemblerValue)),
+				List<ColourDto> colourList => new TypedListValue(typeof(Color), colourList.ConvertAll(ToAssemblerValue)),
+				List<int> intList => new TypedListValue(typeof(int), intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
+				List<float> floatList => new TypedListValue(typeof(float), floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
+				List<bool> boolList => new TypedListValue(typeof(bool), boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
+				List<string> stringList => new TypedListValue(typeof(string), stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
 				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
 				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
-				_ => throw new ParsingException(
-					$"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
+				_ => throw new ParsingException($"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
 			};
 
 		private static IReadOnlyDictionary<string, AssemblerValue> ToAssemblerDict(IDictionary<string, object> dict)
