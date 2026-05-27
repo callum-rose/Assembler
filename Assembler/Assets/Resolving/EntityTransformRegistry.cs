@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Assembler.Resolving
 {
-	public sealed class EntityRegistry
+	public sealed class EntityTransformRegistry
 	{
 		private readonly Dictionary<string, Transform> _transforms = new();
 
@@ -23,7 +23,7 @@ namespace Assembler.Resolving
 			if (!_transforms.TryGetValue(id, out var transform))
 			{
 				throw new System.InvalidOperationException(
-					$"No entity registered with id '{id}'. Available ids: {string.Join(", ", _transforms.Keys)}");
+					$"No transform registered for entity id '{id}'. Available ids: {string.Join(", ", _transforms.Keys)}");
 			}
 
 			return transform;

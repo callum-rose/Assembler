@@ -39,7 +39,7 @@ namespace Assembler.Building
 			AssetRegistry ar,
 			TriggerContext tc,
 			EntityVariableScope scope,
-			EntityRegistry er);
+			EntityTransformRegistry er);
 
 		private readonly static Dictionary<Type, BehaviourBuilder> Builders = new()
 		{
@@ -856,7 +856,7 @@ namespace Assembler.Building
 			IEntitySpawner entitySpawner,
 			AssetRegistry assets,
 			TriggerContext triggerContext,
-			EntityRegistry entities,
+			EntityTransformRegistry entities,
 			EntityVariableScope? scope = null)
 		{
 			return Builders.TryGetValue(behaviourInfo.GetType(), out var builder)
@@ -879,7 +879,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityRegistry entities) =>
+			EntityTransformRegistry entities) =>
 			listeners.Select(l => l switch
 			{
 				DirectListenerInfo direct => BuildDirectAction(direct, listenerRegistry, triggerContext),
@@ -927,7 +927,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			var entityTagProvider = listener.EntityTag.Resolve(variables, expressions, assets, triggerContext, scope, entities);
 			var behaviourId = listener.BehaviourId;
@@ -957,7 +957,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			var behaviourTagProvider = listener.BehaviourTag.Resolve(variables, expressions, assets, triggerContext, scope, entities);
 

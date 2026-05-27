@@ -19,7 +19,7 @@ namespace Assembler.Building
 		private readonly CompiledExpressionsRegistry _expressions;
 		private readonly BehaviourRegistry _behaviourRegistry;
 		private readonly AssetRegistry _assets;
-		private readonly EntityRegistry _entities;
+		private readonly EntityTransformRegistry _entities;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
 		private readonly TriggerContext _triggerContext;
@@ -30,7 +30,7 @@ namespace Assembler.Building
 			CompiledExpressionsRegistry expressions,
 			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
-			EntityRegistry entities,
+			EntityTransformRegistry entities,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			IReadOnlyList<ValueInfo> allValues,
 			TriggerContext triggerContext)

@@ -13,7 +13,7 @@ namespace Assembler.Resolving
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			return valueSource switch
 			{
@@ -40,7 +40,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
 			EntityVariableScope? scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			var (_, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
@@ -93,7 +93,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
 			EntityVariableScope? scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			var wrapperType = valueSource.GetType();
 			var innerType = wrapperType.IsGenericType ? wrapperType.GetGenericArguments()[0] : expectedType;
@@ -115,7 +115,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
 			EntityVariableScope? scope,
-			EntityRegistry entities)
+			EntityTransformRegistry entities)
 		{
 			return wrapperBoxed switch
 			{
