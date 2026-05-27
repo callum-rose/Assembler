@@ -19,6 +19,7 @@ namespace Assembler.Building
 		private readonly CompiledExpressionsRegistry _expressions;
 		private readonly BehaviourRegistry _behaviourRegistry;
 		private readonly AssetRegistry _assets;
+		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
 		private readonly TriggerContext _triggerContext;
@@ -29,6 +30,7 @@ namespace Assembler.Building
 			CompiledExpressionsRegistry expressions,
 			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
+			EntityTransformRegistry entityTransforms,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			IReadOnlyList<ValueInfo> allValues,
 			TriggerContext triggerContext)
@@ -37,6 +39,7 @@ namespace Assembler.Building
 			_expressions = expressions;
 			_behaviourRegistry = behaviourRegistry;
 			_assets = assets;
+			_entityTransforms = entityTransforms;
 			_templates = templates;
 			_allValues = allValues;
 			_triggerContext = triggerContext;
@@ -52,8 +55,8 @@ namespace Assembler.Building
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value,
-					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope).Value.FromEuler()
+					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms).Value,
+					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms).Value.FromEuler()
 				}
 			};
 
@@ -61,6 +64,8 @@ namespace Assembler.Building
 			{
 				gameObject.transform.SetParent(parent, worldPositionStays: false);
 			}
+
+			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
@@ -78,6 +83,7 @@ namespace Assembler.Building
 					this,
 					_assets,
 					_triggerContext,
+					_entityTransforms,
 					scope);
 
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();

@@ -1,0 +1,158 @@
+Game:
+  Title: Entity Position Demo
+  Description: |
+    Demonstrates the `!entity_position <id>` YAML tag — a live wrapper around
+    another entity's Transform that always returns the current frame's
+    position, never a stale value.
+
+      * The `leader` cube moves left/right with A/D (and up/down with W/S).
+      * Two followers track the leader by reading `!entity_position leader`
+        every frame and applying an offset.
+      * The `follower above` is declared in YAML BEFORE the leader, proving
+        that declaration order does not matter — the registry is populated
+        for every entity before any behaviour resolves its properties.
+      * The `follower below` is declared after, for symmetry.
+
+    There is no `vector variable setter` writing the leader's position
+    anywhere — followers read it directly from the transform, so they cannot
+    lag behind regardless of behaviour execution order within a frame.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101020"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  leader speed: 4
+
+  follower above offset y: 1.5
+  follower below offset y: -1.5
+
+  leader colour: !colour { R: 0.9, G: 0.7, B: 0.2, A: 1 }
+  follower colour: !colour { R: 0.4, G: 0.7, B: 1.0, A: 1 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Expressions:
+  shift y:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ pos, yoffset ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(pos.x, pos.y + yoffset, pos.z);"
+
+Entities:
+  # Declared BEFORE `leader` on purpose: proves declaration order is irrelevant
+  # for `!entity_position` reads. Property resolution happens after every
+  # entity has registered its transform.
+  follower above:
+    Position: !vec { X: 0, Y: 1.5, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+          IsWire: false
+          Colour: !var follower colour
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: follower above
+            BehaviourId: track
+      track:
+        Type: position setter
+        Properties:
+          Position: !expr
+            ExpressionId: shift y
+            Arguments:
+              - !entity_position leader
+              - !var follower above offset y
+
+  leader:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+          IsWire: false
+          Colour: !var leader colour
+
+      # WASD-driven motion via four velocity behaviours, each gated by a
+      # key-hold trigger. Standard pattern.
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: move left
+      move left:
+        Type: velocity
+        Properties:
+          Velocity: !vec { X: -4, Y: 0, Z: 0 }
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: move right
+      move right:
+        Type: velocity
+        Properties:
+          Velocity: !vec { X: 4, Y: 0, Z: 0 }
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: move up
+      move up:
+        Type: velocity
+        Properties:
+          Velocity: !vec { X: 0, Y: 4, Z: 0 }
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: move down
+      move down:
+        Type: velocity
+        Properties:
+          Velocity: !vec { X: 0, Y: -4, Z: 0 }
+
+  follower below:
+    Position: !vec { X: 0, Y: -1.5, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+          IsWire: false
+          Colour: !var follower colour
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: follower below
+            BehaviourId: track
+      track:
+        Type: position setter
+        Properties:
+          Position: !expr
+            ExpressionId: shift y
+            Arguments:
+              - !entity_position leader
+              - !var follower below offset y
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

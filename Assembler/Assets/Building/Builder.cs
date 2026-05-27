@@ -95,6 +95,16 @@ namespace Assembler.Building
 			Build(gameInfo);
 		}
 
+		[MenuItem("Test/Build EntityPositionDemo")]
+		public static void BuildEntityPositionDemo()
+		{
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/EntityPositionDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
 		public static void Build(GameInfo gameInfo)
 		{
 			// 1. Initialize variables and expressions
@@ -134,6 +144,7 @@ namespace Assembler.Building
 
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
+			var entityTransformRegistry = new EntityTransformRegistry();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
@@ -144,6 +155,7 @@ namespace Assembler.Building
 				compiledExpressionsRegistry,
 				behaviourRegistry,
 				assetRegistry,
+				entityTransformRegistry,
 				templatesById,
 				gameInfo.Variables,
 				triggerContext);
