@@ -253,6 +253,40 @@ names.
 
 ---
 
+## Conditional assignment — use a ternary `!expr`, not two `condition gate`s
+
+The pattern "set X to A if cond else B" is a single `*_variable setter` whose `Value` is an `!expr`
+with a ternary body. Don't model it as two setters each gated by a `condition gate` — that's verbose
+and easy to get wrong (one of the two branches always fires; both runs evaluate their `Value`).
+
+```yaml
+Expressions:
+  lives after hit:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ lives ]
+    ReturnType: int
+    Expression: "lives > 0 ? lives - 1 : 0;"
+```
+
+```yaml
+on hit:
+  Type: int variable setter
+  Properties:
+    VariableId: !var lives
+    Value: !expr
+      ExpressionId: lives after hit
+      Arguments:
+        - !var lives
+```
+
+The expression compiler supports ternaries (including nested) — see
+[`unity-expression-compiler`](../unity-expression-compiler/SKILL.md). This works for every
+`*_variable setter` (int, float, bool, string, vector). Reach for a `condition gate` only when the
+branches do *different work* (e.g. set X vs. set Y, or set X vs. spawn an entity), not when both
+branches just write a value to the same variable.
+
+---
+
 ## Templates
 
 Templates are reusable entity definitions. Anywhere an entity could appear, an entity can instead

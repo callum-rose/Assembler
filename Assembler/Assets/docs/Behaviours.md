@@ -278,54 +278,54 @@ Forwards an upstream trigger to listeners only when Condition evaluates to true 
 | Condition | bool | Boolean expression checked on each Execute call. |
 
 ## `vector variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes Value into the variable referenced by VariableId when Executed. For conditional assignment ("set X to A if cond else B"), use a single setter whose Value is an `!expr` with a ternary body (`cond ? A : B;`); the expression compiler supports ternaries (including nested) on every supported variable type, so there is no need to gate two setters behind a `condition gate`.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | VariableId | Vector3 | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
-| Value | Vector3 | Source value to assign. Can be a constant, expression, or another variable reference. |
+| Value | Vector3 | Source value to assign. Can be a constant, an `!expr` (including a ternary `cond ? A : B;` for conditional assignment), or another variable reference. |
 
 ## `int variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes Value into the variable referenced by VariableId when Executed. For conditional assignment ("set X to A if cond else B"), use a single setter whose Value is an `!expr` with a ternary body (`cond ? A : B;`); the expression compiler supports ternaries (including nested) on every supported variable type, so there is no need to gate two setters behind a `condition gate`.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | VariableId | int | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
-| Value | int | Source value to assign. Can be a constant, expression, or another variable reference. |
+| Value | int | Source value to assign. Can be a constant, an `!expr` (including a ternary `cond ? A : B;` for conditional assignment), or another variable reference. |
 
 ## `float variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes Value into the variable referenced by VariableId when Executed. For conditional assignment ("set X to A if cond else B"), use a single setter whose Value is an `!expr` with a ternary body (`cond ? A : B;`); the expression compiler supports ternaries (including nested) on every supported variable type, so there is no need to gate two setters behind a `condition gate`.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | VariableId | float | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
-| Value | float | Source value to assign. Can be a constant, expression, or another variable reference. |
+| Value | float | Source value to assign. Can be a constant, an `!expr` (including a ternary `cond ? A : B;` for conditional assignment), or another variable reference. |
 
 ## `bool variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes Value into the variable referenced by VariableId when Executed. For conditional assignment ("set X to A if cond else B"), use a single setter whose Value is an `!expr` with a ternary body (`cond ? A : B;`); the expression compiler supports ternaries (including nested) on every supported variable type, so there is no need to gate two setters behind a `condition gate`.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | VariableId | bool | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
-| Value | bool | Source value to assign. Can be a constant, expression, or another variable reference. |
+| Value | bool | Source value to assign. Can be a constant, an `!expr` (including a ternary `cond ? A : B;` for conditional assignment), or another variable reference. |
 
 ## `string variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes Value into the variable referenced by VariableId when Executed. For conditional assignment ("set X to A if cond else B"), use a single setter whose Value is an `!expr` with a ternary body (`cond ? A : B;`); the expression compiler supports ternaries (including nested) on every supported variable type, so there is no need to gate two setters behind a `condition gate`.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | VariableId | string | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
-| Value | string | Source value to assign. Can be a constant, expression, or another variable reference. |
+| Value | string | Source value to assign. Can be a constant, an `!expr` (including a ternary `cond ? A : B;` for conditional assignment), or another variable reference. |
 
 ## `vector list add`
 Appends Value to the end of List when Executed.

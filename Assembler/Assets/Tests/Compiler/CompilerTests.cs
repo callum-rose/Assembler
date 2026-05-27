@@ -463,6 +463,65 @@ namespace Tests.Compiler
 			Assert.That(func(25), Is.EqualTo(2));
 		}
 
+		// Issue #34 — "set X to A if cond else B" is supported as a single variable setter
+		// whose Value is an !expr with a ternary body, for every variable-setter type.
+		// These tests pin the contract that callers (game descriptors / docs) rely on.
+
+		[Test]
+		public void Issue34_TernaryFor_IntSetter()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, int>("return lives > 0 ? lives - 1 : 0;", "lives");
+			Assert.That(func(3), Is.EqualTo(2));
+			Assert.That(func(1), Is.EqualTo(0));
+			Assert.That(func(0), Is.EqualTo(0));
+		}
+
+		[Test]
+		public void Issue34_TernaryFor_FloatSetter()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, float, float>(
+				"return v < 0f ? 0f : v > max ? max : v;", "v", "max");
+			Assert.That(func(-1f, 5f), Is.EqualTo(0f));
+			Assert.That(func(3f, 5f), Is.EqualTo(3f));
+			Assert.That(func(9f, 5f), Is.EqualTo(5f));
+		}
+
+		[Test]
+		public void Issue34_TernaryFor_BoolSetter()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, int, bool>(
+				"return hp <= 0 ? true : dead;", "hp", "dead");
+			Assert.That(func(0, false), Is.True);
+			Assert.That(func(5, false), Is.False);
+			Assert.That(func(5, true), Is.True);
+		}
+
+		[Test]
+		public void Issue34_TernaryFor_StringSetter()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, string>(
+				"return score > 0 ? \"win\" : \"lose\";", "score");
+			Assert.That(func(10), Is.EqualTo("win"));
+			Assert.That(func(0), Is.EqualTo("lose"));
+		}
+
+		[Test]
+		public void Issue34_TernaryFor_VectorSetter()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(Vector3), "Vector3");
+
+			var func = compiler.CompileFunc<Vector3, bool, Vector3>(
+				"return flip ? new Vector3(-v.x, v.y, v.z) : v;", "v", "flip");
+
+			Assert.That(func(new Vector3(1f, 2f, 3f), false), Is.EqualTo(new Vector3(1f, 2f, 3f)));
+			Assert.That(func(new Vector3(1f, 2f, 3f), true), Is.EqualTo(new Vector3(-1f, 2f, 3f)));
+		}
+
 		// Local method tests
 		[Test]
 		public void LocalMethodDefinition()
