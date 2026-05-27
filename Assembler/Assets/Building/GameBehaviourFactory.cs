@@ -856,7 +856,7 @@ namespace Assembler.Building
 			IEntitySpawner entitySpawner,
 			AssetRegistry assets,
 			TriggerContext triggerContext,
-			EntityTransformRegistry entities,
+			EntityTransformRegistry entityTransforms,
 			EntityVariableScope? scope = null)
 		{
 			return Builders.TryGetValue(behaviourInfo.GetType(), out var builder)
@@ -868,7 +868,7 @@ namespace Assembler.Building
 					assets,
 					triggerContext,
 					scope,
-					entities)
+					entityTransforms)
 				: throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 		}
 
@@ -879,7 +879,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityTransformRegistry entities) =>
+			EntityTransformRegistry entityTransforms) =>
 			listeners.Select(l => l switch
 			{
 				DirectListenerInfo direct => BuildDirectAction(direct, listenerRegistry, triggerContext),
@@ -890,7 +890,7 @@ namespace Assembler.Building
 					assets,
 					triggerContext,
 					scope,
-					entities),
+					entityTransforms),
 				BehaviourTaggedListenerInfo behaviourTagged => BuildBehaviourTaggedAction(behaviourTagged,
 					listenerRegistry,
 					variables,
@@ -898,7 +898,7 @@ namespace Assembler.Building
 					assets,
 					triggerContext,
 					scope,
-					entities),
+					entityTransforms),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			}).ToArray();
 
@@ -927,9 +927,9 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityTransformRegistry entities)
+			EntityTransformRegistry entityTransforms)
 		{
-			var entityTagProvider = listener.EntityTag.Resolve(variables, expressions, assets, triggerContext, scope, entities);
+			var entityTagProvider = listener.EntityTag.Resolve(variables, expressions, assets, triggerContext, scope, entityTransforms);
 			var behaviourId = listener.BehaviourId;
 
 			return () =>
@@ -957,9 +957,9 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityTransformRegistry entities)
+			EntityTransformRegistry entityTransforms)
 		{
-			var behaviourTagProvider = listener.BehaviourTag.Resolve(variables, expressions, assets, triggerContext, scope, entities);
+			var behaviourTagProvider = listener.BehaviourTag.Resolve(variables, expressions, assets, triggerContext, scope, entityTransforms);
 
 			return () =>
 			{

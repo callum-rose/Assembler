@@ -13,7 +13,7 @@ namespace Assembler.Resolving
 			AssetRegistry assets,
 			TriggerContext triggerContext,
 			EntityVariableScope scope,
-			EntityTransformRegistry entities)
+			EntityTransformRegistry entityTransforms)
 		{
 			return valueSource switch
 			{
@@ -24,10 +24,10 @@ namespace Assembler.Resolving
 					expressions,
 					triggerContext,
 					scope,
-					entities)),
+					entityTransforms)),
 				AssetSource<T> assetRef => new ValueProvider<T>(assets.Get<T>(assetRef.AssetId)),
 				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
-					(IValueProvider<T>)(object)new TransformPositionProvider(entities.Get(ep.EntityId)),
+					(IValueProvider<T>)(object)new TransformPositionProvider(entityTransforms.Get(ep.EntityId)),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName, triggerContext),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
@@ -40,7 +40,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
 			EntityVariableScope? scope,
-			EntityTransformRegistry entities)
+			EntityTransformRegistry entityTransforms)
 		{
 			var (_, @delegate) = expressions.GetCompiled(expressionSource.ExpressionId);
 			var info = expressions.GetInfo(expressionSource.ExpressionId);
@@ -57,7 +57,7 @@ namespace Assembler.Resolving
 					expressions,
 					triggerContext,
 					scope,
-					entities);
+					entityTransforms);
 			}
 
 			return InvokeWithArgs;
@@ -93,7 +93,7 @@ namespace Assembler.Resolving
 			CompiledExpressionsRegistry expressions,
 			TriggerContext triggerContext,
 			EntityVariableScope? scope,
-			EntityTransformRegistry entities)
+			EntityTransformRegistry entityTransforms)
 		{
 			var wrapperType = valueSource.GetType();
 			var innerType = wrapperType.IsGenericType ? wrapperType.GetGenericArguments()[0] : expectedType;
@@ -105,7 +105,7 @@ namespace Assembler.Resolving
 			return (IValueProvider)method.Invoke(null,
 				new object?[]
 				{
-					valueSource, variables, expressions, triggerContext, scope, entities
+					valueSource, variables, expressions, triggerContext, scope, entityTransforms
 				});
 		}
 
