@@ -11,6 +11,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 	///   Interval: Seconds between fires.
 	///   Count: Number of times to fire; 0 means fire forever.
 	///   AutoStart: When true the timer starts on entity start; when false it waits for an Execute call from upstream.
+	/// Outputs:
+	///   iteration_index [int]: Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.).
+	///   iteration_count [int]: Total number of fires configured by Count; 0 when the trigger is unbounded.
 	/// </remarks>
 	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
 	{
@@ -30,7 +33,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 				UnityEngine.Debug.LogWarning("Interval trigger already running. Restarting");
 				StopCoroutine(_currentCoroutine);
 			}
-			
+
 			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
 		}
 
@@ -40,10 +43,25 @@ namespace Assembler.Behaviours.Triggers.Timing
 			{
 				yield return new WaitForSeconds(interval);
 
-				NotifyListeners();
+				FireIteration(i, count);
 			}
 
 			_currentCoroutine = null;
+		}
+
+		public void FireIteration(int iterationIndex, int iterationCount)
+		{
+			TriggerContext.Push();
+			try
+			{
+				TriggerContext.Set("iteration_index", iterationIndex);
+				TriggerContext.Set("iteration_count", iterationCount);
+				NotifyListeners();
+			}
+			finally
+			{
+				TriggerContext.Pop();
+			}
 		}
 	}
 }

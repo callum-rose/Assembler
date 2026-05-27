@@ -145,6 +145,13 @@ Fires repeatedly at a fixed interval. Optionally limited to a number of repetiti
 | Count | int | Number of times to fire; 0 means fire forever. |
 | AutoStart | bool | When true the timer starts on entity start; when false it waits for an Execute call from upstream. |
 
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| iteration_index | int | Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.). |
+| iteration_count | int | Total number of fires configured by Count; 0 when the trigger is unbounded. |
+
 ## `every frame trigger`
 Fires every Unity Update frame. Use for behaviours that must run continuously.
 
