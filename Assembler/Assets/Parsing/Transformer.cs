@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Extensions;
 using Assembler.Parsing.Info;
@@ -10,6 +11,26 @@ namespace Assembler.Parsing
 {
 	public static class Transformer
 	{
+		[ThreadStatic] private static IReadOnlyDictionary<string, ExpressionInfo>? _currentExpressionsById;
+		[ThreadStatic] private static IReadOnlyDictionary<string, Type>? _currentTypeRegistry;
+
+		private static readonly MethodInfo CreateValueSourceForArgOpenGeneric =
+			typeof(Transformer).GetMethod(nameof(CreateValueSourceForArg),
+				BindingFlags.NonPublic | BindingFlags.Static)!;
+
+		private static readonly Dictionary<Type, MethodInfo> CreateValueSourceCache = new();
+
+		private static ValueSource<T> CreateValueSourceForArg<T>(IReadOnlyList<ValueInfo> resolvedValues,
+			AssemblerValue raw,
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		{
+			if (raw is NoValue || raw is null)
+			{
+				return None<T>.Instance;
+			}
+			return CreateValueSource<T>(resolvedValues, raw, parameters);
+		}
+
 		public static GameInfo Transform(GameDto gameDto)
 		{
 			var info = new AboutInfo(gameDto.Game?.Title ?? string.Empty, gameDto.Game?.Description ?? string.Empty);
@@ -41,23 +62,37 @@ namespace Assembler.Parsing
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
 
-			var templates = gameDto.Templates?
-				.Select(kvp => new ConcreteEntityInfo(
-					kvp.Key,
-					kvp.Value.Tags ?? new List<string>(),
-					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
-					CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
-					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
-					.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
-					.ToArray(),
-					CreateEntityVariables(kvp.Value.Variables),
-					BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
-				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
+			_currentExpressionsById = expressions.ToDictionary(e => e.Id);
+			_currentTypeRegistry = BuiltInTypeRegistry.Default;
 
-			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
-				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
+			ConcreteEntityInfo[] templates = Array.Empty<ConcreteEntityInfo>();
+			ConcreteEntityInfo[] entities = Array.Empty<ConcreteEntityInfo>();
+			ValueSource<bool> gameOverCondition = None<bool>.Instance;
+			try
+			{
+				templates = gameDto.Templates?
+					.Select(kvp => new ConcreteEntityInfo(
+						kvp.Key,
+						kvp.Value.Tags ?? new List<string>(),
+						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
+						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
+						(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
+							.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
+							.ToArray(),
+						CreateEntityVariables(kvp.Value.Variables),
+						BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
+					.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-			var gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
+				entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
+					.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
+
+				gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
+			}
+			finally
+			{
+				_currentExpressionsById = null;
+				_currentTypeRegistry = null;
+			}
 
 			return new GameInfo(info,
 				world,
@@ -307,17 +342,67 @@ namespace Assembler.Parsing
 					.ToArray()
 				: Array.Empty<string>();
 
-		internal static IReadOnlyList<ValueSource<object>> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
+		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue? value) =>
 			value is ListValue list
-				? list.Value.Select(item =>
+				? list.Value.Select(item => (IValueSourceArg)
 					CreateValueSource<object>(resolvedValues, item, new Dictionary<string, AssemblerValue>())).ToArray()
-				: Array.Empty<ValueSource<object>>();
+				: Array.Empty<IValueSourceArg>();
 
 		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
 			AssemblerValue raw,
 			T? fallback = default) =>
 			CreateValueSource(resolvedValues, raw, new Dictionary<string, AssemblerValue>(), fallback);
+
+		private static IReadOnlyList<IValueSourceArg> BuildExpressionArguments(ExprRef exprRef,
+			IReadOnlyList<ValueInfo> resolvedValues,
+			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		{
+			if (exprRef.Arguments.Count == 0)
+			{
+				return Array.Empty<IValueSourceArg>();
+			}
+
+			var expressionsById = _currentExpressionsById;
+			var typeRegistry = _currentTypeRegistry;
+
+			if (expressionsById == null || typeRegistry == null
+				|| !expressionsById.TryGetValue(exprRef.ExpressionId, out var info))
+			{
+				throw new ParsingException(
+					$"Cannot resolve argument types for expression '{exprRef.ExpressionId}'. " +
+					"Expression must be defined before it can be referenced.");
+			}
+
+			if (info.Arguments.Count != exprRef.Arguments.Count)
+			{
+				throw new ParsingException(
+					$"Expression '{exprRef.ExpressionId}' expects {info.Arguments.Count} arguments " +
+					$"but {exprRef.Arguments.Count} were supplied.");
+			}
+
+			var args = new IValueSourceArg[exprRef.Arguments.Count];
+			for (int i = 0; i < exprRef.Arguments.Count; i++)
+			{
+				var typeName = info.Arguments[i].type;
+				if (!typeRegistry.TryGetValue(typeName, out var argType))
+				{
+					throw new ParsingException(
+						$"Expression '{exprRef.ExpressionId}' argument {i} has unknown type '{typeName}'.");
+				}
+
+				if (!CreateValueSourceCache.TryGetValue(argType, out var typed))
+				{
+					typed = CreateValueSourceForArgOpenGeneric.MakeGenericMethod(argType);
+					CreateValueSourceCache[argType] = typed;
+				}
+
+				args[i] = (IValueSourceArg)typed.Invoke(null,
+					new object?[] { resolvedValues, exprRef.Arguments[i], parameters })!;
+			}
+
+			return args;
+		}
 
 		/// <summary>
 		/// Wraps a parsed <see cref="AssemblerValue"/> into a <see cref="ValueSource{T}"/>.
@@ -343,9 +428,7 @@ namespace Assembler.Parsing
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
-					exprRef.Arguments
-						.Select(a => CreateValueSource<object>(resolvedValues, a, parameters))
-						.ToArray()),
+					BuildExpressionArguments(exprRef, resolvedValues, parameters)),
 				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
 					(T)(object)vec.ToVector3(resolvedValues)),
 				VecValue vec when typeof(T) == typeof(Vector2) => new ConstantSource<T>(

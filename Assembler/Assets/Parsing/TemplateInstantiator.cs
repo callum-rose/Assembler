@@ -144,20 +144,7 @@ namespace Assembler.Parsing
 					$"Cannot adapt runtime parameter '{key}' (type {value.GetType()}) for template instantiation")
 			};
 
-		public static ValueSource<T> SubstituteParameters<T>(this ValueSource<T> source,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
-			source switch
-			{
-				ParameterSource<T> p => !parameters.TryGetValue(p.ParameterId, out var raw)
-					? throw new ParsingException($"Parameter '{p.ParameterId}' not supplied during template instantiation")
-					: Transformer.CreateValueSource<T>(allValues, raw, parameters: parameters),
-				ExpressionSource<T> e => new ExpressionSource<T>(e.ExpressionId,
-					e.Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray()),
-				_ => source
-			};
-
-		private static BehaviourInfo SubstituteBehaviour(
+private static BehaviourInfo SubstituteBehaviour(
 			BehaviourInfo info,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyList<ValueInfo> allValues)

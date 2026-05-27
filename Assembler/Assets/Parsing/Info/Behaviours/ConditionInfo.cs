@@ -7,7 +7,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> ExpressionId,
-		IReadOnlyList<ValueSource<object>> Arguments) : BehaviourInfo(Id, Listeners)
+		IReadOnlyList<IValueSourceArg> Arguments) : BehaviourInfo(Id, Listeners)
 	{
 		public static ConditionInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -25,6 +25,6 @@ namespace Assembler.Parsing.Info.Behaviours
 			new ConditionInfo(Id,
 				substitutedListeners,
 				ExpressionId.SubstituteParameters(parameters, allValues),
-				Arguments.Select(a => TemplateInstantiator.SubstituteParameters<object>(a, parameters, allValues)).ToArray());
+				Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray());
 	}
 }
