@@ -65,8 +65,8 @@ namespace Assembler.Parsing
 					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Position)),
 					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Rotation)),
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
-						.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
-						.ToArray(),
+					.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
+					.ToArray(),
 					CreateEntityVariables(kvp.Value.Variables),
 					BuildTemplateChildren(ctx, kvp.Value.Children, kvp.Key)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
@@ -84,10 +84,7 @@ namespace Assembler.Parsing
 				expressions,
 				templates,
 				entities,
-				gameOverCondition)
-			{
-				ParseContext = ctx
-			};
+				gameOverCondition) { ParseContext = ctx };
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
 				new(kvp.Key,
@@ -256,10 +253,7 @@ namespace Assembler.Parsing
 				ctx);
 
 			return behaviourDto.Tags is { Count: > 0 }
-				? info with
-				{
-					Tags = behaviourDto.Tags.ToArray()
-				}
+				? info with { Tags = behaviourDto.Tags.ToArray() }
 				: info;
 		}
 
@@ -283,20 +277,14 @@ namespace Assembler.Parsing
 					{
 						var entityTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.EntityTag));
 
-						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
-						{
-							OutputMapping = outputs
-						};
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId) { OutputMapping = outputs };
 					}
 
 					if (l.BehaviourTag != null)
 					{
 						var behaviourTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.BehaviourTag));
 
-						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag)
-						{
-							OutputMapping = outputs
-						};
+						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs };
 					}
 
 					var entityId = l.EntityId switch
@@ -312,10 +300,7 @@ namespace Assembler.Parsing
 
 					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
 
-					return new DirectListenerInfo(behaviourDescriptor)
-					{
-						OutputMapping = outputs
-					};
+					return new DirectListenerInfo(behaviourDescriptor) { OutputMapping = outputs };
 				})
 				.ToArray();
 
@@ -540,9 +525,8 @@ namespace Assembler.Parsing
 				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")
 			};
 
-		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj, string? name = null)
-		{
-			switch (obj)
+		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj, string? name = null) =>
+			obj switch
 			{
 				VecDto vecDto => new Vector3Value(vecDto.ToVector3(resolvedValues)),
 				ColourDto colourDto => new ColorValue(colourDto.ToColor(resolvedValues)),
@@ -618,15 +602,23 @@ namespace Assembler.Parsing
 				EntityPositionRefDto v => new EntityPositionRef(v.Id ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
-				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty, v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
+					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
-				ColourDto v => new ColourValue(ToAssemblerValue(v.R), ToAssemblerValue(v.G), ToAssemblerValue(v.B), ToAssemblerValue(v.A), v.Raw is null ? NoValue.Instance : new StringValue(v.Raw)),
+				ColourDto v => new ColourValue(ToAssemblerValue(v.R),
+					ToAssemblerValue(v.G),
+					ToAssemblerValue(v.B),
+					ToAssemblerValue(v.A),
+					v.Raw is null ? NoValue.Instance : new StringValue(v.Raw)),
 				List<VecDto> vecList => new TypedListValue(typeof(Vector3), vecList.ConvertAll(ToAssemblerValue)),
 				List<ColourDto> colourList => new TypedListValue(typeof(Color), colourList.ConvertAll(ToAssemblerValue)),
 				List<int> intList => new TypedListValue(typeof(int), intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
-				List<float> floatList => new TypedListValue(typeof(float), floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
-				List<bool> boolList => new TypedListValue(typeof(bool), boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
-				List<string> stringList => new TypedListValue(typeof(string), stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
+				List<float> floatList => new TypedListValue(typeof(float),
+					floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
+				List<bool> boolList => new TypedListValue(typeof(bool),
+					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
+				List<string> stringList => new TypedListValue(typeof(string),
+					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
 				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
 				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
 				_ => throw new ParsingException($"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
