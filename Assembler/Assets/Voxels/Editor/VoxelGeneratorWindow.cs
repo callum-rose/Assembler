@@ -3,11 +3,10 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Assembler.Anthropic;
-using Assembler.Voxels;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.Generation.Verification.Editor
+namespace Assembler.Voxels.Editor
 {
 	public sealed class VoxelGeneratorWindow : EditorWindow
 	{
