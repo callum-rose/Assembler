@@ -12,10 +12,9 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public TextLabelData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<string> text,
+						IValueProvider<string> text,
 			IValueProvider<string> label,
 			IValueProvider<int> fontSize,
-			ScreenRect rect) : base(id, listeners) => (Text, Label, FontSize, Rect) = (text, label, fontSize, rect);
+			ScreenRect rect) : base(id) => (Text, Label, FontSize, Rect) = (text, label, fontSize, rect);
 	}
 }

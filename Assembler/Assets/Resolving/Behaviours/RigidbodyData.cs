@@ -8,6 +8,6 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<bool> IsKinematic { get; init; } = NullValueProvider<bool>.Instance;
 		public IValueProvider<bool> UseGravity { get; init; } = NullValueProvider<bool>.Instance;
 
-		public RigidbodyData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		public RigidbodyData(string id) : base(id) { }
 	}
 }

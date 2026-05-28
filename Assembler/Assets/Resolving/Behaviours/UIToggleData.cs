@@ -11,9 +11,8 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public UIToggleData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<bool> initialValue,
+						IValueProvider<bool> initialValue,
 			IValueProvider<string> label,
-			ScreenRect rect) : base(id, listeners) => (InitialValue, Label, Rect) = (initialValue, label, rect);
+			ScreenRect rect) : base(id) => (InitialValue, Label, Rect) = (initialValue, label, rect);
 	}
 }

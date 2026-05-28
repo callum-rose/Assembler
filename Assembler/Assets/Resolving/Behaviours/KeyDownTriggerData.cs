@@ -7,7 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<string> Key { get; }
 
-		public KeyDownTriggerData(string id, IValueProvider<string> key, IReadOnlyList<Action> listeners) :
-			base(id, listeners) => Key = key;
+		public KeyDownTriggerData(string id, IValueProvider<string> key) :
+			base(id) => Key = key;
 	}
 }

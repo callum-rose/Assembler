@@ -8,7 +8,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Vector3> Velocity { get; }
 
-		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> velocity) :
-			base(id, listeners) => Velocity = velocity;
+		public VelocityData(string id, IValueProvider<Vector3> velocity) :
+			base(id) => Velocity = velocity;
 	}
 }

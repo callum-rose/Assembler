@@ -10,11 +10,9 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<bool> AutoStart { get; init; }
 
 		public IntervalTriggerData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<float> interval,
+						IValueProvider<float> interval,
 			IValueProvider<int> count,
-			IValueProvider<bool> autoStart) : base(id,
-			listeners)
+			IValueProvider<bool> autoStart) : base(id)
 		{
 			Interval = interval;
 			Count = count;

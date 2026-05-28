@@ -8,7 +8,6 @@ namespace Assembler.Resolving.Behaviours
 		public IReadOnlyList<string> TagsToDetect { get; }
 
 		protected PhysicalTriggerData(string id,
-			IReadOnlyList<string> tagsToDetect,
-			IReadOnlyList<Action> listeners) : base(id, listeners) => TagsToDetect = tagsToDetect;
+			IReadOnlyList<string> tagsToDetect) : base(id) => TagsToDetect = tagsToDetect;
 	}
 }

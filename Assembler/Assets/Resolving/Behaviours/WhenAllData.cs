@@ -7,7 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IReadOnlyList<string> TriggerIds { get; }
 
-		public WhenAllData(string id, IReadOnlyList<Action> listeners, IReadOnlyList<string> triggerIds) :
-			base(id, listeners) => TriggerIds = triggerIds;
+		public WhenAllData(string id, IReadOnlyList<string> triggerIds) :
+			base(id) => TriggerIds = triggerIds;
 	}
 }

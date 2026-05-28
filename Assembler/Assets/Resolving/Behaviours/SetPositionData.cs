@@ -8,8 +8,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Vector3> ValueExpression { get; }
 
-		public SetPositionData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> valueExpression) : base(id,
-			listeners) =>
+		public SetPositionData(string id, IValueProvider<Vector3> valueExpression) : base(id) =>
 			ValueExpression = valueExpression;
 	}
 }

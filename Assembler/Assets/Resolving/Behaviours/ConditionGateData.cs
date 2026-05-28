@@ -7,8 +7,8 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<bool> Condition { get; }
 
-		public ConditionGateData(string id, IValueProvider<bool> condition, IReadOnlyList<Action> listeners) :
-			base(id, listeners)
+		public ConditionGateData(string id, IValueProvider<bool> condition) :
+			base(id)
 		{
 			Condition = condition;
 		}
