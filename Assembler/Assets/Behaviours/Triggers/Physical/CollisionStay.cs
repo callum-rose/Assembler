@@ -18,8 +18,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				TriggerContext.Push();
-				try
+				using (TriggerContext.Push())
 				{
 					TriggerContext.Set("contact_point", other.contacts[0].point);
 					TriggerContext.Set("contact_normal", other.contacts[0].normal);
@@ -27,10 +26,6 @@ namespace Assembler.Behaviours.Triggers.Physical
 						other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero);
 					TriggerContext.Set("other_position", other.transform.position);
 					NotifyListeners();
-				}
-				finally
-				{
-					TriggerContext.Pop();
 				}
 			}
 		}

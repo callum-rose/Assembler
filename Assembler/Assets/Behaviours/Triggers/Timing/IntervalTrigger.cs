@@ -51,16 +51,11 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 		public void FireIteration(int iterationIndex, int iterationCount)
 		{
-			TriggerContext.Push();
-			try
+			using (TriggerContext.Push())
 			{
 				TriggerContext.Set("iteration_index", iterationIndex);
 				TriggerContext.Set("iteration_count", iterationCount);
 				NotifyListeners();
-			}
-			finally
-			{
-				TriggerContext.Pop();
 			}
 		}
 	}

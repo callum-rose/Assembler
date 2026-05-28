@@ -7,7 +7,11 @@ namespace Assembler.Resolving
 	{
 		private readonly Stack<Dictionary<string, object>> _stack = new();
 
-		public void Push() => _stack.Push(new Dictionary<string, object>());
+		public Scope Push()
+		{
+			_stack.Push(new Dictionary<string, object>());
+			return new Scope(this);
+		}
 
 		public void Pop()
 		{
@@ -15,6 +19,15 @@ namespace Assembler.Resolving
 			{
 				_stack.Pop();
 			}
+		}
+
+		public readonly struct Scope : IDisposable
+		{
+			private readonly TriggerContext _context;
+
+			public Scope(TriggerContext context) => _context = context;
+
+			public void Dispose() => _context.Pop();
 		}
 
 		public void Set(string key, object value) => _stack.Peek()[key] = value;

@@ -16,17 +16,12 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				TriggerContext.Push();
-				try
+				using (TriggerContext.Push())
 				{
 					TriggerContext.Set("other_velocity",
 						other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero);
 					TriggerContext.Set("other_position", other.transform.position);
 					NotifyListeners();
-				}
-				finally
-				{
-					TriggerContext.Pop();
 				}
 			}
 		}
