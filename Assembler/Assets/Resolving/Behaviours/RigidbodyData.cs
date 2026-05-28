@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
 {
@@ -7,6 +6,11 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<bool> IsKinematic { get; init; } = NullValueProvider<bool>.Instance;
 		public IValueProvider<bool> UseGravity { get; init; } = NullValueProvider<bool>.Instance;
+		public IValueProvider<float> Mass { get; init; } = NullValueProvider<float>.Instance;
+		public IValueProvider<float> LinearDamping { get; init; } = NullValueProvider<float>.Instance;
+		public IValueProvider<float> AngularDamping { get; init; } = NullValueProvider<float>.Instance;
+		public IValueProvider<Vector3> FreezePosition { get; init; } = NullValueProvider<Vector3>.Instance;
+		public IValueProvider<Vector3> FreezeRotation { get; init; } = NullValueProvider<Vector3>.Instance;
 
 		public RigidbodyData(string id) : base(id) { }
 	}
