@@ -8,7 +8,7 @@ using Anthropic.Core;
 using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 
-namespace Assembler.Generation
+namespace Assembler.Anthropic
 {
 	/// <summary>
 	/// Thin wrapper around the official Anthropic C# SDK
@@ -32,14 +32,15 @@ namespace Assembler.Generation
 			}
 
 			_client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
-			_model = string.IsNullOrWhiteSpace(model) ? (ApiEnum<string, Model>)model! : Model.ClaudeOpus4_7;
+			_model = string.IsNullOrWhiteSpace(model) ? Model.ClaudeOpus4_7 : (ApiEnum<string, Model>)model!;
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
 		public async Task<string> SendAsync(
 			string cachedSystemPrompt,
 			IReadOnlyList<AnthropicMessage> messages,
-			CancellationToken cancellationToken)
+			CancellationToken cancellationToken,
+			Action<string>? onDelta = null)
 		{
 			var parameters = new MessageCreateParams
 			{
@@ -49,16 +50,29 @@ namespace Assembler.Generation
 				Messages = messages
 					.Select(m => new MessageParam
 					{
-						Role = RoleFromString(m.Role), Content = new MessageParamContent(m.Content),
+						Role = RoleFromString(m.Role),
+						Content = new MessageParamContent(m.Content)
 					})
 					.ToArray(),
 			};
 
-			Message response;
+			var sb = new StringBuilder();
 
 			try
 			{
-				response = await _client.Messages.Create(parameters, cancellationToken).ConfigureAwait(false);
+				await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken))
+				{
+					if (ev.TryPickContentBlockDelta(out var blockDelta) &&
+					    blockDelta.Delta.TryPickText(out var textDelta) &&
+					    !string.IsNullOrEmpty(textDelta.Text))
+					{
+						sb.Append(textDelta.Text);
+						onDelta?.Invoke(textDelta.Text);
+					}
+				}
+			}
+			catch (OperationCanceledException)
+			{
 			}
 			catch (AnthropicApiException ex)
 			{
@@ -69,7 +83,12 @@ namespace Assembler.Generation
 				throw new AnthropicRequestException(0, ex.Message, ex);
 			}
 
-			return ExtractText(response);
+			if (sb.Length == 0)
+			{
+				throw new AnthropicRequestException(200, "Anthropic response contained no text deltas.");
+			}
+
+			return sb.ToString();
 		}
 
 		private static Role RoleFromString(string role)
@@ -77,33 +96,6 @@ namespace Assembler.Generation
 			return role.Equals("assistant", StringComparison.OrdinalIgnoreCase)
 				? Role.Assistant
 				: Role.User;
-		}
-
-		private static string ExtractText(Message response)
-		{
-			var sb = new StringBuilder();
-
-			foreach (var block in response.Content)
-			{
-				if (!block.TryPickText(out var text))
-				{
-					continue;
-				}
-
-				if (sb.Length > 0)
-				{
-					sb.Append('\n');
-				}
-
-				sb.Append(text.Text);
-			}
-
-			if (sb.Length == 0)
-			{
-				throw new AnthropicRequestException(200, "Anthropic response contained no text blocks.");
-			}
-
-			return sb.ToString();
 		}
 
 		private static int GetStatusCode(AnthropicApiException ex)

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6921f0b63a51e424b9a638076ed9d9cd
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Art/Shaders/Shader Library/Utility.cginc
+  uploadId: 902436

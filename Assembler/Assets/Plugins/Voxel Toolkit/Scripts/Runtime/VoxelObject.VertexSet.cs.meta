@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 07dcc39f283a48dd8f0fa3512080af17
+timeCreated: 1734007239
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/VoxelObject.VertexSet.cs
+  uploadId: 902436

@@ -1,0 +1,48 @@
+Game:
+  Title: Voxel Demo
+  Description: |
+    Single static voxel mesh entity. Generated via:
+      Assembler > Generate Voxel Mesh
+    which writes Assets/Resources/Voxels/<name>.vox. The Voxel Toolkit
+    importer turns that into a Mesh sub-asset that can be loaded by id
+    here.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+Assets:
+  - Id: voxel mesh asset
+    Type: mesh
+    Source: resources
+    Path: Voxels/voxel
+
+Constants:
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "perspective"
+  camera size: 5
+
+Entities:
+  voxel object:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      mesh:
+        Type: voxel mesh
+        Properties:
+          Mesh: !asset { Id: voxel mesh asset }
+          Scale: !vec { X: 0.1, Y: 0.1, Z: 0.1 }
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

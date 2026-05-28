@@ -20,6 +20,7 @@ namespace Assembler.Resolving
 				{
 					SpriteAssetInfo => loader.Load<Sprite>(assetInfo.Path),
 					AudioClipAssetInfo => loader.Load<AudioClip>(assetInfo.Path),
+					MeshAssetInfo => loader.Load<Mesh>(assetInfo.Path),
 					_ => throw new NotImplementedException($"Unknown asset info type: {assetInfo.GetType().Name}")
 				};
 

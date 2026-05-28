@@ -5,4 +5,6 @@ namespace Assembler.Parsing.Info
 	public record SpriteAssetInfo(string Id, string Source, string Path) : AssetInfo(Id, Source, Path);
 
 	public record AudioClipAssetInfo(string Id, string Source, string Path) : AssetInfo(Id, Source, Path);
+
+	public record MeshAssetInfo(string Id, string Source, string Path) : AssetInfo(Id, Source, Path);
 }

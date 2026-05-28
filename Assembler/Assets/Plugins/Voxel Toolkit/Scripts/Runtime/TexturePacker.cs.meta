@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b5900158eeee4d2c89c6c3b1686e70d7
+timeCreated: 1732801878
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/TexturePacker.cs
+  uploadId: 902436

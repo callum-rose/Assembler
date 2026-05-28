@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e18ab4b4e65f548c3ad4f7aac69f3f75
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Art/Materials/Basic/Ground.mat
+  uploadId: 902436

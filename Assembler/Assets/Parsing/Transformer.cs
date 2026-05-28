@@ -37,6 +37,7 @@ namespace Assembler.Parsing
 					a.Source ?? "resources",
 					a.Path ?? string.Empty),
 				"audioclip" => new AudioClipAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
+				"mesh" => new MeshAssetInfo(a.Id ?? string.Empty, a.Source ?? "resources", a.Path ?? string.Empty),
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 

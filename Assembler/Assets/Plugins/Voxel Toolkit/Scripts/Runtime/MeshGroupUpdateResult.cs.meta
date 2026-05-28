@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: bd21af20626b40e89d1078f481b1230a
+timeCreated: 1733092079
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/MeshGroupUpdateResult.cs
+  uploadId: 902436

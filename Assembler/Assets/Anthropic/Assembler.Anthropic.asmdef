@@ -1,0 +1,14 @@
+{
+    "name": "Assembler.Anthropic",
+    "rootNamespace": "Assembler.Anthropic",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

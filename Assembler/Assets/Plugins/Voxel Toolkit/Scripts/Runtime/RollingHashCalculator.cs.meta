@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: d418a225e0c24a3e8211b13fc4c21214
+timeCreated: 1733061126
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/RollingHashCalculator.cs
+  uploadId: 902436

@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
+using Assembler.Anthropic;
 
 namespace Assembler.Generation.Verification.Editor
 {

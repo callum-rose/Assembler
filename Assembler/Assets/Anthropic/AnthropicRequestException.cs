@@ -1,6 +1,6 @@
 using System;
 
-namespace Assembler.Generation
+namespace Assembler.Anthropic
 {
 	public sealed class AnthropicRequestException : Exception
 	{

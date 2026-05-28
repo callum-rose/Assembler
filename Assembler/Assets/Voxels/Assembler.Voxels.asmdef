@@ -1,0 +1,16 @@
+{
+    "name": "Assembler.Voxels",
+    "rootNamespace": "Assembler.Voxels",
+    "references": [
+        "Assembler.Anthropic"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
