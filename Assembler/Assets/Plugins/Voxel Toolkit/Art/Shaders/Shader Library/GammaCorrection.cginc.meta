@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 9ce28914cb24fa04880bae9eaa61d4f8
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Art/Shaders/Shader Library/GammaCorrection.cginc
+  uploadId: 902436

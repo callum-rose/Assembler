@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e1d170e162142d54bbe21ca4ebc4734e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Resources/Voxel Toolkit/Materials/XRP/UnitTransparent.mat
+  uploadId: 902436

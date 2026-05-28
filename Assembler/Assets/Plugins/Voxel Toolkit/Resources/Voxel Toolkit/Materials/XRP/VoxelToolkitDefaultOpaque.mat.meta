@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 707bd20be5cf546a5af08b117e163e48
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Resources/Voxel Toolkit/Materials/XRP/VoxelToolkitDefaultOpaque.mat
+  uploadId: 902436
