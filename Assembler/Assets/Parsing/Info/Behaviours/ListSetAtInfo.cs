@@ -5,7 +5,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record ListSetAtInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<IList<T>> List,
+		ValueSource<List<T>> List,
 		ValueSource<int> Index,
 		ValueSource<T> Value) : BehaviourInfo(Id, Listeners)
 	{
@@ -15,7 +15,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<IList<T>>(ctx, props.GetValueOrDefault("List")),
+				Transformer.CreateValueSource<List<T>>(ctx, props.GetValueOrDefault("List")),
 				Transformer.CreateValueSource<int>(ctx, props.GetValueOrDefault("Index")),
 				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("Value")));
 

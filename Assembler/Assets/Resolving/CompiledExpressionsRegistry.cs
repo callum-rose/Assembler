@@ -20,7 +20,7 @@ namespace Assembler.Resolving
 			_compiler = compiler;
 
 			// Globally register LINQ extension methods so expressions can use
-			// .Any/.Where/.Select/.Count etc. on IList<T> arguments without
+			// .Any/.Where/.Select/.Count etc. on List<T> arguments without
 			// per-expression RegisterTypeStatics. Also register Color so it's
 			// constructible from any expression that consumes the new "colour"
 			// argument type.

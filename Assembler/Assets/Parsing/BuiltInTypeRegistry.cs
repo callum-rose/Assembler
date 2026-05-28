@@ -14,12 +14,12 @@ namespace Assembler.Parsing
 			["bool"] = typeof(bool),
 			["vector"] = typeof(Vector3),
 			["colour"] = typeof(Color),
-			["vector list"] = typeof(IList<Vector3>),
-			["int list"] = typeof(IList<int>),
-			["float list"] = typeof(IList<float>),
-			["bool list"] = typeof(IList<bool>),
-			["string list"] = typeof(IList<string>),
-			["colour list"] = typeof(IList<Color>)
+			["vector list"] = typeof(List<Vector3>),
+			["int list"] = typeof(List<int>),
+			["float list"] = typeof(List<float>),
+			["bool list"] = typeof(List<bool>),
+			["string list"] = typeof(List<string>),
+			["colour list"] = typeof(List<Color>)
 		};
 	}
 }

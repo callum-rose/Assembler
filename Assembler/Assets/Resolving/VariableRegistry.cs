@@ -72,9 +72,7 @@ namespace Assembler.Resolving
 				list.Add(UnwrapTo<T>(item));
 			}
 
-			// Storing as IList<T> so consumers can mutate via IList<T>.Add/RemoveAt/indexer
-			// while the runtime instance remains the same List<T>.
-			return new ValueProvider<IList<T>>(list);
+			return new ValueProvider<List<T>>(list);
 		}
 
 		private static T UnwrapTo<T>(AssemblerValue value)
