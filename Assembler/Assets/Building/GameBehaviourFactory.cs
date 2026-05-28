@@ -172,26 +172,13 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
 						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(MouseButtonDownTriggerInfo)] = new(typeof(MouseButtonDownTrigger), (go, info, ctx) =>
+				[typeof(MouseButtonTriggerInfo)] = new(typeof(MouseButtonTrigger), (go, info, ctx) =>
 				{
-					var i = (MouseButtonDownTriggerInfo)info;
-					var b = go.AddComponent<MouseButtonDownTrigger>();
-					return (b, lr => b.Initialise(new MouseButtonDownTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MouseButtonUpTriggerInfo)] = new(typeof(MouseButtonUpTrigger), (go, info, ctx) =>
-				{
-					var i = (MouseButtonUpTriggerInfo)info;
-					var b = go.AddComponent<MouseButtonUpTrigger>();
-					return (b, lr => b.Initialise(new MouseButtonUpTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MouseButtonHoldTriggerInfo)] = new(typeof(MouseButtonHoldTrigger), (go, info, ctx) =>
-				{
-					var i = (MouseButtonHoldTriggerInfo)info;
-					var b = go.AddComponent<MouseButtonHoldTrigger>();
-					return (b, lr => b.Initialise(new MouseButtonHoldTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					var i = (MouseButtonTriggerInfo)info;
+					var b = go.AddComponent<MouseButtonTrigger>();
+					return (b, lr => b.Initialise(new MouseButtonTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution),
+						i.Phase.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(MousePositionTriggerInfo)] = new(typeof(MousePositionTrigger), (go, info, ctx) =>
 				{
