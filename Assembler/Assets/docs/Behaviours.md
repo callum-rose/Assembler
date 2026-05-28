@@ -49,6 +49,69 @@ Adds Displacement to the entity's world position each time it Executes (e.g. via
 |------|------|-------------|
 | Displacement | Vector3 | World-space offset to add on each execution. |
 
+## `angular velocity`
+Rotates the entity each frame by AngularVelocity * deltaTime (Euler degrees per second).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| AngularVelocity | Vector3 | World-space angular velocity in degrees per second (Euler per axis). |
+
+## `rotate`
+Adds Displacement (Euler degrees) to the entity's world rotation each time it Executes (e.g. via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Displacement | Vector3 | World-space Euler angle offset (degrees) to add on each execution. |
+
+## `rotation setter`
+Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
+
+## `move animation`
+_No summary — add `<summary>` on MoveAnimation._
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Start | Vector3 |  |
+| End | Vector3 |  |
+| Duration | float |  |
+| Easing | string |  |
+
+## `scale animation`
+_No summary — add `<summary>` on ScaleAnimation._
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Start | Vector3 |  |
+| End | Vector3 |  |
+| Duration | float |  |
+| Easing | string |  |
+
+## `rotate animation`
+_No summary — add `<summary>` on RotateAnimation._
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Start | Vector3 |  |
+| End | Vector3 |  |
+| Duration | float |  |
+| Easing | string |  |
+
 ## `key hold trigger`
 Fires every frame while the named key is held down.
 
@@ -284,6 +347,15 @@ Forwards an upstream trigger to listeners only when Condition evaluates to true 
 |------|------|-------------|
 | Condition | bool | Boolean expression checked on each Execute call. |
 
+## `exclusive trigger`
+Forwards an upstream trigger to listeners only if no other trigger sharing the same Group has already fired this frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
+
 ## `vector variable setter`
 Writes Value into the variable referenced by VariableId when Executed.
 
@@ -341,7 +413,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Vector3> | Reference to the target list variable. |
+| List | List<Vector3> | Reference to the target list variable. |
 | Value | Vector3 | Item to append. |
 
 ## `vector list remove at`
@@ -351,7 +423,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Vector3> | Reference to the target list variable. |
+| List | List<Vector3> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `vector list set at`
@@ -361,7 +433,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Vector3> | Reference to the target list variable. |
+| List | List<Vector3> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | Vector3 | New item. |
 
@@ -372,7 +444,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Vector3> | Reference to the target list variable. |
+| List | List<Vector3> | Reference to the target list variable. |
 
 ## `int list add`
 Appends Value to the end of List when Executed.
@@ -381,7 +453,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<int> | Reference to the target list variable. |
+| List | List<int> | Reference to the target list variable. |
 | Value | int | Item to append. |
 
 ## `int list remove at`
@@ -391,7 +463,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<int> | Reference to the target list variable. |
+| List | List<int> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `int list set at`
@@ -401,7 +473,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<int> | Reference to the target list variable. |
+| List | List<int> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | int | New item. |
 
@@ -412,7 +484,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<int> | Reference to the target list variable. |
+| List | List<int> | Reference to the target list variable. |
 
 ## `float list add`
 Appends Value to the end of List when Executed.
@@ -421,7 +493,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<float> | Reference to the target list variable. |
+| List | List<float> | Reference to the target list variable. |
 | Value | float | Item to append. |
 
 ## `float list remove at`
@@ -431,7 +503,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<float> | Reference to the target list variable. |
+| List | List<float> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `float list set at`
@@ -441,7 +513,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<float> | Reference to the target list variable. |
+| List | List<float> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | float | New item. |
 
@@ -452,7 +524,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<float> | Reference to the target list variable. |
+| List | List<float> | Reference to the target list variable. |
 
 ## `bool list add`
 Appends Value to the end of List when Executed.
@@ -461,7 +533,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<bool> | Reference to the target list variable. |
+| List | List<bool> | Reference to the target list variable. |
 | Value | bool | Item to append. |
 
 ## `bool list remove at`
@@ -471,7 +543,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<bool> | Reference to the target list variable. |
+| List | List<bool> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `bool list set at`
@@ -481,7 +553,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<bool> | Reference to the target list variable. |
+| List | List<bool> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | bool | New item. |
 
@@ -492,7 +564,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<bool> | Reference to the target list variable. |
+| List | List<bool> | Reference to the target list variable. |
 
 ## `string list add`
 Appends Value to the end of List when Executed.
@@ -501,7 +573,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<string> | Reference to the target list variable. |
+| List | List<string> | Reference to the target list variable. |
 | Value | string | Item to append. |
 
 ## `string list remove at`
@@ -511,7 +583,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<string> | Reference to the target list variable. |
+| List | List<string> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `string list set at`
@@ -521,7 +593,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<string> | Reference to the target list variable. |
+| List | List<string> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | string | New item. |
 
@@ -532,7 +604,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<string> | Reference to the target list variable. |
+| List | List<string> | Reference to the target list variable. |
 
 ## `colour list add`
 Appends Value to the end of List when Executed.
@@ -541,7 +613,7 @@ Appends Value to the end of List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Color> | Reference to the target list variable. |
+| List | List<Color> | Reference to the target list variable. |
 | Value | Color | Item to append. |
 
 ## `colour list remove at`
@@ -551,7 +623,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Color> | Reference to the target list variable. |
+| List | List<Color> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
 
 ## `colour list set at`
@@ -561,7 +633,7 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Color> | Reference to the target list variable. |
+| List | List<Color> | Reference to the target list variable. |
 | Index | int | Zero-based position to overwrite. |
 | Value | Color | New item. |
 
@@ -572,7 +644,7 @@ Removes all items from List when Executed.
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | IList<Color> | Reference to the target list variable. |
+| List | List<Color> | Reference to the target list variable. |
 
 ## `sprite`
 Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
@@ -724,9 +796,18 @@ Draws a text input field. Fires listeners when the user presses Enter to submit 
 
 ## Doc-gen warnings
 
-- `move animation`: no MonoBehaviour mapping for `MoveAnimationInfo` (skipped).
-- `scale animation`: no MonoBehaviour mapping for `ScaleAnimationInfo` (skipped).
-- `rotate animation`: no MonoBehaviour mapping for `RotateAnimationInfo` (skipped).
+- `move animation`: property `Start` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
+- `move animation`: property `End` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
+- `move animation`: property `Duration` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
+- `move animation`: property `Easing` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
+- `scale animation`: property `Start` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
+- `scale animation`: property `End` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
+- `scale animation`: property `Duration` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
+- `scale animation`: property `Easing` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
+- `rotate animation`: property `Start` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
+- `rotate animation`: property `End` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
+- `rotate animation`: property `Duration` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
+- `rotate animation`: property `Easing` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
 - `condition`: no MonoBehaviour mapping for `ConditionInfo` (skipped).
 - `trigger stay trigger`: no MonoBehaviour mapping for `TriggerStayTriggerInfo` (skipped).
 - `when all`: no MonoBehaviour mapping for `WhenAllInfo` (skipped).
