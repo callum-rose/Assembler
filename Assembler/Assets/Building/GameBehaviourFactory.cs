@@ -235,6 +235,44 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
 						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(MouseButtonTriggerInfo)] = new(typeof(MouseButtonTrigger), (go, info, ctx) =>
+				{
+					var i = (MouseButtonTriggerInfo)info;
+					var b = go.AddComponent<MouseButtonTrigger>();
+					return (b, lr => b.Initialise(new MouseButtonTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution),
+						i.Phase.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MousePositionTriggerInfo)] = new(typeof(MousePositionTrigger), (go, info, ctx) =>
+				{
+					var i = (MousePositionTriggerInfo)info;
+					var b = go.AddComponent<MousePositionTrigger>();
+					return (b, lr => b.Initialise(new MousePositionTriggerData(i.Id),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ScrollWheelTriggerInfo)] = new(typeof(ScrollWheelTrigger), (go, info, ctx) =>
+				{
+					var i = (ScrollWheelTriggerInfo)info;
+					var b = go.AddComponent<ScrollWheelTrigger>();
+					return (b, lr => b.Initialise(new ScrollWheelTriggerData(i.Id),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(AxisTriggerInfo)] = new(typeof(AxisTrigger), (go, info, ctx) =>
+				{
+					var i = (AxisTriggerInfo)info;
+					var b = go.AddComponent<AxisTrigger>();
+					return (b, lr => b.Initialise(new AxisTriggerData(i.Id,
+						i.XAxis.Resolve(ctx.Resolution),
+						i.YAxis.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(GamepadButtonTriggerInfo)] = new(typeof(GamepadButtonTrigger), (go, info, ctx) =>
+				{
+					var i = (GamepadButtonTriggerInfo)info;
+					var b = go.AddComponent<GamepadButtonTrigger>();
+					return (b, lr => b.Initialise(new GamepadButtonTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution),
+						i.Mode.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(TapTriggerInfo)] = new(typeof(Tap), (go, info, ctx) =>
 				{
 					var i = (TapTriggerInfo)info;

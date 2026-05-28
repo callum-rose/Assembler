@@ -1,0 +1,45 @@
+using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
+using UnityEngine;
+
+namespace Assembler.Behaviours.Triggers.Input
+{
+	/// <summary>Fires on a mouse button event during the selected phase (press, release, or hold).</summary>
+	/// <remarks>
+	/// Properties:
+	///   Button: Mouse button index — 0 (left), 1 (right), 2 (middle).
+	///   Phase: When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down".
+	/// Outputs:
+	///   mouse_position [Vector3]: Screen-space mouse position when the trigger fires.
+	/// </remarks>
+	public class MouseButtonTrigger : InputTrigger<MouseButtonTriggerData>
+	{
+		private void Update()
+		{
+			var button = Data.Button.Value;
+			var phase = Data.Phase.ValueOr("down");
+			var fired = phase switch
+			{
+				"up" => UnityEngine.Input.GetMouseButtonUp(button),
+				"hold" => UnityEngine.Input.GetMouseButton(button),
+				_ => UnityEngine.Input.GetMouseButtonDown(button)
+			};
+
+			if (!fired)
+			{
+				return;
+			}
+
+			TriggerContext.Push();
+			try
+			{
+				TriggerContext.Set("mouse_position", UnityEngine.Input.mousePosition);
+				NotifyListeners();
+			}
+			finally
+			{
+				TriggerContext.Pop();
+			}
+		}
+	}
+}
