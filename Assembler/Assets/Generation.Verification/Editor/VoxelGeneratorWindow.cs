@@ -171,7 +171,10 @@ namespace Assembler.Generation.Verification.Editor
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
 			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.MinHeight(120), GUILayout.MaxHeight(200));
-			EditorGUILayout.TextArea(_log.ToString(), GUILayout.ExpandHeight(true));
+			_logStyle ??= new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+			var logText = _log.ToString();
+			var logHeight = Mathf.Max(120f, _logStyle.CalcHeight(new GUIContent(logText), EditorGUIUtility.currentViewWidth - 40f));
+			EditorGUILayout.SelectableLabel(logText, _logStyle, GUILayout.Height(logHeight), GUILayout.ExpandWidth(true));
 			EditorGUILayout.EndScrollView();
 		}
 
@@ -314,6 +317,7 @@ namespace Assembler.Generation.Verification.Editor
 		}
 
 		private GUIStyle? _richLabelStyle;
+		private GUIStyle? _logStyle;
 
 		private void DrawModelSummary()
 		{
