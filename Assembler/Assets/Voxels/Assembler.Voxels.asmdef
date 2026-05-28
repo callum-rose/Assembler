@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Voxels",
-    "rootNamespace": "Assembler.Voxels",
+    "rootNamespace": "Assembler",
     "references": [
         "Assembler.Anthropic"
     ],

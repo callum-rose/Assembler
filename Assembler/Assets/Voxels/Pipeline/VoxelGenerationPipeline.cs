@@ -171,6 +171,12 @@ namespace Assembler.Voxels.Pipeline
 
 		public async Task<VoxelPipelineResult> ExecuteAsync(CancellationToken ct = default)
 		{
+			// Capture the calling thread's sync context (Unity main thread when
+			// called from the editor) so we can return to it after every stage.
+			// Without this, async stages (Anthropic streaming) resume on a thread
+			// pool thread and observer callbacks that touch Unity (Repaint, etc.)
+			// would throw.
+			var originContext = SynchronizationContext.Current;
 			var ctx = _ctx;
 			foreach (var stage in _stages)
 			{
@@ -183,11 +189,13 @@ namespace Assembler.Voxels.Pipeline
 				}
 				catch (OperationCanceledException)
 				{
+					await ReturnToContext(originContext);
 					ctx.Observer.OnStageFailed(stage.Name, new OperationCanceledException());
 					throw;
 				}
 				catch (Exception ex)
 				{
+					await ReturnToContext(originContext);
 					ctx.Observer.OnStageFailed(stage.Name, ex);
 					throw;
 				}
@@ -195,9 +203,22 @@ namespace Assembler.Voxels.Pipeline
 				{
 					sw.Stop();
 				}
+				await ReturnToContext(originContext);
 				ctx.Observer.OnStageFinished(stage.Name, sw.Elapsed);
 			}
 			return new VoxelPipelineResult(ctx);
+		}
+
+		private static Task ReturnToContext(SynchronizationContext? origin)
+		{
+			if (origin == null || SynchronizationContext.Current == origin)
+			{
+				return Task.CompletedTask;
+			}
+
+			var tcs = new TaskCompletionSource<bool>();
+			origin.Post(_ => tcs.SetResult(true), null);
+			return tcs.Task;
 		}
 
 		private void EnsureLoadSystemPrompt()
