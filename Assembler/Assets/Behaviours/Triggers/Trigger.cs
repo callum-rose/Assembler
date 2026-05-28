@@ -3,7 +3,7 @@ using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Triggers
 {
-	public abstract class Trigger<T> : GameBehaviour<T> where T : TriggerData
+	public abstract class Trigger<T> : GameBehaviour<T>, INeedsTriggerContext where T : TriggerData
 	{
 		public TriggerContext TriggerContext { get; set; }
 	}
