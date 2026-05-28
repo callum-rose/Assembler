@@ -11,19 +11,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static CameraInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("View"), parameters: p),
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Size"), parameters: p));
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("View")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new CameraInfo(Id,
 				substitutedListeners,
-				View.SubstituteParameters(parameters, allValues),
-				Size.SubstituteParameters(parameters, allValues));
+				View.SubstituteParameters(ctx),
+				Size.SubstituteParameters(ctx));
 	}
 }

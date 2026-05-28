@@ -1,0 +1,23 @@
+using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
+
+namespace Assembler.Behaviours.Triggers.Conditionals
+{
+	/// <summary>Forwards an upstream trigger to listeners only if no other trigger sharing the same Group has already fired this frame.</summary>
+	/// <remarks>
+	/// Properties:
+	///   Group: Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates.
+	/// </remarks>
+	public class ExclusiveTrigger : Trigger<ExclusiveTriggerData>
+	{
+		public ExclusiveGroupRegistry Registry { get; set; } = null!;
+
+		public override void Execute()
+		{
+			if (Registry.TryClaim(Data.Group.Value))
+			{
+				NotifyListeners();
+			}
+		}
+	}
+}

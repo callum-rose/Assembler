@@ -1,0 +1,19 @@
+{
+    "name": "Assembler.Generation.Verification",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.Generation",
+        "Assembler.Building",
+        "Assembler.Parsing",
+        "Assembler.Deserialisation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

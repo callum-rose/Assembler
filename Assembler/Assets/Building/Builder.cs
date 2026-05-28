@@ -7,7 +7,9 @@ using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using Color = UnityEngine.Color;
 using Vector3 = UnityEngine.Vector3;
 
@@ -15,6 +17,7 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
+#if UNITY_EDITOR
 		[MenuItem("Test/Build Pong")]
 		public static void BuildPong()
 		{
@@ -104,25 +107,12 @@ namespace Assembler.Building
 			var gameInfo = Transformer.Transform(gameDto);
 			Build(gameInfo);
 		}
+#endif
 
 		public static void Build(GameInfo gameInfo)
 		{
 			// 1. Initialize variables and expressions
-			var typeRegistry = new Dictionary<string, Type>
-			{
-				["float"] = typeof(float),
-				["int"] = typeof(int),
-				["string"] = typeof(string),
-				["bool"] = typeof(bool),
-				["vector"] = typeof(Vector3),
-				["colour"] = typeof(Color),
-				["vector list"] = typeof(IList<Vector3>),
-				["int list"] = typeof(IList<int>),
-				["float list"] = typeof(IList<float>),
-				["bool list"] = typeof(IList<bool>),
-				["string list"] = typeof(IList<string>),
-				["colour list"] = typeof(IList<Color>)
-			};
+			var typeRegistry = BuiltInTypeRegistry.Default;
 
 			var variableRegistry = new VariableRegistry();
 
@@ -145,6 +135,7 @@ namespace Assembler.Building
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
 			var entityTransformRegistry = new EntityTransformRegistry();
+			var exclusiveGroupRegistry = new ExclusiveGroupRegistry();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
@@ -156,8 +147,9 @@ namespace Assembler.Building
 				behaviourRegistry,
 				assetRegistry,
 				entityTransformRegistry,
+				exclusiveGroupRegistry,
 				templatesById,
-				gameInfo.Variables,
+				gameInfo.ParseContext,
 				triggerContext);
 
 			var initialisations = new InitialisationQueue();

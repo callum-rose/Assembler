@@ -8,15 +8,13 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static WhenAnyInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
 				Transformer.ConvertStringList(props.GetValueOrDefault("TriggerIds")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new WhenAnyInfo(Id, substitutedListeners, TriggerIds);
 	}
 }

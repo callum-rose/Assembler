@@ -12,19 +12,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static UIButtonInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Label"), fallback: string.Empty),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new UIButtonInfo(Id,
 				substitutedListeners,
-				Label.SubstituteParameters(parameters, allValues),
+				Label.SubstituteParameters(ctx),
 				Rect);
 	}
 }

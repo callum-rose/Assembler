@@ -13,21 +13,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static CubeGizmoInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Size"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("IsWire"), parameters: p),
-				Transformer.CreateValueSource<Color>(v, props.GetValueOrDefault("Colour"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Size")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsWire")),
+				Transformer.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new CubeGizmoInfo(Id,
 				substitutedListeners,
-				Size.SubstituteParameters(parameters, allValues),
-				IsWire.SubstituteParameters(parameters, allValues),
-				Colour.SubstituteParameters(parameters, allValues));
+				Size.SubstituteParameters(ctx),
+				IsWire.SubstituteParameters(ctx),
+				Colour.SubstituteParameters(ctx));
 	}
 }

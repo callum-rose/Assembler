@@ -14,21 +14,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static AudioSourceInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<AudioClip>(v, props.GetValueOrDefault("Clip"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("PlayOnStart"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("Loop"), parameters: p));
+				Transformer.CreateValueSource<AudioClip>(ctx, props.GetValueOrDefault("Clip")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("PlayOnStart")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("Loop")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new AudioSourceInfo(Id,
 				substitutedListeners,
-				Clip.SubstituteParameters(parameters, allValues),
-				PlayOnStart.SubstituteParameters(parameters, allValues),
-				Loop.SubstituteParameters(parameters, allValues));
+				Clip.SubstituteParameters(ctx),
+				PlayOnStart.SubstituteParameters(ctx),
+				Loop.SubstituteParameters(ctx));
 	}
 }

@@ -12,17 +12,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static SetPositionInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Position"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Position")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new SetPositionInfo(Id,
 				substitutedListeners,
-				ValueExpression.SubstituteParameters(parameters, allValues));
+				ValueExpression.SubstituteParameters(ctx));
 	}
 }

@@ -8,17 +8,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static TimerTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Delay"), parameters: p));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Delay")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new TimerTriggerInfo(Id,
 				substitutedListeners,
-				Delay.SubstituteParameters(parameters, allValues));
+				Delay.SubstituteParameters(ctx));
 	}
 }

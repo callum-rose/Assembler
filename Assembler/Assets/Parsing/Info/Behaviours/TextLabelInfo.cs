@@ -14,23 +14,21 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static TextLabelInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("Text"), parameters: p),
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("FontSize"), fallback: 0, parameters: p),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Text")),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Label"), fallback: string.Empty),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("FontSize"), fallback: 0),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new TextLabelInfo(Id,
 				substitutedListeners,
-				Text.SubstituteParameters(parameters, allValues),
-				Label.SubstituteParameters(parameters, allValues),
-				FontSize.SubstituteParameters(parameters, allValues),
+				Text.SubstituteParameters(ctx),
+				Label.SubstituteParameters(ctx),
+				FontSize.SubstituteParameters(ctx),
 				Rect);
 	}
 }

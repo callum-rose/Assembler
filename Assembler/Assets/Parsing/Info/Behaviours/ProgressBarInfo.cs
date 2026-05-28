@@ -11,19 +11,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static ProgressBarInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Value"), parameters: p),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Value")),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new ProgressBarInfo(Id,
 				substitutedListeners,
-				Value.SubstituteParameters(parameters, allValues),
+				Value.SubstituteParameters(ctx),
 				Rect);
 	}
 }

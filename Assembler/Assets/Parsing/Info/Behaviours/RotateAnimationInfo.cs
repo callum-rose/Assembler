@@ -14,23 +14,21 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static RotateAnimationInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Start"), parameters: p),
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("End"), parameters: p),
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Duration"), parameters: p),
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("Easing"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Duration")),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Easing")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new RotateAnimationInfo(Id,
 				substitutedListeners,
-				Start.SubstituteParameters(parameters, allValues),
-				End.SubstituteParameters(parameters, allValues),
-				Duration.SubstituteParameters(parameters, allValues),
-				Easing.SubstituteParameters(parameters, allValues));
+				Start.SubstituteParameters(ctx),
+				End.SubstituteParameters(ctx),
+				Duration.SubstituteParameters(ctx),
+				Easing.SubstituteParameters(ctx));
 	}
 }

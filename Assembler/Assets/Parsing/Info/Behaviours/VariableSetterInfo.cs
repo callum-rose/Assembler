@@ -11,19 +11,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static VariableSetterInfo<T> Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<T>(v, props.GetValueOrDefault("VariableId"), parameters: p),
-				Transformer.CreateValueSource<T>(v, props.GetValueOrDefault("Value"), parameters: p));
+				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("VariableId")),
+				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("Value")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new VariableSetterInfo<T>(Id,
 				substitutedListeners,
-				ValueToSet.SubstituteParameters(parameters, allValues),
-				ValueToGet.SubstituteParameters(parameters, allValues));
+				ValueToSet.SubstituteParameters(ctx),
+				ValueToGet.SubstituteParameters(ctx));
 	}
 }

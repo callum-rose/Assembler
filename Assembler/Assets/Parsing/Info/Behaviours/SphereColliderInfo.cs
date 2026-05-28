@@ -11,19 +11,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static SphereColliderInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Radius"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("IsTrigger"), parameters: p));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Radius")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsTrigger")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new SphereColliderInfo(Id,
 				substitutedListeners,
-				Radius.SubstituteParameters(parameters, allValues),
-				IsTrigger.SubstituteParameters(parameters, allValues));
+				Radius.SubstituteParameters(ctx),
+				IsTrigger.SubstituteParameters(ctx));
 	}
 }

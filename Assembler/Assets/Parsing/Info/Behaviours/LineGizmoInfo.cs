@@ -13,21 +13,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static LineGizmoInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Start"), parameters: p),
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("End"), parameters: p),
-				Transformer.CreateValueSource<Color>(v, props.GetValueOrDefault("Colour"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
+				Transformer.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new LineGizmoInfo(Id,
 				substitutedListeners,
-				Start.SubstituteParameters(parameters, allValues),
-				End.SubstituteParameters(parameters, allValues),
-				Colour.SubstituteParameters(parameters, allValues));
+				Start.SubstituteParameters(ctx),
+				End.SubstituteParameters(ctx),
+				Colour.SubstituteParameters(ctx));
 	}
 }
