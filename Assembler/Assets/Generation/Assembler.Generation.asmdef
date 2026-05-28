@@ -1,7 +1,9 @@
 {
     "name": "Assembler.Generation",
     "rootNamespace": "Assembler",
-    "references": [],
+    "references": [
+        "Assembler.Anthropic"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

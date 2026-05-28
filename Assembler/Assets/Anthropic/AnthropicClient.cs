@@ -8,7 +8,7 @@ using Anthropic.Core;
 using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 
-namespace Assembler.Generation
+namespace Assembler.Anthropic
 {
 	/// <summary>
 	/// Thin wrapper around the official Anthropic C# SDK

@@ -1,4 +1,4 @@
-namespace Assembler.Generation
+namespace Assembler.Anthropic
 {
 	public sealed class AnthropicMessage
 	{

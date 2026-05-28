@@ -1,13 +1,7 @@
 {
-    "name": "Assembler.Generation.Verification",
-    "rootNamespace": "Assembler",
-    "references": [
-        "Assembler.Generation",
-        "Assembler.Anthropic",
-        "Assembler.Building",
-        "Assembler.Parsing",
-        "Assembler.Deserialisation"
-    ],
+    "name": "Assembler.Anthropic",
+    "rootNamespace": "Assembler.Anthropic",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

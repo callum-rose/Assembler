@@ -3,6 +3,7 @@
     "rootNamespace": "Assembler",
     "references": [
         "Assembler.Generation",
+        "Assembler.Anthropic",
         "Assembler.Generation.Verification"
     ],
     "includePlatforms": [
