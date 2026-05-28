@@ -17,6 +17,7 @@ namespace Assembler.Generation.Verification.Editor
 		private const string NamePref = "Assembler.Voxels.LastName";
 		private const string OutputFolderPref = "Assembler.Voxels.OutputFolder";
 		private const string DefaultOutputFolder = "Assets/Resources/Voxels/";
+		private const float PreviewWidth = 320f;
 
 		private string _apiKey = string.Empty;
 		private string _prompt = string.Empty;
@@ -26,6 +27,7 @@ namespace Assembler.Generation.Verification.Editor
 		private string _goxelText = string.Empty;
 
 		private readonly StringBuilder _log = new();
+		private Vector2 _outerScroll;
 		private Vector2 _logScroll;
 		private Vector2 _promptScroll;
 		private Vector2 _persistentScroll;
@@ -33,11 +35,15 @@ namespace Assembler.Generation.Verification.Editor
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
 
+		private string? _previewMeshPath;
+		private Mesh? _previewMesh;
+		private UnityEditor.Editor? _previewEditor;
+
 		[MenuItem("Assembler/Generate Voxel Mesh")]
 		public static void Open()
 		{
 			var window = GetWindow<VoxelGeneratorWindow>("Generate Voxel");
-			window.minSize = new Vector2(520, 700);
+			window.minSize = new Vector2(720, 500);
 			window.Show();
 		}
 
@@ -53,9 +59,29 @@ namespace Assembler.Generation.Verification.Editor
 		private void OnDisable()
 		{
 			_cts?.Cancel();
+			DestroyPreviewEditor();
 		}
 
 		private void OnGUI()
+		{
+			EditorGUILayout.BeginHorizontal();
+
+			// Left column: scrollable controls.
+			EditorGUILayout.BeginVertical();
+			_outerScroll = EditorGUILayout.BeginScrollView(_outerScroll);
+			DrawControls();
+			EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+
+			// Right column: fixed-width preview pane.
+			EditorGUILayout.BeginVertical(GUILayout.Width(PreviewWidth));
+			DrawPreview();
+			EditorGUILayout.EndVertical();
+
+			EditorGUILayout.EndHorizontal();
+		}
+
+		private void DrawControls()
 		{
 			EditorGUILayout.LabelField("API key (shared with descriptor window)", EditorStyles.boldLabel);
 			using (var scope = new EditorGUI.ChangeCheckScope())
@@ -102,7 +128,7 @@ namespace Assembler.Generation.Verification.Editor
 			EditorGUILayout.Space();
 			using (new EditorGUI.DisabledScope(_isRunning))
 			{
-				if (GUILayout.Button(_isRunning ? "Generating..." : "1. Generate Goxel text"))
+				if (GUILayout.Button(_isRunning ? "Generating..." : "Generate Mesh"))
 				{
 					StartGenerate();
 				}
@@ -116,30 +142,42 @@ namespace Assembler.Generation.Verification.Editor
 			}
 
 			EditorGUILayout.Space();
-			EditorGUILayout.LabelField("Goxel text (editable — manual review gap)", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("Goxel text (editable)", EditorStyles.boldLabel);
 			_goxelScroll = EditorGUILayout.BeginScrollView(_goxelScroll, GUILayout.MinHeight(160));
-			_goxelText = EditorGUILayout.TextArea(_goxelText, GUILayout.ExpandHeight(true));
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_goxelText = EditorGUILayout.TextArea(_goxelText, GUILayout.ExpandHeight(true));
+				if (scope.changed)
+				{
+					// User edited — convert again so preview / .vox match.
+					TryConvertCurrentText(logSuccess: false);
+				}
+			}
 			EditorGUILayout.EndScrollView();
 
 			DrawModelSummary();
 
-			using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_goxelText) || _isRunning))
-			{
-				if (GUILayout.Button("Save Goxel text to file"))
-				{
-					SaveGoxelText();
-				}
-				if (GUILayout.Button("2. Convert to .vox"))
-				{
-					ConvertToVox();
-				}
-			}
-
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
-			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.MinHeight(120));
+			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.MinHeight(120), GUILayout.MaxHeight(200));
 			EditorGUILayout.TextArea(_log.ToString(), GUILayout.ExpandHeight(true));
 			EditorGUILayout.EndScrollView();
+		}
+
+		private void DrawPreview()
+		{
+			EditorGUILayout.LabelField("Mesh preview", EditorStyles.boldLabel);
+			RefreshPreviewEditor();
+
+			var rect = GUILayoutUtility.GetRect(PreviewWidth, PreviewWidth, GUILayout.ExpandHeight(true));
+			if (_previewEditor != null && _previewMesh != null)
+			{
+				_previewEditor.OnInteractivePreviewGUI(rect, EditorStyles.helpBox);
+			}
+			else
+			{
+				GUI.Box(rect, "No mesh yet", EditorStyles.helpBox);
+			}
 		}
 
 		private void StartGenerate()
@@ -171,10 +209,8 @@ namespace Assembler.Generation.Verification.Editor
 				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct);
 				_goxelText = goxelText;
 
-				var txtPath = WriteText(goxelText, ".txt");
-				Log($"Wrote {txtPath}");
-				Log("Inspect/edit the Goxel text, then press '2. Convert to .vox'.");
-				AssetDatabase.Refresh();
+				Log("Converting to .vox...");
+				TryConvertCurrentText(logSuccess: true);
 			}
 			catch (OperationCanceledException)
 			{
@@ -193,16 +229,67 @@ namespace Assembler.Generation.Verification.Editor
 			}
 		}
 
+		private void TryConvertCurrentText(bool logSuccess)
+		{
+			if (string.IsNullOrWhiteSpace(_goxelText)) return;
+
+			try
+			{
+				var pipeline = new VoxelPipeline();
+				var bytes = pipeline.GoxelTextToVox(_goxelText);
+				var voxPath = WriteBytes(bytes, ".vox");
+				if (logSuccess) Log($"Wrote {voxPath}");
+
+				AssetDatabase.Refresh();
+				_previewMeshPath = voxPath;
+				ReloadPreviewMesh();
+			}
+			catch (Exception ex)
+			{
+				if (logSuccess) Log("Convert failed: " + ex);
+			}
+		}
+
+		private void ReloadPreviewMesh()
+		{
+			if (string.IsNullOrEmpty(_previewMeshPath)) return;
+			_previewMesh = AssetDatabase.LoadAssetAtPath<Mesh>(_previewMeshPath);
+			DestroyPreviewEditor();
+		}
+
+		private void RefreshPreviewEditor()
+		{
+			// If we have a path but no mesh (Voxel Toolkit import is async), retry.
+			if (_previewMesh == null && !string.IsNullOrEmpty(_previewMeshPath))
+			{
+				_previewMesh = AssetDatabase.LoadAssetAtPath<Mesh>(_previewMeshPath);
+			}
+
+			if (_previewMesh != null && _previewEditor == null)
+			{
+				_previewEditor = UnityEditor.Editor.CreateEditor(_previewMesh);
+			}
+		}
+
+		private void DestroyPreviewEditor()
+		{
+			if (_previewEditor != null)
+			{
+				DestroyImmediate(_previewEditor);
+				_previewEditor = null;
+			}
+		}
+
 		private GUIStyle? _richLabelStyle;
 
 		private void DrawModelSummary()
 		{
 			if (string.IsNullOrWhiteSpace(_goxelText)) return;
 
-			Assembler.Voxels.VoxelModel model;
+			VoxelModel model;
 			try
 			{
-				model = Assembler.Voxels.GoxelTextParser.Parse(_goxelText);
+				model = GoxelTextParser.Parse(_goxelText);
 			}
 			catch (Exception)
 			{
@@ -230,44 +317,6 @@ namespace Assembler.Generation.Verification.Editor
 			}
 
 			EditorGUILayout.LabelField(sb.ToString(), _richLabelStyle);
-		}
-
-		private void SaveGoxelText()
-		{
-			try
-			{
-				var txtPath = WriteText(_goxelText, ".txt");
-				Log($"Wrote {txtPath}");
-				AssetDatabase.Refresh();
-			}
-			catch (Exception ex)
-			{
-				Log("Save failed: " + ex);
-			}
-		}
-
-		private void ConvertToVox()
-		{
-			try
-			{
-				var pipeline = new VoxelPipeline();
-				var bytes = pipeline.GoxelTextToVox(_goxelText);
-				var voxPath = WriteBytes(bytes, ".vox");
-				Log($"Wrote {voxPath}");
-				AssetDatabase.Refresh();
-			}
-			catch (Exception ex)
-			{
-				Log("Convert failed: " + ex);
-			}
-		}
-
-		private string WriteText(string text, string extension)
-		{
-			Directory.CreateDirectory(_outputFolder);
-			var path = Path.Combine(_outputFolder, _name + extension);
-			File.WriteAllText(path, text);
-			return path;
 		}
 
 		private string WriteBytes(byte[] bytes, string extension)
