@@ -135,6 +135,7 @@ namespace Assembler.Building
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
 			var entityTransformRegistry = new EntityTransformRegistry();
+			var exclusiveGroupRegistry = new ExclusiveGroupRegistry();
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
@@ -146,6 +147,7 @@ namespace Assembler.Building
 				behaviourRegistry,
 				assetRegistry,
 				entityTransformRegistry,
+				exclusiveGroupRegistry,
 				templatesById,
 				gameInfo.ParseContext,
 				triggerContext);
