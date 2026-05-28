@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: b5f072710104347c9bf8b14daa2e5acd
+timeCreated: 1674565618
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/QuadGenerationJob.cs
+  uploadId: 902436

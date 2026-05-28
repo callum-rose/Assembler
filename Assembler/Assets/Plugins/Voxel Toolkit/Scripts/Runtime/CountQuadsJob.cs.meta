@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 608238ff509b4600a614e1f40d66a477
+timeCreated: 1703683898
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/CountQuadsJob.cs
+  uploadId: 902436

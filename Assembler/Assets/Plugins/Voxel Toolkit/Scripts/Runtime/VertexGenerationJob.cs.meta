@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 394ce67aabce04bd1b6b4877859e83ee
+timeCreated: 1674565618
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/VertexGenerationJob.cs
+  uploadId: 902436

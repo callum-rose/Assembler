@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 92ad836fbce8949d5b49c0a91c9eaf72
+timeCreated: 1674565618
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/TextureFillJob.cs
+  uploadId: 902436

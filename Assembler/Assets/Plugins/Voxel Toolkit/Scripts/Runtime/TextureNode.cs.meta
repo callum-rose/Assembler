@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: c2efd1cc59a4448b82af4c25caf96fe0
+timeCreated: 1733091940
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Runtime/TextureNode.cs
+  uploadId: 902436

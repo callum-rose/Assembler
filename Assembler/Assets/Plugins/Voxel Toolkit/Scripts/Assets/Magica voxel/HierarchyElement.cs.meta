@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 5c9c7e00559447a1b0aac743c4640fcb
+timeCreated: 1689026055
+AssetOrigin:
+  serializedVersion: 1
+  productId: 247538
+  packageName: 'Voxel Toolkit: MagicaVoxel Importer & Optimizer'
+  packageVersion: 3.02
+  assetPath: Assets/Plugins/Voxel Toolkit/Scripts/Assets/Magica voxel/HierarchyElement.cs
+  uploadId: 902436
