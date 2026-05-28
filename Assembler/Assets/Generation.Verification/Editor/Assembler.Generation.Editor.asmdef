@@ -4,6 +4,7 @@
     "references": [
         "Assembler.Generation",
         "Assembler.Anthropic",
+        "Assembler.Voxels",
         "Assembler.Generation.Verification"
     ],
     "includePlatforms": [
