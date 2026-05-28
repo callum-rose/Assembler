@@ -30,15 +30,10 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			TriggerContext.Push();
-			try
+			using (TriggerContext.Push())
 			{
 				TriggerContext.Set("mouse_position", UnityEngine.Input.mousePosition);
 				NotifyListeners();
-			}
-			finally
-			{
-				TriggerContext.Pop();
 			}
 		}
 	}

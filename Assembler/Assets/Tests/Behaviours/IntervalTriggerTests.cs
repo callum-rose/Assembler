@@ -76,20 +76,21 @@ namespace Tests.Behaviours
 				var triggerContext = new TriggerContext();
 				trigger.TriggerContext = triggerContext;
 
-				triggerContext.Push();
-				triggerContext.Set("outer", 42);
+				using (triggerContext.Push())
+				{
+					triggerContext.Set("outer", 42);
 
-				var data = new IntervalTriggerData(
-					id: "test_interval",
-					interval: new ValueProvider<float>(0f),
-					count: new ValueProvider<int>(1),
-					autoStart: new ValueProvider<bool>(false));
+					var data = new IntervalTriggerData(
+						id: "test_interval",
+						interval: new ValueProvider<float>(0f),
+						count: new ValueProvider<int>(1),
+						autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }, triggerContext) });
-				trigger.FireIteration(0, 1);
+					trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }, triggerContext) });
+					trigger.FireIteration(0, 1);
 
-				Assert.AreEqual(42, triggerContext.Get<int>("outer"));
-				triggerContext.Pop();
+					Assert.AreEqual(42, triggerContext.Get<int>("outer"));
+				}
 			}
 			finally
 			{
