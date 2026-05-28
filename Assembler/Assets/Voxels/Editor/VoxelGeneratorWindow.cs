@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -26,12 +27,28 @@ namespace Assembler.Voxels.Editor
 		private string _name = "voxel";
 		private string _outputFolder = DefaultOutputFolder;
 		private string _goxelText = string.Empty;
+		private string _refinePrompt = string.Empty;
 		private byte[]? _voxBytes;
+
+		// Chat history for "Refine (chat)" — running user/assistant turns Claude
+		// sees in multi-turn refinement. Reset on Generate and on Load .vox.
+		private readonly List<AnthropicMessage> _chatHistory = new();
+
+		// One-step undo of _goxelText. Snapshot before AI calls or .vox loads;
+		// cleared after the user pops it. Manual edits are not snapshotted.
+		private string? _undoGoxelText;
+
+		// Sidecar project (prompt history, kept persistent on Save).
+		private VoxelProject _project = new();
+
+		// Set when a .vox is loaded from disk so Save can default to the same path.
+		private string? _loadedVoxPath;
 
 		private readonly StringBuilder _log = new();
 		private Vector2 _outerScroll;
 		private Vector2 _logScroll;
 		private Vector2 _promptScroll;
+		private Vector2 _refineScroll;
 		private Vector2 _persistentScroll;
 		private Vector2 _goxelScroll;
 		private bool _isRunning;
@@ -143,12 +160,56 @@ namespace Assembler.Voxels.Editor
 				}
 			}
 
+			using (new EditorGUI.DisabledScope(_isRunning))
+			{
+				if (GUILayout.Button("Load .vox..."))
+				{
+					LoadVox();
+				}
+			}
+
 			using (new EditorGUI.DisabledScope(_voxBytes == null || _isRunning))
 			{
 				if (GUILayout.Button("Save .vox to output folder"))
 				{
 					SaveVox();
 				}
+			}
+
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Refine prompt (sent with current model)", EditorStyles.boldLabel);
+			_refineScroll = EditorGUILayout.BeginScrollView(_refineScroll, GUILayout.MinHeight(50), GUILayout.MaxHeight(120));
+			_refinePrompt = EditorGUILayout.TextArea(_refinePrompt, GUILayout.ExpandHeight(true));
+			EditorGUILayout.EndScrollView();
+
+			var canRefine = !_isRunning && !string.IsNullOrWhiteSpace(_goxelText) && !string.IsNullOrWhiteSpace(_refinePrompt);
+			EditorGUILayout.BeginHorizontal();
+			using (new EditorGUI.DisabledScope(!canRefine))
+			{
+				if (GUILayout.Button("Refine (fresh)"))
+				{
+					StartRefine(useChatHistory: false);
+				}
+				if (GUILayout.Button("Refine (chat)"))
+				{
+					StartRefine(useChatHistory: true);
+				}
+			}
+			EditorGUILayout.EndHorizontal();
+
+			using (new EditorGUI.DisabledScope(_undoGoxelText == null || _isRunning))
+			{
+				if (GUILayout.Button("Undo last change"))
+				{
+					UndoLast();
+				}
+			}
+
+			if (_chatHistory.Count > 0)
+			{
+				EditorGUILayout.LabelField(
+					$"Chat history: {_chatHistory.Count} message(s). 'Refine (chat)' continues; 'Refine (fresh)' ignores.",
+					EditorStyles.miniLabel);
 			}
 
 			EditorGUILayout.Space();
@@ -209,20 +270,33 @@ namespace Assembler.Voxels.Editor
 			_log.Clear();
 			_isRunning = true;
 			_cts = new CancellationTokenSource();
-			RunAsync(_cts.Token);
+			RunGenerateAsync(_cts.Token);
 		}
 
-		private async void RunAsync(CancellationToken ct)
+		private async void RunGenerateAsync(CancellationToken ct)
 		{
 			try
 			{
+				SnapshotUndo();
 				Log("Requesting Goxel text from Claude...");
 				using var client = new AnthropicClient(_apiKey);
 				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
 				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct, AppendStreamDelta);
 				_goxelText = goxelText;
 
-				Log("Converting to .vox...");
+				// New generation: reset project + chat history.
+				_project = new VoxelProject
+				{
+					prompt = _prompt,
+					persistentInstructions = _persistentInstructions,
+				};
+				_project.history.Add(VoxelProject.HistoryEntry.Create("generate", _prompt, _goxelText));
+
+				_chatHistory.Clear();
+				_chatHistory.Add(new AnthropicMessage("user", _prompt));
+				_chatHistory.Add(new AnthropicMessage("assistant", "```goxel\n" + VoxelPipeline.SwapYAndZ(_goxelText) + "\n```"));
+
+				Log("\nConverting to .vox...");
 				TryConvertCurrentText(logSuccess: true);
 			}
 			catch (OperationCanceledException)
@@ -240,6 +314,187 @@ namespace Assembler.Voxels.Editor
 				_cts = null;
 				Repaint();
 			}
+		}
+
+		private void StartRefine(bool useChatHistory)
+		{
+			if (string.IsNullOrWhiteSpace(_apiKey))
+			{
+				Log("ERROR: API key is required.");
+				return;
+			}
+			if (string.IsNullOrWhiteSpace(_goxelText))
+			{
+				Log("ERROR: no current model to refine.");
+				return;
+			}
+			if (string.IsNullOrWhiteSpace(_refinePrompt))
+			{
+				Log("ERROR: refine prompt is required.");
+				return;
+			}
+
+			_isRunning = true;
+			_cts = new CancellationTokenSource();
+			RunRefineAsync(useChatHistory, _cts.Token);
+		}
+
+		private async void RunRefineAsync(bool useChatHistory, CancellationToken ct)
+		{
+			var instruction = _refinePrompt;
+			try
+			{
+				SnapshotUndo();
+				Log(useChatHistory
+					? $"\nRefining (chat, {_chatHistory.Count} prior msgs): {instruction}"
+					: $"\nRefining (fresh): {instruction}");
+				using var client = new AnthropicClient(_apiKey);
+				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
+				var chatRef = useChatHistory ? _chatHistory : null;
+				var newGoxel = await pipeline.RefineGoxelTextAsync(
+					_goxelText, instruction, chatRef, client, ct, AppendStreamDelta);
+				_goxelText = newGoxel;
+
+				_project.history.Add(VoxelProject.HistoryEntry.Create(
+					useChatHistory ? "refine-chat" : "refine-fresh",
+					instruction,
+					_goxelText));
+
+				Log("\nConverting to .vox...");
+				TryConvertCurrentText(logSuccess: true);
+				_refinePrompt = string.Empty;
+			}
+			catch (OperationCanceledException)
+			{
+				Log("Cancelled.");
+			}
+			catch (Exception ex)
+			{
+				Log("Refine failed: " + ex);
+			}
+			finally
+			{
+				_isRunning = false;
+				_cts?.Dispose();
+				_cts = null;
+				Repaint();
+			}
+		}
+
+		private void LoadVox()
+		{
+			var startDir = Directory.Exists(_outputFolder) ? _outputFolder : Application.dataPath;
+			var path = EditorUtility.OpenFilePanel("Load .vox", startDir, "vox");
+			if (string.IsNullOrEmpty(path)) return;
+
+			try
+			{
+				var bytes = File.ReadAllBytes(path);
+				var model = VoxReader.Read(bytes);
+				var text = GoxelTextWriter.Write(model);
+
+				SnapshotUndo();
+				_goxelText = text;
+				_voxBytes = bytes;
+				_loadedVoxPath = path;
+				_name = Path.GetFileNameWithoutExtension(path);
+				EditorPrefs.SetString(NamePref, _name);
+
+				// Sidecar — restore if present, otherwise seed fresh.
+				var sidecarPath = VoxelProject.SidecarPathFor(path);
+				if (File.Exists(sidecarPath))
+				{
+					try
+					{
+						_project = VoxelProject.Load(sidecarPath);
+						if (!string.IsNullOrEmpty(_project.prompt))
+						{
+							_prompt = _project.prompt;
+							EditorPrefs.SetString(PromptPref, _prompt);
+						}
+						if (!string.IsNullOrEmpty(_project.persistentInstructions))
+						{
+							_persistentInstructions = _project.persistentInstructions;
+							EditorPrefs.SetString(PersistentInstructionsPref, _persistentInstructions);
+						}
+						Log($"Loaded {path} (+ sidecar, {_project.history.Count} history entries).");
+					}
+					catch (Exception ex)
+					{
+						Log("Sidecar load failed, starting fresh: " + ex.Message);
+						_project = NewProjectFromLoad();
+					}
+				}
+				else
+				{
+					_project = NewProjectFromLoad();
+					Log($"Loaded {path} (no sidecar; new project).");
+				}
+
+				_project.history.Add(VoxelProject.HistoryEntry.Create("load", path, _goxelText));
+
+				// Seed chat history with a synthetic assistant turn carrying the
+				// loaded model, so "Refine (chat)" still has context for the first
+				// turn even when we load a cold .vox.
+				_chatHistory.Clear();
+				_chatHistory.Add(new AnthropicMessage("user",
+					string.IsNullOrEmpty(_project.prompt) ? "(model loaded from disk)" : _project.prompt));
+				_chatHistory.Add(new AnthropicMessage("assistant",
+					"```goxel\n" + VoxelPipeline.SwapYAndZ(_goxelText) + "\n```"));
+
+				// Update preview from the loaded bytes — write to scratch, refresh.
+				Directory.CreateDirectory(ScratchFolder);
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+				File.WriteAllBytes(scratchPath, _voxBytes);
+				AssetDatabase.Refresh();
+				_previewMeshPath = scratchPath;
+				ReloadPreviewMesh();
+			}
+			catch (Exception ex)
+			{
+				Log("Load failed: " + ex);
+			}
+		}
+
+		private VoxelProject NewProjectFromLoad()
+		{
+			return new VoxelProject
+			{
+				prompt = string.Empty,
+				persistentInstructions = _persistentInstructions,
+			};
+		}
+
+		private void UndoLast()
+		{
+			if (_undoGoxelText == null) return;
+			_goxelText = _undoGoxelText;
+			_undoGoxelText = null;
+
+			// Drop the latest history entry, and (if it was a chat refine) the
+			// matching user+assistant pair from the chat history.
+			if (_project.history.Count > 0)
+			{
+				var last = _project.history[^1];
+				_project.history.RemoveAt(_project.history.Count - 1);
+				if (last.kind == "refine-chat" && _chatHistory.Count >= 2)
+				{
+					_chatHistory.RemoveAt(_chatHistory.Count - 1);
+					_chatHistory.RemoveAt(_chatHistory.Count - 1);
+				}
+				else if (last.kind == "generate" || last.kind == "load")
+				{
+					_chatHistory.Clear();
+				}
+			}
+
+			TryConvertCurrentText(logSuccess: false);
+			Log("Reverted last change.");
+		}
+
+		private void SnapshotUndo()
+		{
+			_undoGoxelText = _goxelText;
 		}
 
 		private void TryConvertCurrentText(bool logSuccess)
@@ -276,7 +531,12 @@ namespace Assembler.Voxels.Editor
 			try
 			{
 				var voxPath = WriteBytes(_voxBytes, ".vox");
-				Log($"Saved {voxPath}");
+				_project.prompt = _prompt;
+				_project.persistentInstructions = _persistentInstructions;
+				var sidecarPath = VoxelProject.SidecarPathFor(voxPath);
+				VoxelProject.Save(sidecarPath, _project);
+				_loadedVoxPath = voxPath;
+				Log($"Saved {voxPath} (+ {Path.GetFileName(sidecarPath)}, {_project.history.Count} history entries).");
 				AssetDatabase.Refresh();
 			}
 			catch (Exception ex)

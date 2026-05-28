@@ -38,3 +38,17 @@ A 2x1x1 red brick:
 0 0 0 ff3030
 1 0 0 ff3030
 ```
+
+# Refinement mode
+
+If the user message contains a `<current_model>...</current_model>` block, that
+block is the starting point — a complete Goxel-format model the user already
+has. Read it, then apply the user's "Change:" instruction:
+
+- Preserve everything the change doesn't ask you to alter (voxel positions,
+  colours, overall silhouette).
+- Make the minimum edits needed to satisfy the instruction.
+- Reply with the full updated model — every voxel, not just the diff — in the
+  same single ```goxel``` block format described above.
+- The coordinates inside `<current_model>` use the same Y-up convention you
+  output in. Keep using Y-up in your reply.
