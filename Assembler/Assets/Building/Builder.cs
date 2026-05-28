@@ -112,21 +112,7 @@ namespace Assembler.Building
 		public static void Build(GameInfo gameInfo)
 		{
 			// 1. Initialize variables and expressions
-			var typeRegistry = new Dictionary<string, Type>
-			{
-				["float"] = typeof(float),
-				["int"] = typeof(int),
-				["string"] = typeof(string),
-				["bool"] = typeof(bool),
-				["vector"] = typeof(Vector3),
-				["colour"] = typeof(Color),
-				["vector list"] = typeof(IList<Vector3>),
-				["int list"] = typeof(IList<int>),
-				["float list"] = typeof(IList<float>),
-				["bool list"] = typeof(IList<bool>),
-				["string list"] = typeof(IList<string>),
-				["colour list"] = typeof(IList<Color>)
-			};
+			var typeRegistry = BuiltInTypeRegistry.Default;
 
 			var variableRegistry = new VariableRegistry();
 
@@ -161,7 +147,7 @@ namespace Assembler.Building
 				assetRegistry,
 				entityTransformRegistry,
 				templatesById,
-				gameInfo.Variables,
+				gameInfo.ParseContext,
 				triggerContext);
 
 			var initialisations = new InitialisationQueue();

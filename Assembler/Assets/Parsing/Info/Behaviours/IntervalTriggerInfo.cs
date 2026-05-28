@@ -13,21 +13,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static IntervalTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Interval"), parameters: p),
-				Transformer.CreateValueSource<int>(v, props.GetValueOrDefault("Count"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("AutoStart"), parameters: p));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Interval")),
+				Transformer.CreateValueSource<int>(ctx, props.GetValueOrDefault("Count")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new IntervalTriggerInfo(Id,
 				substitutedListeners,
-				Interval.SubstituteParameters(parameters, allValues),
-				Count.SubstituteParameters(parameters, allValues),
-				AutoStart.SubstituteParameters(parameters, allValues));
+				Interval.SubstituteParameters(ctx),
+				Count.SubstituteParameters(ctx),
+				AutoStart.SubstituteParameters(ctx));
 	}
 }

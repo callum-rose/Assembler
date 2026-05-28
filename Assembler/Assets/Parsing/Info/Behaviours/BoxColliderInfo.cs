@@ -12,19 +12,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static BoxColliderInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Size"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("IsTrigger"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Size")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsTrigger")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new BoxColliderInfo(Id,
 				substitutedListeners,
-				Size.SubstituteParameters(parameters, allValues),
-				IsTrigger.SubstituteParameters(parameters, allValues));
+				Size.SubstituteParameters(ctx),
+				IsTrigger.SubstituteParameters(ctx));
 	}
 }

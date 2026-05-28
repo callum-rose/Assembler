@@ -11,8 +11,7 @@ namespace Assembler.Parsing
 		string id,
 		IReadOnlyList<ListenerInfo> listeners,
 		IReadOnlyDictionary<string, AssemblerValue> props,
-		IReadOnlyList<ValueInfo> resolvedValues,
-		IReadOnlyDictionary<string, AssemblerValue> parameters);
+		TransformContext ctx);
 
 	public static class BehaviourRegistry
 	{

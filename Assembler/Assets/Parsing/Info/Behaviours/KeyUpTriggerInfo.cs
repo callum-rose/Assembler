@@ -8,17 +8,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static KeyUpTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("Key"), parameters: p));
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Key")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new KeyUpTriggerInfo(Id,
 				substitutedListeners,
-				Key.SubstituteParameters(parameters, allValues));
+				Key.SubstituteParameters(ctx));
 	}
 }

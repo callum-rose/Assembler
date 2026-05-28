@@ -9,17 +9,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static AngularVelocityInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("AngularVelocity"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("AngularVelocity")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new AngularVelocityInfo(Id,
 				substitutedListeners,
-				AngularVelocity.SubstituteParameters(parameters, allValues));
+				AngularVelocity.SubstituteParameters(ctx));
 	}
 }

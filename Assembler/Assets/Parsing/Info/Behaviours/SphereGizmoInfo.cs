@@ -13,21 +13,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static SphereGizmoInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(v, props.GetValueOrDefault("Radius"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("IsWire"), parameters: p),
-				Transformer.CreateValueSource<Color>(v, props.GetValueOrDefault("Colour"), parameters: p));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Radius")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsWire")),
+				Transformer.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new SphereGizmoInfo(Id,
 				substitutedListeners,
-				Radius.SubstituteParameters(parameters, allValues),
-				IsWire.SubstituteParameters(parameters, allValues),
-				Colour.SubstituteParameters(parameters, allValues));
+				Radius.SubstituteParameters(ctx),
+				IsWire.SubstituteParameters(ctx),
+				Colour.SubstituteParameters(ctx));
 	}
 }
