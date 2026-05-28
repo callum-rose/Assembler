@@ -96,6 +96,7 @@ namespace Assembler.Parsing
 				["colour list clear"] = ListClearInfo<Color>.Create,
 
 				["sprite"] = SpriteInfo.Create,
+				["voxel mesh"] = VoxelMeshInfo.Create,
 				["audio source"] = AudioSourceInfo.Create,
 				["sphere gizmo"] = SphereGizmoInfo.Create,
 				["cube gizmo"] = CubeGizmoInfo.Create,

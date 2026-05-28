@@ -13,6 +13,7 @@ using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Rotation;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Sprites;
+using Assembler.Behaviours.Visual;
 using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
@@ -330,6 +331,14 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new SpriteData(i.Id,
 						i.Sprite.Resolve(ctx.Resolution),
 						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(VoxelMeshInfo)] = new(typeof(VoxelMesh), (go, info, ctx) =>
+				{
+					var i = (VoxelMeshInfo)info;
+					var b = go.AddComponent<VoxelMesh>();
+					return (b, lr => b.Initialise(new VoxelMeshData(i.Id,
+						i.Mesh.Resolve(ctx.Resolution),
+						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(AudioSourceInfo)] = new(typeof(AudioSourceBehaviour), (go, info, ctx) =>
 				{
