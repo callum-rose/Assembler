@@ -91,13 +91,76 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new SphereColliderData(i.Id,
 						i.Radius.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(CapsuleColliderInfo)] = new(typeof(AutoAddCapsuleColliderBehaviour), (go, info, ctx) =>
+				{
+					var i = (CapsuleColliderInfo)info;
+					var b = go.AddComponent<AutoAddCapsuleColliderBehaviour>();
+					return (b, lr => b.Initialise(new CapsuleColliderData(i.Id)
+					{
+						Radius = i.Radius.Resolve(ctx.Resolution),
+						Height = i.Height.Resolve(ctx.Resolution),
+						Direction = i.Direction.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MeshColliderInfo)] = new(typeof(AutoAddMeshColliderBehaviour), (go, info, ctx) =>
+				{
+					var i = (MeshColliderInfo)info;
+					var b = go.AddComponent<AutoAddMeshColliderBehaviour>();
+					return (b, lr => b.Initialise(new MeshColliderData(i.Id)
+					{
+						Convex = i.Convex.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(AddForceInfo)] = new(typeof(AddForceBehaviour), (go, info, ctx) =>
+				{
+					var i = (AddForceInfo)info;
+					var b = go.AddComponent<AddForceBehaviour>();
+					return (b, lr => b.Initialise(new AddForceData(i.Id,
+						i.Force.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(AddImpulseInfo)] = new(typeof(AddImpulseBehaviour), (go, info, ctx) =>
+				{
+					var i = (AddImpulseInfo)info;
+					var b = go.AddComponent<AddImpulseBehaviour>();
+					return (b, lr => b.Initialise(new AddImpulseData(i.Id,
+						i.Impulse.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(AddTorqueInfo)] = new(typeof(AddTorqueBehaviour), (go, info, ctx) =>
+				{
+					var i = (AddTorqueInfo)info;
+					var b = go.AddComponent<AddTorqueBehaviour>();
+					return (b, lr => b.Initialise(new AddTorqueData(i.Id,
+						i.Torque.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SetVelocityInfo)] = new(typeof(SetVelocityBehaviour), (go, info, ctx) =>
+				{
+					var i = (SetVelocityInfo)info;
+					var b = go.AddComponent<SetVelocityBehaviour>();
+					return (b, lr => b.Initialise(new SetVelocityData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SetAngularVelocityInfo)] = new(typeof(SetAngularVelocityBehaviour), (go, info, ctx) =>
+				{
+					var i = (SetAngularVelocityInfo)info;
+					var b = go.AddComponent<SetAngularVelocityBehaviour>();
+					return (b, lr => b.Initialise(new SetAngularVelocityData(i.Id,
+						i.AngularVelocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(RigidbodyInfo)] = new(typeof(RigidbodyBehaviour), (go, info, ctx) =>
 				{
 					var i = (RigidbodyInfo)info;
 					var b = go.AddComponent<RigidbodyBehaviour>();
 					return (b, lr => b.Initialise(new RigidbodyData(i.Id)
 					{
-						UseGravity = i.UseGravity.Resolve(ctx.Resolution)
+						UseGravity = i.UseGravity.Resolve(ctx.Resolution),
+						IsKinematic = i.IsKinematic.Resolve(ctx.Resolution),
+						Mass = i.Mass.Resolve(ctx.Resolution),
+						LinearDamping = i.LinearDamping.Resolve(ctx.Resolution),
+						AngularDamping = i.AngularDamping.Resolve(ctx.Resolution),
+						FreezePosition = i.FreezePosition.Resolve(ctx.Resolution),
+						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution)
 					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(VelocityInfo)] = new(typeof(Velocity), (go, info, ctx) =>
