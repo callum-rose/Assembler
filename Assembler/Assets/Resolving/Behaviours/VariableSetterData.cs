@@ -9,9 +9,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<T> ValueToGet { get; }
 
 		public VariableSetterData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<T> valueToSet,
-			IValueProvider<T> valueToGet) : base(id, listeners) =>
+						IValueProvider<T> valueToSet,
+			IValueProvider<T> valueToGet) : base(id) =>
 			(ValueToSet, ValueToGet) = (valueToSet, valueToGet);
 	}
 }

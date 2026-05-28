@@ -17,17 +17,21 @@ namespace Assembler.Behaviours
 
 		protected string Id { get; private set; }
 
-		private IReadOnlyList<Action> _listeners;
+		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
 		public abstract void Execute();
 
-		protected void SetBase(BehaviourData behaviourData) => (Id, _listeners) = (behaviourData.Id, behaviourData.Listeners);
+		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
+		{
+			Id = behaviourData.Id;
+			_listeners = listeners;
+		}
 
 		protected void NotifyListeners()
 		{
 			foreach (var listener in _listeners)
 			{
-				listener.Invoke();
+				listener.Notify();
 			}
 		}
 	}
@@ -36,11 +40,11 @@ namespace Assembler.Behaviours
 	{
 		protected TData Data { get; private set; }
 
-		public void Initialise(TData data)
+		public void Initialise(TData data, IReadOnlyList<Listener> listeners)
 		{
 			Data = data;
 
-			SetBase(data);
+			SetBase(data, listeners);
 			OnInitialise(data);
 		}
 

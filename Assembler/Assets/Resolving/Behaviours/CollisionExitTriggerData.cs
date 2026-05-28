@@ -5,7 +5,7 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class CollisionExitTriggerData : PhysicalTriggerData
 	{
-		public CollisionExitTriggerData(string id, IReadOnlyList<string> tags, IReadOnlyList<Action> listeners) :
-			base(id, tags, listeners) { }
+		public CollisionExitTriggerData(string id, IReadOnlyList<string> tags) :
+			base(id, tags) { }
 	}
 }

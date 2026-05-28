@@ -8,8 +8,7 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<IList<T>> List { get; }
 
 		public ListClearData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<IList<T>> list) : base(id, listeners) =>
+						IValueProvider<IList<T>> list) : base(id) =>
 			List = list;
 	}
 }

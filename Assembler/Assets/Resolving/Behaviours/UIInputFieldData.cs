@@ -9,7 +9,6 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public UIInputFieldData(string id,
-			IReadOnlyList<Action> listeners,
-			ScreenRect rect) : base(id, listeners) => Rect = rect;
+						ScreenRect rect) : base(id) => Rect = rect;
 	}
 }

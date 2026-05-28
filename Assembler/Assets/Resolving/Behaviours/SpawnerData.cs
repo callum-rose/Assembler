@@ -13,11 +13,10 @@ namespace Assembler.Resolving.Behaviours
 
 		public SpawnerData(
 			string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<string> templateId,
+						IValueProvider<string> templateId,
 			IValueProvider<Vector3> position,
 			IValueProvider<Vector3> rotation,
-			IReadOnlyDictionary<string, IValueProvider> parameters) : base(id, listeners) =>
+			IReadOnlyDictionary<string, IValueProvider> parameters) : base(id) =>
 			(TemplateId, Position, Rotation, Parameters) = (templateId, position, rotation, parameters);
 	}
 }

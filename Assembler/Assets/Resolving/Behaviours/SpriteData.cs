@@ -10,9 +10,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<Vector2> Size { get; }
 
 		public SpriteData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<Sprite> sprite,
-			IValueProvider<Vector2> size) : base(id, listeners) =>
+						IValueProvider<Sprite> sprite,
+			IValueProvider<Vector2> size) : base(id) =>
 			(Sprite, Size) = (sprite, size);
 	}
 }

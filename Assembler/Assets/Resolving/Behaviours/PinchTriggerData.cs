@@ -5,6 +5,6 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class PinchTriggerData : TriggerData
 	{
-		public PinchTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		public PinchTriggerData(string id) : base(id) { }
 	}
 }

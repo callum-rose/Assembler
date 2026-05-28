@@ -8,8 +8,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Vector3> Displacement { get; }
 
-		public TranslateData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> displacement) : base(id,
-			listeners) =>
+		public TranslateData(string id, IValueProvider<Vector3> displacement) : base(id) =>
 			Displacement = displacement;
 	}
 }

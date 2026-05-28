@@ -11,9 +11,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<Color> Colour { get; }
 
 		public CubeGizmoData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<Vector3> size,
+						IValueProvider<Vector3> size,
 			IValueProvider<bool> isWire,
-			IValueProvider<Color> colour) : base(id, listeners) => (Size, IsWire, Colour) = (size, isWire, colour);
+			IValueProvider<Color> colour) : base(id) => (Size, IsWire, Colour) = (size, isWire, colour);
 	}
 }

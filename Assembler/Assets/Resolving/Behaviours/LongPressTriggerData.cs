@@ -5,6 +5,6 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class LongPressTriggerData : TriggerData
 	{
-		public LongPressTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		public LongPressTriggerData(string id) : base(id) { }
 	}
 }

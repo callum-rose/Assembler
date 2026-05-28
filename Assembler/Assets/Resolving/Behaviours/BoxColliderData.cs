@@ -10,10 +10,9 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<bool> IsTrigger { get; }
 
 		public BoxColliderData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<Vector3> size,
+						IValueProvider<Vector3> size,
 			IValueProvider<bool> isTrigger) :
-			base(id, listeners) =>
+			base(id) =>
 			(Size, IsTrigger) = (size, isTrigger);
 	}
 }

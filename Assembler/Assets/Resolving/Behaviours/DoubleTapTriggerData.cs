@@ -5,6 +5,6 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class DoubleTapTriggerData : TriggerData
 	{
-		public DoubleTapTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		public DoubleTapTriggerData(string id) : base(id) { }
 	}
 }

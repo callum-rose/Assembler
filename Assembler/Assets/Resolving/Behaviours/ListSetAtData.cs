@@ -10,10 +10,9 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<T> Value { get; }
 
 		public ListSetAtData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<IList<T>> list,
+						IValueProvider<IList<T>> list,
 			IValueProvider<int> index,
-			IValueProvider<T> value) : base(id, listeners) =>
+			IValueProvider<T> value) : base(id) =>
 			(List, Index, Value) = (list, index, value);
 	}
 }

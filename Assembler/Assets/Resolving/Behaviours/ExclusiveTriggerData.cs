@@ -7,8 +7,8 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<string> Group { get; }
 
-		public ExclusiveTriggerData(string id, IValueProvider<string> group, IReadOnlyList<Action> listeners) :
-			base(id, listeners)
+		public ExclusiveTriggerData(string id, IValueProvider<string> group) :
+			base(id)
 		{
 			Group = group;
 		}
