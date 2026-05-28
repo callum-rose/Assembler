@@ -32,11 +32,16 @@ namespace Assembler.Voxels
 				if (parts.Length < 4) continue;
 
 				if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
-				    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ||
-				    !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z))
+				    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var srcY) ||
+				    !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var srcZ))
 				{
 					continue;
 				}
+
+				// Prompt convention is Y-up; MagicaVoxel .vox is Z-up. Swap so the
+				// imported mesh stands upright in Unity.
+				var y = srcZ;
+				var z = srcY;
 
 				if (!TryParseHexColor(parts[3], out var colour)) continue;
 
