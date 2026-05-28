@@ -1,6 +1,5 @@
-using System.Collections.Generic;
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Conditionals
 {
@@ -11,29 +10,14 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 	/// </remarks>
 	public class ExclusiveTrigger : Trigger<ExclusiveTriggerData>
 	{
+		public ExclusiveGroupRegistry Registry { get; set; } = null!;
+
 		public override void Execute()
 		{
-			if (ExclusiveGroupRegistry.TryClaim(Data.Group.Value))
+			if (Registry.TryClaim(Data.Group.Value))
 			{
 				NotifyListeners();
 			}
-		}
-	}
-
-	internal static class ExclusiveGroupRegistry
-	{
-		private static readonly Dictionary<string, int> LastClaimedFrame = new();
-
-		public static bool TryClaim(string group)
-		{
-			int frame = Time.frameCount;
-			if (LastClaimedFrame.TryGetValue(group, out int last) && last == frame)
-			{
-				return false;
-			}
-
-			LastClaimedFrame[group] = frame;
-			return true;
 		}
 	}
 }

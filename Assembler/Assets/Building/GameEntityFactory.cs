@@ -20,6 +20,7 @@ namespace Assembler.Building
 		private readonly BehaviourRegistry _behaviourRegistry;
 		private readonly AssetRegistry _assets;
 		private readonly EntityTransformRegistry _entityTransforms;
+		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly IReadOnlyList<ValueInfo> _allValues;
 		private readonly TriggerContext _triggerContext;
@@ -31,6 +32,7 @@ namespace Assembler.Building
 			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
 			EntityTransformRegistry entityTransforms,
+			ExclusiveGroupRegistry exclusiveGroups,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			IReadOnlyList<ValueInfo> allValues,
 			TriggerContext triggerContext)
@@ -40,6 +42,7 @@ namespace Assembler.Building
 			_behaviourRegistry = behaviourRegistry;
 			_assets = assets;
 			_entityTransforms = entityTransforms;
+			_exclusiveGroups = exclusiveGroups;
 			_templates = templates;
 			_allValues = allValues;
 			_triggerContext = triggerContext;
@@ -84,6 +87,7 @@ namespace Assembler.Building
 					_assets,
 					_triggerContext,
 					_entityTransforms,
+					_exclusiveGroups,
 					scope);
 
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
