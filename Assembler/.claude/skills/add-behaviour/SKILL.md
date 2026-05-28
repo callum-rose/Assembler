@@ -37,18 +37,16 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static VelocityInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(v, props.GetValueOrDefault("Velocity"), parameters: p));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Velocity")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new VelocityInfo(Id,
 				substitutedListeners,
-				Velocity.SubstituteParameters(parameters, allValues));
+				Velocity.SubstituteParameters(ctx));
 	}
 }
 ```
@@ -72,22 +70,20 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static AudioSourceInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<AudioClip>(v, props.GetValueOrDefault("Clip"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("PlayOnStart"), parameters: p),
-				Transformer.CreateValueSource<bool>(v, props.GetValueOrDefault("Loop"), parameters: p));
+				Transformer.CreateValueSource<AudioClip>(ctx, props.GetValueOrDefault("Clip")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("PlayOnStart")),
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("Loop")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new AudioSourceInfo(Id,
 				substitutedListeners,
-				Clip.SubstituteParameters(parameters, allValues),
-				PlayOnStart.SubstituteParameters(parameters, allValues),
-				Loop.SubstituteParameters(parameters, allValues));
+				Clip.SubstituteParameters(ctx),
+				PlayOnStart.SubstituteParameters(ctx),
+				Loop.SubstituteParameters(ctx));
 	}
 }
 ```
@@ -96,8 +92,8 @@ namespace Assembler.Parsing.Info.Behaviours
 
 - Record extends `BehaviourInfo(Id, Listeners)` — always pass both through.
 - Each property is `ValueSource<T>`.
-- `Create` signature is always: `(string id, IReadOnlyList<ListenerInfo> listeners, IReadOnlyDictionary<string, AssemblerValue> props, IReadOnlyList<ValueInfo> v, IReadOnlyDictionary<string, AssemblerValue> p)`.
-- Use `Transformer.CreateValueSource<T>(v, props.GetValueOrDefault("PropName"), parameters: p)` for each property.
+- `Create` signature is always: `(string id, IReadOnlyList<ListenerInfo> listeners, IReadOnlyDictionary<string, AssemblerValue> props, TransformContext ctx)`.
+- Use `Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("PropName"))` for each property — the `TransformContext` carries the values, parameters, expressions and type-registry the transformer needs.
 - **Default convention:** the record property name *is* the YAML key. Doc generation reflects the record's primary-ctor params to build the property list — so prefer matching the YAML key to the property name (e.g. record param `Velocity` ↔ YAML key `Velocity`).
 - **`[YamlName]` override:** if the YAML key cannot match the record property name (e.g. `VariableSetterInfo`'s `ValueToSet` is exposed in YAML as `VariableId`), annotate the param with `[property: YamlName("YamlKey")]`:
 
@@ -110,7 +106,7 @@ namespace Assembler.Parsing.Info.Behaviours
   ```
 
   Doc-gen reads the attribute via reflection; the YAML key in `props.GetValueOrDefault("...")` must still match what `[YamlName]` declares. `YamlNameAttribute` lives in `Assembler.Parsing.Info`.
-- `SubstituteParameters` calls `.SubstituteParameters(parameters, allValues)` on every `ValueSource<T>` property.
+- `SubstituteParameters` calls `.SubstituteParameters(ctx)` on every `ValueSource<T>` property — the `TransformContext` carries the substitution scope.
 - For triggers, the Info record is identical in structure — it still extends `BehaviourInfo`, not a trigger-specific base.
 
 ---
@@ -120,13 +116,12 @@ namespace Assembler.Parsing.Info.Behaviours
 **Location:** `Assets/Resolving/Behaviours/<Name>Data.cs`
 **Namespace:** `Assembler.Resolving.Behaviours`
 
-This is a `sealed class` that holds `IValueProvider<T>` properties for runtime.
+This is a `sealed class` that holds `IValueProvider<T>` properties for runtime. **It no longer carries
+listeners** — listeners are passed separately into `Initialise` (see Step 3 / Step 5).
 
 ### Regular behaviour — extends `BehaviourData`
 
 ```csharp
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
@@ -135,8 +130,8 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Vector3> Velocity { get; }
 
-		public VelocityData(string id, IReadOnlyList<Action> listeners, IValueProvider<Vector3> velocity) :
-			base(id, listeners) => Velocity = velocity;
+		public VelocityData(string id, IValueProvider<Vector3> velocity) :
+			base(id) => Velocity = velocity;
 	}
 }
 ```
@@ -144,17 +139,14 @@ namespace Assembler.Resolving.Behaviours
 ### Trigger — extends `TriggerData`
 
 ```csharp
-using System;
-using System.Collections.Generic;
-
 namespace Assembler.Resolving.Behaviours
 {
 	public sealed class TimerTriggerData : TriggerData
 	{
 		public IValueProvider<float> Delay { get; }
 
-		public TimerTriggerData(string id, IValueProvider<float> delay, IReadOnlyList<Action> listeners) :
-			base(id, listeners) => Delay = delay;
+		public TimerTriggerData(string id, IValueProvider<float> delay) :
+			base(id) => Delay = delay;
 	}
 }
 ```
@@ -162,9 +154,8 @@ namespace Assembler.Resolving.Behaviours
 ### Rules
 
 - Regular behaviours extend `BehaviourData`, triggers extend `TriggerData`.
-- Constructor signature: `(string id, IReadOnlyList<Action> listeners, ...IValueProvider<T> properties)` for regular behaviours.
-- For triggers, the parameter order may place properties before listeners — match existing trigger patterns: `(string id, IValueProvider<T> prop, IReadOnlyList<Action> listeners)`.
-- Always call `base(id, listeners)`.
+- Constructor signature is always: `(string id, ...IValueProvider<T> properties)`. **No `IReadOnlyList<Action> listeners` parameter** — that argument is now gone from data classes.
+- Always call `base(id)`.
 - **Properties MUST always be `IValueProvider<T>` (get-only), never raw types like `float`, `bool`, `string`, etc.** This ensures values can be reactive at runtime (e.g. driven by variables, expressions, or references). The corresponding MonoBehaviour accesses the value via `.Value` (e.g. `Data.Delay.Value`).
 
 ---
@@ -174,13 +165,13 @@ namespace Assembler.Resolving.Behaviours
 **Location:** `Assets/Behaviours/<Subcategory>/<Name>.cs`
 **Namespace:** `Assembler.Behaviours.<Subcategory>`
 
-Subcategories: `Movement`, `Physics`, `Camera`, `Sprites`, `Audio`, `Spawners`, `Debug`, `Debug.UI`,
-`VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`, `Triggers.Conditionals`,
-`Triggers.Physical`.
+Subcategories: `Movement`, `Rotation`, `Animations`, `Physics`, `Camera`, `Sprites`, `Audio`, `Spawners`,
+`Debug`, `Debug.UI`, `VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`,
+`Triggers.Conditionals`, `Triggers.Physical`.
 
 > **The MonoBehaviour is the documentation home.** `Assembler > Generate Behaviour Docs` reads the
 > `<summary>` and `<remarks>` XML doc comments above the class declaration to build the AI-facing
-> [`Assets/docs/Behaviours.md`](../../docs/Behaviours.md). **Author docs here, not on the Info record.**
+> `Assets/docs/Behaviours.md`. **Author docs here, not on the Info record.**
 > Doc-gen validates the property set: any Info property missing from your `Properties:` block (or any
 > extra `Properties:` entry not on Info) emits a warning in the Editor console and in the markdown.
 
@@ -345,16 +336,19 @@ namespace Assembler.Behaviours.Triggers.Input
 | Base class | Use for | `Execute()` |
 |---|---|---|
 | `GameBehaviour<TData>` | Regular behaviours | Must override — contains the main logic |
-| `Trigger<TData>` | Generic triggers (extends `GameBehaviour<TData>`) | Must override — has `TriggerContext` property |
+| `Trigger<TData>` | Generic triggers (extends `GameBehaviour<TData>`) | Must override |
 | `TimingTrigger<TData>` | Time-based triggers (extends `Trigger<TData>`) | Must override |
 | `InputTrigger<TData>` | User input triggers (extends `Trigger<TData>`) | Throws — input triggers are driven by Unity input callbacks, not `Execute()` |
+| `PhysicalTrigger` | Collision/physics triggers (uses `PhysicalTriggerData`) | Throws — driven by Unity collision callbacks |
 
 ### Rules
 
 - Access resolved data via the `Data` property (e.g. `Data.Velocity.Value`).
-- Call `NotifyListeners()` to fire downstream listeners.
-- `Execute()` is abstract and must be overridden (except `InputTrigger` which provides a throwing default).
-- For triggers that need `TriggerContext` set before initialisation, see the builder step — it's set on the component before the init lambda runs.
+- Call `NotifyListeners()` to fire downstream listeners. The base `GameBehaviour` owns the listeners list — you do not manage it on the MonoBehaviour yourself.
+- `Initialise(data, listeners)` is called by the builder (see Step 5). The base `GameBehaviour<TData>` stores the data and wires up the listeners automatically. Override `OnInitialise(TData data)` if you need extra one-time setup.
+- `Execute()` is abstract and must be overridden (except `InputTrigger` / `PhysicalTrigger` which provide a throwing default).
+- **`TriggerContext` is auto-wired.** If a trigger needs to publish outputs via `TriggerContext.Set(...)`, declare the field via the `Trigger<TData>` base (which already implements `INeedsTriggerContext`) — the factory injects it after `AddComponent` and before `Initialise` runs. **Do not assign `TriggerContext` from the builder lambda.**
+- **`Spawner` is auto-wired.** Behaviours that need `IEntitySpawner` implement `INeedsSpawner` and receive it the same way. **Do not assign `Spawner` from the builder lambda.**
 
 ---
 
@@ -370,118 +364,125 @@ namespace Assembler.Behaviours.Triggers.Input
 ### Rules
 
 - The dictionary key is the **YAML behaviour name** — lowercase, with spaces (e.g. `"timer trigger"`, `"key hold trigger"`).
-- The value is just the Info's static `Create` method reference. **No more `PropDescriptor[]`** — property names and types come from reflecting the Info record at doc-gen time (see Step 1's `[YamlName]` rules).
+- The value is the Info's static `Create` method reference. Property names and types come from reflecting the Info record at doc-gen time (see Step 1's `[YamlName]` rules).
+- The `BehaviourFactory` delegate signature is `(string id, IReadOnlyList<ListenerInfo> listeners, IReadOnlyDictionary<string, AssemblerValue> props, TransformContext ctx) → BehaviourInfo`, which matches your Info's `Create` method exactly.
 
 ---
 
-## Step 5 — Builder Entry
+## Step 5 — Builder Entry (also handles doc-gen mapping)
 
 **Location:** `Assets/Building/GameBehaviourFactory.cs`
-**Add to:** The `Builders` dictionary inside `GameBehaviourFactory`.
+**Add to:** The `map` dictionary inside `CreateBuilders()`.
+
+Each entry is a `BuilderEntry` record that bundles **the MonoBehaviour type** with the **build lambda**.
+The `MonoBehaviourByInfo` map used by doc generation is derived from this dictionary automatically —
+**you no longer maintain a separate doc-gen mapping**.
+
+The lambda signature is always: `(GameObject go, BehaviourInfo info, BehaviourBuildContext ctx) → (GameBehaviour, InitialiseBehaviourEvent)`.
+
+- Resolve property values via `i.Foo.Resolve(ctx.Resolution)` (where `ctx.Resolution` is a `ResolutionContext`).
+- Convert listeners via `i.Listeners.ToListeners(lr, ctx.Resolution)` — this returns `IReadOnlyList<Listener>`, which is what `Initialise` takes as its second argument. **Do not use the old `ToActions` extension.**
+- `Initialise` takes `(data, listeners)` as two separate arguments.
 
 ### Regular behaviour
 
 ```csharp
-[typeof(VelocityInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+[typeof(VelocityInfo)] = new(typeof(Velocity), (go, info, ctx) =>
 {
-	var i = (VelocityInfo)info;
-	var b = go.AddComponent<Velocity>();
-
-	return (b, lr => b.Initialise(new VelocityData(i.Id,
-		i.Listeners.ToActions(lr, vr, cr, ar, tc, scope),
-		i.Velocity.Resolve(vr, cr, ar, tc, scope))));
-},
+    var i = (VelocityInfo)info;
+    var b = go.AddComponent<Velocity>();
+    return (b, lr => b.Initialise(new VelocityData(i.Id,
+        i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+}),
 ```
 
 ### Trigger
 
 ```csharp
-[typeof(TimerTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+[typeof(TimerTriggerInfo)] = new(typeof(TimerTrigger), (go, info, ctx) =>
 {
-	var i = (TimerTriggerInfo)info;
-	var b = go.AddComponent<TimerTrigger>();
-
-	return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
-		i.Delay.Resolve(vr, cr, ar, tc, scope),
-		i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
-},
+    var i = (TimerTriggerInfo)info;
+    var b = go.AddComponent<TimerTrigger>();
+    return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
+        i.Delay.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+}),
 ```
 
-### Trigger needing TriggerContext (collision/physics triggers, UI triggers)
+### Physical trigger (no manual TriggerContext assignment)
 
 ```csharp
-[typeof(CollisionEnterTriggerInfo)] = (go, info, vr, cr, es, ar, tc, scope) =>
+[typeof(CollisionEnterTriggerInfo)] = new(typeof(CollisionEnter), (go, info, ctx) =>
 {
-	var i = (CollisionEnterTriggerInfo)info;
-	var b = go.AddComponent<CollisionEnter>();
-	b.TriggerContext = tc;
-
-	return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
-		i.TagsToDetect,
-		i.Listeners.ToActions(lr, vr, cr, ar, tc, scope))));
-},
+    var i = (CollisionEnterTriggerInfo)info;
+    var b = go.AddComponent<CollisionEnter>();
+    return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
+        i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+}),
 ```
+
+> Note: `TriggerContext` and `Spawner` are auto-wired by `GameBehaviourFactory.Create` via the
+> `INeedsTriggerContext` / `INeedsSpawner` interfaces, immediately after the build lambda returns and
+> before the `InitialiseBehaviourEvent` runs. The build lambda must **not** set them manually.
+
+### Special context fields (rare)
+
+Some behaviours still need bespoke fields from `BehaviourBuildContext` that aren't covered by the
+interfaces above — for example, `ExclusiveTrigger` needs the `ExclusiveGroups` registry:
+
+```csharp
+[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
+{
+    var i = (ExclusiveTriggerInfo)info;
+    var b = go.AddComponent<ExclusiveTrigger>();
+    b.Registry = ctx.ExclusiveGroups;
+    return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
+        i.Group.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+}),
+```
+
+Assign these directly on `b` before returning. Only do this for things not already covered by an
+interface-based injection — when in doubt, ask the user rather than inventing a new field.
 
 ### Rules
 
 - Dictionary key is `typeof(YourInfo)`.
-- Lambda signature is always: `(go, info, vr, cr, es, ar, tc, scope)`.
-- Cast `info` to the specific Info type.
+- Entry is `new BuilderEntry(typeof(YourBehaviour), lambda)` — written as `new(typeof(YourBehaviour), (go, info, ctx) => { ... })` because `BuilderEntry` is the dictionary's value type and target-typed `new` is used.
+- The first argument (`typeof(YourBehaviour)`) is what `MonoBehaviourByInfo` will expose for doc-gen — get it right or the generated docs will be wrong.
+- Lambda signature is `(go, info, ctx)`.
+- Cast `info` to the specific Info type as the first line of the lambda.
 - `go.AddComponent<YourBehaviour>()` adds the MonoBehaviour to the GameObject.
 - Return a tuple: `(GameBehaviour, InitialiseBehaviourEvent)`.
-- The `InitialiseBehaviourEvent` is a lambda `lr => ...` where `lr` is `IReadOnlyBehaviourRegistry`.
-- Resolve properties with `.Resolve(vr, cr, ar, tc, scope)`.
-- Convert listeners with `.ToActions(lr, vr, cr, ar, tc, scope)`.
-- For triggers that need `TriggerContext`, set `b.TriggerContext = tc` **before** the return.
-- For behaviours that need `IEntitySpawner`, set `b.Spawner = es` **before** the return.
+- The `InitialiseBehaviourEvent` is a lambda `lr => b.Initialise(data, listeners)` where `lr` is `IReadOnlyBehaviourRegistry`.
+- Resolve properties with `.Resolve(ctx.Resolution)`.
+- Convert listeners with `.ToListeners(lr, ctx.Resolution)` — `IReadOnlyList<Listener>`, not `IReadOnlyList<Action>`.
 - Add using directives at the top of `GameBehaviourFactory.cs` for any new namespaces needed.
 
----
+### Generic registrations
 
-## Step 6 — Doc-gen Mapping (`MonoBehaviourByInfo`)
-
-**Location:** `Assets/Building/GameBehaviourFactory.cs`
-**Add to:** The `MonoBehaviourByInfo` dictionary (immediately after `Builders`).
-
-```csharp
-[typeof(YourInfo)] = typeof(YourBehaviour),
-```
-
-For generic Info records (like `VariableSetterInfo<T>` and `ListAddInfo<T>`) — one entry per closed
-generic instantiation that the registry exposes, each pointing at its non-generic MonoBehaviour
-subclass:
-
-```csharp
-[typeof(VariableSetterInfo<Vector3>)] = typeof(Vector3Setter),
-[typeof(VariableSetterInfo<int>)] = typeof(IntSetter),
-```
-
-### Rules
-
-- This map is what `Assets/Editor/BehaviourDocs.cs` uses to look up the MonoBehaviour for each Info
-  type. Missing entries surface as `no MonoBehaviour mapping` warnings in the generated doc.
-- For generic MonoBehaviours: still map to the **closed non-generic subclass** (e.g. `Vector3Setter`),
-  not the open generic base — the doc-walker climbs `BaseType` automatically to find the docs on the
-  generic base.
-- This is doc-gen wiring only; runtime construction goes through `Builders` (Step 5).
+For generic Info types (e.g. `VariableSetterInfo<T>`, `ListAddInfo<T>`) the file uses helper methods —
+`RegisterVariableSetter<T, TBehaviour>(map)` and `RegisterListOps<T, TAdd, TRemoveAt, TSetAt, TClear>(map)`
+— that add one entry per closed generic. If you're adding a new type parameter for an existing generic
+behaviour, add a call to the existing helper with your concrete `MonoBehaviour` subclass. If you're
+introducing a new generic behaviour, write a similar helper that registers one `BuilderEntry` per closed
+generic instantiation, each pointing at its non-generic MonoBehaviour subclass — the doc-walker climbs
+`BaseType` to find docs on the generic base.
 
 ---
 
 ## Checklist
 
-When adding a new behaviour, create/modify these 6 things in order:
+When adding a new behaviour, create/modify these 5 things in order:
 
-1. `Assets/Parsing/Info/Behaviours/<Name>Info.cs` — Info record with `Create` and `SubstituteParameters` (with `[YamlName]` if YAML key ≠ property name)
-2. `Assets/Resolving/Behaviours/<Name>Data.cs` — Data class with `IValueProvider<T>` properties
-3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour with `Execute()` override **and `<summary>` + `<remarks>` doc comments**
-4. `Assets/Parsing/BehaviourRegistry.cs` — Add `["yaml key"] = YourInfo.Create` to `All`
-5. `Assets/Building/GameBehaviourFactory.cs` — Add entry to `Builders` dictionary
-6. `Assets/Building/GameBehaviourFactory.cs` — Add entry to `MonoBehaviourByInfo` for doc generation
+1. `Assets/Parsing/Info/Behaviours/<Name>Info.cs` — Info record with `Create(string id, listeners, props, TransformContext ctx)` and `SubstituteParameters(substitutedListeners, TransformContext ctx)`; add `[YamlName]` if YAML key ≠ property name.
+2. `Assets/Resolving/Behaviours/<Name>Data.cs` — Data class with `(string id, IValueProvider<T> ...)` constructor and `base(id)`. **No listeners parameter.**
+3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour extending `GameBehaviour<TData>` (or a trigger base) with `Execute()` override and `<summary>` + `<remarks>` doc comments.
+4. `Assets/Parsing/BehaviourRegistry.cs` — Add `["yaml key"] = YourInfo.Create` to `All`.
+5. `Assets/Building/GameBehaviourFactory.cs` — Add `[typeof(YourInfo)] = new(typeof(YourBehaviour), (go, info, ctx) => { ... })` to the `map` inside `CreateBuilders()`. (This single entry also drives doc-gen via `MonoBehaviourByInfo` — no separate step needed.)
 
 **Do not forget any step.** A missing registry or builder entry will cause a runtime error when the
-YAML references the behaviour; a missing `MonoBehaviourByInfo` entry or missing/mismatched doc comments
-will produce warnings when running `Assembler > Generate Behaviour Docs` but won't break runtime.
+YAML references the behaviour; a wrong MonoBehaviour type in the `BuilderEntry` will produce warnings
+or wrong docs when running `Assembler > Generate Behaviour Docs`.
 
-After adding the behaviour, run `Assembler > Generate Behaviour Docs` from the Unity Editor menu and
-confirm there are no warnings about your new behaviour in the console or the `## Doc-gen warnings`
-section of [`Assets/docs/Behaviours.md`](../../docs/Behaviours.md).
+After authoring the files, ask the user to run `Assembler > Generate Behaviour Docs` from the Unity
+Editor menu and report back any warnings in the Editor console or the `## Doc-gen warnings` section of
+`Assets/docs/Behaviours.md` — **do not try to read or run anything yourself**.
