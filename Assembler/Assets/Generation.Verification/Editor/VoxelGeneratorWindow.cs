@@ -13,12 +13,14 @@ namespace Assembler.Generation.Verification.Editor
 	{
 		private const string ApiKeyPref = "Assembler.Generation.ApiKey";
 		private const string PromptPref = "Assembler.Voxels.LastPrompt";
+		private const string PersistentInstructionsPref = "Assembler.Voxels.PersistentInstructions";
 		private const string NamePref = "Assembler.Voxels.LastName";
 		private const string OutputFolderPref = "Assembler.Voxels.OutputFolder";
 		private const string DefaultOutputFolder = "Assets/Resources/Voxels/";
 
 		private string _apiKey = string.Empty;
 		private string _prompt = string.Empty;
+		private string _persistentInstructions = string.Empty;
 		private string _name = "voxel";
 		private string _outputFolder = DefaultOutputFolder;
 		private string _goxelText = string.Empty;
@@ -26,6 +28,7 @@ namespace Assembler.Generation.Verification.Editor
 		private readonly StringBuilder _log = new();
 		private Vector2 _logScroll;
 		private Vector2 _promptScroll;
+		private Vector2 _persistentScroll;
 		private Vector2 _goxelScroll;
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
@@ -44,6 +47,7 @@ namespace Assembler.Generation.Verification.Editor
 			_prompt = EditorPrefs.GetString(PromptPref, string.Empty);
 			_name = EditorPrefs.GetString(NamePref, "voxel");
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, DefaultOutputFolder);
+			_persistentInstructions = EditorPrefs.GetString(PersistentInstructionsPref, string.Empty);
 		}
 
 		private void OnDisable()
@@ -74,6 +78,16 @@ namespace Assembler.Generation.Verification.Editor
 				_name = EditorGUILayout.TextField(_name);
 				if (scope.changed) EditorPrefs.SetString(NamePref, _name);
 			}
+
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Persistent instructions (sent with every request)", EditorStyles.boldLabel);
+			_persistentScroll = EditorGUILayout.BeginScrollView(_persistentScroll, GUILayout.MinHeight(60), GUILayout.MaxHeight(140));
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_persistentInstructions = EditorGUILayout.TextArea(_persistentInstructions, GUILayout.ExpandHeight(true));
+				if (scope.changed) EditorPrefs.SetString(PersistentInstructionsPref, _persistentInstructions);
+			}
+			EditorGUILayout.EndScrollView();
 
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Prompt", EditorStyles.boldLabel);
@@ -151,7 +165,7 @@ namespace Assembler.Generation.Verification.Editor
 			{
 				Log("Requesting Goxel text from Claude...");
 				using var client = new AnthropicClient(_apiKey);
-				var pipeline = new VoxelPipeline();
+				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
 				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct);
 				_goxelText = goxelText;
 

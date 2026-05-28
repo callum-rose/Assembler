@@ -16,9 +16,12 @@ namespace Assembler.Voxels
 	{
 		private readonly string _systemPrompt;
 
-		public VoxelPipeline(string? systemPromptOverride = null)
+		public VoxelPipeline(string? systemPromptOverride = null, string? extraInstructions = null)
 		{
-			_systemPrompt = systemPromptOverride ?? VoxelPromptBuilder.Build();
+			var basePrompt = systemPromptOverride ?? VoxelPromptBuilder.Build();
+			_systemPrompt = string.IsNullOrWhiteSpace(extraInstructions)
+				? basePrompt
+				: basePrompt + "\n\n# Additional persistent instructions\n\n" + extraInstructions;
 		}
 
 		public async Task<string> GenerateGoxelTextAsync(
