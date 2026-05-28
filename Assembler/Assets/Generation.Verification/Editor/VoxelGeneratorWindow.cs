@@ -17,6 +17,8 @@ namespace Assembler.Generation.Verification.Editor
 		private const string NamePref = "Assembler.Voxels.LastName";
 		private const string OutputFolderPref = "Assembler.Voxels.OutputFolder";
 		private const string DefaultOutputFolder = "Assets/Resources/Voxels/";
+		private const string ScratchFolder = "Assets/Resources/Voxels/_Preview/";
+		private const string ScratchName = "preview";
 		private const float PreviewWidth = 320f;
 
 		private string _apiKey = string.Empty;
@@ -25,6 +27,7 @@ namespace Assembler.Generation.Verification.Editor
 		private string _name = "voxel";
 		private string _outputFolder = DefaultOutputFolder;
 		private string _goxelText = string.Empty;
+		private byte[]? _voxBytes;
 
 		private readonly StringBuilder _log = new();
 		private Vector2 _outerScroll;
@@ -141,6 +144,14 @@ namespace Assembler.Generation.Verification.Editor
 				}
 			}
 
+			using (new EditorGUI.DisabledScope(_voxBytes == null || _isRunning))
+			{
+				if (GUILayout.Button("Save .vox to output folder"))
+				{
+					SaveVox();
+				}
+			}
+
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Goxel text (editable)", EditorStyles.boldLabel);
 			_goxelScroll = EditorGUILayout.BeginScrollView(_goxelScroll, GUILayout.MinHeight(160));
@@ -236,17 +247,39 @@ namespace Assembler.Generation.Verification.Editor
 			try
 			{
 				var pipeline = new VoxelPipeline();
-				var bytes = pipeline.GoxelTextToVox(_goxelText);
-				var voxPath = WriteBytes(bytes, ".vox");
-				if (logSuccess) Log($"Wrote {voxPath}");
+				_voxBytes = pipeline.GoxelTextToVox(_goxelText);
+
+				// Write to a scratch path so Voxel Toolkit can import it and
+				// produce a Mesh sub-asset for the preview. The user-facing save
+				// happens only on the Save button.
+				Directory.CreateDirectory(ScratchFolder);
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+				File.WriteAllBytes(scratchPath, _voxBytes);
+				if (logSuccess) Log("Generated in memory (use Save to write).");
 
 				AssetDatabase.Refresh();
-				_previewMeshPath = voxPath;
+				_previewMeshPath = scratchPath;
 				ReloadPreviewMesh();
 			}
 			catch (Exception ex)
 			{
 				if (logSuccess) Log("Convert failed: " + ex);
+			}
+		}
+
+		private void SaveVox()
+		{
+			if (_voxBytes == null) return;
+
+			try
+			{
+				var voxPath = WriteBytes(_voxBytes, ".vox");
+				Log($"Saved {voxPath}");
+				AssetDatabase.Refresh();
+			}
+			catch (Exception ex)
+			{
+				Log("Save failed: " + ex);
 			}
 		}
 
