@@ -12,12 +12,7 @@ namespace Tests.Voxels
 		[Test]
 		public void Parse_SimpleVoxels_PopulatesModel()
 		{
-			const string text = """
-				# comment
-				0 0 0 ff0000
-				1 0 0 00ff00
-				1 1 0 ff0000
-				""";
+			const string text = "# comment\n0 0 0 ff0000\n1 0 0 00ff00\n1 1 0 ff0000";
 
 			var model = GoxelTextParser.Parse(text);
 
@@ -32,11 +27,7 @@ namespace Tests.Voxels
 		[Test]
 		public void Write_ThenRead_RoundTripsVoxelsAndPalette()
 		{
-			const string text = """
-				2 0 0 ff0000
-				3 1 4 00ff00
-				2 0 5 0000ff
-				""";
+			const string text = "2 0 0 ff0000\n3 1 4 00ff00\n2 0 5 0000ff";
 
 			var original = GoxelTextParser.Parse(text);
 			var bytes = VoxWriter.Write(original);
@@ -103,8 +94,11 @@ namespace Tests.Voxels
 						for (var i = 0; i < 256; i++)
 						{
 							var off = i * 4;
-							palette[i] = new Color32(contentBytes[off], contentBytes[off + 1], contentBytes[off + 2], contentBytes[off + 3]);
+							palette[i] = new Color32(contentBytes[off], contentBytes[off + 1],
+								contentBytes[off + 2],
+								contentBytes[off + 3]);
 						}
+
 						break;
 				}
 			}
