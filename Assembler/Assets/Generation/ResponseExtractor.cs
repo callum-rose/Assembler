@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Assembler.Anthropic;
 
 namespace Assembler.Generation
 {
@@ -16,26 +16,8 @@ namespace Assembler.Generation
 
 	public static class ResponseExtractor
 	{
-		private readonly static Regex YamlBlock = new(
-			@"```yaml\s*\r?\n(?<body>.*?)```",
-			RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-		private readonly static Regex FeedbackBlock = new(
-			@"```feedback\s*\r?\n(?<body>.*?)```",
-			RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
-		public static ExtractedResponse Extract(string assistantText)
-		{
-			var yaml = Match(assistantText, YamlBlock);
-			var feedback = Match(assistantText, FeedbackBlock);
-			return new ExtractedResponse(yaml, feedback);
-		}
-
-		private static string? Match(string text, Regex regex)
-		{
-			return regex.Match(text) is { Success: true } m ? 
-				m.Groups["body"].Value.TrimEnd('\r', '\n') : 
-				null;
-		}
+		public static ExtractedResponse Extract(string assistantText) =>
+			new(FencedBlockExtractor.Extract(assistantText, "yaml"),
+				FencedBlockExtractor.Extract(assistantText, "feedback"));
 	}
 }
