@@ -106,7 +106,10 @@ namespace Assembler.Voxels.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_apiKey = EditorGUILayout.PasswordField(_apiKey);
-				if (scope.changed) EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -114,14 +117,20 @@ namespace Assembler.Voxels.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_outputFolder = EditorGUILayout.TextField(_outputFolder);
-				if (scope.changed) EditorPrefs.SetString(OutputFolderPref, _outputFolder);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(OutputFolderPref, _outputFolder);
+				}
 			}
 
 			EditorGUILayout.LabelField("Name (no extension)", EditorStyles.boldLabel);
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_name = EditorGUILayout.TextField(_name);
-				if (scope.changed) EditorPrefs.SetString(NamePref, _name);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(NamePref, _name);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -130,7 +139,10 @@ namespace Assembler.Voxels.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_persistentInstructions = EditorGUILayout.TextArea(_persistentInstructions, GUILayout.ExpandHeight(true));
-				if (scope.changed) EditorPrefs.SetString(PersistentInstructionsPref, _persistentInstructions);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(PersistentInstructionsPref, _persistentInstructions);
+				}
 			}
 			EditorGUILayout.EndScrollView();
 
@@ -140,7 +152,10 @@ namespace Assembler.Voxels.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_prompt = EditorGUILayout.TextArea(_prompt, GUILayout.ExpandHeight(true));
-				if (scope.changed) EditorPrefs.SetString(PromptPref, _prompt);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(PromptPref, _prompt);
+				}
 			}
 			EditorGUILayout.EndScrollView();
 
@@ -284,11 +299,12 @@ namespace Assembler.Voxels.Editor
 
 				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
 				var result = await VoxelGenerationPipeline
-					.CreateNew(BuildServices())
+					.CreateNew(EditorVoxelServices.Default)
 					.WithAnthropic(client)
 					.WithPersistentInstructions(_persistentInstructions)
 					.WithPrompt(_prompt)
 					.WithObserver(new EditorWindowObserver(this))
+					.DedupeVoxels()
 					.RecordHistory("generate")
 					.ParseModel()
 					.EncodeVox()
@@ -357,14 +373,15 @@ namespace Assembler.Voxels.Editor
 				// Start from prior result if we have one (carries ChatHistory + Project),
 				// otherwise build a fresh context seeded with the current text.
 				var pipeline = _lastResult != null
-					? VoxelGenerationPipeline.FromExisting(_lastResult, BuildServices())
-					: SeedFromCurrentText(BuildServices());
+					? VoxelGenerationPipeline.FromExisting(_lastResult, EditorVoxelServices.Default)
+					: SeedFromCurrentText(EditorVoxelServices.Default);
 
 				var result = await pipeline
 					.WithAnthropic(client)
 					.WithPersistentInstructions(_persistentInstructions)
 					.WithObserver(new EditorWindowObserver(this))
 					.Refine(instruction, useChatHistory)
+					.DedupeVoxels()
 					.RecordHistory(useChatHistory ? "refine-chat" : "refine-fresh")
 					.ParseModel()
 					.EncodeVox()
@@ -398,7 +415,10 @@ namespace Assembler.Voxels.Editor
 		{
 			var startDir = Directory.Exists(_outputFolder) ? _outputFolder : Application.dataPath;
 			var path = EditorUtility.OpenFilePanel("Load .vox", startDir, "vox");
-			if (string.IsNullOrEmpty(path)) return;
+			if (string.IsNullOrEmpty(path))
+			{
+				return;
+			}
 
 			try
 			{
@@ -465,10 +485,10 @@ namespace Assembler.Voxels.Editor
 
 				_lastResult = new VoxelPipelineResult(new VoxelPipelineContext
 				{
-					FileSink = BuildServices().FileSink,
-					AssetDb = BuildServices().AssetDb,
-					Observer = BuildServices().Observer,
-					Clock = BuildServices().Clock,
+					FileSink = EditorVoxelServices.Default.FileSink,
+					AssetDb = EditorVoxelServices.Default.AssetDb,
+					Observer = EditorVoxelServices.Default.Observer,
+					Clock = EditorVoxelServices.Default.Clock,
 					GoxelTextZUp = _goxelText,
 					Model = model,
 					VoxBytes = bytes,
@@ -503,7 +523,11 @@ namespace Assembler.Voxels.Editor
 
 		private void UndoLast()
 		{
-			if (_undoGoxelText == null) return;
+			if (_undoGoxelText == null)
+			{
+				return;
+			}
+
 			_goxelText = _undoGoxelText;
 			_lastResult = _undoLastResult;
 			_undoGoxelText = null;
@@ -521,13 +545,15 @@ namespace Assembler.Voxels.Editor
 
 		private void TryConvertCurrentText(bool logSuccess)
 		{
-			if (string.IsNullOrWhiteSpace(_goxelText)) return;
+			if (string.IsNullOrWhiteSpace(_goxelText))
+			{
+				return;
+			}
 
 			try
 			{
 				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
-				var seed = SeedFromCurrentText(BuildServices());
-				var task = seed
+				var task = SeedFromCurrentText(EditorVoxelServices.Default)
 					.ParseModel()
 					.EncodeVox()
 					.WriteScratchPreview(scratchPath)
@@ -540,17 +566,26 @@ namespace Assembler.Voxels.Editor
 				task.GetAwaiter().GetResult();
 				var result = task.Result;
 				ApplyResult(result, scratchPath);
-				if (logSuccess) Log("Generated in memory (use Save to write).");
+				if (logSuccess)
+				{
+					Log("Generated in memory (use Save to write).");
+				}
 			}
 			catch (Exception ex)
 			{
-				if (logSuccess) Log("Convert failed: " + ex);
+				if (logSuccess)
+				{
+					Log("Convert failed: " + ex);
+				}
 			}
 		}
 
 		private void SaveVox()
 		{
-			if (_voxBytes == null) return;
+			if (_voxBytes == null)
+			{
+				return;
+			}
 
 			try
 			{
@@ -611,11 +646,13 @@ namespace Assembler.Voxels.Editor
 			return VoxelGenerationPipeline.FromExisting(seedResult, services);
 		}
 
-		private VoxelPipelineServices BuildServices() => EditorVoxelServices.Default;
-
 		private void ReloadPreviewMesh()
 		{
-			if (string.IsNullOrEmpty(_previewMeshPath)) return;
+			if (string.IsNullOrEmpty(_previewMeshPath))
+			{
+				return;
+			}
+
 			_previewMesh = AssetDatabase.LoadAssetAtPath<Mesh>(_previewMeshPath);
 			DestroyPreviewEditor();
 		}
@@ -648,7 +685,10 @@ namespace Assembler.Voxels.Editor
 
 		private void DrawModelSummary()
 		{
-			if (string.IsNullOrWhiteSpace(_goxelText)) return;
+			if (string.IsNullOrWhiteSpace(_goxelText))
+			{
+				return;
+			}
 
 			VoxelModel model;
 			try
@@ -660,7 +700,10 @@ namespace Assembler.Voxels.Editor
 				return;
 			}
 
-			if (model.Voxels.Count == 0) return;
+			if (model.Voxels.Count == 0)
+			{
+				return;
+			}
 
 			_richLabelStyle ??= new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true };
 

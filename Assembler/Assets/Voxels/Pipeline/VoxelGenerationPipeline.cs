@@ -144,6 +144,24 @@ namespace Assembler.Voxels.Pipeline
 			return this;
 		}
 
+		/// <summary>Swap the Y and Z axes of <c>GoxelTextZUp</c> (involutive).</summary>
+		public VoxelGenerationPipeline SwapYZAxes()
+		{
+			_stages.Add(new SwapYZAxesStage());
+			return this;
+		}
+
+		/// <summary>
+		/// Drop earlier duplicate voxel lines from <c>GoxelTextZUp</c> so each
+		/// (x, y, z) appears at most once, with the LAST occurrence (and its
+		/// colour) winning. Comments and blank lines are preserved.
+		/// </summary>
+		public VoxelGenerationPipeline DedupeVoxels()
+		{
+			_stages.Add(new DedupeVoxelsStage());
+			return this;
+		}
+
 		public VoxelGenerationPipeline EncodeVox()
 		{
 			EnsureParseModel();

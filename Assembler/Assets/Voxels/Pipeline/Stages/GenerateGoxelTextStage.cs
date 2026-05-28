@@ -8,9 +8,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 {
 	/// <summary>
 	/// Sends <c>UserPrompt</c> + <c>SystemPrompt</c> to Claude, writes the raw
-	/// reply to <c>RawAssistantText</c>, then extracts + swaps to populate
-	/// <c>GoxelTextZUp</c>. Also seeds <c>ChatHistory</c> with the round so
-	/// later refines can continue the conversation.
+	/// reply to <c>RawAssistantText</c>, extracts the fenced block, and swaps
+	/// Y↔Z to produce <c>GoxelTextZUp</c>. Internally composes
+	/// <see cref="ExtractGoxelBlockStage"/> + <see cref="SwapYZAxesStage"/>.
+	/// Also seeds <c>ChatHistory</c> with the round so later refines can
+	/// continue the conversation.
 	/// </summary>
 	public sealed class GenerateGoxelTextStage : IVoxelStage
 	{
@@ -27,6 +29,7 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 			var withRaw = ctx with { RawAssistantText = raw };
 			var extracted = await new ExtractGoxelBlockStage().ExecuteAsync(withRaw, ct).ConfigureAwait(false);
+			var swapped = await new SwapYZAxesStage().ExecuteAsync(extracted, ct).ConfigureAwait(false);
 
 			// Generate is a fresh start: reset chat history and seed it with
 			// this one turn. Store the raw reply (Y-up, fenced) — that's what
@@ -36,7 +39,7 @@ namespace Assembler.Voxels.Pipeline.Stages
 				new AnthropicMessage("user", ctx.UserPrompt!),
 				new AnthropicMessage("assistant", raw));
 
-			return extracted with { ChatHistory = newHistory };
+			return swapped with { ChatHistory = newHistory };
 		}
 	}
 }

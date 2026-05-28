@@ -12,16 +12,18 @@ namespace Tests.Voxels
 	public class VoxelPipelineTests
 	{
 		[Test]
-		public void Extract_FencedBlock_AppliesYZSwap()
+		public void Extract_FencedBlock_LeavesContentUnchanged()
 		{
 			const string raw = "Here you go:\n```goxel\n0 1 2 ff0000\n3 4 5 00ff00\n```\nThanks.";
 			var ctx = new VoxelPipelineContext { RawAssistantText = raw };
 
 			var result = new ExtractGoxelBlockStage().ExecuteAsync(ctx, CancellationToken.None).Result;
 
-			// Y/Z swap: "0 1 2" Y-up becomes "0 2 1" Z-up.
-			StringAssert.Contains("0 2 1 ff0000", result.GoxelTextZUp);
-			StringAssert.Contains("3 5 4 00ff00", result.GoxelTextZUp);
+			// Extract is now pure — coordinates pass through verbatim. Use
+			// SwapYZAxesStage if you need to convert from Claude's Y-up to
+			// storage Z-up.
+			StringAssert.Contains("0 1 2 ff0000", result.GoxelTextZUp);
+			StringAssert.Contains("3 4 5 00ff00", result.GoxelTextZUp);
 		}
 
 		[Test]
@@ -30,6 +32,52 @@ namespace Tests.Voxels
 			var ctx = new VoxelPipelineContext { RawAssistantText = "no fenced block here" };
 			Assert.ThrowsAsync<InvalidOperationException>(
 				async () => await new ExtractGoxelBlockStage().ExecuteAsync(ctx, CancellationToken.None));
+		}
+
+		[Test]
+		public void SwapYZAxes_SwapsCoordinatesAndIsInvolutive()
+		{
+			const string original = "0 1 2 ff0000\n3 4 5 00ff00\n# comment line\n";
+			var ctx = new VoxelPipelineContext { GoxelTextZUp = original };
+
+			var once = new SwapYZAxesStage().ExecuteAsync(ctx, CancellationToken.None).Result;
+			StringAssert.Contains("0 2 1 ff0000", once.GoxelTextZUp);
+			StringAssert.Contains("3 5 4 00ff00", once.GoxelTextZUp);
+			StringAssert.Contains("# comment line", once.GoxelTextZUp);
+
+			var twice = new SwapYZAxesStage().ExecuteAsync(once, CancellationToken.None).Result;
+			Assert.AreEqual(original, twice.GoxelTextZUp);
+		}
+
+		[Test]
+		public void DedupeVoxels_KeepsLastOccurrencePerPosition()
+		{
+			const string text =
+				"0 0 0 ff0000\n" +
+				"1 0 0 ff0000\n" +
+				"# pip override\n" +
+				"0 0 0 000000\n" +    // overrides line 1
+				"2 0 0 00ff00\n" +
+				"1 0 0 0000ff\n";     // overrides line 2
+			var ctx = new VoxelPipelineContext { GoxelTextZUp = text };
+
+			var result = new DedupeVoxelsStage().ExecuteAsync(ctx, CancellationToken.None).Result;
+
+			var lines = result.GoxelTextZUp!.Split('\n');
+			CollectionAssert.AreEqual(
+				new[] { "# pip override", "0 0 0 000000", "2 0 0 00ff00", "1 0 0 0000ff", "" },
+				lines);
+		}
+
+		[Test]
+		public void DedupeVoxels_NoDuplicates_IsIdentity()
+		{
+			const string text = "0 0 0 ff0000\n1 0 0 00ff00\n# done";
+			var ctx = new VoxelPipelineContext { GoxelTextZUp = text };
+
+			var result = new DedupeVoxelsStage().ExecuteAsync(ctx, CancellationToken.None).Result;
+
+			Assert.AreEqual(text, result.GoxelTextZUp);
 		}
 
 		[Test]

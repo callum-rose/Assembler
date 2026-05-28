@@ -10,8 +10,12 @@ namespace Assembler.Voxels.Pipeline.Stages
 	/// <summary>
 	/// Refines the current model. Reads <c>GoxelTextZUp</c> + <c>RefinementInstruction</c>,
 	/// optionally <c>ChatHistory</c> when <c>UseChatHistory</c> is true. Writes
-	/// the new <c>GoxelTextZUp</c> and <c>RawAssistantText</c>; appends the
-	/// user+assistant pair to <c>ChatHistory</c> when chat mode is on.
+	/// the new <c>GoxelTextZUp</c> (Z-up, via internally chained
+	/// <see cref="ExtractGoxelBlockStage"/> + <see cref="SwapYZAxesStage"/>)
+	/// and stores <c>RawAssistantText</c>; appends the user+assistant pair to
+	/// <c>ChatHistory</c> when chat mode is on. The internal pre-swap of the
+	/// current model into Y-up for Claude is a transient transformation and
+	/// does not touch the context.
 	/// </summary>
 	public sealed class RefineGoxelTextStage : IVoxelStage
 	{
@@ -35,14 +39,15 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 			var withRaw = ctx with { RawAssistantText = raw };
 			var extracted = await new ExtractGoxelBlockStage().ExecuteAsync(withRaw, ct).ConfigureAwait(false);
+			var swapped = await new SwapYZAxesStage().ExecuteAsync(extracted, ct).ConfigureAwait(false);
 
 			var nextHistory = ctx.UseChatHistory
-				? extracted.ChatHistory
+				? swapped.ChatHistory
 					.Add(new AnthropicMessage("user", userMessage))
 					.Add(new AnthropicMessage("assistant", raw))
-				: extracted.ChatHistory;
+				: swapped.ChatHistory;
 
-			return extracted with { ChatHistory = nextHistory };
+			return swapped with { ChatHistory = nextHistory };
 		}
 
 		private static string BuildRefinementMessage(string currentGoxelTextYUp, string refinementInstruction)
