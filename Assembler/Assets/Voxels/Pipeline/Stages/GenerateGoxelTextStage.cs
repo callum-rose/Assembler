@@ -20,9 +20,20 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.AnthropicClient == null) throw new InvalidOperationException($"{Name}: AnthropicClient is required (call .WithAnthropic(...))");
-			if (string.IsNullOrWhiteSpace(ctx.UserPrompt)) throw new InvalidOperationException($"{Name}: UserPrompt is required (call .WithPrompt(...))");
-			if (string.IsNullOrWhiteSpace(ctx.SystemPrompt)) throw new InvalidOperationException($"{Name}: SystemPrompt is required (LoadSystemPromptStage was not run).");
+			if (ctx.AnthropicClient == null)
+			{
+				throw new InvalidOperationException($"{Name}: AnthropicClient is required (call .WithAnthropic(...))");
+			}
+
+			if (string.IsNullOrWhiteSpace(ctx.UserPrompt))
+			{
+				throw new InvalidOperationException($"{Name}: UserPrompt is required (call .WithPrompt(...))");
+			}
+
+			if (string.IsNullOrWhiteSpace(ctx.SystemPrompt))
+			{
+				throw new InvalidOperationException($"{Name}: SystemPrompt is required (LoadSystemPromptStage was not run).");
+			}
 
 			var messages = new List<AnthropicMessage> { new("user", ctx.UserPrompt!) };
 			var raw = await ctx.AnthropicClient.SendAsync(ctx.SystemPrompt!, messages, ct, ctx.Observer.OnStreamDelta).ConfigureAwait(false);

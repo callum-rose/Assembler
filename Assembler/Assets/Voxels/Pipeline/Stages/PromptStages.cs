@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,14 +97,14 @@ namespace Assembler.Voxels.Pipeline.Stages
 			return Task.FromResult(ctx with { GoxelTextZUp = deduped });
 		}
 
-		internal static string DedupeText(string text)
+		private static string DedupeText(string text)
 		{
 			var lines = text.Split('\n');
 
 			// First pass: for each voxel-line index, find the position key and
 			// remember the LAST line index per key. Non-voxel lines (blank,
 			// comment, malformed) are passed through unchanged.
-			var lastSeenIndexForKey = new System.Collections.Generic.Dictionary<(int x, int y, int z), int>();
+			var lastSeenIndexForKey = new Dictionary<(int x, int y, int z), int>();
 			var lineKeys = new (int x, int y, int z)?[lines.Length];
 			for (var i = 0; i < lines.Length; i++)
 			{
@@ -115,7 +117,7 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 			// Second pass: emit each line iff it's the final occurrence for its
 			// key (or it's a non-voxel line).
-			var sb = new System.Text.StringBuilder(text.Length);
+			var sb = new StringBuilder(text.Length);
 			var firstEmitted = true;
 			for (var i = 0; i < lines.Length; i++)
 			{
@@ -125,7 +127,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 					continue; // earlier duplicate — drop.
 				}
 
-				if (!firstEmitted) sb.Append('\n');
+				if (!firstEmitted)
+				{
+					sb.Append('\n');
+				}
+
 				sb.Append(lines[i]);
 				firstEmitted = false;
 			}
@@ -137,13 +143,31 @@ namespace Assembler.Voxels.Pipeline.Stages
 		{
 			key = default;
 			var trimmed = line.TrimStart();
-			if (trimmed.Length == 0 || trimmed[0] == '#') return false;
+			if (trimmed.Length == 0 || trimmed[0] == '#')
+			{
+				return false;
+			}
 
-			var parts = trimmed.Split(new[] { ' ', '\t' }, 5, System.StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length < 4) return false;
-			if (!int.TryParse(parts[0], out var x)) return false;
-			if (!int.TryParse(parts[1], out var y)) return false;
-			if (!int.TryParse(parts[2], out var z)) return false;
+			var parts = trimmed.Split(new[] { ' ', '\t' }, 5, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length < 4)
+			{
+				return false;
+			}
+
+			if (!int.TryParse(parts[0], out var x))
+			{
+				return false;
+			}
+
+			if (!int.TryParse(parts[1], out var y))
+			{
+				return false;
+			}
+
+			if (!int.TryParse(parts[2], out var z))
+			{
+				return false;
+			}
 
 			key = (x, y, z);
 			return true;

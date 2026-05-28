@@ -17,7 +17,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.VoxBytes == null) throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			if (ctx.VoxBytes == null)
+			{
+				throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			}
+
 			await ctx.FileSink.WriteAsync(_path, ctx.VoxBytes, ct).ConfigureAwait(false);
 			return ctx with { SavedVoxPath = _path };
 		}

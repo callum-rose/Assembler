@@ -28,7 +28,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.Model == null) throw new InvalidOperationException($"{Name}: Model is required.");
+			if (ctx.Model == null)
+			{
+				throw new InvalidOperationException($"{Name}: Model is required.");
+			}
+
 			var bytes = VoxWriter.Write(ctx.Model);
 			return Task.FromResult(ctx with { VoxBytes = bytes });
 		}
@@ -45,7 +49,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.VoxBytes == null) throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			if (ctx.VoxBytes == null)
+			{
+				throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			}
+
 			var model = VoxReader.Read(ctx.VoxBytes);
 			var text = GoxelTextWriter.Write(model);
 			return Task.FromResult(ctx with { Model = model, GoxelTextZUp = text });

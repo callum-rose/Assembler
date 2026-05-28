@@ -23,10 +23,25 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.AnthropicClient == null) throw new InvalidOperationException($"{Name}: AnthropicClient is required.");
-			if (string.IsNullOrWhiteSpace(ctx.SystemPrompt)) throw new InvalidOperationException($"{Name}: SystemPrompt is required.");
-			if (string.IsNullOrWhiteSpace(ctx.GoxelTextZUp)) throw new InvalidOperationException($"{Name}: GoxelTextZUp is required (nothing to refine).");
-			if (string.IsNullOrWhiteSpace(ctx.RefinementInstruction)) throw new InvalidOperationException($"{Name}: RefinementInstruction is required.");
+			if (ctx.AnthropicClient == null)
+			{
+				throw new InvalidOperationException($"{Name}: AnthropicClient is required.");
+			}
+
+			if (string.IsNullOrWhiteSpace(ctx.SystemPrompt))
+			{
+				throw new InvalidOperationException($"{Name}: SystemPrompt is required.");
+			}
+
+			if (string.IsNullOrWhiteSpace(ctx.GoxelTextZUp))
+			{
+				throw new InvalidOperationException($"{Name}: GoxelTextZUp is required (nothing to refine).");
+			}
+
+			if (string.IsNullOrWhiteSpace(ctx.RefinementInstruction))
+			{
+				throw new InvalidOperationException($"{Name}: RefinementInstruction is required.");
+			}
 
 			var currentYUp = GoxelCoordinateConverter.SwapYAndZ(ctx.GoxelTextZUp!);
 			var userMessage = BuildRefinementMessage(currentYUp, ctx.RefinementInstruction!);
@@ -57,7 +72,11 @@ namespace Assembler.Voxels.Pipeline.Stages
 			sb.AppendLine();
 			sb.AppendLine("<current_model>");
 			sb.Append(currentGoxelTextYUp);
-			if (!currentGoxelTextYUp.EndsWith("\n", StringComparison.Ordinal)) sb.AppendLine();
+			if (!currentGoxelTextYUp.EndsWith("\n", StringComparison.Ordinal))
+			{
+				sb.AppendLine();
+			}
+
 			sb.AppendLine("</current_model>");
 			sb.AppendLine();
 			sb.Append("Change: ").Append(refinementInstruction);
