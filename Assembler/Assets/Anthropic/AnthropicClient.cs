@@ -62,17 +62,13 @@ namespace Assembler.Anthropic
 			{
 				await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken))
 				{
-					// Pick text deltas out of the event union; ignore lifecycle
-					// events (message_start/stop, content_block_start, etc.) so
-					// we surface only the actual response text.
-					if (!ev.TryPickContentBlockDelta(out var blockDelta)) continue;
-					if (!blockDelta.Delta.TryPickText(out var textDelta)) continue;
-
-					var text = textDelta.Text;
-					if (string.IsNullOrEmpty(text)) continue;
-
-					sb.Append(text);
-					onDelta?.Invoke(text);
+					if (ev.TryPickContentBlockDelta(out var blockDelta) &&
+					    blockDelta.Delta.TryPickText(out var textDelta) &&
+					    !string.IsNullOrEmpty(textDelta.Text))
+					{
+						sb.Append(textDelta.Text);
+						onDelta?.Invoke(textDelta.Text);
+					}
 				}
 			}
 			catch (OperationCanceledException)
