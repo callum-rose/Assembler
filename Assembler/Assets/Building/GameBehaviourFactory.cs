@@ -559,12 +559,12 @@ namespace Assembler.Building
 			RegisterVariableSetter<bool, BoolSetter>(map);
 			RegisterVariableSetter<string, StringSetter>(map);
 
-			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListRemoveAt, Vector3ListSetAt, Vector3ListClear>(map);
-			RegisterListOps<int, IntListAdd, IntListRemoveAt, IntListSetAt, IntListClear>(map);
-			RegisterListOps<float, FloatListAdd, FloatListRemoveAt, FloatListSetAt, FloatListClear>(map);
-			RegisterListOps<bool, BoolListAdd, BoolListRemoveAt, BoolListSetAt, BoolListClear>(map);
-			RegisterListOps<string, StringListAdd, StringListRemoveAt, StringListSetAt, StringListClear>(map);
-			RegisterListOps<Color, ColourListAdd, ColourListRemoveAt, ColourListSetAt, ColourListClear>(map);
+			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListRemoveAt, Vector3ListSetAt, Vector3ListClear, Vector3ListLoopTrigger>(map);
+			RegisterListOps<int, IntListAdd, IntListRemoveAt, IntListSetAt, IntListClear, IntListLoopTrigger>(map);
+			RegisterListOps<float, FloatListAdd, FloatListRemoveAt, FloatListSetAt, FloatListClear, FloatListLoopTrigger>(map);
+			RegisterListOps<bool, BoolListAdd, BoolListRemoveAt, BoolListSetAt, BoolListClear, BoolListLoopTrigger>(map);
+			RegisterListOps<string, StringListAdd, StringListRemoveAt, StringListSetAt, StringListClear, StringListLoopTrigger>(map);
+			RegisterListOps<Color, ColourListAdd, ColourListRemoveAt, ColourListSetAt, ColourListClear, ColourListLoopTrigger>(map);
 
 			return map;
 		}
@@ -601,12 +601,20 @@ namespace Assembler.Building
 			});
 		}
 
-		private static void RegisterListOps<T, TAdd, TRemoveAt, TSetAt, TClear>(IDictionary<Type, BuilderEntry> map)
+		private static void RegisterListOps<T, TAdd, TRemoveAt, TSetAt, TClear, TLoop>(IDictionary<Type, BuilderEntry> map)
 			where TAdd : GameBehaviour<ListAddData<T>>
 			where TRemoveAt : GameBehaviour<ListRemoveAtData<T>>
 			where TSetAt : GameBehaviour<ListSetAtData<T>>
 			where TClear : GameBehaviour<ListClearData<T>>
+			where TLoop : GameBehaviour<ListLoopTriggerData<T>>
 		{
+			map[typeof(ListLoopTriggerInfo<T>)] = new(typeof(TLoop), (go, info, ctx) =>
+			{
+				var i = (ListLoopTriggerInfo<T>)info;
+				var b = go.AddComponent<TLoop>();
+				return (b, lr => b.Initialise(new ListLoopTriggerData<T>(i.Id,
+					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
 			map[typeof(ListAddInfo<T>)] = new(typeof(TAdd), (go, info, ctx) =>
 			{
 				var i = (ListAddInfo<T>)info;
