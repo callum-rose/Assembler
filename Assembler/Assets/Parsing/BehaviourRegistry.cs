@@ -86,6 +86,7 @@ namespace Assembler.Parsing
 				["vector list set at"] = ListSetAtInfo<Vector3>.Create,
 				["vector list add range"] = ListAddRangeInfo<Vector3>.Create,
 				["vector list clear"] = ListClearInfo<Vector3>.Create,
+				["vector list loop trigger"] = ListLoopTriggerInfo<Vector3>.Create,
 
 				["int list add"] = ListAddInfo<int>.Create,
 				["int list insert"] = ListInsertInfo<int>.Create,
@@ -94,6 +95,7 @@ namespace Assembler.Parsing
 				["int list set at"] = ListSetAtInfo<int>.Create,
 				["int list add range"] = ListAddRangeInfo<int>.Create,
 				["int list clear"] = ListClearInfo<int>.Create,
+				["int list loop trigger"] = ListLoopTriggerInfo<int>.Create,
 
 				["float list add"] = ListAddInfo<float>.Create,
 				["float list insert"] = ListInsertInfo<float>.Create,
@@ -102,6 +104,7 @@ namespace Assembler.Parsing
 				["float list set at"] = ListSetAtInfo<float>.Create,
 				["float list add range"] = ListAddRangeInfo<float>.Create,
 				["float list clear"] = ListClearInfo<float>.Create,
+				["float list loop trigger"] = ListLoopTriggerInfo<float>.Create,
 
 				["bool list add"] = ListAddInfo<bool>.Create,
 				["bool list insert"] = ListInsertInfo<bool>.Create,
@@ -110,6 +113,7 @@ namespace Assembler.Parsing
 				["bool list set at"] = ListSetAtInfo<bool>.Create,
 				["bool list add range"] = ListAddRangeInfo<bool>.Create,
 				["bool list clear"] = ListClearInfo<bool>.Create,
+				["bool list loop trigger"] = ListLoopTriggerInfo<bool>.Create,
 
 				["string list add"] = ListAddInfo<string>.Create,
 				["string list insert"] = ListInsertInfo<string>.Create,
@@ -118,6 +122,7 @@ namespace Assembler.Parsing
 				["string list set at"] = ListSetAtInfo<string>.Create,
 				["string list add range"] = ListAddRangeInfo<string>.Create,
 				["string list clear"] = ListClearInfo<string>.Create,
+				["string list loop trigger"] = ListLoopTriggerInfo<string>.Create,
 
 				["colour list add"] = ListAddInfo<Color>.Create,
 				["colour list insert"] = ListInsertInfo<Color>.Create,
@@ -126,6 +131,7 @@ namespace Assembler.Parsing
 				["colour list set at"] = ListSetAtInfo<Color>.Create,
 				["colour list add range"] = ListAddRangeInfo<Color>.Create,
 				["colour list clear"] = ListClearInfo<Color>.Create,
+				["colour list loop trigger"] = ListLoopTriggerInfo<Color>.Create,
 
 				["sprite"] = SpriteInfo.Create,
 				["voxel mesh"] = VoxelMeshInfo.Create,
