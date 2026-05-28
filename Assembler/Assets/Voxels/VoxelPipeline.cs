@@ -32,7 +32,69 @@ namespace Assembler.Voxels
 		{
 			var messages = new List<AnthropicMessage> { new("user", prompt) };
 			var raw = await client.SendAsync(_systemPrompt, messages, cancellationToken, onDelta).ConfigureAwait(false);
+			return ExtractAndSwap(raw);
+		}
 
+		/// <summary>
+		/// Refine an existing Goxel-text model. The current text is converted back
+		/// to the Y-up convention Claude works in, embedded in a refinement
+		/// request, and the new reply is swapped back to Z-up storage form.
+		///
+		/// If <paramref name="chatHistory"/> is non-null, the refinement is appended
+		/// as the next user turn and the new assistant reply is appended on
+		/// success (multi-turn chat refine). If it is null, this is a fresh
+		/// single-shot request — <paramref name="currentGoxelTextZUp"/> alone is
+		/// the model state Claude sees.
+		/// </summary>
+		public async Task<string> RefineGoxelTextAsync(
+			string currentGoxelTextZUp,
+			string refinementInstruction,
+			List<AnthropicMessage>? chatHistory,
+			AnthropicClient client,
+			CancellationToken cancellationToken,
+			Action<string>? onDelta = null)
+		{
+			var currentYUp = SwapYAndZ(currentGoxelTextZUp);
+			var userMessage = BuildRefinementMessage(currentYUp, refinementInstruction);
+
+			List<AnthropicMessage> messages;
+			if (chatHistory != null)
+			{
+				messages = new List<AnthropicMessage>(chatHistory) { new("user", userMessage) };
+			}
+			else
+			{
+				messages = new List<AnthropicMessage> { new("user", userMessage) };
+			}
+
+			var raw = await client.SendAsync(_systemPrompt, messages, cancellationToken, onDelta).ConfigureAwait(false);
+			var swapped = ExtractAndSwap(raw);
+
+			if (chatHistory != null)
+			{
+				chatHistory.Add(new AnthropicMessage("user", userMessage));
+				chatHistory.Add(new AnthropicMessage("assistant", raw));
+			}
+
+			return swapped;
+		}
+
+		private static string BuildRefinementMessage(string currentGoxelTextYUp, string refinementInstruction)
+		{
+			var sb = new StringBuilder();
+			sb.AppendLine("Here is the current model:");
+			sb.AppendLine();
+			sb.AppendLine("<current_model>");
+			sb.Append(currentGoxelTextYUp);
+			if (!currentGoxelTextYUp.EndsWith("\n", StringComparison.Ordinal)) sb.AppendLine();
+			sb.AppendLine("</current_model>");
+			sb.AppendLine();
+			sb.Append("Change: ").Append(refinementInstruction);
+			return sb.ToString();
+		}
+
+		private static string ExtractAndSwap(string raw)
+		{
 			var extracted = VoxelResponseExtractor.Extract(raw);
 			if (string.IsNullOrWhiteSpace(extracted))
 			{
@@ -46,8 +108,10 @@ namespace Assembler.Voxels
 		// The prompt asks Claude to use Y as up, which matches Unity but not the
 		// MagicaVoxel .vox format (Z-up). Rewrite each voxel line "x y z RRGGBB"
 		// as "x z y RRGGBB" so the saved Goxel text is Z-up — meaning the .txt
-		// also opens upright in the Goxel editor, where Z is up.
-		private static string SwapYAndZ(string goxelText)
+		// also opens upright in the Goxel editor, where Z is up. The operation
+		// is involutive, so the same method swaps Z-up text back to Y-up when
+		// feeding a refinement request to Claude.
+		public static string SwapYAndZ(string goxelText)
 		{
 			var sb = new StringBuilder(goxelText.Length);
 			var lines = goxelText.Split('\n');
