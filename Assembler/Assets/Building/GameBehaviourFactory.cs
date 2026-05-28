@@ -172,6 +172,57 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
 						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(MouseButtonDownTriggerInfo)] = new(typeof(MouseButtonDownTrigger), (go, info, ctx) =>
+				{
+					var i = (MouseButtonDownTriggerInfo)info;
+					var b = go.AddComponent<MouseButtonDownTrigger>();
+					return (b, lr => b.Initialise(new MouseButtonDownTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MouseButtonUpTriggerInfo)] = new(typeof(MouseButtonUpTrigger), (go, info, ctx) =>
+				{
+					var i = (MouseButtonUpTriggerInfo)info;
+					var b = go.AddComponent<MouseButtonUpTrigger>();
+					return (b, lr => b.Initialise(new MouseButtonUpTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MouseButtonHoldTriggerInfo)] = new(typeof(MouseButtonHoldTrigger), (go, info, ctx) =>
+				{
+					var i = (MouseButtonHoldTriggerInfo)info;
+					var b = go.AddComponent<MouseButtonHoldTrigger>();
+					return (b, lr => b.Initialise(new MouseButtonHoldTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MousePositionTriggerInfo)] = new(typeof(MousePositionTrigger), (go, info, ctx) =>
+				{
+					var i = (MousePositionTriggerInfo)info;
+					var b = go.AddComponent<MousePositionTrigger>();
+					return (b, lr => b.Initialise(new MousePositionTriggerData(i.Id),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ScrollWheelTriggerInfo)] = new(typeof(ScrollWheelTrigger), (go, info, ctx) =>
+				{
+					var i = (ScrollWheelTriggerInfo)info;
+					var b = go.AddComponent<ScrollWheelTrigger>();
+					return (b, lr => b.Initialise(new ScrollWheelTriggerData(i.Id),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(AxisTriggerInfo)] = new(typeof(AxisTrigger), (go, info, ctx) =>
+				{
+					var i = (AxisTriggerInfo)info;
+					var b = go.AddComponent<AxisTrigger>();
+					return (b, lr => b.Initialise(new AxisTriggerData(i.Id,
+						i.XAxis.Resolve(ctx.Resolution),
+						i.YAxis.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(GamepadButtonTriggerInfo)] = new(typeof(GamepadButtonTrigger), (go, info, ctx) =>
+				{
+					var i = (GamepadButtonTriggerInfo)info;
+					var b = go.AddComponent<GamepadButtonTrigger>();
+					return (b, lr => b.Initialise(new GamepadButtonTriggerData(i.Id,
+						i.Button.Resolve(ctx.Resolution),
+						i.Mode.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(TapTriggerInfo)] = new(typeof(Tap), (go, info, ctx) =>
 				{
 					var i = (TapTriggerInfo)info;
