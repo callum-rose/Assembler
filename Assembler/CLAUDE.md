@@ -15,10 +15,8 @@ Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games dec
 This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5f1.
 
 - **Run game**: Unity Editor menu `Test > Build` (invokes `Builder.TestBuild()` which loads `Assets/GameDescriptors/Pong.yaml`)
-- **Run tests**: Unity Editor > Window > General > Test Runner (NUnit framework)
+- **Run tests**: Window > General > Test Runner (NUnit). Test assemblies live in `Assets/Tests/` per area (`Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`).
 - **Generate behaviour docs**: Unity Editor menu `Assembler > Generate Behaviour Docs`
-
-Tests are in `Assets/Tests/` with separate assemblies per area (`Tests.Compiler`, `Tests.Parsing`).
 
 ## Architecture
 
@@ -39,6 +37,11 @@ Each stage has its own assembly (`.asmdef`) and namespace under `Assembler.*`.
 | `Assembler.Building` | `Assembler.Building` | Orchestrates the full pipeline; `Builder.cs` is the entry point |
 | `Assembler.Core` | `Assembler.Core` | `GameEntity` and `GameBehaviour<TData>` base MonoBehaviours |
 | `Assembler.Behaviours` | `Assembler.Behaviours` | Concrete behaviour implementations (movement, physics, triggers, etc.) |
+| `Assembler.Voxels` | `Assembler.Voxels` | Goxel `.txt` voxel format parsing/writing and coordinate conversion |
+| `Assembler.Anthropic` | `Assembler.Anthropic` | Minimal HTTP client for the Anthropic Messages API |
+| `Assembler.Generation` | `Assembler.Generation` | LLM-driven YAML game-descriptor generation; wraps `AnthropicClient` with a system prompt built from the behaviour catalogue |
+
+Note: `BehaviourRegistry` exists in two places — `Assembler.Parsing.BehaviourRegistry` is the *static catalogue* mapping behaviour names to factories (used during parsing), while `Assembler.Building.BehaviourRegistry` is the *runtime instance* registry mapping `BehaviourDescriptor` to live `GameBehaviour` components (used during wiring/execution).
 
 ### Three-Layer Type System
 
