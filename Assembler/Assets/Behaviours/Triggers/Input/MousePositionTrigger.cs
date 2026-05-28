@@ -27,16 +27,11 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			TriggerContext.Push();
-			try
+			using (TriggerContext.Push())
 			{
 				TriggerContext.Set("mouse_position", current);
 				TriggerContext.Set("mouse_delta", delta);
 				NotifyListeners();
-			}
-			finally
-			{
-				TriggerContext.Pop();
 			}
 		}
 	}

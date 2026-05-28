@@ -18,16 +18,11 @@ namespace Assembler.Behaviours.Triggers
 
 			for (int i = 0; i < list.Count; i++)
 			{
-				TriggerContext.Push();
-				try
+				using (TriggerContext.Push())
 				{
 					TriggerContext.Set("item", list[i]);
 					TriggerContext.Set("index", i);
 					NotifyListeners();
-				}
-				finally
-				{
-					TriggerContext.Pop();
 				}
 			}
 		}

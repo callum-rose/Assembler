@@ -15,15 +15,10 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				TriggerContext.Push();
-				try
+				using (TriggerContext.Push())
 				{
 					TriggerContext.Set("other_position", other.transform.position);
 					NotifyListeners();
-				}
-				finally
-				{
-					TriggerContext.Pop();
 				}
 			}
 		}

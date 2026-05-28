@@ -24,17 +24,12 @@ namespace Assembler.Behaviours.Triggers.Input
 			var x = string.IsNullOrEmpty(xName) ? 0f : UnityEngine.Input.GetAxis(xName);
 			var y = string.IsNullOrEmpty(yName) ? 0f : UnityEngine.Input.GetAxis(yName);
 
-			TriggerContext.Push();
-			try
+			using (TriggerContext.Push())
 			{
 				TriggerContext.Set("axis", new Vector2(x, y));
 				TriggerContext.Set("x", x);
 				TriggerContext.Set("y", y);
 				NotifyListeners();
-			}
-			finally
-			{
-				TriggerContext.Pop();
 			}
 		}
 	}
