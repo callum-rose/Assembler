@@ -7,7 +7,9 @@ using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using Color = UnityEngine.Color;
 using Vector3 = UnityEngine.Vector3;
 
@@ -15,6 +17,7 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
+#if UNITY_EDITOR
 		[MenuItem("Test/Build Pong")]
 		public static void BuildPong()
 		{
@@ -104,6 +107,7 @@ namespace Assembler.Building
 			var gameInfo = Transformer.Transform(gameDto);
 			Build(gameInfo);
 		}
+#endif
 
 		public static void Build(GameInfo gameInfo)
 		{
