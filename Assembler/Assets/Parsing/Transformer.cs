@@ -47,7 +47,7 @@ namespace Assembler.Parsing
 
 			foreach (var kvp in allValues)
 			{
-				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value)));
+				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value, kvp.Key)));
 			}
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
@@ -540,8 +540,9 @@ namespace Assembler.Parsing
 				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")
 			};
 
-		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj) =>
-			obj switch
+		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj, string? name = null)
+		{
+			switch (obj)
 			{
 				VecDto vecDto => new Vector3Value(vecDto.ToVector3(resolvedValues)),
 				ColourDto colourDto => new ColorValue(colourDto.ToColor(resolvedValues)),
