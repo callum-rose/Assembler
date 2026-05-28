@@ -4,6 +4,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using Assembler.Anthropic;
+using Assembler.Voxels.Editor.Pipeline;
+using Assembler.Voxels.Pipeline;
 using UnityEditor;
 using UnityEngine;
 
@@ -28,18 +30,16 @@ namespace Assembler.Voxels.Editor
 		private string _outputFolder = DefaultOutputFolder;
 		private string _goxelText = string.Empty;
 		private string _refinePrompt = string.Empty;
-		private byte[]? _voxBytes;
 
-		// Chat history for "Refine (chat)" — running user/assistant turns Claude
-		// sees in multi-turn refinement. Reset on Generate and on Load .vox.
-		private readonly List<AnthropicMessage> _chatHistory = new();
+		// Result from the most recent pipeline run. Carries chat history,
+		// project, and the in-memory vox bytes that feed Save / preview.
+		private VoxelPipelineResult? _lastResult;
+		private byte[]? _voxBytes;
 
 		// One-step undo of _goxelText. Snapshot before AI calls or .vox loads;
 		// cleared after the user pops it. Manual edits are not snapshotted.
 		private string? _undoGoxelText;
-
-		// Sidecar project (prompt history, kept persistent on Save).
-		private VoxelProject _project = new();
+		private VoxelPipelineResult? _undoLastResult;
 
 		// Set when a .vox is loaded from disk so Save can default to the same path.
 		private string? _loadedVoxPath;
@@ -205,10 +205,11 @@ namespace Assembler.Voxels.Editor
 				}
 			}
 
-			if (_chatHistory.Count > 0)
+			var historyCount = _lastResult?.ChatHistory.Count ?? 0;
+			if (historyCount > 0)
 			{
 				EditorGUILayout.LabelField(
-					$"Chat history: {_chatHistory.Count} message(s). 'Refine (chat)' continues; 'Refine (fresh)' ignores.",
+					$"Chat history: {historyCount} message(s). 'Refine (chat)' continues; 'Refine (fresh)' ignores.",
 					EditorStyles.miniLabel);
 			}
 
@@ -280,24 +281,24 @@ namespace Assembler.Voxels.Editor
 				SnapshotUndo();
 				Log("Requesting Goxel text from Claude...");
 				using var client = new AnthropicClient(_apiKey);
-				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
-				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct, AppendStreamDelta);
-				_goxelText = goxelText;
 
-				// New generation: reset project + chat history.
-				_project = new VoxelProject
-				{
-					prompt = _prompt,
-					persistentInstructions = _persistentInstructions,
-				};
-				_project.history.Add(VoxelProject.HistoryEntry.Create("generate", _prompt, _goxelText));
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+				var result = await VoxelGenerationPipeline
+					.CreateNew(BuildServices())
+					.WithAnthropic(client)
+					.WithPersistentInstructions(_persistentInstructions)
+					.WithPrompt(_prompt)
+					.WithObserver(new EditorWindowObserver(this))
+					.RecordHistory("generate")
+					.ParseModel()
+					.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.LoadPreviewMesh(scratchPath)
+					.ExecuteAsync(ct);
 
-				_chatHistory.Clear();
-				_chatHistory.Add(new AnthropicMessage("user", _prompt));
-				_chatHistory.Add(new AnthropicMessage("assistant", "```goxel\n" + VoxelPipeline.SwapYAndZ(_goxelText) + "\n```"));
-
-				Log("\nConverting to .vox...");
-				TryConvertCurrentText(logSuccess: true);
+				ApplyResult(result, scratchPath);
+				Log("Done.");
 			}
 			catch (OperationCanceledException)
 			{
@@ -345,24 +346,36 @@ namespace Assembler.Voxels.Editor
 			try
 			{
 				SnapshotUndo();
+				var historyCount = _lastResult?.ChatHistory.Count ?? 0;
 				Log(useChatHistory
-					? $"\nRefining (chat, {_chatHistory.Count} prior msgs): {instruction}"
+					? $"\nRefining (chat, {historyCount} prior msgs): {instruction}"
 					: $"\nRefining (fresh): {instruction}");
 				using var client = new AnthropicClient(_apiKey);
-				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
-				var chatRef = useChatHistory ? _chatHistory : null;
-				var newGoxel = await pipeline.RefineGoxelTextAsync(
-					_goxelText, instruction, chatRef, client, ct, AppendStreamDelta);
-				_goxelText = newGoxel;
 
-				_project.history.Add(VoxelProject.HistoryEntry.Create(
-					useChatHistory ? "refine-chat" : "refine-fresh",
-					instruction,
-					_goxelText));
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
 
-				Log("\nConverting to .vox...");
-				TryConvertCurrentText(logSuccess: true);
+				// Start from prior result if we have one (carries ChatHistory + Project),
+				// otherwise build a fresh context seeded with the current text.
+				var pipeline = _lastResult != null
+					? VoxelGenerationPipeline.FromExisting(_lastResult, BuildServices())
+					: SeedFromCurrentText(BuildServices());
+
+				var result = await pipeline
+					.WithAnthropic(client)
+					.WithPersistentInstructions(_persistentInstructions)
+					.WithObserver(new EditorWindowObserver(this))
+					.Refine(instruction, useChatHistory)
+					.RecordHistory(useChatHistory ? "refine-chat" : "refine-fresh")
+					.ParseModel()
+					.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.LoadPreviewMesh(scratchPath)
+					.ExecuteAsync(ct);
+
+				ApplyResult(result, scratchPath);
 				_refinePrompt = string.Empty;
+				Log("Done.");
 			}
 			catch (OperationCanceledException)
 			{
@@ -389,11 +402,12 @@ namespace Assembler.Voxels.Editor
 
 			try
 			{
+				SnapshotUndo();
+
 				var bytes = File.ReadAllBytes(path);
 				var model = VoxReader.Read(bytes);
 				var text = GoxelTextWriter.Write(model);
 
-				SnapshotUndo();
 				_goxelText = text;
 				_voxBytes = bytes;
 				_loadedVoxPath = path;
@@ -401,46 +415,68 @@ namespace Assembler.Voxels.Editor
 				EditorPrefs.SetString(NamePref, _name);
 
 				// Sidecar — restore if present, otherwise seed fresh.
+				VoxelProject project;
 				var sidecarPath = VoxelProject.SidecarPathFor(path);
 				if (File.Exists(sidecarPath))
 				{
 					try
 					{
-						_project = VoxelProject.Load(sidecarPath);
-						if (!string.IsNullOrEmpty(_project.prompt))
+						project = VoxelProject.Load(sidecarPath);
+						if (!string.IsNullOrEmpty(project.prompt))
 						{
-							_prompt = _project.prompt;
+							_prompt = project.prompt;
 							EditorPrefs.SetString(PromptPref, _prompt);
 						}
-						if (!string.IsNullOrEmpty(_project.persistentInstructions))
+						if (!string.IsNullOrEmpty(project.persistentInstructions))
 						{
-							_persistentInstructions = _project.persistentInstructions;
+							_persistentInstructions = project.persistentInstructions;
 							EditorPrefs.SetString(PersistentInstructionsPref, _persistentInstructions);
 						}
-						Log($"Loaded {path} (+ sidecar, {_project.history.Count} history entries).");
+						Log($"Loaded {path} (+ sidecar, {project.history.Count} history entries).");
 					}
 					catch (Exception ex)
 					{
 						Log("Sidecar load failed, starting fresh: " + ex.Message);
-						_project = NewProjectFromLoad();
+						project = NewProjectFromLoad();
 					}
 				}
 				else
 				{
-					_project = NewProjectFromLoad();
+					project = NewProjectFromLoad();
 					Log($"Loaded {path} (no sidecar; new project).");
 				}
 
-				_project.history.Add(VoxelProject.HistoryEntry.Create("load", path, _goxelText));
+				project.history.Add(new VoxelProject.HistoryEntry
+				{
+					kind = "load",
+					prompt = path,
+					goxelText = _goxelText,
+					timestampIso = DateTime.UtcNow.ToString("o"),
+				});
 
 				// Seed chat history with a synthetic assistant turn carrying the
 				// loaded model, so "Refine (chat)" still has context for the first
 				// turn even when we load a cold .vox.
-				_chatHistory.Clear();
-				_chatHistory.Add(new AnthropicMessage("user",
-					string.IsNullOrEmpty(_project.prompt) ? "(model loaded from disk)" : _project.prompt));
-				_chatHistory.Add(new AnthropicMessage("assistant",
-					"```goxel\n" + VoxelPipeline.SwapYAndZ(_goxelText) + "\n```"));
+				var chat = System.Collections.Immutable.ImmutableList.Create(
+					new AnthropicMessage("user",
+						string.IsNullOrEmpty(project.prompt) ? "(model loaded from disk)" : project.prompt),
+					new AnthropicMessage("assistant",
+						"```goxel\n" + GoxelCoordinateConverter.SwapYAndZ(_goxelText) + "\n```"));
+
+				_lastResult = new VoxelPipelineResult(new VoxelPipelineContext
+				{
+					FileSink = BuildServices().FileSink,
+					AssetDb = BuildServices().AssetDb,
+					Observer = BuildServices().Observer,
+					Clock = BuildServices().Clock,
+					GoxelTextZUp = _goxelText,
+					Model = model,
+					VoxBytes = bytes,
+					ChatHistory = chat,
+					Project = project,
+					PersistentInstructions = _persistentInstructions,
+					UserPrompt = project.prompt,
+				});
 
 				// Update preview from the loaded bytes — write to scratch, refresh.
 				Directory.CreateDirectory(ScratchFolder);
@@ -469,24 +505,9 @@ namespace Assembler.Voxels.Editor
 		{
 			if (_undoGoxelText == null) return;
 			_goxelText = _undoGoxelText;
+			_lastResult = _undoLastResult;
 			_undoGoxelText = null;
-
-			// Drop the latest history entry, and (if it was a chat refine) the
-			// matching user+assistant pair from the chat history.
-			if (_project.history.Count > 0)
-			{
-				var last = _project.history[^1];
-				_project.history.RemoveAt(_project.history.Count - 1);
-				if (last.kind == "refine-chat" && _chatHistory.Count >= 2)
-				{
-					_chatHistory.RemoveAt(_chatHistory.Count - 1);
-					_chatHistory.RemoveAt(_chatHistory.Count - 1);
-				}
-				else if (last.kind == "generate" || last.kind == "load")
-				{
-					_chatHistory.Clear();
-				}
-			}
+			_undoLastResult = null;
 
 			TryConvertCurrentText(logSuccess: false);
 			Log("Reverted last change.");
@@ -495,6 +516,7 @@ namespace Assembler.Voxels.Editor
 		private void SnapshotUndo()
 		{
 			_undoGoxelText = _goxelText;
+			_undoLastResult = _lastResult;
 		}
 
 		private void TryConvertCurrentText(bool logSuccess)
@@ -503,20 +525,22 @@ namespace Assembler.Voxels.Editor
 
 			try
 			{
-				var pipeline = new VoxelPipeline();
-				_voxBytes = pipeline.GoxelTextToVox(_goxelText);
-
-				// Write to a scratch path so Voxel Toolkit can import it and
-				// produce a Mesh sub-asset for the preview. The user-facing save
-				// happens only on the Save button.
-				Directory.CreateDirectory(ScratchFolder);
 				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
-				File.WriteAllBytes(scratchPath, _voxBytes);
-				if (logSuccess) Log("Generated in memory (use Save to write).");
+				var seed = SeedFromCurrentText(BuildServices());
+				var task = seed
+					.ParseModel()
+					.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.LoadPreviewMesh(scratchPath)
+					.ExecuteAsync(CancellationToken.None);
 
-				AssetDatabase.Refresh();
-				_previewMeshPath = scratchPath;
-				ReloadPreviewMesh();
+				// Synchronous wait is safe here — all stages on this path are sync
+				// (no Claude call), and the editor caller is on the main thread.
+				task.GetAwaiter().GetResult();
+				var result = task.Result;
+				ApplyResult(result, scratchPath);
+				if (logSuccess) Log("Generated in memory (use Save to write).");
 			}
 			catch (Exception ex)
 			{
@@ -531,12 +555,15 @@ namespace Assembler.Voxels.Editor
 			try
 			{
 				var voxPath = WriteBytes(_voxBytes, ".vox");
-				_project.prompt = _prompt;
-				_project.persistentInstructions = _persistentInstructions;
+
+				// Update project metadata and write sidecar.
+				var project = _lastResult?.Project ?? new VoxelProject();
+				project.prompt = _prompt;
+				project.persistentInstructions = _persistentInstructions;
 				var sidecarPath = VoxelProject.SidecarPathFor(voxPath);
-				VoxelProject.Save(sidecarPath, _project);
+				VoxelProject.Save(sidecarPath, project);
 				_loadedVoxPath = voxPath;
-				Log($"Saved {voxPath} (+ {Path.GetFileName(sidecarPath)}, {_project.history.Count} history entries).");
+				Log($"Saved {voxPath} (+ {Path.GetFileName(sidecarPath)}, {project.history.Count} history entries).");
 				AssetDatabase.Refresh();
 			}
 			catch (Exception ex)
@@ -544,6 +571,47 @@ namespace Assembler.Voxels.Editor
 				Log("Save failed: " + ex);
 			}
 		}
+
+		private void ApplyResult(VoxelPipelineResult result, string scratchPath)
+		{
+			_lastResult = result;
+			_goxelText = result.GoxelTextZUp ?? _goxelText;
+			_voxBytes = result.VoxBytes ?? _voxBytes;
+			_previewMeshPath = scratchPath;
+			_previewMesh = result.PreviewMesh ?? _previewMesh;
+			DestroyPreviewEditor();
+		}
+
+		private VoxelGenerationPipeline SeedFromCurrentText(VoxelPipelineServices services)
+		{
+			// Build a pipeline whose starting context already has the current
+			// goxel text + project + chat history, so refines and re-converts
+			// have full state without needing a prior pipeline run.
+			var chat = _lastResult?.ChatHistory.Count > 0
+				? System.Collections.Immutable.ImmutableList.CreateRange(_lastResult.ChatHistory)
+				: System.Collections.Immutable.ImmutableList<AnthropicMessage>.Empty;
+			var project = _lastResult?.Project ?? new VoxelProject
+			{
+				prompt = _prompt,
+				persistentInstructions = _persistentInstructions,
+			};
+
+			var seedResult = new VoxelPipelineResult(new VoxelPipelineContext
+			{
+				FileSink = services.FileSink,
+				AssetDb = services.AssetDb,
+				Observer = services.Observer,
+				Clock = services.Clock,
+				GoxelTextZUp = _goxelText,
+				ChatHistory = chat,
+				Project = project,
+				PersistentInstructions = _persistentInstructions,
+				UserPrompt = _prompt,
+			});
+			return VoxelGenerationPipeline.FromExisting(seedResult, services);
+		}
+
+		private VoxelPipelineServices BuildServices() => EditorVoxelServices.Default;
 
 		private void ReloadPreviewMesh()
 		{
@@ -623,18 +691,33 @@ namespace Assembler.Voxels.Editor
 			return path;
 		}
 
-		private void Log(string message)
+		internal void Log(string message)
 		{
 			_log.Append('[').Append(DateTime.Now.ToString("HH:mm:ss")).Append("] ").AppendLine(message);
 			Repaint();
 		}
 
-		private void AppendStreamDelta(string delta)
+		internal void AppendStreamDelta(string delta)
 		{
 			// Write raw deltas to the log so the user sees Claude's response
 			// arrive in real time, no timestamp prefix per chunk.
 			_log.Append(delta);
 			Repaint();
 		}
+	}
+
+	/// <summary>
+	/// Wires pipeline observer events into the window's log + repaint loop.
+	/// </summary>
+	internal sealed class EditorWindowObserver : IVoxelPipelineObserver
+	{
+		private readonly VoxelGeneratorWindow _window;
+		public EditorWindowObserver(VoxelGeneratorWindow window) => _window = window;
+
+		public void OnStageStarted(string stageName) => _window.Log("→ " + stageName);
+		public void OnStageFinished(string stageName, TimeSpan elapsed) { }
+		public void OnStageFailed(string stageName, Exception ex) => _window.Log($"✗ {stageName}: {ex.Message}");
+		public void OnLog(string message) => _window.Log(message);
+		public void OnStreamDelta(string delta) => _window.AppendStreamDelta(delta);
 	}
 }
