@@ -13,11 +13,10 @@ namespace Assembler.Resolving.Behaviours
 
 		public TransformAnimationData(
 			string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<Vector3> start,
+						IValueProvider<Vector3> start,
 			IValueProvider<Vector3> end,
 			IValueProvider<float> duration,
-			IValueProvider<string> easing) : base(id, listeners)
+			IValueProvider<string> easing) : base(id)
 		{
 			Start = start;
 			End = end;

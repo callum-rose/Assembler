@@ -7,7 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<float> Delay { get; }
 
-		public DeferredTriggerData(string id, IReadOnlyList<Action> listeners, IValueProvider<float> delay) : base(id, listeners)
+		public DeferredTriggerData(string id, IValueProvider<float> delay) : base(id)
 		{
 			Delay = delay;
 		}

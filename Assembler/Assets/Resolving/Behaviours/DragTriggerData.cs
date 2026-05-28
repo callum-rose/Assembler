@@ -5,6 +5,6 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class DragTriggerData : TriggerData
 	{
-		public DragTriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		public DragTriggerData(string id) : base(id) { }
 	}
 }

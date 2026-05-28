@@ -9,8 +9,7 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> Size { get; }
 
 		public CameraData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<string> perspective,
-			IValueProvider<float> size) : base(id, listeners) => (Perspective, Size) = (perspective, size);
+						IValueProvider<string> perspective,
+			IValueProvider<float> size) : base(id) => (Perspective, Size) = (perspective, size);
 	}
 }

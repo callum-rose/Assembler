@@ -9,9 +9,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<int> Index { get; }
 
 		public ListRemoveAtData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<IList<T>> list,
-			IValueProvider<int> index) : base(id, listeners) =>
+						IValueProvider<IList<T>> list,
+			IValueProvider<int> index) : base(id) =>
 			(List, Index) = (list, index);
 	}
 }

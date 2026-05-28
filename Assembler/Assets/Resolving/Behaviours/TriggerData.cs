@@ -5,6 +5,6 @@ namespace Assembler.Resolving.Behaviours
 {
 	public abstract class TriggerData : BehaviourData
 	{
-		protected TriggerData(string id, IReadOnlyList<Action> listeners) : base(id, listeners) { }
+		protected TriggerData(string id) : base(id) { }
 	}
 }

@@ -11,8 +11,7 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public UIImageData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<Color> colour,
-			ScreenRect rect) : base(id, listeners) => (Colour, Rect) = (colour, rect);
+						IValueProvider<Color> colour,
+			ScreenRect rect) : base(id) => (Colour, Rect) = (colour, rect);
 	}
 }

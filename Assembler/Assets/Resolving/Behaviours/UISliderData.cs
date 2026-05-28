@@ -12,10 +12,9 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public UISliderData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<float> initialValue,
+						IValueProvider<float> initialValue,
 			IValueProvider<float> minValue,
 			IValueProvider<float> maxValue,
-			ScreenRect rect) : base(id, listeners) => (InitialValue, MinValue, MaxValue, Rect) = (initialValue, minValue, maxValue, rect);
+			ScreenRect rect) : base(id) => (InitialValue, MinValue, MaxValue, Rect) = (initialValue, minValue, maxValue, rect);
 	}
 }

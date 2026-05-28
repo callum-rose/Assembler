@@ -36,7 +36,7 @@ namespace Assembler.Building
 			BehaviourInfo info,
 			BehaviourBuildContext ctx);
 
-		private sealed record BuilderEntry(Type MonoBehaviourType, BehaviourBuilder Build);
+		private readonly record struct BuilderEntry(Type MonoBehaviourType, BehaviourBuilder Build);
 
 		private readonly static Dictionary<Type, BuilderEntry> Builders = CreateBuilders();
 
@@ -75,66 +75,59 @@ namespace Assembler.Building
 					var i = (BoxColliderInfo)info;
 					var b = go.AddComponent<AutoAddBoxColliderBehaviour>();
 					return (b, lr => b.Initialise(new BoxColliderData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution),
-						i.IsTrigger.Resolve(ctx.Resolution))));
+						i.Size.Resolve(ctx),
+						i.IsTrigger.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SphereColliderInfo)] = new(typeof(AutoAddSphereColliderBehaviour), (go, info, ctx) =>
 				{
 					var i = (SphereColliderInfo)info;
 					var b = go.AddComponent<AutoAddSphereColliderBehaviour>();
 					return (b, lr => b.Initialise(new SphereColliderData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Radius.Resolve(ctx.Resolution))));
+						i.Radius.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(RigidbodyInfo)] = new(typeof(RigidbodyBehaviour), (go, info, ctx) =>
 				{
 					var i = (RigidbodyInfo)info;
 					var b = go.AddComponent<RigidbodyBehaviour>();
-					return (b, lr => b.Initialise(new RigidbodyData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))
+					return (b, lr => b.Initialise(new RigidbodyData(i.Id)
 					{
-						UseGravity = i.UseGravity.Resolve(ctx.Resolution)
-					}));
+						UseGravity = i.UseGravity.Resolve(ctx)
+					}, i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(VelocityInfo)] = new(typeof(Velocity), (go, info, ctx) =>
 				{
 					var i = (VelocityInfo)info;
 					var b = go.AddComponent<Velocity>();
 					return (b, lr => b.Initialise(new VelocityData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Velocity.Resolve(ctx.Resolution))));
+						i.Velocity.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TranslateInfo)] = new(typeof(Translate), (go, info, ctx) =>
 				{
 					var i = (TranslateInfo)info;
 					var b = go.AddComponent<Translate>();
 					return (b, lr => b.Initialise(new TranslateData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Displacement.Resolve(ctx.Resolution))));
+						i.Displacement.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(AngularVelocityInfo)] = new(typeof(AngularVelocity), (go, info, ctx) =>
 				{
 					var i = (AngularVelocityInfo)info;
 					var b = go.AddComponent<AngularVelocity>();
 					return (b, lr => b.Initialise(new AngularVelocityData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.AngularVelocity.Resolve(ctx.Resolution))));
+						i.AngularVelocity.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(RotateInfo)] = new(typeof(Rotate), (go, info, ctx) =>
 				{
 					var i = (RotateInfo)info;
 					var b = go.AddComponent<Rotate>();
 					return (b, lr => b.Initialise(new RotateData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Displacement.Resolve(ctx.Resolution))));
+						i.Displacement.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SetRotationInfo)] = new(typeof(SetRotation), (go, info, ctx) =>
 				{
 					var i = (SetRotationInfo)info;
 					var b = go.AddComponent<SetRotation>();
 					return (b, lr => b.Initialise(new SetRotationData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.ValueExpression.Resolve(ctx.Resolution))));
+						i.ValueExpression.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
 					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
@@ -150,160 +143,147 @@ namespace Assembler.Building
 					var i = (SetPositionInfo)info;
 					var b = go.AddComponent<SetPosition>();
 					return (b, lr => b.Initialise(new SetPositionData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.ValueExpression.Resolve(ctx.Resolution))));
+						i.ValueExpression.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(KeyHoldTriggerInfo)] = new(typeof(KeyHoldTrigger), (go, info, ctx) =>
 				{
 					var i = (KeyHoldTriggerInfo)info;
 					var b = go.AddComponent<KeyHoldTrigger>();
 					return (b, lr => b.Initialise(new KeyHoldTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Key.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(KeyDownTriggerInfo)] = new(typeof(KeyDownTrigger), (go, info, ctx) =>
 				{
 					var i = (KeyDownTriggerInfo)info;
 					var b = go.AddComponent<KeyDownTrigger>();
 					return (b, lr => b.Initialise(new KeyDownTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Key.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(KeyUpTriggerInfo)] = new(typeof(KeyUpTrigger), (go, info, ctx) =>
 				{
 					var i = (KeyUpTriggerInfo)info;
 					var b = go.AddComponent<KeyUpTrigger>();
 					return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Key.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TapTriggerInfo)] = new(typeof(Tap), (go, info, ctx) =>
 				{
 					var i = (TapTriggerInfo)info;
 					var b = go.AddComponent<Tap>();
-					return (b, lr => b.Initialise(new TapTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new TapTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(DoubleTapTriggerInfo)] = new(typeof(DoubleTap), (go, info, ctx) =>
 				{
 					var i = (DoubleTapTriggerInfo)info;
 					var b = go.AddComponent<DoubleTap>();
-					return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(LongPressTriggerInfo)] = new(typeof(LongPress), (go, info, ctx) =>
 				{
 					var i = (LongPressTriggerInfo)info;
 					var b = go.AddComponent<LongPress>();
-					return (b, lr => b.Initialise(new LongPressTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new LongPressTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SwipeTriggerInfo)] = new(typeof(Swipe), (go, info, ctx) =>
 				{
 					var i = (SwipeTriggerInfo)info;
 					var b = go.AddComponent<Swipe>();
-					return (b, lr => b.Initialise(new SwipeTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new SwipeTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(DragTriggerInfo)] = new(typeof(Drag), (go, info, ctx) =>
 				{
 					var i = (DragTriggerInfo)info;
 					var b = go.AddComponent<Drag>();
-					return (b, lr => b.Initialise(new DragTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new DragTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(PinchTriggerInfo)] = new(typeof(Pinch), (go, info, ctx) =>
 				{
 					var i = (PinchTriggerInfo)info;
 					var b = go.AddComponent<Pinch>();
-					return (b, lr => b.Initialise(new PinchTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new PinchTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(RotateTriggerInfo)] = new(typeof(Assembler.Behaviours.Triggers.Input.Rotate), (go, info, ctx) =>
 				{
 					var i = (RotateTriggerInfo)info;
 					var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Rotate>();
-					return (b, lr => b.Initialise(new RotateTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new RotateTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(OnStartTriggerInfo)] = new(typeof(OnStartTrigger), (go, info, ctx) =>
 				{
 					var i = (OnStartTriggerInfo)info;
 					var b = go.AddComponent<OnStartTrigger>();
-					return (b, lr => b.Initialise(new OnStartTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new OnStartTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TimerTriggerInfo)] = new(typeof(TimerTrigger), (go, info, ctx) =>
 				{
 					var i = (TimerTriggerInfo)info;
 					var b = go.AddComponent<TimerTrigger>();
 					return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Delay.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(DeferredTriggerInfo)] = new(typeof(DeferredTrigger), (go, info, ctx) =>
 				{
 					var i = (DeferredTriggerInfo)info;
 					var b = go.AddComponent<DeferredTrigger>();
 					return (b, lr => b.Initialise(new DeferredTriggerData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Delay.Resolve(ctx.Resolution))));
+						i.Delay.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(IntervalTriggerInfo)] = new(typeof(IntervalTrigger), (go, info, ctx) =>
 				{
 					var i = (IntervalTriggerInfo)info;
 					var b = go.AddComponent<IntervalTrigger>();
 					return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Interval.Resolve(ctx.Resolution),
-						i.Count.Resolve(ctx.Resolution),
-						i.AutoStart.Resolve(ctx.Resolution))));
+						i.Interval.Resolve(ctx),
+						i.Count.Resolve(ctx),
+						i.AutoStart.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(EveryFrameTriggerInfo)] = new(typeof(EveryFrameTrigger), (go, info, ctx) =>
 				{
 					var i = (EveryFrameTriggerInfo)info;
 					var b = go.AddComponent<EveryFrameTrigger>();
-					return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(CollisionEnterTriggerInfo)] = new(typeof(CollisionEnter), (go, info, ctx) =>
 				{
 					var i = (CollisionEnterTriggerInfo)info;
 					var b = go.AddComponent<CollisionEnter>();
 					return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
-						i.TagsToDetect,
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(CollisionExitTriggerInfo)] = new(typeof(CollisionExit), (go, info, ctx) =>
 				{
 					var i = (CollisionExitTriggerInfo)info;
 					var b = go.AddComponent<CollisionExit>();
 					return (b, lr => b.Initialise(new CollisionExitTriggerData(i.Id,
-						i.TagsToDetect,
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(CollisionStayTriggerInfo)] = new(typeof(CollisionStay), (go, info, ctx) =>
 				{
 					var i = (CollisionStayTriggerInfo)info;
 					var b = go.AddComponent<CollisionStay>();
 					return (b, lr => b.Initialise(new CollisionStayTriggerData(i.Id,
-						i.TagsToDetect,
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TriggerEnterTriggerInfo)] = new(typeof(TriggerEnter), (go, info, ctx) =>
 				{
 					var i = (TriggerEnterTriggerInfo)info;
 					var b = go.AddComponent<TriggerEnter>();
 					return (b, lr => b.Initialise(new TriggerEnterTriggerData(i.Id,
-						i.TagsToDetect,
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TriggerExitTriggerInfo)] = new(typeof(TriggerExit), (go, info, ctx) =>
 				{
 					var i = (TriggerExitTriggerInfo)info;
 					var b = go.AddComponent<TriggerExit>();
 					return (b, lr => b.Initialise(new TriggerExitTriggerData(i.Id,
-						i.TagsToDetect,
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(ConditionGateInfo)] = new(typeof(ConditionGate), (go, info, ctx) =>
 				{
 					var i = (ConditionGateInfo)info;
 					var b = go.AddComponent<ConditionGate>();
 					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
-						i.Condition.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Condition.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
 				{
@@ -311,17 +291,15 @@ namespace Assembler.Building
 					var b = go.AddComponent<ExclusiveTrigger>();
 					b.Registry = ctx.ExclusiveGroups;
 					return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
-						i.Group.Resolve(ctx.Resolution),
-						i.Listeners.ToActions(lr, ctx.Resolution))));
+						i.Group.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(CameraInfo)] = new(typeof(CameraBehaviour), (go, info, ctx) =>
 				{
 					var i = (CameraInfo)info;
 					var b = go.AddComponent<CameraBehaviour>();
 					return (b, lr => b.Initialise(new CameraData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.View.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution))));
+						i.View.Resolve(ctx),
+						i.Size.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SpawnerInfo)] = new(typeof(SpawnerBehaviour), (go, info, ctx) =>
 				{
@@ -329,134 +307,121 @@ namespace Assembler.Building
 					var b = go.AddComponent<SpawnerBehaviour>();
 					b.Spawner = ctx.Spawner;
 					return (b, lr => b.Initialise(new SpawnerData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.TemplateId.Resolve(ctx.Resolution),
-						i.Position.Resolve(ctx.Resolution),
-						i.Rotation.Resolve(ctx.Resolution),
+						i.TemplateId.Resolve(ctx),
+						i.Position.Resolve(ctx),
+						i.Rotation.Resolve(ctx),
 						i.Parameters.ToDictionary(kv => kv.Key,
-							kv => (IValueProvider)kv.Value.Resolve(ctx.Resolution)))));
+							kv => (IValueProvider)kv.Value.Resolve(ctx))), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(DestroyInfo)] = new(typeof(DestroyBehaviour), (go, info, ctx) =>
 				{
 					var i = (DestroyInfo)info;
 					var b = go.AddComponent<DestroyBehaviour>();
-					return (b, lr => b.Initialise(new DestroyData(i.Id, i.Listeners.ToActions(lr, ctx.Resolution))));
+					return (b, lr => b.Initialise(new DestroyData(i.Id), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SpriteInfo)] = new(typeof(SpriteBehaviour), (go, info, ctx) =>
 				{
 					var i = (SpriteInfo)info;
 					var b = go.AddComponent<SpriteBehaviour>();
 					return (b, lr => b.Initialise(new SpriteData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Sprite.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution))));
+						i.Sprite.Resolve(ctx),
+						i.Size.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(AudioSourceInfo)] = new(typeof(AudioSourceBehaviour), (go, info, ctx) =>
 				{
 					var i = (AudioSourceInfo)info;
 					var b = go.AddComponent<AudioSourceBehaviour>();
 					return (b, lr => b.Initialise(new AudioSourceData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Clip.Resolve(ctx.Resolution),
-						i.PlayOnStart.Resolve(ctx.Resolution),
-						i.Loop.Resolve(ctx.Resolution))));
+						i.Clip.Resolve(ctx),
+						i.PlayOnStart.Resolve(ctx),
+						i.Loop.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(SphereGizmoInfo)] = new(typeof(SphereGizmoBehaviour), (go, info, ctx) =>
 				{
 					var i = (SphereGizmoInfo)info;
 					var b = go.AddComponent<SphereGizmoBehaviour>();
 					return (b, lr => b.Initialise(new SphereGizmoData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Radius.Resolve(ctx.Resolution),
-						i.IsWire.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution))));
+						i.Radius.Resolve(ctx),
+						i.IsWire.Resolve(ctx),
+						i.Colour.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(CubeGizmoInfo)] = new(typeof(CubeGizmoBehaviour), (go, info, ctx) =>
 				{
 					var i = (CubeGizmoInfo)info;
 					var b = go.AddComponent<CubeGizmoBehaviour>();
 					return (b, lr => b.Initialise(new CubeGizmoData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution),
-						i.IsWire.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution))));
+						i.Size.Resolve(ctx),
+						i.IsWire.Resolve(ctx),
+						i.Colour.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(LineGizmoInfo)] = new(typeof(LineGizmoBehaviour), (go, info, ctx) =>
 				{
 					var i = (LineGizmoInfo)info;
 					var b = go.AddComponent<LineGizmoBehaviour>();
 					return (b, lr => b.Initialise(new LineGizmoData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Start.Resolve(ctx.Resolution),
-						i.End.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution))));
+						i.Start.Resolve(ctx),
+						i.End.Resolve(ctx),
+						i.Colour.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx) =>
 				{
 					var i = (TextLabelInfo)info;
 					var b = go.AddComponent<TextLabel>();
 					return (b, lr => b.Initialise(new TextLabelData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Text.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
-						i.FontSize.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.Text.Resolve(ctx),
+						i.Label.Resolve(ctx),
+						i.FontSize.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(ProgressBarInfo)] = new(typeof(ProgressBar), (go, info, ctx) =>
 				{
 					var i = (ProgressBarInfo)info;
 					var b = go.AddComponent<ProgressBar>();
 					return (b, lr => b.Initialise(new ProgressBarData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Value.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.Value.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(UIImageInfo)] = new(typeof(UIImage), (go, info, ctx) =>
 				{
 					var i = (UIImageInfo)info;
 					var b = go.AddComponent<UIImage>();
 					return (b, lr => b.Initialise(new UIImageData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.Colour.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(UIButtonInfo)] = new(typeof(UIButton), (go, info, ctx) =>
 				{
 					var i = (UIButtonInfo)info;
 					var b = go.AddComponent<UIButton>();
 					return (b, lr => b.Initialise(new UIButtonData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.Label.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(UIToggleInfo)] = new(typeof(UIToggle), (go, info, ctx) =>
 				{
 					var i = (UIToggleInfo)info;
 					var b = go.AddComponent<UIToggle>();
 					return (b, lr => b.Initialise(new UIToggleData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.InitialValue.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.InitialValue.Resolve(ctx),
+						i.Label.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx) =>
 				{
 					var i = (UISliderInfo)info;
 					var b = go.AddComponent<UISlider>();
 					return (b, lr => b.Initialise(new UISliderData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.InitialValue.Resolve(ctx.Resolution),
-						i.MinValue.Resolve(ctx.Resolution),
-						i.MaxValue.Resolve(ctx.Resolution),
-						i.Rect)));
+						i.InitialValue.Resolve(ctx),
+						i.MinValue.Resolve(ctx),
+						i.MaxValue.Resolve(ctx),
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				}),
 				[typeof(UIInputFieldInfo)] = new(typeof(UIInputField), (go, info, ctx) =>
 				{
 					var i = (UIInputFieldInfo)info;
 					var b = go.AddComponent<UIInputField>();
 					return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
-						i.Listeners.ToActions(lr, ctx.Resolution),
-						i.Rect)));
+						i.Rect), i.Listeners.ToListeners(lr, ctx)));
 				})
 			};
 
@@ -489,11 +454,10 @@ namespace Assembler.Building
 		{
 			var b = go.AddComponent<TBehaviour>();
 			return (b, lr => b.Initialise(new TransformAnimationData(info.Id,
-				info.Listeners.ToActions(lr, ctx.Resolution),
-				start(info).Resolve(ctx.Resolution),
-				end(info).Resolve(ctx.Resolution),
-				duration(info).Resolve(ctx.Resolution),
-				easing(info).Resolve(ctx.Resolution))));
+				start(info).Resolve(ctx),
+				end(info).Resolve(ctx),
+				duration(info).Resolve(ctx),
+				easing(info).Resolve(ctx)), info.Listeners.ToListeners(lr, ctx)));
 		}
 
 		private static void RegisterVariableSetter<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
@@ -504,9 +468,8 @@ namespace Assembler.Building
 				var i = (VariableSetterInfo<T>)info;
 				var b = go.AddComponent<TBehaviour>();
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
-					i.Listeners.ToActions(lr, ctx.Resolution),
-					i.ValueToSet.Resolve(ctx.Resolution),
-					i.ValueToGet.Resolve(ctx.Resolution))));
+					i.ValueToSet.Resolve(ctx),
+					i.ValueToGet.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 			});
 		}
 
@@ -521,132 +484,56 @@ namespace Assembler.Building
 				var i = (ListAddInfo<T>)info;
 				var b = go.AddComponent<TAdd>();
 				return (b, lr => b.Initialise(new ListAddData<T>(i.Id,
-					i.Listeners.ToActions(lr, ctx.Resolution),
-					i.List.Resolve(ctx.Resolution),
-					i.Value.Resolve(ctx.Resolution))));
+					i.List.Resolve(ctx),
+					i.Value.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 			});
 			map[typeof(ListRemoveAtInfo<T>)] = new(typeof(TRemoveAt), (go, info, ctx) =>
 			{
 				var i = (ListRemoveAtInfo<T>)info;
 				var b = go.AddComponent<TRemoveAt>();
 				return (b, lr => b.Initialise(new ListRemoveAtData<T>(i.Id,
-					i.Listeners.ToActions(lr, ctx.Resolution),
-					i.List.Resolve(ctx.Resolution),
-					i.Index.Resolve(ctx.Resolution))));
+					i.List.Resolve(ctx),
+					i.Index.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 			});
 			map[typeof(ListSetAtInfo<T>)] = new(typeof(TSetAt), (go, info, ctx) =>
 			{
 				var i = (ListSetAtInfo<T>)info;
 				var b = go.AddComponent<TSetAt>();
 				return (b, lr => b.Initialise(new ListSetAtData<T>(i.Id,
-					i.Listeners.ToActions(lr, ctx.Resolution),
-					i.List.Resolve(ctx.Resolution),
-					i.Index.Resolve(ctx.Resolution),
-					i.Value.Resolve(ctx.Resolution))));
+					i.List.Resolve(ctx),
+					i.Index.Resolve(ctx),
+					i.Value.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 			});
 			map[typeof(ListClearInfo<T>)] = new(typeof(TClear), (go, info, ctx) =>
 			{
 				var i = (ListClearInfo<T>)info;
 				var b = go.AddComponent<TClear>();
 				return (b, lr => b.Initialise(new ListClearData<T>(i.Id,
-					i.Listeners.ToActions(lr, ctx.Resolution),
-					i.List.Resolve(ctx.Resolution))));
+					i.List.Resolve(ctx)), i.Listeners.ToListeners(lr, ctx)));
 			});
 		}
 
-		private static IReadOnlyList<Action> ToActions(this IReadOnlyList<ListenerInfo> listeners,
+		private static IReadOnlyList<Listener> ToListeners(this IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyBehaviourRegistry listenerRegistry,
 			ResolutionContext ctx) =>
-			listeners
-				.Select(l => l switch
-				{
-					DirectListenerInfo direct => BuildDirectAction(direct, listenerRegistry, ctx.TriggerContext),
-					EntityTaggedListenerInfo entityTagged => BuildEntityTaggedAction(entityTagged, listenerRegistry, ctx),
-					BehaviourTaggedListenerInfo behaviourTagged => BuildBehaviourTaggedAction(behaviourTagged,
-						listenerRegistry,
-						ctx),
-					_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
-				})
-				.ToArray();
-
-		private static Action BuildDirectAction(DirectListenerInfo listener,
-			IReadOnlyBehaviourRegistry registry,
-			TriggerContext triggerContext)
-		{
-			var behaviour = registry[listener.BehaviourDescriptor];
-
-			if (listener.OutputMapping.Count == 0)
+			listeners.Select(l => (Listener)(l switch
 			{
-				return behaviour.Execute;
-			}
-
-			return () =>
-			{
-				triggerContext.ApplyMapping(listener.OutputMapping);
-				behaviour.Execute();
-			};
-		}
-
-		private static Action BuildEntityTaggedAction(EntityTaggedListenerInfo listener,
-			IReadOnlyBehaviourRegistry registry,
-			ResolutionContext ctx)
-		{
-			var entityTagProvider = listener.EntityTag.Resolve(ctx);
-			var behaviourId = listener.BehaviourId;
-			var triggerContext = ctx.TriggerContext;
-
-			return () =>
-			{
-				if (listener.OutputMapping.Count > 0)
-				{
-					triggerContext.ApplyMapping(listener.OutputMapping);
-				}
-
-				var entityTag = entityTagProvider.Value;
-				if (entityTag == null || string.IsNullOrEmpty(behaviourId))
-				{
-					return;
-				}
-
-				var targets = registry.GetByEntityTagAndBehaviourId(entityTag, behaviourId);
-				InvokeAll(targets);
-			};
-		}
-
-		private static Action BuildBehaviourTaggedAction(BehaviourTaggedListenerInfo listener,
-			IReadOnlyBehaviourRegistry registry,
-			ResolutionContext ctx)
-		{
-			var behaviourTagProvider = listener.BehaviourTag.Resolve(ctx);
-			var triggerContext = ctx.TriggerContext;
-
-			return () =>
-			{
-				if (listener.OutputMapping.Count > 0)
-				{
-					triggerContext.ApplyMapping(listener.OutputMapping);
-				}
-
-				var behaviourTag = behaviourTagProvider.Value;
-				if (behaviourTag == null)
-				{
-					return;
-				}
-
-				var targets = registry.GetByBehaviourTag(behaviourTag);
-				InvokeAll(targets);
-			};
-		}
-
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
-		{
-			foreach (var behaviour in targets)
-			{
-				if (behaviour)
-				{
-					behaviour.Execute();
-				}
-			}
-		}
+				DirectListenerInfo direct => new DirectListener(
+					listenerRegistry[direct.BehaviourDescriptor],
+					direct.OutputMapping,
+					ctx.TriggerContext),
+				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
+					entityTagged.EntityTag.Resolve(ctx),
+					entityTagged.BehaviourId,
+					listenerRegistry.GetByEntityTagAndBehaviourId,
+					entityTagged.OutputMapping,
+					ctx.TriggerContext),
+				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
+					behaviourTagged.BehaviourTag.Resolve(ctx),
+					tag => listenerRegistry.GetByBehaviourTag(tag),
+					behaviourTagged.OutputMapping,
+					ctx.TriggerContext),
+				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
+			})).ToArray();
 	}
 }

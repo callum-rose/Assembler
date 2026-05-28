@@ -11,10 +11,9 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<bool> Loop { get; }
 
 		public AudioSourceData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<AudioClip> clip,
+						IValueProvider<AudioClip> clip,
 			IValueProvider<bool> playOnStart,
-			IValueProvider<bool> loop) : base(id, listeners) =>
+			IValueProvider<bool> loop) : base(id) =>
 			(Clip, PlayOnStart, Loop) = (clip, playOnStart, loop);
 	}
 }

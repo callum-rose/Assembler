@@ -10,8 +10,7 @@ namespace Assembler.Resolving.Behaviours
 		public ScreenRect Rect { get; }
 
 		public UIButtonData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<string> label,
-			ScreenRect rect) : base(id, listeners) => (Label, Rect) = (label, rect);
+						IValueProvider<string> label,
+			ScreenRect rect) : base(id) => (Label, Rect) = (label, rect);
 	}
 }

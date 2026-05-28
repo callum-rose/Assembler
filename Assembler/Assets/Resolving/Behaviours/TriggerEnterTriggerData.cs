@@ -5,7 +5,7 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class TriggerEnterTriggerData : PhysicalTriggerData
 	{
-		public TriggerEnterTriggerData(string id, IReadOnlyList<string> tags, IReadOnlyList<Action> listeners) :
-			base(id, tags, listeners) { }
+		public TriggerEnterTriggerData(string id, IReadOnlyList<string> tags) :
+			base(id, tags) { }
 	}
 }

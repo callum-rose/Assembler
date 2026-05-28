@@ -11,9 +11,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<Color> Colour { get; }
 
 		public SphereGizmoData(string id,
-			IReadOnlyList<Action> listeners,
-			IValueProvider<float> radius,
+						IValueProvider<float> radius,
 			IValueProvider<bool> isWire,
-			IValueProvider<Color> colour) : base(id, listeners) => (Radius, IsWire, Colour) = (radius, isWire, colour);
+			IValueProvider<Color> colour) : base(id) => (Radius, IsWire, Colour) = (radius, isWire, colour);
 	}
 }

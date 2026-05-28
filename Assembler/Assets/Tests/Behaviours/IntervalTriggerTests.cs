@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
@@ -10,6 +11,19 @@ namespace Tests.Behaviours
 {
 	public class IntervalTriggerTests
 	{
+		private sealed class ActionListener : Listener
+		{
+			private readonly Action _action;
+
+			public ActionListener(Action action, TriggerContext triggerContext)
+				: base(new Dictionary<string, string>(), triggerContext)
+			{
+				_action = action;
+			}
+
+			public override void Notify() => _action();
+		}
+
 		[Test]
 		public void FireIteration_PublishesIncrementingIndexAndCount_ToTriggerContext()
 		{
@@ -31,12 +45,11 @@ namespace Tests.Behaviours
 
 				var data = new IntervalTriggerData(
 					id: "test_interval",
-					listeners: new List<Action> { listener },
 					interval: new ValueProvider<float>(0f),
 					count: new ValueProvider<int>(3),
 					autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data);
+				trigger.Initialise(data, new List<Listener> { new ActionListener(listener, triggerContext) });
 
 				const int totalIterations = 3;
 				for (int i = 0; i < totalIterations; i++)
@@ -68,12 +81,11 @@ namespace Tests.Behaviours
 
 				var data = new IntervalTriggerData(
 					id: "test_interval",
-					listeners: new List<Action> { () => { } },
 					interval: new ValueProvider<float>(0f),
 					count: new ValueProvider<int>(1),
 					autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data);
+				trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }, triggerContext) });
 				trigger.FireIteration(0, 1);
 
 				Assert.AreEqual(42, triggerContext.Get<int>("outer"));

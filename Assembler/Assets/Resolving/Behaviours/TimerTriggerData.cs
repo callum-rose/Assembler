@@ -7,7 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<float> Delay { get; }
 
-		public TimerTriggerData(string id, IValueProvider<float> delay, IReadOnlyList<Action> listeners) :
-			base(id, listeners) => Delay = delay;
+		public TimerTriggerData(string id, IValueProvider<float> delay) :
+			base(id) => Delay = delay;
 	}
 }
