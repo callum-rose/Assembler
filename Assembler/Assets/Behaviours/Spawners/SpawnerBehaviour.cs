@@ -5,6 +5,11 @@ using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Spawners
 {
+	public interface INeedsSpawner
+	{
+		IEntitySpawner Spawner { get; set; }
+	}
+
 	/// <summary>Spawns an instance of a named template at a position when Executed.</summary>
 	/// <remarks>
 	/// Properties:
@@ -13,7 +18,7 @@ namespace Assembler.Behaviours.Spawners
 	///   Rotation: Euler rotation in degrees for the spawned entity.
 	///   Parameters: Optional name→value overrides forwarded to the template's parameter slots.
 	/// </remarks>
-	public class SpawnerBehaviour : GameBehaviour<SpawnerData>
+	public class SpawnerBehaviour : GameBehaviour<SpawnerData>, INeedsSpawner
 	{
 		public IEntitySpawner Spawner { get; set; }
 

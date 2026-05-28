@@ -62,6 +62,11 @@ namespace Assembler.Building
 			{
 				needsTriggerContext.TriggerContext = ctx.Resolution.TriggerContext;
 			}
+			
+			if (behaviour is INeedsSpawner needsSpawner)
+			{
+				needsSpawner.Spawner = ctx.Spawner;
+			}
 
 			return (behaviour, initialise);
 		}
@@ -305,7 +310,6 @@ namespace Assembler.Building
 				{
 					var i = (SpawnerInfo)info;
 					var b = go.AddComponent<SpawnerBehaviour>();
-					b.Spawner = ctx.Spawner;
 					return (b, lr => b.Initialise(new SpawnerData(i.Id,
 						i.TemplateId.Resolve(ctx.Resolution),
 						i.Position.Resolve(ctx.Resolution),
