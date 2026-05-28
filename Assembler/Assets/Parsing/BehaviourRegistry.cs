@@ -49,6 +49,8 @@ namespace Assembler.Parsing
 				["condition"] = ConditionInfo.Create,
 				["timer trigger"] = TimerTriggerInfo.Create,
 				["deferred trigger"] = DeferredTriggerInfo.Create,
+				["debounced trigger"] = DebouncedTriggerInfo.Create,
+				["throttled trigger"] = ThrottledTriggerInfo.Create,
 				["on start trigger"] = OnStartTriggerInfo.Create,
 				["interval trigger"] = IntervalTriggerInfo.Create,
 				["every frame trigger"] = EveryFrameTriggerInfo.Create,
