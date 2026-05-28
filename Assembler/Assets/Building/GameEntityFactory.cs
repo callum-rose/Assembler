@@ -54,12 +54,14 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
+			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms);
+
 			var gameObject = new GameObject(entityInfo.Id)
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms).Value,
-					rotation = entityInfo.InitialRotation.Resolve(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms).Value.FromEuler()
+					position = entityInfo.InitialPosition.Resolve(initialPositionContext).Value,
+					rotation = entityInfo.InitialRotation.Resolve(initialPositionContext).Value.FromEuler()
 				}
 			};
 
@@ -77,18 +79,14 @@ namespace Assembler.Building
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
+			var buildContext = new BehaviourBuildContext(
+				new ResolutionContext(_variables, _expressions, _assets, _triggerContext, scope, _entityTransforms),
+				this,
+				_exclusiveGroups);
+
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{
-				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject,
-					behaviourInfo,
-					_variables,
-					_expressions,
-					this,
-					_assets,
-					_triggerContext,
-					_entityTransforms,
-					_exclusiveGroups,
-					scope);
+				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject, behaviourInfo, buildContext);
 
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
 
