@@ -19,8 +19,8 @@ namespace Tests.Voxels
 			Assert.AreEqual(3, model.Voxels.Count);
 			Assert.AreEqual(2, model.Palette.Length, "ff0000 and 00ff00 should share two palette entries");
 			Assert.AreEqual(new Vector3Int(0, 0, 0), model.Min);
-			Assert.AreEqual(new Vector3Int(1, 0, 1), model.Max);
-			Assert.AreEqual(model.Voxels[new Vector3Int(0, 0, 0)], model.Voxels[new Vector3Int(1, 0, 1)],
+			Assert.AreEqual(new Vector3Int(1, 1, 0), model.Max);
+			Assert.AreEqual(model.Voxels[new Vector3Int(0, 0, 0)], model.Voxels[new Vector3Int(1, 1, 0)],
 				"same colour should map to same palette index");
 		}
 
@@ -34,7 +34,7 @@ namespace Tests.Voxels
 
 			var (size, voxels, palette) = ReadVox(bytes);
 
-			Assert.AreEqual(new Vector3Int(2, 6, 2), size);
+			Assert.AreEqual(new Vector3Int(2, 2, 6), size);
 			Assert.AreEqual(original.Voxels.Count, voxels.Count);
 
 			foreach (var kv in original.Voxels)
