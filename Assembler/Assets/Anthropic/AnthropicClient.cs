@@ -60,23 +60,23 @@ namespace Assembler.Anthropic
 
 			try
 			{
-				await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken)
-					                .ConfigureAwait(false))
+				await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken))
 				{
-					// Per the SDK docs each streamed event stringifies to its
-					// incremental text delta — that's how `fullText += msg` works
-					// in the documented example. Non-text events stringify to
-					// empty, so we just append unconditionally.
-					var delta = ev?.ToString();
-					if (string.IsNullOrEmpty(delta)) continue;
+					// Pick text deltas out of the event union; ignore lifecycle
+					// events (message_start/stop, content_block_start, etc.) so
+					// we surface only the actual response text.
+					if (!ev.TryPickContentBlockDelta(out var blockDelta)) continue;
+					if (!blockDelta.Delta.TryPickText(out var textDelta)) continue;
 
-					sb.Append(delta);
-					onDelta?.Invoke(delta);
+					var text = textDelta.Text;
+					if (string.IsNullOrEmpty(text)) continue;
+
+					sb.Append(text);
+					onDelta?.Invoke(text);
 				}
 			}
 			catch (OperationCanceledException)
 			{
-				throw;
 			}
 			catch (AnthropicApiException ex)
 			{
