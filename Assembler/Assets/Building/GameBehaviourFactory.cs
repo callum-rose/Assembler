@@ -559,12 +559,12 @@ namespace Assembler.Building
 			RegisterVariableSetter<bool, BoolSetter>(map);
 			RegisterVariableSetter<string, StringSetter>(map);
 
-			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListRemoveAt, Vector3ListSetAt, Vector3ListClear>(map);
-			RegisterListOps<int, IntListAdd, IntListRemoveAt, IntListSetAt, IntListClear>(map);
-			RegisterListOps<float, FloatListAdd, FloatListRemoveAt, FloatListSetAt, FloatListClear>(map);
-			RegisterListOps<bool, BoolListAdd, BoolListRemoveAt, BoolListSetAt, BoolListClear>(map);
-			RegisterListOps<string, StringListAdd, StringListRemoveAt, StringListSetAt, StringListClear>(map);
-			RegisterListOps<Color, ColourListAdd, ColourListRemoveAt, ColourListSetAt, ColourListClear>(map);
+			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListAddRange, Vector3ListClear>(map);
+			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListAddRange, IntListClear>(map);
+			RegisterListOps<float, FloatListAdd, FloatListInsert, FloatListRemoveAt, FloatListRemove, FloatListSetAt, FloatListAddRange, FloatListClear>(map);
+			RegisterListOps<bool, BoolListAdd, BoolListInsert, BoolListRemoveAt, BoolListRemove, BoolListSetAt, BoolListAddRange, BoolListClear>(map);
+			RegisterListOps<string, StringListAdd, StringListInsert, StringListRemoveAt, StringListRemove, StringListSetAt, StringListAddRange, StringListClear>(map);
+			RegisterListOps<Color, ColourListAdd, ColourListInsert, ColourListRemoveAt, ColourListRemove, ColourListSetAt, ColourListAddRange, ColourListClear>(map);
 
 			return map;
 		}
@@ -601,10 +601,13 @@ namespace Assembler.Building
 			});
 		}
 
-		private static void RegisterListOps<T, TAdd, TRemoveAt, TSetAt, TClear>(IDictionary<Type, BuilderEntry> map)
+		private static void RegisterListOps<T, TAdd, TInsert, TRemoveAt, TRemove, TSetAt, TAddRange, TClear>(IDictionary<Type, BuilderEntry> map)
 			where TAdd : GameBehaviour<ListAddData<T>>
+			where TInsert : GameBehaviour<ListInsertData<T>>
 			where TRemoveAt : GameBehaviour<ListRemoveAtData<T>>
+			where TRemove : GameBehaviour<ListRemoveData<T>>
 			where TSetAt : GameBehaviour<ListSetAtData<T>>
+			where TAddRange : GameBehaviour<ListAddRangeData<T>>
 			where TClear : GameBehaviour<ListClearData<T>>
 		{
 			map[typeof(ListAddInfo<T>)] = new(typeof(TAdd), (go, info, ctx) =>
@@ -615,6 +618,15 @@ namespace Assembler.Building
 					i.List.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
+			map[typeof(ListInsertInfo<T>)] = new(typeof(TInsert), (go, info, ctx) =>
+			{
+				var i = (ListInsertInfo<T>)info;
+				var b = go.AddComponent<TInsert>();
+				return (b, lr => b.Initialise(new ListInsertData<T>(i.Id,
+					i.List.Resolve(ctx.Resolution),
+					i.Index.Resolve(ctx.Resolution),
+					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
 			map[typeof(ListRemoveAtInfo<T>)] = new(typeof(TRemoveAt), (go, info, ctx) =>
 			{
 				var i = (ListRemoveAtInfo<T>)info;
@@ -622,6 +634,14 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListRemoveAtData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+			map[typeof(ListRemoveInfo<T>)] = new(typeof(TRemove), (go, info, ctx) =>
+			{
+				var i = (ListRemoveInfo<T>)info;
+				var b = go.AddComponent<TRemove>();
+				return (b, lr => b.Initialise(new ListRemoveData<T>(i.Id,
+					i.List.Resolve(ctx.Resolution),
+					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 			map[typeof(ListSetAtInfo<T>)] = new(typeof(TSetAt), (go, info, ctx) =>
 			{
@@ -631,6 +651,14 @@ namespace Assembler.Building
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+			map[typeof(ListAddRangeInfo<T>)] = new(typeof(TAddRange), (go, info, ctx) =>
+			{
+				var i = (ListAddRangeInfo<T>)info;
+				var b = go.AddComponent<TAddRange>();
+				return (b, lr => b.Initialise(new ListAddRangeData<T>(i.Id,
+					i.List.Resolve(ctx.Resolution),
+					i.Other.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 			map[typeof(ListClearInfo<T>)] = new(typeof(TClear), (go, info, ctx) =>
 			{
