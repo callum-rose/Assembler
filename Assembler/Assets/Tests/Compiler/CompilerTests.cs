@@ -915,7 +915,7 @@ namespace Tests.Compiler
 			compiler.RegisterStaticMethods(typeof(Mathf));
 			compiler.RegisterType(typeof(Vector3));
 
-			var func = compiler.CompileFunc<IList<Vector3>, Vector3>(
+			var func = compiler.CompileFunc<List<Vector3>, Vector3>(
 				$$"""
 				  float halfArena = 6.6f;
 				  float cell = 0.6f;

@@ -5,7 +5,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record ListAddInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<IList<T>> List,
+		ValueSource<List<T>> List,
 		ValueSource<T> Value) : BehaviourInfo(Id, Listeners)
 	{
 		public static ListAddInfo<T> Create(string id,
@@ -14,7 +14,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<IList<T>>(ctx, props.GetValueOrDefault("List")),
+				Transformer.CreateValueSource<List<T>>(ctx, props.GetValueOrDefault("List")),
 				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("Value")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,

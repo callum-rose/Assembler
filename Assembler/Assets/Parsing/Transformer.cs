@@ -419,8 +419,7 @@ namespace Assembler.Parsing
 
 			var genericDef = t.GetGenericTypeDefinition();
 
-			if (genericDef != typeof(IList<>) &&
-			    genericDef != typeof(IReadOnlyList<>) &&
+			if (genericDef != typeof(IReadOnlyList<>) &&
 			    genericDef != typeof(IEnumerable<>) &&
 			    genericDef != typeof(List<>))
 			{
@@ -441,8 +440,7 @@ namespace Assembler.Parsing
 
 			var genericDef = t.GetGenericTypeDefinition();
 
-			if (genericDef != typeof(IList<>) &&
-			    genericDef != typeof(IReadOnlyList<>) &&
+			if (genericDef != typeof(IReadOnlyList<>) &&
 			    genericDef != typeof(IEnumerable<>) &&
 			    genericDef != typeof(List<>))
 			{

@@ -5,10 +5,10 @@ namespace Assembler.Resolving.Behaviours
 {
 	public class ListClearData<T> : BehaviourData
 	{
-		public IValueProvider<IList<T>> List { get; }
+		public IValueProvider<List<T>> List { get; }
 
 		public ListClearData(string id,
-						IValueProvider<IList<T>> list) : base(id) =>
+						IValueProvider<List<T>> list) : base(id) =>
 			List = list;
 	}
 }
