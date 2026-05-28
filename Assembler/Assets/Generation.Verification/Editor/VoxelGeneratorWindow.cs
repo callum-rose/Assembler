@@ -121,6 +121,8 @@ namespace Assembler.Generation.Verification.Editor
 			_goxelText = EditorGUILayout.TextArea(_goxelText, GUILayout.ExpandHeight(true));
 			EditorGUILayout.EndScrollView();
 
+			DrawModelSummary();
+
 			using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_goxelText) || _isRunning))
 			{
 				if (GUILayout.Button("Save Goxel text to file"))
@@ -189,6 +191,45 @@ namespace Assembler.Generation.Verification.Editor
 				_cts = null;
 				Repaint();
 			}
+		}
+
+		private GUIStyle? _richLabelStyle;
+
+		private void DrawModelSummary()
+		{
+			if (string.IsNullOrWhiteSpace(_goxelText)) return;
+
+			Assembler.Voxels.VoxelModel model;
+			try
+			{
+				model = Assembler.Voxels.GoxelTextParser.Parse(_goxelText);
+			}
+			catch (Exception)
+			{
+				return;
+			}
+
+			if (model.Voxels.Count == 0) return;
+
+			_richLabelStyle ??= new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true };
+
+			var size = model.Size;
+			var sb = new StringBuilder();
+			sb.Append("Width ").Append(size.x)
+				.Append("  Depth ").Append(size.z)
+				.Append("  Height ").Append(size.y)
+				.Append("  Voxels ").Append(model.Voxels.Count)
+				.Append("  Colours ").Append(model.Palette.Length).Append("  ");
+
+			for (var i = 0; i < model.Palette.Length; i++)
+			{
+				var c = model.Palette[i];
+				var hex = $"{c.r:x2}{c.g:x2}{c.b:x2}";
+				sb.Append("<color=#").Append(hex).Append(">■</color>");
+				sb.Append("<color=#888888>#").Append(hex).Append("</color> ");
+			}
+
+			EditorGUILayout.LabelField(sb.ToString(), _richLabelStyle);
 		}
 
 		private void SaveGoxelText()
