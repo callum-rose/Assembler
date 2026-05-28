@@ -32,7 +32,7 @@ namespace Assembler.Anthropic
 			}
 
 			_client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
-			_model = string.IsNullOrWhiteSpace(model) ? (ApiEnum<string, Model>)model! : Model.ClaudeOpus4_7;
+			_model = string.IsNullOrWhiteSpace(model) ? Model.ClaudeOpus4_7 : (ApiEnum<string, Model>)model!;
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
@@ -49,7 +49,8 @@ namespace Assembler.Anthropic
 				Messages = messages
 					.Select(m => new MessageParam
 					{
-						Role = RoleFromString(m.Role), Content = new MessageParamContent(m.Content),
+						Role = RoleFromString(m.Role),
+						Content = new MessageParamContent(m.Content)
 					})
 					.ToArray(),
 			};
