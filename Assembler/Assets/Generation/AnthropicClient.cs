@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Anthropic;
+using Anthropic.Exceptions;
+using Anthropic.Models.Messages;
 
 namespace Assembler.Generation
 {
@@ -29,32 +28,37 @@ namespace Assembler.Generation
 		{
 			StatusCode = statusCode;
 		}
+
+		public AnthropicRequestException(int statusCode, string message, Exception inner) : base(message, inner)
+		{
+			StatusCode = statusCode;
+		}
 	}
 
+	/// <summary>
+	/// Thin wrapper around the official Anthropic C# SDK
+	/// (https://www.nuget.org/packages/Anthropic, installed via NuGetForUnity).
+	/// Translates our generation-domain types into SDK params, sets ephemeral
+	/// cache_control on the system prompt, and pulls back assistant text.
+	/// </summary>
 	public sealed class AnthropicClient : IDisposable
 	{
-		private const string Endpoint = "https://api.anthropic.com/v1/messages";
-		private const string AnthropicVersion = "2023-06-01";
-		private const string DefaultModel = "claude-opus-4-7";
-		private const int DefaultMaxTokens = 16000;
+		private const long DefaultMaxTokens = 16000;
 
-		private static readonly HttpClient SharedHttp = new()
-		{
-			Timeout = TimeSpan.FromMinutes(5),
-		};
+		private readonly global::Anthropic.AnthropicClient _client;
+		private readonly ApiEnum<string, Model> _model;
+		private readonly long _maxTokens;
 
-		private readonly string _apiKey;
-		private readonly string _model;
-		private readonly int _maxTokens;
-
-		public AnthropicClient(string apiKey, string? model = null, int? maxTokens = null)
+		public AnthropicClient(string apiKey, string? model = null, long? maxTokens = null)
 		{
 			if (string.IsNullOrWhiteSpace(apiKey))
 			{
 				throw new ArgumentException("API key is required", nameof(apiKey));
 			}
-			_apiKey = apiKey;
-			_model = model ?? DefaultModel;
+
+			_client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
+			// ApiEnum<string, Model> has implicit conversions from both string and Model.
+			_model = model != null ? (ApiEnum<string, Model>)model : Model.ClaudeOpus4_7;
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
@@ -63,142 +67,86 @@ namespace Assembler.Generation
 			IReadOnlyList<AnthropicMessage> messages,
 			CancellationToken cancellationToken)
 		{
-			var body = BuildRequestBody(cachedSystemPrompt, messages);
-
-			using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint);
-			request.Headers.Add("x-api-key", _apiKey);
-			request.Headers.Add("anthropic-version", AnthropicVersion);
-			request.Content = new StringContent(body, Encoding.UTF8);
-			request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-			using var response = await SharedHttp.SendAsync(request, cancellationToken).ConfigureAwait(false);
-			var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-			if (!response.IsSuccessStatusCode)
+			var sdkMessages = new List<MessageParam>(messages.Count);
+			foreach (var m in messages)
 			{
-				throw new AnthropicRequestException(
-					(int)response.StatusCode,
-					$"Anthropic API returned {(int)response.StatusCode}: {responseText}");
+				sdkMessages.Add(new MessageParam
+				{
+					Role = RoleFromString(m.Role),
+					Content = new MessageParamContent(m.Content),
+				});
 			}
 
-			return ExtractAssistantText(responseText);
-		}
-
-		private string BuildRequestBody(string cachedSystemPrompt, IReadOnlyList<AnthropicMessage> messages)
-		{
-			var sb = new StringBuilder();
-			sb.Append('{');
-			sb.Append("\"model\":").Append(JsonString(_model)).Append(',');
-			sb.Append("\"max_tokens\":").Append(_maxTokens).Append(',');
-			sb.Append("\"system\":[{")
-				.Append("\"type\":\"text\",")
-				.Append("\"text\":").Append(JsonString(cachedSystemPrompt)).Append(',')
-				.Append("\"cache_control\":{\"type\":\"ephemeral\"}")
-				.Append("}],");
-			sb.Append("\"messages\":[");
-			for (var i = 0; i < messages.Count; i++)
+			var systemBlocks = new List<TextBlockParam>
 			{
-				if (i > 0) sb.Append(',');
-				var m = messages[i];
-				sb.Append('{');
-				sb.Append("\"role\":").Append(JsonString(m.Role)).Append(',');
-				sb.Append("\"content\":").Append(JsonString(m.Content));
-				sb.Append('}');
+				new(cachedSystemPrompt) { CacheControl = new CacheControlEphemeral() },
+			};
+
+			var parameters = new MessageCreateParams
+			{
+				Model = _model,
+				MaxTokens = _maxTokens,
+				System = systemBlocks,
+				Messages = sdkMessages,
+			};
+
+			Message response;
+			try
+			{
+				response = await _client.Messages.Create(parameters, cancellationToken).ConfigureAwait(false);
 			}
-			sb.Append("]}");
-			return sb.ToString();
+			catch (AnthropicApiException ex)
+			{
+				throw new AnthropicRequestException(GetStatusCode(ex), ex.Message, ex);
+			}
+			catch (AnthropicException ex)
+			{
+				throw new AnthropicRequestException(0, ex.Message, ex);
+			}
+
+			return ExtractText(response);
 		}
 
-		private static readonly Regex TextFieldRegex = new(
-			"\"type\"\\s*:\\s*\"text\"\\s*,\\s*\"text\"\\s*:\\s*\"(?<body>(?:\\\\.|[^\"\\\\])*)\"",
-			RegexOptions.Compiled);
-
-		private static string ExtractAssistantText(string responseJson)
+		private static Role RoleFromString(string role)
 		{
-			var sb = new StringBuilder();
-			foreach (Match m in TextFieldRegex.Matches(responseJson))
+			return role.Equals("assistant", StringComparison.OrdinalIgnoreCase)
+				? Role.Assistant
+				: Role.User;
+		}
+
+		private static string ExtractText(Message response)
+		{
+			var sb = new System.Text.StringBuilder();
+			foreach (var block in response.Content)
 			{
-				if (sb.Length > 0) sb.Append('\n');
-				sb.Append(UnescapeJsonString(m.Groups["body"].Value));
+				if (block.TryPickText(out var text) && text != null)
+				{
+					if (sb.Length > 0) sb.Append('\n');
+					sb.Append(text.Text);
+				}
 			}
 			if (sb.Length == 0)
 			{
-				throw new AnthropicRequestException(
-					200,
-					$"Could not find assistant text in Anthropic response: {responseJson}");
+				throw new AnthropicRequestException(200, "Anthropic response contained no text blocks.");
 			}
 			return sb.ToString();
 		}
 
-		private static string JsonString(string value)
+		private static int GetStatusCode(AnthropicApiException ex)
 		{
-			var sb = new StringBuilder(value.Length + 2);
-			sb.Append('"');
-			foreach (var c in value)
+			// AnthropicApiException doesn't surface the status code directly on every
+			// version, but the SDK throws specific subclasses per status. Map the common ones.
+			return ex switch
 			{
-				switch (c)
-				{
-					case '\\': sb.Append("\\\\"); break;
-					case '"': sb.Append("\\\""); break;
-					case '\b': sb.Append("\\b"); break;
-					case '\f': sb.Append("\\f"); break;
-					case '\n': sb.Append("\\n"); break;
-					case '\r': sb.Append("\\r"); break;
-					case '\t': sb.Append("\\t"); break;
-					default:
-						if (c < 0x20)
-						{
-							sb.Append("\\u").Append(((int)c).ToString("X4"));
-						}
-						else
-						{
-							sb.Append(c);
-						}
-						break;
-				}
-			}
-			sb.Append('"');
-			return sb.ToString();
-		}
-
-		private static string UnescapeJsonString(string s)
-		{
-			var sb = new StringBuilder(s.Length);
-			for (var i = 0; i < s.Length; i++)
-			{
-				var c = s[i];
-				if (c != '\\' || i + 1 >= s.Length)
-				{
-					sb.Append(c);
-					continue;
-				}
-				var next = s[++i];
-				switch (next)
-				{
-					case '"': sb.Append('"'); break;
-					case '\\': sb.Append('\\'); break;
-					case '/': sb.Append('/'); break;
-					case 'b': sb.Append('\b'); break;
-					case 'f': sb.Append('\f'); break;
-					case 'n': sb.Append('\n'); break;
-					case 'r': sb.Append('\r'); break;
-					case 't': sb.Append('\t'); break;
-					case 'u':
-						if (i + 4 < s.Length)
-						{
-							var hex = s.Substring(i + 1, 4);
-							if (int.TryParse(hex, System.Globalization.NumberStyles.HexNumber,
-								System.Globalization.CultureInfo.InvariantCulture, out var code))
-							{
-								sb.Append((char)code);
-								i += 4;
-							}
-						}
-						break;
-					default: sb.Append(next); break;
-				}
-			}
-			return sb.ToString();
+				AnthropicBadRequestException => 400,
+				AnthropicUnauthorizedException => 401,
+				AnthropicForbiddenException => 403,
+				AnthropicNotFoundException => 404,
+				AnthropicUnprocessableEntityException => 422,
+				AnthropicRateLimitException => 429,
+				Anthropic5xxException => 500,
+				_ => 0,
+			};
 		}
 
 		public void Dispose()
