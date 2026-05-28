@@ -109,6 +109,10 @@ namespace Assembler.Generation.Verification.Editor
 
 			using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_goxelText) || _isRunning))
 			{
+				if (GUILayout.Button("Save Goxel text to file"))
+				{
+					SaveGoxelText();
+				}
 				if (GUILayout.Button("2. Convert to .vox"))
 				{
 					ConvertToVox();
@@ -170,6 +174,20 @@ namespace Assembler.Generation.Verification.Editor
 				_cts?.Dispose();
 				_cts = null;
 				Repaint();
+			}
+		}
+
+		private void SaveGoxelText()
+		{
+			try
+			{
+				var txtPath = WriteText(_goxelText, ".txt");
+				Log($"Wrote {txtPath}");
+				AssetDatabase.Refresh();
+			}
+			catch (Exception ex)
+			{
+				Log("Save failed: " + ex);
 			}
 		}
 
