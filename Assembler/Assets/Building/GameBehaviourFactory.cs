@@ -234,6 +234,20 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new DeferredTriggerData(i.Id,
 						i.Delay.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(DebouncedTriggerInfo)] = new(typeof(DebouncedTrigger), (go, info, ctx) =>
+				{
+					var i = (DebouncedTriggerInfo)info;
+					var b = go.AddComponent<DebouncedTrigger>();
+					return (b, lr => b.Initialise(new DebouncedTriggerData(i.Id,
+						i.Interval.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ThrottledTriggerInfo)] = new(typeof(ThrottledTrigger), (go, info, ctx) =>
+				{
+					var i = (ThrottledTriggerInfo)info;
+					var b = go.AddComponent<ThrottledTrigger>();
+					return (b, lr => b.Initialise(new ThrottledTriggerData(i.Id,
+						i.Rate.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(IntervalTriggerInfo)] = new(typeof(IntervalTrigger), (go, info, ctx) =>
 				{
 					var i = (IntervalTriggerInfo)info;
