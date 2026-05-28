@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Generation.Editor",
-    "rootNamespace": "Assembler.Generation.Editor",
+    "rootNamespace": "Assembler",
     "references": [
         "Assembler.Generation",
         "Assembler.Generation.Verification"

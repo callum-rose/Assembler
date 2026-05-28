@@ -8,30 +8,18 @@ using UnityEngine;
 
 namespace Assembler.Generation.Verification
 {
-	public sealed class BuildResult
-	{
-		public bool Success { get; }
-		public IReadOnlyList<string> Errors { get; }
-		public GameDto? ParsedDto { get; }
-
-		public BuildResult(bool success, IReadOnlyList<string> errors, GameDto? parsedDto)
-		{
-			Success = success;
-			Errors = errors;
-			ParsedDto = parsedDto;
-		}
-	}
+	public sealed record BuildResult(bool Success, IReadOnlyList<string> Errors, GameDto? ParsedDto);
 
 	public static class BuildHarness
 	{
 		public static BuildResult TryBuild(string yaml)
 		{
 			var errors = new List<string>();
-			GameDto? dto = null;
+			GameDto? dto;
 
 			void OnLog(string condition, string stackTrace, LogType type)
 			{
-				if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+				if (type is LogType.Error or LogType.Exception or LogType.Assert)
 				{
 					errors.Add(string.IsNullOrEmpty(stackTrace)
 						? condition

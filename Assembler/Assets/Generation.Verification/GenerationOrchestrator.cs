@@ -1,63 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.Generation;
 
 namespace Assembler.Generation.Verification
 {
-	public sealed class AttemptRecord
-	{
-		public int AttemptNumber { get; }
-		public string? Yaml { get; }
-		public string? Feedback { get; }
-		public BuildResult? BuildResult { get; }
-		public string? Error { get; }
-
-		public AttemptRecord(int attemptNumber, string? yaml, string? feedback, BuildResult? buildResult, string? error)
-		{
-			AttemptNumber = attemptNumber;
-			Yaml = yaml;
-			Feedback = feedback;
-			BuildResult = buildResult;
-			Error = error;
-		}
-	}
-
-	public sealed class GenerationResult
-	{
-		public bool Success { get; }
-		public string? YamlPath { get; }
-		public IReadOnlyList<AttemptRecord> Attempts { get; }
-
-		public GenerationResult(bool success, string? yamlPath, IReadOnlyList<AttemptRecord> attempts)
-		{
-			Success = success;
-			YamlPath = yamlPath;
-			Attempts = attempts;
-		}
-	}
-
-	public interface IGeneratorLogger
-	{
-		void Log(string message);
-	}
 
 	public sealed class GenerationOrchestrator
 	{
+		private readonly static Regex TitleRegex = new(
+			@"(?im)^\s*title\s*:\s*(?<value>.+?)\s*$",
+			RegexOptions.Compiled);
+		
 		private readonly Func<GameDescriptorGenerator> _generatorFactory;
 		private readonly Func<string, BuildResult> _builder;
 		private readonly IGeneratorLogger? _logger;
-
-		public GenerationOrchestrator(
-			Func<GameDescriptorGenerator> generatorFactory,
-			Func<string, BuildResult>? builder = null,
-			IGeneratorLogger? logger = null)
-		{
-			_generatorFactory = generatorFactory;
-			_builder = builder ?? BuildHarness.TryBuild;
-			_logger = logger;
-		}
 
 		public static GenerationOrchestrator CreateDefault(string apiKey, IGeneratorLogger? logger = null)
 		{
@@ -67,6 +25,16 @@ namespace Assembler.Generation.Verification
 				logger);
 		}
 
+		private GenerationOrchestrator(
+			Func<GameDescriptorGenerator> generatorFactory,
+			Func<string, BuildResult>? builder = null,
+			IGeneratorLogger? logger = null)
+		{
+			_generatorFactory = generatorFactory;
+			_builder = builder ?? BuildHarness.TryBuild;
+			_logger = logger;
+		}
+
 		public async Task<GenerationResult> GenerateAsync(
 			string userPrompt,
 			int maxAttempts,
@@ -74,7 +42,7 @@ namespace Assembler.Generation.Verification
 		{
 			if (maxAttempts < 1) maxAttempts = 1;
 
-			var attempts = new List<AttemptRecord>();
+			var attempts = new List<Attempt>();
 			var generator = _generatorFactory();
 			string? storedPath = null;
 
@@ -90,11 +58,11 @@ namespace Assembler.Generation.Verification
 					response = i == 1
 						? await generator.RequestInitialAsync(userPrompt, cancellationToken)
 						: await generator.RequestFixAsync(lastResponse!.Yaml ?? string.Empty,
-							attempts[^1].BuildResult?.Errors ?? Array.Empty<string>(), cancellationToken);
+							attempts[^1] is BuildAttempt last ? last.BuildResult.Errors : Array.Empty<string>(), cancellationToken);
 				}
 				catch (Exception ex)
 				{
-					attempts.Add(new AttemptRecord(i, null, null, null, "Anthropic request failed: " + ex.Message));
+					attempts.Add(new RequestFailedAttempt(i, "Anthropic request failed: " + ex.Message));
 					Log($"Attempt {i}: request failed — {ex.Message}");
 					break;
 				}
@@ -103,7 +71,7 @@ namespace Assembler.Generation.Verification
 
 				if (string.IsNullOrWhiteSpace(response.Yaml))
 				{
-					attempts.Add(new AttemptRecord(i, null, response.Feedback, null,
+					attempts.Add(new InvalidResponseAttempt(i, response.Feedback,
 						"Claude reply did not contain a yaml fenced block. Raw reply:\n" + response.RawText));
 					Log($"Attempt {i}: no yaml block in reply.");
 					continue;
@@ -123,28 +91,24 @@ namespace Assembler.Generation.Verification
 
 				Log($"Attempt {i}: building...");
 				var buildResult = _builder(response.Yaml);
-				attempts.Add(new AttemptRecord(i, response.Yaml, response.Feedback, buildResult, null));
+				attempts.Add(new BuildAttempt(i, response.Yaml, response.Feedback, buildResult));
 
 				if (buildResult.Success)
 				{
 					Log($"Attempt {i}: build succeeded.");
-					return new GenerationResult(true, storedPath, attempts);
+					return new SuccessfulGeneration(storedPath!, attempts);
 				}
 
 				Log($"Attempt {i}: build failed with {buildResult.Errors.Count} error(s).");
 			}
 
-			return new GenerationResult(false, storedPath, attempts);
+			return new FailedGeneration(storedPath, attempts);
 		}
 
 		private void Log(string message)
 		{
 			_logger?.Log(message);
 		}
-
-		private static readonly System.Text.RegularExpressions.Regex TitleRegex = new(
-			@"(?im)^\s*title\s*:\s*(?<value>.+?)\s*$",
-			System.Text.RegularExpressions.RegexOptions.Compiled);
 
 		internal static string? TryExtractTitle(string yaml)
 		{

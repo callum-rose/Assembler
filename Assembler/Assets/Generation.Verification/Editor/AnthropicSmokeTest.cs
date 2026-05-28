@@ -4,7 +4,7 @@ using System.Threading;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.Generation.Editor
+namespace Assembler.Generation.Verification.Editor
 {
 	public static class AnthropicSmokeTest
 	{

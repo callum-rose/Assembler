@@ -1,12 +1,9 @@
 {
-    "name": "Assembler.Generation.Verification",
-    "rootNamespace": "Assembler.Generation.Verification",
+    "name": "Assembler.Generation.Runtime",
+    "rootNamespace": "Assembler",
     "references": [
         "Assembler.Generation",
-        "Assembler.Building",
-        "Assembler.Parsing",
-        "Assembler.Parsing.Phase1",
-        "Assembler.Deserialisation"
+        "Assembler.Generation.Verification"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

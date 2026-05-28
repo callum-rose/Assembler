@@ -1,13 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-using Assembler.Generation;
-using Assembler.Generation.Verification;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.Generation.Editor
+namespace Assembler.Generation.Verification.Editor
 {
 	public sealed class GameDescriptorGeneratorWindow : EditorWindow, IGeneratorLogger
 	{
@@ -132,9 +129,15 @@ namespace Assembler.Generation.Editor
 				var orchestrator = GenerationOrchestrator.CreateDefault(_apiKey, this);
 				var result = await orchestrator.GenerateAsync(_prompt, _maxAttempts, ct);
 				_lastResult = result;
-				Log(result.Success
-					? $"DONE — descriptor at {result.YamlPath}"
-					: $"FAILED after {result.Attempts.Count} attempt(s). YAML (last attempt): {result.YamlPath ?? "<not written>"}");
+				switch (result)
+				{
+					case SuccessfulGeneration success:
+						Log($"DONE — descriptor at {success.YamlPath}");
+						break;
+					case FailedGeneration failed:
+						Log($"FAILED after {failed.Attempts.Count} attempt(s). YAML (last attempt): {failed.YamlPath ?? "<not written>"}");
+						break;
+				}
 			}
 			catch (OperationCanceledException)
 			{
@@ -171,26 +174,27 @@ namespace Assembler.Generation.Editor
 			{
 				var label = attempt.AttemptNumber == 1 ? "Attempt 1 feedback" : $"Attempt {attempt.AttemptNumber} feedback (fix-up)";
 				sb.AppendLine("=== " + label + " ===");
-				if (!string.IsNullOrWhiteSpace(attempt.Feedback))
+				switch (attempt)
 				{
-					sb.AppendLine(attempt.Feedback);
-				}
-				else
-				{
-					sb.AppendLine("(empty)");
-				}
-				if (attempt.Error != null)
-				{
-					sb.AppendLine("--- request error ---");
-					sb.AppendLine(attempt.Error);
-				}
-				if (attempt.BuildResult != null && !attempt.BuildResult.Success)
-				{
-					sb.AppendLine("--- build errors ---");
-					foreach (var e in attempt.BuildResult.Errors)
-					{
-						sb.AppendLine("- " + e);
-					}
+					case RequestFailedAttempt failed:
+						sb.AppendLine("(empty)");
+						sb.AppendLine("--- request error ---");
+						sb.AppendLine(failed.Error);
+						break;
+					case InvalidResponseAttempt invalid:
+						sb.AppendLine(!string.IsNullOrWhiteSpace(invalid.Feedback) ? invalid.Feedback : "(empty)");
+						sb.AppendLine("--- request error ---");
+						sb.AppendLine(invalid.Error);
+						break;
+					case BuildAttempt build:
+						sb.AppendLine(!string.IsNullOrWhiteSpace(build.Feedback) ? build.Feedback : "(empty)");
+						if (!build.BuildResult.Success)
+						{
+							sb.AppendLine("--- build errors ---");
+							foreach (var e in build.BuildResult.Errors)
+								sb.AppendLine("- " + e);
+						}
+						break;
 				}
 				sb.AppendLine();
 			}

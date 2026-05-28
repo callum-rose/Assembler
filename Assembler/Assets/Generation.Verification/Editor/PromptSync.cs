@@ -3,13 +3,13 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.Generation.Editor
+namespace Assembler.Generation.Verification.Editor
 {
 	public static class PromptSync
 	{
 		private const string DestinationFolder = "Assets/Generation/Resources/GenerationPrompts";
 
-		private static readonly (string Source, string DestName)[] Mappings =
+		private readonly static (string Source, string DestName)[] Mappings =
 		{
 			(".claude/skills/generate-game-descriptor/SKILL.md", "Skill.txt"),
 			("Assets/docs/Behaviours.md", "Behaviours.txt"),
