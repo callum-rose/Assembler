@@ -13,7 +13,7 @@ namespace Assembler.Resolving
 			return new Scope(this);
 		}
 
-		public void Pop()
+		private void Pop()
 		{
 			if (_stack.Count > 0)
 			{
