@@ -16,8 +16,26 @@ namespace Assembler.Voxels.Pipeline
 		public IAssetDatabaseService AssetDb { get; init; } = new NoOpAssetDatabaseService();
 		public IVoxelPipelineObserver Observer { get; init; } = NullVoxelPipelineObserver.Instance;
 		public IVoxelClock Clock { get; init; } = SystemVoxelClock.Instance;
+		public IMainThreadDispatcher MainThread { get; init; } = InlineMainThreadDispatcher.Instance;
 
 		public static VoxelPipelineServices Default { get; } = new();
+	}
+
+	/// <summary>
+	/// Marshals an action onto the host's main thread. In Unity editor mode the
+	/// implementation queues via <c>EditorApplication.delayCall</c>; in runtime
+	/// builds it can be a coroutine pump; in tests / headless modes it just
+	/// runs inline.
+	/// </summary>
+	public interface IMainThreadDispatcher
+	{
+		Task RunAsync(Action action);
+	}
+
+	public sealed class InlineMainThreadDispatcher : IMainThreadDispatcher
+	{
+		public static readonly InlineMainThreadDispatcher Instance = new();
+		public Task RunAsync(Action action) { action(); return Task.CompletedTask; }
 	}
 
 	public interface IVoxelFileSink

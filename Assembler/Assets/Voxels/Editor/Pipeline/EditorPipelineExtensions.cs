@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,23 +39,29 @@ namespace Assembler.Voxels.Editor.Pipeline
 		public WriteScratchPreviewStage(string scratchPath) => _scratchPath = scratchPath;
 		public string Name => $"WriteScratchPreview({_scratchPath})";
 
-		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
+		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
 			if (ctx.VoxBytes == null) throw new InvalidOperationException($"{Name}: VoxBytes is required.");
-			var dir = Path.GetDirectoryName(_scratchPath);
-			if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-			File.WriteAllBytes(_scratchPath, ctx.VoxBytes);
-			return Task.FromResult(ctx);
+			var bytes = ctx.VoxBytes;
+			var path = _scratchPath;
+			await ctx.MainThread.RunAsync(() =>
+			{
+				var dir = Path.GetDirectoryName(path);
+				if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+				File.WriteAllBytes(path, bytes);
+			}).ConfigureAwait(false);
+			return ctx;
 		}
 	}
 
 	public sealed class RefreshAssetDatabaseStage : IVoxelStage
 	{
 		public string Name => "RefreshAssetDatabase";
-		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
+		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			ctx.AssetDb.Refresh();
-			return Task.FromResult(ctx);
+			var assetDb = ctx.AssetDb;
+			await ctx.MainThread.RunAsync(assetDb.Refresh).ConfigureAwait(false);
+			return ctx;
 		}
 	}
 
@@ -64,10 +71,13 @@ namespace Assembler.Voxels.Editor.Pipeline
 		public LoadPreviewMeshStage(string path) => _path = path;
 		public string Name => $"LoadPreviewMesh({_path})";
 
-		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
+		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			var mesh = ctx.AssetDb.LoadMesh(_path);
-			return Task.FromResult(ctx with { PreviewMesh = mesh });
+			Mesh? mesh = null;
+			var assetDb = ctx.AssetDb;
+			var path = _path;
+			await ctx.MainThread.RunAsync(() => mesh = assetDb.LoadMesh(path)).ConfigureAwait(false);
+			return ctx with { PreviewMesh = mesh };
 		}
 	}
 
@@ -78,11 +88,65 @@ namespace Assembler.Voxels.Editor.Pipeline
 		public Mesh? LoadMesh(string path) => AssetDatabase.LoadAssetAtPath<Mesh>(path);
 	}
 
+	/// <summary>
+	/// Marshals work onto the Unity editor main thread via a concurrent queue
+	/// drained by <c>EditorApplication.update</c>. This pattern is safe to
+	/// enqueue from any thread (whereas subscribing to
+	/// <c>EditorApplication.delayCall</c> directly is not).
+	/// </summary>
+	public sealed class EditorMainThreadDispatcher : IMainThreadDispatcher
+	{
+		public static readonly EditorMainThreadDispatcher Instance = new();
+
+		private static readonly ConcurrentQueue<Action> s_queue = new();
+		private static int s_mainThreadId;
+
+		[InitializeOnLoadMethod]
+		private static void Install()
+		{
+			s_mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+			// Idempotent: subscribing twice with the same delegate is a no-op
+			// for Unity events, but use an explicit unsubscribe+subscribe for
+			// clarity after script reloads.
+			EditorApplication.update -= Pump;
+			EditorApplication.update += Pump;
+		}
+
+		private static void Pump()
+		{
+			while (s_queue.TryDequeue(out var action))
+			{
+				try { action(); }
+				catch (Exception ex) { Debug.LogException(ex); }
+			}
+		}
+
+		public Task RunAsync(Action action)
+		{
+			if (IsOnMainThread())
+			{
+				try { action(); return Task.CompletedTask; }
+				catch (Exception ex) { return Task.FromException(ex); }
+			}
+
+			var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+			s_queue.Enqueue(() =>
+			{
+				try { action(); tcs.SetResult(true); }
+				catch (Exception ex) { tcs.SetException(ex); }
+			});
+			return tcs.Task;
+		}
+
+		private static bool IsOnMainThread() => System.Threading.Thread.CurrentThread.ManagedThreadId == s_mainThreadId;
+	}
+
 	public static class EditorVoxelServices
 	{
 		public static VoxelPipelineServices Default { get; } = new()
 		{
 			AssetDb = EditorAssetDatabaseService.Instance,
+			MainThread = EditorMainThreadDispatcher.Instance,
 		};
 	}
 }

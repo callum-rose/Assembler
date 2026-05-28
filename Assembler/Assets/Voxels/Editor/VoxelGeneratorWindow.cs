@@ -708,20 +708,20 @@ namespace Assembler.Voxels.Editor
 
 	/// <summary>
 	/// Wires pipeline observer events into the window's log + repaint loop.
-	/// Captures the Unity main-thread <see cref="SynchronizationContext"/> at
-	/// construction so callbacks fired from the Anthropic SDK's streaming
-	/// continuation (which lands on a thread pool thread) are marshaled back
-	/// to the main thread before touching the window.
+	/// Marshals through <see cref="EditorMainThreadDispatcher"/> so callbacks
+	/// fired from the Anthropic SDK's streaming continuation (which lands on a
+	/// thread pool thread) are queued back to the Unity main thread before
+	/// touching the window.
 	/// </summary>
 	internal sealed class EditorWindowObserver : IVoxelPipelineObserver
 	{
 		private readonly VoxelGeneratorWindow _window;
-		private readonly SynchronizationContext? _mainContext;
+		private readonly IMainThreadDispatcher _dispatcher;
 
 		public EditorWindowObserver(VoxelGeneratorWindow window)
 		{
 			_window = window;
-			_mainContext = SynchronizationContext.Current;
+			_dispatcher = EditorMainThreadDispatcher.Instance;
 		}
 
 		public void OnStageStarted(string stageName) => Post(() => _window.Log("→ " + stageName));
@@ -730,14 +730,6 @@ namespace Assembler.Voxels.Editor
 		public void OnLog(string message) => Post(() => _window.Log(message));
 		public void OnStreamDelta(string delta) => Post(() => _window.AppendStreamDelta(delta));
 
-		private void Post(Action action)
-		{
-			if (_mainContext == null || SynchronizationContext.Current == _mainContext)
-			{
-				action();
-				return;
-			}
-			_mainContext.Post(_ => action(), null);
-		}
+		private void Post(Action action) => _dispatcher.RunAsync(action);
 	}
 }

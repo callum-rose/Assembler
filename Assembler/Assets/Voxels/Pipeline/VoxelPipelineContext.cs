@@ -19,6 +19,7 @@ namespace Assembler.Voxels.Pipeline
 		public IAssetDatabaseService AssetDb { get; init; } = new NoOpAssetDatabaseService();
 		public IVoxelPipelineObserver Observer { get; init; } = NullVoxelPipelineObserver.Instance;
 		public IVoxelClock Clock { get; init; } = SystemVoxelClock.Instance;
+		public IMainThreadDispatcher MainThread { get; init; } = InlineMainThreadDispatcher.Instance;
 
 		public string? SystemPrompt { get; init; }
 		public string? PersistentInstructions { get; init; }

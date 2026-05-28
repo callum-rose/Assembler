@@ -33,6 +33,7 @@ namespace Assembler.Voxels.Pipeline
 				AssetDb = services.AssetDb,
 				Observer = services.Observer,
 				Clock = services.Clock,
+				MainThread = services.MainThread,
 			};
 			return new VoxelGenerationPipeline(ctx);
 		}
@@ -49,6 +50,7 @@ namespace Assembler.Voxels.Pipeline
 					AssetDb = services.AssetDb,
 					Observer = services.Observer,
 					Clock = services.Clock,
+					MainThread = services.MainThread,
 				};
 			}
 			// Drop AnthropicClient — its lifecycle belongs to the caller, the prior
@@ -171,54 +173,42 @@ namespace Assembler.Voxels.Pipeline
 
 		public async Task<VoxelPipelineResult> ExecuteAsync(CancellationToken ct = default)
 		{
-			// Capture the calling thread's sync context (Unity main thread when
-			// called from the editor) so we can return to it after every stage.
-			// Without this, async stages (Anthropic streaming) resume on a thread
-			// pool thread and observer callbacks that touch Unity (Repaint, etc.)
-			// would throw.
-			var originContext = SynchronizationContext.Current;
+			// Stages may resume on thread-pool threads (Anthropic streaming
+			// awaits land on the pool). Observer callbacks are marshaled via the
+			// configured IMainThreadDispatcher so the editor's Repaint() etc.
+			// always sees the Unity main thread. Stages that touch Unity APIs
+			// (asset DB, asset import) wrap their own work via ctx.MainThread.
 			var ctx = _ctx;
 			foreach (var stage in _stages)
 			{
 				ct.ThrowIfCancellationRequested();
-				ctx.Observer.OnStageStarted(stage.Name);
+				var startedCtx = ctx;
+				await ctx.MainThread.RunAsync(() => startedCtx.Observer.OnStageStarted(stage.Name)).ConfigureAwait(false);
+
 				var sw = Stopwatch.StartNew();
+				VoxelPipelineContext nextCtx;
 				try
 				{
-					ctx = await stage.ExecuteAsync(ctx, ct).ConfigureAwait(false);
-				}
-				catch (OperationCanceledException)
-				{
-					await ReturnToContext(originContext);
-					ctx.Observer.OnStageFailed(stage.Name, new OperationCanceledException());
-					throw;
+					nextCtx = await stage.ExecuteAsync(ctx, ct).ConfigureAwait(false);
 				}
 				catch (Exception ex)
 				{
-					await ReturnToContext(originContext);
-					ctx.Observer.OnStageFailed(stage.Name, ex);
-					throw;
-				}
-				finally
-				{
 					sw.Stop();
+					var failedCtx = ctx;
+					var stageRef = stage;
+					await failedCtx.MainThread.RunAsync(() => failedCtx.Observer.OnStageFailed(stageRef.Name, ex)).ConfigureAwait(false);
+					System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+					throw; // unreachable; keeps the compiler happy.
 				}
-				await ReturnToContext(originContext);
-				ctx.Observer.OnStageFinished(stage.Name, sw.Elapsed);
+				sw.Stop();
+
+				ctx = nextCtx;
+				var finishedCtx = ctx;
+				var stageName = stage.Name;
+				var elapsed = sw.Elapsed;
+				await finishedCtx.MainThread.RunAsync(() => finishedCtx.Observer.OnStageFinished(stageName, elapsed)).ConfigureAwait(false);
 			}
 			return new VoxelPipelineResult(ctx);
-		}
-
-		private static Task ReturnToContext(SynchronizationContext? origin)
-		{
-			if (origin == null || SynchronizationContext.Current == origin)
-			{
-				return Task.CompletedTask;
-			}
-
-			var tcs = new TaskCompletionSource<bool>();
-			origin.Post(_ => tcs.SetResult(true), null);
-			return tcs.Task;
 		}
 
 		private void EnsureLoadSystemPrompt()
