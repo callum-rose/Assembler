@@ -39,7 +39,8 @@ namespace Assembler.Anthropic
 		public async Task<string> SendAsync(
 			string cachedSystemPrompt,
 			IReadOnlyList<AnthropicMessage> messages,
-			CancellationToken cancellationToken)
+			CancellationToken cancellationToken,
+			Action<string>? onDelta = null)
 		{
 			var parameters = new MessageCreateParams
 			{
@@ -55,11 +56,27 @@ namespace Assembler.Anthropic
 					.ToArray(),
 			};
 
-			Message response;
+			var sb = new StringBuilder();
 
 			try
 			{
-				response = await _client.Messages.Create(parameters, cancellationToken).ConfigureAwait(false);
+				await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken)
+					                .ConfigureAwait(false))
+				{
+					// Per the SDK docs each streamed event stringifies to its
+					// incremental text delta — that's how `fullText += msg` works
+					// in the documented example. Non-text events stringify to
+					// empty, so we just append unconditionally.
+					var delta = ev?.ToString();
+					if (string.IsNullOrEmpty(delta)) continue;
+
+					sb.Append(delta);
+					onDelta?.Invoke(delta);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
 			}
 			catch (AnthropicApiException ex)
 			{
@@ -70,7 +87,12 @@ namespace Assembler.Anthropic
 				throw new AnthropicRequestException(0, ex.Message, ex);
 			}
 
-			return ExtractText(response);
+			if (sb.Length == 0)
+			{
+				throw new AnthropicRequestException(200, "Anthropic response contained no text deltas.");
+			}
+
+			return sb.ToString();
 		}
 
 		private static Role RoleFromString(string role)
@@ -78,33 +100,6 @@ namespace Assembler.Anthropic
 			return role.Equals("assistant", StringComparison.OrdinalIgnoreCase)
 				? Role.Assistant
 				: Role.User;
-		}
-
-		private static string ExtractText(Message response)
-		{
-			var sb = new StringBuilder();
-
-			foreach (var block in response.Content)
-			{
-				if (!block.TryPickText(out var text))
-				{
-					continue;
-				}
-
-				if (sb.Length > 0)
-				{
-					sb.Append('\n');
-				}
-
-				sb.Append(text.Text);
-			}
-
-			if (sb.Length == 0)
-			{
-				throw new AnthropicRequestException(200, "Anthropic response contained no text blocks.");
-			}
-
-			return sb.ToString();
 		}
 
 		private static int GetStatusCode(AnthropicApiException ex)

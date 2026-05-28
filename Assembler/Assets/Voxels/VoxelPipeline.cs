@@ -27,10 +27,11 @@ namespace Assembler.Voxels
 		public async Task<string> GenerateGoxelTextAsync(
 			string prompt,
 			AnthropicClient client,
-			CancellationToken cancellationToken)
+			CancellationToken cancellationToken,
+			Action<string>? onDelta = null)
 		{
 			var messages = new List<AnthropicMessage> { new("user", prompt) };
-			var raw = await client.SendAsync(_systemPrompt, messages, cancellationToken).ConfigureAwait(false);
+			var raw = await client.SendAsync(_systemPrompt, messages, cancellationToken, onDelta).ConfigureAwait(false);
 
 			var extracted = VoxelResponseExtractor.Extract(raw);
 			if (string.IsNullOrWhiteSpace(extracted))

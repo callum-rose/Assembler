@@ -217,7 +217,7 @@ namespace Assembler.Generation.Verification.Editor
 				Log("Requesting Goxel text from Claude...");
 				using var client = new AnthropicClient(_apiKey);
 				var pipeline = new VoxelPipeline(extraInstructions: _persistentInstructions);
-				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct);
+				var goxelText = await pipeline.GenerateGoxelTextAsync(_prompt, client, ct, AppendStreamDelta);
 				_goxelText = goxelText;
 
 				Log("Converting to .vox...");
@@ -363,6 +363,14 @@ namespace Assembler.Generation.Verification.Editor
 		private void Log(string message)
 		{
 			_log.Append('[').Append(DateTime.Now.ToString("HH:mm:ss")).Append("] ").AppendLine(message);
+			Repaint();
+		}
+
+		private void AppendStreamDelta(string delta)
+		{
+			// Write raw deltas to the log so the user sees Claude's response
+			// arrive in real time, no timestamp prefix per chunk.
+			_log.Append(delta);
 			Repaint();
 		}
 	}
