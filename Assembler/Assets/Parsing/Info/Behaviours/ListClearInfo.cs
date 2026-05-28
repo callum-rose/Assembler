@@ -10,17 +10,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static ListClearInfo<T> Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<IList<T>>(v, props.GetValueOrDefault("List"), parameters: p));
+				Transformer.CreateValueSource<IList<T>>(ctx, props.GetValueOrDefault("List")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new ListClearInfo<T>(Id,
 				substitutedListeners,
-				List.SubstituteParameters(parameters, allValues));
+				List.SubstituteParameters(ctx));
 	}
 }

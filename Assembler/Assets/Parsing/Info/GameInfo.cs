@@ -11,6 +11,14 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,
 		IReadOnlyList<ConcreteEntityInfo> Entities,
-		ValueSource<bool> GameOverCondition);
-
+		ValueSource<bool> GameOverCondition)
+	{
+		/// <summary>
+		/// The context built during <see cref="Transformer.Transform"/>. Cached so runtime
+		/// callers (e.g. spawners) can re-enter <see cref="TemplateInstantiator.Instantiate"/>
+		/// with the same expressions/type-registry/values they were parsed against.
+		/// Populated by <see cref="Transformer.Transform"/>; not part of the positional ctor.
+		/// </summary>
+		public TransformContext ParseContext { get; init; } = null!;
+	}
 }

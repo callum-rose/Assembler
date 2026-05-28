@@ -21,7 +21,7 @@ namespace Assembler.Building
 		private readonly AssetRegistry _assets;
 		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
-		private readonly IReadOnlyList<ValueInfo> _allValues;
+		private readonly TransformContext _parseContext;
 		private readonly TriggerContext _triggerContext;
 
 		private int _spawnCounter;
@@ -32,7 +32,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			EntityTransformRegistry entityTransforms,
 			IReadOnlyDictionary<string, EntityInfo> templates,
-			IReadOnlyList<ValueInfo> allValues,
+			TransformContext parseContext,
 			TriggerContext triggerContext)
 		{
 			_variables = variables;
@@ -41,7 +41,7 @@ namespace Assembler.Building
 			_assets = assets;
 			_entityTransforms = entityTransforms;
 			_templates = templates;
-			_allValues = allValues;
+			_parseContext = parseContext;
 			_triggerContext = triggerContext;
 		}
 
@@ -114,7 +114,7 @@ namespace Assembler.Building
 				var resolvedChild = TemplateInstantiator.Instantiate(
 					childTemplate,
 					childId,
-					_allValues,
+					_parseContext,
 					child.InitialPosition,
 					child.InitialRotation,
 					child.Parameters,
@@ -144,7 +144,7 @@ namespace Assembler.Building
 			var entity = TemplateInstantiator.Instantiate(
 				template,
 				newId,
-				_allValues,
+				_parseContext,
 				new ConstantSource<Vector3>(position),
 				new ConstantSource<Vector3>(rotation),
 				parameters: new Dictionary<string, AssemblerValue>(),

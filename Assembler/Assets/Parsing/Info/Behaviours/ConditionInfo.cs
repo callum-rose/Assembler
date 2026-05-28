@@ -12,19 +12,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static ConditionInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(v, props.GetValueOrDefault("ExpressionId"), parameters: p),
-				Transformer.ConvertArgumentList(v, props.GetValueOrDefault("Arguments")));
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("ExpressionId")),
+				Transformer.ConvertArgumentList(ctx, props.GetValueOrDefault("Arguments")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new ConditionInfo(Id,
 				substitutedListeners,
-				ExpressionId.SubstituteParameters(parameters, allValues),
-				Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray());
+				ExpressionId.SubstituteParameters(ctx),
+				Arguments.Select(a => a.SubstituteParameters(ctx)).ToArray());
 	}
 }

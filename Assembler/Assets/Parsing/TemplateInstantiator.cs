@@ -11,7 +11,7 @@ namespace Assembler.Parsing
 	{
 		public static ConcreteEntityInfo Instantiate(EntityInfo template,
 			string entityId,
-			IReadOnlyList<ValueInfo> allValues,
+			TransformContext ctx,
 			ValueSource<Vector3> position,
 			ValueSource<Vector3> rotation,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
@@ -34,7 +34,9 @@ namespace Assembler.Parsing
 				}
 			}
 
-			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, augmentedParameters, allValues));
+			var instanceCtx = ctx.WithParameters(augmentedParameters);
+
+			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, instanceCtx));
 
 			var behaviours = inheritedBehaviours.Concat(additionalBehaviours.EmptyIfNull()).ToArray();
 
@@ -42,28 +44,28 @@ namespace Assembler.Parsing
 
 			var resolvedPosition = position is not None<Vector3>
 				? position
-				: template.InitialPosition.SubstituteParameters(augmentedParameters, allValues);
+				: template.InitialPosition.SubstituteParameters(instanceCtx);
 
 			var resolvedRotation = rotation is not None<Vector3>
 				? rotation
-				: template.InitialRotation.SubstituteParameters(augmentedParameters, allValues);
+				: template.InitialRotation.SubstituteParameters(instanceCtx);
 
 			var inheritedVariables = template.Variables.Select(v => new ValueInfo(v.Id,
-				FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, augmentedParameters), allValues)));
+				FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, instanceCtx.Parameters), instanceCtx.Values)));
 
 			var flattenedAdditional = additionalVariables
 				.EmptyIfNull()
-				.Select(v => new ValueInfo(v.Id, FlattenAssemblerValue(v.Value, allValues)));
+				.Select(v => new ValueInfo(v.Id, FlattenAssemblerValue(v.Value, instanceCtx.Values)));
 
 			var variables = inheritedVariables
 				.Concat(flattenedAdditional)
 				.ToArray();
 
 			var inheritedChildren = template.Children
-				.Select(c => SubstituteChild(c, augmentedParameters, allValues));
+				.Select(c => SubstituteChild(c, instanceCtx));
 
 			var addedChildren = (additionalChildren ?? (IEnumerable<ChildEntityInfo>)Array.Empty<ChildEntityInfo>())
-				.Select(c => SubstituteChild(c, augmentedParameters, allValues));
+				.Select(c => SubstituteChild(c, instanceCtx));
 
 			var children = inheritedChildren.Concat(addedChildren).ToArray();
 
@@ -77,31 +79,29 @@ namespace Assembler.Parsing
 				children);
 		}
 
-		private static ChildEntityInfo SubstituteChild(ChildEntityInfo child,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues)
+		private static ChildEntityInfo SubstituteChild(ChildEntityInfo child, TransformContext ctx)
 		{
 			var substitutedParameters = new Dictionary<string, AssemblerValue>(child.Parameters.Count);
 
 			foreach (var kvp in child.Parameters)
 			{
-				substitutedParameters[kvp.Key] = Transformer.SubstituteAssemblerValue(kvp.Value, parameters);
+				substitutedParameters[kvp.Key] = Transformer.SubstituteAssemblerValue(kvp.Value, ctx.Parameters);
 			}
 
 			var substitutedBehaviours = child.Behaviours
-				.Select(b => SubstituteBehaviour(b, parameters, allValues))
+				.Select(b => SubstituteBehaviour(b, ctx))
 				.ToArray();
 
-			var substitutedPosition = child.InitialPosition.SubstituteParameters(parameters, allValues);
-			var substitutedRotation = child.InitialRotation.SubstituteParameters(parameters, allValues);
+			var substitutedPosition = child.InitialPosition.SubstituteParameters(ctx);
+			var substitutedRotation = child.InitialRotation.SubstituteParameters(ctx);
 
 			var substitutedVariables = child.Variables
 				.Select(v => new ValueInfo(v.Id,
-					FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, parameters), allValues)))
+					FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, ctx.Parameters), ctx.Values)))
 				.ToArray();
 
 			var substitutedChildren = child.Children
-				.Select(c => SubstituteChild(c, parameters, allValues))
+				.Select(c => SubstituteChild(c, ctx))
 				.ToArray();
 
 			return child with
@@ -144,13 +144,10 @@ namespace Assembler.Parsing
 					$"Cannot adapt runtime parameter '{key}' (type {value.GetType()}) for template instantiation")
 			};
 
-private static BehaviourInfo SubstituteBehaviour(
-			BehaviourInfo info,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues)
+		private static BehaviourInfo SubstituteBehaviour(BehaviourInfo info, TransformContext ctx)
 		{
-			var listeners = SubstituteListeners(info.Listeners, parameters);
-			var substituted = info.SubstituteParameters(listeners, parameters, allValues);
+			var listeners = SubstituteListeners(info.Listeners, ctx.Parameters);
+			var substituted = info.SubstituteParameters(listeners, ctx);
 
 			return substituted with
 			{

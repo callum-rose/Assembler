@@ -6,9 +6,7 @@ namespace Assembler.Parsing.Info
 
 	public interface IValueSourceArg
 	{
-		IValueSourceArg SubstituteParameters(
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues);
+		IValueSourceArg SubstituteParameters(TransformContext ctx);
 
 		object Resolve(IValueSourceResolver resolver);
 	}
@@ -20,13 +18,9 @@ namespace Assembler.Parsing.Info
 
 	public abstract record ValueSource<T> : IValueSourceArg
 	{
-		public virtual ValueSource<T> SubstituteParameters(
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) => this;
+		public virtual ValueSource<T> SubstituteParameters(TransformContext ctx) => this;
 
-		IValueSourceArg IValueSourceArg.SubstituteParameters(
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) => SubstituteParameters(parameters, allValues);
+		IValueSourceArg IValueSourceArg.SubstituteParameters(TransformContext ctx) => SubstituteParameters(ctx);
 
 		public object Resolve(IValueSourceResolver resolver) => resolver.Resolve(this);
 	}
@@ -44,20 +38,16 @@ namespace Assembler.Parsing.Info
 		string ExpressionId,
 		IReadOnlyList<IValueSourceArg> Arguments) : ValueSource<T>
 	{
-		public override ValueSource<T> SubstituteParameters(
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
 			new ExpressionSource<T>(ExpressionId,
-				Arguments.Select(a => a.SubstituteParameters(parameters, allValues)).ToArray());
+				Arguments.Select(a => a.SubstituteParameters(ctx)).ToArray());
 	}
 
 	public sealed record ParameterSource<T>(string ParameterId) : ValueSource<T>
 	{
-		public override ValueSource<T> SubstituteParameters(
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
-			parameters.TryGetValue(ParameterId, out var raw)
-				? Transformer.CreateValueSource<T>(allValues, raw, parameters: parameters)
+		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
+			ctx.Parameters.TryGetValue(ParameterId, out var raw)
+				? Transformer.CreateValueSource<T>(ctx, raw)
 				: throw new ParsingException($"Parameter '{ParameterId}' not supplied during template instantiation");
 	}
 

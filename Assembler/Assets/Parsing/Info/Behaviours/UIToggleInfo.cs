@@ -13,21 +13,19 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static UIToggleInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("InitialValue"), fallback: false, parameters: p),
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("Label"), fallback: string.Empty, parameters: p),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("InitialValue"), fallback: false),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Label"), fallback: string.Empty),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new UIToggleInfo(Id,
 				substitutedListeners,
-				InitialValue.SubstituteParameters(parameters, allValues),
-				Label.SubstituteParameters(parameters, allValues),
+				InitialValue.SubstituteParameters(ctx),
+				Label.SubstituteParameters(ctx),
 				Rect);
 	}
 }

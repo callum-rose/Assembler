@@ -11,19 +11,15 @@ namespace Assembler.Parsing
 {
 	public static class Transformer
 	{
-		[ThreadStatic] private static IReadOnlyDictionary<string, ExpressionInfo>? _currentExpressionsById;
-		[ThreadStatic] private static IReadOnlyDictionary<string, Type>? _currentTypeRegistry;
-
+		// `CreateValueSourceForArg` is invoked via reflection (one MakeGenericMethod per arg type
+		// the parser actually encounters). This is a method handle constant, not mutable state —
+		// the per-call cache of closed-generic MethodInfos lives on TransformContext.
 		private readonly static MethodInfo CreateValueSourceForArgOpenGeneric =
 			typeof(Transformer).GetMethod(nameof(CreateValueSourceForArg),
 				BindingFlags.NonPublic | BindingFlags.Static)!;
 
-		private readonly static Dictionary<Type, MethodInfo> CreateValueSourceCache = new();
-
-		private static ValueSource<T> CreateValueSourceForArg<T>(IReadOnlyList<ValueInfo> resolvedValues,
-			AssemblerValue raw,
-			IReadOnlyDictionary<string, AssemblerValue> parameters) =>
-			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(resolvedValues, raw, parameters);
+		private static ValueSource<T> CreateValueSourceForArg<T>(TransformContext ctx, AssemblerValue raw) =>
+			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
 
 		public static GameInfo Transform(GameDto gameDto)
 		{
@@ -56,38 +52,29 @@ namespace Assembler.Parsing
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
 
-			_currentExpressionsById = expressions.ToDictionary(e => e.Id);
-			_currentTypeRegistry = BuiltInTypeRegistry.Default;
+			var ctx = new TransformContext(
+				values,
+				new Dictionary<string, AssemblerValue>(),
+				expressions.ToDictionary(e => e.Id),
+				BuiltInTypeRegistry.Default);
 
-			ConcreteEntityInfo[] templates;
-			ConcreteEntityInfo[] entities;
-			ValueSource<bool> gameOverCondition;
-
-			try
-			{
-				templates = gameDto.Templates?
-					.Select(kvp => new ConcreteEntityInfo(
-						kvp.Key,
-						kvp.Value.Tags ?? new List<string>(),
-						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Position)),
-						CreateValueSource<Vector3>(values, ToAssemblerValue(kvp.Value.Rotation)),
-						(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
-						.Select(b => CreateBehaviour(values, b.Key, b.Value, new Dictionary<string, AssemblerValue>()))
+			var templates = gameDto.Templates?
+				.Select(kvp => new ConcreteEntityInfo(
+					kvp.Key,
+					kvp.Value.Tags ?? new List<string>(),
+					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Position)),
+					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Rotation)),
+					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
+						.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
 						.ToArray(),
-						CreateEntityVariables(kvp.Value.Variables),
-						BuildTemplateChildren(values, kvp.Value.Children, kvp.Key)))
-					.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
+					CreateEntityVariables(kvp.Value.Variables),
+					BuildTemplateChildren(ctx, kvp.Value.Children, kvp.Key)))
+				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
-				entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
-					.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
+			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
+				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
 
-				gameOverCondition = CreateValueSource<bool>(values, ToAssemblerValue(gameDto.GameOverCondition));
-			}
-			finally
-			{
-				_currentExpressionsById = null;
-				_currentTypeRegistry = null;
-			}
+			var gameOverCondition = CreateValueSource<bool>(ctx, ToAssemblerValue(gameDto.GameOverCondition));
 
 			return new GameInfo(info,
 				world,
@@ -97,7 +84,10 @@ namespace Assembler.Parsing
 				expressions,
 				templates,
 				entities,
-				gameOverCondition);
+				gameOverCondition)
+			{
+				ParseContext = ctx
+			};
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
 				new(kvp.Key,
@@ -124,16 +114,18 @@ namespace Assembler.Parsing
 					parameters = ConvertProps(entityDto.Template.Parameters);
 				}
 
-				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
-					.Select(b => CreateBehaviour(values, b.Key, b.Value, parameters));
+				var entityCtx = ctx.WithParameters(parameters);
 
-				var children = BuildChildren(values, entityDto.Children, entityId);
+				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
+					.Select(b => CreateBehaviour(entityCtx, b.Key, b.Value));
+
+				var children = BuildChildren(ctx, entityDto.Children, entityId);
 
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
-					values,
-					CreateValueSource<Vector3>(values, ToAssemblerValue(entityDto.Position), parameters: parameters),
-					CreateValueSource<Vector3>(values, ToAssemblerValue(entityDto.Rotation), parameters: parameters),
+					ctx,
+					CreateValueSource<Vector3>(entityCtx, ToAssemblerValue(entityDto.Position)),
+					CreateValueSource<Vector3>(entityCtx, ToAssemblerValue(entityDto.Rotation)),
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
@@ -142,12 +134,12 @@ namespace Assembler.Parsing
 			}
 		}
 
-		private static IReadOnlyList<ChildEntityInfo> BuildTemplateChildren(IReadOnlyList<ValueInfo> values,
+		private static IReadOnlyList<ChildEntityInfo> BuildTemplateChildren(TransformContext ctx,
 			List<EntityDto>? children,
 			string templateId) =>
-			BuildChildren(values, children, $"template '{templateId}'");
+			BuildChildren(ctx, children, $"template '{templateId}'");
 
-		private static IReadOnlyList<ChildEntityInfo> BuildChildren(IReadOnlyList<ValueInfo> values,
+		private static IReadOnlyList<ChildEntityInfo> BuildChildren(TransformContext ctx,
 			List<EntityDto>? children,
 			string parentDescription)
 		{
@@ -160,13 +152,13 @@ namespace Assembler.Parsing
 
 			for (var i = 0; i < children.Count; i++)
 			{
-				result[i] = BuildChild(values, children[i], i, parentDescription);
+				result[i] = BuildChild(ctx, children[i], i, parentDescription);
 			}
 
 			return result;
 		}
 
-		private static ChildEntityInfo BuildChild(IReadOnlyList<ValueInfo> values,
+		private static ChildEntityInfo BuildChild(TransformContext ctx,
 			EntityDto dto,
 			int index,
 			string parentDescription)
@@ -178,15 +170,16 @@ namespace Assembler.Parsing
 			               (templateRefId != null ? $"{templateRefId}_{index}" : $"child_{index}");
 
 			var ownParams = ConvertProps(dto.Template?.Parameters);
+			var childCtx = ctx.WithParameters(ownParams);
 
 			var ownBehaviours = (dto.Behaviours ?? new Dictionary<string, BehaviourDto>())
-				.Select(b => CreateBehaviour(values, b.Key, b.Value, ownParams))
+				.Select(b => CreateBehaviour(childCtx, b.Key, b.Value))
 				.ToArray();
 
-			var position = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Position), parameters: ownParams);
-			var rotation = CreateValueSource<Vector3>(values, ToAssemblerValue(dto.Rotation), parameters: ownParams);
+			var position = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Position));
+			var rotation = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Rotation));
 
-			var nestedChildren = BuildChildren(values, dto.Children, explicitId ?? $"{parentDescription}[{index}]");
+			var nestedChildren = BuildChildren(childCtx, dto.Children, explicitId ?? $"{parentDescription}[{index}]");
 
 			return new ChildEntityInfo(
 				idSuffix,
@@ -244,10 +237,9 @@ namespace Assembler.Parsing
 			};
 		}
 
-		private static BehaviourInfo CreateBehaviour(IReadOnlyList<ValueInfo> resolvedValues,
+		private static BehaviourInfo CreateBehaviour(TransformContext ctx,
 			string id,
-			BehaviourDto behaviourDto,
-			IReadOnlyDictionary<string, AssemblerValue> parameters)
+			BehaviourDto behaviourDto)
 		{
 			var type = behaviourDto.Type ?? string.Empty;
 
@@ -259,10 +251,9 @@ namespace Assembler.Parsing
 			var props = ConvertProps(behaviourDto.Properties);
 
 			var info = factory(id,
-				GetListeners(behaviourDto, resolvedValues, parameters),
+				GetListeners(ctx, behaviourDto),
 				props,
-				resolvedValues,
-				parameters);
+				ctx);
 
 			return behaviourDto.Tags is { Count: > 0 }
 				? info with
@@ -272,9 +263,8 @@ namespace Assembler.Parsing
 				: info;
 		}
 
-		private static IReadOnlyList<ListenerInfo> GetListeners(BehaviourDto behaviourDto,
-			IReadOnlyList<ValueInfo> variables,
-			IReadOnlyDictionary<string, AssemblerValue> parameters) =>
+		private static IReadOnlyList<ListenerInfo> GetListeners(TransformContext ctx,
+			BehaviourDto behaviourDto) =>
 			behaviourDto.Listeners
 				.EmptyIfNull()
 				.Select(l =>
@@ -291,7 +281,7 @@ namespace Assembler.Parsing
 
 					if (l.EntityTag != null)
 					{
-						var entityTag = CreateValueSource<string>(variables, ToAssemblerValue(l.EntityTag), parameters);
+						var entityTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.EntityTag));
 
 						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId)
 						{
@@ -301,7 +291,7 @@ namespace Assembler.Parsing
 
 					if (l.BehaviourTag != null)
 					{
-						var behaviourTag = CreateValueSource<string>(variables, ToAssemblerValue(l.BehaviourTag), parameters);
+						var behaviourTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.BehaviourTag));
 
 						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag)
 						{
@@ -311,11 +301,11 @@ namespace Assembler.Parsing
 
 					var entityId = l.EntityId switch
 					{
-						ParamRefDto paramRefDto => parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
+						ParamRefDto paramRefDto => ctx.Parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
 						                           && pv is StringValue sv
 							? sv.Value
 							: ParameterEntityIdSentinel + (paramRefDto.Id ?? string.Empty),
-						VarRefDto varRefDto => varRefDto.ResolveValue<string>(variables),
+						VarRefDto varRefDto => varRefDto.ResolveValue<string>(ctx.Values),
 						string behaviourId => behaviourId,
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
 					};
@@ -338,33 +328,21 @@ namespace Assembler.Parsing
 					.ToArray()
 				: Array.Empty<string>();
 
-		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(IReadOnlyList<ValueInfo> resolvedValues,
+		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(TransformContext ctx,
 			AssemblerValue? value) =>
 			value is ListValue list
 				? list.Value.Select(item => (IValueSourceArg)
-					CreateValueSource<object>(resolvedValues, item, new Dictionary<string, AssemblerValue>())).ToArray()
+					CreateValueSource<object>(ctx, item)).ToArray()
 				: Array.Empty<IValueSourceArg>();
 
-		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
-			AssemblerValue raw,
-			T? fallback = default) =>
-			CreateValueSource(resolvedValues, raw, new Dictionary<string, AssemblerValue>(), fallback);
-
-		private static IReadOnlyList<IValueSourceArg> BuildExpressionArguments(ExprRef exprRef,
-			IReadOnlyList<ValueInfo> resolvedValues,
-			IReadOnlyDictionary<string, AssemblerValue> parameters)
+		private static IReadOnlyList<IValueSourceArg> BuildExpressionArguments(TransformContext ctx, ExprRef exprRef)
 		{
 			if (exprRef.Arguments.Count == 0)
 			{
 				return Array.Empty<IValueSourceArg>();
 			}
 
-			var expressionsById = _currentExpressionsById;
-			var typeRegistry = _currentTypeRegistry;
-
-			if (expressionsById == null || 
-			    typeRegistry == null || 
-			    !expressionsById.TryGetValue(exprRef.ExpressionId, out var info))
+			if (!ctx.ExpressionsById.TryGetValue(exprRef.ExpressionId, out var info))
 			{
 				throw new ParsingException(
 					$"Cannot resolve argument types for expression '{exprRef.ExpressionId}'. " +
@@ -384,23 +362,19 @@ namespace Assembler.Parsing
 			{
 				var typeName = info.Arguments[i].type;
 
-				if (!typeRegistry.TryGetValue(typeName, out var argType))
+				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
 						$"Expression '{exprRef.ExpressionId}' argument {i} has unknown type '{typeName}'.");
 				}
 
-				if (!CreateValueSourceCache.TryGetValue(argType, out var typed))
+				if (!ctx.ExprArgFactoryCache.TryGetValue(argType, out var typed))
 				{
 					typed = CreateValueSourceForArgOpenGeneric.MakeGenericMethod(argType);
-					CreateValueSourceCache[argType] = typed;
+					ctx.ExprArgFactoryCache[argType] = typed;
 				}
 
-				args[i] = (IValueSourceArg)typed.Invoke(null,
-					new object?[]
-					{
-						resolvedValues, exprRef.Arguments[i], parameters
-					})!;
+				args[i] = (IValueSourceArg)typed.Invoke(null, new object?[] { ctx, exprRef.Arguments[i] })!;
 			}
 
 			return args;
@@ -413,14 +387,13 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
-		internal static ValueSource<T> CreateValueSource<T>(IReadOnlyList<ValueInfo> resolvedValues,
+		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
 			AssemblerValue raw,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			T? fallback = default) =>
 			raw switch
 			{
-				ParamRef paramRef => parameters.TryGetValue(paramRef.Id, out var paramValue)
-					? CreateValueSource(resolvedValues, paramValue, fallback)
+				ParamRef paramRef => ctx.Parameters.TryGetValue(paramRef.Id, out var paramValue)
+					? CreateValueSource(ctx, paramValue, fallback)
 					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
 				EntityPositionRef entityPositionRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
@@ -430,14 +403,14 @@ namespace Assembler.Parsing
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
-					BuildExpressionArguments(exprRef, resolvedValues, parameters)),
+					BuildExpressionArguments(ctx, exprRef)),
 				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
-					(T)(object)vec.ToVector3(resolvedValues)),
+					(T)(object)vec.ToVector3(ctx.Values)),
 				VecValue vec when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
-					(T)(object)vec.ToVector2(resolvedValues)),
-				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(resolvedValues)),
+					(T)(object)vec.ToVector2(ctx.Values)),
+				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(ctx.Values)),
 				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
-					(T)(object)col.ToColor(resolvedValues)),
+					(T)(object)col.ToColor(ctx.Values)),
 				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
 				Vector3Value v3 when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
 					(T)(object)new Vector2(v3.Value.x, v3.Value.y)),

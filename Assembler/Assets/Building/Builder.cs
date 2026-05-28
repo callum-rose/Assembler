@@ -143,7 +143,7 @@ namespace Assembler.Building
 				assetRegistry,
 				entityTransformRegistry,
 				templatesById,
-				gameInfo.Variables,
+				gameInfo.ParseContext,
 				triggerContext);
 
 			var initialisations = new InitialisationQueue();

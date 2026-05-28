@@ -14,23 +14,21 @@ namespace Assembler.Parsing.Info.Behaviours
 		public static UISliderInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
-			IReadOnlyList<ValueInfo> v,
-			IReadOnlyDictionary<string, AssemblerValue> p) =>
+			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("InitialValue"), fallback: 0f, parameters: p),
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("MinValue"), fallback: 0f, parameters: p),
-				Transformer.CreateValueSource(v, props.GetValueOrDefault("MaxValue"), fallback: 1f, parameters: p),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("InitialValue"), fallback: 0f),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MinValue"), fallback: 0f),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MaxValue"), fallback: 1f),
 				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyList<ValueInfo> allValues) =>
+			TransformContext ctx) =>
 			new UISliderInfo(Id,
 				substitutedListeners,
-				InitialValue.SubstituteParameters(parameters, allValues),
-				MinValue.SubstituteParameters(parameters, allValues),
-				MaxValue.SubstituteParameters(parameters, allValues),
+				InitialValue.SubstituteParameters(ctx),
+				MinValue.SubstituteParameters(ctx),
+				MaxValue.SubstituteParameters(ctx),
 				Rect);
 	}
 }
