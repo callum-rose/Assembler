@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Generation",
-    "rootNamespace": "Assembler.Generation",
+    "rootNamespace": "Assembler",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

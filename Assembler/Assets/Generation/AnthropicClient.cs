@@ -1,40 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Anthropic;
+using Anthropic.Core;
 using Anthropic.Exceptions;
 using Anthropic.Models.Messages;
 
 namespace Assembler.Generation
 {
-	public sealed class AnthropicMessage
-	{
-		public string Role { get; }
-		public string Content { get; }
-
-		public AnthropicMessage(string role, string content)
-		{
-			Role = role;
-			Content = content;
-		}
-	}
-
-	public sealed class AnthropicRequestException : Exception
-	{
-		public int StatusCode { get; }
-
-		public AnthropicRequestException(int statusCode, string message) : base(message)
-		{
-			StatusCode = statusCode;
-		}
-
-		public AnthropicRequestException(int statusCode, string message, Exception inner) : base(message, inner)
-		{
-			StatusCode = statusCode;
-		}
-	}
-
 	/// <summary>
 	/// Thin wrapper around the official Anthropic C# SDK
 	/// (https://www.nuget.org/packages/Anthropic, installed via NuGetForUnity).
@@ -57,8 +32,7 @@ namespace Assembler.Generation
 			}
 
 			_client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
-			// ApiEnum<string, Model> has implicit conversions from both string and Model.
-			_model = model != null ? (ApiEnum<string, Model>)model : Model.ClaudeOpus4_7;
+			_model = string.IsNullOrWhiteSpace(model) ? (ApiEnum<string, Model>)model! : Model.ClaudeOpus4_7;
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
@@ -67,30 +41,21 @@ namespace Assembler.Generation
 			IReadOnlyList<AnthropicMessage> messages,
 			CancellationToken cancellationToken)
 		{
-			var sdkMessages = new List<MessageParam>(messages.Count);
-			foreach (var m in messages)
-			{
-				sdkMessages.Add(new MessageParam
-				{
-					Role = RoleFromString(m.Role),
-					Content = new MessageParamContent(m.Content),
-				});
-			}
-
-			var systemBlocks = new List<TextBlockParam>
-			{
-				new(cachedSystemPrompt) { CacheControl = new CacheControlEphemeral() },
-			};
-
 			var parameters = new MessageCreateParams
 			{
 				Model = _model,
 				MaxTokens = _maxTokens,
-				System = systemBlocks,
-				Messages = sdkMessages,
+				System = new List<TextBlockParam> { new(cachedSystemPrompt) { CacheControl = new CacheControlEphemeral() }, },
+				Messages = messages
+					.Select(m => new MessageParam
+					{
+						Role = RoleFromString(m.Role), Content = new MessageParamContent(m.Content),
+					})
+					.ToArray(),
 			};
 
 			Message response;
+
 			try
 			{
 				response = await _client.Messages.Create(parameters, cancellationToken).ConfigureAwait(false);
@@ -116,19 +81,28 @@ namespace Assembler.Generation
 
 		private static string ExtractText(Message response)
 		{
-			var sb = new System.Text.StringBuilder();
+			var sb = new StringBuilder();
+
 			foreach (var block in response.Content)
 			{
-				if (block.TryPickText(out var text) && text != null)
+				if (!block.TryPickText(out var text))
 				{
-					if (sb.Length > 0) sb.Append('\n');
-					sb.Append(text.Text);
+					continue;
 				}
+
+				if (sb.Length > 0)
+				{
+					sb.Append('\n');
+				}
+
+				sb.Append(text.Text);
 			}
+
 			if (sb.Length == 0)
 			{
 				throw new AnthropicRequestException(200, "Anthropic response contained no text blocks.");
 			}
+
 			return sb.ToString();
 		}
 
@@ -151,6 +125,7 @@ namespace Assembler.Generation
 
 		public void Dispose()
 		{
+			_client.Dispose();
 		}
 	}
 }

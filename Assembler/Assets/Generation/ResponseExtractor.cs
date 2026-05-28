@@ -16,11 +16,11 @@ namespace Assembler.Generation
 
 	public static class ResponseExtractor
 	{
-		private static readonly Regex YamlBlock = new(
+		private readonly static Regex YamlBlock = new(
 			@"```yaml\s*\r?\n(?<body>.*?)```",
 			RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-		private static readonly Regex FeedbackBlock = new(
+		private readonly static Regex FeedbackBlock = new(
 			@"```feedback\s*\r?\n(?<body>.*?)```",
 			RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -33,12 +33,9 @@ namespace Assembler.Generation
 
 		private static string? Match(string text, Regex regex)
 		{
-			var m = regex.Match(text);
-			if (!m.Success)
-			{
-				return null;
-			}
-			return m.Groups["body"].Value.TrimEnd('\r', '\n');
+			return regex.Match(text) is { Success: true } m ? 
+				m.Groups["body"].Value.TrimEnd('\r', '\n') : 
+				null;
 		}
 	}
 }
