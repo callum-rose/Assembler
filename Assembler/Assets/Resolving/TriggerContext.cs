@@ -1,63 +1,81 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Assembler.Resolving
 {
-	public class TriggerContext
+	public sealed class TriggerContext
 	{
-		private readonly Stack<Dictionary<string, object>> _stack = new();
+		public static readonly TriggerContext Empty = new(ImmutableDictionary<string, object>.Empty);
 
-		public Scope Push()
-		{
-			_stack.Push(new Dictionary<string, object>());
-			return new Scope(this);
-		}
+		private readonly ImmutableDictionary<string, object> _values;
 
-		private void Pop()
+		private TriggerContext(ImmutableDictionary<string, object> values) => _values = values;
+
+		public TriggerContext With(string key, object value) =>
+			new(_values.SetItem(key, value));
+
+		public TriggerContext WithMany(IEnumerable<KeyValuePair<string, object>> kvps) =>
+			new(_values.SetItems(kvps));
+
+		public TriggerContext WithRenamed(IReadOnlyDictionary<string, string> rename)
 		{
-			if (_stack.Count > 0)
+			if (rename == null || rename.Count == 0)
 			{
-				_stack.Pop();
+				return this;
 			}
+
+			var builder = _values.ToBuilder();
+
+			foreach (var (from, to) in rename)
+			{
+				if (_values.TryGetValue(from, out var value))
+				{
+					builder[to] = value;
+				}
+			}
+
+			return new TriggerContext(builder.ToImmutable());
 		}
 
-		public readonly struct Scope : IDisposable
+		public TriggerContext Without(string key) =>
+			new(_values.Remove(key));
+
+		public bool TryGet<T>(string key, out T value)
 		{
-			private readonly TriggerContext _context;
+			if (_values.TryGetValue(key, out var raw))
+			{
+				value = (T)raw;
+				return true;
+			}
 
-			public Scope(TriggerContext context) => _context = context;
-
-			public void Dispose() => _context.Pop();
+			value = default!;
+			return false;
 		}
-
-		public void Set(string key, object value) => _stack.Peek()[key] = value;
 
 		public T Get<T>(string key)
 		{
-			if (_stack.Count == 0)
-			{
-				throw new InvalidOperationException("No trigger context available — !output can only be used in behaviours invoked by a data-producing trigger");
-			}
-
-			if (!_stack.Peek().TryGetValue(key, out var val))
+			if (!_values.TryGetValue(key, out var raw))
 			{
 				throw new KeyNotFoundException($"Trigger output '{key}' not found in current context");
 			}
 
-			return (T)val;
+			return (T)raw;
 		}
+	}
 
-		public void ApplyMapping(IReadOnlyDictionary<string, string> mapping)
+	public readonly struct TriggerContextScope : IDisposable
+	{
+		private readonly TriggerContext? _previous;
+
+		public TriggerContextScope(TriggerContext ctx)
 		{
-			var frame = _stack.Peek();
-
-			foreach (var (nativeName, mappedName) in mapping)
-			{
-				if (frame.TryGetValue(nativeName, out var value))
-				{
-					frame[mappedName] = value;
-				}
-			}
+			_previous = Current;
+			Current = ctx;
 		}
+
+		public static TriggerContext? Current { get; private set; }
+
+		public void Dispose() => Current = _previous;
 	}
 }

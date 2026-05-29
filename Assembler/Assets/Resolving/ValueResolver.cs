@@ -16,9 +16,7 @@ namespace Assembler.Resolving
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
 				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPositionProvider(ctx.EntityTransforms.Get(ep.EntityId)),
-				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName,
-					ctx.TriggerContext ?? throw new InvalidOperationException(
-						$"TriggerContext required to resolve trigger output '{output.OutputName}'")),
+				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};

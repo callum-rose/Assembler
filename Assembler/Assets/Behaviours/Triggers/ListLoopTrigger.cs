@@ -15,15 +15,13 @@ namespace Assembler.Behaviours.Triggers
 		public override void Execute()
 		{
 			var list = Data.List.Value;
+			var incoming = IncomingContext;
 
 			for (int i = 0; i < list.Count; i++)
 			{
-				using (TriggerContext.Push())
-				{
-					TriggerContext.Set("item", list[i]);
-					TriggerContext.Set("index", i);
-					NotifyListeners();
-				}
+				NotifyListeners(incoming
+					.With("item", list[i])
+					.With("index", i));
 			}
 		}
 	}

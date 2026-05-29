@@ -27,11 +27,15 @@ namespace Assembler.Behaviours
 			_listeners = listeners;
 		}
 
-		protected void NotifyListeners()
+		protected TriggerContext IncomingContext => TriggerContextScope.Current ?? TriggerContext.Empty;
+
+		protected void NotifyListeners() => NotifyListeners(IncomingContext);
+
+		protected void NotifyListeners(TriggerContext ctx)
 		{
 			foreach (var listener in _listeners)
 			{
-				listener.Notify();
+				listener.Notify(ctx);
 			}
 		}
 	}

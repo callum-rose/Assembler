@@ -30,11 +30,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			using (TriggerContext.Push())
-			{
-				TriggerContext.Set("mouse_position", UnityEngine.Input.mousePosition);
-				NotifyListeners();
-			}
+			NotifyListeners(IncomingContext.With("mouse_position", UnityEngine.Input.mousePosition));
 		}
 	}
 }

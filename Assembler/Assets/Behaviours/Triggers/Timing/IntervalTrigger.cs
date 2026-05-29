@@ -34,29 +34,31 @@ namespace Assembler.Behaviours.Triggers.Timing
 				StopCoroutine(_currentCoroutine);
 			}
 
-			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value));
+			var captured = IncomingContext;
+
+			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value, captured));
 		}
 
-		private IEnumerator Routine(float interval, int count)
+		private IEnumerator Routine(float interval, int count, TriggerContext captured)
 		{
 			for (int i = 0; count == 0 || i < count; i++)
 			{
 				yield return new WaitForSeconds(interval);
 
-				FireIteration(i, count);
+				FireIteration(i, count, captured);
 			}
 
 			_currentCoroutine = null;
 		}
 
-		public void FireIteration(int iterationIndex, int iterationCount)
+		public void FireIteration(int iterationIndex, int iterationCount) =>
+			FireIteration(iterationIndex, iterationCount, IncomingContext);
+
+		private void FireIteration(int iterationIndex, int iterationCount, TriggerContext captured)
 		{
-			using (TriggerContext.Push())
-			{
-				TriggerContext.Set("iteration_index", iterationIndex);
-				TriggerContext.Set("iteration_count", iterationCount);
-				NotifyListeners();
-			}
+			NotifyListeners(captured
+				.With("iteration_index", iterationIndex)
+				.With("iteration_count", iterationCount));
 		}
 	}
 }

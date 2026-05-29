@@ -13,14 +13,15 @@ namespace Assembler.Behaviours.Triggers.Timing
 	{
 		public override void Execute()
 		{
+			var captured = IncomingContext;
 			StartCoroutine(Routine());
 			return;
 
 			IEnumerator Routine()
 			{
 				yield return new WaitForSeconds(Data.Delay.Value);
-				
-				NotifyListeners();
+
+				NotifyListeners(captured);
 			}
 		}
 	}

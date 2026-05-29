@@ -33,11 +33,7 @@ namespace Assembler.Behaviours.Debug.UI
 			if (Mathf.Approximately(next, _current)) return;
 
 			_current = next;
-			using (TriggerContext.Push())
-			{
-				TriggerContext.Set("value", (object)_current);
-				NotifyListeners();
-			}
+			NotifyListeners(IncomingContext.With("value", _current));
 		}
 	}
 }

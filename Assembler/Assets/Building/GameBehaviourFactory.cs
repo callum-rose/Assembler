@@ -59,11 +59,6 @@ namespace Assembler.Building
 
 			var (behaviour, initialise) = entry.Build(gameObject, behaviourInfo, ctx);
 
-			if (behaviour is INeedsTriggerContext needsTriggerContext)
-			{
-				needsTriggerContext.TriggerContext = ctx.Resolution.TriggerContext;
-			}
-			
 			if (behaviour is INeedsSpawner needsSpawner)
 			{
 				needsSpawner.Spawner = ctx.Spawner;
@@ -684,19 +679,16 @@ namespace Assembler.Building
 			{
 				DirectListenerInfo direct => new DirectListener(
 					listenerRegistry[direct.BehaviourDescriptor],
-					direct.OutputMapping,
-					ctx.TriggerContext),
+					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
 					entityTagged.BehaviourId,
 					listenerRegistry.GetByEntityTagAndBehaviourId,
-					entityTagged.OutputMapping,
-					ctx.TriggerContext),
+					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),
 					tag => listenerRegistry.GetByBehaviourTag(tag),
-					behaviourTagged.OutputMapping,
-					ctx.TriggerContext),
+					behaviourTagged.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
 	}

@@ -23,7 +23,6 @@ namespace Assembler.Building
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
-		private readonly TriggerContext _triggerContext;
 
 		private int _spawnCounter;
 
@@ -34,8 +33,7 @@ namespace Assembler.Building
 			EntityTransformRegistry entityTransforms,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IReadOnlyDictionary<string, EntityInfo> templates,
-			TransformContext parseContext,
-			TriggerContext triggerContext)
+			TransformContext parseContext)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -45,7 +43,6 @@ namespace Assembler.Building
 			_exclusiveGroups = exclusiveGroups;
 			_templates = templates;
 			_parseContext = parseContext;
-			_triggerContext = triggerContext;
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, null);
@@ -54,7 +51,7 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
-			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, new TriggerContext(), scope, _entityTransforms);
+			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms);
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -80,7 +77,7 @@ namespace Assembler.Building
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
-				new ResolutionContext(_variables, _expressions, _assets, _triggerContext, scope, _entityTransforms),
+				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms),
 				this,
 				_exclusiveGroups);
 

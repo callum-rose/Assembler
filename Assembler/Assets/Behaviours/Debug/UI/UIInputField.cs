@@ -37,11 +37,7 @@ namespace Assembler.Behaviours.Debug.UI
 			{
 				var submitted = _text;
 				_text = string.Empty;
-				using (TriggerContext.Push())
-				{
-					TriggerContext.Set("text", (object)submitted);
-					NotifyListeners();
-				}
+				NotifyListeners(IncomingContext.With("text", submitted));
 				e.Use();
 			}
 		}

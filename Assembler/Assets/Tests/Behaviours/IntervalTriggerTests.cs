@@ -15,13 +15,17 @@ namespace Tests.Behaviours
 		{
 			private readonly Action _action;
 
-			public ActionListener(Action action, TriggerContext triggerContext)
-				: base(new Dictionary<string, string>(), triggerContext)
+			public ActionListener(Action action)
+				: base(new Dictionary<string, string>())
 			{
 				_action = action;
 			}
 
-			public override void Notify() => _action();
+			public override void Notify(TriggerContext ctx)
+			{
+				using var _ = new TriggerContextScope(ctx);
+				_action();
+			}
 		}
 
 		[Test]
@@ -31,16 +35,15 @@ namespace Tests.Behaviours
 			try
 			{
 				var trigger = go.AddComponent<IntervalTrigger>();
-				var triggerContext = new TriggerContext();
-				trigger.TriggerContext = triggerContext;
 
 				var observedIndices = new List<int>();
 				var observedCounts = new List<int>();
 
 				Action listener = () =>
 				{
-					observedIndices.Add(triggerContext.Get<int>("iteration_index"));
-					observedCounts.Add(triggerContext.Get<int>("iteration_count"));
+					var ctx = TriggerContextScope.Current!;
+					observedIndices.Add(ctx.Get<int>("iteration_index"));
+					observedCounts.Add(ctx.Get<int>("iteration_count"));
 				};
 
 				var data = new IntervalTriggerData(
@@ -49,7 +52,7 @@ namespace Tests.Behaviours
 					count: new ValueProvider<int>(3),
 					autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data, new List<Listener> { new ActionListener(listener, triggerContext) });
+				trigger.Initialise(data, new List<Listener> { new ActionListener(listener) });
 
 				const int totalIterations = 3;
 				for (int i = 0; i < totalIterations; i++)
@@ -67,30 +70,27 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void FireIteration_PoppingContextRestoresOuterFrame()
+		public void FireIteration_LeavesAmbientContextUnchanged_AfterReturn()
 		{
 			var go = new GameObject("IntervalTriggerTestObject");
 			try
 			{
 				var trigger = go.AddComponent<IntervalTrigger>();
-				var triggerContext = new TriggerContext();
-				trigger.TriggerContext = triggerContext;
 
-				using (triggerContext.Push())
-				{
-					triggerContext.Set("outer", 42);
+				var outer = TriggerContext.Empty.With("outer", 42);
+				using var _ = new TriggerContextScope(outer);
 
-					var data = new IntervalTriggerData(
-						id: "test_interval",
-						interval: new ValueProvider<float>(0f),
-						count: new ValueProvider<int>(1),
-						autoStart: new ValueProvider<bool>(false));
+				var data = new IntervalTriggerData(
+					id: "test_interval",
+					interval: new ValueProvider<float>(0f),
+					count: new ValueProvider<int>(1),
+					autoStart: new ValueProvider<bool>(false));
 
-					trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }, triggerContext) });
-					trigger.FireIteration(0, 1);
+				trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }) });
+				trigger.FireIteration(0, 1);
 
-					Assert.AreEqual(42, triggerContext.Get<int>("outer"));
-				}
+				Assert.AreSame(outer, TriggerContextScope.Current);
+				Assert.AreEqual(42, TriggerContextScope.Current!.Get<int>("outer"));
 			}
 			finally
 			{
