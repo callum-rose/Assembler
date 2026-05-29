@@ -16,8 +16,8 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var button = Data.Button.Get(TriggerContext.Empty);
-			var phase = Data.Phase.ValueOr(TriggerContext.Empty, "down");
+			var button = Data.Button.Get();
+			var phase = Data.Phase.ValueOr("down");
 			var fired = phase switch
 			{
 				"up" => UnityEngine.Input.GetMouseButtonUp(button),

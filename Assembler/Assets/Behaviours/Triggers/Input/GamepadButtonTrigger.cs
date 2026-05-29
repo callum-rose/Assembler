@@ -14,13 +14,13 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var button = Data.Button.Get(TriggerContext.Empty);
+			var button = Data.Button.Get();
 			if (string.IsNullOrEmpty(button))
 			{
 				return;
 			}
 
-			var mode = Data.Mode.ValueOr(TriggerContext.Empty, "down");
+			var mode = Data.Mode.ValueOr("down");
 			var fired = mode switch
 			{
 				"up" => UnityEngine.Input.GetKeyUp(button),

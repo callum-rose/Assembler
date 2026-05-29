@@ -17,9 +17,11 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				NotifyListeners(TriggerContext.Empty
-					.With("other_velocity", other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero)
-					.With("other_position", other.transform.position));
+				NotifyListeners(TriggerContext.Empty.With(b =>
+				{
+					b["other_velocity"] = other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero;
+					b["other_position"] = other.transform.position;
+				}));
 			}
 		}
 	}

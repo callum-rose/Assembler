@@ -22,10 +22,10 @@ namespace Assembler.Behaviours.Debug
 		{
 			if (Data == null) return;
 
-			Gizmos.color = Data.Colour.Get(TriggerContext.Empty);
+			Gizmos.color = Data.Colour.Get();
 			Gizmos.DrawLine(
-				transform.TransformPoint(Data.Start.Get(TriggerContext.Empty)),
-				transform.TransformPoint(Data.End.Get(TriggerContext.Empty)));
+				transform.TransformPoint(Data.Start.Get()),
+				transform.TransformPoint(Data.End.Get()));
 		}
 	}
 }

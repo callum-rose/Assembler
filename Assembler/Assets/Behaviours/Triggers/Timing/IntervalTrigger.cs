@@ -53,9 +53,11 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 		public void FireIteration(int iterationIndex, int iterationCount, TriggerContext ctx)
 		{
-			NotifyListeners(ctx
-				.With("iteration_index", iterationIndex)
-				.With("iteration_count", iterationCount));
+			NotifyListeners(ctx.With(b =>
+			{
+				b["iteration_index"] = iterationIndex;
+				b["iteration_count"] = iterationCount;
+			}));
 		}
 	}
 }

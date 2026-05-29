@@ -19,9 +19,12 @@ namespace Assembler.Behaviours.Triggers
 
 			for (int i = 0; i < list.Count; i++)
 			{
-				NotifyListeners(ctx
-					.With("item", list[i])
-					.With("index", i));
+				var iteration = i;
+				NotifyListeners(ctx.With(b =>
+				{
+					b["item"] = list[iteration]!;
+					b["index"] = iteration;
+				}));
 			}
 		}
 	}

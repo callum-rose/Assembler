@@ -22,7 +22,7 @@ namespace Assembler.Behaviours.Debug.UI
 
 		protected override void OnInitialise(UISliderData data)
 		{
-			_current = data.InitialValue.Get(TriggerContext.Empty);
+			_current = data.InitialValue.Get();
 		}
 
 		public override void Execute(TriggerContext ctx) { }
@@ -30,7 +30,7 @@ namespace Assembler.Behaviours.Debug.UI
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			var next = GUI.HorizontalSlider(Data.Rect.ToUnityRect(), _current, Data.MinValue.Get(TriggerContext.Empty), Data.MaxValue.Get(TriggerContext.Empty));
+			var next = GUI.HorizontalSlider(Data.Rect.ToUnityRect(), _current, Data.MinValue.Get(), Data.MaxValue.Get());
 			if (Mathf.Approximately(next, _current)) return;
 
 			_current = next;

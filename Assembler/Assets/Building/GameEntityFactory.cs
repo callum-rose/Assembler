@@ -57,8 +57,8 @@ namespace Assembler.Building
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(initialPositionContext).Get(TriggerContext.Empty),
-					rotation = entityInfo.InitialRotation.Resolve(initialPositionContext).Get(TriggerContext.Empty).FromEuler()
+					position = entityInfo.InitialPosition.Resolve(initialPositionContext).Get(),
+					rotation = entityInfo.InitialRotation.Resolve(initialPositionContext).Get().FromEuler()
 				}
 			};
 

@@ -21,7 +21,7 @@ namespace Assembler.Behaviours.Debug.UI
 
 		protected override void OnInitialise(UIToggleData data)
 		{
-			_current = data.InitialValue.Get(TriggerContext.Empty);
+			_current = data.InitialValue.Get();
 		}
 
 		public override void Execute(TriggerContext ctx) { }
@@ -29,7 +29,7 @@ namespace Assembler.Behaviours.Debug.UI
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			var next = GUI.Toggle(Data.Rect.ToUnityRect(), _current, Data.Label.Get(TriggerContext.Empty));
+			var next = GUI.Toggle(Data.Rect.ToUnityRect(), _current, Data.Label.Get());
 			if (next == _current) return;
 
 			_current = next;

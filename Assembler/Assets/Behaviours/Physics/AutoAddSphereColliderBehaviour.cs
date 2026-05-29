@@ -17,8 +17,8 @@ namespace Assembler.Behaviours.Physics
 		protected override void OnInitialise(SphereColliderData data)
 		{
 			_sphereCollider = gameObject.AddComponent<SphereCollider>();
-			data.Radius.UseIfValueExists(TriggerContext.Empty, v => _sphereCollider.radius = v);
-			data.IsTrigger.UseIfValueExists(TriggerContext.Empty, v => _sphereCollider.isTrigger = v);
+			data.Radius.UseIfValueExists(v => _sphereCollider.radius = v);
+			data.IsTrigger.UseIfValueExists(v => _sphereCollider.isTrigger = v);
 		}
 
 		public override void Execute(TriggerContext ctx)

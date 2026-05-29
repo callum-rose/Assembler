@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -16,6 +17,18 @@ namespace Assembler.Resolving
 
 		public TriggerContext WithMany(IEnumerable<KeyValuePair<string, object>> kvps) =>
 			new(_values.SetItems(kvps));
+
+		/// <summary>
+		/// Batch-update the context in a single immutable allocation. Use this when a trigger emits multiple
+		/// outputs per fire (e.g. a collision setting four keys at once) to avoid the intermediate dictionaries
+		/// that chained <c>.With(...)</c> calls would produce.
+		/// </summary>
+		public TriggerContext With(Action<ImmutableDictionary<string, object>.Builder> build)
+		{
+			var builder = _values.ToBuilder();
+			build(builder);
+			return new TriggerContext(builder.ToImmutable());
+		}
 
 		public TriggerContext WithRenamed(IReadOnlyDictionary<string, string> rename)
 		{

@@ -22,12 +22,12 @@ namespace Assembler.Behaviours.Debug
 		{
 			if (Data == null) return;
 
-			Gizmos.color = Data.Colour.Get(TriggerContext.Empty);
+			Gizmos.color = Data.Colour.Get();
 
-			if (Data.IsWire.Get(TriggerContext.Empty))
-				Gizmos.DrawWireSphere(transform.position, Data.Radius.Get(TriggerContext.Empty));
+			if (Data.IsWire.Get())
+				Gizmos.DrawWireSphere(transform.position, Data.Radius.Get());
 			else
-				Gizmos.DrawSphere(transform.position, Data.Radius.Get(TriggerContext.Empty));
+				Gizmos.DrawSphere(transform.position, Data.Radius.Get());
 		}
 	}
 }

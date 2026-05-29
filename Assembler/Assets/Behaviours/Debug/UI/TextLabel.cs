@@ -23,9 +23,9 @@ namespace Assembler.Behaviours.Debug.UI
 		{
 			if (Data == null) return;
 			_style ??= new GUIStyle(GUI.skin.label);
-			_style.fontSize = Data.FontSize.Get(TriggerContext.Empty);
-			var label = Data.Label.Get(TriggerContext.Empty);
-			var text = Data.Text.Get(TriggerContext.Empty);
+			_style.fontSize = Data.FontSize.Get();
+			var label = Data.Label.Get();
+			var text = Data.Text.Get();
 			var display = string.IsNullOrEmpty(label) ? text : label + text;
 			GUI.Label(Data.Rect.ToUnityRect(), display, _style);
 		}

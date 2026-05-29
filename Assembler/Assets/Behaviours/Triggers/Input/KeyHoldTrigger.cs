@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var keyCode = Data.Key.Get(TriggerContext.Empty) switch
+			var keyCode = Data.Key.Get() switch
 			{
 				"w" => KeyCode.W,
 				"s" => KeyCode.S,

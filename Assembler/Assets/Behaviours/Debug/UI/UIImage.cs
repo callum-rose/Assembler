@@ -25,7 +25,7 @@ namespace Assembler.Behaviours.Debug.UI
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			_tex.SetPixel(0, 0, Data.Colour.Get(TriggerContext.Empty));
+			_tex.SetPixel(0, 0, Data.Colour.Get());
 			_tex.Apply();
 			GUI.DrawTexture(Data.Rect.ToUnityRect(), _tex);
 		}

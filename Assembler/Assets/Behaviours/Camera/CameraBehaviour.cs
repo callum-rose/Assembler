@@ -14,8 +14,8 @@ namespace Assembler.Behaviours.Camera
 		protected override void OnInitialise(CameraData data)
 		{
 			var camera = gameObject.AddComponent<UnityEngine.Camera>();
-			data.Perspective.UseIfValueExists(TriggerContext.Empty, v => camera.orthographic = v == "orthographic");
-			data.Size.UseIfValueExists(TriggerContext.Empty, v => camera.orthographicSize = v);
+			data.Perspective.UseIfValueExists(v => camera.orthographic = v == "orthographic");
+			data.Size.UseIfValueExists(v => camera.orthographicSize = v);
 		}
 
 		public override void Execute(TriggerContext ctx)

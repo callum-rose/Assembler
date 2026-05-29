@@ -19,7 +19,7 @@ namespace Assembler.Behaviours.Debug.UI
 		{
 			if (Data == null) return;
 			var rect = Data.Rect.ToUnityRect();
-			var t = Mathf.Clamp01(Data.Value.Get(TriggerContext.Empty));
+			var t = Mathf.Clamp01(Data.Value.Get());
 			GUI.Box(rect, GUIContent.none);
 			GUI.Box(new Rect(rect.x, rect.y, rect.width * t, rect.height), GUIContent.none);
 		}

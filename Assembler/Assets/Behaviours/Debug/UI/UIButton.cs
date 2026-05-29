@@ -19,7 +19,7 @@ namespace Assembler.Behaviours.Debug.UI
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			if (GUI.Button(Data.Rect.ToUnityRect(), Data.Label.Get(TriggerContext.Empty)))
+			if (GUI.Button(Data.Rect.ToUnityRect(), Data.Label.Get()))
 				NotifyListeners(TriggerContext.Empty);
 		}
 	}

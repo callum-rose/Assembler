@@ -14,8 +14,9 @@ namespace Assembler.Behaviours.VariableUpdaters
 	{
 		public override void Execute(TriggerContext ctx)
 		{
-			Data.ValueToSet.Set(Data.ValueToGet.Get(ctx));
-			UnityEngine.Debug.Log($"{Id} set to {Data.ValueToSet.Get(ctx)}");
+			var value = Data.ValueToGet.Get(ctx);
+			Data.ValueToSet.Set(value);
+			UnityEngine.Debug.Log($"{Id} set to {value}");
 		}
 	}
 }

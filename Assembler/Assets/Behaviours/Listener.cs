@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Assembler.Resolving;
 
 namespace Assembler.Behaviours
@@ -34,11 +33,11 @@ namespace Assembler.Behaviours
 	public sealed class EntityTaggedListener : Listener
 	{
 		private readonly IValueProvider<string> _entityTag;
-		private readonly string _behaviourId;
+		private readonly string? _behaviourId;
 		private readonly Func<string, string, IReadOnlyList<GameBehaviour>> _resolveTargets;
 
 		public EntityTaggedListener(IValueProvider<string> entityTag,
-			string behaviourId,
+			string? behaviourId,
 			Func<string, string, IReadOnlyList<GameBehaviour>> resolveTargets,
 			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
@@ -49,7 +48,7 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			if (string.IsNullOrEmpty(_behaviourId))
+			if (_behaviourId == null)
 			{
 				return;
 			}
@@ -57,9 +56,12 @@ namespace Assembler.Behaviours
 			var preparedCtx = Prepare(ctx);
 			var targets = _resolveTargets(_entityTag.Get(preparedCtx), _behaviourId);
 
-			foreach (var behaviour in targets.Where(b => b != null))
+			foreach (var behaviour in targets)
 			{
-				behaviour.Execute(preparedCtx);
+				if (behaviour != null)
+				{
+					behaviour.Execute(preparedCtx);
+				}
 			}
 		}
 	}
@@ -89,9 +91,12 @@ namespace Assembler.Behaviours
 
 			var targets = _resolveTargets(tag);
 
-			foreach (var behaviour in targets.Where(b => b != null))
+			foreach (var behaviour in targets)
 			{
-				behaviour.Execute(preparedCtx);
+				if (behaviour != null)
+				{
+					behaviour.Execute(preparedCtx);
+				}
 			}
 		}
 	}

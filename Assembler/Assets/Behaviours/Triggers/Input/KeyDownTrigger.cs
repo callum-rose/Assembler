@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKeyDown(Data.Key.Get(TriggerContext.Empty)))
+			if (UnityEngine.Input.GetKeyDown(Data.Key.Get()))
 			{
 				NotifyListeners(TriggerContext.Empty);
 			}
