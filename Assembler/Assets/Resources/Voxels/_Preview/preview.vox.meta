@@ -1,0 +1,2599 @@
+fileFormatVersion: 2
+guid: 072693a8a83bb4effab1571fe477b43b
+ScriptedImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 2
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+  script: {fileID: 11500000, guid: bd3f7680e54334578ada730558f401b9, type: 3}
+  modifiers:
+    values: []
+  opaqueEdgeShift: 0
+  transparentEdgeShift: 0
+  scale: 0.1
+  indexFormat: 0
+  generateLightmapUV: 0
+  generateColliders: 1
+  chunkSize: 64
+  AOStrength: 1
+  originMode: 0
+  generationMode: 1
+  meshGenerationApproach: 0
+  materialPropertiesEmbeddingMode: 0
+  textureOptimizationMode: 3
+  opaqueMaterial: {instanceID: 0}
+  transparentMaterial: {instanceID: 0}
+  overrideAssetMaterials: 0
+  overrideMaterials:
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  - color: {r: 1, g: 1, b: 1, a: 1}
+    materialType: 1
+    weight: 1
+    roughness: 1
+    specular: 0
+    ior: 1
+    attenuation: 1
+    flux: 0
+    plastic: 1
+    emit: 0
+  hueShift: 0
+  brightness: 0
+  saturation: 1.3
+  emissionScaleFactor: 1.8
+  remapVoxelIndices: 1
+  animationRoots: []
+  animationFrameDuration: 0.25
+  references:
+    version: 2
+    RefIds: []
