@@ -5,20 +5,17 @@ namespace Assembler.Resolving
 	public sealed class TriggerOutputProvider<T> : IValueProvider<T>
 	{
 		private readonly string _outputName;
-		private readonly TriggerContextHolder _holder;
 
-		public T Value
-		{
-			get => _holder.Current.Get<T>(_outputName);
-			set => throw new InvalidOperationException("Cannot set a trigger output value");
-		}
-
-		object IValueProvider.Value => Value!;
-
-		public TriggerOutputProvider(string outputName, TriggerContextHolder holder)
+		public TriggerOutputProvider(string outputName)
 		{
 			_outputName = outputName;
-			_holder = holder;
 		}
+
+		public T Get(TriggerContext ctx) => ctx.Get<T>(_outputName);
+
+		object IValueProvider.Get(TriggerContext ctx) => ctx.Get<T>(_outputName)!;
+
+		public void Set(T value) =>
+			throw new InvalidOperationException("Cannot set a trigger output value");
 	}
 }

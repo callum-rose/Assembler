@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			NotifyListeners(IncomingContext
+			NotifyListeners(TriggerContext.Empty
 				.With("mouse_position", current)
 				.With("mouse_delta", delta));
 		}

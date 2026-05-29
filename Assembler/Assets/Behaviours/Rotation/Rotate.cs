@@ -11,9 +11,9 @@ namespace Assembler.Behaviours.Rotation
 	/// </remarks>
 	public class Rotate : GameBehaviour<RotateData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.Rotate(Data.Displacement.Value, Space.World);
+			transform.Rotate(Data.Displacement.Get(ctx), Space.World);
 		}
 	}
 }

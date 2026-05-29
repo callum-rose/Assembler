@@ -21,10 +21,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 		private void Start()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 			bool timerIsRunning = _currentCoroutine is not null;
 
@@ -34,9 +34,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 				StopCoroutine(_currentCoroutine);
 			}
 
-			var captured = IncomingContext;
+			var captured = ctx;
 
-			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Value, Data.Count.Value, captured));
+			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Get(ctx), Data.Count.Get(ctx), captured));
 		}
 
 		private IEnumerator Routine(float interval, int count, TriggerContext captured)
@@ -51,12 +51,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 			_currentCoroutine = null;
 		}
 
-		public void FireIteration(int iterationIndex, int iterationCount) =>
-			FireIteration(iterationIndex, iterationCount, IncomingContext);
-
-		private void FireIteration(int iterationIndex, int iterationCount, TriggerContext captured)
+		public void FireIteration(int iterationIndex, int iterationCount, TriggerContext ctx)
 		{
-			NotifyListeners(captured
+			NotifyListeners(ctx
 				.With("iteration_index", iterationIndex)
 				.With("iteration_count", iterationCount));
 		}

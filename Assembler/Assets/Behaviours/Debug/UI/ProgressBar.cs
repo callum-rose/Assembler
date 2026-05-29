@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Parsing;
 using UnityEngine;
@@ -12,13 +13,13 @@ namespace Assembler.Behaviours.Debug.UI
 	/// </remarks>
 	public class ProgressBar : GameBehaviour<ProgressBarData>
 	{
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
 			if (Data == null) return;
 			var rect = Data.Rect.ToUnityRect();
-			var t = Mathf.Clamp01(Data.Value.Value);
+			var t = Mathf.Clamp01(Data.Value.Get(TriggerContext.Empty));
 			GUI.Box(rect, GUIContent.none);
 			GUI.Box(new Rect(rect.x, rect.y, rect.width * t, rect.height), GUIContent.none);
 		}

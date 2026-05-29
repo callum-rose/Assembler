@@ -19,12 +19,12 @@ namespace Assembler.Behaviours.Physics
 		protected override void OnInitialise(CapsuleColliderData data)
 		{
 			_capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
-			data.Radius.UseIfValueExists(v => _capsuleCollider.radius = v);
-			data.Height.UseIfValueExists(v => _capsuleCollider.height = v);
-			data.Direction.UseIfValueExists(v => _capsuleCollider.direction = v);
-			data.IsTrigger.UseIfValueExists(v => _capsuleCollider.isTrigger = v);
+			data.Radius.UseIfValueExists(TriggerContext.Empty, v => _capsuleCollider.radius = v);
+			data.Height.UseIfValueExists(TriggerContext.Empty, v => _capsuleCollider.height = v);
+			data.Direction.UseIfValueExists(TriggerContext.Empty, v => _capsuleCollider.direction = v);
+			data.IsTrigger.UseIfValueExists(TriggerContext.Empty, v => _capsuleCollider.isTrigger = v);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

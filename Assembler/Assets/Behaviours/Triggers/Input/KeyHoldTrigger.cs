@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var keyCode = Data.Key.Value switch
+			var keyCode = Data.Key.Get(TriggerContext.Empty) switch
 			{
 				"w" => KeyCode.W,
 				"s" => KeyCode.S,
@@ -27,7 +27,7 @@ namespace Assembler.Behaviours.Triggers.Input
 			
 			if (UnityEngine.Input.GetKey(keyCode))
 			{
-				NotifyListeners();
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 	}

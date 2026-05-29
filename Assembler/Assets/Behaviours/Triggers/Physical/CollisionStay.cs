@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Physical
@@ -18,7 +19,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				NotifyListeners(IncomingContext
+				NotifyListeners(TriggerContext.Empty
 					.With("contact_point", other.contacts[0].point)
 					.With("contact_normal", other.contacts[0].normal)
 					.With("other_velocity", other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero)

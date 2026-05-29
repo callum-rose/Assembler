@@ -17,11 +17,11 @@ namespace Assembler.Behaviours.Physics
 		protected override void OnInitialise(BoxColliderData data)
 		{
 			_boxCollider = gameObject.AddComponent<BoxCollider>();
-			data.Size.UseIfValueExists(v => _boxCollider.size = v);
-			data.IsTrigger.UseIfValueExists(v => _boxCollider.isTrigger = v);
+			data.Size.UseIfValueExists(TriggerContext.Empty, v => _boxCollider.size = v);
+			data.IsTrigger.UseIfValueExists(TriggerContext.Empty, v => _boxCollider.isTrigger = v);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 		}
 	}

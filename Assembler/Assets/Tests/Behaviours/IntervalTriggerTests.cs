@@ -52,7 +52,7 @@ namespace Tests.Behaviours
 				const int totalIterations = 3;
 				for (int i = 0; i < totalIterations; i++)
 				{
-					trigger.FireIteration(i, totalIterations);
+					trigger.FireIteration(i, totalIterations, TriggerContext.Empty);
 				}
 
 				CollectionAssert.AreEqual(new[] { 0, 1, 2 }, observedIndices);
@@ -65,14 +65,15 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void Invoke_RestoresPreviousContext_OnReturn()
+		public void FireIteration_ForwardsUpstreamOutputsThroughToListeners()
 		{
 			var go = new GameObject("IntervalTriggerTestObject");
 			try
 			{
 				var trigger = go.AddComponent<IntervalTrigger>();
-				var holder = new TriggerContextHolder { Current = TriggerContext.Empty.With("outer", 42) };
-				trigger.AttachContextHolder(holder);
+
+				int observedOuter = 0;
+				var listener = new ActionListener(ctx => observedOuter = ctx.Get<int>("outer"));
 
 				var data = new IntervalTriggerData(
 					id: "test_interval",
@@ -80,12 +81,12 @@ namespace Tests.Behaviours
 					count: new ValueProvider<int>(1),
 					autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data, new List<Listener>());
+				trigger.Initialise(data, new List<Listener> { listener });
 
-				trigger.Invoke(TriggerContext.Empty.With("inner", 99));
+				var upstream = TriggerContext.Empty.With("outer", 42);
+				trigger.FireIteration(0, 1, upstream);
 
-				Assert.AreEqual(42, holder.Current.Get<int>("outer"));
-				Assert.IsFalse(holder.Current.TryGet<int>("inner", out _));
+				Assert.AreEqual(42, observedOuter);
 			}
 			finally
 			{

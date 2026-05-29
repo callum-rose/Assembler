@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Triggers
@@ -12,14 +13,13 @@ namespace Assembler.Behaviours.Triggers
 	/// </remarks>
 	public abstract class ListLoopTrigger<T> : Trigger<ListLoopTriggerData<T>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			var list = Data.List.Value;
-			var incoming = IncomingContext;
+			var list = Data.List.Get(ctx);
 
 			for (int i = 0; i < list.Count; i++)
 			{
-				NotifyListeners(incoming
+				NotifyListeners(ctx
 					.With("item", list[i])
 					.With("index", i));
 			}

@@ -18,9 +18,9 @@ namespace Assembler.Behaviours.Movement
 			_position = behaviourInfo.ValueExpression;
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.position = _position.Value;
+			transform.position = _position.Get(ctx);
 		}
 	}
 }

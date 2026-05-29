@@ -1,5 +1,6 @@
 using Assembler.Behaviours.Triggers;
 using Assembler.Parsing;
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -13,13 +14,13 @@ namespace Assembler.Behaviours.Debug.UI
 	/// </remarks>
 	public class UIButton : Trigger<UIButtonData>
 	{
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			if (GUI.Button(Data.Rect.ToUnityRect(), Data.Label.Value))
-				NotifyListeners();
+			if (GUI.Button(Data.Rect.ToUnityRect(), Data.Label.Get(TriggerContext.Empty)))
+				NotifyListeners(TriggerContext.Empty);
 		}
 	}
 }

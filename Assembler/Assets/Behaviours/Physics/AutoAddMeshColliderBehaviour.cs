@@ -17,10 +17,10 @@ namespace Assembler.Behaviours.Physics
 		protected override void OnInitialise(MeshColliderData data)
 		{
 			_meshCollider = gameObject.AddComponent<MeshCollider>();
-			data.Convex.UseIfValueExists(v => _meshCollider.convex = v);
-			data.IsTrigger.UseIfValueExists(v => _meshCollider.isTrigger = v);
+			data.Convex.UseIfValueExists(TriggerContext.Empty, v => _meshCollider.convex = v);
+			data.IsTrigger.UseIfValueExists(TriggerContext.Empty, v => _meshCollider.isTrigger = v);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

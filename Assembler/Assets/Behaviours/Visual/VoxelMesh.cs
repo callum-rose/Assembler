@@ -18,12 +18,12 @@ namespace Assembler.Behaviours.Visual
 			meshGo.transform.SetParent(transform, false);
 
 			var filter = meshGo.AddComponent<MeshFilter>();
-			filter.sharedMesh = data.Mesh.Value;
+			filter.sharedMesh = data.Mesh.Get(TriggerContext.Empty);
 			meshGo.AddComponent<MeshRenderer>();
 
-			data.Scale.UseIfValueExists(s => meshGo.transform.localScale = s);
+			data.Scale.UseIfValueExists(TriggerContext.Empty, s => meshGo.transform.localScale = s);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

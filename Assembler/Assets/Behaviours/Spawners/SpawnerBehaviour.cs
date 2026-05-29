@@ -22,14 +22,14 @@ namespace Assembler.Behaviours.Spawners
 	{
 		public IEntitySpawner Spawner { get; set; }
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			Spawner.Spawn(Data.TemplateId.Value,
-				Data.Position.Value,
-				Data.Rotation.Value,
-				Data.Parameters.ToDictionary(kv => kv.Key, kv => kv.Value.Value));
+			Spawner.Spawn(Data.TemplateId.Get(ctx),
+				Data.Position.Get(ctx),
+				Data.Rotation.Get(ctx),
+				Data.Parameters.ToDictionary(kv => kv.Key, kv => kv.Value.Get(ctx)));
 
-			NotifyListeners();
+			NotifyListeners(ctx);
 		}
 	}
 }

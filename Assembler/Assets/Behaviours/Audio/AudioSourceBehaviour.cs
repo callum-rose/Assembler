@@ -18,16 +18,16 @@ namespace Assembler.Behaviours.Audio
 		protected override void OnInitialise(AudioSourceData data)
 		{
 			_audioSource = gameObject.AddComponent<AudioSource>();
-			_audioSource.clip = data.Clip.Value;
-			_audioSource.loop = data.Loop.Value;
+			_audioSource.clip = data.Clip.Get(TriggerContext.Empty);
+			_audioSource.loop = data.Loop.Get(TriggerContext.Empty);
 
-			if (data.PlayOnStart.Value)
+			if (data.PlayOnStart.Get(TriggerContext.Empty))
 			{
 				_audioSource.Play();
 			}
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 			_audioSource.Play();
 		}

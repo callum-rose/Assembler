@@ -18,9 +18,9 @@ namespace Assembler.Behaviours.Rotation
 			_rotation = behaviourInfo.ValueExpression;
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.eulerAngles = _rotation.Value;
+			transform.eulerAngles = _rotation.Get(ctx);
 		}
 	}
 }

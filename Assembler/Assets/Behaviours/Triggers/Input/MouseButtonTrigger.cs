@@ -16,8 +16,8 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var button = Data.Button.Value;
-			var phase = Data.Phase.ValueOr("down");
+			var button = Data.Button.Get(TriggerContext.Empty);
+			var phase = Data.Phase.ValueOr(TriggerContext.Empty, "down");
 			var fired = phase switch
 			{
 				"up" => UnityEngine.Input.GetMouseButtonUp(button),
@@ -30,7 +30,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			NotifyListeners(IncomingContext.With("mouse_position", UnityEngine.Input.mousePosition));
+			NotifyListeners(TriggerContext.Empty.With("mouse_position", UnityEngine.Input.mousePosition));
 		}
 	}
 }

@@ -57,12 +57,7 @@ namespace Assembler.Building
 				throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 			}
 
-			var contextHolder = new TriggerContextHolder();
-			var ctxWithHolder = ctx with { Resolution = ctx.Resolution with { ContextHolder = contextHolder } };
-
-			var (behaviour, initialise) = entry.Build(gameObject, behaviourInfo, ctxWithHolder);
-
-			behaviour.AttachContextHolder(contextHolder);
+			var (behaviour, initialise) = entry.Build(gameObject, behaviourInfo, ctx);
 
 			if (behaviour is INeedsSpawner needsSpawner)
 			{

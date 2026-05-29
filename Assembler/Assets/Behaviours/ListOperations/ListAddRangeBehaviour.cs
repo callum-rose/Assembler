@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.ListOperations
@@ -10,9 +11,9 @@ namespace Assembler.Behaviours.ListOperations
 	/// </remarks>
 	public abstract class ListAddRangeBehaviour<T> : GameBehaviour<ListAddRangeData<T>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			Data.List.Value.AddRange(Data.Other.Value);
+			Data.List.Get(ctx).AddRange(Data.Other.Get(ctx));
 		}
 	}
 }

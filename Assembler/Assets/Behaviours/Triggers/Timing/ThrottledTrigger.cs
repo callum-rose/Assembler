@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -12,9 +13,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 	{
 		private float _lastTriggerTime = float.NegativeInfinity;
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			var rate = Data.Rate.Value;
+			var rate = Data.Rate.Get(ctx);
 			if (rate <= 0f)
 			{
 				return;
@@ -29,7 +30,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 			}
 
 			_lastTriggerTime = now;
-			NotifyListeners();
+			NotifyListeners(ctx);
 		}
 	}
 }

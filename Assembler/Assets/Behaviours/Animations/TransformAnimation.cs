@@ -11,16 +11,18 @@ namespace Assembler.Behaviours.Animations
 
 		protected abstract Vector3 Current { get; set; }
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 			_activeTween?.Kill();
 
-			var start = Data.Start.ValueOr(Current);
-			var end = Data.End.Value;
-			var duration = Mathf.Max(0f, Data.Duration.Value);
-			var ease = ParseEase(Data.Easing.ValueOr(string.Empty));
+			var start = Data.Start.ValueOr(ctx, Current);
+			var end = Data.End.Get(ctx);
+			var duration = Mathf.Max(0f, Data.Duration.Get(ctx));
+			var ease = ParseEase(Data.Easing.ValueOr(ctx, string.Empty));
 
 			Current = start;
+
+			var captured = ctx;
 
 			_activeTween = DOTween.To(
 					() => Current,
@@ -32,7 +34,7 @@ namespace Assembler.Behaviours.Animations
 				.OnComplete(() =>
 				{
 					_activeTween = null;
-					NotifyListeners();
+					NotifyListeners(captured);
 				});
 		}
 

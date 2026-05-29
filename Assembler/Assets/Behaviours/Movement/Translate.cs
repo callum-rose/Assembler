@@ -10,9 +10,9 @@ namespace Assembler.Behaviours.Movement
 	/// </remarks>
 	public class Translate : GameBehaviour<TranslateData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.position += Data.Displacement.Value;
+			transform.position += Data.Displacement.Get(ctx);
 		}
 	}
 }

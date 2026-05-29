@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Parsing;
 using UnityEngine;
@@ -16,15 +17,15 @@ namespace Assembler.Behaviours.Debug.UI
 	{
 		private GUIStyle _style;
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
 			if (Data == null) return;
 			_style ??= new GUIStyle(GUI.skin.label);
-			_style.fontSize = Data.FontSize.Value;
-			var label = Data.Label.Value;
-			var text = Data.Text.Value;
+			_style.fontSize = Data.FontSize.Get(TriggerContext.Empty);
+			var label = Data.Label.Get(TriggerContext.Empty);
+			var text = Data.Text.Get(TriggerContext.Empty);
 			var display = string.IsNullOrEmpty(label) ? text : label + text;
 			GUI.Label(Data.Rect.ToUnityRect(), display, _style);
 		}

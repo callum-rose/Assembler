@@ -10,11 +10,11 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 	/// </remarks>
 	public class ConditionGate : Trigger<ConditionGateData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			if (Data.Condition.Value)
+			if (Data.Condition.Get(ctx))
 			{
-				NotifyListeners();
+				NotifyListeners(ctx);
 			}
 		}
 	}

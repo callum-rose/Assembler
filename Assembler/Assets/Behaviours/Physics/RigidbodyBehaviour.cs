@@ -22,16 +22,16 @@ namespace Assembler.Behaviours.Physics
 		protected override void OnInitialise(RigidbodyData data)
 		{
 			_rigidbody = gameObject.AddComponent<Rigidbody>();
-			data.IsKinematic.UseIfValueExists(v => _rigidbody.isKinematic = v);
-			data.UseGravity.UseIfValueExists(v => _rigidbody.useGravity = v);
-			data.Mass.UseIfValueExists(v => _rigidbody.mass = v);
-			data.LinearDamping.UseIfValueExists(v => _rigidbody.linearDamping = v);
-			data.AngularDamping.UseIfValueExists(v => _rigidbody.angularDamping = v);
-			data.FreezePosition.UseIfValueExists(v => _rigidbody.constraints = ApplyPositionFreeze(_rigidbody.constraints, v));
-			data.FreezeRotation.UseIfValueExists(v => _rigidbody.constraints = ApplyRotationFreeze(_rigidbody.constraints, v));
+			data.IsKinematic.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.isKinematic = v);
+			data.UseGravity.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.useGravity = v);
+			data.Mass.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.mass = v);
+			data.LinearDamping.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.linearDamping = v);
+			data.AngularDamping.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.angularDamping = v);
+			data.FreezePosition.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.constraints = ApplyPositionFreeze(_rigidbody.constraints, v));
+			data.FreezeRotation.UseIfValueExists(TriggerContext.Empty, v => _rigidbody.constraints = ApplyRotationFreeze(_rigidbody.constraints, v));
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private static RigidbodyConstraints ApplyPositionFreeze(RigidbodyConstraints current, Vector3 freeze)
 		{

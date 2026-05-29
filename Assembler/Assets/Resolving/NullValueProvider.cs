@@ -6,14 +6,14 @@ namespace Assembler.Resolving
 	{
 		public static NullValueProvider<T> Instance { get; } = new();
 
-		public T Value
-		{
-			get => throw new InvalidOperationException("Null value provider cannot provide a value");
-			set => throw new InvalidOperationException("Null value provider cannot have its value set");
-		}
-
-		object IValueProvider.Value =>
+		public T Get(TriggerContext ctx) =>
 			throw new InvalidOperationException("Null value provider cannot provide a value");
+
+		object IValueProvider.Get(TriggerContext ctx) =>
+			throw new InvalidOperationException("Null value provider cannot provide a value");
+
+		public void Set(T value) =>
+			throw new InvalidOperationException("Null value provider cannot have its value set");
 
 		private NullValueProvider() { }
 	}

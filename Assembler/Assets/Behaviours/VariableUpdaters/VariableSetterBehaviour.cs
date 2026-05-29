@@ -12,10 +12,10 @@ namespace Assembler.Behaviours.VariableUpdaters
 	/// </remarks>
 	public abstract class VariableSetterBehaviour<TValue> : GameBehaviour<VariableSetterData<TValue>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			Data.ValueToSet.Value = Data.ValueToGet.Value;
-			UnityEngine.Debug.Log($"{Id} set to {Data.ValueToSet.Value}");
+			Data.ValueToSet.Set(Data.ValueToGet.Get(ctx));
+			UnityEngine.Debug.Log($"{Id} set to {Data.ValueToSet.Get(ctx)}");
 		}
 	}
 }

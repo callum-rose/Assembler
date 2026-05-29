@@ -8,7 +8,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 {
 	public abstract class PhysicalTrigger : Trigger<PhysicalTriggerData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 			throw new Exception("Cannot execute an input trigger manually");
 		}

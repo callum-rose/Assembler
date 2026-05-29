@@ -28,7 +28,7 @@ namespace Assembler.Behaviours
 			_target = target;
 		}
 
-		public override void Notify(TriggerContext ctx) => _target.Invoke(Prepare(ctx));
+		public override void Notify(TriggerContext ctx) => _target.Execute(Prepare(ctx));
 	}
 
 	public sealed class EntityTaggedListener : Listener
@@ -54,12 +54,12 @@ namespace Assembler.Behaviours
 				return;
 			}
 
-			var targets = _resolveTargets(_entityTag.Value, _behaviourId);
 			var preparedCtx = Prepare(ctx);
+			var targets = _resolveTargets(_entityTag.Get(preparedCtx), _behaviourId);
 
 			foreach (var behaviour in targets.Where(b => b != null))
 			{
-				behaviour.Invoke(preparedCtx);
+				behaviour.Execute(preparedCtx);
 			}
 		}
 	}
@@ -79,19 +79,19 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			var tag = _behaviourTag.Value;
+			var preparedCtx = Prepare(ctx);
+			var tag = _behaviourTag.Get(preparedCtx);
 
 			if (string.IsNullOrEmpty(tag))
 			{
 				return;
 			}
-			
+
 			var targets = _resolveTargets(tag);
-			var preparedCtx = Prepare(ctx);
 
 			foreach (var behaviour in targets.Where(b => b != null))
 			{
-				behaviour.Invoke(preparedCtx);
+				behaviour.Execute(preparedCtx);
 			}
 		}
 	}
