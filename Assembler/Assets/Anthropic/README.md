@@ -4,32 +4,16 @@ Thin wrapper around the official Anthropic C# SDK (installed via NuGetForUnity).
 
 ## Public API
 
-### `AnthropicClient : IDisposable`
-Core client. Constructed with an API key, optional model string, and optional max-tokens.
+| Type / Member | Purpose |
+|---|---|
+| `AnthropicClient` | Disposable streaming client. Construct with API key, optional model (default `claude-opus-4-7`), and optional max-tokens (default 16000). |
+| `AnthropicClient.SendAsync(cachedSystemPrompt, messages, ct, onDelta?)` | Streams a response from the Messages API. System prompt is sent with `cache_control: ephemeral` for prompt caching. `onDelta` receives each text chunk. |
+| `AnthropicMessage` | Simple role/content pair (`"user"` or `"assistant"`) passed into `SendAsync`. |
+| `AnthropicRequestException` | Wraps SDK exceptions with an `int StatusCode` property (HTTP code, or 0 for non-HTTP errors). |
+| `FencedBlockExtractor.Extract(text, blockName)` | Static utility. Extracts the body of a named fenced block (e.g. ```` ```yaml ... ``` ````) using cached compiled regexes. |
 
-```csharp
-Task<string> SendAsync(
-    string cachedSystemPrompt,
-    IReadOnlyList<AnthropicMessage> messages,
-    CancellationToken cancellationToken,
-    Action<string>? onDelta = null)
-```
-
-Streams a response from the Messages API. The system prompt is sent with `cache_control: ephemeral` to enable prompt caching. `onDelta` receives each text chunk as it arrives. Throws `AnthropicRequestException` on API or transport errors; swallows `OperationCanceledException`.
-
-Default model: `claude-opus-4-7`. Default max tokens: 16000.
-
-### `AnthropicMessage`
-Simple role/content pair (`"user"` or `"assistant"`) passed into `SendAsync`.
-
-### `AnthropicRequestException`
-Wraps SDK-typed exceptions into a single exception with an `int StatusCode` property (HTTP code, or 0 for non-HTTP errors).
-
-### `FencedBlockExtractor.Extract(string text, string blockName) : string?`
-Static utility. Extracts the body of a named fenced block (e.g. ` ```yaml ... ``` `) from an LLM response string. Uses cached compiled regexes.
-
-## Notes
+## Gotchas
 
 - **Sole consumer**: `Assembler.Generation` — no other assembly references this one.
-- **SDK dependency**: Requires the `Anthropic` NuGet package via NuGetForUnity. The SDK client is wrapped (not exposed) so callers never touch SDK types directly.
-- `csc.rsp` enables nullable reference types, matching the project-wide convention.
+- **SDK dependency**: requires the `Anthropic` NuGet package via NuGetForUnity. The SDK client is wrapped (not exposed), so callers never touch SDK types directly.
+- `SendAsync` throws `AnthropicRequestException` on API or transport errors and swallows `OperationCanceledException`.
