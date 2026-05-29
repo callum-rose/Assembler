@@ -16,7 +16,9 @@ namespace Assembler.Resolving
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
 				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPositionProvider(ctx.EntityTransforms.Get(ep.EntityId)),
-				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
+				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName,
+					ctx.ContextHolder ?? throw new InvalidOperationException(
+						$"!output '{output.OutputName}' resolved without a TriggerContextHolder — this behaviour was built outside GameBehaviourFactory")),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};

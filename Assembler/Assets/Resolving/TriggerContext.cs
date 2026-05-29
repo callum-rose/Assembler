@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -64,18 +63,14 @@ namespace Assembler.Resolving
 		}
 	}
 
-	public readonly struct TriggerContextScope : IDisposable
+	/// <summary>
+	/// Per-behaviour mutable slot that holds the trigger context currently being processed by that behaviour.
+	/// A fresh holder is allocated for every <see cref="Assembler.Behaviours.GameBehaviour"/> at build time and
+	/// shared with every <see cref="TriggerOutputProvider{T}"/> that the behaviour's data depends on, so that
+	/// <c>!output</c> reads route to the same context that the invoking listener handed in.
+	/// </summary>
+	public sealed class TriggerContextHolder
 	{
-		private readonly TriggerContext? _previous;
-
-		public TriggerContextScope(TriggerContext ctx)
-		{
-			_previous = Current;
-			Current = ctx;
-		}
-
-		public static TriggerContext? Current { get; private set; }
-
-		public void Dispose() => Current = _previous;
+		public TriggerContext Current { get; set; } = TriggerContext.Empty;
 	}
 }

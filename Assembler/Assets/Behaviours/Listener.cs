@@ -29,11 +29,7 @@ namespace Assembler.Behaviours
 			_target = target;
 		}
 
-		public override void Notify(TriggerContext ctx)
-		{
-			using var _ = new TriggerContextScope(Prepare(ctx));
-			_target.Execute();
-		}
+		public override void Notify(TriggerContext ctx) => _target.Invoke(Prepare(ctx));
 	}
 
 	public sealed class EntityTaggedListener : Listener
@@ -54,23 +50,22 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			using var _ = new TriggerContextScope(Prepare(ctx));
-
+			var prepared = Prepare(ctx);
 			var entityTag = _entityTag.Value;
 
 			if (!string.IsNullOrEmpty(_behaviourId))
 			{
-				InvokeAll(_resolveTargets(entityTag, _behaviourId));
+				InvokeAll(_resolveTargets(entityTag, _behaviourId), prepared);
 			}
 		}
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
+		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets, TriggerContext ctx)
 		{
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute();
+					behaviour.Invoke(ctx);
 				}
 			}
 		}
@@ -91,17 +86,17 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			using var _ = new TriggerContextScope(Prepare(ctx));
-			InvokeAll(_resolveTargets(_behaviourTag.Value));
+			var prepared = Prepare(ctx);
+			InvokeAll(_resolveTargets(_behaviourTag.Value), prepared);
 		}
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
+		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets, TriggerContext ctx)
 		{
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute();
+					behaviour.Invoke(ctx);
 				}
 			}
 		}

@@ -5,5 +5,6 @@ namespace Assembler.Resolving
 		CompiledExpressionsRegistry Expressions,
 		AssetRegistry Assets,
 		EntityVariableScope? Scope,
-		EntityTransformRegistry EntityTransforms);
+		EntityTransformRegistry EntityTransforms,
+		TriggerContextHolder? ContextHolder = null);
 }
