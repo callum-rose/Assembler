@@ -1,30 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Resolving;
 
 namespace Assembler.Behaviours
 {
 	public abstract class Listener
 	{
-		private IReadOnlyDictionary<string, string> OutputMapping { get; }
+		private readonly IReadOnlyDictionary<string, string> _outputMapping;
 
 		protected Listener(IReadOnlyDictionary<string, string> outputMapping)
 		{
-			OutputMapping = outputMapping;
+			_outputMapping = outputMapping;
 		}
 
 		public abstract void Notify(TriggerContext ctx);
 
-		protected TriggerContext Prepare(TriggerContext ctx) =>
-			OutputMapping.Count > 0 ? ctx.WithRenamed(OutputMapping) : ctx;
+		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
 	}
 
 	public sealed class DirectListener : Listener
 	{
 		private readonly GameBehaviour _target;
 
-		public DirectListener(GameBehaviour target,
-			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
+		public DirectListener(GameBehaviour target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_target = target;
 		}
@@ -35,11 +34,11 @@ namespace Assembler.Behaviours
 	public sealed class EntityTaggedListener : Listener
 	{
 		private readonly IValueProvider<string> _entityTag;
-		private readonly string? _behaviourId;
+		private readonly string _behaviourId;
 		private readonly Func<string, string, IReadOnlyList<GameBehaviour>> _resolveTargets;
 
 		public EntityTaggedListener(IValueProvider<string> entityTag,
-			string? behaviourId,
+			string behaviourId,
 			Func<string, string, IReadOnlyList<GameBehaviour>> resolveTargets,
 			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
@@ -50,23 +49,17 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			var prepared = Prepare(ctx);
-			var entityTag = _entityTag.Value;
-
-			if (!string.IsNullOrEmpty(_behaviourId))
+			if (string.IsNullOrEmpty(_behaviourId))
 			{
-				InvokeAll(_resolveTargets(entityTag, _behaviourId), prepared);
+				return;
 			}
-		}
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets, TriggerContext ctx)
-		{
-			foreach (var behaviour in targets)
+			var targets = _resolveTargets(_entityTag.Value, _behaviourId);
+			var preparedCtx = Prepare(ctx);
+
+			foreach (var behaviour in targets.Where(b => b != null))
 			{
-				if (behaviour != null)
-				{
-					behaviour.Invoke(ctx);
-				}
+				behaviour.Invoke(preparedCtx);
 			}
 		}
 	}
@@ -86,18 +79,19 @@ namespace Assembler.Behaviours
 
 		public override void Notify(TriggerContext ctx)
 		{
-			var prepared = Prepare(ctx);
-			InvokeAll(_resolveTargets(_behaviourTag.Value), prepared);
-		}
+			var tag = _behaviourTag.Value;
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets, TriggerContext ctx)
-		{
-			foreach (var behaviour in targets)
+			if (string.IsNullOrEmpty(tag))
 			{
-				if (behaviour != null)
-				{
-					behaviour.Invoke(ctx);
-				}
+				return;
+			}
+			
+			var targets = _resolveTargets(tag);
+			var preparedCtx = Prepare(ctx);
+
+			foreach (var behaviour in targets.Where(b => b != null))
+			{
+				behaviour.Invoke(preparedCtx);
 			}
 		}
 	}
