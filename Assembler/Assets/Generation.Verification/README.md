@@ -1,5 +1,5 @@
-# Assembler.Generation.Verification
+# Generation.Verification
 
-Closes the loop on LLM-driven YAML generation. Sends a game-descriptor request to Claude, runs the response through the full parse/transform/build pipeline, and feeds any errors back to Claude for a fix-up — repeating until the build succeeds or the attempt budget is exhausted.
+Closes the loop on LLM-driven YAML generation. Asks the model for a game descriptor, runs the response through the full parse / transform / build pipeline, and feeds any errors back to the model for a fix-up — repeating until the build succeeds or the configured attempt budget is exhausted.
 
-`GenerationOrchestrator` owns the request-write-build-retry loop and is the main entry point (`CreateDefault(apiKey)` + `GenerateAsync(prompt, maxAttempts, ct)`), returning a `GenerationResult` (`SuccessfulGeneration` or `FailedGeneration`) with a per-iteration `Attempt` history. `BuildHarness.TryBuild(yaml)` runs `GameFileParser → Transformer → Builder` and captures Unity error/exception logs in addition to thrown exceptions. The directory also contains the Unity Editor window (`Assembler > Generate Game Descriptor`), an Anthropic connectivity smoke test, and a player-build smoke MonoBehaviour.
+The build step intercepts both thrown exceptions and Unity error logs, so problems that surface as logged messages (rather than as throws) are still treated as build failures and surfaced back to the model. Also contains the Unity Editor window that drives generation interactively, a connectivity smoke test, and a player-build smoke component.
