@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Debug
 	/// </remarks>
 	public class SphereGizmoBehaviour : GameBehaviour<SphereGizmoData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 
 		}
@@ -22,12 +22,12 @@ namespace Assembler.Behaviours.Debug
 		{
 			if (Data == null) return;
 
-			Gizmos.color = Data.Colour.Value;
+			Gizmos.color = Data.Colour.Get();
 
-			if (Data.IsWire.Value)
-				Gizmos.DrawWireSphere(transform.position, Data.Radius.Value);
+			if (Data.IsWire.Get())
+				Gizmos.DrawWireSphere(transform.position, Data.Radius.Get());
 			else
-				Gizmos.DrawSphere(transform.position, Data.Radius.Value);
+				Gizmos.DrawSphere(transform.position, Data.Radius.Get());
 		}
 	}
 }

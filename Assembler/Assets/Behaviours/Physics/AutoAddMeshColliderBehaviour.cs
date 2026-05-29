@@ -21,6 +21,6 @@ namespace Assembler.Behaviours.Physics
 			data.IsTrigger.UseIfValueExists(v => _meshCollider.isTrigger = v);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

@@ -13,35 +13,33 @@ namespace Tests.Behaviours
 	{
 		private sealed class ActionListener : Listener
 		{
-			private readonly Action _action;
+			private readonly Action<TriggerContext> _action;
 
-			public ActionListener(Action action, TriggerContext triggerContext)
-				: base(new Dictionary<string, string>(), triggerContext)
+			public ActionListener(Action<TriggerContext> action)
+				: base(new Dictionary<string, string>())
 			{
 				_action = action;
 			}
 
-			public override void Notify() => _action();
+			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
 		}
 
 		[Test]
-		public void FireIteration_PublishesIncrementingIndexAndCount_ToTriggerContext()
+		public void FireIteration_PublishesIncrementingIndexAndCount()
 		{
 			var go = new GameObject("IntervalTriggerTestObject");
 			try
 			{
 				var trigger = go.AddComponent<IntervalTrigger>();
-				var triggerContext = new TriggerContext();
-				trigger.TriggerContext = triggerContext;
 
 				var observedIndices = new List<int>();
 				var observedCounts = new List<int>();
 
-				Action listener = () =>
+				var listener = new ActionListener(ctx =>
 				{
-					observedIndices.Add(triggerContext.Get<int>("iteration_index"));
-					observedCounts.Add(triggerContext.Get<int>("iteration_count"));
-				};
+					observedIndices.Add(ctx.Get<int>("iteration_index"));
+					observedCounts.Add(ctx.Get<int>("iteration_count"));
+				});
 
 				var data = new IntervalTriggerData(
 					id: "test_interval",
@@ -49,12 +47,12 @@ namespace Tests.Behaviours
 					count: new ValueProvider<int>(3),
 					autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data, new List<Listener> { new ActionListener(listener, triggerContext) });
+				trigger.Initialise(data, new List<Listener> { listener });
 
 				const int totalIterations = 3;
 				for (int i = 0; i < totalIterations; i++)
 				{
-					trigger.FireIteration(i, totalIterations);
+					trigger.FireIteration(i, totalIterations, TriggerContext.Empty);
 				}
 
 				CollectionAssert.AreEqual(new[] { 0, 1, 2 }, observedIndices);
@@ -67,30 +65,28 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void FireIteration_PoppingContextRestoresOuterFrame()
+		public void FireIteration_ForwardsUpstreamOutputsThroughToListeners()
 		{
 			var go = new GameObject("IntervalTriggerTestObject");
 			try
 			{
 				var trigger = go.AddComponent<IntervalTrigger>();
-				var triggerContext = new TriggerContext();
-				trigger.TriggerContext = triggerContext;
 
-				using (triggerContext.Push())
-				{
-					triggerContext.Set("outer", 42);
+				int observedOuter = 0;
+				var listener = new ActionListener(ctx => observedOuter = ctx.Get<int>("outer"));
 
-					var data = new IntervalTriggerData(
-						id: "test_interval",
-						interval: new ValueProvider<float>(0f),
-						count: new ValueProvider<int>(1),
-						autoStart: new ValueProvider<bool>(false));
+				var data = new IntervalTriggerData(
+					id: "test_interval",
+					interval: new ValueProvider<float>(0f),
+					count: new ValueProvider<int>(1),
+					autoStart: new ValueProvider<bool>(false));
 
-					trigger.Initialise(data, new List<Listener> { new ActionListener(() => { }, triggerContext) });
-					trigger.FireIteration(0, 1);
+				trigger.Initialise(data, new List<Listener> { listener });
 
-					Assert.AreEqual(42, triggerContext.Get<int>("outer"));
-				}
+				var upstream = TriggerContext.Empty.With("outer", 42);
+				trigger.FireIteration(0, 1, upstream);
+
+				Assert.AreEqual(42, observedOuter);
 			}
 			finally
 			{

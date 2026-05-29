@@ -18,19 +18,18 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var xName = Data.XAxis.Value;
+			var xName = Data.XAxis.Get();
 			var yName = Data.YAxis.ValueOr(string.Empty);
 
 			var x = string.IsNullOrEmpty(xName) ? 0f : UnityEngine.Input.GetAxis(xName);
 			var y = string.IsNullOrEmpty(yName) ? 0f : UnityEngine.Input.GetAxis(yName);
 
-			using (TriggerContext.Push())
+			NotifyListeners(TriggerContext.Empty.With(b =>
 			{
-				TriggerContext.Set("axis", new Vector2(x, y));
-				TriggerContext.Set("x", x);
-				TriggerContext.Set("y", y);
-				NotifyListeners();
-			}
+				b["axis"] = new Vector2(x, y);
+				b["x"] = x;
+				b["y"] = y;
+			}));
 		}
 	}
 }

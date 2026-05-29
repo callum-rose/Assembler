@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Physical
@@ -18,15 +19,13 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				using (TriggerContext.Push())
+				NotifyListeners(TriggerContext.Empty.With(b =>
 				{
-					TriggerContext.Set("contact_point", other.contacts[0].point);
-					TriggerContext.Set("contact_normal", other.contacts[0].normal);
-					TriggerContext.Set("other_velocity",
-						other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero);
-					TriggerContext.Set("other_position", other.transform.position);
-					NotifyListeners();
-				}
+					b["contact_point"] = other.contacts[0].point;
+					b["contact_normal"] = other.contacts[0].normal;
+					b["other_velocity"] = other.rigidbody != null ? other.rigidbody.linearVelocity : Vector3.zero;
+					b["other_position"] = other.transform.position;
+				}));
 			}
 		}
 	}

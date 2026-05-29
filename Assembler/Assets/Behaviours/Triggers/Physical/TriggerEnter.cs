@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Physical
@@ -15,11 +16,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				using (TriggerContext.Push())
-				{
-					TriggerContext.Set("other_position", other.transform.position);
-					NotifyListeners();
-				}
+				NotifyListeners(TriggerContext.Empty.With("other_position", other.transform.position));
 			}
 		}
 	}

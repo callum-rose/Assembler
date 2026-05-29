@@ -25,6 +25,6 @@ namespace Assembler.Behaviours.Physics
 			data.IsTrigger.UseIfValueExists(v => _capsuleCollider.isTrigger = v);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

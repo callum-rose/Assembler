@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -19,11 +20,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			using (TriggerContext.Push())
-			{
-				TriggerContext.Set("scroll_delta", delta);
-				NotifyListeners();
-			}
+			NotifyListeners(TriggerContext.Empty.With("scroll_delta", delta));
 		}
 	}
 }

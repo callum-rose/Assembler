@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.ListOperations
@@ -9,9 +10,9 @@ namespace Assembler.Behaviours.ListOperations
 	/// </remarks>
 	public abstract class ListClearBehaviour<T> : GameBehaviour<ListClearData<T>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			Data.List.Value.Clear();
+			Data.List.Get(ctx).Clear();
 		}
 	}
 }

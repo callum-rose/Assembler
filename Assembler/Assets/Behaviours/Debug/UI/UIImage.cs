@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Parsing;
 using UnityEngine;
@@ -19,12 +20,12 @@ namespace Assembler.Behaviours.Debug.UI
 			_tex = new Texture2D(1, 1);
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			_tex.SetPixel(0, 0, Data.Colour.Value);
+			_tex.SetPixel(0, 0, Data.Colour.Get());
 			_tex.Apply();
 			GUI.DrawTexture(Data.Rect.ToUnityRect(), _tex);
 		}

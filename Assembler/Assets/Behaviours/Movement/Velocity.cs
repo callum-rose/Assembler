@@ -13,12 +13,12 @@ namespace Assembler.Behaviours.Movement
 	{
 		private void Update()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.position += Data.Velocity.Value * Time.deltaTime;
+			transform.position += Data.Velocity.Get(ctx) * Time.deltaTime;
 		}
 	}
 }

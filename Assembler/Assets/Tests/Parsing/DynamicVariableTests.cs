@@ -18,9 +18,9 @@ namespace Tests.Parsing
 			var scope = new EntityVariableScope();
 			scope.Create(new ValueInfo("health", new IntValue(100)));
 
-			Assert.AreEqual(100, registry.Get<int>("health", scope).Value);
-			Assert.AreEqual(50, registry.Get<int>("health").Value);
-			Assert.AreEqual(50, registry.Get<int>("health", new EntityVariableScope()).Value);
+			Assert.AreEqual(100, registry.Get<int>("health", scope).Get());
+			Assert.AreEqual(50, registry.Get<int>("health").Get());
+			Assert.AreEqual(50, registry.Get<int>("health", new EntityVariableScope()).Get());
 		}
 
 		[Test]
@@ -32,7 +32,7 @@ namespace Tests.Parsing
 			var scope = new EntityVariableScope();
 			scope.Create(new ValueInfo("health", new IntValue(10)));
 
-			Assert.AreEqual(2.5f, registry.Get<float>("speed", scope).Value);
+			Assert.AreEqual(2.5f, registry.Get<float>("speed", scope).Get());
 		}
 
 		[Test]
@@ -49,10 +49,10 @@ namespace Tests.Parsing
 			var aHealth = registry.Get<int>("health", a);
 			var bHealth = registry.Get<int>("health", b);
 
-			aHealth.Value = 99;
+			aHealth.Set(99);
 
-			Assert.AreEqual(99, registry.Get<int>("health", a).Value);
-			Assert.AreEqual(2, registry.Get<int>("health", b).Value);
+			Assert.AreEqual(99, registry.Get<int>("health", a).Get());
+			Assert.AreEqual(2, registry.Get<int>("health", b).Get());
 			Assert.AreNotSame(aHealth, bHealth);
 		}
 
@@ -67,7 +67,7 @@ namespace Tests.Parsing
 
 			scope.Dispose();
 
-			Assert.AreEqual(7, registry.Get<int>("health", scope).Value);
+			Assert.AreEqual(7, registry.Get<int>("health", scope).Get());
 		}
 
 		[Test]

@@ -12,11 +12,11 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 	{
 		public ExclusiveGroupRegistry Registry { get; set; } = null!;
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			if (Registry.TryClaim(Data.Group.Value))
+			if (Registry.TryClaim(Data.Group.Get(ctx)))
 			{
-				NotifyListeners();
+				NotifyListeners(ctx);
 			}
 		}
 	}

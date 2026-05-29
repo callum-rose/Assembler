@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -12,10 +13,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 	{
 		private float _lastTriggerTime = float.NegativeInfinity;
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 			var now = Time.time;
-			var interval = Data.Interval.Value;
+			var interval = Data.Interval.Get(ctx);
 
 			if (now - _lastTriggerTime < interval)
 			{
@@ -24,7 +25,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 			}
 
 			_lastTriggerTime = now;
-			NotifyListeners();
+			NotifyListeners(ctx);
 		}
 	}
 }

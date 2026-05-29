@@ -9,10 +9,10 @@ namespace Assembler.Behaviours.Spawners
     /// </remarks>
     public class DestroyBehaviour : GameBehaviour<DestroyData>
     {
-        public override void Execute()
+        public override void Execute(TriggerContext ctx)
         {
             Destroy(gameObject);
-            NotifyListeners();
+            NotifyListeners(ctx);
         }
     }
 }

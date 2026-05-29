@@ -6,42 +6,28 @@ namespace Assembler.Behaviours
 {
 	public abstract class Listener
 	{
-		private IReadOnlyDictionary<string, string> OutputMapping { get; }
-		private TriggerContext TriggerContext { get; }
+		private readonly IReadOnlyDictionary<string, string> _outputMapping;
 
-		protected Listener(IReadOnlyDictionary<string, string> outputMapping, TriggerContext triggerContext)
+		protected Listener(IReadOnlyDictionary<string, string> outputMapping)
 		{
-			OutputMapping = outputMapping;
-			TriggerContext = triggerContext;
+			_outputMapping = outputMapping;
 		}
 
-		public abstract void Notify();
+		public abstract void Notify(TriggerContext ctx);
 
-		protected void ApplyOutputMapping()
-		{
-			if (OutputMapping.Count > 0)
-			{
-				TriggerContext.ApplyMapping(OutputMapping);
-			}
-		}
+		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
 	}
 
 	public sealed class DirectListener : Listener
 	{
 		private readonly GameBehaviour _target;
 
-		public DirectListener(GameBehaviour target,
-			IReadOnlyDictionary<string, string> outputMapping,
-			TriggerContext triggerContext) : base(outputMapping, triggerContext)
+		public DirectListener(GameBehaviour target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_target = target;
 		}
 
-		public override void Notify()
-		{
-			ApplyOutputMapping();
-			_target.Execute();
-		}
+		public override void Notify(TriggerContext ctx) => _target.Execute(Prepare(ctx));
 	}
 
 	public sealed class EntityTaggedListener : Listener
@@ -53,33 +39,28 @@ namespace Assembler.Behaviours
 		public EntityTaggedListener(IValueProvider<string> entityTag,
 			string? behaviourId,
 			Func<string, string, IReadOnlyList<GameBehaviour>> resolveTargets,
-			IReadOnlyDictionary<string, string> outputMapping,
-			TriggerContext triggerContext) : base(outputMapping, triggerContext)
+			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_entityTag = entityTag;
 			_behaviourId = behaviourId;
 			_resolveTargets = resolveTargets;
 		}
 
-		public override void Notify()
+		public override void Notify(TriggerContext ctx)
 		{
-			ApplyOutputMapping();
-
-			var entityTag = _entityTag.Value;
-
-			if (!string.IsNullOrEmpty(_behaviourId))
+			if (_behaviourId == null)
 			{
-				InvokeAll(_resolveTargets(entityTag, _behaviourId));
+				return;
 			}
-		}
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
-		{
+			var preparedCtx = Prepare(ctx);
+			var targets = _resolveTargets(_entityTag.Get(preparedCtx), _behaviourId);
+
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute();
+					behaviour.Execute(preparedCtx);
 				}
 			}
 		}
@@ -92,26 +73,29 @@ namespace Assembler.Behaviours
 
 		public BehaviourTaggedListener(IValueProvider<string> behaviourTag,
 			Func<string, IReadOnlyList<GameBehaviour>> resolveTargets,
-			IReadOnlyDictionary<string, string> outputMapping,
-			TriggerContext triggerContext) : base(outputMapping, triggerContext)
+			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_behaviourTag = behaviourTag;
 			_resolveTargets = resolveTargets;
 		}
 
-		public override void Notify()
+		public override void Notify(TriggerContext ctx)
 		{
-			ApplyOutputMapping();
-			InvokeAll(_resolveTargets(_behaviourTag.Value));
-		}
+			var preparedCtx = Prepare(ctx);
+			var tag = _behaviourTag.Get(preparedCtx);
 
-		private static void InvokeAll(IReadOnlyList<GameBehaviour> targets)
-		{
+			if (string.IsNullOrEmpty(tag))
+			{
+				return;
+			}
+
+			var targets = _resolveTargets(tag);
+
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute();
+					behaviour.Execute(preparedCtx);
 				}
 			}
 		}

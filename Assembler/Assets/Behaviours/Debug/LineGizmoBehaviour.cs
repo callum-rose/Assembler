@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Debug
 	/// </remarks>
 	public class LineGizmoBehaviour : GameBehaviour<LineGizmoData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 
 		}
@@ -22,10 +22,10 @@ namespace Assembler.Behaviours.Debug
 		{
 			if (Data == null) return;
 
-			Gizmos.color = Data.Colour.Value;
+			Gizmos.color = Data.Colour.Get();
 			Gizmos.DrawLine(
-				transform.TransformPoint(Data.Start.Value),
-				transform.TransformPoint(Data.End.Value));
+				transform.TransformPoint(Data.Start.Get()),
+				transform.TransformPoint(Data.End.Get()));
 		}
 	}
 }

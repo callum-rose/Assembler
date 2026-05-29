@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.ListOperations
@@ -11,14 +12,14 @@ namespace Assembler.Behaviours.ListOperations
 	/// </remarks>
 	public abstract class ListInsertBehaviour<T> : GameBehaviour<ListInsertData<T>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			var list = Data.List.Value;
-			var index = Data.Index.Value;
+			var list = Data.List.Get(ctx);
+			var index = Data.Index.Get(ctx);
 
 			if (index >= 0 && index <= list.Count)
 			{
-				list.Insert(index, Data.Value.Value);
+				list.Insert(index, Data.Value.Get(ctx));
 			}
 		}
 	}

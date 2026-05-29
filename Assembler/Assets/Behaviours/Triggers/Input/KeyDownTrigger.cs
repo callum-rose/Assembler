@@ -13,9 +13,9 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKeyDown(Data.Key.Value))
+			if (UnityEngine.Input.GetKeyDown(Data.Key.Get()))
 			{
-				NotifyListeners();
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 	}

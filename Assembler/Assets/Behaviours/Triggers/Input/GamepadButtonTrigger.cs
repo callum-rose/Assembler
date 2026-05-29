@@ -14,7 +14,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			var button = Data.Button.Value;
+			var button = Data.Button.Get();
 			if (string.IsNullOrEmpty(button))
 			{
 				return;
@@ -30,7 +30,7 @@ namespace Assembler.Behaviours.Triggers.Input
 
 			if (fired)
 			{
-				NotifyListeners();
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 	}

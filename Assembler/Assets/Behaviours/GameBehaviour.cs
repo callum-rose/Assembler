@@ -19,7 +19,7 @@ namespace Assembler.Behaviours
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
-		public abstract void Execute();
+		public abstract void Execute(TriggerContext ctx);
 
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{
@@ -27,11 +27,11 @@ namespace Assembler.Behaviours
 			_listeners = listeners;
 		}
 
-		protected void NotifyListeners()
+		protected void NotifyListeners(TriggerContext ctx)
 		{
 			foreach (var listener in _listeners)
 			{
-				listener.Notify();
+				listener.Notify(ctx);
 			}
 		}
 	}

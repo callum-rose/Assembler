@@ -31,7 +31,7 @@ namespace Assembler.Behaviours.Physics
 			data.FreezeRotation.UseIfValueExists(v => _rigidbody.constraints = ApplyRotationFreeze(_rigidbody.constraints, v));
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private static RigidbodyConstraints ApplyPositionFreeze(RigidbodyConstraints current, Vector3 freeze)
 		{

@@ -14,19 +14,20 @@ namespace Assembler.Behaviours.Triggers.Timing
 	{
 		private void Start()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			StartCoroutine(InvokeTriggerAfter(Data.Delay.Value));
+			var captured = ctx;
+			StartCoroutine(InvokeTriggerAfter(Data.Delay.Get(ctx), captured));
 		}
 
-		private IEnumerator InvokeTriggerAfter(float seconds)
+		private IEnumerator InvokeTriggerAfter(float seconds, TriggerContext captured)
 		{
 			yield return new WaitForSeconds(seconds);
 
-			NotifyListeners();
+			NotifyListeners(captured);
 		}
 	}
 }

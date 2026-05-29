@@ -13,12 +13,12 @@ namespace Assembler.Behaviours.Rotation
 	{
 		private void Update()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.Rotate(Data.AngularVelocity.Value * Time.deltaTime, Space.World);
+			transform.Rotate(Data.AngularVelocity.Get(ctx) * Time.deltaTime, Space.World);
 		}
 	}
 }

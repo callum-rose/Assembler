@@ -1,4 +1,5 @@
 using System.Collections;
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -11,16 +12,18 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// </remarks>
 	public sealed class DeferredTrigger : Trigger<DeferredTriggerData>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
+			var captured = ctx;
+			var delay = Data.Delay.Get(ctx);
 			StartCoroutine(Routine());
 			return;
 
 			IEnumerator Routine()
 			{
-				yield return new WaitForSeconds(Data.Delay.Value);
-				
-				NotifyListeners();
+				yield return new WaitForSeconds(delay);
+
+				NotifyListeners(captured);
 			}
 		}
 	}

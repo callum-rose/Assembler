@@ -1,5 +1,6 @@
 using Assembler.Behaviours.Triggers;
 using Assembler.Parsing;
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -22,7 +23,7 @@ namespace Assembler.Behaviours.Debug.UI
 			_controlName = "UIInputField_" + data.Id;
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
@@ -37,11 +38,7 @@ namespace Assembler.Behaviours.Debug.UI
 			{
 				var submitted = _text;
 				_text = string.Empty;
-				using (TriggerContext.Push())
-				{
-					TriggerContext.Set("text", (object)submitted);
-					NotifyListeners();
-				}
+				NotifyListeners(TriggerContext.Empty.With("text", submitted));
 				e.Use();
 			}
 		}

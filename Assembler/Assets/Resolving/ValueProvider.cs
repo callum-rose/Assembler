@@ -2,13 +2,17 @@ namespace Assembler.Resolving
 {
 	public sealed class ValueProvider<T> : IValueProvider<T>
 	{
-		public T Value { get; set; }
-
-		object IValueProvider.Value => Value!;
+		private T _value;
 
 		public ValueProvider(T value)
 		{
-			Value = value;
+			_value = value;
 		}
+
+		public T Get(TriggerContext ctx) => _value;
+
+		object IValueProvider.Get(TriggerContext ctx) => _value!;
+
+		public void Set(T value) => _value = value;
 	}
 }

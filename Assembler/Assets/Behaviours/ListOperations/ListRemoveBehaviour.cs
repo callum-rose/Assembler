@@ -1,3 +1,4 @@
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.ListOperations
@@ -10,9 +11,9 @@ namespace Assembler.Behaviours.ListOperations
 	/// </remarks>
 	public abstract class ListRemoveBehaviour<T> : GameBehaviour<ListRemoveData<T>>
 	{
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			Data.List.Value.Remove(Data.Value.Value);
+			Data.List.Get(ctx).Remove(Data.Value.Get(ctx));
 		}
 	}
 }

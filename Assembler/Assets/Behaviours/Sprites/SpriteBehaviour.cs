@@ -18,16 +18,16 @@ namespace Assembler.Behaviours.Sprites
 			spriteGo.transform.SetParent(transform, false);
 
 			var spriteRenderer = spriteGo.AddComponent<SpriteRenderer>();
-			spriteRenderer.sprite = data.Sprite.Value;
+			spriteRenderer.sprite = data.Sprite.Get();
 
 			data.Size.UseIfValueExists(size =>
 			{
-				var sprite = data.Sprite.Value;
+				var sprite = data.Sprite.Get();
 				var nativeSize = sprite.rect.size / sprite.pixelsPerUnit;
 				spriteGo.transform.localScale = new Vector3(size.x / nativeSize.x, size.y / nativeSize.y, 1f);
 			});
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 	}
 }

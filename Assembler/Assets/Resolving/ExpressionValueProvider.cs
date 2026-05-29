@@ -4,19 +4,18 @@ namespace Assembler.Resolving
 {
 	public sealed class ExpressionValueProvider<T> : IValueProvider<T>
 	{
-		public T Value
-		{
-			get => _func.Invoke();
-			set => throw new InvalidOperationException("ExpressionContainerProvider cannot have its value set");
-		}
+		private readonly Func<TriggerContext, T> _func;
 
-		object IValueProvider.Value => Value!;
-
-		private readonly Func<T> _func;
-
-		public ExpressionValueProvider(Func<T> func)
+		public ExpressionValueProvider(Func<TriggerContext, T> func)
 		{
 			_func = func;
 		}
+
+		public T Get(TriggerContext ctx) => _func(ctx);
+
+		object IValueProvider.Get(TriggerContext ctx) => _func(ctx)!;
+
+		public void Set(T value) =>
+			throw new InvalidOperationException("ExpressionValueProvider cannot have its value set");
 	}
 }

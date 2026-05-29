@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Camera
 			data.Size.UseIfValueExists(v => camera.orthographicSize = v);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
 		}
 	}

@@ -1,5 +1,6 @@
 using Assembler.Behaviours.Triggers;
 using Assembler.Parsing;
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -20,23 +21,19 @@ namespace Assembler.Behaviours.Debug.UI
 
 		protected override void OnInitialise(UIToggleData data)
 		{
-			_current = data.InitialValue.Value;
+			_current = data.InitialValue.Get();
 		}
 
-		public override void Execute() { }
+		public override void Execute(TriggerContext ctx) { }
 
 		private void OnGUI()
 		{
 			if (Data == null) return;
-			var next = GUI.Toggle(Data.Rect.ToUnityRect(), _current, Data.Label.Value);
+			var next = GUI.Toggle(Data.Rect.ToUnityRect(), _current, Data.Label.Get());
 			if (next == _current) return;
 
 			_current = next;
-			using (TriggerContext.Push())
-			{
-				TriggerContext.Set("value", (object)_current);
-				NotifyListeners();
-			}
+			NotifyListeners(TriggerContext.Empty.With("value", _current));
 		}
 	}
 }
