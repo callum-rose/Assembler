@@ -4,6 +4,7 @@ using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Validation;
 using Assembler.Resolving;
 
 namespace Assembler.Building
@@ -20,6 +21,9 @@ namespace Assembler.Building
 
 		public static void Build(GameInfo gameInfo)
 		{
+			// 0. Validate before resolving — fail with all accumulated errors at once.
+			GameInfoValidator.Validate(gameInfo).ThrowIfInvalid();
+
 			// 1. Initialize variables and expressions
 			var typeRegistry = BuiltInTypeRegistry.Default;
 
