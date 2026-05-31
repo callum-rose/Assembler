@@ -1,0 +1,112 @@
+# Procedural voxel scripting (optional)
+
+You also have a tool, `run_voxel_script`, that builds a voxel model by running a
+short C# script in-process. You CHOOSE per request whether to use it:
+
+- PREFER a script for models that are regular, symmetric, repetitive, or
+  parametric: grids, checkerboards, towers, staircases, rings, spheres,
+  cylinders, lattices, anything with loops or mirror symmetry, or anything
+  larger than a handful of voxels.
+- PREFER direct ```goxel``` text (the format described above) for small, organic,
+  irregular, or hand-placed models where writing coordinates directly is simpler.
+
+If you use the tool, do NOT also emit a ```goxel``` block — the model returned by
+the script is used directly. If you do NOT use the tool, emit a ```goxel``` block
+exactly as described above.
+
+## The script
+
+The `script` argument is a C# **method body** (no method signature). It receives a
+`VoxelBuilder` named `b`, places voxels by calling methods on `b`, and MUST end
+with:
+
+    return b.Build();
+
+Coordinates are integers in the SAME axis convention as the goxel text above
+(+Y is up, X is right, Z is forward). Re-use colours; the palette holds 255.
+
+Colours come from helper methods (never construct a Color directly):
+
+    var red  = b.Rgb(255, 0, 0);        // 0..255 per channel
+    var gold = b.Hex("ffcc00");         // "RRGGBB" or "RRGGBBAA", '#' optional
+    var sky  = b.Hsv(200, 80, 90);      // hue 0..360, sat/val 0..100
+
+### Builder API
+
+Placement:
+    b.Set(x, y, z, c);          // place one voxel
+    b.Clear(x, y, z);           // remove one voxel
+    var c = b.Get(x, y, z);     // colour at a cell (0,0,0,0 if empty)
+    var present = b.Has(x, y, z);
+    var n = b.Count;            // voxels placed so far
+
+Solids (all take a final colour `c`):
+    b.Box(x0, y0, z0, x1, y1, z1, c);        // filled box (inclusive corners)
+    b.HollowBox(x0, y0, z0, x1, y1, z1, c);  // shell only
+    b.Sphere(cx, cy, cz, r, c);
+    b.Ellipsoid(cx, cy, cz, rx, ry, rz, c);
+    b.Cylinder(cx, cy, cz, radius, height, axis, c);  // centred, runs along axis
+    b.Cone(cx, cy, cz, radius, height, axis, c);      // base at -axis, apex at +axis
+    b.Torus(cx, cy, cz, majorR, minorR, axis, c);
+
+Lines / planes:
+    b.Line(x0, y0, z0, x1, y1, z1, c);       // 3D line
+    b.RectFill(axis, plane, u0, v0, u1, v1, c);
+        // fills a rectangle on the plane perpendicular to `axis` at coord `plane`.
+        // (axis X: u=Y,v=Z;  axis Y: u=X,v=Z;  axis Z: u=X,v=Y)
+
+Bulk transforms:
+    b.Mirror(axis);             // reflect across the bbox centre on `axis` (keeps originals)
+    b.Translate(dx, dy, dz);    // shift every voxel
+    b.Fill(x, y, z, c);         // flood-fill connected EMPTY cells (clamped to current bbox)
+
+`axis` is `VoxelAxis.X`, `VoxelAxis.Y`, or `VoxelAxis.Z`.
+
+### Example script
+
+A 16x16 red/white checkerboard floor on the ground plane:
+
+    var red = b.Rgb(200, 40, 40);
+    var white = b.Rgb(235, 235, 235);
+    for (int x = 0; x < 16; x++)
+    {
+        for (int z = 0; z < 16; z++)
+        {
+            if ((x + z) % 2 == 0)
+            {
+                b.Set(x, 0, z, red);
+            }
+            else
+            {
+                b.Set(x, 0, z, white);
+            }
+        }
+    }
+    return b.Build();
+
+## Language limits (read carefully — violations fail the script)
+
+The script is compiled by a restricted C# compiler. ONLY these work:
+
+- Types: `int`, `float`, `double`, `bool`, `string`, and `var` for locals.
+  Use `var` (not a type name) for builder/colour results: `var c = b.Rgb(...);`.
+- Control flow: `if`/`else if`/`else`, `for`, `while`, `break`, `continue`,
+  `return`. ALWAYS use braces `{ }` — braceless bodies fail.
+- Operators: arithmetic `+ - * / %`, comparison, `&& || !`, ternary `?:`, casts
+  `(int)x`, compound assignment, `++`/`--`.
+- Local helper methods are allowed (e.g. `int sq(int n) { return n * n; }`).
+- Coordinates and channel values are `int`. Integer literals are fine everywhere
+  in this API.
+
+NOT supported — do not use any of these:
+
+- `foreach` (use `for` with an int index), `do/while`, `switch`.
+- Arrays, lists, collection/array initializers, indexing `arr[0]`.
+- String interpolation `$"..."`, `??`, `?.`, `is`/`as`, `typeof`, tuples,
+  pattern matching, generics, `try/catch`, `throw`, `new` of any type.
+- Multi-statement or multi-parameter lambdas.
+- Constructing colours with `new` — use `b.Rgb` / `b.Hex` / `b.Hsv`.
+
+Keep models reasonable. There is a voxel-count cap and a wall-clock budget; if a
+script exceeds them or fails to compile, you will get an error message back —
+read it, fix the script, and call the tool again.

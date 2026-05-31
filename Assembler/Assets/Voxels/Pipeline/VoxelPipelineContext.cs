@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using UnityEngine;
 using Assembler.Anthropic;
+using Assembler.Voxels.Scripting;
 
 namespace Assembler.Voxels.Pipeline
 {
@@ -15,6 +16,8 @@ namespace Assembler.Voxels.Pipeline
 	public sealed record VoxelPipelineContext
 	{
 		public AnthropicClient? AnthropicClient { get; init; }
+		public IVoxelScriptExecutor? ScriptExecutor { get; init; }
+		public VoxelScriptLimits Limits { get; init; } = VoxelScriptLimits.Default;
 		public IVoxelFileSink FileSink { get; init; } = new SystemVoxelFileSink();
 		public IAssetDatabaseService AssetDb { get; init; } = new NoOpAssetDatabaseService();
 		public IVoxelPipelineObserver Observer { get; init; } = NullVoxelPipelineObserver.Instance;
@@ -29,6 +32,7 @@ namespace Assembler.Voxels.Pipeline
 		public bool UseChatHistory { get; init; }
 
 		public string? RawAssistantText { get; init; }
+		public string? LastScript { get; init; }
 		public string? GoxelTextZUp { get; init; }
 		public VoxelModel? Model { get; init; }
 		public byte[]? VoxBytes { get; init; }
@@ -46,6 +50,7 @@ namespace Assembler.Voxels.Pipeline
 		public VoxelPipelineResult(VoxelPipelineContext context) => Context = context;
 
 		public string? GoxelTextZUp => Context.GoxelTextZUp;
+		public string? LastScript => Context.LastScript;
 		public byte[]? VoxBytes => Context.VoxBytes;
 		public VoxelModel? Model => Context.Model;
 		public string? SavedPath => Context.SavedVoxPath;

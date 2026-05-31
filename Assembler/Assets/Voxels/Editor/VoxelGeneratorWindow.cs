@@ -6,6 +6,7 @@ using System.Threading;
 using Assembler.Anthropic;
 using Assembler.Voxels.Editor.Pipeline;
 using Assembler.Voxels.Pipeline;
+using Assembler.Voxels.Scripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -18,6 +19,9 @@ namespace Assembler.Voxels.Editor
 		private const string PersistentInstructionsPref = "Assembler.Voxels.PersistentInstructions";
 		private const string NamePref = "Assembler.Voxels.LastName";
 		private const string OutputFolderPref = "Assembler.Voxels.OutputFolder";
+		private const string VoxelCapPref = "Assembler.Voxels.ScriptVoxelCap";
+		private const string TimeoutPref = "Assembler.Voxels.ScriptTimeoutSeconds";
+		private const string MaxIterationsPref = "Assembler.Voxels.ScriptMaxIterations";
 		private const string DefaultOutputFolder = "Assets/Resources/Voxels/";
 		private const string ScratchFolder = "Assets/Resources/Voxels/_Preview/";
 		private const string ScratchName = "preview";
@@ -30,6 +34,14 @@ namespace Assembler.Voxels.Editor
 		private string _outputFolder = DefaultOutputFolder;
 		private string _goxelText = string.Empty;
 		private string _refinePrompt = string.Empty;
+
+		// Procedural-script settings (configurable safety caps) + last script.
+		private int _voxelCap = VoxelScriptLimits.Default.MaxVoxels;
+		private float _timeoutSeconds = (float)VoxelScriptLimits.Default.WallClock.TotalSeconds;
+		private int _maxIterations = VoxelScriptLimits.Default.MaxToolIterations;
+		private string? _lastScript;
+		private bool _scriptFoldout = true;
+		private Vector2 _scriptScroll;
 
 		// Result from the most recent pipeline run. Carries chat history,
 		// project, and the in-memory vox bytes that feed Save / preview.
@@ -73,7 +85,17 @@ namespace Assembler.Voxels.Editor
 			_name = EditorPrefs.GetString(NamePref, "voxel");
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, DefaultOutputFolder);
 			_persistentInstructions = EditorPrefs.GetString(PersistentInstructionsPref, string.Empty);
+			_voxelCap = EditorPrefs.GetInt(VoxelCapPref, VoxelScriptLimits.Default.MaxVoxels);
+			_timeoutSeconds = EditorPrefs.GetFloat(TimeoutPref, (float)VoxelScriptLimits.Default.WallClock.TotalSeconds);
+			_maxIterations = EditorPrefs.GetInt(MaxIterationsPref, VoxelScriptLimits.Default.MaxToolIterations);
 		}
+
+		private VoxelScriptLimits CurrentLimits() => new()
+		{
+			MaxVoxels = Mathf.Max(1, _voxelCap),
+			WallClock = TimeSpan.FromSeconds(Mathf.Max(0.5f, _timeoutSeconds)),
+			MaxToolIterations = Mathf.Max(1, _maxIterations),
+		};
 
 		private void OnDisable()
 		{
@@ -130,6 +152,21 @@ namespace Assembler.Voxels.Editor
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(NamePref, _name);
+				}
+			}
+
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Procedural script limits", EditorStyles.boldLabel);
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_voxelCap = EditorGUILayout.IntField("Voxel cap", _voxelCap);
+				_timeoutSeconds = EditorGUILayout.FloatField("Timeout (seconds)", _timeoutSeconds);
+				_maxIterations = EditorGUILayout.IntField("Max tool iterations", _maxIterations);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(VoxelCapPref, _voxelCap);
+					EditorPrefs.SetFloat(TimeoutPref, _timeoutSeconds);
+					EditorPrefs.SetInt(MaxIterationsPref, _maxIterations);
 				}
 			}
 
@@ -243,6 +280,7 @@ namespace Assembler.Voxels.Editor
 			EditorGUILayout.EndScrollView();
 
 			DrawModelSummary();
+			DrawGeneratedScript();
 
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
@@ -298,9 +336,12 @@ namespace Assembler.Voxels.Editor
 				using var client = new AnthropicClient(_apiKey);
 
 				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+				var limits = CurrentLimits();
 				var result = await VoxelGenerationPipeline
 					.CreateNew(EditorVoxelServices.Default)
 					.WithAnthropic(client)
+					.WithScriptExecutor(new VoxelScriptExecutor(limits))
+					.WithScriptLimits(limits)
 					.WithPersistentInstructions(_persistentInstructions)
 					.WithPrompt(_prompt)
 					.WithObserver(new EditorWindowObserver(this))
@@ -376,8 +417,11 @@ namespace Assembler.Voxels.Editor
 					? VoxelGenerationPipeline.FromExisting(_lastResult, EditorVoxelServices.Default)
 					: SeedFromCurrentText(EditorVoxelServices.Default);
 
+				var limits = CurrentLimits();
 				var result = await pipeline
 					.WithAnthropic(client)
+					.WithScriptExecutor(new VoxelScriptExecutor(limits))
+					.WithScriptLimits(limits)
 					.WithPersistentInstructions(_persistentInstructions)
 					.WithObserver(new EditorWindowObserver(this))
 					.Refine(instruction, useChatHistory)
@@ -430,6 +474,7 @@ namespace Assembler.Voxels.Editor
 
 				_goxelText = text;
 				_voxBytes = bytes;
+				_lastScript = null;
 				_loadedVoxPath = path;
 				_name = Path.GetFileNameWithoutExtension(path);
 				EditorPrefs.SetString(NamePref, _name);
@@ -612,8 +657,13 @@ namespace Assembler.Voxels.Editor
 			_lastResult = result;
 			_goxelText = result.GoxelTextZUp ?? _goxelText;
 			_voxBytes = result.VoxBytes ?? _voxBytes;
+			_lastScript = result.LastScript;
 			_previewMeshPath = scratchPath;
 			_previewMesh = result.PreviewMesh ?? _previewMesh;
+			if (!string.IsNullOrEmpty(_lastScript))
+			{
+				Log("Model was built procedurally (see Generated script panel).");
+			}
 			DestroyPreviewEditor();
 		}
 
@@ -724,6 +774,34 @@ namespace Assembler.Voxels.Editor
 			}
 
 			EditorGUILayout.LabelField(sb.ToString(), _richLabelStyle);
+		}
+
+		private void DrawGeneratedScript()
+		{
+			if (string.IsNullOrEmpty(_lastScript))
+			{
+				return;
+			}
+
+			EditorGUILayout.Space();
+			EditorGUILayout.BeginHorizontal();
+			_scriptFoldout = EditorGUILayout.Foldout(_scriptFoldout, "Generated script (read-only)", true);
+			if (GUILayout.Button("Copy", GUILayout.Width(60)))
+			{
+				EditorGUIUtility.systemCopyBuffer = _lastScript;
+				Log("Copied script to clipboard.");
+			}
+			EditorGUILayout.EndHorizontal();
+
+			if (_scriptFoldout)
+			{
+				_scriptScroll = EditorGUILayout.BeginScrollView(_scriptScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(220));
+				using (new EditorGUI.DisabledScope(true))
+				{
+					EditorGUILayout.TextArea(_lastScript, GUILayout.ExpandHeight(true));
+				}
+				EditorGUILayout.EndScrollView();
+			}
 		}
 
 		private string WriteBytes(byte[] bytes, string extension)

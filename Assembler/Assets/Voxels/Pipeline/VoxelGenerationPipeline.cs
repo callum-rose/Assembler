@@ -53,9 +53,10 @@ namespace Assembler.Voxels.Pipeline
 					MainThread = services.MainThread,
 				};
 			}
-			// Drop AnthropicClient — its lifecycle belongs to the caller, the prior
-			// run's client may already be disposed. Caller re-supplies via WithAnthropic.
-			ctx = ctx with { AnthropicClient = null, RefinementInstruction = null, UseChatHistory = false };
+			// Drop AnthropicClient + ScriptExecutor — their lifecycle belongs to the
+			// caller, and the executor's last-run state should not leak across runs.
+			// Caller re-supplies via WithAnthropic / WithScriptExecutor.
+			ctx = ctx with { AnthropicClient = null, ScriptExecutor = null, RefinementInstruction = null, UseChatHistory = false };
 			return new VoxelGenerationPipeline(ctx);
 		}
 
@@ -72,6 +73,23 @@ namespace Assembler.Voxels.Pipeline
 		public VoxelGenerationPipeline WithAnthropic(AnthropicClient client)
 		{
 			_ctx = _ctx with { AnthropicClient = client };
+			return this;
+		}
+
+		/// <summary>
+		/// Offers the procedural <c>run_voxel_script</c> tool on the next
+		/// generate/refine. Claude may call it to build the model in code, or
+		/// ignore it and write direct goxel text.
+		/// </summary>
+		public VoxelGenerationPipeline WithScriptExecutor(Scripting.IVoxelScriptExecutor executor)
+		{
+			_ctx = _ctx with { ScriptExecutor = executor };
+			return this;
+		}
+
+		public VoxelGenerationPipeline WithScriptLimits(Scripting.VoxelScriptLimits limits)
+		{
+			_ctx = _ctx with { Limits = limits };
 			return this;
 		}
 
