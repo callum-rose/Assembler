@@ -28,6 +28,10 @@ namespace Assembler.Resolving
 			// argument type.
 			_compiler.RegisterStaticMethods(typeof(System.Linq.Enumerable));
 			_compiler.RegisterType(typeof(UnityEngine.Color));
+
+			// First-class grid/tilemap helpers (cell<->world, bounds, occupancy)
+			// callable by bare name from any expression.
+			_compiler.RegisterStaticMethods(typeof(GridMath));
 		}
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)
