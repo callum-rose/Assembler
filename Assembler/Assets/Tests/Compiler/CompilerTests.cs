@@ -973,6 +973,53 @@ namespace Tests.Compiler
 			Assert.That(vector3.y, Is.EqualTo(6.6f).Within(0.01f));
 			Assert.That(vector3.z, Is.EqualTo(0f).Within(0.01f));
 		}
+
+		// --- Cross-expression calls (issue #72) ---
+
+		[Test]
+		public void RegisteredExpressionCanBeCalledByAnother()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<int, int, int> add = (a, b) => a + b;
+			compiler.RegisterExpression("add", add, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			var func = compiler.CompileFunc<int, int>("return add(x, 10);", "x");
+
+			Assert.That(func(5), Is.EqualTo(15));
+		}
+
+		[Test]
+		public void RegisteredExpressionCallsAreNested()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<int, int, int> add = (a, b) => a + b;
+			compiler.RegisterExpression("add", add, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			// "doubleAdd" is itself a compiled expression that calls "add", then is
+			// registered and called by a third expression -> nested call chain.
+			var doubleAdd = compiler.CompileFunc<int, int, int>("return add(add(a, b), b);", "a", "b");
+			compiler.RegisterExpression("doubleAdd", doubleAdd, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			var func = compiler.CompileFunc<int, int>("return doubleAdd(x, 1);", "x");
+
+			Assert.That(func(5), Is.EqualTo(7));
+		}
+
+		[Test]
+		public void RegisteredExpressionConvertsArgumentTypes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<float, float> half = v => v * 0.5f;
+			compiler.RegisterExpression("half", half, new[] { typeof(float) }, typeof(float));
+
+			// Passes an int literal where the callee expects a float.
+			var func = compiler.CompileFunc<float>("return half(10);");
+
+			Assert.That(func(), Is.EqualTo(5f).Within(0.001f));
+		}
 	}
 
 	public class TestVector3

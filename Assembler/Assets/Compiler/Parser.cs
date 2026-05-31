@@ -53,6 +53,11 @@ namespace Assembler.Compiler.Compiler
 			_registeredTypes[name] = type;
 		}
 
+		public void RegisterLocalMethod(string name, Delegate compiledMethod, Type[] paramTypes, Type returnType)
+		{
+			_localMethods[name] = (compiledMethod, paramTypes, returnType);
+		}
+
 		private Token Current => _tokens[_position];
 
 		private void Advance() => _position++;
@@ -1973,7 +1978,17 @@ namespace Assembler.Compiler.Compiler
 						}
 
 						Expect(TokenType.RightParen);
-						return Expression.Invoke(Expression.Constant(localMethod.compiledMethod), arguments);
+
+						var convertedLocalArgs = new List<Expression>();
+						for (int i = 0; i < arguments.Count; i++)
+						{
+							var targetType = i < localMethod.paramTypes.Length ? localMethod.paramTypes[i] : arguments[i].Type;
+							convertedLocalArgs.Add(arguments[i].Type != targetType
+								? Expression.Convert(arguments[i], targetType)
+								: arguments[i]);
+						}
+
+						return Expression.Invoke(Expression.Constant(localMethod.compiledMethod), convertedLocalArgs);
 					}
 
 					if (_availableMethods.TryGetValue(name, out var methodInfos))

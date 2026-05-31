@@ -8,5 +8,6 @@ namespace Assembler.Parsing.Info
 		string ReturnType,
 		string[] RegisterTypes,
 		string[] RegisterTypeStatics,
-		string Expression);
+		string Expression,
+		string? CallableAlias = null);
 }
