@@ -4,6 +4,7 @@ using Assembler.Building;
 using Assembler.Deserialisation;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Parsing;
+using Assembler.Parsing.Validation;
 using UnityEngine;
 
 namespace Assembler.Generation.Verification
@@ -43,6 +44,18 @@ namespace Assembler.Generation.Verification
 				try
 				{
 					var gameInfo = Transformer.Transform(dto);
+
+					var validation = GameInfoValidator.Validate(gameInfo);
+					if (!validation.IsValid)
+					{
+						foreach (var error in validation.Errors)
+						{
+							errors.Add(error.ToString());
+						}
+
+						return new BuildResult(false, errors, dto);
+					}
+
 					Builder.Build(gameInfo);
 				}
 				catch (Exception ex)
