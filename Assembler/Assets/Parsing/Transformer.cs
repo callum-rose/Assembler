@@ -94,7 +94,8 @@ namespace Assembler.Parsing
 					kvp.Value.ReturnType ?? string.Empty,
 					kvp.Value.RegisterTypes ?? Array.Empty<string>(),
 					kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
-					kvp.Value.Expression ?? string.Empty);
+					kvp.Value.Expression ?? string.Empty,
+					kvp.Value.CallableAs);
 
 			ConcreteEntityInfo CreateEntityInfo(string entityId, EntityDto entityDto)
 			{

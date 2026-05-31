@@ -47,10 +47,7 @@ namespace Assembler.Building
 
 			var compiledExpressionsRegistry = new CompiledExpressionsRegistry(typeRegistry, new ExpressionMethodCompiler());
 
-			foreach (var expressionInfo in gameInfo.Expressions)
-			{
-				compiledExpressionsRegistry.CompileAndRegister(expressionInfo);
-			}
+			compiledExpressionsRegistry.CompileAndRegisterAll(gameInfo.Expressions);
 
 			// 2. Load assets
 			var assetRegistry = new AssetRegistry();
