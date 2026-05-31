@@ -5,10 +5,11 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
-	/// <summary>Fires repeatedly at a fixed interval. Optionally limited to a number of repetitions.</summary>
+	/// <summary>Fires repeatedly at an interval. Optionally limited to a number of repetitions.</summary>
 	/// <remarks>
 	/// Properties:
-	///   Interval: Seconds between fires.
+	///   Interval: Seconds between fires. Re-read before each wait, so binding it to a variable that other
+	///     behaviours mutate changes the live tick rate (e.g. accelerating gravity as a level increases).
 	///   Count: Number of times to fire; 0 means fire forever.
 	///   AutoStart: When true the timer starts on entity start; when false it waits for an Execute call from upstream.
 	/// Outputs:
@@ -36,14 +37,14 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 			var captured = ctx;
 
-			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Get(ctx), Data.Count.Get(ctx), captured));
+			_currentCoroutine = StartCoroutine(Routine(Data.Count.Get(ctx), captured));
 		}
 
-		private IEnumerator Routine(float interval, int count, TriggerContext captured)
+		private IEnumerator Routine(int count, TriggerContext captured)
 		{
 			for (int i = 0; count == 0 || i < count; i++)
 			{
-				yield return new WaitForSeconds(interval);
+				yield return new WaitForSeconds(Data.Interval.Get(captured));
 
 				FireIteration(i, count, captured);
 			}
