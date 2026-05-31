@@ -67,23 +67,7 @@ namespace Assembler.Parsing
 
 		private static float ResolveVarRefAsFloat(VarRef varRef, IReadOnlyList<ValueInfo> resolvedValues)
 		{
-			ValueInfo? found = null;
-
-			foreach (var v in resolvedValues)
-			{
-				if (v.Id == varRef.Id)
-				{
-					found = v;
-					break;
-				}
-			}
-
-			if (found is null)
-			{
-				throw new ParsingException($"Reference with ID {varRef.Id} not found");
-			}
-
-			return found.Value switch
+			return resolvedValues.ResolveValue(varRef.Id) switch
 			{
 				FloatValue fv => fv.Value,
 				IntValue iv => iv.Value,
