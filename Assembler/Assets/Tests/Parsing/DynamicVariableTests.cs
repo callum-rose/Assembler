@@ -71,6 +71,17 @@ namespace Tests.Parsing
 		}
 
 		[Test]
+		public void Get_AsObject_BoxesTypedVariable()
+		{
+			var registry = new VariableRegistry();
+			registry.Register(new ValueInfo("next shape", new IntValue(4)));
+
+			var provider = registry.Get<object>("next shape");
+
+			Assert.AreEqual(4, provider.Get());
+		}
+
+		[Test]
 		public void Templates_VariablesBlockIsParsedOntoEntityInfo()
 		{
 			var yaml = @"
