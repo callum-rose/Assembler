@@ -4,8 +4,7 @@ description: >
   Use this skill whenever the user asks to author, generate, edit, or review a game descriptor YAML
   file for the Assembler project. Trigger on requests like "make me a Tetris game", "write a yaml for
   a top-down shooter", "add a power-up to this descriptor", "review my descriptor", or any task where
-  the deliverable is a `.yaml` game definition under `Assets/GameDescriptors/` or
-  `Assets/ExampleGameDescriptors/`. Also trigger when the user wants feedback on whether existing
+  the deliverable is a `.yaml` game definition under `Assets/ExampleGameDescriptors/`. Also trigger when the user wants feedback on whether existing
   behaviours are sufficient, well-designed, or missing functionality for a game idea — this skill is
   expected to push back on the behaviour catalogue when something is awkward, faulty, or missing.
 ---
@@ -25,6 +24,12 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 >    code, not YAML. It must be authored via the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 >    skill — that compiler is strict and the wrong syntax will fail at runtime. Always invoke that
 >    skill when writing or editing expression bodies.
+> 3. **Register a `Test/Build <GameName>` menu item in `Assets/Building/Builder.cs`** whenever you
+>    create a new descriptor under `Assets/ExampleGameDescriptors/`. The
+>    Unity Editor only exposes games that have a corresponding `[MenuItem("Test/Build …")]` method
+>    inside the `#if UNITY_EDITOR` block — without one, the user has no way to launch the game.
+>    Follow the existing pattern verbatim (read the file, parse, transform, `Build(gameInfo)`). Do
+>    this in the same turn that you write the YAML, without being asked.
 
 You do not need to understand or reference the C# implementation, the build pipeline, the parsing
 layer, or the runtime. Treat the descriptor as a self-contained authoring format.

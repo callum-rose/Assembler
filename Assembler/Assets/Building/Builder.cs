@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Assembler.Compiler.Compiler;
@@ -10,8 +8,6 @@ using Assembler.Resolving;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using Color = UnityEngine.Color;
-using Vector3 = UnityEngine.Vector3;
 
 namespace Assembler.Building
 {
@@ -102,6 +98,26 @@ namespace Assembler.Building
 		public static void BuildEntityPositionDemo()
 		{
 			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/EntityPositionDemo.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
+		[MenuItem("Test/Build FlappyBird")]
+		public static void BuildFlappyBird()
+		{
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/FlappyBird.yaml");
+
+			var gameDto = new GameFileParser().Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+			Build(gameInfo);
+		}
+
+		[MenuItem("Test/Build DoodleJump")]
+		public static void BuildDoodleJump()
+		{
+			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/DoodleJump.yaml");
 
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);

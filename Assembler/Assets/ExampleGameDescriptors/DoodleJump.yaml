@@ -1,0 +1,473 @@
+Game:
+  Title: Doodle Jump
+  Description: >
+    Move left and right with the arrow keys (or A/D). The doodler bounces
+    automatically when it falls onto a platform. Climb as high as you can —
+    fall off the bottom of the screen and it's game over. Walking off the
+    left or right edge wraps around to the other side.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#FFE5B4"
+
+Physics:
+  # Gravity is applied manually to the player's velocity each frame.
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # --- Player ---
+  player start position: !vec { X: 0, Y: 0 }
+  player size: !vec { X: 0.7, Y: 0.7 }
+  player gravity: 30.0
+  player jump speed: 14.0
+  player move speed: 6.5
+  initial player velocity: !vec { X: 0, Y: 0 }
+  player colour: !colour { R: 0.95, G: 0.75, B: 0.2 }
+
+  # --- World bounds (matches camera ortho size & aspect) ---
+  world half width: 5.5
+  camera size: 7.0
+  camera z: -10.0
+  game over distance: 8.0
+
+  # --- Platforms ---
+  platform size: !vec { X: 1.4, Y: 0.3 }
+  platform colour: !colour { R: 0.3, G: 0.75, B: 0.35 }
+  initial platform y: -4.0
+  platform spacing: 1.4
+  spawn lookahead: 12.0
+  platform lifetime: 60.0
+
+  # --- Starter platform (so the player has something under it on frame 1) ---
+  starter platform position: !vec { X: 0, Y: -2.0 }
+
+  # --- State init ---
+  initial max height: 0.0
+
+Variables:
+  player position: !var player start position
+  player velocity: !var initial player velocity
+  left held: false
+  right held: false
+  max height: !var initial max height
+  next platform y: !var initial platform y
+  is dead: false
+
+Expressions:
+  apply gravity:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ vel, g ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(vel.x, vel.y - g * UnityEngine.Time.deltaTime, 0f);
+
+  apply input:
+    ArgumentTypes: [ vector, bool, bool, float ]
+    ArgumentNames: [ vel, left, right, speed ]
+    ReturnType: vector
+    Expression: |
+      float vx = right ? speed : (left ? -speed : 0f);
+      return new UnityEngine.Vector3(vx, vel.y, 0f);
+
+  integrate position:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ pos, vel, halfW ]
+    ReturnType: vector
+    Expression: |
+      float dt = UnityEngine.Time.deltaTime;
+      float nx = pos.x + vel.x * dt;
+      float ny = pos.y + vel.y * dt;
+      if (nx > halfW) nx = nx - 2f * halfW;
+      if (nx < -halfW) nx = nx + 2f * halfW;
+      return new UnityEngine.Vector3(nx, ny, 0f);
+
+  bounce velocity:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ vel, jump ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(vel.x, jump, 0f);
+
+  is falling:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ vel ]
+    ReturnType: bool
+    Expression: "return vel.y < 0f;"
+
+  max float:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ a, b ]
+    ReturnType: float
+    Expression: "return a > b ? a : b;"
+
+  position y:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ p ]
+    ReturnType: float
+    Expression: "return p.y;"
+
+  camera target:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ y, z ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(0f, y, z);
+
+  random platform position:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ y, halfW ]
+    ReturnType: vector
+    Expression: |
+      float x = UnityEngine.Random.Range(-halfW, halfW);
+      return new UnityEngine.Vector3(x, y, 0f);
+
+  should spawn next platform:
+    ArgumentTypes: [ float, float, float ]
+    ArgumentNames: [ next, maxY, lookahead ]
+    ReturnType: bool
+    Expression: "return next < maxY + lookahead;"
+
+  add float:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ a, b ]
+    ReturnType: float
+    Expression: "return a + b;"
+
+  game over check:
+    ArgumentTypes: [ vector, float, float, bool ]
+    ArgumentNames: [ pos, maxY, window, dead ]
+    ReturnType: bool
+    Expression: "return dead || (pos.y < (maxY - window));"
+
+  format score:
+    ArgumentTypes: [ float ]
+    ArgumentNames: [ y ]
+    ReturnType: string
+    Expression: |
+      int s = (int)(y * 10f);
+      return "Score: " + s;
+
+  passthrough bool:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ d ]
+    ReturnType: bool
+    Expression: "return d;"
+
+Templates:
+  platform_template:
+    Tags: [ platform ]
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var platform size
+          IsWire: false
+          Colour: !var platform colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var platform size
+          IsTrigger: true
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var platform lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+Entities:
+  # --- Player (the doodler) ---
+  player:
+    Tags: [ player ]
+    Position: !var player start position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # ---- Per-frame physics tick ----
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply gravity
+          - EntityId: player
+            BehaviourId: apply input
+          - EntityId: player
+            BehaviourId: integrate position
+          - EntityId: player
+            BehaviourId: write position
+          - EntityId: player
+            BehaviourId: update max height
+
+      apply gravity:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !expr
+            ExpressionId: apply gravity
+            Arguments:
+              - !var player velocity
+              - !var player gravity
+
+      apply input:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !expr
+            ExpressionId: apply input
+            Arguments:
+              - !var player velocity
+              - !var left held
+              - !var right held
+              - !var player move speed
+
+      integrate position:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player position
+          Value: !expr
+            ExpressionId: integrate position
+            Arguments:
+              - !var player position
+              - !var player velocity
+              - !var world half width
+
+      write position:
+        Type: position setter
+        Properties:
+          Position: !var player position
+
+      update max height:
+        Type: float variable setter
+        Properties:
+          VariableId: !var max height
+          Value: !expr
+            ExpressionId: max float
+            Arguments:
+              - !var max height
+              - !expr
+                  ExpressionId: position y
+                  Arguments:
+                    - !var player position
+
+      # ---- Input: track left/right held state via key down + key up ----
+      left down:
+        Type: key down trigger
+        Properties: { Key: "left" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set left true
+      left up:
+        Type: key up trigger
+        Properties: { Key: "left" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set left false
+      right down:
+        Type: key down trigger
+        Properties: { Key: "right" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set right true
+      right up:
+        Type: key up trigger
+        Properties: { Key: "right" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set right false
+
+      a down:
+        Type: key down trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set left true
+      a up:
+        Type: key up trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set left false
+      d down:
+        Type: key down trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set right true
+      d up:
+        Type: key up trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: set right false
+
+      set left true:
+        Type: bool variable setter
+        Properties: { VariableId: !var left held, Value: true }
+      set left false:
+        Type: bool variable setter
+        Properties: { VariableId: !var left held, Value: false }
+      set right true:
+        Type: bool variable setter
+        Properties: { VariableId: !var right held, Value: true }
+      set right false:
+        Type: bool variable setter
+        Properties: { VariableId: !var right held, Value: false }
+
+      # ---- Bouncing on platforms (only when falling) ----
+      land on platform:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ platform ]
+        Listeners:
+          - EntityId: player
+            BehaviourId: bounce gate
+      bounce gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: is falling
+            Arguments:
+              - !var player velocity
+        Listeners:
+          - EntityId: player
+            BehaviourId: bounce
+      bounce:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !expr
+            ExpressionId: bounce velocity
+            Arguments:
+              - !var player velocity
+              - !var player jump speed
+
+  # --- Starter platform so the player has something under it at game start ---
+  starter platform:
+    Tags: [ platform ]
+    Position: !var starter platform position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var platform size
+          IsWire: false
+          Colour: !var platform colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var platform size
+          IsTrigger: true
+
+  # --- Platform spawner: streams platforms above the player's max height ---
+  platform spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: platform spawner
+            BehaviourId: spawn gate
+
+      spawn gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: should spawn next platform
+            Arguments:
+              - !var next platform y
+              - !var max height
+              - !var spawn lookahead
+        Listeners:
+          - EntityId: platform spawner
+            BehaviourId: spawn platform
+          - EntityId: platform spawner
+            BehaviourId: advance next y
+
+      spawn platform:
+        Type: spawner
+        Properties:
+          TemplateId: platform_template
+          Position: !expr
+            ExpressionId: random platform position
+            Arguments:
+              - !var next platform y
+              - !var world half width
+          Rotation: !vec { X: 0, Y: 0, Z: 0 }
+
+      advance next y:
+        Type: float variable setter
+        Properties:
+          VariableId: !var next platform y
+          Value: !expr
+            ExpressionId: add float
+            Arguments:
+              - !var next platform y
+              - !var platform spacing
+
+  # --- Camera follows the player's max height ---
+  camera:
+    Tags: [ camera ]
+    Position: !vec { X: 0, Y: 0, Z: -10 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "orthographic"
+          Size: !var camera size
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: camera
+            BehaviourId: follow
+      follow:
+        Type: position setter
+        Properties:
+          Position: !expr
+            ExpressionId: camera target
+            Arguments:
+              - !var max height
+              - !var camera z
+
+  # --- HUD ---
+  score display:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format score
+            Arguments:
+              - !var max height
+          FontSize: 32
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 240
+            Height: 50
+
+GameOverCondition: !expr
+  ExpressionId: game over check
+  Arguments:
+    - !var player position
+    - !var max height
+    - !var game over distance
+    - !var is dead

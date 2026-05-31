@@ -8,12 +8,13 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: VoxelToolkitDefaultTransparent
-  m_Shader: {fileID: -6465566751694194690, guid: 37c10999b54d64d8397dc5168576c9d5,
-    type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: 37c10999b54d64d8397dc5168576c9d5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _BUILTIN_SURFACE_TYPE_TRANSPARENT
+  m_InvalidKeywords:
   - _SURFACE_TYPE_TRANSPARENT
-  m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -27,6 +28,7 @@ Material:
   - RayTracingPrepass
   - MOTIONVECTORS
   - DepthOnly
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -59,6 +61,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Materialparameters_31a3b603523643c5a87b12cb322e8576_AO_2017342640:
+        m_Texture: {fileID: 2800000, guid: 79073083374044a488c5c6a5f802c686, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Materialparameters_31a3b603523643c5a87b12cb322e8576_AO_2017342640_Texture2D:
         m_Texture: {fileID: 2800000, guid: 79073083374044a488c5c6a5f802c686, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -100,6 +106,7 @@ Material:
     - TEXTURED: 0
     - VTK_PROPERTIES_TEXTURE: 0
     - VTK_TEXTURED: 0
+    - _AOPower: 1
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaCutoffEnable: 0
@@ -200,6 +207,7 @@ Material:
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &343753396894779722
 MonoBehaviour:
   m_ObjectHideFlags: 11

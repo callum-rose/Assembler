@@ -1,0 +1,379 @@
+Game:
+  Title: Flappy Bird
+  Description: >
+    Press Space to flap. Gravity pulls the bird down; hit the ground,
+    ceiling, or a pipe and it's game over. Pass through a pipe gap to score.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#70C5CE"
+
+Physics:
+  # Gravity is applied manually to the bird's velocity each frame.
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # Bird
+  bird start position: !vec { X: -3, Y: 0 }
+  bird size: !vec { X: 0.6, Y: 0.6 }
+  bird gravity: 18.0
+  jump velocity: !vec { X: 0, Y: 7 }
+  initial bird velocity: !vec { X: 0, Y: 0 }
+
+  # Pipes
+  pipe spawn x: 8.0
+  pipe lifetime: 5.0
+  pipe velocity: !vec { X: -5.5, Y: 0 }
+  pipe spawn interval: 1.3
+  pipe size: !vec { X: 1.0, Y: 6.0 }
+  pipe half height: 3.0
+  gap half height: 2.0
+  gap y min: -1.8
+  gap y max: 1.8
+  initial gap y: 0.0
+  score zone size: !vec { X: 0.3, Y: 4.0 }
+
+  # Walls
+  ground position: !vec { X: 0, Y: -5.0 }
+  ground size: !vec { X: 30, Y: 1 }
+  ground colour: !colour { R: 0.55, G: 0.35, B: 0.15 }
+  ceiling position: !vec { X: 0, Y: 5.5 }
+  ceiling size: !vec { X: 30, Y: 1 }
+
+  # Score
+  initial score: 0
+  score per pipe: 1
+
+  # Camera
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 6
+
+Variables:
+  bird velocity: !var initial bird velocity
+  is dead: false
+  score: !var initial score
+  current gap y: !var initial gap y
+
+Expressions:
+  apply gravity:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ vel, g ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(vel.x, vel.y - g * UnityEngine.Time.deltaTime, 0f);
+
+  random gap y:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ lo, hi ]
+    ReturnType: float
+    Expression: |
+      return UnityEngine.Random.Range(lo, hi);
+
+  top pipe position:
+    ArgumentTypes: [ float, float, float, float ]
+    ArgumentNames: [ x, gap_y, gap_half, pipe_half ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(x, gap_y + gap_half + pipe_half, 0f);
+
+  bottom pipe position:
+    ArgumentTypes: [ float, float, float, float ]
+    ArgumentNames: [ x, gap_y, gap_half, pipe_half ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(x, gap_y - gap_half - pipe_half, 0f);
+
+  score zone position:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ x, gap_y ]
+    ReturnType: vector
+    Expression: |
+      return new UnityEngine.Vector3(x, gap_y, 0f);
+
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+
+  format score:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ s ]
+    ReturnType: string
+    Expression: "\"Score: \" + s;"
+
+  is dead expr:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ d ]
+    ReturnType: bool
+    Expression: "d;"
+
+Templates:
+  pipe_template:
+    Tags: [ pipe ]
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var pipe size
+          IsWire: false
+          Colour: !colour green
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pipe size
+          IsTrigger: true
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var pipe velocity
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var pipe lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+  score_zone_template:
+    Tags: [ score zone ]
+    Behaviours:
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var score zone size
+          IsTrigger: true
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var pipe velocity
+      bird passed:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ bird ]
+        Listeners:
+          - EntityId: score tracker
+            BehaviourId: increment score
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var pipe lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+Entities:
+  # --- Bird ---
+  bird:
+    Tags: [ bird ]
+    Position: !var bird start position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var bird size
+          IsWire: false
+          Colour: !colour yellow
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var bird size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var bird velocity
+
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: bird
+            BehaviourId: apply gravity
+      apply gravity:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var bird velocity
+          Value: !expr
+            ExpressionId: apply gravity
+            Arguments:
+              - !var bird velocity
+              - !var bird gravity
+
+      jump key:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - EntityId: bird
+            BehaviourId: jump
+      jump:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var bird velocity
+          Value: !var jump velocity
+
+      hit obstacle:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ pipe, wall ]
+        Listeners:
+          - EntityId: bird
+            BehaviourId: die
+      die:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var is dead
+          Value: true
+
+  # --- Walls ---
+  ground:
+    Tags: [ wall ]
+    Position: !var ground position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var ground size
+          IsWire: false
+          Colour: !var ground colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var ground size
+          IsTrigger: true
+
+  ceiling:
+    Tags: [ wall ]
+    Position: !var ceiling position
+    Behaviours:
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var ceiling size
+          IsTrigger: true
+
+  # --- Pipe spawner ---
+  pipe spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var pipe spawn interval
+          Count: 0
+          AutoStart: true
+        Listeners:
+          - EntityId: pipe spawner
+            BehaviourId: randomize gap
+          - EntityId: pipe spawner
+            BehaviourId: spawn top pipe
+          - EntityId: pipe spawner
+            BehaviourId: spawn bottom pipe
+          - EntityId: pipe spawner
+            BehaviourId: spawn score zone
+
+      randomize gap:
+        Type: float variable setter
+        Properties:
+          VariableId: !var current gap y
+          Value: !expr
+            ExpressionId: random gap y
+            Arguments:
+              - !var gap y min
+              - !var gap y max
+
+      spawn top pipe:
+        Type: spawner
+        Properties:
+          TemplateId: pipe_template
+          Position: !expr
+            ExpressionId: top pipe position
+            Arguments:
+              - !var pipe spawn x
+              - !var current gap y
+              - !var gap half height
+              - !var pipe half height
+          Rotation: !vec { X: 0, Y: 0, Z: 0 }
+
+      spawn bottom pipe:
+        Type: spawner
+        Properties:
+          TemplateId: pipe_template
+          Position: !expr
+            ExpressionId: bottom pipe position
+            Arguments:
+              - !var pipe spawn x
+              - !var current gap y
+              - !var gap half height
+              - !var pipe half height
+          Rotation: !vec { X: 0, Y: 0, Z: 0 }
+
+      spawn score zone:
+        Type: spawner
+        Properties:
+          TemplateId: score_zone_template
+          Position: !expr
+            ExpressionId: score zone position
+            Arguments:
+              - !var pipe spawn x
+              - !var current gap y
+          Rotation: !vec { X: 0, Y: 0, Z: 0 }
+
+  # --- Score tracker ---
+  score tracker:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      increment score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var score per pipe
+
+  # --- Camera ---
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  # --- HUD ---
+  score display:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !expr
+            ExpressionId: format score
+            Arguments:
+              - !var score
+          FontSize: 32
+          Rect:
+            Anchor: top-center
+            X: -50
+            Y: 20
+            Width: 200
+            Height: 50
+
+GameOverCondition: !expr
+  ExpressionId: is dead expr
+  Arguments:
+    - !var is dead

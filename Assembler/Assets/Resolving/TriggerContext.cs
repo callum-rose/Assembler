@@ -6,7 +6,7 @@ namespace Assembler.Resolving
 {
 	public sealed class TriggerContext
 	{
-		public static readonly TriggerContext Empty = new(ImmutableDictionary<string, object>.Empty);
+		public readonly static TriggerContext Empty = new(ImmutableDictionary<string, object>.Empty);
 
 		private readonly ImmutableDictionary<string, object> _values;
 
@@ -32,7 +32,7 @@ namespace Assembler.Resolving
 
 		public TriggerContext WithRenamed(IReadOnlyDictionary<string, string> rename)
 		{
-			if (rename == null || rename.Count == 0)
+			if (rename.Count == 0)
 			{
 				return this;
 			}
@@ -49,10 +49,7 @@ namespace Assembler.Resolving
 
 			return new TriggerContext(builder.ToImmutable());
 		}
-
-		public TriggerContext Without(string key) =>
-			new(_values.Remove(key));
-
+		
 		public bool TryGet<T>(string key, out T value)
 		{
 			if (_values.TryGetValue(key, out var raw))
