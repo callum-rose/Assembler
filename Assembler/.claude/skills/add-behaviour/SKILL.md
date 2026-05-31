@@ -156,7 +156,7 @@ namespace Assembler.Resolving.Behaviours
 - Regular behaviours extend `BehaviourData`, triggers extend `TriggerData`.
 - Constructor signature is always: `(string id, ...IValueProvider<T> properties)`. **No `IReadOnlyList<Action> listeners` parameter** — that argument is now gone from data classes.
 - Always call `base(id)`.
-- **Properties MUST always be `IValueProvider<T>` (get-only), never raw types like `float`, `bool`, `string`, etc.** This ensures values can be reactive at runtime (e.g. driven by variables, expressions, or references). The corresponding MonoBehaviour accesses the value via `.Value` (e.g. `Data.Delay.Value`).
+- **Properties MUST always be `IValueProvider<T>` (get-only), never raw types like `float`, `bool`, `string`, etc.** This ensures values can be reactive at runtime (e.g. driven by variables, expressions, or references). The corresponding MonoBehaviour reads the value via `.Get(ctx)` — passing the `TriggerContext` that flowed into `Execute` so trigger outputs resolve (e.g. `Data.Delay.Get(ctx)`). In a Unity callback with no upstream context, use the no-arg `.Get()` extension (which passes `TriggerContext.Empty`) or `.ValueOr(ctx, default)` for optional values. **There is no longer a `.Value` property.**
 
 ---
 
@@ -166,7 +166,7 @@ namespace Assembler.Resolving.Behaviours
 **Namespace:** `Assembler.Behaviours.<Subcategory>`
 
 Subcategories: `Movement`, `Rotation`, `Animations`, `Physics`, `Camera`, `Sprites`, `Audio`, `Spawners`,
-`Debug`, `Debug.UI`, `VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`,
+`Visual`, `Debug`, `Debug.UI`, `VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`,
 `Triggers.Conditionals`, `Triggers.Physical`.
 
 > **The MonoBehaviour is the documentation home.** `Assembler > Generate Behaviour Docs` reads the
@@ -194,9 +194,10 @@ Every MonoBehaviour declares (above `public class ...`):
 - **`Properties:` block** — one line per Info property. Names must match the YAML keys (i.e. record
   property names, or the `[YamlName]` override if present). The block must be present even if empty
   (`Properties:` on its own line is fine for behaviours with no properties — emit it so the parser knows).
-- **`Outputs:` block** — only required when the MonoBehaviour publishes outputs via
-  `TriggerContext.Set("name", value)` (e.g. physical triggers, UI controls). Names must match the
-  literal strings passed to `TriggerContext.Set`. The bracketed type is part of the doc — output
+- **`Outputs:` block** — only required when the MonoBehaviour publishes outputs by adding keys to the
+  `TriggerContext` it passes to `NotifyListeners` (e.g. physical triggers, UI controls). Names must
+  match the literal string keys written into the context (via `ctx.With("name", value)` or the
+  builder-form `ctx.With(b => b["name"] = value)`). The bracketed type is part of the doc — output
   types are not otherwise discoverable from the Info record.
 - **Generic bases:** author the doc once on the generic base (e.g. `VariableSetterBehaviour<T>`,
   `ListAddBehaviour<T>`) — closed subclasses (`Vector3Setter`, `IntListAdd`, …) inherit it via the
@@ -220,12 +221,12 @@ namespace Assembler.Behaviours.Movement
 	{
 		private void Update()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			transform.position += Data.Velocity.Value * Time.deltaTime;
+			transform.position += Data.Velocity.Get(ctx) * Time.deltaTime;
 		}
 	}
 }
@@ -250,18 +251,19 @@ namespace Assembler.Behaviours.Triggers.Timing
 	{
 		private void Start()
 		{
-			Execute();
+			Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute()
+		public override void Execute(TriggerContext ctx)
 		{
-			StartCoroutine(InvokeTriggerAfter(Data.Delay.Value));
+			var captured = ctx;
+			StartCoroutine(InvokeTriggerAfter(Data.Delay.Get(ctx), captured));
 		}
 
-		private IEnumerator InvokeTriggerAfter(float seconds)
+		private IEnumerator InvokeTriggerAfter(float seconds, TriggerContext captured)
 		{
 			yield return new WaitForSeconds(seconds);
-			NotifyListeners();
+			NotifyListeners(captured);
 		}
 	}
 }
@@ -270,6 +272,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 ### Physical trigger that publishes outputs
 
 ```csharp
+using Assembler.Resolving;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Physical
@@ -288,26 +291,27 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				TriggerContext.Push();
-				try
+				NotifyListeners(TriggerContext.Empty.With(b =>
 				{
-					TriggerContext.Set("contact_point", other.contacts[0].point);
-					TriggerContext.Set("other_position", other.transform.position);
-					NotifyListeners();
-				}
-				finally
-				{
-					TriggerContext.Pop();
-				}
+					b["contact_point"] = other.contacts[0].point;
+					b["other_position"] = other.transform.position;
+				}));
 			}
 		}
 	}
 }
 ```
 
+> Outputs are attached by deriving a new immutable `TriggerContext` and passing it to
+> `NotifyListeners`. Use the builder-form `TriggerContext.Empty.With(b => { b["key"] = value; })` when
+> setting several keys at once (one allocation), or chain `ctx.With("key", value)` for a single output.
+> A trigger that wants to *add* outputs while preserving upstream ones starts from the `ctx` it received
+> rather than `TriggerContext.Empty`.
+
 ### Input trigger
 
 ```csharp
+using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -322,9 +326,9 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKey(/* ... */))
+			if (UnityEngine.Input.GetKey(/* ...derived from Data.Key.Get()... */))
 			{
-				NotifyListeners();
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 	}
@@ -333,22 +337,22 @@ namespace Assembler.Behaviours.Triggers.Input
 
 ### Inheritance hierarchy
 
-| Base class | Use for | `Execute()` |
+| Base class | Use for | `Execute(TriggerContext ctx)` |
 |---|---|---|
 | `GameBehaviour<TData>` | Regular behaviours | Must override — contains the main logic |
 | `Trigger<TData>` | Generic triggers (extends `GameBehaviour<TData>`) | Must override |
 | `TimingTrigger<TData>` | Time-based triggers (extends `Trigger<TData>`) | Must override |
-| `InputTrigger<TData>` | User input triggers (extends `Trigger<TData>`) | Throws — input triggers are driven by Unity input callbacks, not `Execute()` |
+| `InputTrigger<TData>` | User input triggers (extends `Trigger<TData>`) | Throws — input triggers are driven by Unity input callbacks, not `Execute(ctx)` |
 | `PhysicalTrigger` | Collision/physics triggers (uses `PhysicalTriggerData`) | Throws — driven by Unity collision callbacks |
 
 ### Rules
 
-- Access resolved data via the `Data` property (e.g. `Data.Velocity.Value`).
-- Call `NotifyListeners()` to fire downstream listeners. The base `GameBehaviour` owns the listeners list — you do not manage it on the MonoBehaviour yourself.
+- Access resolved data via the `Data` property, reading each provider with `.Get(ctx)` — thread through the `ctx` passed into `Execute` (e.g. `Data.Velocity.Get(ctx)`). There is **no `.Value` property**. In a Unity callback that has no upstream context, call the no-arg `.Get()` extension (it passes `TriggerContext.Empty`) or `.ValueOr(ctx, default)` for optional/nullable values.
+- `Execute` is now `public override void Execute(TriggerContext ctx)`. It is abstract and must be overridden (except `InputTrigger` / `PhysicalTrigger`, which provide a throwing default). Unity-callback entry points (`Update`, `Start`, `OnGUI`, collision callbacks, coroutines) start a fresh chain by calling `Execute(TriggerContext.Empty)` or `NotifyListeners(TriggerContext.Empty)`.
+- Call `NotifyListeners(ctx)` to fire downstream listeners — it now **takes the `TriggerContext`** and threads it to each listener's `Execute`. The base `GameBehaviour` owns the listeners list — you do not manage it on the MonoBehaviour yourself.
+- **Publishing outputs:** there is no ambient `TriggerContext.Set(...)` any more. Derive a new immutable context and pass it to `NotifyListeners`: `NotifyListeners(ctx.With("key", value))`, or the batch builder form `NotifyListeners(ctx.With(b => { b["a"] = x; b["b"] = y; }))`. Start from the received `ctx` to cascade upstream outputs downstream, or from `TriggerContext.Empty` at a Unity-callback entry point. The key strings must match the `Outputs:` doc block.
 - `Initialise(data, listeners)` is called by the builder (see Step 5). The base `GameBehaviour<TData>` stores the data and wires up the listeners automatically. Override `OnInitialise(TData data)` if you need extra one-time setup.
-- `Execute()` is abstract and must be overridden (except `InputTrigger` / `PhysicalTrigger` which provide a throwing default).
-- **`TriggerContext` is auto-wired.** If a trigger needs to publish outputs via `TriggerContext.Set(...)`, declare the field via the `Trigger<TData>` base (which already implements `INeedsTriggerContext`) — the factory injects it after `AddComponent` and before `Initialise` runs. **Do not assign `TriggerContext` from the builder lambda.**
-- **`Spawner` is auto-wired.** Behaviours that need `IEntitySpawner` implement `INeedsSpawner` and receive it the same way. **Do not assign `Spawner` from the builder lambda.**
+- **`Spawner` is auto-wired.** Behaviours that need `IEntitySpawner` implement `INeedsSpawner`; the factory injects it after `AddComponent` and before `Initialise` runs. **Do not assign `Spawner` from the builder lambda.** (Note: `INeedsTriggerContext` no longer exists — `TriggerContext` is threaded as a method parameter, not injected.)
 
 ---
 
@@ -408,7 +412,7 @@ The lambda signature is always: `(GameObject go, BehaviourInfo info, BehaviourBu
 }),
 ```
 
-### Physical trigger (no manual TriggerContext assignment)
+### Physical trigger
 
 ```csharp
 [typeof(CollisionEnterTriggerInfo)] = new(typeof(CollisionEnter), (go, info, ctx) =>
@@ -420,9 +424,10 @@ The lambda signature is always: `(GameObject go, BehaviourInfo info, BehaviourBu
 }),
 ```
 
-> Note: `TriggerContext` and `Spawner` are auto-wired by `GameBehaviourFactory.Create` via the
-> `INeedsTriggerContext` / `INeedsSpawner` interfaces, immediately after the build lambda returns and
-> before the `InitialiseBehaviourEvent` runs. The build lambda must **not** set them manually.
+> Note: `Spawner` is auto-wired by `GameBehaviourFactory.Create` via the `INeedsSpawner` interface,
+> immediately after the build lambda returns and before the `InitialiseBehaviourEvent` runs. The build
+> lambda must **not** set it manually. `TriggerContext` is **not** injected — it is threaded through
+> `Execute(ctx)` / `NotifyListeners(ctx)` at runtime, so there is nothing context-related to wire here.
 
 ### Special context fields (rare)
 
@@ -475,7 +480,7 @@ When adding a new behaviour, create/modify these 5 things in order:
 
 1. `Assets/Parsing/Info/Behaviours/<Name>Info.cs` — Info record with `Create(string id, listeners, props, TransformContext ctx)` and `SubstituteParameters(substitutedListeners, TransformContext ctx)`; add `[YamlName]` if YAML key ≠ property name.
 2. `Assets/Resolving/Behaviours/<Name>Data.cs` — Data class with `(string id, IValueProvider<T> ...)` constructor and `base(id)`. **No listeners parameter.**
-3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour extending `GameBehaviour<TData>` (or a trigger base) with `Execute()` override and `<summary>` + `<remarks>` doc comments.
+3. `Assets/Behaviours/<Subcategory>/<Name>.cs` — MonoBehaviour extending `GameBehaviour<TData>` (or a trigger base) with `Execute(TriggerContext ctx)` override and `<summary>` + `<remarks>` doc comments.
 4. `Assets/Parsing/BehaviourRegistry.cs` — Add `["yaml key"] = YourInfo.Create` to `All`.
 5. `Assets/Building/GameBehaviourFactory.cs` — Add `[typeof(YourInfo)] = new(typeof(YourBehaviour), (go, info, ctx) => { ... })` to the `map` inside `CreateBuilders()`. (This single entry also drives doc-gen via `MonoBehaviourByInfo` — no separate step needed.)
 
