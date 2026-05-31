@@ -9,6 +9,7 @@ namespace Assembler.Deserialisation.Dtos
 		public object? EntityTag { get; init; }
 		public object? BehaviourTag { get; init; }
 		public Dictionary<string, string>? Outputs { get; init; }
+		public bool? When { get; init; }
 	}
 
 	/// <summary>Marker listener produced by the <c>!gameover</c> tag; targets the implicit end-game behaviour.</summary>

@@ -401,6 +401,13 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(BranchInfo)] = new(typeof(Branch), (go, info, ctx) =>
+				{
+					var i = (BranchInfo)info;
+					var b = go.AddComponent<Branch>();
+					return (b, lr => b.Initialise(new BranchData(i.Id,
+						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
 				{
 					var i = (ExclusiveTriggerInfo)info;
@@ -685,20 +692,20 @@ namespace Assembler.Building
 			{
 				DirectListenerInfo direct => new DirectListener(
 					listenerRegistry[direct.BehaviourDescriptor],
-					direct.OutputMapping),
+					direct.OutputMapping) { When = direct.When },
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
 					entityTagged.BehaviourId,
 					listenerRegistry.GetByEntityTagAndBehaviourId,
-					entityTagged.OutputMapping),
+					entityTagged.OutputMapping) { When = entityTagged.When },
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),
 					tag => listenerRegistry.GetByBehaviourTag(tag),
-					behaviourTagged.OutputMapping),
+					behaviourTagged.OutputMapping) { When = behaviourTagged.When },
 				GameOverListenerInfo gameOver => new DirectListener(
 					listenerRegistry[new BehaviourDescriptor(
 						GameOverController.EntityId, GameOverController.EndBehaviourId)],
-					gameOver.OutputMapping),
+					gameOver.OutputMapping) { When = gameOver.When },
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
 	}

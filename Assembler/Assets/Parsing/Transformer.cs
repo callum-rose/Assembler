@@ -265,10 +265,11 @@ namespace Assembler.Parsing
 				.Select(l =>
 				{
 					var outputs = l.Outputs ?? new Dictionary<string, string>();
+					var when = l.When ?? true;
 
 					if (l is GameOverListenerDto)
 					{
-						return new GameOverListenerInfo { OutputMapping = outputs };
+						return new GameOverListenerInfo { OutputMapping = outputs, When = when };
 					}
 
 					if (l is { EntityTag: not null, BehaviourTag: not null })
@@ -283,14 +284,14 @@ namespace Assembler.Parsing
 					{
 						var entityTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.EntityTag));
 
-						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId ?? string.Empty) { OutputMapping = outputs };
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId ?? string.Empty) { OutputMapping = outputs, When = when };
 					}
 
 					if (l.BehaviourTag != null)
 					{
 						var behaviourTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.BehaviourTag));
 
-						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs };
+						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs, When = when };
 					}
 
 					var entityId = l.EntityId switch
@@ -306,7 +307,7 @@ namespace Assembler.Parsing
 
 					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
 
-					return new DirectListenerInfo(behaviourDescriptor) { OutputMapping = outputs };
+					return new DirectListenerInfo(behaviourDescriptor) { OutputMapping = outputs, When = when };
 				})
 				.ToArray();
 
