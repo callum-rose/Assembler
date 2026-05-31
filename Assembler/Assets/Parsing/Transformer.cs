@@ -94,7 +94,8 @@ namespace Assembler.Parsing
 					kvp.Value.ReturnType ?? string.Empty,
 					kvp.Value.RegisterTypes ?? Array.Empty<string>(),
 					kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
-					kvp.Value.Expression ?? string.Empty);
+					kvp.Value.Expression ?? string.Empty,
+					kvp.Value.CallableAs);
 
 			ConcreteEntityInfo CreateEntityInfo(string entityId, EntityDto entityDto)
 			{
@@ -556,18 +557,8 @@ namespace Assembler.Parsing
 				_ => throw new ParsingException("Cannot convert null to a value")
 			};
 
-		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues)
-		{
-			foreach (var v in resolvedValues)
-			{
-				if (v.Id == refDto.Id)
-				{
-					return v.Value;
-				}
-			}
-
-			throw new ParsingException($"Cannot resolve reference '{refDto.Id}'");
-		}
+		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues) =>
+			resolvedValues.ResolveValue(refDto.Id);
 
 		private static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)
 		{

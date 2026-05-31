@@ -559,6 +559,7 @@ namespace Assembler.Building
 			RegisterVariableSetter<float, FloatSetter>(map);
 			RegisterVariableSetter<bool, BoolSetter>(map);
 			RegisterVariableSetter<string, StringSetter>(map);
+			RegisterVariableSetter<Color, ColourSetter>(map);
 
 			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListAddRange, Vector3ListClear, Vector3ListLoopTrigger>(map);
 			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListAddRange, IntListClear, IntListLoopTrigger>(map);

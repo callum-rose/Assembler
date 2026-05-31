@@ -10,6 +10,7 @@ namespace Assembler.Compiler.Compiler
 	{
 		private readonly Dictionary<string, HashSet<MethodInfo>> _registeredMethods = new();
 		private readonly Dictionary<string, Type> _registeredTypes = new();
+		private readonly Dictionary<string, (Delegate @delegate, Type[] paramTypes, Type returnType)> _registeredExpressions = new();
 
 		public void RegisterMethod(string name, MethodInfo methodInfo)
 		{
@@ -29,6 +30,13 @@ namespace Assembler.Compiler.Compiler
 			{
 				RegisterMethod(method.Name, method);
 			}
+		}
+
+		// Registers an already-compiled expression delegate so other expressions can
+		// invoke it by name as a local method call.
+		public void RegisterExpression(string name, Delegate @delegate, Type[] paramTypes, Type returnType)
+		{
+			_registeredExpressions[name] = (@delegate, paramTypes, returnType);
 		}
 
 		public void RegisterType(Type type, string? alias = null)
@@ -66,6 +74,13 @@ namespace Assembler.Compiler.Compiler
 			foreach (var type in _registeredTypes)
 			{
 				parser.RegisterType(type.Key, type.Value);
+			}
+
+			// Register previously-compiled expressions as callable local methods
+			foreach (var expression in _registeredExpressions)
+			{
+				parser.RegisterLocalMethod(expression.Key, expression.Value.@delegate, expression.Value.paramTypes,
+					expression.Value.returnType);
 			}
 
 			// Create parameter expressions first
