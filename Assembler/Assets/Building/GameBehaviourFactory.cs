@@ -401,11 +401,11 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(BranchInfo)] = new(typeof(Branch), (go, info, ctx) =>
+				[typeof(InverseConditionGateInfo)] = new(typeof(InverseConditionGate), (go, info, ctx) =>
 				{
-					var i = (BranchInfo)info;
-					var b = go.AddComponent<Branch>();
-					return (b, lr => b.Initialise(new BranchData(i.Id,
+					var i = (InverseConditionGateInfo)info;
+					var b = go.AddComponent<InverseConditionGate>();
+					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
@@ -692,20 +692,20 @@ namespace Assembler.Building
 			{
 				DirectListenerInfo direct => new DirectListener(
 					listenerRegistry[direct.BehaviourDescriptor],
-					direct.OutputMapping) { When = direct.When },
+					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
 					entityTagged.BehaviourId,
 					listenerRegistry.GetByEntityTagAndBehaviourId,
-					entityTagged.OutputMapping) { When = entityTagged.When },
+					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),
 					tag => listenerRegistry.GetByBehaviourTag(tag),
-					behaviourTagged.OutputMapping) { When = behaviourTagged.When },
+					behaviourTagged.OutputMapping),
 				GameOverListenerInfo gameOver => new DirectListener(
 					listenerRegistry[new BehaviourDescriptor(
 						GameOverController.EntityId, GameOverController.EndBehaviourId)],
-					gameOver.OutputMapping) { When = gameOver.When },
+					gameOver.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
 	}

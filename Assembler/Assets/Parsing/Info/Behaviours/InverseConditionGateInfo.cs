@@ -2,10 +2,10 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record BranchInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<bool> Condition)
+	public record InverseConditionGateInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<bool> Condition)
 		: BehaviourInfo(Id, Listeners)
 	{
-		public static BranchInfo Create(string id,
+		public static InverseConditionGateInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
 			TransformContext ctx) =>
@@ -15,7 +15,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
-			new BranchInfo(Id,
+			new InverseConditionGateInfo(Id,
 				substitutedListeners,
 				Condition.SubstituteParameters(ctx));
 	}

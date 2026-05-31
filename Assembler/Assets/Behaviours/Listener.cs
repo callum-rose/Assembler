@@ -8,9 +8,6 @@ namespace Assembler.Behaviours
 	{
 		private readonly IReadOnlyDictionary<string, string> _outputMapping;
 
-		/// <summary>Branch channel this listener belongs to; consulted by routing behaviours such as <c>branch</c>.</summary>
-		public bool When { get; init; } = true;
-
 		protected Listener(IReadOnlyDictionary<string, string> outputMapping)
 		{
 			_outputMapping = outputMapping;

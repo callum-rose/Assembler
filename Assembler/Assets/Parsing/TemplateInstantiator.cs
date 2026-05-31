@@ -191,8 +191,7 @@ namespace Assembler.Parsing
 						EntityId = sv.Value
 					})
 					{
-						OutputMapping = direct.OutputMapping,
-						When = direct.When
+						OutputMapping = direct.OutputMapping
 					};
 				}
 				else

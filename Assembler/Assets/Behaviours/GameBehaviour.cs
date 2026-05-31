@@ -34,18 +34,6 @@ namespace Assembler.Behaviours
 				listener.Notify(ctx);
 			}
 		}
-
-		/// <summary>Notifies only the listeners on the given branch channel (matching <see cref="Listener.When"/>).</summary>
-		protected void NotifyListeners(TriggerContext ctx, bool branch)
-		{
-			foreach (var listener in _listeners)
-			{
-				if (listener.When == branch)
-				{
-					listener.Notify(ctx);
-				}
-			}
-		}
 	}
 
 	public abstract class GameBehaviour<TData> : GameBehaviour where TData : BehaviourData
