@@ -120,8 +120,22 @@ namespace Assembler.Parsing
 			{
 				VecValue vec => new Vector3Value(vec.ToVector3(allValues)),
 				ColourValue col => new ColorValue(col.ToColor(allValues)),
+				VarRef varRef => FlattenAssemblerValue(ResolveVarRef(varRef, allValues), allValues),
 				_ => value
 			};
+
+		private static AssemblerValue ResolveVarRef(VarRef varRef, IReadOnlyList<ValueInfo> allValues)
+		{
+			foreach (var v in allValues)
+			{
+				if (v.Id == varRef.Id)
+				{
+					return v.Value;
+				}
+			}
+
+			throw new ParsingException($"Cannot resolve variable reference '{varRef.Id}'");
+		}
 
 		// Adapts a value resolved at runtime (e.g. by an expression in a spawner's Parameters)
 		// into the already-flattened AssemblerValue subtype the rest of the instantiation
