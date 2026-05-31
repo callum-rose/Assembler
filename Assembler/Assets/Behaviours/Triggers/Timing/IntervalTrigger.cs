@@ -10,7 +10,8 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Interval: Seconds between fires. Re-read before each wait, so binding it to a variable that other
 	///     behaviours mutate changes the live tick rate (e.g. accelerating gravity as a level increases).
-	///   Count: Number of times to fire; 0 means fire forever.
+	///   Count: Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound
+	///     count can extend or shorten the run live.
 	///   AutoStart: When true the timer starts on entity start; when false it waits for an Execute call from upstream.
 	/// Outputs:
 	///   iteration_index [int]: Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.).
@@ -37,13 +38,21 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 			var captured = ctx;
 
-			_currentCoroutine = StartCoroutine(Routine(Data.Count.Get(ctx), captured));
+			_currentCoroutine = StartCoroutine(Routine(captured));
 		}
 
-		private IEnumerator Routine(int count, TriggerContext captured)
+		private IEnumerator Routine(TriggerContext captured)
 		{
-			for (int i = 0; count == 0 || i < count; i++)
+			for (int i = 0; ; i++)
 			{
+				// Re-read Interval and Count each iteration so binding either to a variable that other
+				// behaviours mutate changes the live tick rate and repetition limit.
+				int count = Data.Count.Get(captured);
+				if (count != 0 && i >= count)
+				{
+					break;
+				}
+
 				yield return new WaitForSeconds(Data.Interval.Get(captured));
 
 				FireIteration(i, count, captured);
