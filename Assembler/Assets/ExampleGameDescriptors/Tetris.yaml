@@ -27,6 +27,7 @@ Physics:
 Constants:
   spawn origin: !vec { X: 4, Y: 18 }
   fall interval: 0.8
+  soft interval: 0.04
   block size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
 
   camera position: !vec { X: 0, Y: 0, Z: -10 }
@@ -43,6 +44,8 @@ Variables:
   # Scratch: number of rows cleared by the most recent lock.
   lines now: 0
   is dead: false
+  # True while the S key is held (global so a piece spawned mid-hold keeps dropping).
+  soft dropping: false
 
 Expressions:
   # ---- pure helpers -------------------------------------------------------
@@ -609,10 +612,37 @@ Templates:
         Properties:
           Displacement: !vec { X: 0, Y: 0, Z: -90 }
 
-      # ---- soft drop (one cell, or lock) ----
-      soft drop key:
+      # ---- soft drop (hold S to fall fast until it lands) ----
+      # key down/up toggle a global flag; a fast interval ticks every
+      # `soft interval` seconds and, while the flag is set, drives the same
+      # fall-ok / fall-blocked gates as gravity (so it locks on landing).
+      soft press:
         Type: key down trigger
         Properties: { Key: "s" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: set soft on
+      soft release:
+        Type: key up trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: set soft off
+      set soft on:
+        Type: bool variable setter
+        Properties: { VariableId: !var soft dropping, Value: true }
+      set soft off:
+        Type: bool variable setter
+        Properties: { VariableId: !var soft dropping, Value: false }
+      soft tick:
+        Type: interval trigger
+        Properties: { Interval: !var soft interval, Count: 0, AutoStart: true }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: soft gate
+      soft gate:
+        Type: condition gate
+        Properties: { Condition: !var soft dropping }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: fall ok gate
