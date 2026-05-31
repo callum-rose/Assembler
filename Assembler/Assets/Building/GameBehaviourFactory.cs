@@ -561,12 +561,12 @@ namespace Assembler.Building
 			RegisterVariableSetter<string, StringSetter>(map);
 			RegisterVariableSetter<Color, ColourSetter>(map);
 
-			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListAddRange, Vector3ListClear, Vector3ListLoopTrigger>(map);
-			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListAddRange, IntListClear, IntListLoopTrigger>(map);
-			RegisterListOps<float, FloatListAdd, FloatListInsert, FloatListRemoveAt, FloatListRemove, FloatListSetAt, FloatListAddRange, FloatListClear, FloatListLoopTrigger>(map);
-			RegisterListOps<bool, BoolListAdd, BoolListInsert, BoolListRemoveAt, BoolListRemove, BoolListSetAt, BoolListAddRange, BoolListClear, BoolListLoopTrigger>(map);
-			RegisterListOps<string, StringListAdd, StringListInsert, StringListRemoveAt, StringListRemove, StringListSetAt, StringListAddRange, StringListClear, StringListLoopTrigger>(map);
-			RegisterListOps<Color, ColourListAdd, ColourListInsert, ColourListRemoveAt, ColourListRemove, ColourListSetAt, ColourListAddRange, ColourListClear, ColourListLoopTrigger>(map);
+			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListSet, Vector3ListAddRange, Vector3ListClear, Vector3ListLoopTrigger>(map);
+			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListSet, IntListAddRange, IntListClear, IntListLoopTrigger>(map);
+			RegisterListOps<float, FloatListAdd, FloatListInsert, FloatListRemoveAt, FloatListRemove, FloatListSetAt, FloatListSet, FloatListAddRange, FloatListClear, FloatListLoopTrigger>(map);
+			RegisterListOps<bool, BoolListAdd, BoolListInsert, BoolListRemoveAt, BoolListRemove, BoolListSetAt, BoolListSet, BoolListAddRange, BoolListClear, BoolListLoopTrigger>(map);
+			RegisterListOps<string, StringListAdd, StringListInsert, StringListRemoveAt, StringListRemove, StringListSetAt, StringListSet, StringListAddRange, StringListClear, StringListLoopTrigger>(map);
+			RegisterListOps<Color, ColourListAdd, ColourListInsert, ColourListRemoveAt, ColourListRemove, ColourListSetAt, ColourListSet, ColourListAddRange, ColourListClear, ColourListLoopTrigger>(map);
 
 			return map;
 		}
@@ -603,12 +603,13 @@ namespace Assembler.Building
 			});
 		}
 
-		private static void RegisterListOps<T, TAdd, TInsert, TRemoveAt, TRemove, TSetAt, TAddRange, TClear, TLoop>(IDictionary<Type, BuilderEntry> map)
+		private static void RegisterListOps<T, TAdd, TInsert, TRemoveAt, TRemove, TSetAt, TSet, TAddRange, TClear, TLoop>(IDictionary<Type, BuilderEntry> map)
 			where TAdd : GameBehaviour<ListAddData<T>>
 			where TInsert : GameBehaviour<ListInsertData<T>>
 			where TRemoveAt : GameBehaviour<ListRemoveAtData<T>>
 			where TRemove : GameBehaviour<ListRemoveData<T>>
 			where TSetAt : GameBehaviour<ListSetAtData<T>>
+			where TSet : GameBehaviour<ListSetData<T>>
 			where TAddRange : GameBehaviour<ListAddRangeData<T>>
 			where TClear : GameBehaviour<ListClearData<T>>
 			where TLoop : GameBehaviour<ListLoopTriggerData<T>>
@@ -660,6 +661,14 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListSetAtData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution),
+					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+			map[typeof(ListSetInfo<T>)] = new(typeof(TSet), (go, info, ctx) =>
+			{
+				var i = (ListSetInfo<T>)info;
+				var b = go.AddComponent<TSet>();
+				return (b, lr => b.Initialise(new ListSetData<T>(i.Id,
+					i.List.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 			map[typeof(ListAddRangeInfo<T>)] = new(typeof(TAddRange), (go, info, ctx) =>
