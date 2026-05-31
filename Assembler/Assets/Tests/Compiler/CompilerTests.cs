@@ -248,6 +248,38 @@ namespace Tests.Compiler
 			Assert.That(func(false), Is.True);
 		}
 
+		// Boolean literals
+		[Test]
+		public void BooleanLiteralTrue()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool>("return true;");
+			Assert.That(func(), Is.True);
+		}
+
+		[Test]
+		public void BooleanLiteralFalseVariable()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool>("bool b = false; return b;");
+			Assert.That(func(), Is.False);
+		}
+
+		[Test]
+		public void BooleanLiteralFlagPattern()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool, bool>(
+				$$"""
+				  bool ok = true;
+				  if (x) { ok = false; }
+				  return ok;
+				  """,
+				"x");
+			Assert.That(func(false), Is.True);
+			Assert.That(func(true), Is.False);
+		}
+
 		// Variable declaration and assignment
 		[Test]
 		public void VariableDeclaration()
