@@ -471,7 +471,7 @@ Templates:
   piece:
     Tags: [ piece ]
     Variables:
-      origin: !var spawn origin
+      origin: !vec { X: 4, Y: 18 }
       rot: 0
     Behaviours:
       # ---- spawn-time game-over check ----
@@ -922,7 +922,7 @@ Entities:
           TemplateId: piece
           Position: !expr { ExpressionId: cell to world, Arguments: [ !var spawn origin ] }
           Parameters:
-            shape: !var next shape
+            shape: !expr { ExpressionId: int add, Arguments: [ !var next shape, 0 ] }
             tint: !expr { ExpressionId: colour for shape, Arguments: [ !var next shape ] }
 
   # ===== Well border (cosmetic) ===========================================
