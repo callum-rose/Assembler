@@ -115,11 +115,17 @@ namespace Assembler.Parsing
 			};
 		}
 
+		// Flattens a variable initialiser into a concrete AssemblerValue that
+		// VariableRegistry.BuildProvider can turn into a constant provider.
+		// ParamRefs are already substituted before we get here; the other reference
+		// kinds (ExprRef/AssetRef/EntityPositionRef/OutputRef) resolve at runtime and
+		// cannot be reduced to a constant, so only VarRef is dereferenced here.
 		private static AssemblerValue FlattenAssemblerValue(AssemblerValue value, IReadOnlyList<ValueInfo> allValues) =>
 			value switch
 			{
 				VecValue vec => new Vector3Value(vec.ToVector3(allValues)),
 				ColourValue col => new ColorValue(col.ToColor(allValues)),
+				VarRef varRef => FlattenAssemblerValue(allValues.ResolveValue(varRef.Id), allValues),
 				_ => value
 			};
 

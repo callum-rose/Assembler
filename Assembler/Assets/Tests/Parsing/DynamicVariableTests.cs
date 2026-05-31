@@ -114,5 +114,36 @@ Entities:
 			Assert.IsInstanceOf<IntValue>(speed.Value);
 			Assert.AreEqual(3, ((IntValue)speed.Value).Value);
 		}
+
+		[Test]
+		public void Templates_VariableInitialisedFromGlobalVarRefIsFlattened()
+		{
+			var yaml = @"
+Constants:
+  spawn origin: !vec { X: 4, Y: 18 }
+Templates:
+  piece:
+    Variables:
+      origin: !var spawn origin
+Entities:
+  active piece:
+    Template:
+      Id: piece
+";
+
+			var parser = new GameFileParser();
+			var gameDto = parser.Parse(yaml);
+			var gameInfo = Transformer.Transform(gameDto);
+
+			var piece = gameInfo.Entities.Single();
+			var origin = piece.Variables.Single(v => v.Id == "origin");
+
+			Assert.IsInstanceOf<Vector3Value>(origin.Value);
+			Assert.AreEqual(new UnityEngine.Vector3(4, 18, 0), ((Vector3Value)origin.Value).Value);
+
+			var registry = new VariableRegistry();
+			Assert.DoesNotThrow(() => registry.Register(origin));
+			Assert.AreEqual(new UnityEngine.Vector3(4, 18, 0), registry.Get<UnityEngine.Vector3>("origin").Get());
+		}
 	}
 }
