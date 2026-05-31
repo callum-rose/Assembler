@@ -5,11 +5,13 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
-	/// <summary>Fires repeatedly at a fixed interval. Optionally limited to a number of repetitions.</summary>
+	/// <summary>Fires repeatedly at an interval. Optionally limited to a number of repetitions.</summary>
 	/// <remarks>
 	/// Properties:
-	///   Interval: Seconds between fires.
-	///   Count: Number of times to fire; 0 means fire forever.
+	///   Interval: Seconds between fires. Re-read before each wait, so binding it to a variable that other
+	///     behaviours mutate changes the live tick rate (e.g. accelerating gravity as a level increases).
+	///   Count: Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound
+	///     count can extend or shorten the run live.
 	///   AutoStart: When true the timer starts on entity start; when false it waits for an Execute call from upstream.
 	/// Outputs:
 	///   iteration_index [int]: Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.).
@@ -36,14 +38,22 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 			var captured = ctx;
 
-			_currentCoroutine = StartCoroutine(Routine(Data.Interval.Get(ctx), Data.Count.Get(ctx), captured));
+			_currentCoroutine = StartCoroutine(Routine(captured));
 		}
 
-		private IEnumerator Routine(float interval, int count, TriggerContext captured)
+		private IEnumerator Routine(TriggerContext captured)
 		{
-			for (int i = 0; count == 0 || i < count; i++)
+			for (int i = 0; ; i++)
 			{
-				yield return new WaitForSeconds(interval);
+				// Re-read Interval and Count each iteration so binding either to a variable that other
+				// behaviours mutate changes the live tick rate and repetition limit.
+				int count = Data.Count.Get(captured);
+				if (count != 0 && i >= count)
+				{
+					break;
+				}
+
+				yield return new WaitForSeconds(Data.Interval.Get(captured));
 
 				FireIteration(i, count, captured);
 			}
