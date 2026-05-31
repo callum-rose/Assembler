@@ -72,6 +72,7 @@ namespace Assembler.Parsing
 				["position setter"] = SetPositionInfo.Create,
 				["camera"] = CameraInfo.Create,
 				["condition gate"] = ConditionGateInfo.Create,
+				["inverse condition gate"] = InverseConditionGateInfo.Create,
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
 				["vector variable setter"] = VariableSetterInfo<Vector3>.Create,
 				["int variable setter"] = VariableSetterInfo<int>.Create,

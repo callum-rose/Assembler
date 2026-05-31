@@ -401,6 +401,13 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(InverseConditionGateInfo)] = new(typeof(InverseConditionGate), (go, info, ctx) =>
+				{
+					var i = (InverseConditionGateInfo)info;
+					var b = go.AddComponent<InverseConditionGate>();
+					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
+						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
 				{
 					var i = (ExclusiveTriggerInfo)info;
