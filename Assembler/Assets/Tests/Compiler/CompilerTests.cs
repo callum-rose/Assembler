@@ -979,7 +979,7 @@ namespace Tests.Compiler
 		public void FloatPlusIntPromotes()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<float, float, int>("return x + y;", "x", "y");
+			var func = compiler.CompileFunc<float, int, float>("return x + y;", "x", "y");
 			Assert.That(func(1.5f, 2), Is.EqualTo(3.5f).Within(0.0001f));
 		}
 
@@ -1019,7 +1019,7 @@ namespace Tests.Compiler
 		public void FloatModuloIntPromotes()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<float, float, int>("return x % y;", "x", "y");
+			var func = compiler.CompileFunc<float, int, float>("return x % y;", "x", "y");
 			Assert.That(func(5.5f, 2), Is.EqualTo(1.5f).Within(0.0001f));
 		}
 
@@ -1062,8 +1062,8 @@ namespace Tests.Compiler
 		public void FloatVariablePlusEqualsInt()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<float, int>(
-				"""
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
 				float total = 1.5f;
 				total += x;
 				return total;
@@ -1076,8 +1076,8 @@ namespace Tests.Compiler
 		public void FloatVariableMinusEqualsInt()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<float, int>(
-				"""
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
 				float total = 5f;
 				total -= x;
 				return total;
@@ -1090,8 +1090,8 @@ namespace Tests.Compiler
 		public void FloatVariableTimesEqualsInt()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<float, int>(
-				"""
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
 				float total = 2.5f;
 				total *= x;
 				return total;
@@ -1104,8 +1104,8 @@ namespace Tests.Compiler
 		public void IntVariablePlusEqualsFloatNarrowsBack()
 		{
 			var compiler = new ExpressionMethodCompiler();
-			var func = compiler.CompileFunc<int, float>(
-				"""
+			var func = compiler.CompileFunc<float, int>(
+				$$"""
 				int total = 5;
 				total += x;
 				return total;
