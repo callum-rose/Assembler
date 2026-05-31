@@ -16,7 +16,7 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 		public Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			var basePrompt = VoxelPromptBuilder.Build();
+			var basePrompt = VoxelPromptBuilder.Build(includeScriptSkill: ctx.ScriptExecutor != null);
 			var systemPrompt = string.IsNullOrWhiteSpace(ctx.PersistentInstructions)
 				? basePrompt
 				: basePrompt + "\n\n# Additional persistent instructions\n\n" + ctx.PersistentInstructions;

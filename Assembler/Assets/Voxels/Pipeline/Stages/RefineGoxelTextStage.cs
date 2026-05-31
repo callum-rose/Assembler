@@ -50,9 +50,36 @@ namespace Assembler.Voxels.Pipeline.Stages
 				? new List<AnthropicMessage>(ctx.ChatHistory) { new("user", userMessage) }
 				: new List<AnthropicMessage> { new("user", userMessage) };
 
-			var raw = await ctx.AnthropicClient.SendAsync(ctx.SystemPrompt!, messages, ct, ctx.Observer.OnStreamDelta).ConfigureAwait(false);
+			var executor = ctx.ScriptExecutor;
+			IReadOnlyList<AnthropicTool>? tools = executor != null ? new[] { executor.Tool } : null;
+			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse =
+				executor != null ? executor.HandleToolUseAsync : null;
+
+			var raw = await ctx.AnthropicClient
+				.SendAsync(ctx.SystemPrompt!, messages, ct, ctx.Observer.OnStreamDelta, tools, onToolUse, ctx.Limits.MaxToolIterations)
+				.ConfigureAwait(false);
 
 			var withRaw = ctx with { RawAssistantText = raw };
+
+			// Script path: Claude rebuilt the model in code. Use it directly (Z-up).
+			if (executor != null && executor.LastGoxelTextZUp is { Length: > 0 } scriptText)
+			{
+				var assistantTurn = "I rebuilt the model with a procedural script:\n\n```csharp\n" + executor.LastScript + "\n```";
+				var scriptHistory = ctx.UseChatHistory
+					? ctx.ChatHistory
+						.Add(new AnthropicMessage("user", userMessage))
+						.Add(new AnthropicMessage("assistant", assistantTurn))
+					: ctx.ChatHistory;
+
+				return withRaw with
+				{
+					GoxelTextZUp = scriptText,
+					LastScript = executor.LastScript,
+					ChatHistory = scriptHistory,
+				};
+			}
+
+			// Mentalised path: Claude returned a direct goxel block (Y-up).
 			var extracted = await new ExtractGoxelBlockStage().ExecuteAsync(withRaw, ct).ConfigureAwait(false);
 			var swapped = await new SwapYZAxesStage().ExecuteAsync(extracted, ct).ConfigureAwait(false);
 
@@ -62,7 +89,7 @@ namespace Assembler.Voxels.Pipeline.Stages
 					.Add(new AnthropicMessage("assistant", raw))
 				: swapped.ChatHistory;
 
-			return swapped with { ChatHistory = nextHistory };
+			return swapped with { ChatHistory = nextHistory, LastScript = null };
 		}
 
 		private static string BuildRefinementMessage(string currentGoxelTextYUp, string refinementInstruction)

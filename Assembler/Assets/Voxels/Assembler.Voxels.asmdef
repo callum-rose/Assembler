@@ -2,7 +2,8 @@
     "name": "Assembler.Voxels",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Assembler.Compiler"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

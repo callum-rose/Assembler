@@ -3,6 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Assembler.Voxels",
+        "Assembler.Anthropic",
+        "Assembler.Compiler",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
