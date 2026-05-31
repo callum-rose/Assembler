@@ -5,125 +5,18 @@ using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Assembler.Building
 {
 	public static class Builder
 	{
-#if UNITY_EDITOR
-		[MenuItem("Test/Build Pong")]
-		public static void BuildPong()
+		public static void Build(string yamlPath)
 		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Pong.yaml");
-
+			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			Build(gameInfo);
 		}
-
-		[MenuItem("Test/Build Snake")]
-		public static void BuildSnake()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Snake 2.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build EnemyHealthDemo")]
-		public static void BuildEnemyHealthDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/EnemyHealthDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build SpawnedBubblesDemo")]
-		public static void BuildSpawnedBubblesDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/SpawnedBubblesDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build TaggedListenerDemo")]
-		public static void BuildTaggedListenerDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/TaggedListenerDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}		
-		
-		[MenuItem("Test/Build Asteroids")]
-		public static void BuildAsteroids()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/Asteroids.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build AnimationsDemo")]
-		public static void BuildAnimationsDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/AnimationsDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build HierarchyDemo")]
-		public static void BuildHierarchyDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/HierarchyDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build EntityPositionDemo")]
-		public static void BuildEntityPositionDemo()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/EntityPositionDemo.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build FlappyBird")]
-		public static void BuildFlappyBird()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/FlappyBird.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-
-		[MenuItem("Test/Build DoodleJump")]
-		public static void BuildDoodleJump()
-		{
-			var yaml = File.ReadAllText("Assets/ExampleGameDescriptors/DoodleJump.yaml");
-
-			var gameDto = new GameFileParser().Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
-		}
-#endif
 
 		public static void Build(GameInfo gameInfo)
 		{
