@@ -77,8 +77,8 @@ Expressions:
 
   random shape:
     ReturnType: int
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "return Range(0, 7);"
+    RegisterTypes: [ UnityEngine.Random ]
+    Expression: "return UnityEngine.Random.Range(0, 7);"
 
   colour for shape:
     ArgumentTypes: [ int ]
@@ -106,14 +106,14 @@ Expressions:
     ArgumentNames: [ origin, dx, dy ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "return new Vector3(origin.x + dx, origin.y + dy, 0f);"
+    Expression: "return new Vector3(origin.x + (float)dx, origin.y + (float)dy, 0f);"
 
   shift down:
     ArgumentTypes: [ vector, int ]
     ArgumentNames: [ cell, by ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "return new Vector3(cell.x, cell.y - by, 0f);"
+    Expression: "return new Vector3(cell.x, cell.y - (float)by, 0f);"
 
   should shift:
     ArgumentTypes: [ bool, int ]
@@ -294,8 +294,8 @@ Expressions:
           float rx = ox(s, i);
           float ry = oy(s, i);
           for (int k = 0; k < rot; k++) { float nx = ry; float ny = -rx; rx = nx; ry = ny; }
-          float col = origin.x + rx + dx;
-          float row = origin.y + ry + dy;
+          float col = origin.x + rx + (float)dx;
+          float row = origin.y + ry + (float)dy;
           if (col < 0f || col > 9f || row < 0f) { free = false; }
           if (occupied.Any(c => c.x == col && c.y == row)) { free = false; }
       }
@@ -456,14 +456,14 @@ Expressions:
               float ry = oy(s, i);
               for (int k = 0; k < rot; k++) { float nx = ry; float ny = -rx; rx = nx; ry = ny; }
               float col = origin.x + rx;
-              float row = origin.y + ry - nd;
+              float row = origin.y + ry - (float)nd;
               if (col < 0f || col > 9f || row < 0f) { ok = false; }
               if (occupied.Any(c => c.x == col && c.y == row)) { ok = false; }
           }
           if (!ok) { break; }
           d = nd;
       }
-      return new Vector3(origin.x, origin.y - d, 0f);
+      return new Vector3(origin.x, origin.y - (float)d, 0f);
 Templates:
   # ===== Active falling piece =============================================
   # One parent entity with 4 child blocks. Logical state lives in `origin`
