@@ -21,6 +21,66 @@ namespace Assembler.Compiler.Compiler
 		private LabelTarget? _returnLabel;
 		private Type _returnType = typeof(void);
 
+		// Widening ladder used to mimic C#'s implicit numeric promotion in binary ops.
+		private static readonly Dictionary<Type, int> NumericRank = new()
+		{
+			{ typeof(byte), 1 },
+			{ typeof(sbyte), 1 },
+			{ typeof(short), 2 },
+			{ typeof(ushort), 2 },
+			{ typeof(int), 3 },
+			{ typeof(uint), 3 },
+			{ typeof(long), 4 },
+			{ typeof(ulong), 4 },
+			{ typeof(float), 5 },
+			{ typeof(double), 6 },
+			{ typeof(decimal), 7 },
+		};
+
+		// Promote the narrower of two differing numeric operands to the wider type so the
+		// LINQ Expression factory methods (which require matching operand types) accept them.
+		private static void PromoteNumericOperands(ref Expression left, ref Expression right)
+		{
+			if (left.Type == right.Type)
+			{
+				return;
+			}
+
+			if (!NumericRank.TryGetValue(left.Type, out var leftRank) ||
+			    !NumericRank.TryGetValue(right.Type, out var rightRank))
+			{
+				return;
+			}
+
+			if (leftRank < rightRank)
+			{
+				left = Expression.Convert(left, right.Type);
+			}
+			else if (rightRank < leftRank)
+			{
+				right = Expression.Convert(right, left.Type);
+			}
+		}
+
+		private static Expression BuildBinary(Func<Expression, Expression, Expression> factory, Expression left, Expression right)
+		{
+			PromoteNumericOperands(ref left, ref right);
+			return factory(left, right);
+		}
+
+		// Mirrors C#'s `x op= y` semantics: compute `x op y` with numeric promotion, then
+		// narrow the result back to the target's type before assigning.
+		private static Expression BuildCompoundAssign(Func<Expression, Expression, Expression> factory, Expression target, Expression value)
+		{
+			var combined = BuildBinary(factory, target, value);
+			if (combined.Type != target.Type)
+			{
+				combined = Expression.Convert(combined, target.Type);
+			}
+
+			return Expression.Assign(target, combined);
+		}
+
 		public Parser(List<Token> tokens)
 		{
 			_tokens = tokens;
@@ -1124,11 +1184,11 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.Equal))
 				{
-					left = Expression.Equal(left, ParseComparison());
+					left = BuildBinary(Expression.Equal, left, ParseComparison());
 				}
 				else if (Match(TokenType.NotEqual))
 				{
-					left = Expression.NotEqual(left, ParseComparison());
+					left = BuildBinary(Expression.NotEqual, left, ParseComparison());
 				}
 				else
 				{
@@ -1147,19 +1207,19 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.LessThan))
 				{
-					left = Expression.LessThan(left, ParseAdditive());
+					left = BuildBinary(Expression.LessThan, left, ParseAdditive());
 				}
 				else if (Match(TokenType.GreaterThan))
 				{
-					left = Expression.GreaterThan(left, ParseAdditive());
+					left = BuildBinary(Expression.GreaterThan, left, ParseAdditive());
 				}
 				else if (Match(TokenType.LessThanOrEqual))
 				{
-					left = Expression.LessThanOrEqual(left, ParseAdditive());
+					left = BuildBinary(Expression.LessThanOrEqual, left, ParseAdditive());
 				}
 				else if (Match(TokenType.GreaterThanOrEqual))
 				{
-					left = Expression.GreaterThanOrEqual(left, ParseAdditive());
+					left = BuildBinary(Expression.GreaterThanOrEqual, left, ParseAdditive());
 				}
 				else
 				{
@@ -1188,12 +1248,12 @@ namespace Assembler.Compiler.Compiler
 					}
 					else
 					{
-						left = Expression.Add(left, right);
+						left = BuildBinary(Expression.Add, left, right);
 					}
 				}
 				else if (Match(TokenType.Minus))
 				{
-					left = Expression.Subtract(left, ParseMultiplicative());
+					left = BuildBinary(Expression.Subtract, left, ParseMultiplicative());
 				}
 				else
 				{
@@ -1212,15 +1272,15 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.Multiply))
 				{
-					left = Expression.Multiply(left, ParseUnary());
+					left = BuildBinary(Expression.Multiply, left, ParseUnary());
 				}
 				else if (Match(TokenType.Divide))
 				{
-					left = Expression.Divide(left, ParseUnary());
+					left = BuildBinary(Expression.Divide, left, ParseUnary());
 				}
 				else if (Match(TokenType.Modulo))
 				{
-					left = Expression.Modulo(left, ParseUnary());
+					left = BuildBinary(Expression.Modulo, left, ParseUnary());
 				}
 				else
 				{
@@ -2045,26 +2105,22 @@ namespace Assembler.Compiler.Compiler
 
 				if (Match(TokenType.PlusAssign))
 				{
-					var value = ParseExpression();
-					return Expression.Assign(_variables[name], Expression.Add(_variables[name], value));
+					return BuildCompoundAssign(Expression.Add, _variables[name], ParseExpression());
 				}
 
 				if (Match(TokenType.MinusAssign))
 				{
-					var value = ParseExpression();
-					return Expression.Assign(_variables[name], Expression.Subtract(_variables[name], value));
+					return BuildCompoundAssign(Expression.Subtract, _variables[name], ParseExpression());
 				}
 
 				if (Match(TokenType.MultiplyAssign))
 				{
-					var value = ParseExpression();
-					return Expression.Assign(_variables[name], Expression.Multiply(_variables[name], value));
+					return BuildCompoundAssign(Expression.Multiply, _variables[name], ParseExpression());
 				}
 
 				if (Match(TokenType.DivideAssign))
 				{
-					var value = ParseExpression();
-					return Expression.Assign(_variables[name], Expression.Divide(_variables[name], value));
+					return BuildCompoundAssign(Expression.Divide, _variables[name], ParseExpression());
 				}
 
 				if (Match(TokenType.Increment))

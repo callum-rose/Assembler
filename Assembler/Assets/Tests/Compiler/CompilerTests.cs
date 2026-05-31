@@ -974,6 +974,146 @@ namespace Tests.Compiler
 			Assert.That(vector3.z, Is.EqualTo(0f).Within(0.01f));
 		}
 
+		// Implicit numeric promotion in binary operations (issue #73)
+		[Test]
+		public void FloatPlusIntPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, float>("return x + y;", "x", "y");
+			Assert.That(func(1.5f, 2), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntPlusFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x + y;", "x", "y");
+			Assert.That(func(2, 1.5f), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntMinusFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x - y;", "x", "y");
+			Assert.That(func(5, 1.5f), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntTimesFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x * y;", "x", "y");
+			Assert.That(func(3, 2.5f), Is.EqualTo(7.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntDividedByFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x / y;", "x", "y");
+			Assert.That(func(5, 2f), Is.EqualTo(2.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatModuloIntPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, float>("return x % y;", "x", "y");
+			Assert.That(func(5.5f, 2), Is.EqualTo(1.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntPlusDoublePromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, double, double>("return x + y;", "x", "y");
+			Assert.That(func(2, 1.5), Is.EqualTo(3.5).Within(0.0001));
+		}
+
+		[Test]
+		public void MixedLessThanComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, bool>("return x < y;", "x", "y");
+			Assert.That(func(1.5f, 2), Is.True);
+			Assert.That(func(2.5f, 2), Is.False);
+		}
+
+		[Test]
+		public void MixedGreaterThanOrEqualComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, bool>("return x >= y;", "x", "y");
+			Assert.That(func(3, 2.5f), Is.True);
+			Assert.That(func(2, 2.5f), Is.False);
+		}
+
+		[Test]
+		public void MixedEqualityComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, bool>("return x == y;", "x", "y");
+			Assert.That(func(2f, 2), Is.True);
+			Assert.That(func(2.5f, 2), Is.False);
+		}
+
+		[Test]
+		public void FloatVariablePlusEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 1.5f;
+				total += x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatVariableMinusEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 5f;
+				total -= x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2), Is.EqualTo(3f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatVariableTimesEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 2.5f;
+				total *= x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(3), Is.EqualTo(7.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntVariablePlusEqualsFloatNarrowsBack()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int>(
+				$$"""
+				int total = 5;
+				total += x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2.9f), Is.EqualTo(7));
+		}
+
 		// --- Cross-expression calls (issue #72) ---
 
 		[Test]
