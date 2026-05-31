@@ -5,6 +5,13 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Animations
 {
+	/// <remarks>
+	/// Properties:
+	///   Start: Starting value; defaults to the transform's current value when left unset.
+	///   End: Target value to tween towards.
+	///   Duration: Tween length in seconds (clamped to a minimum of 0).
+	///   Easing: DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine.
+	/// </remarks>
 	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>
 	{
 		private Tween? _activeTween;

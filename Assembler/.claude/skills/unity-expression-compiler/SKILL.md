@@ -221,6 +221,18 @@ return v;
 
 ---
 
+## Known Limitations
+
+Subtler gotchas (each backed by a test in `Assets/Tests/Compiler/CompilerTests.cs`):
+
+- **No implicit numeric conversion** — `float + int` throws at compile time. Cast explicitly and keep operand types equal (see the note under *Supported Types*).
+- **Integer division truncates** — `5 / 2` is `2`. Use float/double literals (`5f / 2f`) for fractional results.
+- **String escapes are not interpreted** — only `\"` and `\\` are meaningful; `\n`/`\t` become the literal `n`/`t`.
+- **`break` / `continue` only work inside a loop** — using them elsewhere throws.
+- **Casts must be legal CLR conversions** — the syntax parses `(int) (float) (double) (bool) (string)`, but the runtime conversion still has to be valid.
+
+---
+
 ## Complete Example
 
 ```csharp

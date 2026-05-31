@@ -55,6 +55,7 @@ namespace Editor
 			sb.AppendLine();
 
 			var warnings = new List<string>();
+			var parseOnly = new List<(string Name, Type InfoType, IReadOnlyList<InfoProp> Props)>();
 
 			foreach (var (name, factory) in BehaviourRegistry.All)
 			{
@@ -67,7 +68,9 @@ namespace Editor
 
 				if (!GameBehaviourFactory.MonoBehaviourByInfo.TryGetValue(infoType, out var monoType))
 				{
-					warnings.Add($"`{name}`: no MonoBehaviour mapping for `{infoType.Name}` (skipped).");
+					// Registered in the parse catalogue but with no runtime MonoBehaviour. These parse
+					// from YAML yet cannot execute; document them in an explicit section rather than warn.
+					parseOnly.Add((name, infoType, GetInfoProperties(infoType)));
 					continue;
 				}
 
@@ -120,6 +123,36 @@ namespace Editor
 						sb.AppendLine($"| {outName} | {outDoc.TypeOverride ?? ""} | {outDoc.Description ?? ""} |");
 					}
 					sb.AppendLine();
+				}
+			}
+
+			if (parseOnly.Count > 0)
+			{
+				sb.AppendLine("---");
+				sb.AppendLine();
+				sb.AppendLine("## Parse-only behaviours (not yet runnable)");
+				sb.AppendLine();
+				sb.AppendLine("These behaviours are registered in the parse catalogue and accept the properties below, but have no runtime `GameBehaviour` implementation — they parse from YAML yet will not execute. Treat them as unsupported until a MonoBehaviour mapping is added in `GameBehaviourFactory`.");
+				sb.AppendLine();
+				foreach (var (name, _, props) in parseOnly)
+				{
+					sb.AppendLine($"### `{name}`");
+					sb.AppendLine();
+					if (props.Count > 0)
+					{
+						sb.AppendLine("| Name | Type |");
+						sb.AppendLine("|------|------|");
+						foreach (var prop in props)
+						{
+							sb.AppendLine($"| {prop.YamlName} | {RenderType(prop.Type)} |");
+						}
+						sb.AppendLine();
+					}
+					else
+					{
+						sb.AppendLine("No properties.");
+						sb.AppendLine();
+					}
 				}
 			}
 

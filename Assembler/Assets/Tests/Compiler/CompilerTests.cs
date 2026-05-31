@@ -973,6 +973,128 @@ namespace Tests.Compiler
 			Assert.That(vector3.y, Is.EqualTo(6.6f).Within(0.01f));
 			Assert.That(vector3.z, Is.EqualTo(0f).Within(0.01f));
 		}
+
+		// Compound assignment operators (multiply / divide)
+		[Test]
+		public void MultiplyAssignment()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int, int>(
+				$"""
+				 int result = 10;
+				 result *= x;
+				 return result;
+				 """,
+				"x");
+
+			Assert.That(func(3), Is.EqualTo(30));
+		}
+
+		[Test]
+		public void DivideAssignment()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int, int>(
+				$"""
+				 int result = 20;
+				 result /= x;
+				 return result;
+				 """,
+				"x");
+
+			Assert.That(func(4), Is.EqualTo(5));
+		}
+
+		// continue
+		[Test]
+		public void ContinueStatement()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int>(
+				$$"""
+				  int result = 0;
+				  for (int i = 0; i < 6; i++)
+				  {
+				      if (i % 2 == 0)
+				      {
+				          continue;
+				      }
+				      result += i;
+				  }
+				  return result;
+				  """);
+
+			Assert.That(func(), Is.EqualTo(9)); // 1 + 3 + 5
+		}
+
+		// Float literal arithmetic with the 'f' suffix
+		[Test]
+		public void FloatLiteralArithmetic()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return 1.5f + 2.5f;");
+			Assert.That(func(), Is.EqualTo(4f).Within(0.0001f));
+		}
+
+		// Explicit numeric casts
+		[Test]
+		public void CastToDouble()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<double>("return (double)7 / (double)2;");
+			Assert.That(func(), Is.EqualTo(3.5));
+		}
+
+		[Test]
+		public void CastToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return (float)9 / (float)2;");
+			Assert.That(func(), Is.EqualTo(4.5f).Within(0.0001f));
+		}
+
+		// LINQ Last()
+		[Test]
+		public void LinqLastOnList()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Enumerable));
+
+			var func = compiler.CompileFunc<List<int>, int>(
+				$"""
+				 return list.Last();
+				 """,
+				"list");
+
+			var testList = new List<int>
+			{
+				5, 10, 15
+			};
+
+			Assert.That(func(testList), Is.EqualTo(15));
+		}
+
+		// No implicit numeric conversion: float + int must fail at compile time.
+		[Test]
+		public void NoImplicitNumericConversionThrows()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			Assert.That(
+				() => compiler.CompileFunc<float, float>("return x + 1;", "x"),
+				Throws.Exception);
+		}
+
+		// String escapes are not interpreted: the lexer only strips the backslash.
+		[Test]
+		public void StringEscapesAreNotInterpreted()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<string>("return \"a\\nb\";");
+			Assert.That(func(), Is.EqualTo("anb"));
+		}
 	}
 
 	public class TestVector3
