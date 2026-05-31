@@ -50,6 +50,13 @@ var auto = 10;        // type inferred from initializer
 
 Use `f` suffix for float literals: `3.14f`, not `3.14`.
 
+> **No implicit numeric conversion.** Arithmetic and comparison operators are built directly
+> with no widening, so mixing numeric types throws at compile time (e.g. `float + int` →
+> *"binary operator Add is not defined for the types Single and Int32"*). Both operands must be
+> the same type. Cast explicitly: `someFloat + (float)someInt`, `(float)i < limitFloat`. This
+> applies to `+ - * / %` **and** `< > <= >= == !=`. Integer literals like `0` are `int`, so
+> compare/operate against floats as `0f` / `(float)0`.
+
 ---
 
 ## Operators
