@@ -28,6 +28,7 @@ namespace Assembler.Resolving
 			// argument type.
 			_compiler.RegisterStaticMethods(typeof(System.Linq.Enumerable));
 			_compiler.RegisterType(typeof(UnityEngine.Color));
+			_compiler.RegisterStaticMethods(typeof(GridMath));
 		}
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)
