@@ -30,16 +30,14 @@ namespace Assembler.Resolving
 
 		// col in [0, width-1] and row >= 0, with no ceiling (pieces may spawn/extend
 		// above the top of a well).
-		public static bool InBoundsOpenTop(float col, float row, float width) =>
-			col >= 0f && col <= width - 1f && row >= 0f;
+		public static bool InBoundsOpenTop(float col, float row, float width) => col >= 0f && col <= width - 1f && row >= 0f;
 
 		// True if any occupied cell sits at (col, row).
 		public static bool IsOccupied(List<Vector3> occupied, float col, float row) =>
-			occupied.Any(c => c.x == col && c.y == row);
+			occupied.Any(c => Mathf.Approximately(c.x, col) && Mathf.Approximately(c.y, row));
 
 		// Number of occupied cells in a row.
-		public static int CellsInRow(List<Vector3> occupied, float row) =>
-			occupied.Where(c => c.y == row).Count();
+		public static int CellsInRow(List<Vector3> occupied, float row) => occupied.Count(c => Mathf.Approximately(c.y, row));
 
 		// True if a row is completely filled.
 		public static bool RowFull(List<Vector3> occupied, float row, float width) =>
@@ -59,7 +57,7 @@ namespace Assembler.Resolving
 
 		// Rotate a cell offset clockwise about the origin, `times` quarter-turns
 		// ((x, y) -> (y, -x) per turn). Four turns is the identity.
-		public static Vector3 RotateCellCW(Vector3 cell, int times) => (times % 4 + 4) % 4 switch
+		public static Vector3 RotateCellCW(Vector3 cell, int times) => ((times % 4 + 4) % 4) switch
 		{
 			1 => new Vector3(cell.y, -cell.x, 0f),
 			2 => new Vector3(-cell.x, -cell.y, 0f),
