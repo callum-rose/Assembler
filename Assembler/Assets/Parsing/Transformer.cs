@@ -266,6 +266,11 @@ namespace Assembler.Parsing
 				{
 					var outputs = l.Outputs ?? new Dictionary<string, string>();
 
+					if (l is GameOverListenerDto)
+					{
+						return new GameOverListenerInfo { OutputMapping = outputs };
+					}
+
 					if (l is { EntityTag: not null, BehaviourTag: not null })
 					{
 						throw new ParsingException(

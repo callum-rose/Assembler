@@ -1,0 +1,180 @@
+Game:
+  Title: Game Over Demo
+  Description: |
+    Demonstrates the `!gameover` listener tag — an event-driven way to end and
+    unload a game.
+
+    A green player cube is moved with WASD around a field of red mines. The
+    game ends the instant the player touches a mine, or when the player presses
+    Q to give up.
+
+    Both endings are wired the same way: the trigger that detects the event
+    (`trigger enter trigger` for the mine, `key down trigger` for Q) lists a
+    single `- !gameover` listener. That tag targets the framework's implicit
+    end-game behaviour, which logs "Game Over" and destroys the whole game.
+
+    Note there is NO top-level `GameOverCondition` in this descriptor — the
+    `!gameover` listeners alone satisfy the build-time requirement that every
+    game have a way to end. This is the purely event-driven path: no flag
+    variable, no per-frame polling.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  mine colour: !colour { R: 0.9, G: 0.25, B: 0.25, A: 1 }
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  mine size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Templates:
+  # A static red mine. Touching it ends the game (the player's trigger detects
+  # the [mine] tag). Only needs a trigger collider so the player can overlap it.
+  mine_template:
+    Tags: [ mine ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var mine size
+          IsWire: false
+          Colour: !var mine colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var mine size
+          IsTrigger: true
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: -3, Y: -3, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+
+      # Trigger collider + rigidbody so the player generates trigger-enter
+      # events as it moves over a mine (same setup as FlappyBird's bird).
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- WASD movement: each key-hold trigger drives a translate while held. ---
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: -0.12, Y: 0, Z: 0 }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0.12, Y: 0, Z: 0 }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move up
+      move up:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0, Y: 0.12, Z: 0 }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move down
+      move down:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0, Y: -0.12, Z: 0 }
+
+      # --- The feature: touching a mine ends the game, event-driven. ---
+      hit mine:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ mine ]
+        Listeners:
+          - !gameover
+
+      # --- The feature again: press Q to quit, the simplest possible wiring. ---
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  mine a:
+    Template: { Id: mine_template }
+    Position: !vec { X: -2, Y: 1, Z: 0 }
+
+  mine b:
+    Template: { Id: mine_template }
+    Position: !vec { X: 2, Y: -1, Z: 0 }
+
+  mine c:
+    Template: { Id: mine_template }
+    Position: !vec { X: 0, Y: 2.5, Z: 0 }
+
+  mine d:
+    Template: { Id: mine_template }
+    Position: !vec { X: 3, Y: 2, Z: 0 }
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Label: ""
+          Text: "WASD to move - avoid the red mines - press Q to quit. Any ending fires !gameover."
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 640
+            Height: 40
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

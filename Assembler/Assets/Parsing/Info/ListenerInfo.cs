@@ -15,4 +15,7 @@ namespace Assembler.Parsing.Info
 
 	public sealed record BehaviourTaggedListenerInfo(
 		ValueSource<string> BehaviourTag) : ListenerInfo;
+
+	/// <summary>Targets the implicit end-game behaviour. Produced by the <c>!gameover</c> listener tag.</summary>
+	public sealed record GameOverListenerInfo : ListenerInfo;
 }
