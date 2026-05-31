@@ -22,6 +22,28 @@ Adds a Unity SphereCollider to the entity. Required for collision/trigger physic
 | Radius | float | Local-space radius of the sphere. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 
+## `capsule collider`
+Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physics events.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Radius | float | Local-space radius of the capsule hemispheres. |
+| Height | float | Local-space total height of the capsule along its Direction axis. |
+| Direction | int | Axis the capsule is aligned to — 0 = X, 1 = Y, 2 = Z. |
+| IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider. |
+
+## `mesh collider`
+Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFilter. Required for collision/trigger physics events on arbitrary meshes (e.g. voxel meshes).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
+| IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
+
 ## `rigidbody`
 Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 
@@ -30,6 +52,57 @@ Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 | Name | Type | Description |
 |------|------|-------------|
 | UseGravity | bool | When true the rigidbody is affected by gravity. |
+| IsKinematic | bool | When true the rigidbody ignores forces and is moved only by transform writes. |
+| Mass | float | Mass of the rigidbody in kilograms. |
+| LinearDamping | float | Damping applied to linear velocity (Unity's Rigidbody.linearDamping / drag). |
+| AngularDamping | float | Damping applied to angular velocity (Unity's Rigidbody.angularDamping). |
+| FreezePosition | Vector3 | Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z). |
+| FreezeRotation | Vector3 | Per-axis rotation freeze (any non-zero component locks that axis). |
+
+## `add force`
+Adds a continuous world-space force to the entity's Rigidbody when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Force | Vector3 | World-space force vector applied with ForceMode.Force (mass-dependent, frame-rate independent acceleration). |
+
+## `add impulse`
+Adds an instantaneous world-space impulse to the entity's Rigidbody when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Impulse | Vector3 | World-space impulse applied with ForceMode.Impulse (mass-dependent, instantaneous velocity change). |
+
+## `add torque`
+Adds a continuous world-space torque to the entity's Rigidbody when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Torque | Vector3 | World-space torque vector applied with ForceMode.Force (mass-dependent angular acceleration). |
+
+## `set velocity`
+Sets the entity's Rigidbody linear velocity to Velocity when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Velocity | Vector3 | World-space linear velocity in units per second. |
+
+## `set angular velocity`
+Sets the entity's Rigidbody angular velocity to AngularVelocity when Executed (typically via a trigger).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| AngularVelocity | Vector3 | World-space angular velocity in radians per second around each axis. |
 
 ## `velocity`
 Moves the entity each frame by Velocity * deltaTime.
@@ -139,6 +212,73 @@ Fires on the frame the named key is released.
 |------|------|-------------|
 | Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
 
+## `mouse button trigger`
+Fires on a mouse button event during the selected phase (press, release, or hold).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Button | int | Mouse button index — 0 (left), 1 (right), 2 (middle). |
+| Phase | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| mouse_position | Vector3 | Screen-space mouse position when the trigger fires. |
+
+## `mouse position trigger`
+Fires every frame the mouse moves, publishing the current position and frame delta.
+
+No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| mouse_position | Vector3 | Current screen-space mouse position. |
+| mouse_delta | Vector3 | Screen-space movement since the previous frame. |
+
+## `scroll wheel trigger`
+Fires on frames where the mouse scroll wheel moved.
+
+No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| scroll_delta | Vector2 | Scroll wheel delta for this frame (y is the common vertical scroll). |
+
+## `axis trigger`
+Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| XAxis | string | Name of the Unity input axis read into the x component (e.g. "Horizontal"). |
+| YAxis | string | Optional. Name of the Unity input axis read into the y component (e.g. "Vertical"). Leave unset for a 1D axis. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| axis | Vector2 | Combined (x, y) axis value; y is 0 when YAxis is unset. |
+| x | float | Current XAxis value. |
+| y | float | Current YAxis value, or 0 when YAxis is unset. |
+
+## `gamepad button trigger`
+Fires on a gamepad / joystick button event (press, release, or hold).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Button | string | Unity key string for the gamepad button (e.g. "joystick button 0", "joystick 1 button 1"). |
+| Mode | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+
 ## `tap trigger`
 Fires once on a quick screen tap gesture (touch or click).
 
@@ -191,6 +331,24 @@ Forwards a trigger event to listeners after a delay. Insert between an upstream 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait between Execute and notifying listeners. |
+
+## `debounced trigger`
+Forwards a trigger event only when no prior trigger has been received within the last Interval seconds. Use to suppress rapid repeat triggers.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Interval | float | Seconds that must elapse since the previous incoming trigger before another one is forwarded. |
+
+## `throttled trigger`
+Forwards at most Rate trigger events per second. Incoming triggers that arrive sooner than 1/Rate seconds after the previous forwarded one are dropped.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Rate | float | Maximum number of forwarded triggers per second. |
 
 ## `on start trigger`
 Fires once when the entity is first started.
@@ -416,6 +574,17 @@ Appends Value to the end of List when Executed.
 | List | List<Vector3> | Reference to the target list variable. |
 | Value | Vector3 | Item to append. |
 
+## `vector list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Vector3> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Vector3 | Item to insert. |
+
 ## `vector list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -425,6 +594,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<Vector3> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `vector list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Vector3> | Reference to the target list variable. |
+| Value | Vector3 | Item to remove. |
 
 ## `vector list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -437,6 +616,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | Vector3 | New item. |
 
+## `vector list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Vector3> | Reference to the target list variable. |
+| Other | List<Vector3> | List whose items will be appended to List. |
+
 ## `vector list clear`
 Removes all items from List when Executed.
 
@@ -445,6 +634,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<Vector3> | Reference to the target list variable. |
+
+## `vector list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Vector3> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `int list add`
 Appends Value to the end of List when Executed.
@@ -456,6 +661,17 @@ Appends Value to the end of List when Executed.
 | List | List<int> | Reference to the target list variable. |
 | Value | int | Item to append. |
 
+## `int list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<int> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | int | Item to insert. |
+
 ## `int list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -465,6 +681,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<int> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `int list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<int> | Reference to the target list variable. |
+| Value | int | Item to remove. |
 
 ## `int list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -477,6 +703,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | int | New item. |
 
+## `int list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<int> | Reference to the target list variable. |
+| Other | List<int> | List whose items will be appended to List. |
+
 ## `int list clear`
 Removes all items from List when Executed.
 
@@ -485,6 +721,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<int> | Reference to the target list variable. |
+
+## `int list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<int> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `float list add`
 Appends Value to the end of List when Executed.
@@ -496,6 +748,17 @@ Appends Value to the end of List when Executed.
 | List | List<float> | Reference to the target list variable. |
 | Value | float | Item to append. |
 
+## `float list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<float> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | float | Item to insert. |
+
 ## `float list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -505,6 +768,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<float> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `float list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<float> | Reference to the target list variable. |
+| Value | float | Item to remove. |
 
 ## `float list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -517,6 +790,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | float | New item. |
 
+## `float list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<float> | Reference to the target list variable. |
+| Other | List<float> | List whose items will be appended to List. |
+
 ## `float list clear`
 Removes all items from List when Executed.
 
@@ -525,6 +808,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<float> | Reference to the target list variable. |
+
+## `float list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<float> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `bool list add`
 Appends Value to the end of List when Executed.
@@ -536,6 +835,17 @@ Appends Value to the end of List when Executed.
 | List | List<bool> | Reference to the target list variable. |
 | Value | bool | Item to append. |
 
+## `bool list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<bool> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | bool | Item to insert. |
+
 ## `bool list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -545,6 +855,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<bool> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `bool list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<bool> | Reference to the target list variable. |
+| Value | bool | Item to remove. |
 
 ## `bool list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -557,6 +877,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | bool | New item. |
 
+## `bool list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<bool> | Reference to the target list variable. |
+| Other | List<bool> | List whose items will be appended to List. |
+
 ## `bool list clear`
 Removes all items from List when Executed.
 
@@ -565,6 +895,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<bool> | Reference to the target list variable. |
+
+## `bool list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<bool> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `string list add`
 Appends Value to the end of List when Executed.
@@ -576,6 +922,17 @@ Appends Value to the end of List when Executed.
 | List | List<string> | Reference to the target list variable. |
 | Value | string | Item to append. |
 
+## `string list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<string> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | string | Item to insert. |
+
 ## `string list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -585,6 +942,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<string> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `string list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<string> | Reference to the target list variable. |
+| Value | string | Item to remove. |
 
 ## `string list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -597,6 +964,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | string | New item. |
 
+## `string list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<string> | Reference to the target list variable. |
+| Other | List<string> | List whose items will be appended to List. |
+
 ## `string list clear`
 Removes all items from List when Executed.
 
@@ -605,6 +982,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<string> | Reference to the target list variable. |
+
+## `string list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<string> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `colour list add`
 Appends Value to the end of List when Executed.
@@ -616,6 +1009,17 @@ Appends Value to the end of List when Executed.
 | List | List<Color> | Reference to the target list variable. |
 | Value | Color | Item to append. |
 
+## `colour list insert`
+Inserts Value into List at Index when Executed. No-op if Index is out of range.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Color> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Color | Item to insert. |
+
 ## `colour list remove at`
 Removes the item at Index from List when Executed. No-op if Index is out of range.
 
@@ -625,6 +1029,16 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 |------|------|-------------|
 | List | List<Color> | Reference to the target list variable. |
 | Index | int | Zero-based position to remove from. |
+
+## `colour list remove`
+Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Color> | Reference to the target list variable. |
+| Value | Color | Item to remove. |
 
 ## `colour list set at`
 Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
@@ -637,6 +1051,16 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | Color | New item. |
 
+## `colour list add range`
+Appends every item from Other to List when Executed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Color> | Reference to the target list variable. |
+| Other | List<Color> | List whose items will be appended to List. |
+
 ## `colour list clear`
 Removes all items from List when Executed.
 
@@ -645,6 +1069,22 @@ Removes all items from List when Executed.
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<Color> | Reference to the target list variable. |
+
+## `colour list loop trigger`
+Iterates List synchronously when Executed, firing listeners once per element.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Color> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `sprite`
 Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
@@ -655,6 +1095,16 @@ Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
 |------|------|-------------|
 | Sprite | Sprite | Asset reference to the sprite to display. |
 | Size | Vector2 | Target world-space size in units; the sprite is scaled to fit. |
+
+## `voxel mesh`
+Renders a voxel mesh asset as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Mesh | Mesh | Asset reference to the Mesh to display. |
+| Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
 
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).

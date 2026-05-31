@@ -31,7 +31,9 @@ namespace Assembler.Compiler.Compiler
 			["float"] = TokenType.Float,
 			["double"] = TokenType.Double,
 			["void"] = TokenType.Void,
-			["new"] = TokenType.New
+			["new"] = TokenType.New,
+			["true"] = TokenType.BooleanLiteral,
+			["false"] = TokenType.BooleanLiteral
 		};
 
 		public Lexer(string code)
