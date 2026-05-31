@@ -1,10 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Assembler.Behaviours;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
+using UnityEngine;
 
 namespace Assembler.Building
 {
@@ -20,6 +25,16 @@ namespace Assembler.Building
 
 		public static void Build(GameInfo gameInfo)
 		{
+			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
+			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
+
+			if (!hasCondition && !HasGameOverListener(gameInfo))
+			{
+				throw new InvalidOperationException(
+					"Game descriptor must declare a game-over path (a top-level GameOverCondition " +
+					"or a !gameover listener).");
+			}
+
 			// 1. Initialize variables and expressions
 			var typeRegistry = BuiltInTypeRegistry.Default;
 
@@ -48,6 +63,10 @@ namespace Assembler.Building
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
+			// The shared root parents every entity, so destroying it unloads the whole game.
+			var gameRoot = new GameObject("Game");
+			gameRoot.AddComponent<GameController>();
+
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,
@@ -56,21 +75,72 @@ namespace Assembler.Building
 				entityTransformRegistry,
 				exclusiveGroupRegistry,
 				templatesById,
-				gameInfo.ParseContext);
+				gameInfo.ParseContext,
+				gameRoot.transform);
 
 			var initialisations = new InitialisationQueue();
 
-			foreach (var entityInfo in gameInfo.Entities)
+			// 4. Append the implicit game-over controller so it builds through the normal pipeline.
+			var entities = gameInfo.Entities
+				.Append(BuildGameOverControllerInfo(hasCondition ? gameInfo.GameOverCondition : null));
+
+			foreach (var entityInfo in entities)
 			{
 				var result = gameEntityFactory.Create(entityInfo);
 				behaviourRegistry.Register(result);
 				initialisations.Enqueue(result);
 			}
 
-			// 4. Initialise Behaviours
+			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
+		}
 
-			// 5. Run game over condition
+		/// <summary>
+		/// Builds the implicit entity that ends the game. It always hosts an <see cref="EndGameInfo"/>
+		/// behaviour (targeted by the <c>!gameover</c> listener); when a top-level GameOverCondition is
+		/// present it also gets an every-frame trigger gated by that condition, both driving the same
+		/// end-game behaviour.
+		/// </summary>
+		private static ConcreteEntityInfo BuildGameOverControllerInfo(ValueSource<bool>? condition)
+		{
+			var entityId = GameOverController.EntityId;
+			var endId = GameOverController.EndBehaviourId;
+
+			var behaviours = new List<BehaviourInfo>
+			{
+				new EndGameInfo(endId, Array.Empty<ListenerInfo>())
+			};
+
+			if (condition != null)
+			{
+				var toEnd = new ListenerInfo[] { new DirectListenerInfo(new BehaviourDescriptor(entityId, endId)) };
+				var toGate = new ListenerInfo[] { new DirectListenerInfo(new BehaviourDescriptor(entityId, "gate")) };
+
+				behaviours.Add(new EveryFrameTriggerInfo("tick", toGate));
+				behaviours.Add(new ConditionGateInfo("gate", toEnd, condition));
+			}
+
+			return new ConcreteEntityInfo(
+				entityId,
+				Array.Empty<string>(),
+				new ConstantSource<Vector3>(Vector3.zero),
+				new ConstantSource<Vector3>(Vector3.zero),
+				behaviours,
+				Array.Empty<ValueInfo>(),
+				Array.Empty<ChildEntityInfo>());
+		}
+
+		private static bool HasGameOverListener(GameInfo gameInfo)
+		{
+			bool InBehaviours(IEnumerable<BehaviourInfo> behaviours) =>
+				behaviours.Any(b => b.Listeners.Any(l => l is GameOverListenerInfo));
+
+			bool InChildren(IEnumerable<ChildEntityInfo> children) =>
+				children.Any(c => InBehaviours(c.Behaviours) || InChildren(c.Children));
+
+			bool InEntity(EntityInfo e) => InBehaviours(e.Behaviours) || InChildren(e.Children);
+
+			return gameInfo.Entities.Any(InEntity) || gameInfo.Templates.Any(InEntity);
 		}
 	}
 }

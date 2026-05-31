@@ -23,6 +23,7 @@ namespace Assembler.Building
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
+		private readonly Transform _root;
 
 		private int _spawnCounter;
 
@@ -33,7 +34,8 @@ namespace Assembler.Building
 			EntityTransformRegistry entityTransforms,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IReadOnlyDictionary<string, EntityInfo> templates,
-			TransformContext parseContext)
+			TransformContext parseContext,
+			Transform root)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -43,9 +45,10 @@ namespace Assembler.Building
 			_exclusiveGroups = exclusiveGroups;
 			_templates = templates;
 			_parseContext = parseContext;
+			_root = root;
 		}
 
-		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, null);
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent)
 		{

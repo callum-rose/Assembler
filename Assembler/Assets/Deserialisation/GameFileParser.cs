@@ -17,6 +17,7 @@ namespace Assembler.Deserialisation
 			.WithTagMapping("!asset", typeof(AssetRefDto))
 			.WithTagMapping("!output", typeof(OutputRefDto))
 			.WithTagMapping("!entity_position", typeof(EntityPositionRefDto))
+			.WithTagMapping("!gameover", typeof(GameOverListenerDto))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new ColourTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
@@ -25,6 +26,7 @@ namespace Assembler.Deserialisation
 			.WithTypeConverter(new AssetTypeConverter())
 			.WithTypeConverter(new OutputTypeConverter())
 			.WithTypeConverter(new EntityPositionTypeConverter())
+			.WithTypeConverter(new GameOverListenerTypeConverter())
 			.WithNodeDeserializer(
 				new ObjectNodeDeserializer(),
 				where => where.Before<TypeConverterNodeDeserializer>())

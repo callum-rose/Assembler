@@ -434,6 +434,12 @@ namespace Assembler.Building
 					var b = go.AddComponent<DestroyBehaviour>();
 					return (b, lr => b.Initialise(new DestroyData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(EndGameInfo)] = new(typeof(EndGame), (go, info, ctx) =>
+				{
+					var i = (EndGameInfo)info;
+					var b = go.AddComponent<EndGame>();
+					return (b, lr => b.Initialise(new EndGameData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(SpriteInfo)] = new(typeof(SpriteBehaviour), (go, info, ctx) =>
 				{
 					var i = (SpriteInfo)info;
@@ -689,6 +695,10 @@ namespace Assembler.Building
 					behaviourTagged.BehaviourTag.Resolve(ctx),
 					tag => listenerRegistry.GetByBehaviourTag(tag),
 					behaviourTagged.OutputMapping),
+				GameOverListenerInfo gameOver => new DirectListener(
+					listenerRegistry[new BehaviourDescriptor(
+						GameOverController.EntityId, GameOverController.EndBehaviourId)],
+					gameOver.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
 	}
