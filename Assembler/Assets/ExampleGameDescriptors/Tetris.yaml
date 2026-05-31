@@ -29,8 +29,8 @@ Physics:
 
 Constants:
   # Grid definition (the well). Cells are (col,row,0); world origin places cell
-  # (0,0) at (-4.5,-9.5) so the 10x20 well is centred. These document the grid
-  # the GridMath expressions below are built against.
+  # (0,0) at (-4.5,-9.5) so the 10x20 well is centred. The origin is passed into
+  # the cell<->world expressions; width/height (10/20) are the well extents.
   grid width: 10
   grid height: 20
   grid origin x: -4.5
@@ -109,10 +109,10 @@ Expressions:
 
   # ---- world mapping ------------------------------------------------------
   cell to world:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ cell ]
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ cell, originX, originY ]
     ReturnType: vector
-    Expression: "return CellToWorld(cell, -4.5f, -9.5f);"
+    Expression: "return CellToWorld(cell, originX, originY);"
 
   move origin:
     ArgumentTypes: [ vector, int, int ]
@@ -200,10 +200,10 @@ Expressions:
 
   # world position of block `i` (grid cell mapped to world space).
   cell world:
-    ArgumentTypes: [ vector, int, int, int ]
-    ArgumentNames: [ origin, s, rot, i ]
+    ArgumentTypes: [ vector, int, int, int, float, float ]
+    ArgumentNames: [ origin, s, rot, i, originX, originY ]
     ReturnType: vector
-    Expression: "return CellToWorld(cellGrid(origin, s, rot, i), -4.5f, -9.5f);"
+    Expression: "return CellToWorld(cellGrid(origin, s, rot, i), originX, originY);"
 
   # true if the piece can occupy origin+(dx,dy) at rot without leaving the
   # well or overlapping a settled cell.
@@ -356,7 +356,7 @@ Templates:
         Properties:
           Position: !expr
             ExpressionId: cell to world
-            Arguments: [ !var origin ]
+            Arguments: [ !var origin, !var grid origin x, !var grid origin y ]
 
       # ---- horizontal movement ----
       left key:
@@ -576,7 +576,7 @@ Templates:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 0, !var grid origin x, !var grid origin y ] }
           Parameters:
             cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
             tint: !parameter tint
@@ -584,7 +584,7 @@ Templates:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 1, !var grid origin x, !var grid origin y ] }
           Parameters:
             cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
             tint: !parameter tint
@@ -592,7 +592,7 @@ Templates:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 2, !var grid origin x, !var grid origin y ] }
           Parameters:
             cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
             tint: !parameter tint
@@ -600,7 +600,7 @@ Templates:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 3, !var grid origin x, !var grid origin y ] }
           Parameters:
             cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
             tint: !parameter tint
@@ -694,7 +694,7 @@ Templates:
       reposition:
         Type: position setter
         Properties:
-          Position: !expr { ExpressionId: cell to world, Arguments: [ !var cell ] }
+          Position: !expr { ExpressionId: cell to world, Arguments: [ !var cell, !var grid origin x, !var grid origin y ] }
 
       # phase 3: rebuild
       rebuild gate:
@@ -778,7 +778,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: piece
-          Position: !expr { ExpressionId: cell to world, Arguments: [ !var spawn origin ] }
+          Position: !expr { ExpressionId: cell to world, Arguments: [ !var spawn origin, !var grid origin x, !var grid origin y ] }
           Parameters:
             shape: !expr { ExpressionId: int add, Arguments: [ !var next shape, 0 ] }
             tint: !expr { ExpressionId: colour for shape, Arguments: [ !var next shape ] }
