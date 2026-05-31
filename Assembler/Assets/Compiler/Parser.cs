@@ -1929,6 +1929,11 @@ namespace Assembler.Compiler.Compiler
 				return Expression.Constant(_tokens[_position - 1].Value);
 			}
 
+			if (Match(TokenType.BooleanLiteral))
+			{
+				return Expression.Constant(_tokens[_position - 1].Value == "true", typeof(bool));
+			}
+
 			if (Match(TokenType.Identifier))
 			{
 				var name = _tokens[_position - 1].Value;
