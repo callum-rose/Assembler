@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Assembler.Compiler.Compiler;
+using Assembler.Extensions;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Resolving
@@ -105,6 +105,19 @@ namespace Assembler.Resolving
 				byCallableName[name] = info;
 			}
 
+			foreach (var info in OrderByDependencies(expressions, byCallableName))
+			{
+				CompileAndRegister(info);
+			}
+		}
+
+		// Returns the expressions ordered so that each one comes after every other
+		// expression it calls, via a depth-first topological sort. Throws if a
+		// dependency cycle is detected.
+		private static IReadOnlyList<ExpressionInfo> OrderByDependencies(
+			IReadOnlyList<ExpressionInfo> expressions,
+			IReadOnlyDictionary<string, ExpressionInfo> byCallableName)
+		{
 			var ordered = new List<ExpressionInfo>();
 			var visited = new HashSet<string>();
 			var onStack = new HashSet<string>();
@@ -146,38 +159,11 @@ namespace Assembler.Resolving
 				Visit(info);
 			}
 
-			foreach (var info in ordered)
-			{
-				CompileAndRegister(info);
-			}
+			return ordered;
 		}
 
 		private static string GetCallableName(ExpressionInfo info) =>
-			string.IsNullOrWhiteSpace(info.CallableAlias) ? ToCallableName(info.Id) : info.CallableAlias!;
-
-		// Converts an expression id such as "base offset" into a valid identifier
-		// "baseOffset" that can be used as a method-call name inside expression code.
-		private static string ToCallableName(string id)
-		{
-			var parts = Regex.Split(id, "[^A-Za-z0-9]+").Where(p => p.Length > 0).ToArray();
-
-			if (parts.Length == 0)
-			{
-				return id;
-			}
-
-			var sb = new StringBuilder();
-
-			for (int i = 0; i < parts.Length; i++)
-			{
-				var part = parts[i];
-				var first = i == 0 ? char.ToLowerInvariant(part[0]) : char.ToUpperInvariant(part[0]);
-				sb.Append(first);
-				sb.Append(part, 1, part.Length - 1);
-			}
-
-			return sb.ToString();
-		}
+			string.IsNullOrWhiteSpace(info.CallableAlias) ? info.Id.ToCamelCase() : info.CallableAlias!;
 
 		private static bool CallsExpression(string body, string callableName) =>
 			Regex.IsMatch(body, $@"(?<![A-Za-z0-9_]){Regex.Escape(callableName)}\s*\(");
