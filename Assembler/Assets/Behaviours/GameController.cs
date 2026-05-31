@@ -15,7 +15,7 @@ namespace Assembler.Behaviours
 			}
 
 			_ended = true;
-			Debug.Log("Game Over");
+			UnityEngine.Debug.Log("Game Over");
 			Destroy(gameObject);
 		}
 	}
