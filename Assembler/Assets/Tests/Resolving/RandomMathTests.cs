@@ -7,6 +7,7 @@ using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using NUnit.Framework;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Tests.Resolving
 {
