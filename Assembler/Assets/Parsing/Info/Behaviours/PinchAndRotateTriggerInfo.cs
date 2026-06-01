@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record RotateTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners) : BehaviourInfo(Id, Listeners)
+	public record PinchAndRotateTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners) : BehaviourInfo(Id, Listeners)
 	{
-		public static RotateTriggerInfo Create(string id,
+		public static PinchAndRotateTriggerInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
 			TransformContext ctx) =>
@@ -12,6 +12,6 @@ namespace Assembler.Parsing.Info.Behaviours
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
-			new RotateTriggerInfo(Id, substitutedListeners);
+			new PinchAndRotateTriggerInfo(Id, substitutedListeners);
 	}
 }
