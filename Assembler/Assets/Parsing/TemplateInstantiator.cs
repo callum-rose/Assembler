@@ -40,7 +40,11 @@ namespace Assembler.Parsing
 
 			var behaviours = inheritedBehaviours.Concat(additionalBehaviours.EmptyIfNull()).ToArray();
 
-			var tags = template.Tags.Concat(additionalTags.EmptyIfNull()).ToArray();
+			// Tags override (not merge): an entity that declares its own Tags replaces the
+			// template's, mirroring how an explicit Position overrides the template's. An entity
+			// with no Tags of its own inherits the template's.
+			var ownTags = additionalTags.EmptyIfNull().ToArray();
+			var tags = ownTags.Length > 0 ? ownTags : template.Tags.ToArray();
 
 			var resolvedPosition = position is not None<Vector3>
 				? position

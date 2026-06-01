@@ -677,9 +677,31 @@ namespace Assembler.Parsing
 					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
 				List<string> stringList => new TypedListValue(typeof(string),
 					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
-				not null => throw new ParsingException($"Cannot convert value of type {obj.GetType()} to a value"),
-				_ => throw new ParsingException("Cannot convert null to a value")
+				not null => throw new ParsingException(DescribeConvertFailure(obj, name)),
+				_ => throw new ParsingException(
+					$"Cannot convert null to a value{(name is null ? string.Empty : $" (for '{name}')")}")
 			};
+
+		// Builds the failure message for a value Convert can't handle, naming the offending
+		// field and — for an untyped collection (e.g. a mixed YAML sequence that deserialises to
+		// List<object>) — listing the element types so the mismatch is visible.
+		private static string DescribeConvertFailure(object obj, string? name)
+		{
+			var forField = name is null ? string.Empty : $" for '{name}'";
+
+			if (obj is System.Collections.IEnumerable enumerable and not string)
+			{
+				var elementTypes = enumerable.Cast<object?>()
+					.Select(item => item?.GetType().Name ?? "null")
+					.Distinct()
+					.ToArray();
+
+				return $"Cannot convert value of type {obj.GetType()} to a value{forField} " +
+				       $"(element types: {string.Join(", ", elementTypes)})";
+			}
+
+			return $"Cannot convert value of type {obj.GetType()} to a value{forField}";
+		}
 
 		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues) =>
 			resolvedValues.ResolveValue(refDto.Id);
