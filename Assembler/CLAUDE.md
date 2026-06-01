@@ -8,6 +8,7 @@ Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games dec
 
 ## Code Conventions
 
+- **Be concise** in all responses — favour short, direct answers and avoid unnecessary preamble or repetition.
 - **Nullable reference types** are enabled project-wide (`Assets/Parsing/csc.rsp`). All new and modified code must respect nullable annotations — use `?` for nullable references, avoid `null!` suppression unless justified, and handle nullability properly.
 
 ## Build & Test
