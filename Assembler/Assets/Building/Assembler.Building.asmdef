@@ -12,7 +12,9 @@
         "Assembler.Behaviours",
         "Assembler.Parsing",
         "Assembler.Deserialisation",
-        "Assembler.Resolving"
+        "Assembler.Resolving",
+        "Assembler.Input",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

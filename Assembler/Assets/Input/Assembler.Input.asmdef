@@ -1,13 +1,10 @@
 {
-    "name": "Assembler.Behaviours",
-    "rootNamespace": "Assembler",
+    "name": "Assembler.Input",
+    "rootNamespace": "Assembler.Input",
     "references": [
-        "Assembler.Parsing.Phase2",
-        "Assembler.Core",
-        "Assembler.Parsing.Phase3",
-        "Assembler.Extensions",
-        "Assembler.Resolving",
+        "Assembler.Deserialisation",
         "Assembler.Parsing",
+        "Assembler.Extensions",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

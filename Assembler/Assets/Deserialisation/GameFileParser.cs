@@ -27,6 +27,7 @@ namespace Assembler.Deserialisation
 			.WithTypeConverter(new OutputTypeConverter())
 			.WithTypeConverter(new EntityPositionTypeConverter())
 			.WithTypeConverter(new GameOverListenerTypeConverter())
+			.WithTypeConverter(new BindingTypeConverter())
 			.WithNodeDeserializer(
 				new ObjectNodeDeserializer(),
 				where => where.Before<TypeConverterNodeDeserializer>())

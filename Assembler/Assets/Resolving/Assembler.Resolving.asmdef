@@ -5,7 +5,8 @@
         "Assembler.Compiler",
         "Assembler.Parsing",
         "Assembler.Extensions",
-        "Assembler.Libraries"
+        "Assembler.Libraries",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -15,10 +15,6 @@ Constants:
   right paddle initial position: !vec { X: 5, Y: 0 }
   paddle up speed: 5
   paddle down speed: -5
-  left paddle up key: "w"
-  left paddle down key: "s"
-  right paddle up key: "up"
-  right paddle down key: "down"
   upper wall position: !vec { X: 0, Y: 3 }
   lower wall position: !vec { X: 0, Y: -3 }
   left goal position: !vec { X: -6, Y: 0 }
@@ -60,10 +56,10 @@ Templates:
             X: !var paddle width
             Y: !var paddle height
           IsTrigger: false
-      up key trigger:
-        Type: key hold trigger
+      up action:
+        Type: input action
         Properties:
-          Key: !parameter up_key
+          Action: !parameter up_action
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move up
@@ -73,10 +69,10 @@ Templates:
           Velocity: !vec
             X: 0
             Y: !var paddle up speed
-      down key trigger:
-        Type: key hold trigger
+      down action:
+        Type: input action
         Properties:
-          Key: !parameter down_key
+          Action: !parameter down_action
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: move down
@@ -204,6 +200,25 @@ Templates:
       self destructor:
         Type: destroy
 
+Controls:
+  Actions:
+    move-left-up:    { Type: button, Phase: hold }
+    move-left-down:  { Type: button, Phase: hold }
+    move-right-up:   { Type: button, Phase: hold }
+    move-right-down: { Type: button, Phase: hold }
+
+  Bindings:
+    desktop:
+      move-left-up:    [ "<Keyboard>/w" ]
+      move-left-down:  [ "<Keyboard>/s" ]
+      move-right-up:   [ "<Keyboard>/upArrow" ]
+      move-right-down: [ "<Keyboard>/downArrow" ]
+    gamepad:
+      move-left-up:    [ "<Gamepad>/leftStick/up" ]
+      move-left-down:  [ "<Gamepad>/leftStick/down" ]
+      move-right-up:   [ "<Gamepad>/rightStick/up" ]
+      move-right-down: [ "<Gamepad>/rightStick/down" ]
+
 Expressions:
   paddle bounce:
     ArgumentTypes: [ vector, vector, vector, float ]
@@ -252,16 +267,16 @@ Entities:
     Template:
       Id: paddle_template
       Parameters:
-        up_key: !var left paddle up key
-        down_key: !var left paddle down key
+        up_action: move-left-up
+        down_action: move-left-down
     Tags: [ left paddle ]
     Position: !var left paddle initial position
   right paddle:
     Template:
       Id: paddle_template
       Parameters:
-        up_key: !var right paddle up key
-        down_key: !var right paddle down key
+        up_action: move-right-up
+        down_action: move-right-down
     Tags: [ right paddle ]
     Position: !var right paddle initial position
   upper wall:

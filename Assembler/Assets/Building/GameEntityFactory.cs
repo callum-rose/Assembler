@@ -4,10 +4,12 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
+using Assembler.Input;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Assembler.Building
 {
@@ -24,6 +26,8 @@ namespace Assembler.Building
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
 		private readonly Transform _root;
+		private readonly ControlsInfo? _controls;
+		private readonly InputActionAsset? _controlsAsset;
 
 		private int _spawnCounter;
 
@@ -35,7 +39,9 @@ namespace Assembler.Building
 			ExclusiveGroupRegistry exclusiveGroups,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			TransformContext parseContext,
-			Transform root)
+			Transform root,
+			ControlsInfo? controls = null,
+			InputActionAsset? controlsAsset = null)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -46,6 +52,8 @@ namespace Assembler.Building
 			_templates = templates;
 			_parseContext = parseContext;
 			_root = root;
+			_controls = controls;
+			_controlsAsset = controlsAsset;
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
@@ -82,7 +90,9 @@ namespace Assembler.Building
 			var buildContext = new BehaviourBuildContext(
 				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms),
 				this,
-				_exclusiveGroups);
+				_exclusiveGroups,
+				_controls,
+				_controlsAsset);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

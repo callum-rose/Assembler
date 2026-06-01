@@ -5,25 +5,30 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
+using Assembler.Input;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static void Build(string yamlPath)
+		public static void Build(string yamlPath, InputPlatform? overridePlatform = null)
 		{
 			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
-			Build(gameInfo);
+			var controls = ControlsTransformer.Transform(gameDto.Controls);
+			Build(gameInfo, controls, overridePlatform);
 		}
 
-		public static void Build(GameInfo gameInfo)
+		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
+
+		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
@@ -34,6 +39,17 @@ namespace Assembler.Building
 					"Game descriptor must declare a game-over path (a top-level GameOverCondition " +
 					"or a !gameover listener).");
 			}
+
+			// 0b. Resolve the active platform group and hard-fail on any used-but-unbound input action, then
+			// build the live InputActionAsset for that platform. Mirrors the game-over check above.
+			var platform = overridePlatform ?? PlatformSelector.Resolve();
+			var activeGroup = PlatformFallback.ResolveGroup(platform, controls);
+
+			ControlsValidator.Validate(gameInfo, controls, activeGroup);
+
+			var controlsAsset = controls.Actions.Count > 0
+				? InputActionBuilder.Build(controls, activeGroup)
+				: null;
 
 			// 1. Initialize variables and expressions
 			var typeRegistry = BuiltInTypeRegistry.Default;
@@ -73,7 +89,9 @@ namespace Assembler.Building
 				exclusiveGroupRegistry,
 				templatesById,
 				gameInfo.ParseContext,
-				gameRoot.transform);
+				gameRoot.transform,
+				controls,
+				controlsAsset);
 
 			var initialisations = new InitialisationQueue();
 
