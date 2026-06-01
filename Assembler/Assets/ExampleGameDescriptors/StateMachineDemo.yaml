@@ -9,11 +9,11 @@ Game:
     the machine and seeded to the initial state), so it shows up in the in-game
     debug console and is snapshot-able for free.
 
-    You drive the transitions with the number keys, each of which flips a bool
+    You drive the transitions with the Z/X/C keys, each of which flips a bool
     input the machine's transitions test:
-      1  see_player   -> patrol transitions to chase
-      2  low_health   -> chase  transitions to flee
-      3  lost_player  -> chase  transitions back to patrol
+      Z  see_player   -> patrol transitions to chase
+      X  low_health   -> chase  transitions to flee
+      C  lost_player  -> chase  transitions back to patrol
 
     Each state declares `OnEnter` hooks (ordinary listeners) that write a label
     into `guard_event` (visible in the debug console). The `flee` state's
@@ -38,7 +38,7 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
-# Global bool inputs the player toggles with the number keys; the machine's
+# Global bool inputs the player toggles with the Z/X/C keys; the machine's
 # transitions test these via `!var`.
 Variables:
   see_player: false
@@ -95,10 +95,12 @@ Entities:
         Type: string variable setter
         Properties: { VariableId: !var guard_event, Value: "entered flee - game over" }
 
-      # --- Number keys flip the transition inputs. ---
+      # --- Keys flip the transition inputs. (Letter keys: the key-trigger Key is
+      #     a string, and the YAML deserialiser coerces a bare/quoted numeric
+      #     scalar to an int, so number keys like "1" don't resolve to a string.) ---
       see key:
         Type: key down trigger
-        Properties: { Key: "1" }
+        Properties: { Key: "z" }
         Listeners:
           - EntityId: guard
             BehaviourId: set see
@@ -108,7 +110,7 @@ Entities:
 
       low key:
         Type: key down trigger
-        Properties: { Key: "2" }
+        Properties: { Key: "x" }
         Listeners:
           - EntityId: guard
             BehaviourId: set low
@@ -118,7 +120,7 @@ Entities:
 
       lost key:
         Type: key down trigger
-        Properties: { Key: "3" }
+        Properties: { Key: "c" }
         Listeners:
           - EntityId: guard
             BehaviourId: set lost
@@ -142,7 +144,7 @@ Entities:
         Type: text label
         Properties:
           Label: ""
-          Text: "1 = see player (patrol->chase) - 2 = low health (chase->flee, game over) - 3 = lost player (chase->patrol). Watch guard_state / guard_event in the debug console."
+          Text: "Z = see player (patrol->chase) - X = low health (chase->flee, game over) - C = lost player (chase->patrol) - Q = quit. Watch guard_state / guard_event in the debug console."
           FontSize: 18
           Rect:
             Anchor: top-left
