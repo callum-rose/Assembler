@@ -14,6 +14,11 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			var button = Data.Button.Get();
 			if (string.IsNullOrEmpty(button))
 			{
@@ -30,7 +35,7 @@ namespace Assembler.Behaviours.Triggers.Input
 
 			if (fired)
 			{
-				NotifyListeners(TriggerContext.Empty);
+				FireInput(TriggerContext.Empty);
 			}
 		}
 	}

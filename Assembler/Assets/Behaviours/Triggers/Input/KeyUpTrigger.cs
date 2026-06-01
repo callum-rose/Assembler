@@ -13,9 +13,14 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			if (UnityEngine.Input.GetKeyUp(Data.Key.Get()))
 			{
-				NotifyListeners(TriggerContext.Empty);
+				FireInput(TriggerContext.Empty);
 			}
 		}
 	}

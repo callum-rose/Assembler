@@ -46,6 +46,8 @@ namespace Assembler.Building
 		{
 			_behaviours.Add(descriptor, behaviour);
 			_registrationIndex[behaviour] = _nextIndex++;
+			// Stamp the behaviour with its identity so record/replay can key input activations to it.
+			behaviour.Descriptor = descriptor;
 			if (behaviourTags == null) return;
 			foreach (var tag in behaviourTags)
 			{
