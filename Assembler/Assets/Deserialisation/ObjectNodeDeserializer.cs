@@ -32,6 +32,10 @@ namespace Assembler.Deserialisation
 					value = nestedObjectDeserializer(reader, typeof(ColourDto));
 					return true;
 
+				case Scalar scalar when scalar.Tag == "!text":
+					value = nestedObjectDeserializer(reader, typeof(TextRefDto));
+					return true;
+
 				case Scalar scalar when scalar.Tag == "!int":
 					reader.MoveNext();
 					value = int.Parse(scalar.Value);
@@ -67,6 +71,10 @@ namespace Assembler.Deserialisation
 
 				case MappingStart mappingStart when mappingStart.Tag == "!expr":
 					value = nestedObjectDeserializer(reader, typeof(ExprRefDto));
+					return true;
+
+				case MappingStart mappingStart when mappingStart.Tag == "!text":
+					value = nestedObjectDeserializer(reader, typeof(TextRefDto));
 					return true;
 
 				case MappingStart:
@@ -198,6 +206,15 @@ namespace Assembler.Deserialisation
 
 		private static object ParseScalar(Scalar scalar)
 		{
+			// Honour YAML quoting: a quoted or block scalar is a string regardless of its
+			// contents (matches the implicit tag:yaml.org,2002:str of a quoted scalar).
+			// Only plain (unquoted) scalars get numeric/bool type inference, so `Key: "1"`
+			// stays the string "1" while bare `1` is still an int.
+			if (scalar.Style != ScalarStyle.Plain)
+			{
+				return scalar.Value;
+			}
+
 			if (int.TryParse(scalar.Value, out var intValue))
 			{
 				return intValue;

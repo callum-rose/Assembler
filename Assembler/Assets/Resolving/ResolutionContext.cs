@@ -6,7 +6,8 @@ namespace Assembler.Resolving
 		VariableRegistry Variables,
 		CompiledExpressionsRegistry Expressions,
 		AssetRegistry Assets,
-		EntityVariableScope? Scope,
+		StringTableRegistry Strings,
+		EntityVariableScope Scope,
 		EntityTransformRegistry EntityTransforms,
 		IGameClock Clock);
 }

@@ -41,6 +41,8 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
+			var localisation = CreateLocalisationInfo(gameDto.Localisation);
+
 			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
 			var allValues = (gameDto.Constants ?? new Dictionary<string, object>())
@@ -81,6 +83,7 @@ namespace Assembler.Parsing
 				world,
 				physics,
 				assets,
+				localisation,
 				values,
 				expressions,
 				templates,
@@ -311,6 +314,88 @@ namespace Assembler.Parsing
 				})
 				.ToArray();
 
+		/// <summary>
+		/// Builds listeners authored *inside* a behaviour's properties (e.g. a state machine's per-state
+		/// <c>OnEnter</c>/<c>OnExit</c> hooks). Unlike the top-level <c>Listeners:</c> field, these arrive
+		/// as already-converted <see cref="AssemblerValue"/>s (<see cref="DictValue"/> entries, or a
+		/// <see cref="GameOverMarker"/> for a nested <c>!gameover</c>), so this mirrors <see cref="GetListeners"/>
+		/// reading from that shape to produce identical <see cref="ListenerInfo"/> semantics.
+		/// </summary>
+		internal static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue? raw) =>
+			raw is ListValue list
+				? list.Value.Select(item => ParseNestedListener(ctx, item)).ToArray()
+				: Array.Empty<ListenerInfo>();
+
+		private static ListenerInfo ParseNestedListener(TransformContext ctx, AssemblerValue item)
+		{
+			if (item is GameOverMarker)
+			{
+				return new GameOverListenerInfo();
+			}
+
+			if (item is not DictValue dict)
+			{
+				throw new ParsingException(
+					"OnEnter/OnExit entries must be listener maps (EntityId + BehaviourId, EntityTag, or BehaviourTag) or !gameover.");
+			}
+
+			var fields = dict.Value;
+			var outputs = ParseNestedOutputMapping(fields.GetValueOrDefault("Outputs"));
+
+			var hasEntityTag = fields.TryGetValue("EntityTag", out var entityTagValue);
+			var hasBehaviourTag = fields.TryGetValue("BehaviourTag", out var behaviourTagValue);
+
+			if (hasEntityTag && hasBehaviourTag)
+			{
+				throw new ParsingException(
+					"A listener cannot declare both EntityTag and BehaviourTag. " +
+					"Pick one: EntityTag (+ BehaviourId) targets behaviours on entities with that tag; " +
+					"BehaviourTag targets all behaviours carrying that tag.");
+			}
+
+			var behaviourId = (fields.GetValueOrDefault("BehaviourId") as StringValue)?.Value ?? string.Empty;
+
+			if (hasEntityTag)
+			{
+				return new EntityTaggedListenerInfo(CreateValueSource<string>(ctx, entityTagValue!), behaviourId)
+				{
+					OutputMapping = outputs
+				};
+			}
+
+			if (hasBehaviourTag)
+			{
+				return new BehaviourTaggedListenerInfo(CreateValueSource<string>(ctx, behaviourTagValue!))
+				{
+					OutputMapping = outputs
+				};
+			}
+
+			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId"));
+
+			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId)) { OutputMapping = outputs };
+		}
+
+		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue? value) =>
+			value is DictValue dict
+				? dict.Value.ToDictionary(kvp => kvp.Key, kvp => (kvp.Value as StringValue)?.Value ?? string.Empty)
+				: new Dictionary<string, string>();
+
+		private static string ResolveNestedEntityId(TransformContext ctx, AssemblerValue? value) =>
+			value switch
+			{
+				StringValue s => s.Value,
+				ParamRef p => ctx.Parameters.TryGetValue(p.Id, out var pv) && pv is StringValue sv
+					? sv.Value
+					: ParameterEntityIdSentinel + p.Id,
+				VarRef v => ctx.Values.ResolveValue(v.Id) is StringValue sv
+					? sv.Value
+					: throw new ParsingException($"Listener EntityId variable '{v.Id}' must resolve to a string."),
+				null => throw new ParsingException(
+					"Listener entry requires an EntityId (with BehaviourId), or an EntityTag / BehaviourTag."),
+				_ => throw new ParsingException($"Cannot interpret listener EntityId '{value}'.")
+			};
+
 		internal const string ParameterEntityIdSentinel = "@param:";
 
 		internal static IReadOnlyList<string> ConvertStringList(AssemblerValue? value) =>
@@ -326,6 +411,25 @@ namespace Assembler.Parsing
 				? list.Value.Select(item => (IValueSourceArg)
 					CreateValueSource<object>(ctx, item)).ToArray()
 				: Array.Empty<IValueSourceArg>();
+
+		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
+		{
+			if (textRef.Arguments.Count == 0)
+			{
+				return Array.Empty<IValueSourceArg>();
+			}
+
+			var args = new IValueSourceArg[textRef.Arguments.Count];
+
+			for (int i = 0; i < textRef.Arguments.Count; i++)
+			{
+				// !text placeholders have no declared types — each argument is boxed to object and
+				// stringified by string.Format at runtime, so every argument resolves as object.
+				args[i] = CreateValueSource<object>(ctx, textRef.Arguments[i]);
+			}
+
+			return args;
+		}
 
 		private static IReadOnlyList<IValueSourceArg> BuildExpressionArguments(TransformContext ctx, ExprRef exprRef)
 		{
@@ -409,6 +513,10 @@ namespace Assembler.Parsing
 				ClockRef clockRef => throw new ParsingException(
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
+				TextRef textRef when typeof(T) == typeof(string) =>
+					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
+				TextRef textRef => throw new ParsingException(
+					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
 					BuildExpressionArguments(ctx, exprRef)),
@@ -598,6 +706,23 @@ namespace Assembler.Parsing
 			return result;
 		}
 
+		private static LocalisationInfo CreateLocalisationInfo(LocalisationDto? dto)
+		{
+			if (dto?.Locales == null || dto.Locales.Count == 0)
+			{
+				return LocalisationInfo.Empty;
+			}
+
+			var locales = new Dictionary<string, IReadOnlyDictionary<string, string>>(dto.Locales.Count);
+
+			foreach (var kvp in dto.Locales)
+			{
+				locales[kvp.Key] = new Dictionary<string, string>(kvp.Value);
+			}
+
+			return new LocalisationInfo(dto.DefaultLocale ?? string.Empty, locales);
+		}
+
 		private static AssemblerValue ToAssemblerValue(object? raw) =>
 			raw switch
 			{
@@ -614,7 +739,13 @@ namespace Assembler.Parsing
 				ClockRefDto v => new ClockRef(v.Property ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
+				// A nested `!gameover` (e.g. inside a state machine OnEnter/OnExit list) deserialises to a
+				// GameOverListenerDto via the global tag mapping; carry it through as a marker so the
+				// nested-listener parser can rebuild a GameOverListenerInfo.
+				GameOverListenerDto => new GameOverMarker(),
 				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
+					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+				TextRefDto v => new TextRef(v.Key ?? string.Empty,
 					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
 				ColourDto v => new ColourValue(ToAssemblerValue(v.R),

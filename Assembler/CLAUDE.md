@@ -10,14 +10,15 @@ Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games dec
 
 - **Be concise** in all responses — favour short, direct answers and avoid unnecessary preamble or repetition.
 - **Nullable reference types** are enabled project-wide (`Assets/Parsing/csc.rsp`). All new and modified code must respect nullable annotations — use `?` for nullable references, avoid `null!` suppression unless justified, and handle nullability properly.
+- **Unity `.meta` files** never need to be created manually — Unity generates them automatically. Don't author or hand-create `.meta` files for new assets or scripts.
 
 ## Build & Test
 
 This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5f1.
 
 - **Run game**: Unity Editor menu `Test > Build` (invokes `Builder.TestBuild()` which loads `Assets/GameDescriptors/Pong.yaml`)
-- **Run tests**: Window > General > Test Runner (NUnit). Test assemblies live in `Assets/Tests/` per area (`Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`).
-- **Generate behaviour/library docs**: run `Tools/generate-docs.sh` to regenerate both `Assets/docs/Behaviours.md` and `Assets/docs/Libraries.md` headlessly (boots Unity in batch mode and invokes the same code as the editor menus — no UI needed, so Claude can run and verify it). The in-editor menu items `Assembler > Generate Behaviour Docs` / `Generate Library Docs` still work too.
+- **Run tests**: run `Tools/run-tests.sh` to execute the EditMode test suites headlessly (boots Unity in batch mode and invokes the same tests as Window > General > Test Runner, via `Editor.TestBatch.RunEditModeTests` — no UI needed, so Claude can run and verify it). It prints a pass/fail summary and exits non-zero on failure; full NUnit XML lands in `TestResults/EditMode-results.xml`. Pass assembly names to scope the run (`Tools/run-tests.sh Tests.Compiler`), or `--filter <regex>` / `--category <name>`. The in-editor Window > General > Test Runner still works too. Test assemblies live in `Assets/Tests/` per area (`Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`, `Tests.Input`, `Tests.Resolving`).
+- **Generate behaviour/library docs**: run `Tools/generate-docs.sh` to regenerate both `Assets/docs/Behaviours.md` and `Assets/docs/Libraries.md` headlessly (boots Unity in batch mode and invokes the same code as the editor menus — no UI needed, so Claude can run and verify it). The in-editor menu items `Assembler > Generate Behaviour Docs` / `Generate Library Docs` still work too. This runs fine **concurrently with an editor open on a different path** (e.g. your main checkout), so a branch's docs can be generated in its worktree without checking the branch out — the script refuses only if an editor already has *this* path open. The first run in a fresh worktree does a one-time cold import (~3 min); pass `SEED_LIBRARY=1` to instead clone the main worktree's `Library/` first (only faster when the editor is idle — see the script header).
 
 ## Architecture
 

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Assembler.Parsing.Info;
 using UnityEngine;
 
@@ -17,10 +18,25 @@ namespace Assembler.Resolving
 				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPositionProvider(ctx.EntityTransforms.Get(ep.EntityId)),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
+				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
+					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};
+		}
+
+		private static LocalisedTextProvider BuildLocalisedTextProvider<T>(
+			LocalisedTextSource<T> source,
+			ResolutionContext ctx)
+		{
+			var resolver = new ArgResolver(ctx);
+
+			var argProviders = source.Arguments
+				.Select(arg => (IValueProvider)arg.Resolve(resolver))
+				.ToArray();
+
+			return new LocalisedTextProvider(ctx.Strings, source.Key, argProviders);
 		}
 
 		private static Func<TriggerContext, TReturn> BuildExpressionContainer<TReturn>(

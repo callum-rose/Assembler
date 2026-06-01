@@ -1,0 +1,236 @@
+Game:
+  Title: Localisation Demo — Coin Collector
+  Description: |
+    A small playable game that shows off the `!text` localisation layer.
+
+    Move the green cube with WASD and touch the gold coins to collect them.
+    Collect all of them to win; press Q to quit.
+
+    The point of the demo is that **every user-facing string goes through a
+    localisation key**, never an inline literal:
+      - The instructions line uses the scalar form `!text hud.instructions`.
+      - The live HUD counter uses the mapping form
+        `!text { Key: hud.score, Arguments: [ !var score, !var total coins ] }`,
+        so the localised template "Coins: {0} / {1}" is filled with runtime
+        values. The template owns the placeholder order, so a translation can
+        reorder `{0}`/`{1}` freely.
+
+    All strings live in one place — the top-level `Localisation:` table — with
+    `en`, `fr` and `es` provided. The active locale is `en` (the framework-level
+    default for now); switching `LocaleSettings` in the builder swaps the whole
+    UI language with no descriptor changes. Compare this with the older demos
+    (e.g. SpawnedBubblesDemo) that concatenate display strings inside an `!expr`.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  coin colour: !colour { R: 1.0, G: 0.84, B: 0.0, A: 1 }
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  coin radius: 0.35
+  coin size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+
+  total coins: 5
+  one: 1
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  score: 0
+
+Expressions:
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+  all collected:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ score, total ]
+    ReturnType: bool
+    Expression: "score >= total;"
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.instructions: "WASD to move, collect the coins, Q to quit"
+      hud.score: "Coins: {0} / {1}"
+    fr:
+      hud.instructions: "ZQSD pour bouger, ramassez les pièces, Q pour quitter"
+      hud.score: "Pièces : {0} / {1}"
+    es:
+      hud.instructions: "WASD para moverte, recoge las monedas, Q para salir"
+      hud.score: "Monedas: {0} / {1}"
+
+Templates:
+  # A gold coin. Its own trigger detects the player, bumps the global score, and
+  # destroys itself — wired to its own behaviours via `!parameter self_id`.
+  coin_template:
+    Tags: [ coin ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var coin radius
+          IsWire: false
+          Colour: !var coin colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var coin size
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: add score
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      add score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var one
+      self destruct:
+        Type: destroy
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: -3, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+
+      # Trigger collider + rigidbody so the player generates trigger-enter events
+      # against the coins as it moves.
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- WASD movement: each key-hold trigger drives a translate while held. ---
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: -0.12, Y: 0, Z: 0 }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0.12, Y: 0, Z: 0 }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move up
+      move up:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0, Y: 0.12, Z: 0 }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move down
+      move down:
+        Type: translate
+        Properties:
+          Displacement: !vec { X: 0, Y: -0.12, Z: 0 }
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Text: !text hud.instructions
+          FontSize: 18
+          Rect: { Anchor: top-left, X: 20, Y: 20, Width: 680, Height: 40 }
+      score label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.score, Arguments: [ !var score, !var total coins ] }
+          FontSize: 28
+          Rect: { Anchor: top-left, X: 20, Y: 56, Width: 680, Height: 50 }
+
+  coin a:
+    Template: { Id: coin_template }
+    Position: !vec { X: -4, Y: 2, Z: 0 }
+  coin b:
+    Template: { Id: coin_template }
+    Position: !vec { X: 4, Y: 2, Z: 0 }
+  coin c:
+    Template: { Id: coin_template }
+    Position: !vec { X: 0, Y: 3, Z: 0 }
+  coin d:
+    Template: { Id: coin_template }
+    Position: !vec { X: -3, Y: -1, Z: 0 }
+  coin e:
+    Template: { Id: coin_template }
+    Position: !vec { X: 3, Y: -1, Z: 0 }
+
+  quit controller:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+GameOverCondition: !expr
+  ExpressionId: all collected
+  Arguments:
+    - !var score
+    - !var total coins

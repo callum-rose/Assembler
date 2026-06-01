@@ -22,6 +22,7 @@ namespace Assembler.Building
 		private readonly CompiledExpressionsRegistry _expressions;
 		private readonly BehaviourRegistry _behaviourRegistry;
 		private readonly AssetRegistry _assets;
+		private readonly StringTableRegistry _strings;
 		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IGameClock _clock;
@@ -37,6 +38,7 @@ namespace Assembler.Building
 			CompiledExpressionsRegistry expressions,
 			BehaviourRegistry behaviourRegistry,
 			AssetRegistry assets,
+			StringTableRegistry strings,
 			EntityTransformRegistry entityTransforms,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IGameClock clock,
@@ -50,6 +52,7 @@ namespace Assembler.Building
 			_expressions = expressions;
 			_behaviourRegistry = behaviourRegistry;
 			_assets = assets;
+			_strings = strings;
 			_entityTransforms = entityTransforms;
 			_exclusiveGroups = exclusiveGroups;
 			_clock = clock;
@@ -66,7 +69,7 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
-			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms, _clock);
+			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _clock);
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -92,7 +95,7 @@ namespace Assembler.Building
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
-				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms, _clock),
+				new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _clock),
 				this,
 				_exclusiveGroups,
 				_controls,
