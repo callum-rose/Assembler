@@ -53,8 +53,8 @@ Constants:
   flee range: 1.5
   safe range: 4.5
   catch range: 0.8
-  chase speed: 2.5
-  flee speed: 3.5
+  chase speed: 1.1
+  flee speed: 1.3
 
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera view: "orthographic"
@@ -206,7 +206,7 @@ Entities:
           - { EntityId: player, BehaviourId: move left }
       move left:
         Type: translate
-        Properties: { Displacement: !vec { X: -0.12, Y: 0, Z: 0 } }
+        Properties: { Displacement: !vec { X: -0.024, Y: 0, Z: 0 } }
 
       hold right:
         Type: key hold trigger
@@ -215,7 +215,7 @@ Entities:
           - { EntityId: player, BehaviourId: move right }
       move right:
         Type: translate
-        Properties: { Displacement: !vec { X: 0.12, Y: 0, Z: 0 } }
+        Properties: { Displacement: !vec { X: 0.024, Y: 0, Z: 0 } }
 
       hold up:
         Type: key hold trigger
@@ -224,7 +224,7 @@ Entities:
           - { EntityId: player, BehaviourId: move up }
       move up:
         Type: translate
-        Properties: { Displacement: !vec { X: 0, Y: 0.12, Z: 0 } }
+        Properties: { Displacement: !vec { X: 0, Y: 0.024, Z: 0 } }
 
       hold down:
         Type: key hold trigger
@@ -233,7 +233,7 @@ Entities:
           - { EntityId: player, BehaviourId: move down }
       move down:
         Type: translate
-        Properties: { Displacement: !vec { X: 0, Y: -0.12, Z: 0 } }
+        Properties: { Displacement: !vec { X: 0, Y: -0.024, Z: 0 } }
 
       # Press Q to quit. Top-level `!gameover` also satisfies the build's
       # requirement that every game declare a game-over path.
