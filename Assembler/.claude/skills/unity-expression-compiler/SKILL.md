@@ -194,6 +194,11 @@ v.x = v.x * scale;
 return v;
 ```
 
+> **Local declarations need a simple type name or `var`.** A namespace-qualified type on the left
+> of a declaration (`UnityEngine.Vector3 p = ...;`) is parsed as an expression and fails with
+> *"Expected Semicolon but got Identifier"*. Write `var p = ...;` (or a registered bare type name).
+> Qualified types are fine in *expression* position — `new UnityEngine.Vector3(...)` works.
+
 ---
 
 ## Library helpers — callable by bare name

@@ -73,7 +73,7 @@ Expressions:
     ArgumentNames: [ pos, vel, halfW ]
     ReturnType: vector
     Expression: |
-      UnityEngine.Vector3 p = IntegratePosition(pos, vel);
+      var p = IntegratePosition(pos, vel);
       float nx = p.x;
       if (nx > halfW) nx = nx - 2f * halfW;
       if (nx < -halfW) nx = nx + 2f * halfW;
