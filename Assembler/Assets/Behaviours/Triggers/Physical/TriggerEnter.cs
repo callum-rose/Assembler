@@ -16,7 +16,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				NotifyListeners(TriggerContext.Empty.With("other_position", other.transform.position));
+				NotifyListeners(TriggerContext.New("other_position", other.transform.position));
 			}
 		}
 	}

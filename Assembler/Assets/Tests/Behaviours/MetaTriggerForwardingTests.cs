@@ -106,7 +106,7 @@ namespace Tests.Behaviours
 					new ConditionGateData("gate", new ValueProvider<bool>(true)),
 					new List<Listener> { listener });
 
-				var upstreamCtx = TriggerContext.Empty.With("item", "hello");
+				var upstreamCtx = TriggerContext.New("item", "hello");
 
 				trigger.Execute(upstreamCtx);
 
@@ -132,7 +132,7 @@ namespace Tests.Behaviours
 					new ConditionGateData("gate", new ValueProvider<bool>(false)),
 					new List<Listener> { listener });
 
-				trigger.Execute(TriggerContext.Empty.With("item", "hello"));
+				trigger.Execute(TriggerContext.New("item", "hello"));
 
 				Assert.AreEqual(0, listener.CallCount);
 			}

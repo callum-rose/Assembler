@@ -48,7 +48,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 					var held = Clock.Time - _startTime;
 					if (held >= Data.Duration.ValueOr(0.5f))
 					{
-						NotifyListeners(TriggerContext.Empty.With(b =>
+						NotifyListeners(TriggerContext.New(b =>
 						{
 							b["position"] = position;
 							b["hold_duration"] = (float)held;

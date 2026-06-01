@@ -19,7 +19,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			if (IsOtherRelevant(other.gameObject))
 			{
-				NotifyListeners(TriggerContext.Empty.With(b =>
+				NotifyListeners(TriggerContext.New(b =>
 				{
 					b["contact_point"] = other.contacts[0].point;
 					b["contact_normal"] = other.contacts[0].normal;

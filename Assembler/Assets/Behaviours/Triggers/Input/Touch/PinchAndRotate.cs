@@ -54,7 +54,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				return;
 			}
 
-			NotifyListeners(TriggerContext.Empty.With(b =>
+			NotifyListeners(TriggerContext.New(b =>
 			{
 				b["center"] = (first + second) * 0.5f;
 				b["distance"] = distance;

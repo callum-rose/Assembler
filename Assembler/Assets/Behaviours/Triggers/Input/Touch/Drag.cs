@@ -52,7 +52,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 				if (delta != Vector2.zero)
 				{
-					NotifyListeners(TriggerContext.Empty.With(b =>
+					NotifyListeners(TriggerContext.New(b =>
 					{
 						b["start"] = _startPosition;
 						b["position"] = position;

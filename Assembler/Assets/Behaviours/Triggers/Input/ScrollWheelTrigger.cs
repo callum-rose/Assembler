@@ -20,7 +20,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			NotifyListeners(TriggerContext.Empty.With("scroll_delta", delta));
+			NotifyListeners(TriggerContext.New("scroll_delta", delta));
 		}
 	}
 }

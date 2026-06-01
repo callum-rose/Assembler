@@ -103,7 +103,7 @@ namespace Assembler.Behaviours.Triggers.Input
 		internal void Emit(Vector2 value) => NotifyListeners(BuildValueContext(value));
 
 		internal static TriggerContext BuildValueContext(Vector2 value) =>
-			TriggerContext.Empty.With(b =>
+			TriggerContext.New(b =>
 			{
 				b["axis"] = value;
 				b["x"] = value.x;

@@ -58,7 +58,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				         Clock.Time - _firstTapTime <= Data.MaxInterval.ValueOr(0.3f) &&
 				         (position - _firstTapPosition).sqrMagnitude <= maxMoveSqr)
 				{
-					NotifyListeners(TriggerContext.Empty.With("position", position));
+					NotifyListeners(TriggerContext.New("position", position));
 					_hasFirstTap = false;
 				}
 				else

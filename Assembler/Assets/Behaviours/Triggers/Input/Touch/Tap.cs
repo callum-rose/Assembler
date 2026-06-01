@@ -45,7 +45,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 				if (withinTime && withinMovement)
 				{
-					NotifyListeners(TriggerContext.Empty.With("position", position));
+					NotifyListeners(TriggerContext.New("position", position));
 				}
 			}
 

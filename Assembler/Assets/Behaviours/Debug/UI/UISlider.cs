@@ -34,7 +34,7 @@ namespace Assembler.Behaviours.Debug.UI
 			if (Mathf.Approximately(next, _current)) return;
 
 			_current = next;
-			NotifyListeners(TriggerContext.Empty.With("value", _current));
+			NotifyListeners(TriggerContext.New("value", _current));
 		}
 	}
 }
