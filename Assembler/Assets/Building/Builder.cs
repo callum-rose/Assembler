@@ -47,9 +47,7 @@ namespace Assembler.Building
 
 			ControlsValidator.Validate(gameInfo, controls, activeGroup);
 
-			var controlsAsset = controls.Actions.Count > 0
-				? InputActionBuilder.Build(controls, activeGroup)
-				: null;
+			var controlsAsset = InputActionBuilder.Build(controls, activeGroup);
 
 			// 1. Initialize variables and expressions
 			var typeRegistry = BuiltInTypeRegistry.Default;

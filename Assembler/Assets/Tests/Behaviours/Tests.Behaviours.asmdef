@@ -5,7 +5,9 @@
         "Assembler.Behaviours",
         "Assembler.Resolving",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Assembler.Parsing",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

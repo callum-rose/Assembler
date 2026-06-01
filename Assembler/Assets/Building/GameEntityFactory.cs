@@ -26,8 +26,8 @@ namespace Assembler.Building
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
 		private readonly Transform _root;
-		private readonly ControlsInfo? _controls;
-		private readonly InputActionAsset? _controlsAsset;
+		private readonly ControlsInfo _controls;
+		private readonly InputActionAsset _controlsAsset;
 
 		private int _spawnCounter;
 
@@ -40,8 +40,8 @@ namespace Assembler.Building
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			TransformContext parseContext,
 			Transform root,
-			ControlsInfo? controls = null,
-			InputActionAsset? controlsAsset = null)
+			ControlsInfo controls,
+			InputActionAsset controlsAsset)
 		{
 			_variables = variables;
 			_expressions = expressions;

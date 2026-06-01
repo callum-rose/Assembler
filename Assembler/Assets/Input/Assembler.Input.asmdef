@@ -1,6 +1,6 @@
 {
     "name": "Assembler.Input",
-    "rootNamespace": "Assembler.Input",
+    "rootNamespace": "Assembler",
     "references": [
         "Assembler.Deserialisation",
         "Assembler.Parsing",

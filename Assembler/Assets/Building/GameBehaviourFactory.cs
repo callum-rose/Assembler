@@ -272,9 +272,9 @@ namespace Assembler.Building
 					var i = (InputActionTriggerInfo)info;
 					var b = go.AddComponent<InputActionTrigger>();
 
-					var actionName = i.Action.Resolve(ctx.Resolution).Get(TriggerContext.Empty);
+					var actionName = i.Action.Resolve(ctx.Resolution).Get();
 
-					if (ctx.Controls is null || !ctx.Controls.Actions.TryGetValue(actionName, out var actionInfo))
+					if (!ctx.Controls.Actions.TryGetValue(actionName, out var actionInfo))
 					{
 						throw new ArgumentException(
 							$"Input action '{actionName}' referenced by behaviour '{i.Id}' is not declared in Controls.");

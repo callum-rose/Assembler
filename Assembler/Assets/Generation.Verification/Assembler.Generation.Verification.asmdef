@@ -6,7 +6,8 @@
         "Assembler.Anthropic",
         "Assembler.Building",
         "Assembler.Parsing",
-        "Assembler.Deserialisation"
+        "Assembler.Deserialisation",
+        "Assembler.Input"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

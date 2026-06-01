@@ -9,6 +9,6 @@ namespace Assembler.Building
 		ResolutionContext Resolution,
 		IEntitySpawner Spawner,
 		ExclusiveGroupRegistry ExclusiveGroups,
-		ControlsInfo? Controls = null,
-		InputActionAsset? ControlsAsset = null);
+		ControlsInfo Controls,
+		InputActionAsset ControlsAsset);
 }
