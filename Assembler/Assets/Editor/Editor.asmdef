@@ -12,7 +12,9 @@
         "Assembler.Behaviours",
         "Assembler.Libraries",
         "Assembler.Core",
-        "Assembler.Input"
+        "Assembler.Input",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
