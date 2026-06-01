@@ -26,6 +26,9 @@ namespace Assembler.Behaviours
 		/// is defined, so release builds pay nothing.
 		/// </summary>
 		public static event Action<GameBehaviour, TriggerContext>? Fired;
+
+		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
+		public IReadOnlyList<Listener> DebugListeners => _listeners;
 #endif
 
 		public abstract void Execute(TriggerContext ctx);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Building.Debug;
@@ -86,6 +87,23 @@ namespace Tests.Behaviours
 				}
 
 				Assert.AreSame(behaviour, captured);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		[Test]
+		public void DirectListener_DebugTargets_ReturnsTarget()
+		{
+			var go = new GameObject("target");
+			try
+			{
+				var target = go.AddComponent<FiringBehaviour>();
+				var listener = new DirectListener(target, new Dictionary<string, string>());
+
+				CollectionAssert.AreEqual(new GameBehaviour[] { target }, listener.DebugTargets().ToList());
 			}
 			finally
 			{

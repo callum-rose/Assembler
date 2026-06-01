@@ -31,11 +31,23 @@ namespace Assembler.Building.Debug
 
 		private readonly TriggerLog _log = new(256);
 		private readonly Dictionary<string, string> _edits = new();
+		private readonly HashSet<BehaviourDescriptor> _expanded = new();
 
 		private bool _open;
 		private bool _logging;
+		private string _logFilter = "";
 		private Vector2 _scroll;
 		private GUIStyle? _header;
+		private GUIStyle? _rowButton;
+
+		// Behaviour highlighted by a listener "ping", and the realtime moment the highlight expires.
+		private BehaviourDescriptor? _pingDescriptor;
+		private float _pingUntil;
+
+		// Expand/ping change the control count, so they are queued from click handlers and applied on the
+		// next Layout pass — mutating layout mid-event triggers IMGUI "mismatched LayoutGroup" warnings.
+		private BehaviourDescriptor? _toggleRequest;
+		private BehaviourDescriptor? _pingRequest;
 
 		public void Initialise(BehaviourRegistry registry, IGameClock clock, VariableRegistry globals,
 			GameController controller)
@@ -67,6 +79,12 @@ namespace Assembler.Building.Debug
 				}
 			}
 
+			// The implicit game-over controller fires an every-frame tick; that noise swamps the log.
+			if (descriptor?.EntityId == GameOverController.EntityId)
+			{
+				return;
+			}
+
 			_log.Append(new TriggerLog.Entry(_clock.FrameCount, descriptor, source.GetType().Name,
 				ctx.Keys.ToArray()));
 		}
@@ -87,6 +105,14 @@ namespace Assembler.Building.Debug
 			}
 
 			_header ??= new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold };
+			_rowButton ??= new GUIStyle(GUI.skin.button) { alignment = TextAnchor.MiddleLeft };
+
+			// Apply queued expand/ping requests now, before laying out, so the control count stays
+			// consistent across this frame's Layout and Repaint passes.
+			if (e.type == EventType.Layout)
+			{
+				ApplyPendingRequests();
+			}
 
 			var width = Mathf.Min(480f, Screen.width - 20f);
 			GUILayout.BeginArea(new Rect(10f, 10f, width, Screen.height - 20f), GUI.skin.box);
@@ -188,6 +214,7 @@ namespace Assembler.Building.Debug
 			// Re-read the live registry each frame so spawned/destroyed entities are reflected.
 			var behavioursByEntity = new SortedDictionary<string, List<KeyValuePair<BehaviourDescriptor, GameBehaviour>>>();
 			var entityComponents = new Dictionary<string, GameEntity>();
+			var descriptorByBehaviour = new Dictionary<GameBehaviour, BehaviourDescriptor>();
 
 			foreach (var kv in _registry.All)
 			{
@@ -195,6 +222,8 @@ namespace Assembler.Building.Debug
 				{
 					continue;
 				}
+
+				descriptorByBehaviour[kv.Value] = kv.Key;
 
 				var entityId = kv.Key.EntityId;
 				if (!behavioursByEntity.TryGetValue(entityId, out var list))
@@ -228,18 +257,133 @@ namespace Assembler.Building.Debug
 
 				foreach (var kv in behaviours.OrderBy(b => b.Key.BehaviourId))
 				{
-					GUILayout.BeginHorizontal();
-					GUILayout.Label($"  • {kv.Key.BehaviourId} ({kv.Value.GetType().Name})",
-						GUILayout.ExpandWidth(true));
-					if (GUILayout.Button("Fire", GUILayout.Width(50f)))
-					{
-						kv.Value.Execute(TriggerContext.Empty);
-					}
-
-					GUILayout.EndHorizontal();
+					DrawBehaviourRow(kv.Key, kv.Value, descriptorByBehaviour);
 				}
 
 				GUILayout.Space(4f);
+			}
+		}
+
+		private void DrawBehaviourRow(BehaviourDescriptor descriptor, GameBehaviour behaviour,
+			IReadOnlyDictionary<GameBehaviour, BehaviourDescriptor> descriptorByBehaviour)
+		{
+			var expanded = _expanded.Contains(descriptor);
+			var pinged = descriptor.Equals(_pingDescriptor) && Time.realtimeSinceStartup < _pingUntil;
+
+			GUILayout.BeginHorizontal();
+			var prevColor = GUI.backgroundColor;
+			if (pinged)
+			{
+				GUI.backgroundColor = Color.yellow;
+			}
+
+			if (GUILayout.Button($"{(expanded ? "▼" : "▶")} {descriptor.BehaviourId} ({behaviour.GetType().Name})",
+				_rowButton, GUILayout.ExpandWidth(true)))
+			{
+				Toggle(descriptor);
+			}
+
+			GUI.backgroundColor = prevColor;
+
+			if (GUILayout.Button("Fire", GUILayout.Width(50f)))
+			{
+				behaviour.Execute(TriggerContext.Empty);
+			}
+
+			GUILayout.EndHorizontal();
+
+			if (expanded)
+			{
+				DrawBehaviourDetails(behaviour, descriptorByBehaviour);
+			}
+		}
+
+		private void DrawBehaviourDetails(GameBehaviour behaviour,
+			IReadOnlyDictionary<GameBehaviour, BehaviourDescriptor> descriptorByBehaviour)
+		{
+			var tags = behaviour.Tags;
+			GUILayout.Label(tags.Length > 0 ? "      tags: " + string.Join(", ", tags) : "      tags: (none)");
+
+			GUILayout.Label("      notifies:");
+			var any = false;
+			foreach (var target in ResolveListenerTargets(behaviour))
+			{
+				any = true;
+				var label = descriptorByBehaviour.TryGetValue(target, out var targetDescriptor)
+					? $"{targetDescriptor.EntityId}/{targetDescriptor.BehaviourId}"
+					: target.GetType().Name;
+
+				GUILayout.BeginHorizontal();
+				GUILayout.Space(24f);
+				if (GUILayout.Button("→ " + label, _rowButton, GUILayout.ExpandWidth(true)))
+				{
+					Ping(target, descriptorByBehaviour);
+				}
+
+				GUILayout.EndHorizontal();
+			}
+
+			if (!any)
+			{
+				GUILayout.Label("        (none)");
+			}
+		}
+
+		/// <summary>Resolved target behaviours of every listener wired to <paramref name="behaviour"/>, de-duplicated.</summary>
+		private static IEnumerable<GameBehaviour> ResolveListenerTargets(GameBehaviour behaviour)
+		{
+			var seen = new HashSet<GameBehaviour>();
+			foreach (var listener in behaviour.DebugListeners)
+			{
+				List<GameBehaviour> targets;
+				try
+				{
+					// Tagged listeners resolve against an empty context and may throw or come up empty.
+					targets = listener.DebugTargets().Where(t => t).ToList();
+				}
+				catch
+				{
+					continue;
+				}
+
+				foreach (var target in targets)
+				{
+					if (seen.Add(target))
+					{
+						yield return target;
+					}
+				}
+			}
+		}
+
+		private void ApplyPendingRequests()
+		{
+			if (_toggleRequest is { } toggle)
+			{
+				if (!_expanded.Remove(toggle))
+				{
+					_expanded.Add(toggle);
+				}
+
+				_toggleRequest = null;
+			}
+
+			if (_pingRequest is { } ping)
+			{
+				_pingDescriptor = ping;
+				_pingUntil = Time.realtimeSinceStartup + 2.5f;
+				_expanded.Add(ping); // expand the target so its details are visible when highlighted
+				_pingRequest = null;
+			}
+		}
+
+		private void Toggle(BehaviourDescriptor descriptor) => _toggleRequest = descriptor;
+
+		private void Ping(GameBehaviour target, IReadOnlyDictionary<GameBehaviour, BehaviourDescriptor> descriptorByBehaviour)
+		{
+			if (descriptorByBehaviour.TryGetValue(target, out var descriptor))
+			{
+				_pingRequest = descriptor;
 			}
 		}
 
@@ -278,6 +422,11 @@ namespace Assembler.Building.Debug
 
 			GUILayout.EndHorizontal();
 
+			GUILayout.BeginHorizontal();
+			GUILayout.Label("filter", GUILayout.Width(40f));
+			_logFilter = GUILayout.TextField(_logFilter, GUILayout.ExpandWidth(true));
+			GUILayout.EndHorizontal();
+
 			// Newest first.
 			foreach (var entry in _log.Entries().Reverse())
 			{
@@ -285,6 +434,12 @@ namespace Assembler.Building.Debug
 				var source = descriptor != null
 					? $"{descriptor.EntityId}/{descriptor.BehaviourId}"
 					: entry.Source;
+
+				if (_logFilter.Length > 0 && source.IndexOf(_logFilter, System.StringComparison.OrdinalIgnoreCase) < 0)
+				{
+					continue;
+				}
+
 				var keys = entry.Keys.Count == 0 ? "" : " [" + string.Join(", ", entry.Keys) + "]";
 				GUILayout.Label($"  f{entry.Frame}  {source}{keys}");
 			}
