@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Deserialisation.Dtos;
+using Assembler.Extensions;
 using Assembler.Parsing.Info.Behaviours;
 
 namespace Assembler.Parsing.Controls
@@ -19,33 +21,22 @@ namespace Assembler.Parsing.Controls
 				return ControlsInfo.Empty;
 			}
 
-			var actions = new Dictionary<string, ActionInfo>();
+			var actions = dto.Actions
+				.EmptyIfNull()
+				.ToDictionary(t => t.Key, t => TransformAction(t.Key, t.Value));
 
-			foreach (var (name, actionDto) in dto.Actions ?? new Dictionary<string, ActionDto>())
-			{
-				actions[name] = TransformAction(name, actionDto);
-			}
-
-			var bindings = new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>>();
-
-			foreach (var (platform, byAction) in dto.Bindings ?? new Dictionary<string, Dictionary<string, List<BindingDto>>>())
-			{
-				var platformBindings = new Dictionary<string, IReadOnlyList<BindingInfo>>();
-
-				foreach (var (actionName, bindingDtos) in byAction ?? new Dictionary<string, List<BindingDto>>())
-				{
-					var list = new List<BindingInfo>();
-
-					foreach (var bindingDto in bindingDtos ?? new List<BindingDto>())
-					{
-						list.Add(TransformBinding(platform, actionName, bindingDto));
-					}
-
-					platformBindings[actionName] = list;
-				}
-
-				bindings[platform] = platformBindings;
-			}
+			var bindings = dto.Bindings
+				.EmptyIfNull()
+				.ToDictionary(
+					p => p.Key,
+					p => (IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>)p.Value
+						.EmptyIfNull()
+						.ToDictionary(
+							a => a.Key,
+							a => (IReadOnlyList<BindingInfo>)a.Value
+								.EmptyIfNull()
+								.Select(b => TransformBinding(p.Key, a.Key, b))
+								.ToList()));
 
 			return new ControlsInfo(actions, bindings);
 		}
