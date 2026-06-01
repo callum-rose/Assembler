@@ -47,7 +47,7 @@ namespace Editor
 
 		private static string GenerateMarkdown()
 		{
-			var membersByKey = LoadXmlDocMembers();
+			var membersByKey = XmlDocs.LoadMembers(CandidateXmlPaths);
 			var sb = new StringBuilder();
 			sb.AppendLine("# Behaviours");
 			sb.AppendLine();
@@ -97,7 +97,7 @@ namespace Editor
 					foreach (var prop in infoProps)
 					{
 						var doc = propsDocs.TryGetValue(prop.YamlName, out var d) ? d : new PropDoc(null, null);
-						var renderedType = doc.TypeOverride ?? RenderType(prop.Type);
+						var renderedType = doc.TypeOverride ?? XmlDocs.RenderType(prop.Type);
 						var desc = doc.Description ?? "";
 						sb.AppendLine($"| {prop.YamlName} | {renderedType} | {desc} |");
 					}
@@ -143,39 +143,6 @@ namespace Editor
 		// XML doc loading
 		// ----------------------------------------------------------------------
 
-		private static Dictionary<string, XElement> LoadXmlDocMembers()
-		{
-			var result = new Dictionary<string, XElement>();
-			XDocument? doc = null;
-			foreach (var p in CandidateXmlPaths)
-			{
-				if (File.Exists(p))
-				{
-					doc = XDocument.Load(p);
-					break;
-				}
-			}
-
-			if (doc is null)
-			{
-				Debug.LogWarning(
-					$"BehaviourDocs: no XML doc file found. Searched: {string.Join(", ", CandidateXmlPaths)}. " +
-					"Confirm Assets/Behaviours/csc.rsp includes `-doc:Temp/Assembler.Behaviours.xml` and the assembly has compiled.");
-				return result;
-			}
-
-			foreach (var m in doc.Descendants("member"))
-			{
-				var nameAttr = m.Attribute("name")?.Value;
-				if (!string.IsNullOrEmpty(nameAttr))
-				{
-					result[nameAttr!] = m;
-				}
-			}
-
-			return result;
-		}
-
 		// Walk the type chain (closed → open generic base → … ) until we find a <member name="T:...">
 		// matching, or run out. This lets us author docs on a generic base like
 		// VariableSetterBehaviour<T> and have closed subclasses (Vector3Setter, IntSetter, …) inherit them.
@@ -215,21 +182,12 @@ namespace Editor
 		{
 			for (var t = type; t is not null && t != typeof(object) && t != typeof(MonoBehaviour); t = t.BaseType)
 			{
-				var key = "T:" + XmlDocTypeName(t);
+				var key = "T:" + XmlDocs.XmlDocTypeName(t);
 				if (membersByKey.TryGetValue(key, out var member))
 				{
 					yield return member;
 				}
 			}
-		}
-
-		// Approximates the type-name encoding used by C# XML doc files:
-		//   - generic types end with `Arity (e.g. VariableSetterBehaviour`1)
-		//   - nested types use '+' replaced by '.'
-		private static string XmlDocTypeName(Type t)
-		{
-			var name = (t.Namespace is null ? "" : t.Namespace + ".") + t.Name;
-			return name.Replace('+', '.');
 		}
 
 		// ----------------------------------------------------------------------
@@ -364,50 +322,6 @@ namespace Editor
 				warnings.Add(
 					$"`{behaviourName}`: `{monoType.Name}` documents `{extra}` in its `Properties:` block but `{infoType.Name}` has no such property.");
 			}
-		}
-
-		// ----------------------------------------------------------------------
-		// Type rendering
-		// ----------------------------------------------------------------------
-
-		private readonly static Dictionary<Type, string> PrimitiveNames = new()
-		{
-			[typeof(bool)] = "bool",
-			[typeof(byte)] = "byte",
-			[typeof(int)] = "int",
-			[typeof(long)] = "long",
-			[typeof(float)] = "float",
-			[typeof(double)] = "double",
-			[typeof(string)] = "string",
-			[typeof(object)] = "object",
-		};
-
-		private static string RenderType(Type t)
-		{
-			if (PrimitiveNames.TryGetValue(t, out var simple))
-			{
-				return simple;
-			}
-
-			if (t.IsArray)
-			{
-				return RenderType(t.GetElementType()!) + "[]";
-			}
-
-			if (t.IsGenericType)
-			{
-				var defName = t.Name;
-				var tickIndex = defName.IndexOf('`');
-				if (tickIndex >= 0)
-				{
-					defName = defName.Substring(0, tickIndex);
-				}
-
-				var args = string.Join(", ", t.GetGenericArguments().Select(RenderType));
-				return $"{defName}<{args}>";
-			}
-
-			return t.Name;
 		}
 	}
 }
