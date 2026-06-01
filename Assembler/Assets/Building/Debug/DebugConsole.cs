@@ -90,8 +90,7 @@ namespace Assembler.Building.Debug
 				return;
 			}
 
-			_log.Append(new TriggerLog.Entry(_clock.FrameCount, descriptor, source.GetType().Name,
-				ctx.Keys.ToArray()));
+			_log.Record(_clock.FrameCount, descriptor, source.GetType().Name, ctx.Keys.ToArray());
 		}
 
 		private void OnGUI()
@@ -460,8 +459,8 @@ namespace Assembler.Building.Debug
 
 		private void DrawLogEntries()
 		{
-			// Newest first.
-			foreach (var entry in _log.Entries().Reverse())
+			// Coalesced, most recently fired first.
+			foreach (var entry in _log.Entries())
 			{
 				var descriptor = entry.Descriptor;
 				var source = descriptor != null
@@ -474,7 +473,8 @@ namespace Assembler.Building.Debug
 				}
 
 				var keys = entry.Keys.Count == 0 ? "" : " [" + string.Join(", ", entry.Keys) + "]";
-				GUILayout.Label($"  f{entry.Frame}  {source}{keys}");
+				var count = entry.Count > 1 ? $" x{entry.Count}" : "";
+				GUILayout.Label($"  f{entry.LastFrame}{count}  {source}{keys}");
 			}
 		}
 

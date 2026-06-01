@@ -12,30 +12,46 @@ namespace Tests.Behaviours
 {
 	public class DebugConsoleTests
 	{
-		// ---- TriggerLog ring buffer ----
+		// ---- TriggerLog (coalescing) ----
 
 		[Test]
-		public void TriggerLog_DropsOldestWhenOverCapacity()
+		public void TriggerLog_CoalescesRepeatedFiringsOfSameBehaviour()
+		{
+			var log = new TriggerLog(8);
+			var hold = new BehaviourDescriptor("player", "hold");
+
+			log.Record(1, hold, "KeyHold", new[] { "pressed" });
+			log.Record(2, hold, "KeyHold", new[] { "pressed" });
+			log.Record(5, hold, "KeyHold", new[] { "pressed" });
+
+			var entry = log.Entries().Single(); // one row despite three firings
+			Assert.AreEqual(3, entry.Count);
+			Assert.AreEqual(1, entry.FirstFrame);
+			Assert.AreEqual(5, entry.LastFrame);
+		}
+
+		[Test]
+		public void TriggerLog_DropsLeastRecentWhenOverCapacity()
 		{
 			var log = new TriggerLog(2);
-			log.Append(Entry(1));
-			log.Append(Entry(2));
-			log.Append(Entry(3)); // evicts frame 1
+			log.Record(1, Descriptor("a"), "A", Array.Empty<string>());
+			log.Record(2, Descriptor("b"), "B", Array.Empty<string>());
+			log.Record(3, Descriptor("c"), "C", Array.Empty<string>()); // evicts "a" (least recent)
 
 			Assert.AreEqual(2, log.Count);
-			var frames = log.Entries().Select(e => e.Frame).ToArray();
-			CollectionAssert.AreEqual(new[] { 2, 3 }, frames); // oldest -> newest
+			var ids = log.Entries().Select(e => e.Descriptor!.BehaviourId).ToArray();
+			CollectionAssert.AreEqual(new[] { "c", "b" }, ids); // most recently fired first
 		}
 
 		[Test]
 		public void TriggerLog_RecordsDescriptorAndKeys()
 		{
 			var log = new TriggerLog(4);
-			log.Append(new TriggerLog.Entry(5, new BehaviourDescriptor("ball", "collide"), "X",
-				new[] { "point", "other" }));
+			log.Record(5, new BehaviourDescriptor("ball", "collide"), "X", new[] { "point", "other" });
 
 			var entry = log.Entries().Single();
-			Assert.AreEqual(5, entry.Frame);
+			Assert.AreEqual(5, entry.LastFrame);
+			Assert.AreEqual(1, entry.Count);
 			Assert.AreEqual("ball", entry.Descriptor!.EntityId);
 			Assert.AreEqual("collide", entry.Descriptor!.BehaviourId);
 			CollectionAssert.AreEqual(new[] { "point", "other" }, entry.Keys);
@@ -45,15 +61,14 @@ namespace Tests.Behaviours
 		public void TriggerLog_ClearEmptiesBuffer()
 		{
 			var log = new TriggerLog(4);
-			log.Append(Entry(1));
+			log.Record(1, Descriptor("b"), "B", Array.Empty<string>());
 			log.Clear();
 
 			Assert.AreEqual(0, log.Count);
 			Assert.IsEmpty(log.Entries());
 		}
 
-		private static TriggerLog.Entry Entry(int frame) =>
-			new(frame, new BehaviourDescriptor("e", "b" + frame), "B", Array.Empty<string>());
+		private static BehaviourDescriptor Descriptor(string behaviourId) => new("e", behaviourId);
 
 		// ---- GameBehaviour.Fired hook (only present under DEBUG_CONSOLE) ----
 
