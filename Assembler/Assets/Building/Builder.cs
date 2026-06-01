@@ -22,32 +22,32 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static void Build(string yamlPath, InputPlatform? overridePlatform = null) =>
+		public static BuildResult Build(string yamlPath, InputPlatform? overridePlatform = null) =>
 			Build(yamlPath, new BuildOptions(OverridePlatform: overridePlatform));
 
 		/// <summary>
 		/// Builds from a YAML descriptor on disk. This is the only entry that supports record/replay, since it can
 		/// compute the descriptor hash from the raw YAML text (see Determinism (Level 1) in CLAUDE.md).
 		/// </summary>
-		public static void Build(string yamlPath, BuildOptions options)
+		public static BuildResult Build(string yamlPath, BuildOptions options)
 		{
 			var yaml = File.ReadAllText(yamlPath);
 			var descriptorHash = DescriptorHash.Compute(yaml);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			Build(gameInfo, controls, options, descriptorHash);
+			return Build(gameInfo, controls, options, descriptorHash);
 		}
 
-		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, BuildOptions.Default);
+		public static BuildResult Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, BuildOptions.Default);
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform) =>
+		public static BuildResult Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform) =>
 			Build(gameInfo, controls, new BuildOptions(OverridePlatform: overridePlatform));
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options) =>
+		public static BuildResult Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options) =>
 			Build(gameInfo, controls, options, descriptorHash: null);
 
-		private static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options, string? descriptorHash)
+		private static BuildResult Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options, string? descriptorHash)
 		{
 			// Clear any record/replay state from a prior build so nothing leaks between runs.
 			InputBoundary.Reset();
@@ -203,6 +203,8 @@ namespace Assembler.Building
 			gameRoot.AddComponent<Assembler.Building.Debug.DebugConsole>()
 				.Initialise(behaviourRegistry, gameClock, variableRegistry, gameRoot.GetComponent<GameController>());
 #endif
+
+			return new BuildResult(gameRoot, behaviourRegistry, variableRegistry, gameClock, seed);
 		}
 
 		/// <summary>
