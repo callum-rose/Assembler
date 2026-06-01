@@ -36,16 +36,25 @@ namespace Editor
 		{
 			try
 			{
-				const string outputPath = "Assets/docs/Libraries.md";
-				Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-				File.WriteAllText(outputPath, GenerateMarkdown());
+				WriteDocs();
 				AssetDatabase.Refresh();
-				Debug.Log($"Wrote {outputPath}");
 			}
 			catch (Exception e)
 			{
 				Debug.LogError(e);
 			}
+		}
+
+		// Builds the markdown and writes it to disk, returning the output path. Shared by the
+		// menu item and the headless DocsBatch entry point. Does not call AssetDatabase.Refresh —
+		// callers decide whether/when to refresh.
+		internal static string WriteDocs()
+		{
+			const string outputPath = "Assets/docs/Libraries.md";
+			Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+			File.WriteAllText(outputPath, GenerateMarkdown());
+			Debug.Log($"Wrote {outputPath}");
+			return outputPath;
 		}
 
 		private static string GenerateMarkdown()
