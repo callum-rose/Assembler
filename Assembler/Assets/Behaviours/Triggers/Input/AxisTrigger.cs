@@ -18,18 +18,13 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (InputBoundary.ReplayActive)
-			{
-				return;
-			}
-
 			var xName = Data.XAxis.Get();
 			var yName = Data.YAxis.ValueOr(string.Empty);
 
 			var x = string.IsNullOrEmpty(xName) ? 0f : UnityEngine.Input.GetAxis(xName);
 			var y = string.IsNullOrEmpty(yName) ? 0f : UnityEngine.Input.GetAxis(yName);
 
-			FireInput(TriggerContext.New(b =>
+			NotifyListeners(TriggerContext.New(b =>
 			{
 				b["axis"] = new Vector2(x, y);
 				b["x"] = x;

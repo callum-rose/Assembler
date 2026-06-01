@@ -49,8 +49,9 @@ namespace Assembler.Building
 
 		private static BuildResult Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options, string? descriptorHash)
 		{
-			// Clear any record/replay state from a prior build so nothing leaks between runs.
-			InputBoundary.Reset();
+			// The input record/replay seam for this run. Created per build and injected into every input trigger,
+			// so there is no shared static state to leak between runs.
+			var inputBoundary = new InputBoundary();
 
 			// Record/replay needs the descriptor hash, which only the YAML-path entry can compute.
 			if (options.Replay != ReplayMode.Off && descriptorHash == null)
@@ -160,7 +161,8 @@ namespace Assembler.Building
 				gameInfo.ParseContext,
 				gameRoot.transform,
 				controls,
-				controlsAsset);
+				controlsAsset,
+				inputBoundary);
 
 			var initialisations = new InitialisationQueue();
 
@@ -186,7 +188,7 @@ namespace Assembler.Building
 					var recorder = options.Recorder ?? throw new InvalidOperationException(
 						"Record mode requires a Recorder to capture into.");
 					recorder.Initialise(gameClock, descriptorHash!, seed, options.FixedDeltaTime, platform);
-					InputBoundary.Sink = recorder;
+					inputBoundary.Sink = recorder;
 					break;
 				}
 				case ReplayMode.Replay:
@@ -199,7 +201,7 @@ namespace Assembler.Building
 					}
 
 					player.Initialise(gameClock, behaviourRegistry);
-					InputBoundary.BeginReplay(player);
+					inputBoundary.BeginReplay(player);
 					gameRoot.AddComponent<ReplayDriver>().Player = player;
 					break;
 				}

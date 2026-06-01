@@ -24,11 +24,6 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
-			if (InputBoundary.ReplayActive)
-			{
-				return;
-			}
-
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 
@@ -50,7 +45,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 				if (withinTime && withinMovement)
 				{
-					FireInput(TriggerContext.New("position", position));
+					NotifyListeners(TriggerContext.New("position", position));
 				}
 			}
 

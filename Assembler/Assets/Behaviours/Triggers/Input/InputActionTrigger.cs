@@ -77,17 +77,12 @@ namespace Assembler.Behaviours.Triggers.Input
 		{
 			if (isActiveAndEnabled)
 			{
-				FireInput(TriggerContext.Empty);
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 
 		private void Update()
 		{
-			if (InputBoundary.ReplayActive)
-			{
-				return;
-			}
-
 			var action = Data.Action;
 
 			if (Data.Kind is ActionKind.Value)
@@ -99,13 +94,13 @@ namespace Assembler.Behaviours.Triggers.Input
 			// Button + hold: fire every frame the control is pressed (≡ KeyHoldTrigger). Down/up are event-driven.
 			if (Data.Phase is ButtonPhase.Hold && action.IsPressed())
 			{
-				FireInput(TriggerContext.Empty);
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 
 		// Exposed for unit testing: live device polling is impractical to drive in a unit test, so the
 		// value-forwarding shape (axis/x/y, mirroring AxisTrigger) is verified through this seam.
-		internal void Emit(Vector2 value) => FireInput(BuildValueContext(value));
+		internal void Emit(Vector2 value) => NotifyListeners(BuildValueContext(value));
 
 		internal static TriggerContext BuildValueContext(Vector2 value) =>
 			TriggerContext.New(b =>

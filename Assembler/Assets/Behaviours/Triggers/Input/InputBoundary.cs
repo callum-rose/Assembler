@@ -22,36 +22,35 @@ namespace Assembler.Behaviours.Triggers.Input
 		void ReplayFire(TriggerContext ctx);
 	}
 
+	/// <summary>Marker for behaviours the build pipeline injects the per-run <see cref="InputBoundary"/> into (mirrors <c>INeedsGameClock</c>).</summary>
+	public interface INeedsInputBoundary
+	{
+		InputBoundary InputBoundary { set; }
+	}
+
 	/// <summary>
-	/// The single seam between live input and record/replay. Input triggers consult this when firing: in normal
-	/// mode they record (if a <see cref="Sink"/> is attached) and notify; in replay mode they go silent so the
-	/// <see cref="Source"/> can re-inject recorded activations instead. Single-threaded (Unity main thread); see
-	/// the Determinism (Level 1) section in CLAUDE.md.
+	/// The seam between live input and record/replay for a single run. Input triggers consult their injected
+	/// boundary when firing: in normal mode they record (if a <see cref="Sink"/> is attached) and notify; in replay
+	/// mode they go silent so the <see cref="Source"/> can re-inject recorded activations instead. One instance is
+	/// created per build and injected into every input trigger, so there is no shared static state to leak between
+	/// runs. See the Determinism (Level 1) section in CLAUDE.md.
 	/// </summary>
-	public static class InputBoundary
+	public sealed class InputBoundary
 	{
 		/// <summary>True while a replay is driving input; live triggers suppress their own firing.</summary>
-		public static bool ReplayActive { get; private set; }
+		public bool ReplayActive { get; private set; }
 
 		/// <summary>The active recorder, or null when not recording.</summary>
-		public static IInputSink? Sink { get; set; }
+		public IInputSink? Sink { get; set; }
 
 		/// <summary>The active replay source, or null when not replaying.</summary>
-		public static IInputSource? Source { get; private set; }
+		public IInputSource? Source { get; private set; }
 
-		/// <summary>Switches into replay mode with the given source.</summary>
-		public static void BeginReplay(IInputSource source)
+		/// <summary>Switches this boundary into replay mode with the given source.</summary>
+		public void BeginReplay(IInputSource source)
 		{
 			Source = source;
 			ReplayActive = true;
-		}
-
-		/// <summary>Clears all record/replay state. Called at build start and on game teardown so nothing leaks between runs.</summary>
-		public static void Reset()
-		{
-			Sink = null;
-			Source = null;
-			ReplayActive = false;
 		}
 	}
 }
