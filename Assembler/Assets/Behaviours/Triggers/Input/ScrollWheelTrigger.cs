@@ -14,18 +14,13 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
-			if (InputBoundary.ReplayActive)
-			{
-				return;
-			}
-
 			var delta = UnityEngine.Input.mouseScrollDelta;
 			if (delta == Vector2.zero)
 			{
 				return;
 			}
 
-			FireInput(TriggerContext.New("scroll_delta", delta));
+			NotifyListeners(TriggerContext.New("scroll_delta", delta));
 		}
 	}
 }

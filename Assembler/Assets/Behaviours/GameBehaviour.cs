@@ -17,12 +17,11 @@ namespace Assembler.Behaviours
 		}
 
 		/// <summary>
-		/// This behaviour's stable identity (entity id + behaviour id), assigned by <c>BehaviourRegistry.Register</c>.
-		/// Used by record/replay to key input activations to the trigger that emitted them. Null until registered.
+		/// This behaviour's stable identity (entity id + behaviour id). Assigned by <c>BehaviourRegistry.Register</c>
+		/// before initialisation, so it is always set for any built behaviour. Used by record/replay to key input
+		/// activations to the trigger that emitted them.
 		/// </summary>
-		public BehaviourDescriptor? Descriptor { get; set; }
-
-		protected string Id { get; private set; }
+		public BehaviourDescriptor Descriptor { get; set; } = null!;
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
@@ -40,13 +39,16 @@ namespace Assembler.Behaviours
 
 		public abstract void Execute(TriggerContext ctx);
 
-		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
+		protected void SetBase(IReadOnlyList<Listener> listeners)
 		{
-			Id = behaviourData.Id;
 			_listeners = listeners;
 		}
 
-		protected void NotifyListeners(TriggerContext ctx)
+		/// <summary>
+		/// Notifies this behaviour's listeners. Virtual so input triggers can route firing through the record/replay
+		/// seam (see <c>InputTrigger</c>) without every concrete trigger having to remember to do so.
+		/// </summary>
+		protected virtual void NotifyListeners(TriggerContext ctx)
 		{
 #if DEBUG_CONSOLE
 			Fired?.Invoke(this, ctx);
@@ -71,7 +73,7 @@ namespace Assembler.Behaviours
 		{
 			Data = data;
 
-			SetBase(data, listeners);
+			SetBase(listeners);
 			OnInitialise(data);
 		}
 

@@ -25,11 +25,6 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
-			if (InputBoundary.ReplayActive)
-			{
-				return;
-			}
-
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 
@@ -53,7 +48,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 					var held = Clock.Time - _startTime;
 					if (held >= Data.Duration.ValueOr(0.5f))
 					{
-						FireInput(TriggerContext.New(b =>
+						NotifyListeners(TriggerContext.New(b =>
 						{
 							b["position"] = position;
 							b["hold_duration"] = (float)held;

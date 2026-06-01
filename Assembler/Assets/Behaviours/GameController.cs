@@ -1,4 +1,3 @@
-using Assembler.Behaviours.Triggers.Input;
 using UnityEngine;
 
 namespace Assembler.Behaviours
@@ -19,8 +18,5 @@ namespace Assembler.Behaviours
 			UnityEngine.Debug.Log("Game Over");
 			Destroy(gameObject);
 		}
-
-		// Clear record/replay state when the game tears down so it never leaks into the next build/run.
-		private void OnDestroy() => InputBoundary.Reset();
 	}
 }

@@ -72,6 +72,11 @@ namespace Assembler.Building
 				needsClock.Clock = ctx.Clock;
 			}
 
+			if (behaviour is INeedsInputBoundary needsInputBoundary)
+			{
+				needsInputBoundary.InputBoundary = ctx.InputBoundary;
+			}
+
 			return (behaviour, initialise);
 		}
 
