@@ -1,3 +1,4 @@
+using Assembler.Building.Replay;
 using Assembler.Input;
 
 namespace Assembler.Building
@@ -26,17 +27,25 @@ namespace Assembler.Building
 	}
 
 	/// <summary>
-	/// Optional configuration for a build, threading determinism controls (seed, clock mode, replay) through
+	/// Optional configuration for a build, threading determinism controls (seed, clock mode, record/replay) through
 	/// <see cref="Builder.Build(Assembler.Parsing.Info.GameInfo, Assembler.Parsing.Controls.ControlsInfo, BuildOptions)"/>.
-	/// <see cref="Default"/> reproduces the original realtime, unseeded, no-replay behaviour. Extended by later
-	/// determinism phases (clock selection, record/replay wiring).
+	/// <see cref="Default"/> reproduces the original realtime, unseeded, no-replay behaviour.
 	/// </summary>
+	/// <remarks>
+	/// In <see cref="ReplayMode.Record"/> mode, supply a <see cref="Recorder"/> to capture into; the builder
+	/// initialises and wires it, and you call <c>Recorder.Build()</c> afterwards. In <see cref="ReplayMode.Replay"/>
+	/// mode, supply a <see cref="Player"/> built from the recorded session; the builder validates its descriptor hash
+	/// and forces the clock/seed to match the recording. Record/replay is only meaningful via the YAML-path build
+	/// entry (which can compute the descriptor hash).
+	/// </remarks>
 	public sealed record BuildOptions(
 		InputPlatform? OverridePlatform = null,
 		uint? RandomSeed = null,
 		ClockMode Clock = ClockMode.Realtime,
 		float FixedDeltaTime = 1f / 60f,
-		ReplayMode Replay = ReplayMode.Off)
+		ReplayMode Replay = ReplayMode.Off,
+		ReplayRecorder? Recorder = null,
+		ReplayPlayer? Player = null)
 	{
 		public static readonly BuildOptions Default = new();
 	}

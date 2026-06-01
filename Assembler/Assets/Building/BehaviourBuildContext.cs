@@ -1,4 +1,5 @@
 using Assembler.Behaviours.Spawners;
+using Assembler.Behaviours.Triggers.Input;
 using Assembler.Parsing.Controls;
 using Assembler.Resolving;
 using UnityEngine.InputSystem;
@@ -12,5 +13,6 @@ namespace Assembler.Building
 		ExclusiveGroupRegistry ExclusiveGroups,
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,
-		IGameClock Clock);
+		IGameClock Clock,
+		InputBoundary InputBoundary);
 }

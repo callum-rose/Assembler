@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
+using Assembler.Behaviours.Triggers.Input;
 using Assembler.Extensions;
 using Assembler.Parsing.Controls;
 using Assembler.Parsing;
@@ -30,6 +31,7 @@ namespace Assembler.Building
 		private readonly Transform _root;
 		private readonly ControlsInfo _controls;
 		private readonly InputActionAsset _controlsAsset;
+		private readonly InputBoundary _inputBoundary;
 
 		private int _spawnCounter;
 
@@ -44,7 +46,8 @@ namespace Assembler.Building
 			TransformContext parseContext,
 			Transform root,
 			ControlsInfo controls,
-			InputActionAsset controlsAsset)
+			InputActionAsset controlsAsset,
+			InputBoundary inputBoundary)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -58,6 +61,7 @@ namespace Assembler.Building
 			_root = root;
 			_controls = controls;
 			_controlsAsset = controlsAsset;
+			_inputBoundary = inputBoundary;
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
@@ -97,7 +101,8 @@ namespace Assembler.Building
 				_exclusiveGroups,
 				_controls,
 				_controlsAsset,
-				_clock);
+				_clock,
+				_inputBoundary);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

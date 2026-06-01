@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.Triggers.Input;
+using Assembler.Building.Replay;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
@@ -20,13 +22,21 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static void Build(string yamlPath, InputPlatform? overridePlatform = null)
+		public static void Build(string yamlPath, InputPlatform? overridePlatform = null) =>
+			Build(yamlPath, new BuildOptions(OverridePlatform: overridePlatform));
+
+		/// <summary>
+		/// Builds from a YAML descriptor on disk. This is the only entry that supports record/replay, since it can
+		/// compute the descriptor hash from the raw YAML text (see Determinism (Level 1) in CLAUDE.md).
+		/// </summary>
+		public static void Build(string yamlPath, BuildOptions options)
 		{
 			var yaml = File.ReadAllText(yamlPath);
+			var descriptorHash = DescriptorHash.Compute(yaml);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			Build(gameInfo, controls, overridePlatform);
+			Build(gameInfo, controls, options, descriptorHash);
 		}
 
 		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, BuildOptions.Default);
@@ -34,8 +44,36 @@ namespace Assembler.Building
 		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform) =>
 			Build(gameInfo, controls, new BuildOptions(OverridePlatform: overridePlatform));
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options)
+		public static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options) =>
+			Build(gameInfo, controls, options, descriptorHash: null);
+
+		private static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options, string? descriptorHash)
 		{
+			// The input record/replay seam for this run. Created per build and injected into every input trigger,
+			// so there is no shared static state to leak between runs.
+			var inputBoundary = new InputBoundary();
+
+			// Record/replay needs the descriptor hash, which only the YAML-path entry can compute.
+			if (options.Replay != ReplayMode.Off && descriptorHash == null)
+			{
+				throw new InvalidOperationException(
+					"Record/replay is only supported via the YAML-path build entry (it needs the descriptor hash).");
+			}
+
+			// Replay forces the deterministic config captured in the recording: fixed clock, recorded delta and seed.
+			if (options.Replay == ReplayMode.Replay)
+			{
+				var recorded = (options.Player ?? throw new InvalidOperationException(
+					"Replay mode requires a Player built from a recorded session.")).Replay;
+
+				options = options with
+				{
+					Clock = ClockMode.FixedStep,
+					FixedDeltaTime = recorded.FixedDeltaTime,
+					RandomSeed = recorded.Seed
+				};
+			}
+
 			// Seed the per-run PRNG before any runtime randomness is drawn (first draws happen in
 			// initialisations.ExecuteAll). Defaulting to TickCount preserves unseeded variety while letting a
 			// caller pin the seed for deterministic replay. See Determinism (Level 1) in CLAUDE.md.
@@ -116,7 +154,8 @@ namespace Assembler.Building
 				gameInfo.ParseContext,
 				gameRoot.transform,
 				controls,
-				controlsAsset);
+				controlsAsset,
+				inputBoundary);
 
 			var initialisations = new InitialisationQueue();
 
@@ -133,6 +172,33 @@ namespace Assembler.Building
 
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
+
+			// 5b. Wire record/replay at the input boundary now the behaviour graph is fully registered.
+			switch (options.Replay)
+			{
+				case ReplayMode.Record:
+				{
+					var recorder = options.Recorder ?? throw new InvalidOperationException(
+						"Record mode requires a Recorder to capture into.");
+					recorder.Initialise(gameClock, descriptorHash!, seed, options.FixedDeltaTime, platform);
+					inputBoundary.Sink = recorder;
+					break;
+				}
+				case ReplayMode.Replay:
+				{
+					var player = options.Player!; // Non-null: validated above.
+					if (player.Replay.DescriptorHash != descriptorHash)
+					{
+						throw new InvalidOperationException(
+							"Replay descriptor hash does not match the built descriptor — the descriptor has changed since recording.");
+					}
+
+					player.Initialise(gameClock, behaviourRegistry);
+					inputBoundary.BeginReplay(player);
+					gameRoot.AddComponent<ReplayDriver>().Player = player;
+					break;
+				}
+			}
 
 #if DEBUG_CONSOLE
 			// 6. Attach the framework-level debug overlay (stripped entirely in non-DEBUG_CONSOLE builds).
