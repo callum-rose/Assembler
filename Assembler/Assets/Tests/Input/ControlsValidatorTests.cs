@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Assembler.Input;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;

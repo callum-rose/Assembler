@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using Assembler.Deserialisation.Dtos;
-using Assembler.Parsing;
 using Assembler.Parsing.Info.Behaviours;
 
-namespace Assembler.Input
+namespace Assembler.Parsing.Controls
 {
 	/// <summary>
 	/// Converts the raw <see cref="ControlsDto"/> (deserialised from the descriptor's <c>Controls</c> section)

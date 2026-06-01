@@ -1,6 +1,6 @@
 using Assembler.Parsing.Info.Behaviours;
 
-namespace Assembler.Input
+namespace Assembler.Parsing.Controls
 {
 	/// <summary>
 	/// A single abstract input action declared under <c>Controls.Actions</c>. Carries only its semantic shape

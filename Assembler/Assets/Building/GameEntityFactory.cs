@@ -4,7 +4,7 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
-using Assembler.Input;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;

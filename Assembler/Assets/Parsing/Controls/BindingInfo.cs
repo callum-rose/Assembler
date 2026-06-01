@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.Input
+namespace Assembler.Parsing.Controls
 {
 	/// <summary>
 	/// One physical-input binding for an action on a particular platform. Either a plain Input System control

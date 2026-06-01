@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.Input
+namespace Assembler.Parsing.Controls
 {
 	/// <summary>
 	/// The parsed, validated <c>Controls</c> section: the named abstract <see cref="ActionInfo"/>s a game uses,

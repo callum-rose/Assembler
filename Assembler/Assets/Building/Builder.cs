@@ -7,6 +7,7 @@ using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
 using Assembler.Parsing;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;

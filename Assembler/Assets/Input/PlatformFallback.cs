@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Parsing.Controls;
 
 namespace Assembler.Input
 {
@@ -28,7 +29,7 @@ namespace Assembler.Input
 		public static string ResolveGroup(InputPlatform platform, ControlsInfo controls)
 		{
 			var chain = Chain(platform);
-			return chain.FirstOrDefault(controls.Bindings.ContainsKey) ?? chain[chain.Count - 1];
+			return chain.FirstOrDefault(controls.Bindings.ContainsKey) ?? chain[^1];
 		}
 	}
 }

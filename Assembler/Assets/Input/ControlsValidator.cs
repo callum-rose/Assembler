@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
+using Assembler.Parsing.Controls;
 
 namespace Assembler.Input
 {

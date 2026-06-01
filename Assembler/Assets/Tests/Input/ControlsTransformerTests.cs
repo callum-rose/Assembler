@@ -1,5 +1,5 @@
 using Assembler.Deserialisation;
-using Assembler.Input;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 
