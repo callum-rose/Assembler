@@ -18,7 +18,7 @@ This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5
 
 - **Run game**: Unity Editor menu `Test > Build` (invokes `Builder.TestBuild()` which loads `Assets/GameDescriptors/Pong.yaml`)
 - **Run tests**: Window > General > Test Runner (NUnit). Test assemblies live in `Assets/Tests/` per area (`Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`).
-- **Generate behaviour/library docs**: run `Tools/generate-docs.sh` to regenerate both `Assets/docs/Behaviours.md` and `Assets/docs/Libraries.md` headlessly (boots Unity in batch mode and invokes the same code as the editor menus — no UI needed, so Claude can run and verify it). The in-editor menu items `Assembler > Generate Behaviour Docs` / `Generate Library Docs` still work too.
+- **Generate behaviour/library docs**: run `Tools/generate-docs.sh` to regenerate both `Assets/docs/Behaviours.md` and `Assets/docs/Libraries.md` headlessly (boots Unity in batch mode and invokes the same code as the editor menus — no UI needed, so Claude can run and verify it). The in-editor menu items `Assembler > Generate Behaviour Docs` / `Generate Library Docs` still work too. This runs fine **concurrently with an editor open on a different path** (e.g. your main checkout), so a branch's docs can be generated in its worktree without checking the branch out — the script refuses only if an editor already has *this* path open. The first run in a fresh worktree does a one-time cold import (~3 min); pass `SEED_LIBRARY=1` to instead clone the main worktree's `Library/` first (only faster when the editor is idle — see the script header).
 
 ## Architecture
 
