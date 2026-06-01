@@ -6,6 +6,7 @@ using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Tests.Behaviours
 {
@@ -41,7 +42,7 @@ namespace Tests.Behaviours
 
 				// Null InputAction: the notify path under test takes the Vector2 directly, so no device is needed.
 				trigger.Initialise(
-					new InputActionTriggerData("aim", "aim", ActionKind.Value, ButtonPhase.Hold, null),
+					new InputActionTriggerData("aim", "aim", ActionKind.Value, ButtonPhase.Hold, new InputAction()),
 					new List<Listener> { listener });
 
 				trigger.Emit(new Vector2(0.5f, -0.25f));

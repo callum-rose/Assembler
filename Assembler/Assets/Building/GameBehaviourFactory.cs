@@ -280,7 +280,7 @@ namespace Assembler.Building
 							$"Input action '{actionName}' referenced by behaviour '{i.Id}' is not declared in Controls.");
 					}
 
-					var liveAction = ctx.ControlsAsset?.FindAction(actionName)
+					var liveAction = ctx.ControlsAsset.FindAction(actionName)
 						?? throw new ArgumentException(
 							$"No InputAction '{actionName}' was built for behaviour '{i.Id}'.");
 

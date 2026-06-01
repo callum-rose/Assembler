@@ -14,9 +14,9 @@ namespace Assembler.Resolving.Behaviours
 		public string ActionName { get; }
 		public ActionKind Kind { get; }
 		public ButtonPhase Phase { get; }
-		public InputAction? Action { get; }
+		public InputAction Action { get; }
 
-		public InputActionTriggerData(string id, string actionName, ActionKind kind, ButtonPhase phase, InputAction? action)
+		public InputActionTriggerData(string id, string actionName, ActionKind kind, ButtonPhase phase, InputAction action)
 			: base(id)
 		{
 			ActionName = actionName;

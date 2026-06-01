@@ -1,3 +1,4 @@
+using System;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
@@ -22,27 +23,17 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// </remarks>
 	public class InputActionTrigger : InputTrigger<InputActionTriggerData>
 	{
-		private bool _wired;
-
-		// OnEnable runs on AddComponent (before Initialise sets Data), so the real wiring is deferred to here and
-		// re-run by OnEnable only once Data exists.
 		protected override void OnInitialise(InputActionTriggerData data)
 		{
-			if (isActiveAndEnabled)
-			{
-				Wire();
-			}
+			Wire();
 		}
 
 		private void OnEnable()
 		{
-			if (Data != null)
-			{
-				Wire();
-			}
+			// Here to show enabled checkbox
 		}
 
-		private void OnDisable()
+		private void OnDestroy()
 		{
 			Unwire();
 		}
@@ -51,64 +42,54 @@ namespace Assembler.Behaviours.Triggers.Input
 		{
 			var action = Data.Action;
 
-			if (action == null || _wired)
+			action.Enable();
+
+			if (Data.Kind is not ActionKind.Button)
 			{
 				return;
 			}
 
-			action.Enable();
-
-			if (Data.Kind == ActionKind.Button)
+			switch (Data.Phase)
 			{
-				switch (Data.Phase)
-				{
-					case ButtonPhase.Down:
-						action.started += OnButtonEvent;
-						break;
-					case ButtonPhase.Up:
-						action.canceled += OnButtonEvent;
-						break;
-				}
+				case ButtonPhase.Down:
+					action.started += OnButtonEvent;
+					break;
+				case ButtonPhase.Up:
+					action.canceled += OnButtonEvent;
+					break;
 			}
-
-			_wired = true;
 		}
 
 		private void Unwire()
 		{
-			var action = Data?.Action;
-
-			if (action == null || !_wired)
-			{
-				return;
-			}
+			var action = Data.Action;
 
 			action.started -= OnButtonEvent;
 			action.canceled -= OnButtonEvent;
+			
 			action.Disable();
-
-			_wired = false;
 		}
 
-		private void OnButtonEvent(InputAction.CallbackContext _) => NotifyListeners(TriggerContext.Empty);
+		private void OnButtonEvent(InputAction.CallbackContext _)
+		{
+			if (isActiveAndEnabled)
+			{
+				NotifyListeners(TriggerContext.Empty);
+			}
+		}
 
 		private void Update()
 		{
-			var action = Data?.Action;
+			var action = Data.Action;
 
-			if (action == null)
-			{
-				return;
-			}
-
-			if (Data.Kind == ActionKind.Value)
+			if (Data.Kind is ActionKind.Value)
 			{
 				Emit(action.ReadValue<Vector2>());
 				return;
 			}
 
 			// Button + hold: fire every frame the control is pressed (≡ KeyHoldTrigger). Down/up are event-driven.
-			if (Data.Phase == ButtonPhase.Hold && action.IsPressed())
+			if (Data.Phase is ButtonPhase.Hold && action.IsPressed())
 			{
 				NotifyListeners(TriggerContext.Empty);
 			}
