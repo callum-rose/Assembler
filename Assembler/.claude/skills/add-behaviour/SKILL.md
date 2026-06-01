@@ -509,3 +509,16 @@ menu item (first run on a fresh worktree imports the project and is slow; later 
 read your new behaviour's section in `Assets/docs/Behaviours.md` and the `## Doc-gen warnings` section
 at the bottom — fix any warning that names your behaviour (a missing/extra `Properties:` entry, or a
 wrong MonoBehaviour mapping). The in-editor menu item still works if you'd rather run it there.
+
+Then run the tests headlessly to confirm the new behaviour compiles and nothing regressed:
+
+```bash
+Tools/run-tests.sh                 # all EditMode suites
+Tools/run-tests.sh Tests.Behaviours  # or scope to one assembly to iterate faster
+```
+
+It boots Unity in batch mode and runs the same tests as Window > General > Test Runner (via
+`Editor.TestBatch.RunEditModeTests`), prints a pass/fail summary, and exits non-zero on failure
+(first run on a fresh worktree imports the project and is slow; later runs are fast). A compile error
+in any of your five files surfaces here. If you add a test for the behaviour, put it under
+`Assets/Tests/Behaviours/` and re-run.
