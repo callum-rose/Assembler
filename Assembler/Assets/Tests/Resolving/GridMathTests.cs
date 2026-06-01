@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Assembler.Compiler.Compiler;
+using Assembler.Libraries;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;

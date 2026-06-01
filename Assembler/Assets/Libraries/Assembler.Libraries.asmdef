@@ -1,12 +1,7 @@
 {
-    "name": "Assembler.Resolving",
+    "name": "Assembler.Libraries",
     "rootNamespace": "Assembler",
-    "references": [
-        "Assembler.Compiler",
-        "Assembler.Parsing",
-        "Assembler.Extensions",
-        "Assembler.Libraries"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

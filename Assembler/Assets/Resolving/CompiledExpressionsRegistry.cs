@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Assembler.Compiler.Compiler;
 using Assembler.Extensions;
+using Assembler.Libraries;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Resolving

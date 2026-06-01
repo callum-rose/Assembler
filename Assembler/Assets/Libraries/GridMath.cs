@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Assembler.Resolving
+namespace Assembler.Libraries
 {
 	// First-class grid/tilemap helpers for grid-based games. Registered globally
 	// in CompiledExpressionsRegistry so every descriptor expression can call these
