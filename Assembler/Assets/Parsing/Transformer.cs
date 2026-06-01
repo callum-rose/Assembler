@@ -41,6 +41,8 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
+			var localization = CreateLocalizationInfo(gameDto.Localization);
+
 			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
 			var allValues = (gameDto.Constants ?? new Dictionary<string, object>())
@@ -81,6 +83,7 @@ namespace Assembler.Parsing
 				world,
 				physics,
 				assets,
+				localization,
 				values,
 				expressions,
 				templates,
@@ -327,6 +330,25 @@ namespace Assembler.Parsing
 					CreateValueSource<object>(ctx, item)).ToArray()
 				: Array.Empty<IValueSourceArg>();
 
+		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
+		{
+			if (textRef.Arguments.Count == 0)
+			{
+				return Array.Empty<IValueSourceArg>();
+			}
+
+			var args = new IValueSourceArg[textRef.Arguments.Count];
+
+			for (int i = 0; i < textRef.Arguments.Count; i++)
+			{
+				// !text placeholders have no declared types — each argument is boxed to object and
+				// stringified by string.Format at runtime, so every argument resolves as object.
+				args[i] = CreateValueSource<object>(ctx, textRef.Arguments[i]);
+			}
+
+			return args;
+		}
+
 		private static IReadOnlyList<IValueSourceArg> BuildExpressionArguments(TransformContext ctx, ExprRef exprRef)
 		{
 			if (exprRef.Arguments.Count == 0)
@@ -409,6 +431,10 @@ namespace Assembler.Parsing
 				ClockRef clockRef => throw new ParsingException(
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
+				TextRef textRef when typeof(T) == typeof(string) || typeof(T) == typeof(object) =>
+					new LocalizedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
+				TextRef textRef => throw new ParsingException(
+					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
 					BuildExpressionArguments(ctx, exprRef)),
@@ -598,6 +624,23 @@ namespace Assembler.Parsing
 			return result;
 		}
 
+		private static LocalizationInfo CreateLocalizationInfo(LocalizationDto? dto)
+		{
+			if (dto?.Locales == null || dto.Locales.Count == 0)
+			{
+				return LocalizationInfo.Empty;
+			}
+
+			var locales = new Dictionary<string, IReadOnlyDictionary<string, string>>(dto.Locales.Count);
+
+			foreach (var kvp in dto.Locales)
+			{
+				locales[kvp.Key] = new Dictionary<string, string>(kvp.Value);
+			}
+
+			return new LocalizationInfo(dto.DefaultLocale ?? string.Empty, locales);
+		}
+
 		private static AssemblerValue ToAssemblerValue(object? raw) =>
 			raw switch
 			{
@@ -615,6 +658,8 @@ namespace Assembler.Parsing
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
 				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,
+					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+				TextRefDto v => new TextRef(v.Key ?? string.Empty,
 					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
 				ColourDto v => new ColourValue(ToAssemblerValue(v.R),

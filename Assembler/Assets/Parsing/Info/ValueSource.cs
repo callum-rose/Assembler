@@ -68,4 +68,18 @@ namespace Assembler.Parsing.Info
 
 	/// <summary>A value sourced from the injected game clock (resolved each frame). See <c>!clock</c>.</summary>
 	public sealed record ClockValueSource<T>(ClockProperty Property) : ValueSource<T>;
+
+	/// <summary>
+	/// A localized string sourced from the string table via a <c>!text</c> key. <see cref="Arguments"/>
+	/// fill the localized template's <c>string.Format</c> placeholders (<c>{0}</c>, <c>{1}</c>, …) at
+	/// runtime. Mirrors <see cref="ExpressionSource{T}"/> in owning an id plus a runtime argument list.
+	/// </summary>
+	public sealed record LocalizedTextSource<T>(
+		string Key,
+		IReadOnlyList<IValueSourceArg> Arguments) : ValueSource<T>
+	{
+		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
+			new LocalizedTextSource<T>(Key,
+				Arguments.Select(a => a.SubstituteParameters(ctx)).ToArray());
+	}
 }

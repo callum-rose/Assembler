@@ -32,6 +32,7 @@ namespace Tests.Input
 				new WorldInfo(2, Color.black),
 				new PhysicsInfo(Vector3.zero),
 				Array.Empty<AssetInfo>(),
+				LocalizationInfo.Empty,
 				Array.Empty<ValueInfo>(),
 				Array.Empty<ExpressionInfo>(),
 				Array.Empty<EntityInfo>(),

@@ -1,0 +1,101 @@
+Game:
+  Title: Localization Demo
+  Description: |
+    Demonstrates the `!text` localization layer.
+
+    Every user-facing string in this descriptor is a `!text` key resolved against
+    the top-level `Localization:` table — no inline literals. Press Space to bump
+    the score; the HUD label uses the mapping form `!text { Key, Arguments }` so the
+    localized template "Score: {0}" is filled with the live `score` variable. The
+    instructions line uses the scalar form. One label intentionally references a key
+    that does not exist, to show the visible `#missing.key#` miss marker rather than
+    a crash. Press Q to quit (fires `!gameover`).
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+  score step: 1
+
+Variables:
+  score: 0
+
+Expressions:
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
+
+Localization:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.instructions: "Press Space to score, Q to quit"
+      hud.score: "Score: {0}"
+      hud.missing_demo: "This label references a missing key:"
+
+Entities:
+  controller:
+    Behaviours:
+      score key:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - EntityId: controller
+            BehaviourId: bump score
+      bump score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: int add
+            Arguments:
+              - !var score
+              - !var score step
+
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  hud:
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Text: !text hud.instructions
+          FontSize: 18
+          Rect: { Anchor: top-left, X: 20, Y: 20, Width: 640, Height: 40 }
+
+      score label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.score, Arguments: [ !var score ] }
+          FontSize: 24
+          Rect: { Anchor: top-left, X: 20, Y: 60, Width: 640, Height: 40 }
+
+      # Intentionally references an undefined key to demonstrate the #key# miss marker.
+      missing demo:
+        Type: text label
+        Properties:
+          Text: !text hud.does_not_exist
+          FontSize: 14
+          Rect: { Anchor: top-left, X: 20, Y: 100, Width: 640, Height: 40 }
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

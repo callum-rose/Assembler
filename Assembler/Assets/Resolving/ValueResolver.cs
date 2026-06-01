@@ -17,10 +17,28 @@ namespace Assembler.Resolving
 				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPositionProvider(ctx.EntityTransforms.Get(ep.EntityId)),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
+				LocalizedTextSource<T> text when typeof(T) == typeof(string) || typeof(T) == typeof(object) =>
+					BuildLocalizedTextProvider(text, ctx),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
 				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
 			};
+		}
+
+		private static LocalizedTextProvider<T> BuildLocalizedTextProvider<T>(
+			LocalizedTextSource<T> source,
+			ResolutionContext ctx)
+		{
+			var resolver = new ArgResolver(ctx);
+
+			var argProviders = new IValueProvider[source.Arguments.Count];
+
+			for (int i = 0; i < source.Arguments.Count; i++)
+			{
+				argProviders[i] = (IValueProvider)source.Arguments[i].Resolve(resolver);
+			}
+
+			return new LocalizedTextProvider<T>(ctx.Strings, source.Key, argProviders);
 		}
 
 		private static Func<TriggerContext, TReturn> BuildExpressionContainer<TReturn>(

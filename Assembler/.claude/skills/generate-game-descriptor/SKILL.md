@@ -54,6 +54,7 @@ Variables:           # runtime mutable named values
 Expressions:         # named code snippets, called from !expr
 Templates:           # reusable entity blueprints
 Entities:            # the actual entities in the scene
+Localization:        # per-locale string table; referenced via !text
 GameOverCondition:   # boolean !expr; game ends when true
 ```
 
@@ -162,8 +163,48 @@ as shown.
 | `!expr` | `!expr { ExpressionId: …, Arguments: [ … ] }` | Calls a named expression from the `Expressions:` section. |
 | `!output` | `!output local_name` | Reads a trigger output that was bound by an upstream listener (see **Trigger outputs**). |
 | `!clock` | `!clock deltaTime` | Reads a property of the game clock (`deltaTime`, `time`, `frameCount`, `unscaledDeltaTime`) as a number. Respects pause / slow-mo (`set timescale`): `deltaTime` is 0 while paused. Use it to pass the frame delta into per-frame `!expr` physics, e.g. `IntegratePosition(pos, vel, dt)` with `dt` supplied as `!clock deltaTime`. |
+| `!text` | `!text menu.start` or `!text { Key: hud.score, Arguments: [ !var score ] }` | Resolves a localization key to a string from the `Localization:` table. Use the scalar form for static text and the mapping form for text with runtime values — the localized template owns the `{0}`/`{1}` placeholders that the arguments fill. **Always use `!text` for user-facing strings instead of inline literals** (see **Localization**). |
 
 Lists of values can use either flow `[ a, b ]` or block `- a` syntax — both work.
+
+---
+
+## Localization — user-facing text
+
+**All user-facing strings must go through the localization layer, never inline literals.** This is
+cheap to do up front and miserable to retrofit. Whenever you author text a player will read (HUD
+labels, instructions, button captions, titles), emit a `!text` key and add the string to the
+`Localization:` table — do **not** write the literal directly into a property or build it with a
+string-concatenation `!expr`.
+
+The `Localization:` block is a per-locale string table:
+
+```yaml
+Localization:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.score: "Score: {0}"
+      hud.lives: "Lives: {0}"
+      menu.start: "Press Space to start"
+```
+
+Reference keys with `!text`:
+
+```yaml
+# Static text — scalar form:
+Text: !text menu.start
+
+# Dynamic text — mapping form; arguments fill the template's {0}, {1}, … placeholders:
+Text: !text { Key: hud.score, Arguments: [ !var score ] }
+```
+
+Notes:
+- Placeholders use `string.Format` indices (`{0}`, `{1}`); escape literal braces as `{{`/`}}`.
+- The template owns word order, so translators can reorder placeholders — prefer the mapping form
+  over a format `!expr` for dynamic HUD text.
+- A missing key renders as a visible `#key#` marker rather than crashing, so gaps are obvious.
+- Only `en` need be authored for now; the layer falls back to the default locale.
 
 ---
 
@@ -442,6 +483,9 @@ When giving feedback, be concrete:
 > "There's no `text variable setter` in the catalogue, so the HUD label has to be rebuilt every
 > frame via a format expression. Consider adding `string variable setter` for direct text writes, or
 > a `format and set` behaviour for the common case."
+
+For HUD text with runtime values, prefer a `!text { Key, Arguments }` (the localized template owns the
+placeholders) over a string-concatenation format `!expr` — see **Localization**.
 
 Don't gold-plate — only raise it if it actually bites the current task or would clearly bite the
 next similar one.
