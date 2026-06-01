@@ -1,0 +1,19 @@
+{
+    "name": "Assembler.Input",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.Deserialisation",
+        "Assembler.Parsing",
+        "Assembler.Extensions",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

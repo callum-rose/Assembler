@@ -278,6 +278,23 @@ Fires every frame with the current value(s) of one or two Unity input axes (1D o
 | x | float | Current XAxis value. |
 | y | float | Current YAxis value, or 0 when YAxis is unset. |
 
+## `input action`
+Relays an abstract input action (declared in the descriptor's Controls section and bound to a physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis trigger, emitting axis/x/y every frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Action | string | Name of the abstract action to listen for (must be declared under Controls.Actions). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| axis | Vector2 | For value actions, the current (x, y) value of the action each frame. |
+| x | float | For value actions, the current x component. |
+| y | float | For value actions, the current y component. |
+
 ## `gamepad button trigger`
 Fires on a gamepad / joystick button event (press, release, or hold).
 

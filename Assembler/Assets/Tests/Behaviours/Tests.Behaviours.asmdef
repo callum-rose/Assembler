@@ -6,7 +6,9 @@
         "Assembler.Resolving",
         "Assembler.Time",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Assembler.Parsing",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

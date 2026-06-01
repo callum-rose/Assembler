@@ -11,7 +11,8 @@
         "Assembler.Building",
         "Assembler.Behaviours",
         "Assembler.Libraries",
-        "Assembler.Core"
+        "Assembler.Core",
+        "Assembler.Input"
     ],
     "includePlatforms": [
         "Editor"

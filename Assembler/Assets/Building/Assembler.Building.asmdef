@@ -13,6 +13,8 @@
         "Assembler.Parsing",
         "Assembler.Deserialisation",
         "Assembler.Resolving",
+        "Unity.InputSystem",
+        "Assembler.Input",
         "Assembler.Time"
     ],
     "includePlatforms": [],

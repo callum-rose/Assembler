@@ -4,11 +4,13 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using Assembler.Time;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Assembler.Building
 {
@@ -26,6 +28,8 @@ namespace Assembler.Building
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
 		private readonly Transform _root;
+		private readonly ControlsInfo _controls;
+		private readonly InputActionAsset _controlsAsset;
 
 		private int _spawnCounter;
 
@@ -38,7 +42,9 @@ namespace Assembler.Building
 			IGameClock clock,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			TransformContext parseContext,
-			Transform root)
+			Transform root,
+			ControlsInfo controls,
+			InputActionAsset controlsAsset)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -50,6 +56,8 @@ namespace Assembler.Building
 			_templates = templates;
 			_parseContext = parseContext;
 			_root = root;
+			_controls = controls;
+			_controlsAsset = controlsAsset;
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
@@ -87,6 +95,8 @@ namespace Assembler.Building
 				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms, _clock),
 				this,
 				_exclusiveGroups,
+				_controls,
+				_controlsAsset,
 				_clock);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)

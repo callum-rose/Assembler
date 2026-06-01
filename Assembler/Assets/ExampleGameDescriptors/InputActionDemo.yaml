@@ -1,0 +1,190 @@
+Game:
+  Title: Input Action Demo
+  Description: |
+    Shows off the semantic input-action layer: gameplay is wired to named
+    abstract ACTIONS, and the physical inputs that drive them are declared
+    separately per platform in the `Controls` section. Author the game once;
+    it plays on keyboard or gamepad with no change to the entities.
+
+    Steer the green cube to the gold goal. Two actions demonstrate the layer:
+
+      - `move`  — a VALUE (vector2) action. It emits axis/x/y every frame
+                  (exactly like the old `axis trigger`), so the same listener
+                  drives smooth analogue movement whether the value comes from
+                  a keyboard 2DVector composite or a gamepad stick.
+      - `quit`  — a BUTTON action on its `down` phase (≡ the old key-down
+                  trigger). Fires `!gameover` to give up.
+
+    The `input action` trigger is a 1:1 drop-in for the old `key hold/down`
+    triggers — note the `Listeners:` still live on the behaviour, in the usual
+    place. Only the `Controls` block knows about physical inputs; swapping
+    keyboard for gamepad is a binding change, not a gameplay change.
+
+    To make the platform switch easy to feel without a controller, this demo
+    SIMULATES two platforms on the keyboard: the `desktop` scheme drives the
+    game with WASD (quit: Esc/Q), while the `gamepad` scheme uses the ARROW
+    KEYS (quit: Backspace). Pick the platform in the Game Launcher's Platform
+    dropdown (Desktop vs Gamepad) and watch which keys move the cube change —
+    the entities are identical, only the active binding group differs.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  goal colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  goal size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+
+  # Per-frame step applied to the analogue move vector. The value action fires
+  # every frame, so this is the player's top speed in units/frame. Kept low so
+  # the cube glides rather than darts across the small play area.
+  move step: 0.05
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+# Abstract actions + the physical inputs that feed them, declared per platform.
+# Adding a console/touch scheme later is a new Bindings block — entities untouched.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # emits axis/x/y every frame
+    quit: { Type: button, Phase: down }          # fires once on press
+
+  Bindings:
+    # Two keyboard-only schemes so you can feel the platform switch without a
+    # controller: Desktop = WASD, Gamepad = arrow keys.
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      quit:
+        - "<Keyboard>/escape"
+        - "<Keyboard>/q"
+    gamepad:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+      quit:
+        - "<Keyboard>/backspace"
+
+Expressions:
+  # Turn the action's analogue x/y outputs into a per-frame displacement.
+  move vector:
+    ArgumentTypes: [ float, float, float ]
+    ArgumentNames: [ ax, ay, step ]
+    ReturnType: vector
+    Expression: "new UnityEngine.Vector3(ax * step, ay * step, 0f);"
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: -4, Y: -3, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+
+      # Trigger collider + rigidbody so the player generates trigger-enter
+      # events as it moves over the goal (same setup as GameOverDemo's player).
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- VALUE action: analogue movement, identical wiring on every platform. ---
+      move action:
+        Type: input action
+        Properties:
+          Action: move
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: translate
+        Properties:
+          # x/y come from the move action's TriggerContext; the expression scales
+          # them into this frame's displacement.
+          Displacement: !expr
+            ExpressionId: move vector
+            Arguments:
+              - !output x
+              - !output y
+              - !var move step
+
+      # --- BUTTON action (down phase): give up. ---
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+      # --- Objective: reaching the goal ends the game, event-driven. ---
+      reach goal:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ goal ]
+        Listeners:
+          - !gameover
+
+  goal:
+    Tags: [ goal ]
+    Position: !vec { X: 4, Y: 3, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var goal size
+          IsWire: false
+          Colour: !var goal colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var goal size
+          IsTrigger: true
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Label: ""
+          Text: "Reach the gold goal.   Desktop platform: WASD (quit Esc/Q).   Gamepad platform: Arrow keys (quit Backspace).   Switch via the Game Launcher Platform dropdown."
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 760
+            Height: 40
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

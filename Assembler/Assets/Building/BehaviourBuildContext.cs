@@ -1,5 +1,7 @@
 using Assembler.Behaviours.Spawners;
+using Assembler.Parsing.Controls;
 using Assembler.Resolving;
+using UnityEngine.InputSystem;
 using Assembler.Time;
 
 namespace Assembler.Building
@@ -8,5 +10,7 @@ namespace Assembler.Building
 		ResolutionContext Resolution,
 		IEntitySpawner Spawner,
 		ExclusiveGroupRegistry ExclusiveGroups,
+		ControlsInfo Controls,
+		InputActionAsset ControlsAsset,
 		IGameClock Clock);
 }

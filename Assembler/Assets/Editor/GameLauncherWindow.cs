@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Assembler.Building;
 using Assembler.Deserialisation;
+using Assembler.Input;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,9 +12,15 @@ namespace Editor
 	{
 		private const string DescriptorsFolder = "Assets/ExampleGameDescriptors";
 		private const string PendingLaunchKey = "GameLauncherWindow.PendingYamlPath";
+		private const string PendingPlatformKey = "GameLauncherWindow.PendingPlatform";
+
+		// Index 0 is "Auto" (let PlatformSelector decide); the rest map onto InputPlatform values + 1, so the
+		// editor can simulate a platform without deploying to a device.
+		private static readonly string[] PlatformOptions = { "Auto", "Desktop", "Gamepad", "Mobile", "Console" };
 
 		private List<GameEntry> _entries = new();
 		private int _selectedIndex = -1;
+		private int _platformIndex;
 		private Vector2 _listScroll;
 		private Vector2 _descriptionScroll;
 
@@ -139,28 +146,37 @@ namespace Editor
 
 				EditorGUILayout.Space();
 
+				_platformIndex = EditorGUILayout.Popup("Platform", _platformIndex, PlatformOptions);
+
+				EditorGUILayout.Space();
+
 				using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode && !EditorApplication.isPlaying))
 				{
 					if (GUILayout.Button("Play", GUILayout.Height(32)))
 					{
-						LaunchGame(entry.Path);
+						LaunchGame(entry.Path, _platformIndex);
 					}
 				}
 			}
 		}
 
-		private static void LaunchGame(string yamlPath)
+		private static void LaunchGame(string yamlPath, int platformIndex)
 		{
 			if (EditorApplication.isPlaying)
 			{
-				Builder.Build(yamlPath);
+				Builder.Build(yamlPath, PlatformOverride(platformIndex));
 			}
 			else
 			{
 				SessionState.SetString(PendingLaunchKey, yamlPath);
+				SessionState.SetInt(PendingPlatformKey, platformIndex);
 				EditorApplication.EnterPlaymode();
 			}
 		}
+
+		// Index 0 ("Auto") leaves selection to PlatformSelector; otherwise map onto the InputPlatform value.
+		private static InputPlatform? PlatformOverride(int platformIndex) =>
+			platformIndex <= 0 ? null : (InputPlatform)(platformIndex - 1);
 
 		[InitializeOnLoadMethod]
 		private static void Register()
@@ -175,11 +191,14 @@ namespace Editor
 			var pending = SessionState.GetString(PendingLaunchKey, "");
 			if (string.IsNullOrEmpty(pending)) return;
 
+			var platformIndex = SessionState.GetInt(PendingPlatformKey, 0);
+
 			SessionState.EraseString(PendingLaunchKey);
+			SessionState.EraseInt(PendingPlatformKey);
 
 			try
 			{
-				Builder.Build(pending);
+				Builder.Build(pending, PlatformOverride(platformIndex));
 			}
 			catch (System.Exception e)
 			{

@@ -274,6 +274,29 @@ namespace Assembler.Building
 						i.XAxis.Resolve(ctx.Resolution),
 						i.YAxis.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx) =>
+				{
+					var i = (InputActionTriggerInfo)info;
+					var b = go.AddComponent<InputActionTrigger>();
+
+					var actionName = i.Action.Resolve(ctx.Resolution).Get();
+
+					if (!ctx.Controls.Actions.TryGetValue(actionName, out var actionInfo))
+					{
+						throw new ArgumentException(
+							$"Input action '{actionName}' referenced by behaviour '{i.Id}' is not declared in Controls.");
+					}
+
+					var liveAction = ctx.ControlsAsset.FindAction(actionName)
+						?? throw new ArgumentException(
+							$"No InputAction '{actionName}' was built for behaviour '{i.Id}'.");
+
+					return (b, lr => b.Initialise(new InputActionTriggerData(i.Id,
+						actionName,
+						actionInfo.Kind,
+						actionInfo.Phase,
+						liveAction), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(GamepadButtonTriggerInfo)] = new(typeof(GamepadButtonTrigger), (go, info, ctx) =>
 				{
 					var i = (GamepadButtonTriggerInfo)info;

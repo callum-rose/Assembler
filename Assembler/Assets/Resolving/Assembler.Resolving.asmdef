@@ -6,6 +6,7 @@
         "Assembler.Parsing",
         "Assembler.Extensions",
         "Assembler.Libraries",
+        "Unity.InputSystem",
         "Assembler.Time"
     ],
     "includePlatforms": [],
