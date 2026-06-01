@@ -16,8 +16,13 @@ namespace Editor
 {
 	public static class BehaviourDocs
 	{
+		// DocGen/ is a persistent, non-volatile location written by Assets/Behaviours/csc.rsp's
+		// -doc flag. Unlike Temp/ (which Unity clears on batch-mode startup), it survives between
+		// runs, so headless doc generation finds the XML even when the assembly wasn't recompiled
+		// this session. Temp/ and ScriptAssemblies are kept as fallbacks for older layouts.
 		private readonly static string[] CandidateXmlPaths =
 		{
+			"DocGen/Assembler.Behaviours.xml",
 			"Temp/Assembler.Behaviours.xml",
 			"Library/ScriptAssemblies/Assembler.Behaviours.xml",
 		};
@@ -33,16 +38,25 @@ namespace Editor
 		{
 			try
 			{
-				const string outputPath = "Assets/docs/Behaviours.md";
-				Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-				File.WriteAllText(outputPath, GenerateMarkdown());
+				WriteDocs();
 				AssetDatabase.Refresh();
-				Debug.Log($"Wrote {outputPath}");
 			}
 			catch (Exception e)
 			{
 				Debug.LogError(e);
 			}
+		}
+
+		// Builds the markdown and writes it to disk, returning the output path. Shared by the
+		// menu item and the headless DocsBatch entry point. Does not call AssetDatabase.Refresh —
+		// callers decide whether/when to refresh.
+		internal static string WriteDocs()
+		{
+			const string outputPath = "Assets/docs/Behaviours.md";
+			Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+			File.WriteAllText(outputPath, GenerateMarkdown());
+			Debug.Log($"Wrote {outputPath}");
+			return outputPath;
 		}
 
 		private static string GenerateMarkdown()
@@ -144,7 +158,7 @@ namespace Editor
 						sb.AppendLine("|------|------|");
 						foreach (var prop in props)
 						{
-							sb.AppendLine($"| {prop.YamlName} | {RenderType(prop.Type)} |");
+							sb.AppendLine($"| {prop.YamlName} | {XmlDocs.RenderType(prop.Type)} |");
 						}
 						sb.AppendLine();
 					}
@@ -186,7 +200,7 @@ namespace Editor
 				var summary = member.Element("summary");
 				if (summary is not null)
 				{
-					return summary.Value;
+					return XmlDocs.Flatten(summary);
 				}
 			}
 
@@ -204,7 +218,7 @@ namespace Editor
 					continue;
 				}
 
-				var text = remarks.Value;
+				var text = XmlDocs.Flatten(remarks);
 				return ParseRemarksBlocks(text);
 			}
 

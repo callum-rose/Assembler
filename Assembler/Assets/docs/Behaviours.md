@@ -113,6 +113,15 @@ Moves the entity each frame by Velocity * deltaTime.
 |------|------|-------------|
 | Velocity | Vector3 | World-space velocity in units per second. |
 
+## `acceleration`
+Integrates Acceleration into an internal velocity each frame, then moves the entity by that velocity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Acceleration | Vector3 | World-space acceleration in units per second squared. |
+
 ## `translate`
 Adds Displacement to the entity's world position each time it Executes (e.g. via a trigger).
 
@@ -150,40 +159,40 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 | Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
 
 ## `move animation`
-Tweens the entity's world position from Start to End over Duration, then notifies listeners on completion.
+Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
-| End | Vector3 | Target value to tween towards. |
-| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
-| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `scale animation`
-Tweens the entity's local scale from Start to End over Duration, then notifies listeners on completion.
+Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
-| End | Vector3 | Target value to tween towards. |
-| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
-| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `rotate animation`
-Tweens the entity's euler-angle rotation from Start to End over Duration, then notifies listeners on completion.
+Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
-| End | Vector3 | Target value to tween towards. |
-| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
-| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `key hold trigger`
 Fires every frame while the named key is held down.
@@ -356,14 +365,14 @@ Fires once when the entity is first started.
 No properties.
 
 ## `interval trigger`
-Fires repeatedly at a fixed interval. Optionally limited to a number of repetitions.
+Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Interval | float | Seconds between fires. |
-| Count | int | Number of times to fire; 0 means fire forever. |
+| Interval | float | Seconds between fires. Re-read before each wait, so binding it to a variable that other |
+| Count | int | Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound |
 | AutoStart | bool | When true the timer starts on entity start; when false it waits for an Execute call from upstream. |
 
 ### Outputs
@@ -505,6 +514,15 @@ Forwards an upstream trigger to listeners only when Condition evaluates to true 
 |------|------|-------------|
 | Condition | bool | Boolean expression checked on each Execute call. |
 
+## `inverse condition gate`
+Forwards an upstream trigger to listeners only when Condition evaluates to false at that moment.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Condition | bool | Boolean expression checked on each Execute call; listeners fire when it is false. |
+
 ## `exclusive trigger`
 Forwards an upstream trigger to listeners only if no other trigger sharing the same Group has already fired this frame.
 
@@ -515,7 +533,7 @@ Forwards an upstream trigger to listeners only if no other trigger sharing the s
 | Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
 
 ## `vector variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
@@ -525,7 +543,7 @@ Writes Value into the variable referenced by VariableId when Executed.
 | Value | Vector3 | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `int variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes a int value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
@@ -535,7 +553,7 @@ Writes Value into the variable referenced by VariableId when Executed.
 | Value | int | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `float variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes a float value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
@@ -545,7 +563,7 @@ Writes Value into the variable referenced by VariableId when Executed.
 | Value | float | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `bool variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes a bool value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
@@ -555,7 +573,7 @@ Writes Value into the variable referenced by VariableId when Executed.
 | Value | bool | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `string variable setter`
-Writes Value into the variable referenced by VariableId when Executed.
+Writes a string value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
@@ -564,8 +582,18 @@ Writes Value into the variable referenced by VariableId when Executed.
 | VariableId | string | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
 | Value | string | Source value to assign. Can be a constant, expression, or another variable reference. |
 
+## `colour variable setter`
+Writes a Color value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Color | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | Color | Source value to assign. Can be a constant, expression, or another variable reference. |
+
 ## `vector list add`
-Appends Value to the end of List when Executed.
+Appends a Vector3 value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -575,7 +603,7 @@ Appends Value to the end of List when Executed.
 | Value | Vector3 | Item to append. |
 
 ## `vector list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a Vector3 value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -586,7 +614,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | Vector3 | Item to insert. |
 
 ## `vector list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the Vector3 item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -596,7 +624,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `vector list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a Vector3 value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -606,7 +634,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | Vector3 | Item to remove. |
 
 ## `vector list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the Vector3 item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -616,8 +644,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | Vector3 | New item. |
 
+## `vector list set`
+Replaces the entire contents of the target Vector3 list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Vector3> | Reference to the target list variable. |
+| Value | List<Vector3> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `vector list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another Vector3 list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -627,7 +665,7 @@ Appends every item from Other to List when Executed.
 | Other | List<Vector3> | List whose items will be appended to List. |
 
 ## `vector list clear`
-Removes all items from List when Executed.
+Removes all items from the target Vector3 list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -636,7 +674,7 @@ Removes all items from List when Executed.
 | List | List<Vector3> | Reference to the target list variable. |
 
 ## `vector list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a Vector3 list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -652,7 +690,7 @@ Iterates List synchronously when Executed, firing listeners once per element.
 | index | int | Zero-based position of the current element. |
 
 ## `int list add`
-Appends Value to the end of List when Executed.
+Appends a int value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -662,7 +700,7 @@ Appends Value to the end of List when Executed.
 | Value | int | Item to append. |
 
 ## `int list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a int value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -673,7 +711,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | int | Item to insert. |
 
 ## `int list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the int item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -683,7 +721,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `int list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a int value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -693,7 +731,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | int | Item to remove. |
 
 ## `int list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the int item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -703,8 +741,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | int | New item. |
 
+## `int list set`
+Replaces the entire contents of the target int list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<int> | Reference to the target list variable. |
+| Value | List<int> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `int list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another int list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -714,7 +762,7 @@ Appends every item from Other to List when Executed.
 | Other | List<int> | List whose items will be appended to List. |
 
 ## `int list clear`
-Removes all items from List when Executed.
+Removes all items from the target int list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -723,7 +771,7 @@ Removes all items from List when Executed.
 | List | List<int> | Reference to the target list variable. |
 
 ## `int list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a int list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -739,7 +787,7 @@ Iterates List synchronously when Executed, firing listeners once per element.
 | index | int | Zero-based position of the current element. |
 
 ## `float list add`
-Appends Value to the end of List when Executed.
+Appends a float value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -749,7 +797,7 @@ Appends Value to the end of List when Executed.
 | Value | float | Item to append. |
 
 ## `float list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a float value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -760,7 +808,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | float | Item to insert. |
 
 ## `float list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the float item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -770,7 +818,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `float list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a float value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -780,7 +828,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | float | Item to remove. |
 
 ## `float list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the float item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -790,8 +838,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | float | New item. |
 
+## `float list set`
+Replaces the entire contents of the target float list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<float> | Reference to the target list variable. |
+| Value | List<float> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `float list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another float list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -801,7 +859,7 @@ Appends every item from Other to List when Executed.
 | Other | List<float> | List whose items will be appended to List. |
 
 ## `float list clear`
-Removes all items from List when Executed.
+Removes all items from the target float list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -810,7 +868,7 @@ Removes all items from List when Executed.
 | List | List<float> | Reference to the target list variable. |
 
 ## `float list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a float list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -826,7 +884,7 @@ Iterates List synchronously when Executed, firing listeners once per element.
 | index | int | Zero-based position of the current element. |
 
 ## `bool list add`
-Appends Value to the end of List when Executed.
+Appends a bool value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -836,7 +894,7 @@ Appends Value to the end of List when Executed.
 | Value | bool | Item to append. |
 
 ## `bool list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a bool value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -847,7 +905,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | bool | Item to insert. |
 
 ## `bool list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the bool item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -857,7 +915,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `bool list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a bool value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -867,7 +925,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | bool | Item to remove. |
 
 ## `bool list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the bool item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -877,8 +935,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | bool | New item. |
 
+## `bool list set`
+Replaces the entire contents of the target bool list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<bool> | Reference to the target list variable. |
+| Value | List<bool> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `bool list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another bool list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -888,7 +956,7 @@ Appends every item from Other to List when Executed.
 | Other | List<bool> | List whose items will be appended to List. |
 
 ## `bool list clear`
-Removes all items from List when Executed.
+Removes all items from the target bool list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -897,7 +965,7 @@ Removes all items from List when Executed.
 | List | List<bool> | Reference to the target list variable. |
 
 ## `bool list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a bool list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -913,7 +981,7 @@ Iterates List synchronously when Executed, firing listeners once per element.
 | index | int | Zero-based position of the current element. |
 
 ## `string list add`
-Appends Value to the end of List when Executed.
+Appends a string value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -923,7 +991,7 @@ Appends Value to the end of List when Executed.
 | Value | string | Item to append. |
 
 ## `string list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a string value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -934,7 +1002,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | string | Item to insert. |
 
 ## `string list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the string item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -944,7 +1012,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `string list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a string value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -954,7 +1022,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | string | Item to remove. |
 
 ## `string list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the string item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -964,8 +1032,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | string | New item. |
 
+## `string list set`
+Replaces the entire contents of the target string list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<string> | Reference to the target list variable. |
+| Value | List<string> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `string list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another string list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -975,7 +1053,7 @@ Appends every item from Other to List when Executed.
 | Other | List<string> | List whose items will be appended to List. |
 
 ## `string list clear`
-Removes all items from List when Executed.
+Removes all items from the target string list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -984,7 +1062,7 @@ Removes all items from List when Executed.
 | List | List<string> | Reference to the target list variable. |
 
 ## `string list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a string list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -1000,7 +1078,7 @@ Iterates List synchronously when Executed, firing listeners once per element.
 | index | int | Zero-based position of the current element. |
 
 ## `colour list add`
-Appends Value to the end of List when Executed.
+Appends a Color value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
@@ -1010,7 +1088,7 @@ Appends Value to the end of List when Executed.
 | Value | Color | Item to append. |
 
 ## `colour list insert`
-Inserts Value into List at Index when Executed. No-op if Index is out of range.
+Inserts a Color value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
@@ -1021,7 +1099,7 @@ Inserts Value into List at Index when Executed. No-op if Index is out of range.
 | Value | Color | Item to insert. |
 
 ## `colour list remove at`
-Removes the item at Index from List when Executed. No-op if Index is out of range.
+Removes the Color item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
@@ -1031,7 +1109,7 @@ Removes the item at Index from List when Executed. No-op if Index is out of rang
 | Index | int | Zero-based position to remove from. |
 
 ## `colour list remove`
-Removes the first occurrence of Value from List when Executed. No-op if Value is not present.
+Removes the first occurrence of a Color value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
@@ -1041,7 +1119,7 @@ Removes the first occurrence of Value from List when Executed. No-op if Value is
 | Value | Color | Item to remove. |
 
 ## `colour list set at`
-Overwrites the item at Index in List with Value when Executed. No-op if Index is out of range.
+Overwrites the Color item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
@@ -1051,8 +1129,18 @@ Overwrites the item at Index in List with Value when Executed. No-op if Index is
 | Index | int | Zero-based position to overwrite. |
 | Value | Color | New item. |
 
+## `colour list set`
+Replaces the entire contents of the target Color list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Color> | Reference to the target list variable. |
+| Value | List<Color> | List whose items replace List's contents (typically an expression returning a list). |
+
 ## `colour list add range`
-Appends every item from Other to List when Executed.
+Appends every item from another Color list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
@@ -1062,7 +1150,7 @@ Appends every item from Other to List when Executed.
 | Other | List<Color> | List whose items will be appended to List. |
 
 ## `colour list clear`
-Removes all items from List when Executed.
+Removes all items from the target Color list when Executed. See ListClearBehaviour.
 
 ### Properties
 
@@ -1071,7 +1159,7 @@ Removes all items from List when Executed.
 | List | List<Color> | Reference to the target list variable. |
 
 ## `colour list loop trigger`
-Iterates List synchronously when Executed, firing listeners once per element.
+Iterates a Color list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
@@ -1085,6 +1173,29 @@ Iterates List synchronously when Executed, firing listeners once per element.
 |------|------|-------------|
 | item | T | The current element of the list. |
 | index | int | Zero-based position of the current element. |
+
+## `active poll`
+Polls a boolean value every frame and sets the entity GameObject's active state to match it.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Active | bool | Boolean (usually a variable or expression) re-read each frame; true keeps the entity active, false deactivates it. |
+
+## `set active`
+Sets the entity GameObject's active state to the Active value when Executed by an upstream trigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Active | bool | Boolean applied to the entity's active state on each Execute; true activates, false deactivates. |
+
+## `toggle active`
+Flips the entity GameObject's active state each time it is Executed by an upstream trigger.
+
+No properties.
 
 ## `sprite`
 Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
@@ -1272,3 +1383,9 @@ These behaviours are registered in the parse catalogue and accept the properties
 | Name | Type |
 |------|------|
 | TriggerIds | IReadOnlyList<string> |
+
+---
+
+## Doc-gen warnings
+
+- `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.

@@ -1,3 +1,3 @@
 -langVersion:preview -nullable:enable
--doc:Temp/Assembler.Libraries.xml
+-doc:DocGen/Assembler.Libraries.xml
 -nowarn:1591

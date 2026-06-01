@@ -169,9 +169,10 @@ Subcategories: `Movement`, `Rotation`, `Animations`, `Physics`, `Camera`, `Sprit
 `Visual`, `Debug`, `Debug.UI`, `VariableUpdaters`, `ListOperations`, `Triggers.Input`, `Triggers.Timing`,
 `Triggers.Conditionals`, `Triggers.Physical`.
 
-> **The MonoBehaviour is the documentation home.** `Assembler > Generate Behaviour Docs` reads the
-> `<summary>` and `<remarks>` XML doc comments above the class declaration to build the AI-facing
-> `Assets/docs/Behaviours.md`. **Author docs here, not on the Info record.**
+> **The MonoBehaviour is the documentation home.** The doc generator (`Tools/generate-docs.sh`, or the
+> `Assembler > Generate Behaviour Docs` menu item) reads the `<summary>` and `<remarks>` XML doc
+> comments above the class declaration to build the AI-facing `Assets/docs/Behaviours.md`.
+> **Author docs here, not on the Info record.**
 > Doc-gen validates the property set: any Info property missing from your `Properties:` block (or any
 > extra `Properties:` entry not on Info) emits a warning in the Editor console and in the markdown.
 
@@ -486,8 +487,16 @@ When adding a new behaviour, create/modify these 5 things in order:
 
 **Do not forget any step.** A missing registry or builder entry will cause a runtime error when the
 YAML references the behaviour; a wrong MonoBehaviour type in the `BuilderEntry` will produce warnings
-or wrong docs when running `Assembler > Generate Behaviour Docs`.
+or wrong docs when the docs are regenerated.
 
-After authoring the files, ask the user to run `Assembler > Generate Behaviour Docs` from the Unity
-Editor menu and report back any warnings in the Editor console or the `## Doc-gen warnings` section of
-`Assets/docs/Behaviours.md` — **do not try to read or run anything yourself**.
+After authoring the files, regenerate and check the docs yourself by running the headless script:
+
+```bash
+Tools/generate-docs.sh
+```
+
+It boots Unity in batch mode and runs the same generator as the `Assembler > Generate Behaviour Docs`
+menu item (first run on a fresh worktree imports the project and is slow; later runs are fast). Then
+read your new behaviour's section in `Assets/docs/Behaviours.md` and the `## Doc-gen warnings` section
+at the bottom — fix any warning that names your behaviour (a missing/extra `Properties:` entry, or a
+wrong MonoBehaviour mapping). The in-editor menu item still works if you'd rather run it there.

@@ -1,0 +1,4 @@
+# Persistent XML doc output written by the -doc flag in Assets/Behaviours/csc.rsp and
+# Assets/Libraries/csc.rsp, consumed by BehaviourDocs/LibraryDocs. Regenerated on compile;
+# not source. The folder itself is tracked (via this file) so csc always has somewhere to write.
+*.xml
