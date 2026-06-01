@@ -220,7 +220,7 @@ Representative helpers (not exhaustive — consult the doc for the complete set)
 
 ```csharp
 // Grid          (GridMath)   CellToWorld(cell, ox, oy)  InBounds(col,row,w,h)  NeighbourCell(cell,dCol,dRow)  RotateCellCW(cell,times)
-// Vectors       (VectorMath) ScaleVector(v,k)  Magnitude(v)  Normalize(v)  Distance(a,b)  Rotate2D(v,degrees)  IntegratePosition(pos,vel)
+// Vectors       (VectorMath) ScaleVector(v,k)  Magnitude(v)  Normalize(v)  Distance(a,b)  Rotate2D(v,degrees)  IntegratePosition(pos,vel,dt)
 // Scalars       (NumberMath) Clamp(x,lo,hi)  Lerp(a,b,t)  Min(a,b)  Max(a,b)  Remap(x,inMin,inMax,outMin,outMax)  Round(x)
 // Randomness    (RandomMath) RandomFloat(min,max)  RandomInt(minInc,maxInc)  RandomOnCircle(radius)  RandomColor()  Chance(p)
 // Colour        (ColorMath)  LerpColor(a,b,t)  WithAlpha(c,a)  Brighten(c,f)  RgbToHsv(c)  HsvToRgb(h,s,v)
