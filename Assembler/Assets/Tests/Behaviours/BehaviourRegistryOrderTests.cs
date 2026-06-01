@@ -3,6 +3,7 @@ using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Building;
 using Assembler.Parsing.Info;
+using Assembler.Resolving;
 using NUnit.Framework;
 using UnityEngine;
 
