@@ -194,6 +194,41 @@ v.x = v.x * scale;
 return v;
 ```
 
+> **Local declarations need a simple type name or `var`.** A namespace-qualified type on the left
+> of a declaration (`UnityEngine.Vector3 p = ...;`) is parsed as an expression and fails with
+> *"Expected Semicolon but got Identifier"*. Write `var p = ...;` (or a registered bare type name).
+> Qualified types are fine in *expression* position — `new UnityEngine.Vector3(...)` works.
+
+---
+
+## Library helpers — callable by bare name
+
+A set of reusable static helper functions is registered **globally** with the compiler, so you
+can call them by bare name from any expression — **no `RegisterTypes` / `RegisterTypeStatics`
+needed**. Prefer them over hand-rolling math or registering `UnityEngine.Mathf` /
+`UnityEngine.Random`; they are clearer and remove boilerplate.
+
+The full, authoritative list (every signature + description) is in
+[`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md), generated from the library
+source by the Unity menu **`Assembler > Generate Library Docs`**. Read it before writing
+math-heavy expressions. If that file is missing, generate it (or read the source under
+`Assets/Libraries/`: `GridMath`, `VectorMath`, `NumberMath`, `RandomMath`, `ColorMath`, `HexMath`).
+
+Representative helpers (not exhaustive — consult the doc for the complete set):
+
+```csharp
+// Grid          (GridMath)   CellToWorld(cell, ox, oy)  InBounds(col,row,w,h)  NeighbourCell(cell,dCol,dRow)  RotateCellCW(cell,times)
+// Vectors       (VectorMath) ScaleVector(v,k)  Magnitude(v)  Normalize(v)  Distance(a,b)  Rotate2D(v,degrees)  IntegratePosition(pos,vel)
+// Scalars       (NumberMath) Clamp(x,lo,hi)  Lerp(a,b,t)  Min(a,b)  Max(a,b)  Remap(x,inMin,inMax,outMin,outMax)  Round(x)
+// Randomness    (RandomMath) RandomFloat(min,max)  RandomInt(minInc,maxInc)  RandomOnCircle(radius)  RandomColor()  Chance(p)
+// Colour        (ColorMath)  LerpColor(a,b,t)  WithAlpha(c,a)  Brighten(c,f)  RgbToHsv(c)  HsvToRgb(h,s,v)
+// Hex grids     (HexMath)    HexToWorldPointy(hex,size)  HexDistance(a,b)  HexNeighbour(hex,dir)
+```
+
+All numeric parameters are `float`, so passing `int` literals or arguments is fine (they coerce
+automatically). Names are disambiguated across libraries so calls stay unambiguous: scalar `Lerp`
+vs vector `LerpVector` vs colour `LerpColor`.
+
 ---
 
 ## Comments

@@ -80,13 +80,11 @@ Expressions:
     Expression: "a + b;"
   random lifetime:
     ReturnType: float
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "Range(1.5f, 5.0f);"
+    Expression: "RandomFloat(1.5f, 5.0f);"
   random spawn position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Vector3(Range(-4f, 4f), -4.5f, 0);"
+    Expression: "new Vector3(RandomFloat(-4f, 4f), -4.5f, 0);"
   format stats:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ spawned, popped ]

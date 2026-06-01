@@ -96,8 +96,7 @@ Expressions:
   random spawn position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Vector3(Range(-4f, 4f), Range(-3f, 3f), 0);"
+    Expression: "new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0);"
   format alive:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ spawned, destroyed ]

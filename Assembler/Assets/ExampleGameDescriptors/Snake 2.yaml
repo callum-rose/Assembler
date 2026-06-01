@@ -158,7 +158,6 @@ Expressions:
     ArgumentNames: [ taken ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    RegisterTypeStatics: [ UnityEngine.Random, UnityEngine.Mathf ]
     Expression: >
       float halfArena = 6.6f;
       float cell = 0.6f;
@@ -167,8 +166,8 @@ Expressions:
       float y = 0f;
       while (attempts < 50)
       {
-          x = Round(Range(-halfArena, halfArena) / cell) * cell;
-          y = Round(Range(-halfArena, halfArena) / cell) * cell;
+          x = Round(RandomFloat(-halfArena, halfArena) / cell) * cell;
+          y = Round(RandomFloat(-halfArena, halfArena) / cell) * cell;
           float fx = x;
           float fy = y;
           bool clash = taken.Any(p => p.x == fx && p.y == fy);

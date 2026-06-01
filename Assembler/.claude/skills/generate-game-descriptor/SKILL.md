@@ -23,7 +23,11 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 > 2. **Use the expression compiler skill for any code.** Any value inside an `Expression:` field is
 >    code, not YAML. It must be authored via the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 >    skill — that compiler is strict and the wrong syntax will fail at runtime. Always invoke that
->    skill when writing or editing expression bodies.
+>    skill when writing or editing expression bodies. That skill also documents the **library
+>    helpers** (see [`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md)): reusable
+>    functions like `CellToWorld`, `Rotate2D`, `Clamp`, `RandomFloat`, `LerpColor`, callable by bare
+>    name from any expression with no `RegisterTypes` / `RegisterTypeStatics`. Prefer them over
+>    hand-rolling vector/scalar/random/colour math.
 > 3. **Register a `Test/Build <GameName>` menu item in `Assets/Building/Builder.cs`** whenever you
 >    create a new descriptor under `Assets/ExampleGameDescriptors/`. The
 >    Unity Editor only exposes games that have a corresponding `[MenuItem("Test/Build …")]` method
@@ -103,7 +107,7 @@ Named code snippets that can be called via `!expr`. Each entry:
 expression name:
   ArgumentTypes:   [ int, int ]              # optional, omit if no args
   ArgumentNames:   [ a, b ]                  # optional, must match ArgumentTypes length
-  ReturnType:      int                       # required: int | float | bool | string | vector
+  ReturnType:      int                       # required: int | float | bool | string | vector | colour
   RegisterTypes:   [ UnityEngine.Vector3 ]   # optional; lets the body use the bare type name
   RegisterTypeStatics: [ UnityEngine.Random ]# optional; lets the body call statics without the type prefix
   Expression: "a + b;"                       # the method body
@@ -111,6 +115,15 @@ expression name:
 
 The `Expression:` field is code. **Always invoke the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 skill when authoring it.** It is a strict procedural subset of C#; ordinary C# will fail to parse.
+
+**Prefer the library helpers over registering statics.** Functions documented in
+[`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md) (e.g. `ScaleVector`, `Rotate2D`,
+`IntegratePosition`, `Clamp`, `Max`, `RandomFloat`, `RandomOnCircle`, `RandomColor`, `LerpColor`,
+plus all of `GridMath`) are registered globally and callable by bare name — so you usually do **not**
+need `RegisterTypeStatics: [ UnityEngine.Random / Mathf ]`, and often not `RegisterTypes` either.
+Reach for these first; only register a `UnityEngine.*` type when no helper covers what you need
+(`new Vector3(...)` still needs `RegisterTypes: [ UnityEngine.Vector3 ]`, though `new Color(...)` is
+already available globally).
 
 ### `Templates`
 Reusable entity blueprints. An entity that references a template inherits its `Tags`, `Variables`,
@@ -389,6 +402,9 @@ Run through this before handing a descriptor back:
       entities involved (the catalogue notes this for `collision enter trigger`).
 - [ ] A `camera` entity exists, with a `camera` behaviour, otherwise nothing renders.
 - [ ] Every `Expression:` body has been authored via the `unity-expression-compiler` skill.
+- [ ] Math-heavy expressions reuse the bare-name library helpers from
+      [`Libraries.md`](../../../Assets/docs/Libraries.md) instead of hand-rolling them, and no
+      `RegisterTypeStatics`/`RegisterTypes` entry remains that the helpers made unnecessary.
 - [ ] `GameOverCondition` evaluates to `false` initially and there is at least one path to make it
       `true`, OR it is omitted intentionally for an endless game.
 

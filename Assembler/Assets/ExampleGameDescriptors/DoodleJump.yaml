@@ -58,8 +58,7 @@ Expressions:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ vel, g ]
     ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(vel.x, vel.y - g * UnityEngine.Time.deltaTime, 0f);
+    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f));"
 
   apply input:
     ArgumentTypes: [ vector, bool, bool, float ]
@@ -74,12 +73,11 @@ Expressions:
     ArgumentNames: [ pos, vel, halfW ]
     ReturnType: vector
     Expression: |
-      float dt = UnityEngine.Time.deltaTime;
-      float nx = pos.x + vel.x * dt;
-      float ny = pos.y + vel.y * dt;
+      var p = IntegratePosition(pos, vel);
+      float nx = p.x;
       if (nx > halfW) nx = nx - 2f * halfW;
       if (nx < -halfW) nx = nx + 2f * halfW;
-      return new UnityEngine.Vector3(nx, ny, 0f);
+      return new UnityEngine.Vector3(nx, p.y, 0f);
 
   bounce velocity:
     ArgumentTypes: [ vector, float ]
@@ -98,7 +96,7 @@ Expressions:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ a, b ]
     ReturnType: float
-    Expression: "return a > b ? a : b;"
+    Expression: "return Max(a, b);"
 
   position y:
     ArgumentTypes: [ vector ]
@@ -118,7 +116,7 @@ Expressions:
     ArgumentNames: [ y, halfW ]
     ReturnType: vector
     Expression: |
-      float x = UnityEngine.Random.Range(-halfW, halfW);
+      float x = RandomFloat(-halfW, halfW);
       return new UnityEngine.Vector3(x, y, 0f);
 
   should spawn next platform:
