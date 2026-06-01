@@ -15,7 +15,8 @@
         "Assembler.Resolving",
         "Unity.InputSystem",
         "Assembler.Input",
-        "Assembler.Time"
+        "Assembler.Time",
+        "Assembler.Libraries"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -6,6 +6,7 @@ using Assembler.Behaviours;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
+using Assembler.Libraries;
 using Assembler.Parsing;
 using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
@@ -28,10 +29,19 @@ namespace Assembler.Building
 			Build(gameInfo, controls, overridePlatform);
 		}
 
-		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
+		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, BuildOptions.Default);
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform) =>
+			Build(gameInfo, controls, new BuildOptions(OverridePlatform: overridePlatform));
+
+		public static void Build(GameInfo gameInfo, ControlsInfo controls, BuildOptions options)
 		{
+			// Seed the per-run PRNG before any runtime randomness is drawn (first draws happen in
+			// initialisations.ExecuteAll). Defaulting to TickCount preserves unseeded variety while letting a
+			// caller pin the seed for deterministic replay. See Determinism (Level 1) in CLAUDE.md.
+			var seed = options.RandomSeed ?? (uint)Environment.TickCount;
+			RandomState.Seed(seed);
+
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
 
@@ -44,7 +54,7 @@ namespace Assembler.Building
 
 			// 0b. Resolve the active platform group and hard-fail on any used-but-unbound input action, then
 			// build the live InputActionAsset for that platform. Mirrors the game-over check above.
-			var platform = overridePlatform ?? PlatformSelector.Resolve();
+			var platform = options.OverridePlatform ?? PlatformSelector.Resolve();
 			var activeGroup = PlatformFallback.ResolveGroup(platform, controls);
 
 			ControlsValidator.Validate(gameInfo, controls, activeGroup);
