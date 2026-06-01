@@ -85,8 +85,11 @@ namespace Assembler.Building
 
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
-			// (ahead of every behaviour Update via DefaultExecutionOrder).
-			var gameClock = new RealtimeGameClock();
+			// (ahead of every behaviour Update via DefaultExecutionOrder). FixedStep makes the per-tick
+			// delta constant for deterministic replay; Realtime is the default (see Determinism in CLAUDE.md).
+			ITickableClock gameClock = options.Clock == ClockMode.FixedStep
+				? new FixedStepGameClock(options.FixedDeltaTime)
+				: new RealtimeGameClock();
 
 			var exclusiveGroupRegistry = new ExclusiveGroupRegistry(gameClock);
 
