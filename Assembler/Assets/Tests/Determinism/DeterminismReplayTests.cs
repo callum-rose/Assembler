@@ -13,14 +13,15 @@ using UnityEngine.TestTools;
 namespace Tests.Determinism
 {
 	/// <summary>
-	/// End-to-end Level 1 determinism: a fixed seed + fixed delta + scripted input log reproduces a Snake run
+	/// End-to-end Level 1 determinism: a fixed seed + fixed delta + scripted input log reproduces an Asteroids run
 	/// byte-identically on the same build/machine, and a recording replays to the same state (and re-records
 	/// identically). See the Determinism (Level 1) section in CLAUDE.md.
 	///
-	/// Snake 2 uses physics colliders for food-eating and death, which are NOT part of the guarantee, so these
-	/// tests assert only on clock-driven, physics-independent state: the head's logical position, its transform
-	/// (moved by the clock-stepped `translate`), and the `direction` variable. Runs are kept short so the snake
-	/// never hits a wall or itself (which would end the game and tear down the scene mid-test).
+	/// Asteroids uses physics colliders for bullet/asteroid/ship collisions, which are NOT part of the guarantee,
+	/// so these tests assert only on the ship's clock-and-input-driven state: its <c>ship facing</c> (rotated by
+	/// A/D input), <c>ship velocity</c> (accumulated by W thrust), and its transform (moved each tick by the
+	/// clock-stepped <c>velocity</c> behaviour). Runs are kept under the 1.2 s asteroid spawn interval (72 frames),
+	/// so no asteroid ever spawns and no physics interaction can perturb the asserted state.
 	/// </summary>
 	public class DeterminismReplayTests
 	{
@@ -28,11 +29,29 @@ namespace Tests.Determinism
 		private const uint Seed = 12345u;
 		private const int Frames = 40;
 
-		private static readonly BehaviourDescriptor UpKey = new("snake head", "up key");
-		private static readonly BehaviourDescriptor LeftKey = new("snake head", "left key");
-		private static readonly BehaviourDescriptor HeadGizmo = new("snake head", "gizmo");
+		private static readonly BehaviourDescriptor RotateLeft = new("ship", "rotate left key");
+		private static readonly BehaviourDescriptor RotateRight = new("ship", "rotate right key");
+		private static readonly BehaviourDescriptor Thrust = new("ship", "thrust key");
+		private static readonly BehaviourDescriptor ShipGizmo = new("ship", "gizmo");
 
-		private static string SnakePath => Application.dataPath + "/ExampleGameDescriptors/Snake 2.yaml";
+		private static string AsteroidsPath => Application.dataPath + "/ExampleGameDescriptors/Asteroids.yaml";
+
+		// A short input log exercising both input paths: A/D rotate the facing, W accumulates velocity along it.
+		// All firings land before frame 72, so the asteroid spawner never runs and the ship state stays physics-free.
+		private static Dictionary<int, BehaviourDescriptor[]> InputScript() => new()
+		{
+			{ 4, new[] { RotateLeft } },
+			{ 5, new[] { RotateLeft } },
+			{ 6, new[] { RotateLeft } },
+			{ 10, new[] { Thrust } },
+			{ 11, new[] { Thrust } },
+			{ 12, new[] { Thrust } },
+			{ 13, new[] { Thrust } },
+			{ 20, new[] { RotateRight } },
+			{ 21, new[] { RotateRight } },
+			{ 25, new[] { Thrust } },
+			{ 26, new[] { Thrust } },
+		};
 
 		private GameObject? _root;
 
@@ -53,12 +72,14 @@ namespace Tests.Determinism
 		{
 			var firstResult = Build(new BuildOptions(
 				RandomSeed: Seed, Clock: ClockMode.FixedStep, FixedDeltaTime: FixedDt));
+			AttachScriptedDriver(firstResult, recorder: null, InputScript());
 			yield return RunFrames(Frames);
 			var first = Snapshot(firstResult);
 			Teardown(firstResult);
 
 			var secondResult = Build(new BuildOptions(
 				RandomSeed: Seed, Clock: ClockMode.FixedStep, FixedDeltaTime: FixedDt));
+			AttachScriptedDriver(secondResult, recorder: null, InputScript());
 			yield return RunFrames(Frames);
 			var second = Snapshot(secondResult);
 			Teardown(secondResult);
@@ -69,11 +90,7 @@ namespace Tests.Determinism
 		[UnityTest]
 		public IEnumerator Replay_ReproducesRecording_AndReRecordsIdentically()
 		{
-			var script = new Dictionary<int, BehaviourDescriptor[]>
-			{
-				{ 13, new[] { UpKey } },
-				{ 25, new[] { LeftKey } },
-			};
+			var script = InputScript();
 
 			// --- Record ---
 			var recorder = new ReplayRecorder();
@@ -117,7 +134,7 @@ namespace Tests.Determinism
 
 		private BuildResult Build(BuildOptions options)
 		{
-			var result = Builder.Build(SnakePath, options);
+			var result = Builder.Build(AsteroidsPath, options);
 			_root = result.Root;
 			return result;
 		}
@@ -143,8 +160,10 @@ namespace Tests.Determinism
 			}
 		}
 
+		// Drives the scripted input log. A null recorder just fires (for the plain identical-config run); a non-null
+		// one also captures each activation, so a recorded session can later be replayed.
 		private static void AttachScriptedDriver(
-			BuildResult result, ReplayRecorder recorder, Dictionary<int, BehaviourDescriptor[]> script)
+			BuildResult result, ReplayRecorder? recorder, Dictionary<int, BehaviourDescriptor[]> script)
 		{
 			result.Root.AddComponent<ScriptedInputDriver>()
 				.Initialise(result.Clock, result.BehaviourRegistry, recorder, script);
@@ -152,17 +171,17 @@ namespace Tests.Determinism
 
 		private static DeterministicState Snapshot(BuildResult result)
 		{
-			var headPos = result.VariableRegistry.Get<Vector3>("head pos").Get();
-			var direction = result.VariableRegistry.Get<Vector3>("direction").Get();
-			var headTransform = result.BehaviourRegistry[HeadGizmo].transform.position;
-			return new DeterministicState(headPos, direction, headTransform);
+			var facing = result.VariableRegistry.Get<Vector3>("ship facing").Get();
+			var velocity = result.VariableRegistry.Get<Vector3>("ship velocity").Get();
+			var shipTransform = result.BehaviourRegistry[ShipGizmo].transform.position;
+			return new DeterministicState(facing, velocity, shipTransform);
 		}
 
 		private static void AssertStatesEqual(DeterministicState a, DeterministicState b, string context)
 		{
-			AssertVectorsExactlyEqual(a.HeadPos, b.HeadPos, $"{context}: head pos");
-			AssertVectorsExactlyEqual(a.Direction, b.Direction, $"{context}: direction");
-			AssertVectorsExactlyEqual(a.HeadTransform, b.HeadTransform, $"{context}: head transform");
+			AssertVectorsExactlyEqual(a.Facing, b.Facing, $"{context}: ship facing");
+			AssertVectorsExactlyEqual(a.Velocity, b.Velocity, $"{context}: ship velocity");
+			AssertVectorsExactlyEqual(a.ShipTransform, b.ShipTransform, $"{context}: ship transform");
 		}
 
 		private static void AssertVectorsExactlyEqual(Vector3 expected, Vector3 actual, string message)
@@ -174,35 +193,35 @@ namespace Tests.Determinism
 
 		private readonly struct DeterministicState
 		{
-			public DeterministicState(Vector3 headPos, Vector3 direction, Vector3 headTransform)
+			public DeterministicState(Vector3 facing, Vector3 velocity, Vector3 shipTransform)
 			{
-				HeadPos = headPos;
-				Direction = direction;
-				HeadTransform = headTransform;
+				Facing = facing;
+				Velocity = velocity;
+				ShipTransform = shipTransform;
 			}
 
-			public Vector3 HeadPos { get; }
-			public Vector3 Direction { get; }
-			public Vector3 HeadTransform { get; }
+			public Vector3 Facing { get; }
+			public Vector3 Velocity { get; }
+			public Vector3 ShipTransform { get; }
 		}
 	}
 
 	/// <summary>
 	/// Test-only input source for the record pass. Runs at the same execution order as <see cref="ReplayDriver"/>
 	/// (before gameplay) so a scripted activation lands at the identical point in the tick during record and replay,
-	/// keeping the two byte-identical. Records each activation and re-fires the trigger via the public replay seam —
-	/// the same data a live <c>FireInput</c> would have produced.
+	/// keeping the two byte-identical. Re-fires each trigger via the public replay seam, and (when a recorder is
+	/// supplied) records the same activation a live firing would have produced.
 	/// </summary>
 	[DefaultExecutionOrder(-9999)]
 	public sealed class ScriptedInputDriver : MonoBehaviour
 	{
 		private IGameClock _clock = null!;
 		private BehaviourRegistry _registry = null!;
-		private ReplayRecorder _recorder = null!;
+		private ReplayRecorder? _recorder;
 		private Dictionary<int, BehaviourDescriptor[]> _script = null!;
 
 		public void Initialise(
-			IGameClock clock, BehaviourRegistry registry, ReplayRecorder recorder,
+			IGameClock clock, BehaviourRegistry registry, ReplayRecorder? recorder,
 			Dictionary<int, BehaviourDescriptor[]> script)
 		{
 			_clock = clock;
@@ -220,7 +239,7 @@ namespace Tests.Determinism
 
 			foreach (var descriptor in descriptors)
 			{
-				_recorder.Record(descriptor, TriggerContext.Empty);
+				_recorder?.Record(descriptor, TriggerContext.Empty);
 				if (_registry[descriptor] is IReplayableInputTrigger trigger)
 				{
 					trigger.ReplayFire(TriggerContext.Empty);

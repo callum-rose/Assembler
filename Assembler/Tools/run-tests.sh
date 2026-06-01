@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 #
-# Runs the EditMode test suites headlessly by booting the Unity editor in batch mode and invoking
-# Editor.TestBatch.RunEditModeTests (the same tests you would run from Window > General > Test
-# Runner). Prints a pass/fail summary to the log and exits non-zero if anything fails, so Claude
-# can run and verify tests without the UI.
+# Runs the EditMode (or PlayMode) test suites headlessly by booting the Unity editor in batch mode
+# and invoking Editor.TestBatch.RunEditModeTests / RunPlayModeTests (the same tests you would run
+# from Window > General > Test Runner). Prints a pass/fail summary to the log and exits non-zero if
+# anything fails, so Claude can run and verify tests without the UI.
 #
 # Usage:
 #   Assembler/Tools/run-tests.sh                       # run all EditMode tests
+#   Assembler/Tools/run-tests.sh --playmode            # run all PlayMode tests
 #   Assembler/Tools/run-tests.sh Tests.Compiler        # run only these assemblies (repeatable)
 #   Assembler/Tools/run-tests.sh --filter '.*Lexer.*'  # run tests whose full name matches a regex
 #   Assembler/Tools/run-tests.sh --category Slow        # run tests with a given [Category]
-# Flags and assembly names can be combined; --filter/--category are repeatable.
+# Flags and assembly names can be combined; --playmode/--filter/--category are repeatable.
 #
 # Notes:
 #  - The first run in a fresh worktree triggers a full asset import and is slow (minutes).
@@ -19,7 +20,7 @@
 #    open on this worktree before running.
 #  - Unlike generate-docs.sh this does NOT pass -quit: the test run is asynchronous and TestBatch
 #    exits the editor itself once tests finish.
-#  - Full NUnit XML is written to TestResults/EditMode-results.xml.
+#  - Full NUnit XML is written to TestResults/<EditMode|PlayMode>-results.xml.
 set -euo pipefail
 
 # Project = the Assembler/ directory (parent of this script's Tools/ dir), resolved absolutely so
@@ -50,8 +51,15 @@ fi
 # Translate friendly CLI args into the -testAssembly/-testFilter/-testCategory flags that
 # TestBatch reads from the command line. Bare positional args are treated as assembly names.
 FILTER_ARGS=()
+MODE="EditMode"
+METHOD="Editor.TestBatch.RunEditModeTests"
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--playmode)
+			MODE="PlayMode"
+			METHOD="Editor.TestBatch.RunPlayModeTests"
+			shift
+			;;
 		--filter)
 			FILTER_ARGS+=(-testFilter "$2")
 			shift 2
@@ -61,7 +69,7 @@ while [[ $# -gt 0 ]]; do
 			shift 2
 			;;
 		-*)
-			echo "error: unknown flag '$1' (expected --filter or --category, or a bare assembly name)" >&2
+			echo "error: unknown flag '$1' (expected --playmode, --filter or --category, or a bare assembly name)" >&2
 			exit 1
 			;;
 		*)
@@ -71,12 +79,12 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-echo "Running EditMode tests with Unity $VERSION (project: $PROJECT)..."
+echo "Running $MODE tests with Unity $VERSION (project: $PROJECT)..."
 # Note: "${FILTER_ARGS[@]+...}" guards the empty-array case — under `set -u`, macOS's bash 3.2
 # treats a bare "${FILTER_ARGS[@]}" on an empty array as an unbound-variable error.
 "$UNITY" \
 	-batchmode -nographics \
 	-projectPath "$PROJECT" \
-	-executeMethod Editor.TestBatch.RunEditModeTests \
+	-executeMethod "$METHOD" \
 	${FILTER_ARGS[@]+"${FILTER_ARGS[@]}"} \
 	-logFile -
