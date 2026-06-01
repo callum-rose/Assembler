@@ -638,7 +638,7 @@ namespace Assembler.Building
 					// via !var resolve regardless of initialisation order. Seeded to the initial state;
 					// respected if the entity already declares it (e.g. restored from a save).
 					var scope = ctx.Resolution.Scope;
-					if (scope != null && !scope.TryGet(i.StateVariable, out _))
+					if (!scope.TryGet(i.StateVariable, out _))
 					{
 						scope.Create(new ValueInfo(i.StateVariable, new StringValue(i.Initial)));
 					}
@@ -646,9 +646,7 @@ namespace Assembler.Building
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
-						var current = scope != null
-							? res.Variables.Get<string>(i.StateVariable, scope)
-							: res.Variables.Get<string>(i.StateVariable);
+						var current = res.Variables.Get<string>(i.StateVariable, scope);
 						var transitions = i.Transitions
 							.Select(t => new StateTransition(t.From, t.To, t.When.Resolve(res)))
 							.ToArray();
