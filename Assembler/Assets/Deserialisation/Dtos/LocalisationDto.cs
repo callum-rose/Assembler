@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Deserialisation.Dtos
 {
-	public sealed record LocalizationDto
+	public sealed record LocalisationDto
 	{
 		public string? DefaultLocale { get; init; }
 

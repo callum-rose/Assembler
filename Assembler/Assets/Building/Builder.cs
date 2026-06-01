@@ -69,11 +69,11 @@ namespace Assembler.Building
 			var assetRegistry = new AssetRegistry();
 			assetRegistry.LoadAll(gameInfo.Assets);
 
-			// 2b. Load the localization string table. Locale is hardcoded for now; this is the seam the
+			// 2b. Load the localisation string table. Locale is hardcoded for now; this is the seam the
 			// future settings/options system will drive.
-			var localeSettings = new LocaleSettings("en", "en");
+			var localeSettings = new LocaleSettings("en");
 			var stringTableRegistry = new StringTableRegistry(localeSettings);
-			stringTableRegistry.LoadAll(gameInfo.Localization);
+			stringTableRegistry.LoadAll(gameInfo.Localisation);
 
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();

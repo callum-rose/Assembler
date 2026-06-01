@@ -7,7 +7,7 @@ namespace Assembler.Parsing.Info
 		WorldInfo World,
 		PhysicsInfo Physics,
 		IReadOnlyList<AssetInfo> Assets,
-		LocalizationInfo Localization,
+		LocalisationInfo Localisation,
 		IReadOnlyList<ValueInfo> Variables,
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,

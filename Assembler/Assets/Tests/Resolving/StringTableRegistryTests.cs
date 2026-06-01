@@ -7,7 +7,7 @@ namespace Tests.Resolving
 {
 	public class StringTableRegistryTests
 	{
-		private static LocalizationInfo Info() => new(
+		private static LocalisationInfo Info() => new(
 			"en",
 			new Dictionary<string, IReadOnlyDictionary<string, string>>
 			{
@@ -15,9 +15,9 @@ namespace Tests.Resolving
 				["fr"] = new Dictionary<string, string> { ["greet"] = "Bonjour" }
 			});
 
-		private static StringTableRegistry Registry(string current, string fallback)
+		private static StringTableRegistry Registry(string current)
 		{
-			var registry = new StringTableRegistry(new LocaleSettings(current, fallback));
+			var registry = new StringTableRegistry(new LocaleSettings(current));
 			registry.LoadAll(Info());
 			return registry;
 		}
@@ -25,26 +25,26 @@ namespace Tests.Resolving
 		[Test]
 		public void ResolvesFromCurrentLocale()
 		{
-			Assert.AreEqual("Bonjour", Registry("fr", "en").GetTemplate("greet"));
+			Assert.AreEqual("Bonjour", Registry("fr").GetTemplate("greet"));
 		}
 
 		[Test]
-		public void FallsBackToFallbackLocaleWhenKeyMissingInCurrent()
+		public void FallsBackToDefaultLocaleWhenKeyMissingInCurrent()
 		{
-			Assert.AreEqual("EnglishOnly", Registry("fr", "en").GetTemplate("only_en"));
+			Assert.AreEqual("EnglishOnly", Registry("fr").GetTemplate("only_en"));
 		}
 
 		[Test]
 		public void MissingKeyReturnsVisibleMarker()
 		{
-			Assert.AreEqual("#nope#", Registry("en", "en").GetTemplate("nope"));
+			Assert.AreEqual("#nope#", Registry("en").GetTemplate("nope"));
 		}
 
 		[Test]
 		public void SwitchingLocaleChangesOutput()
 		{
-			Assert.AreEqual("Hello", Registry("en", "en").GetTemplate("greet"));
-			Assert.AreEqual("Bonjour", Registry("fr", "en").GetTemplate("greet"));
+			Assert.AreEqual("Hello", Registry("en").GetTemplate("greet"));
+			Assert.AreEqual("Bonjour", Registry("fr").GetTemplate("greet"));
 		}
 	}
 }

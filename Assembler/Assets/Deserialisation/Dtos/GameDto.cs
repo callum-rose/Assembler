@@ -14,7 +14,7 @@ namespace Assembler.Deserialisation.Dtos
         public Dictionary<string, EntityDto>? Templates { get; init; }
         public Dictionary<string, EntityDto>? Entities { get; init; }
         public ControlsDto? Controls { get; init; }
-        public LocalizationDto? Localization { get; init; }
+        public LocalisationDto? Localisation { get; init; }
         public object? GameOverCondition { get; init; }
     }
 }

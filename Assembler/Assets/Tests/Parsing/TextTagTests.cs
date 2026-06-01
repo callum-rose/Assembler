@@ -11,11 +11,11 @@ namespace Tests.Parsing
 		private static GameInfo Parse(string yaml) =>
 			Transformer.Transform(new GameFileParser().Parse(yaml));
 
-		private static LocalizedTextSource<string> TextSourceOf(GameInfo info) =>
-			(LocalizedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
+		private static LocalisedTextSource<string> TextSourceOf(GameInfo info) =>
+			(LocalisedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
 
 		[Test]
-		public void ScalarTextTagBecomesLocalizedSourceWithNoArguments()
+		public void ScalarTextTagBecomesLocalisedSourceWithNoArguments()
 		{
 			var yaml = @"
 Entities:
@@ -53,10 +53,10 @@ Entities:
 		}
 
 		[Test]
-		public void LocalizationBlockTransformsIntoLocalizationInfo()
+		public void LocalisationBlockTransformsIntoLocalisationInfo()
 		{
 			var yaml = @"
-Localization:
+Localisation:
   DefaultLocale: en
   Locales:
     en:
@@ -69,15 +69,15 @@ Entities:
 ";
 			var info = Parse(yaml);
 
-			Assert.AreEqual("en", info.Localization.DefaultLocale);
-			Assert.IsTrue(info.Localization.Locales.ContainsKey("en"));
-			Assert.IsTrue(info.Localization.Locales.ContainsKey("fr"));
-			Assert.AreEqual("Apple", info.Localization.Locales["en"]["a"]);
-			Assert.AreEqual("Pomme", info.Localization.Locales["fr"]["a"]);
+			Assert.AreEqual("en", info.Localisation.DefaultLocale);
+			Assert.IsTrue(info.Localisation.Locales.ContainsKey("en"));
+			Assert.IsTrue(info.Localisation.Locales.ContainsKey("fr"));
+			Assert.AreEqual("Apple", info.Localisation.Locales["en"]["a"]);
+			Assert.AreEqual("Pomme", info.Localisation.Locales["fr"]["a"]);
 		}
 
 		[Test]
-		public void MissingLocalizationBlockYieldsEmptyInfo()
+		public void MissingLocalisationBlockYieldsEmptyInfo()
 		{
 			var info = Parse(@"
 Entities:
@@ -85,7 +85,7 @@ Entities:
     Behaviours: {}
 ");
 
-			Assert.AreEqual(0, info.Localization.Locales.Count);
+			Assert.AreEqual(0, info.Localisation.Locales.Count);
 		}
 
 		[Test]

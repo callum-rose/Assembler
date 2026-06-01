@@ -41,7 +41,7 @@ namespace Assembler.Parsing
 				_ => throw new NotImplementedException($"Unknown asset type: {a.Type}")
 			}).ToList();
 
-			var localization = CreateLocalizationInfo(gameDto.Localization);
+			var localisation = CreateLocalisationInfo(gameDto.Localisation);
 
 			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
@@ -83,7 +83,7 @@ namespace Assembler.Parsing
 				world,
 				physics,
 				assets,
-				localization,
+				localisation,
 				values,
 				expressions,
 				templates,
@@ -431,8 +431,8 @@ namespace Assembler.Parsing
 				ClockRef clockRef => throw new ParsingException(
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
-				TextRef textRef when typeof(T) == typeof(string) || typeof(T) == typeof(object) =>
-					new LocalizedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
+				TextRef textRef when typeof(T) == typeof(string) =>
+					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
 				TextRef textRef => throw new ParsingException(
 					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
@@ -624,11 +624,11 @@ namespace Assembler.Parsing
 			return result;
 		}
 
-		private static LocalizationInfo CreateLocalizationInfo(LocalizationDto? dto)
+		private static LocalisationInfo CreateLocalisationInfo(LocalisationDto? dto)
 		{
 			if (dto?.Locales == null || dto.Locales.Count == 0)
 			{
-				return LocalizationInfo.Empty;
+				return LocalisationInfo.Empty;
 			}
 
 			var locales = new Dictionary<string, IReadOnlyDictionary<string, string>>(dto.Locales.Count);
@@ -638,7 +638,7 @@ namespace Assembler.Parsing
 				locales[kvp.Key] = new Dictionary<string, string>(kvp.Value);
 			}
 
-			return new LocalizationInfo(dto.DefaultLocale ?? string.Empty, locales);
+			return new LocalisationInfo(dto.DefaultLocale ?? string.Empty, locales);
 		}
 
 		private static AssemblerValue ToAssemblerValue(object? raw) =>

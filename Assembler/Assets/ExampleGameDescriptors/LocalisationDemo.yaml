@@ -1,21 +1,21 @@
 Game:
-  Title: Localization Demo — Coin Collector
+  Title: Localisation Demo — Coin Collector
   Description: |
-    A small playable game that shows off the `!text` localization layer.
+    A small playable game that shows off the `!text` localisation layer.
 
     Move the green cube with WASD and touch the gold coins to collect them.
     Collect all of them to win; press Q to quit.
 
     The point of the demo is that **every user-facing string goes through a
-    localization key**, never an inline literal:
+    localisation key**, never an inline literal:
       - The instructions line uses the scalar form `!text hud.instructions`.
       - The live HUD counter uses the mapping form
         `!text { Key: hud.score, Arguments: [ !var score, !var total coins ] }`,
-        so the localized template "Coins: {0} / {1}" is filled with runtime
+        so the localised template "Coins: {0} / {1}" is filled with runtime
         values. The template owns the placeholder order, so a translation can
         reorder `{0}`/`{1}` freely.
 
-    All strings live in one place — the top-level `Localization:` table — with
+    All strings live in one place — the top-level `Localisation:` table — with
     `en`, `fr` and `es` provided. The active locale is `en` (the framework-level
     default for now); switching `LocaleSettings` in the builder swaps the whole
     UI language with no descriptor changes. Compare this with the older demos
@@ -58,7 +58,7 @@ Expressions:
     ReturnType: bool
     Expression: "score >= total;"
 
-Localization:
+Localisation:
   DefaultLocale: en
   Locales:
     en:

@@ -52,8 +52,8 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ExprRef(string ExpressionId, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
 
-	/// <summary>A <c>!text &lt;key&gt;</c> reference into the localization string table. Carries the lookup
-	/// key plus any runtime arguments that fill the localized template's <c>{0}</c>/<c>{1}</c> placeholders.</summary>
+	/// <summary>A <c>!text &lt;key&gt;</c> reference into the localisation string table. Carries the lookup
+	/// key plus any runtime arguments that fill the localised template's <c>{0}</c>/<c>{1}</c> placeholders.</summary>
 	public sealed record TextRef(string Key, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
 
 	public sealed record DictValue(IReadOnlyDictionary<string, AssemblerValue> Value) : AssemblerValue;
