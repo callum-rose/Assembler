@@ -13,7 +13,7 @@ namespace Assembler.Time
 	[DefaultExecutionOrder(-10000)]
 	public sealed class GameClockDriver : MonoBehaviour
 	{
-		public RealtimeGameClock Clock { get; set; } = new RealtimeGameClock();
+		public ITickableClock Clock { get; set; } = new RealtimeGameClock();
 
 		private void Update() => Clock.Tick();
 	}
