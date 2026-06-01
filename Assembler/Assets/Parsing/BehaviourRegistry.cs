@@ -75,6 +75,7 @@ namespace Assembler.Parsing
 				["condition gate"] = ConditionGateInfo.Create,
 				["inverse condition gate"] = InverseConditionGateInfo.Create,
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
+				["state machine"] = StateMachineInfo.Create,
 				["vector variable setter"] = VariableSetterInfo<Vector3>.Create,
 				["int variable setter"] = VariableSetterInfo<int>.Create,
 				["float variable setter"] = VariableSetterInfo<float>.Create,
