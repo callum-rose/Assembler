@@ -25,27 +25,46 @@ namespace Assembler.Time
 		}
 
 		public bool IsPaused { get; private set; }
-		
+
 		private float _timeScale = 1f;
+		private int _pendingSteps;
 
 		public void Pause() => IsPaused = true;
 
 		public void Resume() => IsPaused = false;
 
+		public void Step(int frames = 1)
+		{
+			// Stepping only makes sense while paused; queued frames must not leak into a later pause.
+			if (IsPaused && frames > 0)
+			{
+				_pendingSteps += frames;
+			}
+		}
+
 		/// <summary>
 		/// Advances the clock by one frame. Call once per frame, before any reader runs.
 		/// Snapshots the scaled and unscaled deltas, then accumulates time and the frame count
-		/// (both frozen while paused).
+		/// (both frozen while paused, except for a single queued <see cref="Step"/> frame).
 		/// </summary>
 		public void Tick()
 		{
 			UnscaledDeltaTime = UnityEngine.Time.deltaTime;
-			DeltaTime = IsPaused ? 0f : UnscaledDeltaTime * _timeScale;
 
-			if (!IsPaused)
+			// A queued step lets a paused clock advance exactly one frame, for frame-by-frame debugging.
+			var stepping = IsPaused && _pendingSteps > 0;
+
+			DeltaTime = IsPaused && !stepping ? 0f : UnscaledDeltaTime * _timeScale;
+
+			if (!IsPaused || stepping)
 			{
 				Time += DeltaTime;
 				FrameCount++;
+
+				if (stepping)
+				{
+					_pendingSteps--;
+				}
 			}
 		}
 	}

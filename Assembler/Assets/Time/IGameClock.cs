@@ -36,5 +36,13 @@ namespace Assembler.Time
 
 		/// <summary>Resumes game time at the current <see cref="TimeScale"/>.</summary>
 		void Resume();
+
+		/// <summary>
+		/// Queues <paramref name="frames"/> single-frame advances while paused. Each queued frame lets
+		/// the clock tick exactly once (advancing <see cref="Time"/> and <see cref="FrameCount"/>) before
+		/// freezing again, for frame-by-frame debugging. No effect when not paused; non-positive counts
+		/// are ignored.
+		/// </summary>
+		void Step(int frames = 1);
 	}
 }
