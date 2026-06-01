@@ -463,6 +463,27 @@ namespace Assembler.Building
 						i.Mesh.Resolve(ctx.Resolution),
 						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(ActivePollInfo)] = new(typeof(ActivePoll), (go, info, ctx) =>
+				{
+					var i = (ActivePollInfo)info;
+					var b = go.AddComponent<ActivePoll>();
+					return (b, lr => b.Initialise(new ActivePollData(i.Id,
+						i.Active.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SetActiveInfo)] = new(typeof(SetActive), (go, info, ctx) =>
+				{
+					var i = (SetActiveInfo)info;
+					var b = go.AddComponent<SetActive>();
+					return (b, lr => b.Initialise(new SetActiveData(i.Id,
+						i.Active.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ToggleActiveInfo)] = new(typeof(ToggleActive), (go, info, ctx) =>
+				{
+					var i = (ToggleActiveInfo)info;
+					var b = go.AddComponent<ToggleActive>();
+					return (b, lr => b.Initialise(new ToggleActiveData(i.Id),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(AudioSourceInfo)] = new(typeof(AudioSourceBehaviour), (go, info, ctx) =>
 				{
 					var i = (AudioSourceInfo)info;
