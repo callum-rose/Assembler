@@ -68,12 +68,10 @@ namespace Tests.Behaviours
 			var clock = new FakeClock { FrameCount = 3 };
 			var recorder = NewRecorder(clock);
 
-			var ctx = TriggerContext.New(b =>
-			{
-				b["y"] = 2f;
-				b["x"] = 1f;
-				b["axis"] = new Vector2(1f, 2f);
-			});
+			var ctx = TriggerContext.Empty
+				.With("y", 2f)
+				.With("x", 1f)
+				.With("axis", new Vector2(1f, 2f));
 
 			recorder.Record(new BehaviourDescriptor("e", "axis"), ctx);
 

@@ -45,7 +45,6 @@ namespace Tests.Determinism
 				_root = null;
 			}
 
-			InputBoundary.Reset();
 			yield return null;
 		}
 
@@ -134,8 +133,6 @@ namespace Tests.Determinism
 			{
 				_root = null;
 			}
-
-			InputBoundary.Reset();
 		}
 
 		private static IEnumerator RunFrames(int count)
