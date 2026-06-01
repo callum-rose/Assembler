@@ -36,6 +36,11 @@ namespace Assembler.Behaviours
 		}
 	}
 
+	/// <summary>
+	/// Strongly-typed <see cref="GameBehaviour"/> base that binds a behaviour to its <typeparamref name="TData"/>
+	/// configuration. The resolved data is exposed via <see cref="Data"/> after <see cref="Initialise"/> runs.
+	/// </summary>
+	/// <typeparam name="TData">The <see cref="BehaviourData"/> type carrying this behaviour's serialized configuration.</typeparam>
 	public abstract class GameBehaviour<TData> : GameBehaviour where TData : BehaviourData
 	{
 		protected TData Data { get; private set; }
