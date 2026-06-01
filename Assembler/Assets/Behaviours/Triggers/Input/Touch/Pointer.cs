@@ -6,25 +6,16 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	/// Stateless reader that unifies the legacy touch and mouse APIs into a single "primary pointer"
 	/// (the first finger, or the left mouse button on desktop). Single-finger gestures (tap, swipe,
 	/// drag, …) build on this so they remain testable with a mouse in the editor; multi-finger gestures
-	/// (pinch, rotate) read the touch API directly via <see cref="Count"/> / <see cref="TryGetTouch"/>.
+	/// (pinch) read the touch API directly via <see cref="Count"/> / <see cref="TouchPosition"/>.
 	/// Each gesture tracks its own press/elapsed state on top of these per-frame reads.
 	/// </summary>
 	internal static class Pointer
 	{
 		/// <summary>True while the primary pointer is down this frame (a live finger, or the left mouse button).</summary>
-		public static bool IsPressed
-		{
-			get
-			{
-				if (UnityEngine.Input.touchCount > 0)
-				{
-					var phase = UnityEngine.Input.GetTouch(0).phase;
-					return phase != TouchPhase.Ended && phase != TouchPhase.Canceled;
-				}
-
-				return UnityEngine.Input.GetMouseButton(0);
-			}
-		}
+		public static bool IsPressed =>
+			UnityEngine.Input.touchCount > 0
+				? UnityEngine.Input.GetTouch(0).phase is not (TouchPhase.Ended or TouchPhase.Canceled)
+				: UnityEngine.Input.GetMouseButton(0);
 
 		/// <summary>Screen-space position of the primary pointer this frame.</summary>
 		public static Vector2 Position =>

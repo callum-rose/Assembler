@@ -335,6 +335,7 @@ Fires once when the pointer is held still for a threshold time (a long press).
 | Name | Type | Description |
 |------|------|-------------|
 | position | Vector2 | Screen-space position of the press when the threshold was reached. |
+| hold_duration | float | Seconds the pointer had been held when the trigger fired (at least Duration). |
 
 ## `swipe trigger`
 Fires when the pointer is dragged far enough, fast enough, and then released (a swipe).
@@ -359,7 +360,11 @@ Fires when the pointer is dragged far enough, fast enough, and then released (a 
 ## `drag trigger`
 Fires every frame the pointer moves while held down (a drag), reporting the per-frame movement.
 
-No properties.
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Threshold | float | Screen-space distance, in pixels, the pointer must travel from the press point before drag events start firing. Defaults to 25. |
 
 ### Outputs
 
@@ -370,7 +375,7 @@ No properties.
 | delta | Vector2 | Screen-space movement since the previous frame. |
 
 ## `pinch trigger`
-Fires every frame two fingers move closer together or further apart (a pinch / zoom).
+Fires every frame two fingers change their separation or orientation (a pinch / zoom and twist).
 
 No properties.
 
@@ -382,18 +387,8 @@ No properties.
 | distance | float | Current distance between the two fingers, in pixels. |
 | delta | float | Change in finger distance since the previous frame (positive = spreading apart). |
 | scale | float | Ratio of the current distance to the previous frame's (greater than 1 = zooming in). |
-
-## `rotate trigger`
-Fires every frame two fingers twist around each other (a rotate gesture).
-
-No properties.
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| center | Vector2 | Screen-space midpoint between the two fingers. |
-| angle_delta | float | Signed rotation since the previous frame, in degrees (positive = counter-clockwise). |
+| angle | float | Current angle of the line between the two fingers, in degrees. |
+| angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
 Fires once after a delay (starts the countdown on entity start, or on Execute).

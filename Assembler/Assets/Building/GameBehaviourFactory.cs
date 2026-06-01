@@ -319,19 +319,14 @@ namespace Assembler.Building
 				{
 					var i = (DragTriggerInfo)info;
 					var b = go.AddComponent<Drag>();
-					return (b, lr => b.Initialise(new DragTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					return (b, lr => b.Initialise(new DragTriggerData(i.Id,
+						i.Threshold.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(PinchTriggerInfo)] = new(typeof(Pinch), (go, info, ctx) =>
 				{
 					var i = (PinchTriggerInfo)info;
 					var b = go.AddComponent<Pinch>();
 					return (b, lr => b.Initialise(new PinchTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(RotateTriggerInfo)] = new(typeof(Assembler.Behaviours.Triggers.Input.Touch.Rotate), (go, info, ctx) =>
-				{
-					var i = (RotateTriggerInfo)info;
-					var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Touch.Rotate>();
-					return (b, lr => b.Initialise(new RotateTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(OnStartTriggerInfo)] = new(typeof(OnStartTrigger), (go, info, ctx) =>
 				{

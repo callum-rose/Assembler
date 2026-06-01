@@ -12,6 +12,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   MaxMovement: Largest screen-space drift, in pixels, allowed while holding; moving further cancels the press. Defaults to 25.
 	/// Outputs:
 	///   position [Vector2]: Screen-space position of the press when the threshold was reached.
+	///   hold_duration [float]: Seconds the pointer had been held when the trigger fired (at least Duration).
 	/// </remarks>
 	public class LongPress : InputTrigger<LongPressTriggerData>, INeedsGameClock
 	{
@@ -42,10 +43,18 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 					// Drifted too far to be a long press — give up until the pointer is released.
 					_resolved = true;
 				}
-				else if (Clock.Time - _startTime >= Data.Duration.ValueOr(0.5f))
+				else
 				{
-					NotifyListeners(TriggerContext.Empty.With("position", position));
-					_resolved = true;
+					var held = Clock.Time - _startTime;
+					if (held >= Data.Duration.ValueOr(0.5f))
+					{
+						NotifyListeners(TriggerContext.Empty.With(b =>
+						{
+							b["position"] = position;
+							b["hold_duration"] = (float)held;
+						}));
+						_resolved = true;
+					}
 				}
 			}
 
