@@ -165,6 +165,13 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new VelocityData(i.Id,
 						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(AccelerationInfo)] = new(typeof(Acceleration), (go, info, ctx) =>
+				{
+					var i = (AccelerationInfo)info;
+					var b = go.AddComponent<Acceleration>();
+					return (b, lr => b.Initialise(new AccelerationData(i.Id,
+						i.Acceleration.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(TranslateInfo)] = new(typeof(Translate), (go, info, ctx) =>
 				{
 					var i = (TranslateInfo)info;
