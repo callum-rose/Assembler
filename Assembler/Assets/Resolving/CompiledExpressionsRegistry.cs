@@ -29,6 +29,11 @@ namespace Assembler.Resolving
 			// argument type.
 			_compiler.RegisterStaticMethods(typeof(System.Linq.Enumerable));
 			_compiler.RegisterType(typeof(UnityEngine.Color));
+
+			// Register reusable library helpers from the Assembler.Libraries assembly so
+			// they're callable by bare name. Add a RegisterStaticMethods line per class.
+			// LibraryDocs documents every public static class in that assembly, so keep
+			// this list in step with the folder for docs to match what's callable.
 			_compiler.RegisterStaticMethods(typeof(GridMath));
 		}
 
