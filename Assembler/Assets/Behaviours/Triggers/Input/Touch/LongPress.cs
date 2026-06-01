@@ -1,0 +1,55 @@
+using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
+using Assembler.Time;
+using UnityEngine;
+
+namespace Assembler.Behaviours.Triggers.Input.Touch
+{
+	/// <summary>Fires once when the pointer is held still for a threshold time (a long press).</summary>
+	/// <remarks>
+	/// Properties:
+	///   Duration: Seconds the pointer must be held before the trigger fires. Defaults to 0.5.
+	///   MaxMovement: Largest screen-space drift, in pixels, allowed while holding; moving further cancels the press. Defaults to 25.
+	/// Outputs:
+	///   position [Vector2]: Screen-space position of the press when the threshold was reached.
+	/// </remarks>
+	public class LongPress : InputTrigger<LongPressTriggerData>, INeedsGameClock
+	{
+		public IGameClock Clock { get; set; } = null!;
+
+		private bool _pressed;
+		private double _startTime;
+		private Vector2 _startPosition;
+		private bool _resolved;
+
+		private void Update()
+		{
+			var pressed = Pointer.IsPressed;
+			var position = Pointer.Position;
+
+			if (pressed && !_pressed)
+			{
+				_startTime = Clock.Time;
+				_startPosition = position;
+				_resolved = false;
+			}
+			else if (pressed && !_resolved)
+			{
+				var maxMovement = Data.MaxMovement.ValueOr(25f);
+
+				if ((position - _startPosition).sqrMagnitude > maxMovement * maxMovement)
+				{
+					// Drifted too far to be a long press — give up until the pointer is released.
+					_resolved = true;
+				}
+				else if (Clock.Time - _startTime >= Data.Duration.ValueOr(0.5f))
+				{
+					NotifyListeners(TriggerContext.Empty.With("position", position));
+					_resolved = true;
+				}
+			}
+
+			_pressed = pressed;
+		}
+	}
+}

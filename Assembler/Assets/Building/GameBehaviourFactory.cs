@@ -18,6 +18,7 @@ using Assembler.Behaviours.Visual;
 using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
+using Assembler.Behaviours.Triggers.Input.Touch;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Behaviours.VariableUpdaters;
@@ -286,25 +287,33 @@ namespace Assembler.Building
 				{
 					var i = (TapTriggerInfo)info;
 					var b = go.AddComponent<Tap>();
-					return (b, lr => b.Initialise(new TapTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					return (b, lr => b.Initialise(new TapTriggerData(i.Id,
+						i.MaxDuration.Resolve(ctx.Resolution),
+						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(DoubleTapTriggerInfo)] = new(typeof(DoubleTap), (go, info, ctx) =>
 				{
 					var i = (DoubleTapTriggerInfo)info;
 					var b = go.AddComponent<DoubleTap>();
-					return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id,
+						i.MaxInterval.Resolve(ctx.Resolution),
+						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(LongPressTriggerInfo)] = new(typeof(LongPress), (go, info, ctx) =>
 				{
 					var i = (LongPressTriggerInfo)info;
 					var b = go.AddComponent<LongPress>();
-					return (b, lr => b.Initialise(new LongPressTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					return (b, lr => b.Initialise(new LongPressTriggerData(i.Id,
+						i.Duration.Resolve(ctx.Resolution),
+						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(SwipeTriggerInfo)] = new(typeof(Swipe), (go, info, ctx) =>
 				{
 					var i = (SwipeTriggerInfo)info;
 					var b = go.AddComponent<Swipe>();
-					return (b, lr => b.Initialise(new SwipeTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					return (b, lr => b.Initialise(new SwipeTriggerData(i.Id,
+						i.MinDistance.Resolve(ctx.Resolution),
+						i.MaxDuration.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(DragTriggerInfo)] = new(typeof(Drag), (go, info, ctx) =>
 				{
@@ -318,10 +327,10 @@ namespace Assembler.Building
 					var b = go.AddComponent<Pinch>();
 					return (b, lr => b.Initialise(new PinchTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(RotateTriggerInfo)] = new(typeof(Assembler.Behaviours.Triggers.Input.Rotate), (go, info, ctx) =>
+				[typeof(RotateTriggerInfo)] = new(typeof(Assembler.Behaviours.Triggers.Input.Touch.Rotate), (go, info, ctx) =>
 				{
 					var i = (RotateTriggerInfo)info;
-					var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Rotate>();
+					var b = go.AddComponent<Assembler.Behaviours.Triggers.Input.Touch.Rotate>();
 					return (b, lr => b.Initialise(new RotateTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(OnStartTriggerInfo)] = new(typeof(OnStartTrigger), (go, info, ctx) =>

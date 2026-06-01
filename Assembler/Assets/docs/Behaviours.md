@@ -289,39 +289,111 @@ Fires on a gamepad / joystick button event (press, release, or hold).
 | Mode | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ## `tap trigger`
-Fires once on a quick screen tap gesture (touch or click).
+Fires once when the pointer is pressed and released quickly without moving (a tap).
 
-No properties.
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| MaxDuration | float | Longest press, in seconds, that still counts as a tap. Defaults to 0.3. |
+| MaxMovement | float | Largest screen-space drift, in pixels, allowed during the press. Defaults to 25. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| position | Vector2 | Screen-space position where the tap was released. |
 
 ## `double tap trigger`
-Fires on a double-tap gesture (two quick taps in succession).
+Fires when two quick taps land close together within a short interval (a double-tap).
 
-No properties.
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| MaxInterval | float | Longest gap, in seconds, allowed between the two taps. Defaults to 0.3. |
+| MaxMovement | float | Largest screen-space drift, in pixels, allowed both during a tap and between the two taps. Defaults to 25. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| position | Vector2 | Screen-space position where the second tap was released. |
 
 ## `long press trigger`
-Fires on a long-press gesture (touch held without movement for a threshold time).
+Fires once when the pointer is held still for a threshold time (a long press).
 
-No properties.
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Duration | float | Seconds the pointer must be held before the trigger fires. Defaults to 0.5. |
+| MaxMovement | float | Largest screen-space drift, in pixels, allowed while holding; moving further cancels the press. Defaults to 25. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| position | Vector2 | Screen-space position of the press when the threshold was reached. |
 
 ## `swipe trigger`
-Fires on a swipe gesture (touch dragged across the screen).
+Fires when the pointer is dragged far enough, fast enough, and then released (a swipe).
 
-No properties.
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| MinDistance | float | Minimum screen-space travel, in pixels, required to count as a swipe. Defaults to 75. |
+| MaxDuration | float | Longest press, in seconds, that still counts as a swipe rather than a slow drag. Defaults to 0.5. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| start | Vector2 | Screen-space position where the swipe began. |
+| position | Vector2 | Screen-space position where the swipe ended. |
+| delta | Vector2 | Vector from start to end. |
+| distance | float | Length of the swipe in pixels. |
+| direction | Vector2 | Normalised swipe direction. |
 
 ## `drag trigger`
-Fires while a drag gesture is active (touch held and moved).
+Fires every frame the pointer moves while held down (a drag), reporting the per-frame movement.
 
 No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| start | Vector2 | Screen-space position where the drag began. |
+| position | Vector2 | Current screen-space pointer position. |
+| delta | Vector2 | Screen-space movement since the previous frame. |
 
 ## `pinch trigger`
-Fires on a two-finger pinch gesture (zoom in/out).
+Fires every frame two fingers move closer together or further apart (a pinch / zoom).
 
 No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| center | Vector2 | Screen-space midpoint between the two fingers. |
+| distance | float | Current distance between the two fingers, in pixels. |
+| delta | float | Change in finger distance since the previous frame (positive = spreading apart). |
+| scale | float | Ratio of the current distance to the previous frame's (greater than 1 = zooming in). |
 
 ## `rotate trigger`
-Fires on a two-finger rotate gesture.
+Fires every frame two fingers twist around each other (a rotate gesture).
 
 No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| center | Vector2 | Screen-space midpoint between the two fingers. |
+| angle_delta | float | Signed rotation since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
 Fires once after a delay (starts the countdown on entity start, or on Execute).
