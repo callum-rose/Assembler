@@ -11,6 +11,7 @@ using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
+using Assembler.Time;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -71,13 +72,20 @@ namespace Assembler.Building
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
 			var entityTransformRegistry = new EntityTransformRegistry();
-			var exclusiveGroupRegistry = new ExclusiveGroupRegistry();
+
+			// The single source of game time, injected everywhere timing matters. Created before the
+			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
+			// (ahead of every behaviour Update via DefaultExecutionOrder).
+			var gameClock = new RealtimeGameClock();
+
+			var exclusiveGroupRegistry = new ExclusiveGroupRegistry(gameClock);
 
 			var templatesById = gameInfo.Templates.ToDictionary(t => t.Id, t => t);
 
 			// The shared root parents every entity, so destroying it unloads the whole game.
 			var gameRoot = new GameObject("Game");
 			gameRoot.AddComponent<GameController>();
+			gameRoot.AddComponent<GameClockDriver>().Clock = gameClock;
 
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
@@ -86,6 +94,7 @@ namespace Assembler.Building
 				assetRegistry,
 				entityTransformRegistry,
 				exclusiveGroupRegistry,
+				gameClock,
 				templatesById,
 				gameInfo.ParseContext,
 				gameRoot.transform,

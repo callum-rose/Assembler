@@ -4,6 +4,7 @@
     "references": [
         "Assembler.Behaviours",
         "Assembler.Resolving",
+        "Assembler.Time",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Assembler.Parsing",

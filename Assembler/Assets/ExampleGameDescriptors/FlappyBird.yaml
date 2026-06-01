@@ -57,10 +57,10 @@ Variables:
 
 Expressions:
   apply gravity:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ vel, g ]
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ vel, g, dt ]
     ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f));"
+    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
 
   random gap y:
     ArgumentTypes: [ float, float ]
@@ -207,6 +207,7 @@ Entities:
             Arguments:
               - !var bird velocity
               - !var bird gravity
+              - !clock deltaTime
 
       jump key:
         Type: key down trigger

@@ -1,7 +1,7 @@
 using System.Collections;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
@@ -10,8 +10,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Delay: Seconds to wait between Execute and notifying listeners.
 	/// </remarks>
-	public sealed class DeferredTrigger : Trigger<DeferredTriggerData>
+	public sealed class DeferredTrigger : Trigger<DeferredTriggerData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		public override void Execute(TriggerContext ctx)
 		{
 			var captured = ctx;
@@ -21,7 +23,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 			IEnumerator Routine()
 			{
-				yield return new WaitForSeconds(delay);
+				yield return new WaitForGameSeconds(Clock, delay);
 
 				NotifyListeners(captured);
 			}

@@ -14,7 +14,8 @@
         "Assembler.Deserialisation",
         "Assembler.Resolving",
         "Unity.InputSystem",
-        "Assembler.Input"
+        "Assembler.Input",
+        "Assembler.Time"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

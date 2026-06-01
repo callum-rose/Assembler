@@ -379,6 +379,17 @@ namespace Assembler.Parsing
 		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
 		/// recursively wrapped as <see cref="ValueSource{T}"/>.
 		/// </summary>
+		private static ClockProperty ParseClockProperty(string property) =>
+			property.Trim().ToLowerInvariant() switch
+			{
+				"deltatime" => ClockProperty.DeltaTime,
+				"time" => ClockProperty.Time,
+				"framecount" => ClockProperty.FrameCount,
+				"unscaleddeltatime" => ClockProperty.UnscaledDeltaTime,
+				_ => throw new ParsingException(
+					$"Unknown !clock property '{property}'. Expected one of: deltaTime, time, frameCount, unscaledDeltaTime")
+			};
+
 		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
 			AssemblerValue raw,
 			T? fallback = default) =>
@@ -392,6 +403,11 @@ namespace Assembler.Parsing
 					new EntityPositionSource<T>(entityPositionRef.Id),
 				EntityPositionRef entityPositionRef => throw new ParsingException(
 					$"!entity_position '{entityPositionRef.Id}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
+				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
+					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
+					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),
+				ClockRef clockRef => throw new ParsingException(
+					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => new ExpressionSource<T>(exprRef.ExpressionId,
@@ -595,6 +611,7 @@ namespace Assembler.Parsing
 				VarRefDto v => new VarRef(v.Id ?? string.Empty),
 				AssetRefDto v => new AssetRef(v.Id ?? string.Empty),
 				EntityPositionRefDto v => new EntityPositionRef(v.Id ?? string.Empty),
+				ClockRefDto v => new ClockRef(v.Property ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
 				ExprRefDto v => new ExprRef(v.ExpressionId ?? string.Empty,

@@ -209,7 +209,7 @@ Every MonoBehaviour declares (above `public class ...`):
 ```csharp
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Movement
 {
@@ -218,8 +218,12 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Velocity: World-space velocity in units per second.
 	/// </remarks>
-	public class Velocity : GameBehaviour<VelocityData>
+	public class Velocity : GameBehaviour<VelocityData>, INeedsGameClock
 	{
+		// Auto-wired by the factory (like Spawner). Never read UnityEngine.Time directly —
+		// Clock respects pause / slow-mo / deterministic replay.
+		public IGameClock Clock { get; set; } = null!;
+
 		private void Update()
 		{
 			Execute(TriggerContext.Empty);
@@ -227,7 +231,7 @@ namespace Assembler.Behaviours.Movement
 
 		public override void Execute(TriggerContext ctx)
 		{
-			transform.position += Data.Velocity.Get(ctx) * Time.deltaTime;
+			transform.position += Data.Velocity.Get(ctx) * Clock.DeltaTime;
 		}
 	}
 }
@@ -239,7 +243,7 @@ namespace Assembler.Behaviours.Movement
 using System.Collections;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
@@ -248,8 +252,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Delay: Seconds to wait before notifying listeners.
 	/// </remarks>
-	public class TimerTrigger : TimingTrigger<TimerTriggerData>
+	public class TimerTrigger : TimingTrigger<TimerTriggerData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private void Start()
 		{
 			Execute(TriggerContext.Empty);
@@ -261,9 +267,11 @@ namespace Assembler.Behaviours.Triggers.Timing
 			StartCoroutine(InvokeTriggerAfter(Data.Delay.Get(ctx), captured));
 		}
 
+		// WaitForGameSeconds accumulates Clock.DeltaTime, so the wait freezes under pause / slow-mo.
+		// Never use UnityEngine's WaitForSeconds for gameplay timers.
 		private IEnumerator InvokeTriggerAfter(float seconds, TriggerContext captured)
 		{
-			yield return new WaitForSeconds(seconds);
+			yield return new WaitForGameSeconds(Clock, seconds);
 			NotifyListeners(captured);
 		}
 	}
@@ -354,6 +362,7 @@ namespace Assembler.Behaviours.Triggers.Input
 - **Publishing outputs:** there is no ambient `TriggerContext.Set(...)` any more. Derive a new immutable context and pass it to `NotifyListeners`: `NotifyListeners(ctx.With("key", value))`, or the batch builder form `NotifyListeners(ctx.With(b => { b["a"] = x; b["b"] = y; }))`. Start from the received `ctx` to cascade upstream outputs downstream, or from `TriggerContext.Empty` at a Unity-callback entry point. The key strings must match the `Outputs:` doc block.
 - `Initialise(data, listeners)` is called by the builder (see Step 5). The base `GameBehaviour<TData>` stores the data and wires up the listeners automatically. Override `OnInitialise(TData data)` if you need extra one-time setup.
 - **`Spawner` is auto-wired.** Behaviours that need `IEntitySpawner` implement `INeedsSpawner`; the factory injects it after `AddComponent` and before `Initialise` runs. **Do not assign `Spawner` from the builder lambda.** (Note: `INeedsTriggerContext` no longer exists — `TriggerContext` is threaded as a method parameter, not injected.)
+- **`Clock` is auto-wired — never read `UnityEngine.Time`.** Any behaviour that needs game time (per-frame motion, `Time.time` style timestamps, or coroutine waits) implements `INeedsGameClock { IGameClock Clock { get; set; } }` (in `Assembler.Time`) and reads `Clock.DeltaTime` / `Clock.Time` / `Clock.FrameCount`. The factory injects it exactly like `Spawner`, so **do not assign `Clock` from the builder lambda**. The clock respects pause, slow-mo (`set timescale`), and deterministic replay — reading `UnityEngine.Time` directly bypasses all of that. For coroutine delays use `new WaitForGameSeconds(Clock, seconds)`, not `WaitForSeconds`. Descriptor expressions get the same values via the `!clock <property>` value tag.
 
 ---
 

@@ -8,6 +8,7 @@ using Assembler.Parsing.Controls;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
+using Assembler.Time;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,6 +24,7 @@ namespace Assembler.Building
 		private readonly AssetRegistry _assets;
 		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
+		private readonly IGameClock _clock;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
 		private readonly Transform _root;
@@ -37,6 +39,7 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			EntityTransformRegistry entityTransforms,
 			ExclusiveGroupRegistry exclusiveGroups,
+			IGameClock clock,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			TransformContext parseContext,
 			Transform root,
@@ -49,6 +52,7 @@ namespace Assembler.Building
 			_assets = assets;
 			_entityTransforms = entityTransforms;
 			_exclusiveGroups = exclusiveGroups;
+			_clock = clock;
 			_templates = templates;
 			_parseContext = parseContext;
 			_root = root;
@@ -62,7 +66,7 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
-			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms);
+			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms, _clock);
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -88,11 +92,12 @@ namespace Assembler.Building
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
-				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms),
+				new ResolutionContext(_variables, _expressions, _assets, scope, _entityTransforms, _clock),
 				this,
 				_exclusiveGroups,
 				_controls,
-				_controlsAsset);
+				_controlsAsset,
+				_clock);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

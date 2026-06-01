@@ -8,7 +8,8 @@
         "Assembler.Extensions",
         "Assembler.Resolving",
         "Assembler.Parsing",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Assembler.Time"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
