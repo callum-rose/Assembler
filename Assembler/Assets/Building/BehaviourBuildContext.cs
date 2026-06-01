@@ -12,6 +12,5 @@ namespace Assembler.Building
 		ExclusiveGroupRegistry ExclusiveGroups,
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,
-		ExclusiveGroupRegistry ExclusiveGroups,
 		IGameClock Clock);
 }
