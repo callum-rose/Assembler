@@ -256,6 +256,18 @@ vs vector `LerpVector` vs colour `LerpColor`.
 
 ---
 
+## Known Limitations
+
+Subtler gotchas (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
+
+- **Integer division truncates** — `5 / 2` is `2` (both operands are `int`). Mix in a float/double for a fractional result: `5 / 2f` is `2.5` (the `int` promotes — see *Supported Types*).
+- **Compound assignment narrows back to the target's type** — `int total = 5; total += 2.9f;` leaves `total == 7`, mirroring C#.
+- **String escapes are not interpreted** — only `\"` and `\\` are meaningful; `\n`/`\t` become the literal `n`/`t`.
+- **`break` / `continue` only work inside a loop** — using them elsewhere throws.
+- **Casts must be legal CLR conversions** — the syntax parses `(int) (float) (double) (bool) (string)`, but the runtime conversion still has to be valid.
+
+---
+
 ## Complete Example
 
 ```csharp

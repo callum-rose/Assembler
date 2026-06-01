@@ -42,6 +42,14 @@ string text = "Hello";
 var auto = 10;  // inferred as int
 ```
 
+> **Implicit numeric promotion.** Mixing numeric types in a binary op widens the narrower
+> operand up the `int → long → float → double` ladder, mirroring C# (e.g. `float + int`
+> yields `float`, `int < float` compares as `float`). This applies to `+ - * / %`, the
+> comparisons `< > <= >= == !=`, and compound assignments `+= -= *= /=` (where the result is
+> narrowed back to the target's type, like C#). Explicit casts are no longer required for
+> mixed-type math, but remain available when you want a specific type. Use the `f` suffix for
+> float literals (`3.14f`); a bare `3.14` is a `double`.
+
 ---
 
 ## Literals
@@ -58,8 +66,12 @@ double d = -2.5;      // negative floating point
 ```csharp
 string text = "Hello World";
 string empty = "";
-string escaped = "Line 1\nLine 2";  // escape sequences supported
+string quote = "He said \"hi\"";  // \" embeds a quote; \\ embeds a backslash
 ```
+
+> **Escape sequences are not interpreted.** The lexer only strips the leading
+> backslash and keeps the next character verbatim, so `\"` → `"` and `\\` → `\`,
+> but `\n` → `n` and `\t` → `t` (no newline/tab). Only `\"` and `\\` are useful.
 
 ### Boolean Literals
 ```csharp
@@ -94,8 +106,8 @@ x /= 4;             // divide and assign
 
 ### Increment/Decrement
 ```csharp
-x++;                // pre-increment
-x--;                // pre-decrement
+x++;                // increment by 1 (use as a statement)
+x--;                // decrement by 1 (use as a statement)
 ```
 
 ---
@@ -577,6 +589,19 @@ The following C# features are **NOT** supported and will cause errors:
 ## Switch Statements
 
 **IMPORTANT:** While the lexer has tokens for `switch`, `case`, and `default`, the parser does **NOT** implement switch statement parsing. Do not use switch statements.
+
+---
+
+## Known Limitations
+
+Behaviours that commonly surprise authors (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
+
+- **Integer division truncates.** `5 / 2` is `2`, not `2.5` — both operands are `int`. Mix in a float/double for a fractional result: `5 / 2f` is `2.5` (the `int` promotes — see [Basic Types](#basic-types)).
+- **Compound assignment narrows back to the target's type.** `int total = 5; total += 2.9f;` leaves `total == 7`, mirroring C#.
+- **String escapes are not interpreted.** Only `\"` and `\\` are meaningful; `\n`/`\t` become the literal characters `n`/`t`.
+- **`break` / `continue` only inside loops.** Using them elsewhere throws (`"… outside of loop"`).
+- **Casts must be valid CLR conversions.** The syntax accepts `(int) (float) (double) (bool) (string)`, but the underlying conversion must be legal at runtime (e.g. `(double)5` is fine; `(bool)someInt` is not).
+- **Lambdas are single-parameter, expression-body only** — see [Lambda Expressions](#lambda-expressions).
 
 ---
 

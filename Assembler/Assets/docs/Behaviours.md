@@ -150,40 +150,40 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 | Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
 
 ## `move animation`
-_No summary — add `<summary>` on MoveAnimation._
+Tweens the entity's world position from Start to End over Duration, then notifies listeners on completion.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
+| End | Vector3 | Target value to tween towards. |
+| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
+| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
 
 ## `scale animation`
-_No summary — add `<summary>` on ScaleAnimation._
+Tweens the entity's local scale from Start to End over Duration, then notifies listeners on completion.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
+| End | Vector3 | Target value to tween towards. |
+| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
+| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
 
 ## `rotate animation`
-_No summary — add `<summary>` on RotateAnimation._
+Tweens the entity's euler-angle rotation from Start to End over Duration, then notifies listeners on completion.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Starting value; defaults to the transform's current value when left unset. |
+| End | Vector3 | Target value to tween towards. |
+| Duration | float | Tween length in seconds (clamped to a minimum of 0). |
+| Easing | string | DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine. |
 
 ## `key hold trigger`
 Fires every frame while the named key is held down.
@@ -1244,21 +1244,31 @@ Draws a text input field. Fires listeners when the user presses Enter to submit 
 
 ---
 
-## Doc-gen warnings
+## Parse-only behaviours (not yet runnable)
 
-- `move animation`: property `Start` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `End` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `Duration` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `Easing` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `scale animation`: property `Start` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `End` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `Duration` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `Easing` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `rotate animation`: property `Start` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `End` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `Duration` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `Easing` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `condition`: no MonoBehaviour mapping for `ConditionInfo` (skipped).
-- `trigger stay trigger`: no MonoBehaviour mapping for `TriggerStayTriggerInfo` (skipped).
-- `when all`: no MonoBehaviour mapping for `WhenAllInfo` (skipped).
-- `when any`: no MonoBehaviour mapping for `WhenAnyInfo` (skipped).
+These behaviours are registered in the parse catalogue and accept the properties below, but have no runtime `GameBehaviour` implementation — they parse from YAML yet will not execute. Treat them as unsupported until a MonoBehaviour mapping is added in `GameBehaviourFactory`.
+
+### `condition`
+
+| Name | Type |
+|------|------|
+| ExpressionId | string |
+| Arguments | IReadOnlyList<IValueSourceArg> |
+
+### `trigger stay trigger`
+
+| Name | Type |
+|------|------|
+| TagsToDetect | IReadOnlyList<string> |
+
+### `when all`
+
+| Name | Type |
+|------|------|
+| TriggerIds | IReadOnlyList<string> |
+
+### `when any`
+
+| Name | Type |
+|------|------|
+| TriggerIds | IReadOnlyList<string> |
