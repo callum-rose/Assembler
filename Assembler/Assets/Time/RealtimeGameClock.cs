@@ -13,21 +13,10 @@ namespace Assembler.Time
 	/// </remarks>
 	public sealed class RealtimeGameClock : IGameClock
 	{
-		private float _timeScale = 1f;
-		private bool _isPaused;
-
-		private float _deltaTime;
-		private float _unscaledDeltaTime;
-		private double _time;
-		private int _frameCount;
-
-		public float DeltaTime => _deltaTime;
-
-		public float UnscaledDeltaTime => _unscaledDeltaTime;
-
-		public double Time => _time;
-
-		public int FrameCount => _frameCount;
+		public float DeltaTime { get; private set; }
+		public float UnscaledDeltaTime { get; private set; }
+		public double Time { get; private set; }
+		public int FrameCount { get; private set; }
 
 		public float TimeScale
 		{
@@ -35,11 +24,13 @@ namespace Assembler.Time
 			set => _timeScale = value < 0f ? 0f : value;
 		}
 
-		public bool IsPaused => _isPaused;
+		public bool IsPaused { get; private set; }
+		
+		private float _timeScale = 1f;
 
-		public void Pause() => _isPaused = true;
+		public void Pause() => IsPaused = true;
 
-		public void Resume() => _isPaused = false;
+		public void Resume() => IsPaused = false;
 
 		/// <summary>
 		/// Advances the clock by one frame. Call once per frame, before any reader runs.
@@ -48,13 +39,13 @@ namespace Assembler.Time
 		/// </summary>
 		public void Tick()
 		{
-			_unscaledDeltaTime = UnityEngine.Time.deltaTime;
-			_deltaTime = _isPaused ? 0f : _unscaledDeltaTime * _timeScale;
+			UnscaledDeltaTime = UnityEngine.Time.deltaTime;
+			DeltaTime = IsPaused ? 0f : UnscaledDeltaTime * _timeScale;
 
-			if (!_isPaused)
+			if (!IsPaused)
 			{
-				_time += _deltaTime;
-				_frameCount++;
+				Time += DeltaTime;
+				FrameCount++;
 			}
 		}
 	}
