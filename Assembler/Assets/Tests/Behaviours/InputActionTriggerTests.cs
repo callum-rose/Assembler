@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Input;
 using Assembler.Parsing.Info.Behaviours;
@@ -29,6 +30,8 @@ namespace Tests.Behaviours
 				Last = Prepare(ctx);
 				CallCount++;
 			}
+
+			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 
 		[Test]
