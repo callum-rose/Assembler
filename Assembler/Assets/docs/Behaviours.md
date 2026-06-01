@@ -374,7 +374,7 @@ Fires every frame the pointer moves while held down (a drag), reporting the per-
 | position | Vector2 | Current screen-space pointer position. |
 | delta | Vector2 | Screen-space movement since the previous frame. |
 
-## `pinch trigger`
+## `pinch and rotate trigger`
 Fires every frame two fingers change their separation or orientation (a pinch / zoom and twist).
 
 No properties.

@@ -322,11 +322,11 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new DragTriggerData(i.Id,
 						i.Threshold.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(PinchTriggerInfo)] = new(typeof(Pinch), (go, info, ctx) =>
+				[typeof(PinchAndRotateTriggerInfo)] = new(typeof(PinchAndRotate), (go, info, ctx) =>
 				{
-					var i = (PinchTriggerInfo)info;
-					var b = go.AddComponent<Pinch>();
-					return (b, lr => b.Initialise(new PinchTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
+					var i = (PinchAndRotateTriggerInfo)info;
+					var b = go.AddComponent<PinchAndRotate>();
+					return (b, lr => b.Initialise(new PinchAndRotateTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(OnStartTriggerInfo)] = new(typeof(OnStartTrigger), (go, info, ctx) =>
 				{

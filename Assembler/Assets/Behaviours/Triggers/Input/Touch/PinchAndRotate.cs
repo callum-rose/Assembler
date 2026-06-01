@@ -15,7 +15,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   angle [float]: Current angle of the line between the two fingers, in degrees.
 	///   angle_delta [float]: Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise).
 	/// </remarks>
-	public class Pinch : InputTrigger<PinchTriggerData>
+	public class PinchAndRotate : InputTrigger<PinchAndRotateTriggerData>
 	{
 		private bool _tracking;
 		private float _lastDistance;

@@ -50,7 +50,7 @@ namespace Assembler.Parsing
 				["long press trigger"] = LongPressTriggerInfo.Create,
 				["swipe trigger"] = SwipeTriggerInfo.Create,
 				["drag trigger"] = DragTriggerInfo.Create,
-				["pinch trigger"] = PinchTriggerInfo.Create,
+				["pinch and rotate trigger"] = PinchAndRotateTriggerInfo.Create,
 				["condition"] = ConditionInfo.Create,
 				["timer trigger"] = TimerTriggerInfo.Create,
 				["deferred trigger"] = DeferredTriggerInfo.Create,
