@@ -87,6 +87,10 @@ namespace Assembler.Building
 			gameRoot.AddComponent<GameController>();
 			gameRoot.AddComponent<GameClockDriver>().Clock = gameClock;
 
+			// Enable the controls asset for the game's lifetime and tie its destruction to the game root, so
+			// individual input triggers never enable/disable (and never leak) the shared asset themselves.
+			gameRoot.AddComponent<ControlsAssetOwner>().Initialise(controlsAsset);
+
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,

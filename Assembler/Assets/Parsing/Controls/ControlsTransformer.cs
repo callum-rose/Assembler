@@ -69,6 +69,14 @@ namespace Assembler.Parsing.Controls
 					$"Action '{name}' has unknown Phase '{other}'. Expected 'hold', 'down' or 'up'.")
 			};
 
+			// Value actions are built as Vector2 and read via ReadValue<Vector2> in the trigger, so reject any
+			// other ValueType up front rather than silently coercing a 1D/scalar declaration into a vector.
+			if (kind == ActionKind.Value && (dto.ValueType ?? "vector2").ToLowerInvariant() != "vector2")
+			{
+				throw new ParsingException(
+					$"Action '{name}' has unsupported ValueType '{dto.ValueType}'. Only 'vector2' is currently supported.");
+			}
+
 			return new ActionInfo(name, kind, phase, dto.ValueType);
 		}
 

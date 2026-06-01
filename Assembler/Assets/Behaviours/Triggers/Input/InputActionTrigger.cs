@@ -40,14 +40,15 @@ namespace Assembler.Behaviours.Triggers.Input
 
 		private void Wire()
 		{
-			var action = Data.Action;
-
-			action.Enable();
-
+			// The action's enabled lifetime is owned by ControlsAssetOwner (the whole asset is enabled for the
+			// game's lifetime), not by this behaviour — several behaviours can share one action, so enabling or
+			// disabling it per-behaviour would let one consumer's teardown kill input for the others.
 			if (Data.Kind is not ActionKind.Button)
 			{
 				return;
 			}
+
+			var action = Data.Action;
 
 			switch (Data.Phase)
 			{
@@ -62,12 +63,14 @@ namespace Assembler.Behaviours.Triggers.Input
 
 		private void Unwire()
 		{
-			var action = Data.Action;
+			// Initialise may never have run (component destroyed before the build's initialisation pass).
+			if (Data?.Action is not { } action)
+			{
+				return;
+			}
 
 			action.started -= OnButtonEvent;
 			action.canceled -= OnButtonEvent;
-			
-			action.Disable();
 		}
 
 		private void OnButtonEvent(InputAction.CallbackContext _)

@@ -27,15 +27,5 @@ namespace Assembler.Input
 				_ => InputPlatform.Desktop
 			};
 		}
-
-		/// <summary>The descriptor binding-group key for a platform (matches the <c>Bindings:</c> keys).</summary>
-		public static string GroupKey(this InputPlatform platform) => platform switch
-		{
-			InputPlatform.Desktop => "desktop",
-			InputPlatform.Gamepad => "gamepad",
-			InputPlatform.Mobile => "mobile",
-			InputPlatform.Console => "console",
-			_ => "desktop"
-		};
 	}
 }

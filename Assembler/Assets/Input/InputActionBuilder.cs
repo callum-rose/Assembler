@@ -21,7 +21,8 @@ namespace Assembler.Input
 			var asset = ScriptableObject.CreateInstance<InputActionAsset>();
 			asset.name = "GameplayControls";
 
-			// One control scheme per platform group, so MaskByGroup has matching schemes to consult.
+			// Register a control scheme per platform group. Masking (below) keys purely off each binding's group
+			// string and doesn't need these, but they let the asset be inspected/extended like an authored one.
 			foreach (var platform in controls.Bindings.Keys)
 			{
 				asset.AddControlScheme(platform);
