@@ -98,6 +98,25 @@ Example YAML game files are in `Assets/GameDescriptors/` (e.g. `Pong.yaml`, `Sna
 
 IDs for definitions (entities, behaviours, templates, variables, etc.) are promoted to YAML keys at the definition site rather than being a separate `id:` property — i.e. the mapping key *is* the identifier.
 
+## Determinism (Level 1)
+
+Assembler supports **deterministic execution and record/replay**: the same descriptor, seed, and input log reproduce a byte-identical run. This makes generated games debuggable (capture a session and replay it exactly) and testable (play a descriptor through a scripted input log and assert on the outcome).
+
+**The guarantee (Level 1 — same build, same machine):** given a fixed *seed*, *fixed delta time*, and *input log*, a descriptor produces identical execution **on the same build running on the same machine**. This is **NOT cross-platform lockstep** — floating-point and physics results may differ across CPUs, OSes, or Unity versions, so a replay captured on one machine is not guaranteed to reproduce on another.
+
+**Physics caveat:** physics-driven games are **excluded from the determinism guarantee**. Unity's `PhysicsScene` stepping is tied to the engine and not controlled here; manual `Physics.Simulate` is noted as future work. Treat physics as same-machine-best-effort only.
+
+**Controlled nondeterminism sources:**
+
+1. **Time** → `FixedStepGameClock` advances a constant delta per tick (vs. `RealtimeGameClock`'s wall-clock delta).
+2. **Randomness** → a single seeded per-run PRNG (`DeterministicRng` / `RandomState`); `RandomMath` routes through it.
+3. **Iteration order** → a stable registration index in `BehaviourRegistry`. Queries that would otherwise iterate the unordered `_behaviours` dictionary (`GetByEntityTagAndBehaviourId`) sort by registration order; `GetByBehaviourTag` is already List-backed and stable.
+4. **Input** → record/replay at the trigger boundary (`InputTrigger.NotifyListeners` → `TriggerContext`), capturing the ordered set of `(trigger, emitted context)` per logical tick.
+
+**Ordering guarantees:** registration runs in stable entity/behaviour list order, so the registration index is deterministic. Within a single tick, the recorder captures an *ordered* activation list and replay re-injects in recorded order, so downstream behaviour is reproduced regardless of Unity's (unspecified) intra-frame `Update` order among equal-`DefaultExecutionOrder` components.
+
+**Rule — no raw `UnityEngine.Random` in behaviours:** behaviours and libraries must draw randomness through `RandomMath` / `RandomState.Current`, never `UnityEngine.Random` directly. Raw `UnityEngine.Random` reads the engine's global, uncaptured state and breaks replay determinism.
+
 ## Workflow
 
 ### Git Worktrees
