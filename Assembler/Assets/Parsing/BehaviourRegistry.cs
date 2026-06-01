@@ -141,6 +141,10 @@ namespace Assembler.Parsing
 				["colour list clear"] = ListClearInfo<Color>.Create,
 				["colour list loop trigger"] = ListLoopTriggerInfo<Color>.Create,
 
+				["active poll"] = ActivePollInfo.Create,
+				["set active"] = SetActiveInfo.Create,
+				["toggle active"] = ToggleActiveInfo.Create,
+
 				["sprite"] = SpriteInfo.Create,
 				["voxel mesh"] = VoxelMeshInfo.Create,
 				["audio source"] = AudioSourceInfo.Create,
