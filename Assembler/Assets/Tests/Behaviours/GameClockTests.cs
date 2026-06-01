@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Rotation;
@@ -56,6 +57,8 @@ namespace Tests.Behaviours
 			}
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
+			
+			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 
 		private static T NewBehaviour<T>(GameObject go, FakeGameClock clock) where T : GameBehaviour

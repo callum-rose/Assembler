@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Resolving;
@@ -22,6 +23,8 @@ namespace Tests.Behaviours
 			}
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
+			
+			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 
 		[Test]
