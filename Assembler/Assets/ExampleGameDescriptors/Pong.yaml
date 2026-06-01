@@ -209,10 +209,9 @@ Expressions:
     ArgumentTypes: [ vector, vector, vector, float ]
     ArgumentNames: [ ball_vel, hit_point, paddle_pos, factor ]
     ReturnType: vector
-    Expression: "var speed = ball_vel.magnitude;
+    Expression: "var speed = Magnitude(ball_vel);
       var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
-      var norm = dir.normalized;
-      new UnityEngine.Vector3(norm.x * speed, norm.y * speed, 0f);"
+      ScaleVector(Normalize(dir), speed);"
   vec multiply:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ a, b ]
@@ -231,8 +230,7 @@ Expressions:
   random ball initial position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Vector3(0, Range(-2f, 2f), 0);"
+    Expression: "new Vector3(0, RandomFloat(-2f, 2f), 0);"
   is game over:
     ArgumentTypes: [ int, int, int ]
     ArgumentNames: [ a, b, w ]

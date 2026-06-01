@@ -73,14 +73,11 @@ Templates:
 Expressions:
   random colour:
     ReturnType: colour
-    RegisterTypes: [ UnityEngine.Color ]
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Color(Range(0.4f, 1.0f), Range(0.4f, 1.0f), Range(0.4f, 1.0f), 1f);"
+    Expression: "return RandomColorBetween(new Color(0.4f, 0.4f, 0.4f, 1f), new Color(1f, 1f, 1f, 1f));"
   random spawn x:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
-    RegisterTypeStatics: [ UnityEngine.Random ]
-    Expression: "new Vector3(Range(-3.5f, 3.5f), -4.5f, 0);"
+    Expression: "new Vector3(RandomFloat(-3.5f, 3.5f), -4.5f, 0);"
 
 Entities:
   ship:

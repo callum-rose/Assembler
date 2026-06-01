@@ -91,8 +91,7 @@ Expressions:
 
   random shape:
     ReturnType: int
-    RegisterTypes: [ UnityEngine.Random ]
-    Expression: "return UnityEngine.Random.Range(0, 7);"
+    Expression: "return RandomInt(0, 6);"
 
   colour for shape:
     ArgumentTypes: [ int ]
@@ -118,15 +117,13 @@ Expressions:
     ArgumentTypes: [ vector, int, int ]
     ArgumentNames: [ origin, dx, dy ]
     ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "return new Vector3(origin.x + (float)dx, origin.y + (float)dy, 0f);"
+    Expression: "return NeighbourCell(origin, dx, dy);"
 
   shift down:
     ArgumentTypes: [ vector, int ]
     ArgumentNames: [ cell, by ]
     ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "return new Vector3(cell.x, cell.y - (float)by, 0f);"
+    Expression: "return NeighbourCell(cell, 0, -by);"
 
   should shift:
     ArgumentTypes: [ bool, int ]
@@ -276,7 +273,6 @@ Expressions:
     ArgumentTypes: [ vector, int, int, vector list ]
     ArgumentNames: [ origin, s, rot, occupied ]
     ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: >
       int d = 0;
       while (d < 25)
@@ -294,7 +290,7 @@ Expressions:
           if (!ok) { break; }
           d = nd;
       }
-      return new Vector3(origin.x, origin.y - (float)d, 0f);
+      return NeighbourCell(origin, 0, -d);
 Templates:
   # ===== Active falling piece =============================================
   # One parent entity with 4 child blocks. Logical state lives in `origin`

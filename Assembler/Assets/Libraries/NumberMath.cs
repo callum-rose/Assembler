@@ -46,6 +46,21 @@ namespace Assembler.Libraries
 		/// <returns>-1 if negative, 1 if positive, 0 if zero.</returns>
 		public static float Sign(float x) => x > 0f ? 1f : x < 0f ? -1f : 0f;
 
+		/// <summary>Round to the nearest whole number (banker's rounding at .5).</summary>
+		/// <param name="x">The value to round.</param>
+		/// <returns>The nearest integral value.</returns>
+		public static float Round(float x) => Mathf.Round(x);
+
+		/// <summary>Largest whole number less than or equal to a value.</summary>
+		/// <param name="x">The value.</param>
+		/// <returns>The floor of x.</returns>
+		public static float Floor(float x) => Mathf.Floor(x);
+
+		/// <summary>Smallest whole number greater than or equal to a value.</summary>
+		/// <param name="x">The value.</param>
+		/// <returns>The ceiling of x.</returns>
+		public static float Ceil(float x) => Mathf.Ceil(x);
+
 		/// <summary>Linear interpolation between two values (t clamped to [0, 1]).</summary>
 		/// <param name="a">Start value (t = 0).</param>
 		/// <param name="b">End value (t = 1).</param>

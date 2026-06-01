@@ -90,67 +90,52 @@ Expressions:
     ReturnType: bool
     Expression: "score >= target || dead;"
 
-  # Rotate a 2D vector counter-clockwise by 1 degree (0.0175 rad)
+  # Rotate a 2D vector counter-clockwise by 1 degree
   rotate left:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ v ]
     ReturnType: vector
-    Expression: |
-      float c = UnityEngine.Mathf.Cos(0.0175f);
-      float s = UnityEngine.Mathf.Sin(0.0175f);
-      return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
+    Expression: "return Rotate2D(v, 1f);"
 
   # Rotate a 2D vector clockwise by 1 degree
   rotate right:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ v ]
     ReturnType: vector
-    Expression: |
-      float c = UnityEngine.Mathf.Cos(-0.0175f);
-      float s = UnityEngine.Mathf.Sin(-0.0175f);
-      return new UnityEngine.Vector3(v.x * c - v.y * s, v.x * s + v.y * c, 0f);
+    Expression: "return Rotate2D(v, -1f);"
 
   # vel + facing * impulse
   apply thrust:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ vel, facing, impulse ]
     ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(vel.x + facing.x * impulse, vel.y + facing.y * impulse, 0f);
+    Expression: "return AddVector(vel, ScaleVector(facing, impulse));"
 
   # pos + vel * dt (per-frame integration for position tracking)
   integrate position:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ pos, vel ]
     ReturnType: vector
-    Expression: |
-      float dt = UnityEngine.Time.deltaTime;
-      return new UnityEngine.Vector3(pos.x + vel.x * dt, pos.y + vel.y * dt, 0f);
+    Expression: "return IntegratePosition(pos, vel);"
 
   # facing * speed
   scale vec:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ v, k ]
     ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(v.x * k, v.y * k, 0f);
+    Expression: "return ScaleVector(v, k);"
 
   # Random spawn point on a circle of radius 6.8 around origin
   random asteroid position:
     ReturnType: vector
-    Expression: |
-      float angle = UnityEngine.Random.Range(0f, 6.2832f);
-      float r = 6.8f;
-      return new UnityEngine.Vector3(UnityEngine.Mathf.Cos(angle) * r, UnityEngine.Mathf.Sin(angle) * r, 0f);
+    Expression: "return RandomOnCircle(6.8f);"
 
   # Random velocity vector aimed roughly toward the centre, with jitter
   random asteroid velocity:
     ArgumentTypes: [ float ]
     ArgumentNames: [ speed ]
     ReturnType: vector
-    Expression: |
-      float angle = UnityEngine.Random.Range(0f, 6.2832f);
-      return new UnityEngine.Vector3(UnityEngine.Mathf.Cos(angle) * speed, UnityEngine.Mathf.Sin(angle) * speed, 0f);
+    Expression: "return RandomOnCircle(speed);"
 
   format score:
     ArgumentTypes: [ int ]

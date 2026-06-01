@@ -35,6 +35,15 @@ namespace Tests.Resolving
 		}
 
 		[Test]
+		public void RoundFloorCeil()
+		{
+			Assert.That(NumberMath.Round(2.4f), Is.EqualTo(2f).Within(Tol));
+			Assert.That(NumberMath.Round(2.6f), Is.EqualTo(3f).Within(Tol));
+			Assert.That(NumberMath.Floor(2.9f), Is.EqualTo(2f).Within(Tol));
+			Assert.That(NumberMath.Ceil(2.1f), Is.EqualTo(3f).Within(Tol));
+		}
+
+		[Test]
 		public void LerpAndRemap()
 		{
 			Assert.That(NumberMath.Lerp(0, 10, 0.25f), Is.EqualTo(2.5f).Within(Tol));

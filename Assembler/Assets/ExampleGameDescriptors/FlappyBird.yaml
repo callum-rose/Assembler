@@ -60,15 +60,13 @@ Expressions:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ vel, g ]
     ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(vel.x, vel.y - g * UnityEngine.Time.deltaTime, 0f);
+    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f));"
 
   random gap y:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ lo, hi ]
     ReturnType: float
-    Expression: |
-      return UnityEngine.Random.Range(lo, hi);
+    Expression: "return RandomFloat(lo, hi);"
 
   top pipe position:
     ArgumentTypes: [ float, float, float, float ]
