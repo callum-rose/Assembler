@@ -43,7 +43,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 				if (distance >= Data.MinDistance.ValueOr(75f) && withinTime)
 				{
-					NotifyListeners(TriggerContext.Empty.With(b =>
+					NotifyListeners(TriggerContext.New(b =>
 					{
 						b["start"] = _startPosition;
 						b["position"] = position;

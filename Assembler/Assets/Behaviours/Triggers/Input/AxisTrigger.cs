@@ -24,7 +24,7 @@ namespace Assembler.Behaviours.Triggers.Input
 			var x = string.IsNullOrEmpty(xName) ? 0f : UnityEngine.Input.GetAxis(xName);
 			var y = string.IsNullOrEmpty(yName) ? 0f : UnityEngine.Input.GetAxis(yName);
 
-			NotifyListeners(TriggerContext.Empty.With(b =>
+			NotifyListeners(TriggerContext.New(b =>
 			{
 				b["axis"] = new Vector2(x, y);
 				b["x"] = x;

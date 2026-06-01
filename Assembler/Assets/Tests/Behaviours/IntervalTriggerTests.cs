@@ -86,7 +86,7 @@ namespace Tests.Behaviours
 
 				trigger.Initialise(data, new List<Listener> { listener });
 
-				var upstream = TriggerContext.Empty.With("outer", 42);
+				var upstream = TriggerContext.New("outer", 42);
 				trigger.FireIteration(0, 1, upstream);
 
 				Assert.AreEqual(42, observedOuter);

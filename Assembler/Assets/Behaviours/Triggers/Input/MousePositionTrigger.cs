@@ -28,7 +28,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			NotifyListeners(TriggerContext.Empty.With(b =>
+			NotifyListeners(TriggerContext.New(b =>
 			{
 				b["mouse_position"] = current;
 				b["mouse_delta"] = delta;

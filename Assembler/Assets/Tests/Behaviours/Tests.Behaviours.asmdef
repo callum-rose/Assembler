@@ -9,7 +9,6 @@
         "Assembler.Time",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Assembler.Parsing",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

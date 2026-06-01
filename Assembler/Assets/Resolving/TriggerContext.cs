@@ -14,12 +14,14 @@ namespace Assembler.Resolving
 
 		/// <summary>The keys currently present in this context. Used by debug tooling to show what a fired trigger carried.</summary>
 		public IEnumerable<string> Keys => _values.Keys;
+		
+		public static TriggerContext New(string key, object value) => Empty.With(key, value);
 
-		public TriggerContext With(string key, object value) =>
-			new(_values.SetItem(key, value));
+		public static TriggerContext New(Action<ImmutableDictionary<string, object>.Builder> builder) => Empty.With(builder);
 
-		public TriggerContext WithMany(IEnumerable<KeyValuePair<string, object>> kvps) =>
-			new(_values.SetItems(kvps));
+		public TriggerContext With(string key, object value) => new(_values.SetItem(key, value));
+
+		public TriggerContext WithMany(IEnumerable<KeyValuePair<string, object>> kvps) => new(_values.SetItems(kvps));
 
 		/// <summary>
 		/// Batch-update the context in a single immutable allocation. Use this when a trigger emits multiple
@@ -52,7 +54,7 @@ namespace Assembler.Resolving
 
 			return new TriggerContext(builder.ToImmutable());
 		}
-		
+
 		public bool TryGet<T>(string key, out T value)
 		{
 			if (_values.TryGetValue(key, out var raw))
