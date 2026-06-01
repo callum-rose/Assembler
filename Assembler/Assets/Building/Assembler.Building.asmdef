@@ -12,7 +12,8 @@
         "Assembler.Behaviours",
         "Assembler.Parsing",
         "Assembler.Deserialisation",
-        "Assembler.Resolving"
+        "Assembler.Resolving",
+        "Assembler.Time"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

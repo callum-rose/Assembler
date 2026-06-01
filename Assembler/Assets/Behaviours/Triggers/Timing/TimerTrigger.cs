@@ -1,7 +1,7 @@
 using System.Collections;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
@@ -10,8 +10,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Delay: Seconds to wait before notifying listeners.
 	/// </remarks>
-	public class TimerTrigger : TimingTrigger<TimerTriggerData>
+	public class TimerTrigger : TimingTrigger<TimerTriggerData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private void Start()
 		{
 			Execute(TriggerContext.Empty);
@@ -25,7 +27,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 		private IEnumerator InvokeTriggerAfter(float seconds, TriggerContext captured)
 		{
-			yield return new WaitForSeconds(seconds);
+			yield return new WaitForGameSeconds(Clock, seconds);
 
 			NotifyListeners(captured);
 		}

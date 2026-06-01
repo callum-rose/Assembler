@@ -42,6 +42,10 @@ namespace Assembler.Parsing.Info
 
 	public sealed record EntityPositionRef(string Id) : AssemblerRef(Id);
 
+	/// <summary>A <c>!clock &lt;property&gt;</c> reference (e.g. <c>!clock deltaTime</c>), resolved at
+	/// runtime against the injected game clock. Carries the requested property name verbatim.</summary>
+	public sealed record ClockRef(string Property) : AssemblerValue;
+
 	public sealed record OutputRef(string Id) : AssemblerRef(Id);
 
 	public sealed record ParamRef(string Id) : AssemblerRef(Id);

@@ -1,3 +1,5 @@
+using Assembler.Time;
+
 namespace Assembler.Resolving
 {
 	public sealed record ResolutionContext(
@@ -5,5 +7,6 @@ namespace Assembler.Resolving
 		CompiledExpressionsRegistry Expressions,
 		AssetRegistry Assets,
 		EntityVariableScope? Scope,
-		EntityTransformRegistry EntityTransforms);
+		EntityTransformRegistry EntityTransforms,
+		IGameClock Clock);
 }

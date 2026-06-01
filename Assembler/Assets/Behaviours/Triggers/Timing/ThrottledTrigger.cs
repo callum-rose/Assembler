@@ -1,6 +1,6 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
@@ -9,9 +9,11 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Rate: Maximum number of forwarded triggers per second.
 	/// </remarks>
-	public sealed class ThrottledTrigger : Trigger<ThrottledTriggerData>
+	public sealed class ThrottledTrigger : Trigger<ThrottledTriggerData>, INeedsGameClock
 	{
-		private float _lastTriggerTime = float.NegativeInfinity;
+		public IGameClock Clock { get; set; } = null!;
+
+		private double _lastTriggerTime = double.NegativeInfinity;
 
 		public override void Execute(TriggerContext ctx)
 		{
@@ -21,7 +23,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 				return;
 			}
 
-			var now = Time.time;
+			var now = Clock.Time;
 			var minInterval = 1f / rate;
 
 			if (now - _lastTriggerTime < minInterval)

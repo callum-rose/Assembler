@@ -577,16 +577,6 @@ Dot product of two vectors.
 
 **Returns** (float): The dot product a · b.
 
-### `Vector3 IntegratePosition(Vector3 pos, Vector3 vel)`
-Advance a position by a velocity over the current frame's delta time (UnityEngine.Time.deltaTime). Replaces the pos + vel * Time.deltaTime pattern.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| pos | Vector3 | Current position. |
-| vel | Vector3 | Velocity (units per second). |
-
-**Returns** (Vector3): The new position after one frame.
-
 ### `Vector3 IntegratePosition(Vector3 pos, Vector3 vel, float dt)`
 Advance a position by a velocity over an explicit time step.
 

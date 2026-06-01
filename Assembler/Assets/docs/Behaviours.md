@@ -1192,6 +1192,15 @@ Sets the entity GameObject's active state to the Active value when Executed by a
 |------|------|-------------|
 | Active | bool | Boolean applied to the entity's active state on each Execute; true activates, false deactivates. |
 
+## `set timescale`
+Sets the game clock's time scale when Executed by an upstream trigger. A scale of 0 pauses gameplay, 0.5 is slow-motion, 1 is normal speed.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Scale | float | Playback rate applied to the shared game clock; 0 pauses, 0.5 halves speed, 1 is normal. Negative values are clamped to 0. |
+
 ## `toggle active`
 Flips the entity GameObject's active state each time it is Executed by an upstream trigger.
 

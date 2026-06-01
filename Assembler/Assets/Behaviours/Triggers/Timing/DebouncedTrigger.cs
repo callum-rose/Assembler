@@ -1,6 +1,6 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Triggers.Timing
 {
@@ -9,13 +9,15 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Interval: Seconds that must elapse since the previous incoming trigger before another one is forwarded.
 	/// </remarks>
-	public sealed class DebouncedTrigger : Trigger<DebouncedTriggerData>
+	public sealed class DebouncedTrigger : Trigger<DebouncedTriggerData>, INeedsGameClock
 	{
-		private float _lastTriggerTime = float.NegativeInfinity;
+		public IGameClock Clock { get; set; } = null!;
+
+		private double _lastTriggerTime = double.NegativeInfinity;
 
 		public override void Execute(TriggerContext ctx)
 		{
-			var now = Time.time;
+			var now = Clock.Time;
 			var interval = Data.Interval.Get(ctx);
 
 			if (now - _lastTriggerTime < interval)

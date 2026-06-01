@@ -1,6 +1,6 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using Assembler.Time;
 
 namespace Assembler.Behaviours.Movement
 {
@@ -9,8 +9,10 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Velocity: World-space velocity in units per second.
 	/// </remarks>
-	public class Velocity : GameBehaviour<VelocityData>
+	public class Velocity : GameBehaviour<VelocityData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private void Update()
 		{
 			Execute(TriggerContext.Empty);
@@ -18,7 +20,7 @@ namespace Assembler.Behaviours.Movement
 
 		public override void Execute(TriggerContext ctx)
 		{
-			transform.position += Data.Velocity.Get(ctx) * Time.deltaTime;
+			transform.position += Data.Velocity.Get(ctx) * Clock.DeltaTime;
 		}
 	}
 }

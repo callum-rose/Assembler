@@ -144,6 +144,7 @@ namespace Assembler.Parsing
 
 				["active poll"] = ActivePollInfo.Create,
 				["set active"] = SetActiveInfo.Create,
+				["set timescale"] = SetTimeScaleInfo.Create,
 				["toggle active"] = ToggleActiveInfo.Create,
 
 				["sprite"] = SpriteInfo.Create,

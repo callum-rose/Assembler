@@ -1,6 +1,7 @@
 using System.Collections;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Triggers.Timing
@@ -17,8 +18,10 @@ namespace Assembler.Behaviours.Triggers.Timing
 	///   iteration_index [int]: Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.).
 	///   iteration_count [int]: Total number of fires configured by Count; 0 when the trigger is unbounded.
 	/// </remarks>
-	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>
+	public class IntervalTrigger : TimingTrigger<IntervalTriggerData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private Coroutine? _currentCoroutine;
 
 		private void Start()
@@ -53,7 +56,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 					break;
 				}
 
-				yield return new WaitForSeconds(Data.Interval.Get(captured));
+				yield return new WaitForGameSeconds(Clock, Data.Interval.Get(captured));
 
 				FireIteration(i, count, captured);
 			}
