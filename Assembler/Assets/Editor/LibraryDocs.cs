@@ -19,8 +19,13 @@ namespace Editor
 	{
 		private const string AssemblyName = "Assembler.Libraries";
 
+		// DocGen/ is a persistent, non-volatile location written by Assets/Libraries/csc.rsp's
+		// -doc flag. Unlike Temp/ (which Unity clears on batch-mode startup), it survives between
+		// runs, so headless doc generation finds the XML even when the assembly wasn't recompiled
+		// this session. Temp/ and ScriptAssemblies are kept as fallbacks for older layouts.
 		private readonly static string[] CandidateXmlPaths =
 		{
+			"DocGen/Assembler.Libraries.xml",
 			"Temp/Assembler.Libraries.xml",
 			"Library/ScriptAssemblies/Assembler.Libraries.xml",
 		};
@@ -148,7 +153,8 @@ namespace Editor
 				return;
 			}
 
-			var summary = member.Element("summary")?.Value;
+			var summaryElement = member.Element("summary");
+			var summary = summaryElement is null ? null : XmlDocs.Flatten(summaryElement);
 			if (!string.IsNullOrWhiteSpace(summary))
 			{
 				sb.AppendLine(Collapse(summary!));
@@ -156,7 +162,7 @@ namespace Editor
 			}
 
 			var paramDocs = member.Elements("param")
-				.ToDictionary(p => p.Attribute("name")?.Value ?? "", p => Collapse(p.Value));
+				.ToDictionary(p => p.Attribute("name")?.Value ?? "", p => Collapse(XmlDocs.Flatten(p)));
 
 			if (parameters.Length > 0)
 			{
@@ -171,7 +177,8 @@ namespace Editor
 				sb.AppendLine();
 			}
 
-			var returns = member.Element("returns")?.Value;
+			var returnsElement = member.Element("returns");
+			var returns = returnsElement is null ? null : XmlDocs.Flatten(returnsElement);
 			if (method.ReturnType != typeof(void) && !string.IsNullOrWhiteSpace(returns))
 			{
 				sb.AppendLine($"**Returns** ({XmlDocs.RenderType(method.ReturnType)}): {Collapse(returns!)}");
@@ -179,8 +186,16 @@ namespace Editor
 			}
 		}
 
-		private static string? FindSummary(Dictionary<string, XElement> members, string key) =>
-			members.TryGetValue(key, out var member) ? member.Element("summary")?.Value : null;
+		private static string? FindSummary(Dictionary<string, XElement> members, string key)
+		{
+			if (!members.TryGetValue(key, out var member))
+			{
+				return null;
+			}
+
+			var summary = member.Element("summary");
+			return summary is null ? null : XmlDocs.Flatten(summary);
+		}
 
 		// Resolves the public, non-generic classes of the Assembler.Libraries assembly —
 		// the same set CompiledExpressionsRegistry registers static methods from.

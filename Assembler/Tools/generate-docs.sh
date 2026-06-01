@@ -38,6 +38,10 @@ if [[ ! -x "$UNITY" ]]; then
 	exit 1
 fi
 
+# csc's -doc flag writes the XML doc files here; ensure the dir exists (it's normally committed,
+# but be defensive in case it was cleaned).
+mkdir -p "$PROJECT/DocGen"
+
 echo "Generating docs with Unity $VERSION (project: $PROJECT)..."
 "$UNITY" \
 	-batchmode -quit -nographics \

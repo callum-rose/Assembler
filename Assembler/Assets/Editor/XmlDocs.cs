@@ -55,6 +55,89 @@ namespace Editor
 		}
 
 		// ----------------------------------------------------------------------
+		// Mixed-content flattening
+		// ----------------------------------------------------------------------
+
+		// Flattens an XML doc element's mixed content to plain text, resolving cross-reference
+		// elements to readable names. Plain XElement.Value silently DROPS the content of
+		// self-closing tags like <see cref="Foo"/>, which leaves dangling "See ." fragments in the
+		// generated markdown. Here <see>/<seealso> render their inner text (or the cref's short
+		// name) and <paramref>/<typeparamref> render their name. Use this instead of `.Value` for
+		// any summary/param/returns text that may contain such references.
+		public static string Flatten(XElement element)
+		{
+			var sb = new StringBuilder();
+			AppendNodes(element, sb);
+			return sb.ToString();
+		}
+
+		private static void AppendNodes(XElement element, StringBuilder sb)
+		{
+			foreach (var node in element.Nodes())
+			{
+				switch (node)
+				{
+					case XText text:
+						sb.Append(text.Value);
+						break;
+					case XElement child:
+						AppendElement(child, sb);
+						break;
+				}
+			}
+		}
+
+		private static void AppendElement(XElement el, StringBuilder sb)
+		{
+			switch (el.Name.LocalName)
+			{
+				case "see":
+				case "seealso":
+					var inner = el.Value;
+					sb.Append(!string.IsNullOrWhiteSpace(inner) ? inner : CrefName(el.Attribute("cref")?.Value));
+					break;
+				case "paramref":
+				case "typeparamref":
+					sb.Append(el.Attribute("name")?.Value ?? "");
+					break;
+				default:
+					// Unknown wrapper (e.g. <para>, <c>): keep its text content.
+					AppendNodes(el, sb);
+					break;
+			}
+		}
+
+		// "T:Some.Namespace.ListClearBehaviour`1" -> "ListClearBehaviour"
+		private static string CrefName(string? cref)
+		{
+			if (string.IsNullOrEmpty(cref))
+			{
+				return "";
+			}
+
+			var s = cref!;
+			var colon = s.IndexOf(':');
+			if (colon >= 0)
+			{
+				s = s.Substring(colon + 1);
+			}
+
+			var tick = s.IndexOf('`');
+			if (tick >= 0)
+			{
+				s = s.Substring(0, tick);
+			}
+
+			var dot = s.LastIndexOf('.');
+			if (dot >= 0)
+			{
+				s = s.Substring(dot + 1);
+			}
+
+			return s;
+		}
+
+		// ----------------------------------------------------------------------
 		// XML-doc member ids
 		// ----------------------------------------------------------------------
 

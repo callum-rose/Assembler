@@ -16,8 +16,13 @@ namespace Editor
 {
 	public static class BehaviourDocs
 	{
+		// DocGen/ is a persistent, non-volatile location written by Assets/Behaviours/csc.rsp's
+		// -doc flag. Unlike Temp/ (which Unity clears on batch-mode startup), it survives between
+		// runs, so headless doc generation finds the XML even when the assembly wasn't recompiled
+		// this session. Temp/ and ScriptAssemblies are kept as fallbacks for older layouts.
 		private readonly static string[] CandidateXmlPaths =
 		{
+			"DocGen/Assembler.Behaviours.xml",
 			"Temp/Assembler.Behaviours.xml",
 			"Library/ScriptAssemblies/Assembler.Behaviours.xml",
 		};
@@ -195,7 +200,7 @@ namespace Editor
 				var summary = member.Element("summary");
 				if (summary is not null)
 				{
-					return summary.Value;
+					return XmlDocs.Flatten(summary);
 				}
 			}
 
@@ -213,7 +218,7 @@ namespace Editor
 					continue;
 				}
 
-				var text = remarks.Value;
+				var text = XmlDocs.Flatten(remarks);
 				return ParseRemarksBlocks(text);
 			}
 

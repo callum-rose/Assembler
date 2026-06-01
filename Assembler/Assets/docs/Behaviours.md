@@ -3,1224 +3,1355 @@
 Generated from `Assembler.Behaviours` XML doc comments. Each behaviour's description, property meanings, and trigger outputs are authored on the corresponding `GameBehaviour` MonoBehaviour; property names and types are reflected from the matching `*Info` record.
 
 ## `box collider`
-_No summary — add `<summary>` on AutoAddBoxColliderBehaviour._
+Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/trigger physics events.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Size | Vector3 |  |
-| IsTrigger | bool |  |
+| Size | Vector3 | Local-space dimensions of the box (x, y, z). |
+| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 
 ## `sphere collider`
-_No summary — add `<summary>` on AutoAddSphereColliderBehaviour._
+Adds a Unity SphereCollider to the entity. Required for collision/trigger physics events.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Radius | float |  |
-| IsTrigger | bool |  |
+| Radius | float | Local-space radius of the sphere. |
+| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 
 ## `capsule collider`
-_No summary — add `<summary>` on AutoAddCapsuleColliderBehaviour._
+Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physics events.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Radius | float |  |
-| Height | float |  |
-| Direction | int |  |
-| IsTrigger | bool |  |
+| Radius | float | Local-space radius of the capsule hemispheres. |
+| Height | float | Local-space total height of the capsule along its Direction axis. |
+| Direction | int | Axis the capsule is aligned to — 0 = X, 1 = Y, 2 = Z. |
+| IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider. |
 
 ## `mesh collider`
-_No summary — add `<summary>` on AutoAddMeshColliderBehaviour._
+Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFilter. Required for collision/trigger physics events on arbitrary meshes (e.g. voxel meshes).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Convex | bool |  |
-| IsTrigger | bool |  |
+| Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
+| IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
 
 ## `rigidbody`
-_No summary — add `<summary>` on RigidbodyBehaviour._
+Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| UseGravity | bool |  |
-| IsKinematic | bool |  |
-| Mass | float |  |
-| LinearDamping | float |  |
-| AngularDamping | float |  |
-| FreezePosition | Vector3 |  |
-| FreezeRotation | Vector3 |  |
+| UseGravity | bool | When true the rigidbody is affected by gravity. |
+| IsKinematic | bool | When true the rigidbody ignores forces and is moved only by transform writes. |
+| Mass | float | Mass of the rigidbody in kilograms. |
+| LinearDamping | float | Damping applied to linear velocity (Unity's Rigidbody.linearDamping / drag). |
+| AngularDamping | float | Damping applied to angular velocity (Unity's Rigidbody.angularDamping). |
+| FreezePosition | Vector3 | Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z). |
+| FreezeRotation | Vector3 | Per-axis rotation freeze (any non-zero component locks that axis). |
 
 ## `add force`
-_No summary — add `<summary>` on AddForceBehaviour._
+Adds a continuous world-space force to the entity's Rigidbody when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Force | Vector3 |  |
+| Force | Vector3 | World-space force vector applied with ForceMode.Force (mass-dependent, frame-rate independent acceleration). |
 
 ## `add impulse`
-_No summary — add `<summary>` on AddImpulseBehaviour._
+Adds an instantaneous world-space impulse to the entity's Rigidbody when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Impulse | Vector3 |  |
+| Impulse | Vector3 | World-space impulse applied with ForceMode.Impulse (mass-dependent, instantaneous velocity change). |
 
 ## `add torque`
-_No summary — add `<summary>` on AddTorqueBehaviour._
+Adds a continuous world-space torque to the entity's Rigidbody when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Torque | Vector3 |  |
+| Torque | Vector3 | World-space torque vector applied with ForceMode.Force (mass-dependent angular acceleration). |
 
 ## `set velocity`
-_No summary — add `<summary>` on SetVelocityBehaviour._
+Sets the entity's Rigidbody linear velocity to Velocity when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Velocity | Vector3 |  |
+| Velocity | Vector3 | World-space linear velocity in units per second. |
 
 ## `set angular velocity`
-_No summary — add `<summary>` on SetAngularVelocityBehaviour._
+Sets the entity's Rigidbody angular velocity to AngularVelocity when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| AngularVelocity | Vector3 |  |
+| AngularVelocity | Vector3 | World-space angular velocity in radians per second around each axis. |
 
 ## `velocity`
-_No summary — add `<summary>` on Velocity._
+Moves the entity each frame by Velocity * deltaTime.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Velocity | Vector3 |  |
+| Velocity | Vector3 | World-space velocity in units per second. |
 
 ## `acceleration`
-_No summary — add `<summary>` on Acceleration._
+Integrates Acceleration into an internal velocity each frame, then moves the entity by that velocity.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Acceleration | Vector3 |  |
+| Acceleration | Vector3 | World-space acceleration in units per second squared. |
 
 ## `translate`
-_No summary — add `<summary>` on Translate._
+Adds Displacement to the entity's world position each time it Executes (e.g. via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Displacement | Vector3 |  |
+| Displacement | Vector3 | World-space offset to add on each execution. |
 
 ## `angular velocity`
-_No summary — add `<summary>` on AngularVelocity._
+Rotates the entity each frame by AngularVelocity * deltaTime (Euler degrees per second).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| AngularVelocity | Vector3 |  |
+| AngularVelocity | Vector3 | World-space angular velocity in degrees per second (Euler per axis). |
 
 ## `rotate`
-_No summary — add `<summary>` on Rotate._
+Adds Displacement (Euler degrees) to the entity's world rotation each time it Executes (e.g. via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Displacement | Vector3 |  |
+| Displacement | Vector3 | World-space Euler angle offset (degrees) to add on each execution. |
 
 ## `rotation setter`
-_No summary — add `<summary>` on SetRotation._
+Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Rotation | Vector3 |  |
+| Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
 
 ## `move animation`
-_No summary — add `<summary>` on MoveAnimation._
+Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `scale animation`
-_No summary — add `<summary>` on ScaleAnimation._
+Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `rotate animation`
-_No summary — add `<summary>` on RotateAnimation._
+Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Duration | float |  |
-| Easing | string |  |
+| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
+| End | Vector3 | Value to animate to. |
+| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
+| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
 
 ## `key hold trigger`
-_No summary — add `<summary>` on KeyHoldTrigger._
+Fires every frame while the named key is held down.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string |  |
+| Key | string | One of "w", "a", "s", "d", "up", "down", "left", "right". |
 
 ## `key down trigger`
-_No summary — add `<summary>` on KeyDownTrigger._
+Fires on the frame the named key is pressed down.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string |  |
+| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
 
 ## `key up trigger`
-_No summary — add `<summary>` on KeyUpTrigger._
+Fires on the frame the named key is released.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string |  |
+| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
 
 ## `mouse button trigger`
-_No summary — add `<summary>` on MouseButtonTrigger._
+Fires on a mouse button event during the selected phase (press, release, or hold).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Button | int |  |
-| Phase | string |  |
+| Button | int | Mouse button index — 0 (left), 1 (right), 2 (middle). |
+| Phase | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| mouse_position | Vector3 | Screen-space mouse position when the trigger fires. |
 
 ## `mouse position trigger`
-_No summary — add `<summary>` on MousePositionTrigger._
+Fires every frame the mouse moves, publishing the current position and frame delta.
 
 No properties.
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| mouse_position | Vector3 | Current screen-space mouse position. |
+| mouse_delta | Vector3 | Screen-space movement since the previous frame. |
 
 ## `scroll wheel trigger`
-_No summary — add `<summary>` on ScrollWheelTrigger._
+Fires on frames where the mouse scroll wheel moved.
 
 No properties.
 
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| scroll_delta | Vector2 | Scroll wheel delta for this frame (y is the common vertical scroll). |
+
 ## `axis trigger`
-_No summary — add `<summary>` on AxisTrigger._
+Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| XAxis | string |  |
-| YAxis | string |  |
+| XAxis | string | Name of the Unity input axis read into the x component (e.g. "Horizontal"). |
+| YAxis | string | Optional. Name of the Unity input axis read into the y component (e.g. "Vertical"). Leave unset for a 1D axis. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| axis | Vector2 | Combined (x, y) axis value; y is 0 when YAxis is unset. |
+| x | float | Current XAxis value. |
+| y | float | Current YAxis value, or 0 when YAxis is unset. |
 
 ## `gamepad button trigger`
-_No summary — add `<summary>` on GamepadButtonTrigger._
+Fires on a gamepad / joystick button event (press, release, or hold).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Button | string |  |
-| Mode | string |  |
+| Button | string | Unity key string for the gamepad button (e.g. "joystick button 0", "joystick 1 button 1"). |
+| Mode | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ## `tap trigger`
-_No summary — add `<summary>` on Tap._
+Fires once on a quick screen tap gesture (touch or click).
 
 No properties.
 
 ## `double tap trigger`
-_No summary — add `<summary>` on DoubleTap._
+Fires on a double-tap gesture (two quick taps in succession).
 
 No properties.
 
 ## `long press trigger`
-_No summary — add `<summary>` on LongPress._
+Fires on a long-press gesture (touch held without movement for a threshold time).
 
 No properties.
 
 ## `swipe trigger`
-_No summary — add `<summary>` on Swipe._
+Fires on a swipe gesture (touch dragged across the screen).
 
 No properties.
 
 ## `drag trigger`
-_No summary — add `<summary>` on Drag._
+Fires while a drag gesture is active (touch held and moved).
 
 No properties.
 
 ## `pinch trigger`
-_No summary — add `<summary>` on Pinch._
+Fires on a two-finger pinch gesture (zoom in/out).
 
 No properties.
 
 ## `rotate trigger`
-_No summary — add `<summary>` on Rotate._
+Fires on a two-finger rotate gesture.
 
 No properties.
 
 ## `timer trigger`
-_No summary — add `<summary>` on TimerTrigger._
+Fires once after a delay (starts the countdown on entity start, or on Execute).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Delay | float |  |
+| Delay | float | Seconds to wait before notifying listeners. |
 
 ## `deferred trigger`
-_No summary — add `<summary>` on DeferredTrigger._
+Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Delay | float |  |
+| Delay | float | Seconds to wait between Execute and notifying listeners. |
 
 ## `debounced trigger`
-_No summary — add `<summary>` on DebouncedTrigger._
+Forwards a trigger event only when no prior trigger has been received within the last Interval seconds. Use to suppress rapid repeat triggers.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Interval | float |  |
+| Interval | float | Seconds that must elapse since the previous incoming trigger before another one is forwarded. |
 
 ## `throttled trigger`
-_No summary — add `<summary>` on ThrottledTrigger._
+Forwards at most Rate trigger events per second. Incoming triggers that arrive sooner than 1/Rate seconds after the previous forwarded one are dropped.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Rate | float |  |
+| Rate | float | Maximum number of forwarded triggers per second. |
 
 ## `on start trigger`
-_No summary — add `<summary>` on OnStartTrigger._
+Fires once when the entity is first started.
 
 No properties.
 
 ## `interval trigger`
-_No summary — add `<summary>` on IntervalTrigger._
+Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Interval | float |  |
-| Count | int |  |
-| AutoStart | bool |  |
+| Interval | float | Seconds between fires. Re-read before each wait, so binding it to a variable that other |
+| Count | int | Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound |
+| AutoStart | bool | When true the timer starts on entity start; when false it waits for an Execute call from upstream. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| iteration_index | int | Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.). |
+| iteration_count | int | Total number of fires configured by Count; 0 when the trigger is unbounded. |
 
 ## `every frame trigger`
-_No summary — add `<summary>` on EveryFrameTrigger._
+Fires every Unity Update frame. Use for behaviours that must run continuously.
 
 No properties.
 
 ## `collision enter trigger`
-_No summary — add `<summary>` on CollisionEnter._
+Fires when a non-trigger collision begins with another entity matching TagsToDetect. Requires colliders + a Rigidbody.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> |  |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| contact_point | Vector3 | World-space point of first contact. |
+| contact_normal | Vector3 | Surface normal at the contact point. |
+| other_velocity | Vector3 | Other body's linear velocity (zero if it has no Rigidbody). |
+| other_position | Vector3 | Other entity's world position at the moment of collision. |
 
 ## `trigger enter trigger`
-_No summary — add `<summary>` on TriggerEnter._
+Fires when an entity matching TagsToDetect enters this entity's trigger collider.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> |  |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position at the moment of entry. |
 
 ## `trigger exit trigger`
-_No summary — add `<summary>` on TriggerExit._
+Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> |  |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position at the moment of exit. |
 
 ## `collision exit trigger`
-_No summary — add `<summary>` on CollisionExit._
+Fires when a non-trigger collision ends with another entity matching TagsToDetect.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> |  |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_velocity | Vector3 | Other body's linear velocity at separation (zero if no Rigidbody). |
+| other_position | Vector3 | Other entity's world position at separation. |
 
 ## `collision stay trigger`
-_No summary — add `<summary>` on CollisionStay._
+Fires every physics frame while colliding with another entity matching TagsToDetect.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> |  |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| contact_point | Vector3 | World-space point of contact for this frame. |
+| contact_normal | Vector3 | Surface normal at the contact point. |
+| other_velocity | Vector3 | Other body's linear velocity (zero if no Rigidbody). |
+| other_position | Vector3 | Other entity's world position. |
 
 ## `spawner`
-_No summary — add `<summary>` on SpawnerBehaviour._
+Spawns an instance of a named template at a position when Executed.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TemplateId | string |  |
-| Position | Vector3 |  |
-| Rotation | Vector3 |  |
-| Parameters | IReadOnlyDictionary<string, ValueSource<object>> |  |
+| TemplateId | string | Id of the template to instantiate. |
+| Position | Vector3 | World-space position for the spawned entity. |
+| Rotation | Vector3 | Euler rotation in degrees for the spawned entity. |
+| Parameters | IReadOnlyDictionary<string, ValueSource<object>> | Optional name→value overrides forwarded to the template's parameter slots. |
 
 ## `destroy`
-_No summary — add `<summary>` on DestroyBehaviour._
+Destroys the entity's GameObject when Executed and notifies any listeners.
 
 No properties.
 
 ## `position setter`
-_No summary — add `<summary>` on SetPosition._
+Sets the entity's world position to Position when Executed (typically via a trigger).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Position | Vector3 |  |
+| Position | Vector3 | World-space position to teleport the entity to on each execution. |
 
 ## `camera`
-_No summary — add `<summary>` on CameraBehaviour._
+Adds a Unity Camera component to the entity; chooses orthographic vs perspective and sets size.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| View | string |  |
-| Size | float |  |
+| View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
+| Size | float | Orthographic size in world units (only used when View = "orthographic"). |
 
 ## `condition gate`
-_No summary — add `<summary>` on ConditionGate._
+Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Condition | bool |  |
+| Condition | bool | Boolean expression checked on each Execute call. |
 
 ## `inverse condition gate`
-_No summary — add `<summary>` on InverseConditionGate._
+Forwards an upstream trigger to listeners only when Condition evaluates to false at that moment.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Condition | bool |  |
+| Condition | bool | Boolean expression checked on each Execute call; listeners fire when it is false. |
 
 ## `exclusive trigger`
-_No summary — add `<summary>` on ExclusiveTrigger._
+Forwards an upstream trigger to listeners only if no other trigger sharing the same Group has already fired this frame.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Group | string |  |
+| Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
 
 ## `vector variable setter`
-_No summary — add `<summary>` on Vector3Setter._
+Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | Vector3 |  |
-| Value | Vector3 |  |
+| VariableId | Vector3 | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | Vector3 | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `int variable setter`
-_No summary — add `<summary>` on IntSetter._
+Writes a int value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | int |  |
-| Value | int |  |
+| VariableId | int | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | int | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `float variable setter`
-_No summary — add `<summary>` on FloatSetter._
+Writes a float value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | float |  |
-| Value | float |  |
+| VariableId | float | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | float | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `bool variable setter`
-_No summary — add `<summary>` on BoolSetter._
+Writes a bool value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | bool |  |
-| Value | bool |  |
+| VariableId | bool | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | bool | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `string variable setter`
-_No summary — add `<summary>` on StringSetter._
+Writes a string value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | string |  |
-| Value | string |  |
+| VariableId | string | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | string | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `colour variable setter`
-_No summary — add `<summary>` on ColourSetter._
+Writes a Color value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| VariableId | Color |  |
-| Value | Color |  |
+| VariableId | Color | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | Color | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `vector list add`
-_No summary — add `<summary>` on Vector3ListAdd._
+Appends a Vector3 value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Value | Vector3 |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Value | Vector3 | Item to append. |
 
 ## `vector list insert`
-_No summary — add `<summary>` on Vector3ListInsert._
+Inserts a Vector3 value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Index | int |  |
-| Value | Vector3 |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Vector3 | Item to insert. |
 
 ## `vector list remove at`
-_No summary — add `<summary>` on Vector3ListRemoveAt._
+Removes the Vector3 item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Index | int |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `vector list remove`
-_No summary — add `<summary>` on Vector3ListRemove._
+Removes the first occurrence of a Vector3 value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Value | Vector3 |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Value | Vector3 | Item to remove. |
 
 ## `vector list set at`
-_No summary — add `<summary>` on Vector3ListSetAt._
+Overwrites the Vector3 item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Index | int |  |
-| Value | Vector3 |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | Vector3 | New item. |
 
 ## `vector list set`
-_No summary — add `<summary>` on Vector3ListSet._
+Replaces the entire contents of the target Vector3 list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Value | List<Vector3> |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Value | List<Vector3> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `vector list add range`
-_No summary — add `<summary>` on Vector3ListAddRange._
+Appends every item from another Vector3 list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
-| Other | List<Vector3> |  |
+| List | List<Vector3> | Reference to the target list variable. |
+| Other | List<Vector3> | List whose items will be appended to List. |
 
 ## `vector list clear`
-_No summary — add `<summary>` on Vector3ListClear._
+Removes all items from the target Vector3 list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
+| List | List<Vector3> | Reference to the target list variable. |
 
 ## `vector list loop trigger`
-_No summary — add `<summary>` on Vector3ListLoopTrigger._
+Iterates a Vector3 list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Vector3> |  |
+| List | List<Vector3> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `int list add`
-_No summary — add `<summary>` on IntListAdd._
+Appends a int value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Value | int |  |
+| List | List<int> | Reference to the target list variable. |
+| Value | int | Item to append. |
 
 ## `int list insert`
-_No summary — add `<summary>` on IntListInsert._
+Inserts a int value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Index | int |  |
-| Value | int |  |
+| List | List<int> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | int | Item to insert. |
 
 ## `int list remove at`
-_No summary — add `<summary>` on IntListRemoveAt._
+Removes the int item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Index | int |  |
+| List | List<int> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `int list remove`
-_No summary — add `<summary>` on IntListRemove._
+Removes the first occurrence of a int value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Value | int |  |
+| List | List<int> | Reference to the target list variable. |
+| Value | int | Item to remove. |
 
 ## `int list set at`
-_No summary — add `<summary>` on IntListSetAt._
+Overwrites the int item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Index | int |  |
-| Value | int |  |
+| List | List<int> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | int | New item. |
 
 ## `int list set`
-_No summary — add `<summary>` on IntListSet._
+Replaces the entire contents of the target int list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Value | List<int> |  |
+| List | List<int> | Reference to the target list variable. |
+| Value | List<int> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `int list add range`
-_No summary — add `<summary>` on IntListAddRange._
+Appends every item from another int list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
-| Other | List<int> |  |
+| List | List<int> | Reference to the target list variable. |
+| Other | List<int> | List whose items will be appended to List. |
 
 ## `int list clear`
-_No summary — add `<summary>` on IntListClear._
+Removes all items from the target int list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
+| List | List<int> | Reference to the target list variable. |
 
 ## `int list loop trigger`
-_No summary — add `<summary>` on IntListLoopTrigger._
+Iterates a int list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<int> |  |
+| List | List<int> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `float list add`
-_No summary — add `<summary>` on FloatListAdd._
+Appends a float value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Value | float |  |
+| List | List<float> | Reference to the target list variable. |
+| Value | float | Item to append. |
 
 ## `float list insert`
-_No summary — add `<summary>` on FloatListInsert._
+Inserts a float value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Index | int |  |
-| Value | float |  |
+| List | List<float> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | float | Item to insert. |
 
 ## `float list remove at`
-_No summary — add `<summary>` on FloatListRemoveAt._
+Removes the float item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Index | int |  |
+| List | List<float> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `float list remove`
-_No summary — add `<summary>` on FloatListRemove._
+Removes the first occurrence of a float value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Value | float |  |
+| List | List<float> | Reference to the target list variable. |
+| Value | float | Item to remove. |
 
 ## `float list set at`
-_No summary — add `<summary>` on FloatListSetAt._
+Overwrites the float item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Index | int |  |
-| Value | float |  |
+| List | List<float> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | float | New item. |
 
 ## `float list set`
-_No summary — add `<summary>` on FloatListSet._
+Replaces the entire contents of the target float list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Value | List<float> |  |
+| List | List<float> | Reference to the target list variable. |
+| Value | List<float> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `float list add range`
-_No summary — add `<summary>` on FloatListAddRange._
+Appends every item from another float list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
-| Other | List<float> |  |
+| List | List<float> | Reference to the target list variable. |
+| Other | List<float> | List whose items will be appended to List. |
 
 ## `float list clear`
-_No summary — add `<summary>` on FloatListClear._
+Removes all items from the target float list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
+| List | List<float> | Reference to the target list variable. |
 
 ## `float list loop trigger`
-_No summary — add `<summary>` on FloatListLoopTrigger._
+Iterates a float list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<float> |  |
+| List | List<float> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `bool list add`
-_No summary — add `<summary>` on BoolListAdd._
+Appends a bool value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Value | bool |  |
+| List | List<bool> | Reference to the target list variable. |
+| Value | bool | Item to append. |
 
 ## `bool list insert`
-_No summary — add `<summary>` on BoolListInsert._
+Inserts a bool value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Index | int |  |
-| Value | bool |  |
+| List | List<bool> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | bool | Item to insert. |
 
 ## `bool list remove at`
-_No summary — add `<summary>` on BoolListRemoveAt._
+Removes the bool item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Index | int |  |
+| List | List<bool> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `bool list remove`
-_No summary — add `<summary>` on BoolListRemove._
+Removes the first occurrence of a bool value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Value | bool |  |
+| List | List<bool> | Reference to the target list variable. |
+| Value | bool | Item to remove. |
 
 ## `bool list set at`
-_No summary — add `<summary>` on BoolListSetAt._
+Overwrites the bool item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Index | int |  |
-| Value | bool |  |
+| List | List<bool> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | bool | New item. |
 
 ## `bool list set`
-_No summary — add `<summary>` on BoolListSet._
+Replaces the entire contents of the target bool list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Value | List<bool> |  |
+| List | List<bool> | Reference to the target list variable. |
+| Value | List<bool> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `bool list add range`
-_No summary — add `<summary>` on BoolListAddRange._
+Appends every item from another bool list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
-| Other | List<bool> |  |
+| List | List<bool> | Reference to the target list variable. |
+| Other | List<bool> | List whose items will be appended to List. |
 
 ## `bool list clear`
-_No summary — add `<summary>` on BoolListClear._
+Removes all items from the target bool list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
+| List | List<bool> | Reference to the target list variable. |
 
 ## `bool list loop trigger`
-_No summary — add `<summary>` on BoolListLoopTrigger._
+Iterates a bool list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<bool> |  |
+| List | List<bool> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `string list add`
-_No summary — add `<summary>` on StringListAdd._
+Appends a string value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Value | string |  |
+| List | List<string> | Reference to the target list variable. |
+| Value | string | Item to append. |
 
 ## `string list insert`
-_No summary — add `<summary>` on StringListInsert._
+Inserts a string value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Index | int |  |
-| Value | string |  |
+| List | List<string> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | string | Item to insert. |
 
 ## `string list remove at`
-_No summary — add `<summary>` on StringListRemoveAt._
+Removes the string item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Index | int |  |
+| List | List<string> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `string list remove`
-_No summary — add `<summary>` on StringListRemove._
+Removes the first occurrence of a string value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Value | string |  |
+| List | List<string> | Reference to the target list variable. |
+| Value | string | Item to remove. |
 
 ## `string list set at`
-_No summary — add `<summary>` on StringListSetAt._
+Overwrites the string item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Index | int |  |
-| Value | string |  |
+| List | List<string> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | string | New item. |
 
 ## `string list set`
-_No summary — add `<summary>` on StringListSet._
+Replaces the entire contents of the target string list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Value | List<string> |  |
+| List | List<string> | Reference to the target list variable. |
+| Value | List<string> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `string list add range`
-_No summary — add `<summary>` on StringListAddRange._
+Appends every item from another string list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
-| Other | List<string> |  |
+| List | List<string> | Reference to the target list variable. |
+| Other | List<string> | List whose items will be appended to List. |
 
 ## `string list clear`
-_No summary — add `<summary>` on StringListClear._
+Removes all items from the target string list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
+| List | List<string> | Reference to the target list variable. |
 
 ## `string list loop trigger`
-_No summary — add `<summary>` on StringListLoopTrigger._
+Iterates a string list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<string> |  |
+| List | List<string> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `colour list add`
-_No summary — add `<summary>` on ColourListAdd._
+Appends a Color value to the end of the target list when Executed. See ListAddBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Value | Color |  |
+| List | List<Color> | Reference to the target list variable. |
+| Value | Color | Item to append. |
 
 ## `colour list insert`
-_No summary — add `<summary>` on ColourListInsert._
+Inserts a Color value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Index | int |  |
-| Value | Color |  |
+| List | List<Color> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Color | Item to insert. |
 
 ## `colour list remove at`
-_No summary — add `<summary>` on ColourListRemoveAt._
+Removes the Color item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Index | int |  |
+| List | List<Color> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
 
 ## `colour list remove`
-_No summary — add `<summary>` on ColourListRemove._
+Removes the first occurrence of a Color value from the target list when Executed. See ListRemoveBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Value | Color |  |
+| List | List<Color> | Reference to the target list variable. |
+| Value | Color | Item to remove. |
 
 ## `colour list set at`
-_No summary — add `<summary>` on ColourListSetAt._
+Overwrites the Color item at a given index in the target list when Executed. See ListSetAtBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Index | int |  |
-| Value | Color |  |
+| List | List<Color> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | Color | New item. |
 
 ## `colour list set`
-_No summary — add `<summary>` on ColourListSet._
+Replaces the entire contents of the target Color list with another list when Executed. See ListSetBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Value | List<Color> |  |
+| List | List<Color> | Reference to the target list variable. |
+| Value | List<Color> | List whose items replace List's contents (typically an expression returning a list). |
 
 ## `colour list add range`
-_No summary — add `<summary>` on ColourListAddRange._
+Appends every item from another Color list to the target list when Executed. See ListAddRangeBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
-| Other | List<Color> |  |
+| List | List<Color> | Reference to the target list variable. |
+| Other | List<Color> | List whose items will be appended to List. |
 
 ## `colour list clear`
-_No summary — add `<summary>` on ColourListClear._
+Removes all items from the target Color list when Executed. See ListClearBehaviour.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
+| List | List<Color> | Reference to the target list variable. |
 
 ## `colour list loop trigger`
-_No summary — add `<summary>` on ColourListLoopTrigger._
+Iterates a Color list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| List | List<Color> |  |
+| List | List<Color> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `active poll`
-_No summary — add `<summary>` on ActivePoll._
+Polls a boolean value every frame and sets the entity GameObject's active state to match it.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Active | bool |  |
+| Active | bool | Boolean (usually a variable or expression) re-read each frame; true keeps the entity active, false deactivates it. |
 
 ## `set active`
-_No summary — add `<summary>` on SetActive._
+Sets the entity GameObject's active state to the Active value when Executed by an upstream trigger.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Active | bool |  |
+| Active | bool | Boolean applied to the entity's active state on each Execute; true activates, false deactivates. |
 
 ## `toggle active`
-_No summary — add `<summary>` on ToggleActive._
+Flips the entity GameObject's active state each time it is Executed by an upstream trigger.
 
 No properties.
 
 ## `sprite`
-_No summary — add `<summary>` on SpriteBehaviour._
+Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Sprite | Sprite |  |
-| Size | Vector2 |  |
+| Sprite | Sprite | Asset reference to the sprite to display. |
+| Size | Vector2 | Target world-space size in units; the sprite is scaled to fit. |
 
 ## `voxel mesh`
-_No summary — add `<summary>` on VoxelMesh._
+Renders a voxel mesh asset as a child of the entity.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Mesh | Mesh |  |
-| Scale | Vector3 |  |
+| Mesh | Mesh | Asset reference to the Mesh to display. |
+| Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
 
 ## `audio source`
-_No summary — add `<summary>` on AudioSourceBehaviour._
+Plays an audio clip when Executed (or on start, if configured).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Clip | AudioClip |  |
-| PlayOnStart | bool |  |
-| Loop | bool |  |
+| Clip | AudioClip | Asset reference to the audio clip to play. |
+| PlayOnStart | bool | When true the clip plays automatically when the entity is created. |
+| Loop | bool | When true the clip loops once started. |
 
 ## `sphere gizmo`
-_No summary — add `<summary>` on SphereGizmoBehaviour._
+Debug-draws a sphere gizmo at the entity's position in the Scene view.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Radius | float |  |
-| IsWire | bool |  |
-| Colour | Color |  |
+| Radius | float | Sphere radius in world units. |
+| IsWire | bool | When true draws an outline; when false draws a filled sphere. |
+| Colour | Color | Gizmo colour. |
 
 ## `cube gizmo`
-_No summary — add `<summary>` on CubeGizmoBehaviour._
+Debug-draws a cube gizmo at the entity's position in the Scene view.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Size | Vector3 |  |
-| IsWire | bool |  |
-| Colour | Color |  |
+| Size | Vector3 | Cube dimensions in world units. |
+| IsWire | bool | When true draws an outline; when false draws a filled cube. |
+| Colour | Color | Gizmo colour. |
 
 ## `line gizmo`
-_No summary — add `<summary>` on LineGizmoBehaviour._
+Debug-draws a line gizmo between two points in the entity's local transform space.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 |  |
-| End | Vector3 |  |
-| Colour | Color |  |
+| Start | Vector3 | Line start point in local transform space. |
+| End | Vector3 | Line end point in local transform space. |
+| Colour | Color | Gizmo colour. |
 
 ## `text label`
-_No summary — add `<summary>` on TextLabel._
+Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Text | string |  |
-| Label | string |  |
-| FontSize | int |  |
-| Rect | ScreenRect |  |
+| Text | string | Dynamic body text (re-read each frame; bind to a variable to display live values). |
+| Label | string | Optional static prefix shown before Text (e.g. "Score: "). |
+| FontSize | int | Font size in pixels. |
+| Rect | ScreenRect | Screen-space rectangle (see ScreenRect format). |
 
 ## `progress bar`
-_No summary — add `<summary>` on ProgressBar._
+Draws a horizontal fill bar; the filled fraction is Value clamped to [0, 1].
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Value | float |  |
-| Rect | ScreenRect |  |
+| Value | float | Progress in [0, 1]. Re-read each frame. |
+| Rect | ScreenRect | Screen-space rectangle. |
 
 ## `ui image`
-_No summary — add `<summary>` on UIImage._
+Draws a solid-coloured rectangle on-screen. Useful as a simple HUD backdrop or indicator.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Colour | Color |  |
-| Rect | ScreenRect |  |
+| Colour | Color | Fill colour. |
+| Rect | ScreenRect | Screen-space rectangle. |
 
 ## `ui button`
-_No summary — add `<summary>` on UIButton._
+Draws a button. Acts as a trigger: notifies listeners each time the button is clicked.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Label | string |  |
-| Rect | ScreenRect |  |
+| Label | string | Button caption. |
+| Rect | ScreenRect | Screen-space rectangle. |
 
 ## `ui toggle`
-_No summary — add `<summary>` on UIToggle._
+Draws a toggle (checkbox). Fires listeners whenever the toggle's state changes.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| InitialValue | bool |  |
-| Label | string |  |
-| Rect | ScreenRect |  |
+| InitialValue | bool | Starting checked/unchecked state. |
+| Label | string | Caption shown next to the toggle. |
+| Rect | ScreenRect | Screen-space rectangle. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | bool | The new toggle state after the change. |
 
 ## `ui slider`
-_No summary — add `<summary>` on UISlider._
+Draws a horizontal slider. Fires listeners whenever the slider value changes.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| InitialValue | float |  |
-| MinValue | float |  |
-| MaxValue | float |  |
-| Rect | ScreenRect |  |
+| InitialValue | float | Starting slider value. |
+| MinValue | float | Minimum value the slider can produce. |
+| MaxValue | float | Maximum value the slider can produce. |
+| Rect | ScreenRect | Screen-space rectangle. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | float | The new slider value after the change. |
 
 ## `ui input field`
-_No summary — add `<summary>` on UIInputField._
+Draws a text input field. Fires listeners when the user presses Enter to submit the typed text.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Rect | ScreenRect |  |
+| Rect | ScreenRect | Screen-space rectangle. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| text | string | The submitted text. The field is cleared after submission. |
 
 ---
 
@@ -1257,230 +1388,4 @@ These behaviours are registered in the parse catalogue and accept the properties
 
 ## Doc-gen warnings
 
-- `box collider`: property `Size` on `BoxColliderInfo` is missing from `AutoAddBoxColliderBehaviour`'s `Properties:` block.
-- `box collider`: property `IsTrigger` on `BoxColliderInfo` is missing from `AutoAddBoxColliderBehaviour`'s `Properties:` block.
-- `sphere collider`: property `Radius` on `SphereColliderInfo` is missing from `AutoAddSphereColliderBehaviour`'s `Properties:` block.
-- `sphere collider`: property `IsTrigger` on `SphereColliderInfo` is missing from `AutoAddSphereColliderBehaviour`'s `Properties:` block.
-- `capsule collider`: property `Radius` on `CapsuleColliderInfo` is missing from `AutoAddCapsuleColliderBehaviour`'s `Properties:` block.
-- `capsule collider`: property `Height` on `CapsuleColliderInfo` is missing from `AutoAddCapsuleColliderBehaviour`'s `Properties:` block.
-- `capsule collider`: property `Direction` on `CapsuleColliderInfo` is missing from `AutoAddCapsuleColliderBehaviour`'s `Properties:` block.
-- `capsule collider`: property `IsTrigger` on `CapsuleColliderInfo` is missing from `AutoAddCapsuleColliderBehaviour`'s `Properties:` block.
-- `mesh collider`: property `Convex` on `MeshColliderInfo` is missing from `AutoAddMeshColliderBehaviour`'s `Properties:` block.
-- `mesh collider`: property `IsTrigger` on `MeshColliderInfo` is missing from `AutoAddMeshColliderBehaviour`'s `Properties:` block.
-- `rigidbody`: property `UseGravity` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `IsKinematic` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `Mass` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `LinearDamping` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `AngularDamping` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `FreezePosition` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `rigidbody`: property `FreezeRotation` on `RigidbodyInfo` is missing from `RigidbodyBehaviour`'s `Properties:` block.
-- `add force`: property `Force` on `AddForceInfo` is missing from `AddForceBehaviour`'s `Properties:` block.
-- `add impulse`: property `Impulse` on `AddImpulseInfo` is missing from `AddImpulseBehaviour`'s `Properties:` block.
-- `add torque`: property `Torque` on `AddTorqueInfo` is missing from `AddTorqueBehaviour`'s `Properties:` block.
-- `set velocity`: property `Velocity` on `SetVelocityInfo` is missing from `SetVelocityBehaviour`'s `Properties:` block.
-- `set angular velocity`: property `AngularVelocity` on `SetAngularVelocityInfo` is missing from `SetAngularVelocityBehaviour`'s `Properties:` block.
-- `velocity`: property `Velocity` on `VelocityInfo` is missing from `Velocity`'s `Properties:` block.
-- `acceleration`: property `Acceleration` on `AccelerationInfo` is missing from `Acceleration`'s `Properties:` block.
-- `translate`: property `Displacement` on `TranslateInfo` is missing from `Translate`'s `Properties:` block.
-- `angular velocity`: property `AngularVelocity` on `AngularVelocityInfo` is missing from `AngularVelocity`'s `Properties:` block.
-- `rotate`: property `Displacement` on `RotateInfo` is missing from `Rotate`'s `Properties:` block.
-- `rotation setter`: property `Rotation` on `SetRotationInfo` is missing from `SetRotation`'s `Properties:` block.
-- `move animation`: property `Start` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `End` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `Duration` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `move animation`: property `Easing` on `MoveAnimationInfo` is missing from `MoveAnimation`'s `Properties:` block.
-- `scale animation`: property `Start` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `End` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `Duration` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `scale animation`: property `Easing` on `ScaleAnimationInfo` is missing from `ScaleAnimation`'s `Properties:` block.
-- `rotate animation`: property `Start` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `End` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `Duration` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `rotate animation`: property `Easing` on `RotateAnimationInfo` is missing from `RotateAnimation`'s `Properties:` block.
-- `key hold trigger`: property `Key` on `KeyHoldTriggerInfo` is missing from `KeyHoldTrigger`'s `Properties:` block.
-- `key down trigger`: property `Key` on `KeyDownTriggerInfo` is missing from `KeyDownTrigger`'s `Properties:` block.
-- `key up trigger`: property `Key` on `KeyUpTriggerInfo` is missing from `KeyUpTrigger`'s `Properties:` block.
-- `mouse button trigger`: property `Button` on `MouseButtonTriggerInfo` is missing from `MouseButtonTrigger`'s `Properties:` block.
-- `mouse button trigger`: property `Phase` on `MouseButtonTriggerInfo` is missing from `MouseButtonTrigger`'s `Properties:` block.
-- `axis trigger`: property `XAxis` on `AxisTriggerInfo` is missing from `AxisTrigger`'s `Properties:` block.
-- `axis trigger`: property `YAxis` on `AxisTriggerInfo` is missing from `AxisTrigger`'s `Properties:` block.
-- `gamepad button trigger`: property `Button` on `GamepadButtonTriggerInfo` is missing from `GamepadButtonTrigger`'s `Properties:` block.
-- `gamepad button trigger`: property `Mode` on `GamepadButtonTriggerInfo` is missing from `GamepadButtonTrigger`'s `Properties:` block.
-- `timer trigger`: property `Delay` on `TimerTriggerInfo` is missing from `TimerTrigger`'s `Properties:` block.
-- `deferred trigger`: property `Delay` on `DeferredTriggerInfo` is missing from `DeferredTrigger`'s `Properties:` block.
-- `debounced trigger`: property `Interval` on `DebouncedTriggerInfo` is missing from `DebouncedTrigger`'s `Properties:` block.
-- `throttled trigger`: property `Rate` on `ThrottledTriggerInfo` is missing from `ThrottledTrigger`'s `Properties:` block.
-- `interval trigger`: property `Interval` on `IntervalTriggerInfo` is missing from `IntervalTrigger`'s `Properties:` block.
-- `interval trigger`: property `Count` on `IntervalTriggerInfo` is missing from `IntervalTrigger`'s `Properties:` block.
-- `interval trigger`: property `AutoStart` on `IntervalTriggerInfo` is missing from `IntervalTrigger`'s `Properties:` block.
-- `collision enter trigger`: property `TagsToDetect` on `CollisionEnterTriggerInfo` is missing from `CollisionEnter`'s `Properties:` block.
-- `trigger enter trigger`: property `TagsToDetect` on `TriggerEnterTriggerInfo` is missing from `TriggerEnter`'s `Properties:` block.
-- `trigger exit trigger`: property `TagsToDetect` on `TriggerExitTriggerInfo` is missing from `TriggerExit`'s `Properties:` block.
-- `collision exit trigger`: property `TagsToDetect` on `CollisionExitTriggerInfo` is missing from `CollisionExit`'s `Properties:` block.
-- `collision stay trigger`: property `TagsToDetect` on `CollisionStayTriggerInfo` is missing from `CollisionStay`'s `Properties:` block.
-- `spawner`: property `TemplateId` on `SpawnerInfo` is missing from `SpawnerBehaviour`'s `Properties:` block.
-- `spawner`: property `Position` on `SpawnerInfo` is missing from `SpawnerBehaviour`'s `Properties:` block.
-- `spawner`: property `Rotation` on `SpawnerInfo` is missing from `SpawnerBehaviour`'s `Properties:` block.
-- `spawner`: property `Parameters` on `SpawnerInfo` is missing from `SpawnerBehaviour`'s `Properties:` block.
-- `position setter`: property `Position` on `SetPositionInfo` is missing from `SetPosition`'s `Properties:` block.
-- `camera`: property `View` on `CameraInfo` is missing from `CameraBehaviour`'s `Properties:` block.
-- `camera`: property `Size` on `CameraInfo` is missing from `CameraBehaviour`'s `Properties:` block.
-- `condition gate`: property `Condition` on `ConditionGateInfo` is missing from `ConditionGate`'s `Properties:` block.
-- `inverse condition gate`: property `Condition` on `InverseConditionGateInfo` is missing from `InverseConditionGate`'s `Properties:` block.
-- `exclusive trigger`: property `Group` on `ExclusiveTriggerInfo` is missing from `ExclusiveTrigger`'s `Properties:` block.
-- `vector variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `Vector3Setter`'s `Properties:` block.
-- `vector variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `Vector3Setter`'s `Properties:` block.
-- `int variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `IntSetter`'s `Properties:` block.
-- `int variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `IntSetter`'s `Properties:` block.
-- `float variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `FloatSetter`'s `Properties:` block.
-- `float variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `FloatSetter`'s `Properties:` block.
-- `bool variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `BoolSetter`'s `Properties:` block.
-- `bool variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `BoolSetter`'s `Properties:` block.
-- `string variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `StringSetter`'s `Properties:` block.
-- `string variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `StringSetter`'s `Properties:` block.
-- `colour variable setter`: property `VariableId` on `VariableSetterInfo`1` is missing from `ColourSetter`'s `Properties:` block.
-- `colour variable setter`: property `Value` on `VariableSetterInfo`1` is missing from `ColourSetter`'s `Properties:` block.
-- `vector list add`: property `List` on `ListAddInfo`1` is missing from `Vector3ListAdd`'s `Properties:` block.
-- `vector list add`: property `Value` on `ListAddInfo`1` is missing from `Vector3ListAdd`'s `Properties:` block.
-- `vector list insert`: property `List` on `ListInsertInfo`1` is missing from `Vector3ListInsert`'s `Properties:` block.
-- `vector list insert`: property `Index` on `ListInsertInfo`1` is missing from `Vector3ListInsert`'s `Properties:` block.
-- `vector list insert`: property `Value` on `ListInsertInfo`1` is missing from `Vector3ListInsert`'s `Properties:` block.
-- `vector list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `Vector3ListRemoveAt`'s `Properties:` block.
-- `vector list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `Vector3ListRemoveAt`'s `Properties:` block.
-- `vector list remove`: property `List` on `ListRemoveInfo`1` is missing from `Vector3ListRemove`'s `Properties:` block.
-- `vector list remove`: property `Value` on `ListRemoveInfo`1` is missing from `Vector3ListRemove`'s `Properties:` block.
-- `vector list set at`: property `List` on `ListSetAtInfo`1` is missing from `Vector3ListSetAt`'s `Properties:` block.
-- `vector list set at`: property `Index` on `ListSetAtInfo`1` is missing from `Vector3ListSetAt`'s `Properties:` block.
-- `vector list set at`: property `Value` on `ListSetAtInfo`1` is missing from `Vector3ListSetAt`'s `Properties:` block.
-- `vector list set`: property `List` on `ListSetInfo`1` is missing from `Vector3ListSet`'s `Properties:` block.
-- `vector list set`: property `Value` on `ListSetInfo`1` is missing from `Vector3ListSet`'s `Properties:` block.
-- `vector list add range`: property `List` on `ListAddRangeInfo`1` is missing from `Vector3ListAddRange`'s `Properties:` block.
-- `vector list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `Vector3ListAddRange`'s `Properties:` block.
-- `vector list clear`: property `List` on `ListClearInfo`1` is missing from `Vector3ListClear`'s `Properties:` block.
-- `vector list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `Vector3ListLoopTrigger`'s `Properties:` block.
-- `int list add`: property `List` on `ListAddInfo`1` is missing from `IntListAdd`'s `Properties:` block.
-- `int list add`: property `Value` on `ListAddInfo`1` is missing from `IntListAdd`'s `Properties:` block.
-- `int list insert`: property `List` on `ListInsertInfo`1` is missing from `IntListInsert`'s `Properties:` block.
-- `int list insert`: property `Index` on `ListInsertInfo`1` is missing from `IntListInsert`'s `Properties:` block.
-- `int list insert`: property `Value` on `ListInsertInfo`1` is missing from `IntListInsert`'s `Properties:` block.
-- `int list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `IntListRemoveAt`'s `Properties:` block.
-- `int list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `IntListRemoveAt`'s `Properties:` block.
-- `int list remove`: property `List` on `ListRemoveInfo`1` is missing from `IntListRemove`'s `Properties:` block.
-- `int list remove`: property `Value` on `ListRemoveInfo`1` is missing from `IntListRemove`'s `Properties:` block.
-- `int list set at`: property `List` on `ListSetAtInfo`1` is missing from `IntListSetAt`'s `Properties:` block.
-- `int list set at`: property `Index` on `ListSetAtInfo`1` is missing from `IntListSetAt`'s `Properties:` block.
-- `int list set at`: property `Value` on `ListSetAtInfo`1` is missing from `IntListSetAt`'s `Properties:` block.
-- `int list set`: property `List` on `ListSetInfo`1` is missing from `IntListSet`'s `Properties:` block.
-- `int list set`: property `Value` on `ListSetInfo`1` is missing from `IntListSet`'s `Properties:` block.
-- `int list add range`: property `List` on `ListAddRangeInfo`1` is missing from `IntListAddRange`'s `Properties:` block.
-- `int list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `IntListAddRange`'s `Properties:` block.
-- `int list clear`: property `List` on `ListClearInfo`1` is missing from `IntListClear`'s `Properties:` block.
-- `int list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `IntListLoopTrigger`'s `Properties:` block.
-- `float list add`: property `List` on `ListAddInfo`1` is missing from `FloatListAdd`'s `Properties:` block.
-- `float list add`: property `Value` on `ListAddInfo`1` is missing from `FloatListAdd`'s `Properties:` block.
-- `float list insert`: property `List` on `ListInsertInfo`1` is missing from `FloatListInsert`'s `Properties:` block.
-- `float list insert`: property `Index` on `ListInsertInfo`1` is missing from `FloatListInsert`'s `Properties:` block.
-- `float list insert`: property `Value` on `ListInsertInfo`1` is missing from `FloatListInsert`'s `Properties:` block.
-- `float list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `FloatListRemoveAt`'s `Properties:` block.
-- `float list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `FloatListRemoveAt`'s `Properties:` block.
-- `float list remove`: property `List` on `ListRemoveInfo`1` is missing from `FloatListRemove`'s `Properties:` block.
-- `float list remove`: property `Value` on `ListRemoveInfo`1` is missing from `FloatListRemove`'s `Properties:` block.
-- `float list set at`: property `List` on `ListSetAtInfo`1` is missing from `FloatListSetAt`'s `Properties:` block.
-- `float list set at`: property `Index` on `ListSetAtInfo`1` is missing from `FloatListSetAt`'s `Properties:` block.
-- `float list set at`: property `Value` on `ListSetAtInfo`1` is missing from `FloatListSetAt`'s `Properties:` block.
-- `float list set`: property `List` on `ListSetInfo`1` is missing from `FloatListSet`'s `Properties:` block.
-- `float list set`: property `Value` on `ListSetInfo`1` is missing from `FloatListSet`'s `Properties:` block.
-- `float list add range`: property `List` on `ListAddRangeInfo`1` is missing from `FloatListAddRange`'s `Properties:` block.
-- `float list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `FloatListAddRange`'s `Properties:` block.
-- `float list clear`: property `List` on `ListClearInfo`1` is missing from `FloatListClear`'s `Properties:` block.
-- `float list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `FloatListLoopTrigger`'s `Properties:` block.
-- `bool list add`: property `List` on `ListAddInfo`1` is missing from `BoolListAdd`'s `Properties:` block.
-- `bool list add`: property `Value` on `ListAddInfo`1` is missing from `BoolListAdd`'s `Properties:` block.
-- `bool list insert`: property `List` on `ListInsertInfo`1` is missing from `BoolListInsert`'s `Properties:` block.
-- `bool list insert`: property `Index` on `ListInsertInfo`1` is missing from `BoolListInsert`'s `Properties:` block.
-- `bool list insert`: property `Value` on `ListInsertInfo`1` is missing from `BoolListInsert`'s `Properties:` block.
-- `bool list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `BoolListRemoveAt`'s `Properties:` block.
-- `bool list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `BoolListRemoveAt`'s `Properties:` block.
-- `bool list remove`: property `List` on `ListRemoveInfo`1` is missing from `BoolListRemove`'s `Properties:` block.
-- `bool list remove`: property `Value` on `ListRemoveInfo`1` is missing from `BoolListRemove`'s `Properties:` block.
-- `bool list set at`: property `List` on `ListSetAtInfo`1` is missing from `BoolListSetAt`'s `Properties:` block.
-- `bool list set at`: property `Index` on `ListSetAtInfo`1` is missing from `BoolListSetAt`'s `Properties:` block.
-- `bool list set at`: property `Value` on `ListSetAtInfo`1` is missing from `BoolListSetAt`'s `Properties:` block.
-- `bool list set`: property `List` on `ListSetInfo`1` is missing from `BoolListSet`'s `Properties:` block.
-- `bool list set`: property `Value` on `ListSetInfo`1` is missing from `BoolListSet`'s `Properties:` block.
-- `bool list add range`: property `List` on `ListAddRangeInfo`1` is missing from `BoolListAddRange`'s `Properties:` block.
-- `bool list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `BoolListAddRange`'s `Properties:` block.
-- `bool list clear`: property `List` on `ListClearInfo`1` is missing from `BoolListClear`'s `Properties:` block.
-- `bool list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `BoolListLoopTrigger`'s `Properties:` block.
-- `string list add`: property `List` on `ListAddInfo`1` is missing from `StringListAdd`'s `Properties:` block.
-- `string list add`: property `Value` on `ListAddInfo`1` is missing from `StringListAdd`'s `Properties:` block.
-- `string list insert`: property `List` on `ListInsertInfo`1` is missing from `StringListInsert`'s `Properties:` block.
-- `string list insert`: property `Index` on `ListInsertInfo`1` is missing from `StringListInsert`'s `Properties:` block.
-- `string list insert`: property `Value` on `ListInsertInfo`1` is missing from `StringListInsert`'s `Properties:` block.
-- `string list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `StringListRemoveAt`'s `Properties:` block.
-- `string list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `StringListRemoveAt`'s `Properties:` block.
-- `string list remove`: property `List` on `ListRemoveInfo`1` is missing from `StringListRemove`'s `Properties:` block.
-- `string list remove`: property `Value` on `ListRemoveInfo`1` is missing from `StringListRemove`'s `Properties:` block.
-- `string list set at`: property `List` on `ListSetAtInfo`1` is missing from `StringListSetAt`'s `Properties:` block.
-- `string list set at`: property `Index` on `ListSetAtInfo`1` is missing from `StringListSetAt`'s `Properties:` block.
-- `string list set at`: property `Value` on `ListSetAtInfo`1` is missing from `StringListSetAt`'s `Properties:` block.
-- `string list set`: property `List` on `ListSetInfo`1` is missing from `StringListSet`'s `Properties:` block.
-- `string list set`: property `Value` on `ListSetInfo`1` is missing from `StringListSet`'s `Properties:` block.
-- `string list add range`: property `List` on `ListAddRangeInfo`1` is missing from `StringListAddRange`'s `Properties:` block.
-- `string list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `StringListAddRange`'s `Properties:` block.
-- `string list clear`: property `List` on `ListClearInfo`1` is missing from `StringListClear`'s `Properties:` block.
-- `string list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `StringListLoopTrigger`'s `Properties:` block.
-- `colour list add`: property `List` on `ListAddInfo`1` is missing from `ColourListAdd`'s `Properties:` block.
-- `colour list add`: property `Value` on `ListAddInfo`1` is missing from `ColourListAdd`'s `Properties:` block.
-- `colour list insert`: property `List` on `ListInsertInfo`1` is missing from `ColourListInsert`'s `Properties:` block.
-- `colour list insert`: property `Index` on `ListInsertInfo`1` is missing from `ColourListInsert`'s `Properties:` block.
-- `colour list insert`: property `Value` on `ListInsertInfo`1` is missing from `ColourListInsert`'s `Properties:` block.
-- `colour list remove at`: property `List` on `ListRemoveAtInfo`1` is missing from `ColourListRemoveAt`'s `Properties:` block.
-- `colour list remove at`: property `Index` on `ListRemoveAtInfo`1` is missing from `ColourListRemoveAt`'s `Properties:` block.
-- `colour list remove`: property `List` on `ListRemoveInfo`1` is missing from `ColourListRemove`'s `Properties:` block.
-- `colour list remove`: property `Value` on `ListRemoveInfo`1` is missing from `ColourListRemove`'s `Properties:` block.
-- `colour list set at`: property `List` on `ListSetAtInfo`1` is missing from `ColourListSetAt`'s `Properties:` block.
-- `colour list set at`: property `Index` on `ListSetAtInfo`1` is missing from `ColourListSetAt`'s `Properties:` block.
-- `colour list set at`: property `Value` on `ListSetAtInfo`1` is missing from `ColourListSetAt`'s `Properties:` block.
-- `colour list set`: property `List` on `ListSetInfo`1` is missing from `ColourListSet`'s `Properties:` block.
-- `colour list set`: property `Value` on `ListSetInfo`1` is missing from `ColourListSet`'s `Properties:` block.
-- `colour list add range`: property `List` on `ListAddRangeInfo`1` is missing from `ColourListAddRange`'s `Properties:` block.
-- `colour list add range`: property `Other` on `ListAddRangeInfo`1` is missing from `ColourListAddRange`'s `Properties:` block.
-- `colour list clear`: property `List` on `ListClearInfo`1` is missing from `ColourListClear`'s `Properties:` block.
-- `colour list loop trigger`: property `List` on `ListLoopTriggerInfo`1` is missing from `ColourListLoopTrigger`'s `Properties:` block.
-- `active poll`: property `Active` on `ActivePollInfo` is missing from `ActivePoll`'s `Properties:` block.
-- `set active`: property `Active` on `SetActiveInfo` is missing from `SetActive`'s `Properties:` block.
-- `sprite`: property `Sprite` on `SpriteInfo` is missing from `SpriteBehaviour`'s `Properties:` block.
-- `sprite`: property `Size` on `SpriteInfo` is missing from `SpriteBehaviour`'s `Properties:` block.
-- `voxel mesh`: property `Mesh` on `VoxelMeshInfo` is missing from `VoxelMesh`'s `Properties:` block.
-- `voxel mesh`: property `Scale` on `VoxelMeshInfo` is missing from `VoxelMesh`'s `Properties:` block.
-- `audio source`: property `Clip` on `AudioSourceInfo` is missing from `AudioSourceBehaviour`'s `Properties:` block.
-- `audio source`: property `PlayOnStart` on `AudioSourceInfo` is missing from `AudioSourceBehaviour`'s `Properties:` block.
-- `audio source`: property `Loop` on `AudioSourceInfo` is missing from `AudioSourceBehaviour`'s `Properties:` block.
-- `sphere gizmo`: property `Radius` on `SphereGizmoInfo` is missing from `SphereGizmoBehaviour`'s `Properties:` block.
-- `sphere gizmo`: property `IsWire` on `SphereGizmoInfo` is missing from `SphereGizmoBehaviour`'s `Properties:` block.
-- `sphere gizmo`: property `Colour` on `SphereGizmoInfo` is missing from `SphereGizmoBehaviour`'s `Properties:` block.
-- `cube gizmo`: property `Size` on `CubeGizmoInfo` is missing from `CubeGizmoBehaviour`'s `Properties:` block.
-- `cube gizmo`: property `IsWire` on `CubeGizmoInfo` is missing from `CubeGizmoBehaviour`'s `Properties:` block.
-- `cube gizmo`: property `Colour` on `CubeGizmoInfo` is missing from `CubeGizmoBehaviour`'s `Properties:` block.
-- `line gizmo`: property `Start` on `LineGizmoInfo` is missing from `LineGizmoBehaviour`'s `Properties:` block.
-- `line gizmo`: property `End` on `LineGizmoInfo` is missing from `LineGizmoBehaviour`'s `Properties:` block.
-- `line gizmo`: property `Colour` on `LineGizmoInfo` is missing from `LineGizmoBehaviour`'s `Properties:` block.
-- `text label`: property `Text` on `TextLabelInfo` is missing from `TextLabel`'s `Properties:` block.
-- `text label`: property `Label` on `TextLabelInfo` is missing from `TextLabel`'s `Properties:` block.
-- `text label`: property `FontSize` on `TextLabelInfo` is missing from `TextLabel`'s `Properties:` block.
-- `text label`: property `Rect` on `TextLabelInfo` is missing from `TextLabel`'s `Properties:` block.
-- `progress bar`: property `Value` on `ProgressBarInfo` is missing from `ProgressBar`'s `Properties:` block.
-- `progress bar`: property `Rect` on `ProgressBarInfo` is missing from `ProgressBar`'s `Properties:` block.
-- `ui image`: property `Colour` on `UIImageInfo` is missing from `UIImage`'s `Properties:` block.
-- `ui image`: property `Rect` on `UIImageInfo` is missing from `UIImage`'s `Properties:` block.
-- `ui button`: property `Label` on `UIButtonInfo` is missing from `UIButton`'s `Properties:` block.
-- `ui button`: property `Rect` on `UIButtonInfo` is missing from `UIButton`'s `Properties:` block.
-- `ui toggle`: property `InitialValue` on `UIToggleInfo` is missing from `UIToggle`'s `Properties:` block.
-- `ui toggle`: property `Label` on `UIToggleInfo` is missing from `UIToggle`'s `Properties:` block.
-- `ui toggle`: property `Rect` on `UIToggleInfo` is missing from `UIToggle`'s `Properties:` block.
-- `ui slider`: property `InitialValue` on `UISliderInfo` is missing from `UISlider`'s `Properties:` block.
-- `ui slider`: property `MinValue` on `UISliderInfo` is missing from `UISlider`'s `Properties:` block.
-- `ui slider`: property `MaxValue` on `UISliderInfo` is missing from `UISlider`'s `Properties:` block.
-- `ui slider`: property `Rect` on `UISliderInfo` is missing from `UISlider`'s `Properties:` block.
-- `ui input field`: property `Rect` on `UIInputFieldInfo` is missing from `UIInputField`'s `Properties:` block.
+- `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.
