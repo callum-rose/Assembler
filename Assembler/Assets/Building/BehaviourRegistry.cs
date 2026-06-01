@@ -34,9 +34,18 @@ namespace Assembler.Building
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviours = new();
 		private readonly Dictionary<string, List<GameBehaviour>> _behavioursByTag = new();
 
+		/// <summary>
+		/// Registration order of each behaviour. Registration runs in stable entity/behaviour list order, so this
+		/// gives a deterministic ordering for queries that would otherwise iterate the unordered <see cref="_behaviours"/>
+		/// dictionary (see <see cref="GetByEntityTagAndBehaviourId"/>). Part of the Level 1 determinism guarantee.
+		/// </summary>
+		private readonly Dictionary<GameBehaviour, int> _registrationIndex = new();
+		private int _nextIndex;
+
 		public void Register(BehaviourDescriptor descriptor, GameBehaviour behaviour, IReadOnlyList<string>? behaviourTags = null)
 		{
 			_behaviours.Add(descriptor, behaviour);
+			_registrationIndex[behaviour] = _nextIndex++;
 			if (behaviourTags == null) return;
 			foreach (var tag in behaviourTags)
 			{
@@ -63,6 +72,7 @@ namespace Assembler.Building
 				             && kv.Value
 				             && kv.Value.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
 				.Select(kv => kv.Value)
+				.OrderBy(b => _registrationIndex[b])
 				.ToArray();
 		}
 	}
