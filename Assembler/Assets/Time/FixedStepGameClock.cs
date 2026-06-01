@@ -1,18 +1,23 @@
 namespace Assembler.Time
 {
 	/// <summary>
-	/// The default <see cref="IGameClock"/>: drives game time from wall-clock
-	/// <see cref="UnityEngine.Time.deltaTime"/>, scaled by <see cref="TimeScale"/> and gated by pause.
+	/// A deterministic <see cref="IGameClock"/>: every <see cref="Tick"/> advances a constant delta rather than
+	/// the wall-clock <see cref="UnityEngine.Time.deltaTime"/>. Required for byte-identical replay (Level 1
+	/// determinism; see CLAUDE.md). Pause, step, and timescale semantics mirror <see cref="RealtimeGameClock"/>.
 	/// </summary>
 	/// <remarks>
-	/// <see cref="Tick"/> snapshots the per-frame deltas once, so a whole frame is atomic: changing
-	/// <see cref="TimeScale"/> or pausing mid-frame takes effect next frame and every reader within a
-	/// frame sees the same value. A per-frame driver (<see cref="GameClockDriver"/>) is required
-	/// because <see cref="Time"/> and <see cref="FrameCount"/> are accumulators that cannot be
-	/// recomputed on demand once they diverge from wall-clock.
+	/// For Level 1, one logical tick equals one Unity Update frame; this clock just makes the per-frame delta
+	/// constant. Decoupled accumulation (multiple sim ticks per render frame) is future work.
 	/// </remarks>
-	public sealed class RealtimeGameClock : ITickableClock
+	public sealed class FixedStepGameClock : ITickableClock
 	{
+		private readonly float _fixedDeltaTime;
+
+		public FixedStepGameClock(float fixedDeltaTime = 1f / 60f)
+		{
+			_fixedDeltaTime = fixedDeltaTime;
+		}
+
 		public float DeltaTime { get; private set; }
 		public float UnscaledDeltaTime { get; private set; }
 		public double Time { get; private set; }
@@ -43,18 +48,17 @@ namespace Assembler.Time
 		}
 
 		/// <summary>
-		/// Advances the clock by one frame. Call once per frame, before any reader runs.
-		/// Snapshots the scaled and unscaled deltas, then accumulates time and the frame count
-		/// (both frozen while paused, except for a single queued <see cref="Step"/> frame).
+		/// Advances the clock by one fixed frame. Call once per frame, before any reader runs. Unlike the
+		/// realtime clock the delta is a constant, so the run is reproducible given the same tick count.
 		/// </summary>
 		public void Tick()
 		{
-			UnscaledDeltaTime = UnityEngine.Time.deltaTime;
+			UnscaledDeltaTime = _fixedDeltaTime;
 
 			// A queued step lets a paused clock advance exactly one frame, for frame-by-frame debugging.
 			var stepping = IsPaused && _pendingSteps > 0;
 
-			DeltaTime = IsPaused && !stepping ? 0f : UnscaledDeltaTime * _timeScale;
+			DeltaTime = IsPaused && !stepping ? 0f : _fixedDeltaTime * _timeScale;
 
 			if (!IsPaused || stepping)
 			{
