@@ -100,8 +100,8 @@ IDs for definitions (entities, behaviours, templates, variables, etc.) are promo
 
 ### Git Worktrees
 
-Use worktrees only for initial parallel work when the user is on a different branch. For follow-up work on a branch the user already has checked out, work directly in the main repo.
+AI work happens in a worktree so the user can keep using the main repo. The user's flow is: work in a worktree → open a PR → check the branch out in the main repo to run it in Unity. To support that, the worktree must be cleaned up once a PR exists and recreated when more work is requested.
 
-- **Before starting parallel work**: Check if the required worktree exists and create it if it doesn't.
-- **After finishing**: Commit all changes, then delete the worktree so the user can checkout the branch in the main repo to verify in Unity.
-- **Follow-up work**: If the user requests more changes and is already on the branch, work directly in the main project directory — no worktree needed.
+- **Before starting work on a branch**: Check whether the branch's worktree exists. If it doesn't (e.g. it was removed after a previous PR), recreate it for that branch before making changes. Never work directly in the main repo for AI changes — the user keeps that checkout for running in Unity.
+- **When a PR is created**: After pushing the branch and opening the PR, commit any remaining changes, then remove the local worktree (`git worktree remove`). This frees the branch so the user can `git checkout` it in the main repo and run it in Unity. Tell the user the worktree has been removed and the branch is ready to check out.
+- **Follow-up work on the same branch**: If the user requests further changes after the worktree was removed, recreate the worktree for that branch first, then continue working in it. Open a follow-up commit/PR update from the recreated worktree, and remove the worktree again once the PR is updated.
