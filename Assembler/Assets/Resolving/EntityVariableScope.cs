@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Resolving
@@ -7,6 +8,10 @@ namespace Assembler.Resolving
 	public sealed class EntityVariableScope : IDisposable
 	{
 		private Dictionary<string, IValueProvider>? _locals = new();
+
+		/// <summary>The entity's local variables keyed by id. Empty once disposed. Used by debug tooling to inspect/edit state.</summary>
+		public IEnumerable<KeyValuePair<string, IValueProvider>> All =>
+			_locals ?? Enumerable.Empty<KeyValuePair<string, IValueProvider>>();
 
 		public static EntityVariableScope Create(IEnumerable<ValueInfo> values)
 		{

@@ -17,6 +17,7 @@ namespace Tests.Resolving
 			public bool IsPaused { get; set; }
 			public void Pause() => IsPaused = true;
 			public void Resume() => IsPaused = false;
+			public void Step(int frames = 1) { }
 		}
 
 		private static ResolutionContext ContextWith(IGameClock clock) =>

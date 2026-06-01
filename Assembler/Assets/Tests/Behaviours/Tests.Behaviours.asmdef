@@ -3,7 +3,9 @@
     "rootNamespace": "",
     "references": [
         "Assembler.Behaviours",
+        "Assembler.Building",
         "Assembler.Resolving",
+        "Assembler.Parsing",
         "Assembler.Time",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

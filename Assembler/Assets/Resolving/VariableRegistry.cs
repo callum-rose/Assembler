@@ -9,6 +9,9 @@ namespace Assembler.Resolving
 	{
 		private readonly Dictionary<string, IValueProvider> _global = new();
 
+		/// <summary>All global variables keyed by id. Used by debug tooling to inspect/edit game-wide state.</summary>
+		public IEnumerable<KeyValuePair<string, IValueProvider>> Globals => _global;
+
 		public void Register(ValueInfo valueInfo)
 		{
 			_global[valueInfo.Id] = BuildProvider(valueInfo);

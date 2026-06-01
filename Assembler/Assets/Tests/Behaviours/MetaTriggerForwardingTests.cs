@@ -1,10 +1,11 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using Assembler.Time;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -29,6 +30,35 @@ namespace Tests.Behaviours
 				Last = Prepare(ctx);
 				CallCount++;
 			}
+			
+			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
+		}
+		
+		private sealed class FakeGameClock : IGameClock
+		{
+			public float DeltaTime { get; set; }
+			public float UnscaledDeltaTime { get; set; }
+			public double Time { get; set; }
+			public int FrameCount { get; set; }
+			public float TimeScale { get; set; } = 1f;
+			public bool IsPaused { get; set; }
+
+			public void Pause()
+			{
+				IsPaused = true;
+				DeltaTime = 0f;
+			}
+
+			public void Resume() => IsPaused = false;
+
+			public void Step(int frames = 1) { }
+
+			public void Advance(float seconds)
+			{
+				DeltaTime = seconds;
+				Time += seconds;
+				FrameCount++;
+			}
 		}
 
 		[Test]
@@ -38,6 +68,7 @@ namespace Tests.Behaviours
 			try
 			{
 				var trigger = go.AddComponent<DebouncedTrigger>();
+				trigger.Clock = new FakeGameClock();
 				var listener = new CapturingListener();
 
 				// Zero interval — every fire forwards.

@@ -12,6 +12,9 @@ namespace Assembler.Resolving
 
 		private TriggerContext(ImmutableDictionary<string, object> values) => _values = values;
 
+		/// <summary>The keys currently present in this context. Used by debug tooling to show what a fired trigger carried.</summary>
+		public IEnumerable<string> Keys => _values.Keys;
+
 		public TriggerContext With(string key, object value) =>
 			new(_values.SetItem(key, value));
 

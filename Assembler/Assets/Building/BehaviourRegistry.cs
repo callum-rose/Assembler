@@ -28,6 +28,9 @@ namespace Assembler.Building
 	{
 		public GameBehaviour this[BehaviourDescriptor descriptor] => _behaviours[descriptor];
 
+		/// <summary>All registered behaviours keyed by descriptor. Used by debug tooling to enumerate the live graph.</summary>
+		public IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> All => _behaviours;
+
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviours = new();
 		private readonly Dictionary<string, List<GameBehaviour>> _behavioursByTag = new();
 

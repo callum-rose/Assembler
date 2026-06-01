@@ -19,6 +19,18 @@ namespace Assembler.Behaviours
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
+#if DEBUG_CONSOLE
+		/// <summary>
+		/// Raised whenever any behaviour notifies its listeners, just before the listeners run. Lets the
+		/// debug console observe the otherwise-invisible trigger flow. Compiled out unless DEBUG_CONSOLE
+		/// is defined, so release builds pay nothing.
+		/// </summary>
+		public static event Action<GameBehaviour, TriggerContext>? Fired;
+
+		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
+		public IReadOnlyList<Listener> DebugListeners => _listeners;
+#endif
+
 		public abstract void Execute(TriggerContext ctx);
 
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
@@ -29,6 +41,9 @@ namespace Assembler.Behaviours
 
 		protected void NotifyListeners(TriggerContext ctx)
 		{
+#if DEBUG_CONSOLE
+			Fired?.Invoke(this, ctx);
+#endif
 			foreach (var listener in _listeners)
 			{
 				listener.Notify(ctx);

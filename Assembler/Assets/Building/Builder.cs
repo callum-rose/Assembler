@@ -120,6 +120,12 @@ namespace Assembler.Building
 
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
+
+#if DEBUG_CONSOLE
+			// 6. Attach the framework-level debug overlay (stripped entirely in non-DEBUG_CONSOLE builds).
+			gameRoot.AddComponent<Assembler.Building.Debug.DebugConsole>()
+				.Initialise(behaviourRegistry, gameClock, variableRegistry, gameRoot.GetComponent<GameController>());
+#endif
 		}
 
 		/// <summary>

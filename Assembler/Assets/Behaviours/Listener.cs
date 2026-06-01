@@ -16,6 +16,15 @@ namespace Assembler.Behaviours
 		public abstract void Notify(TriggerContext ctx);
 
 		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
+
+#if DEBUG_CONSOLE
+		/// <summary>
+		/// The behaviours this listener currently resolves to. Debug-only graph inspection. Tagged
+		/// listeners resolve against an empty context, so tags that depend on trigger output may not
+		/// resolve; callers should tolerate an empty result or an exception.
+		/// </summary>
+		public abstract IEnumerable<GameBehaviour> DebugTargets();
+#endif
 	}
 
 	public sealed class DirectListener : Listener
@@ -28,6 +37,16 @@ namespace Assembler.Behaviours
 		}
 
 		public override void Notify(TriggerContext ctx) => _target.Execute(Prepare(ctx));
+
+#if DEBUG_CONSOLE
+		public override IEnumerable<GameBehaviour> DebugTargets()
+		{
+			if (_target != null)
+			{
+				yield return _target;
+			}
+		}
+#endif
 	}
 
 	public sealed class EntityTaggedListener : Listener
@@ -64,6 +83,13 @@ namespace Assembler.Behaviours
 				}
 			}
 		}
+
+#if DEBUG_CONSOLE
+		public override IEnumerable<GameBehaviour> DebugTargets() =>
+			_behaviourId == null
+				? Array.Empty<GameBehaviour>()
+				: _resolveTargets(_entityTag.Get(TriggerContext.Empty), _behaviourId);
+#endif
 	}
 
 	public sealed class BehaviourTaggedListener : Listener
@@ -99,5 +125,13 @@ namespace Assembler.Behaviours
 				}
 			}
 		}
+
+#if DEBUG_CONSOLE
+		public override IEnumerable<GameBehaviour> DebugTargets()
+		{
+			var tag = _behaviourTag.Get(TriggerContext.Empty);
+			return string.IsNullOrEmpty(tag) ? Array.Empty<GameBehaviour>() : _resolveTargets(tag);
+		}
+#endif
 	}
 }

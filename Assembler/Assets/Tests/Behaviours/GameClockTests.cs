@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Rotation;
@@ -35,6 +36,8 @@ namespace Tests.Behaviours
 
 			public void Resume() => IsPaused = false;
 
+			public void Step(int frames = 1) { }
+
 			public void Advance(float seconds)
 			{
 				DeltaTime = seconds;
@@ -54,6 +57,8 @@ namespace Tests.Behaviours
 			}
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
+			
+			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 
 		private static T NewBehaviour<T>(GameObject go, FakeGameClock clock) where T : GameBehaviour
@@ -419,6 +424,54 @@ namespace Tests.Behaviours
 			Assert.AreEqual(0f, clock.DeltaTime);
 			Assert.AreEqual(frameBeforePause, clock.FrameCount);
 			Assert.IsTrue(clock.IsPaused);
+		}
+
+		[Test]
+		public void RealtimeGameClock_StepAdvancesExactlyOneFrameWhilePaused()
+		{
+			var clock = new RealtimeGameClock();
+			clock.Pause();
+			clock.Tick();
+			int frozen = clock.FrameCount;
+
+			clock.Step();
+			clock.Tick(); // consumes the queued step: advances one frame
+			clock.Tick(); // no step queued: frozen again
+
+			Assert.AreEqual(frozen + 1, clock.FrameCount);
+			Assert.IsTrue(clock.IsPaused);
+		}
+
+		[Test]
+		public void RealtimeGameClock_StepQueuesMultipleFrames()
+		{
+			var clock = new RealtimeGameClock();
+			clock.Pause();
+			clock.Tick();
+			int frozen = clock.FrameCount;
+
+			clock.Step(3);
+			clock.Tick();
+			clock.Tick();
+			clock.Tick();
+			clock.Tick(); // fourth tick: queue empty, frozen
+
+			Assert.AreEqual(frozen + 3, clock.FrameCount);
+		}
+
+		[Test]
+		public void RealtimeGameClock_StepIgnoredWhenNotPaused()
+		{
+			var clock = new RealtimeGameClock();
+			clock.Step(5); // queued but never consumed while running
+
+			clock.Tick();
+			Assert.AreEqual(1, clock.FrameCount);
+
+			// The queued steps must not leak into a later pause.
+			clock.Pause();
+			clock.Tick();
+			Assert.AreEqual(1, clock.FrameCount);
 		}
 
 		[Test]
