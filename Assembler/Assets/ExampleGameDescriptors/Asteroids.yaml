@@ -113,10 +113,10 @@ Expressions:
 
   # pos + vel * dt (per-frame integration for position tracking)
   integrate position:
-    ArgumentTypes: [ vector, vector ]
-    ArgumentNames: [ pos, vel ]
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ pos, vel, dt ]
     ReturnType: vector
-    Expression: "return IntegratePosition(pos, vel);"
+    Expression: "return IntegratePosition(pos, vel, dt);"
 
   # facing * speed
   scale vec:
@@ -291,6 +291,7 @@ Entities:
             Arguments:
               - !var ship position
               - !var ship velocity
+              - !clock deltaTime
 
       # --- Rotation (A / D) ---
       rotate left key:

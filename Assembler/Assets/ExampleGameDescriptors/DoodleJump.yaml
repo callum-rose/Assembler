@@ -55,10 +55,10 @@ Variables:
 
 Expressions:
   apply gravity:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ vel, g ]
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ vel, g, dt ]
     ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f));"
+    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
 
   apply input:
     ArgumentTypes: [ vector, bool, bool, float ]
@@ -69,11 +69,11 @@ Expressions:
       return new UnityEngine.Vector3(vx, vel.y, 0f);
 
   integrate position:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ pos, vel, halfW ]
+    ArgumentTypes: [ vector, vector, float, float ]
+    ArgumentNames: [ pos, vel, halfW, dt ]
     ReturnType: vector
     Expression: |
-      var p = IntegratePosition(pos, vel);
+      var p = IntegratePosition(pos, vel, dt);
       float nx = p.x;
       if (nx > halfW) nx = nx - 2f * halfW;
       if (nx < -halfW) nx = nx + 2f * halfW;
@@ -222,6 +222,7 @@ Entities:
             Arguments:
               - !var player velocity
               - !var player gravity
+              - !clock deltaTime
 
       apply input:
         Type: vector variable setter
@@ -245,6 +246,7 @@ Entities:
               - !var player position
               - !var player velocity
               - !var world half width
+              - !clock deltaTime
 
       write position:
         Type: position setter

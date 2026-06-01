@@ -56,4 +56,16 @@ namespace Assembler.Parsing.Info
 	public sealed record EntityPositionSource<T>(string EntityId) : ValueSource<T>;
 
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
+
+	/// <summary>Properties exposed by the game clock to descriptor expressions via the <c>!clock</c> tag.</summary>
+	public enum ClockProperty
+	{
+		DeltaTime,
+		Time,
+		FrameCount,
+		UnscaledDeltaTime
+	}
+
+	/// <summary>A value sourced from the injected game clock (resolved each frame). See <c>!clock</c>.</summary>
+	public sealed record ClockValueSource<T>(ClockProperty Property) : ValueSource<T>;
 }

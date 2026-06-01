@@ -1,5 +1,6 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
@@ -9,8 +10,10 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Acceleration: World-space acceleration in units per second squared.
 	/// </remarks>
-	public class Acceleration : GameBehaviour<AccelerationData>
+	public class Acceleration : GameBehaviour<AccelerationData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private Vector3 _velocity;
 
 		private void Update()
@@ -20,8 +23,9 @@ namespace Assembler.Behaviours.Movement
 
 		public override void Execute(TriggerContext ctx)
 		{
-			_velocity += Data.Acceleration.Get(ctx) * Time.deltaTime;
-			transform.position += _velocity * Time.deltaTime;
+			var dt = Clock.DeltaTime;
+			_velocity += Data.Acceleration.Get(ctx) * dt;
+			transform.position += _velocity * dt;
 		}
 	}
 }

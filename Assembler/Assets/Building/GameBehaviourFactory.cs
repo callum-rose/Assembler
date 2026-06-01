@@ -13,6 +13,7 @@ using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Rotation;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Sprites;
+using Assembler.Behaviours.Time;
 using Assembler.Behaviours.Visual;
 using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.Triggers.Conditionals;
@@ -24,6 +25,7 @@ using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using Assembler.Time;
 using UnityEngine;
 using Rotate = Assembler.Behaviours.Rotation.Rotate;
 
@@ -62,6 +64,11 @@ namespace Assembler.Building
 			if (behaviour is INeedsSpawner needsSpawner)
 			{
 				needsSpawner.Spawner = ctx.Spawner;
+			}
+
+			if (behaviour is INeedsGameClock needsClock)
+			{
+				needsClock.Clock = ctx.Clock;
 			}
 
 			return (behaviour, initialise);
@@ -483,6 +490,13 @@ namespace Assembler.Building
 					var b = go.AddComponent<SetActive>();
 					return (b, lr => b.Initialise(new SetActiveData(i.Id,
 						i.Active.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SetTimeScaleInfo)] = new(typeof(SetTimeScale), (go, info, ctx) =>
+				{
+					var i = (SetTimeScaleInfo)info;
+					var b = go.AddComponent<SetTimeScale>();
+					return (b, lr => b.Initialise(new SetTimeScaleData(i.Id,
+						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(ToggleActiveInfo)] = new(typeof(ToggleActive), (go, info, ctx) =>
 				{

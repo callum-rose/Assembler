@@ -93,15 +93,5 @@ namespace Assembler.Libraries
 		/// <returns>The new position pos + vel * dt.</returns>
 		public static Vector3 IntegratePosition(Vector3 pos, Vector3 vel, float dt) =>
 			new(pos.x + vel.x * dt, pos.y + vel.y * dt, pos.z + vel.z * dt);
-
-		/// <summary>
-		/// Advance a position by a velocity over the current frame's delta time
-		/// (UnityEngine.Time.deltaTime). Replaces the pos + vel * Time.deltaTime pattern.
-		/// </summary>
-		/// <param name="pos">Current position.</param>
-		/// <param name="vel">Velocity (units per second).</param>
-		/// <returns>The new position after one frame.</returns>
-		public static Vector3 IntegratePosition(Vector3 pos, Vector3 vel) =>
-			IntegratePosition(pos, vel, Time.deltaTime);
 	}
 }
