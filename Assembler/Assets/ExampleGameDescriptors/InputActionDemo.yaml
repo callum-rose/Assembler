@@ -20,6 +20,13 @@ Game:
     place. Only the `Controls` block knows about physical inputs; swapping
     keyboard for gamepad is a binding change, not a gameplay change.
 
+    To make the platform switch easy to feel without a controller, this demo
+    SIMULATES two platforms on the keyboard: the `desktop` scheme drives the
+    game with WASD (quit: Esc/Q), while the `gamepad` scheme uses the ARROW
+    KEYS (quit: Backspace). Pick the platform in the Game Launcher's Platform
+    dropdown (Desktop vs Gamepad) and watch which keys move the cube change —
+    the entities are identical, only the active binding group differs.
+
 World:
   Dimensionality: 2
   BackgroundColor: "#101018"
@@ -50,29 +57,27 @@ Controls:
     quit: { Type: button, Phase: down }          # fires once on press
 
   Bindings:
+    # Two keyboard-only schemes so you can feel the platform switch without a
+    # controller: Desktop = WASD, Gamepad = arrow keys.
     desktop:
-      # Two composites bound to the same action: WASD and the arrow keys both
-      # produce the (x, y) move vector.
       move:
         - Composite: 2DVector
           Up: "<Keyboard>/w"
           Down: "<Keyboard>/s"
           Left: "<Keyboard>/a"
           Right: "<Keyboard>/d"
-        - Composite: 2DVector
-          Up: "<Keyboard>/upArrow"
-          Down: "<Keyboard>/downArrow"
-          Left: "<Keyboard>/leftArrow"
-          Right: "<Keyboard>/rightArrow"
-      # A button action can list several plain paths; any of them fires it.
       quit:
         - "<Keyboard>/escape"
         - "<Keyboard>/q"
     gamepad:
       move:
-        - "<Gamepad>/leftStick"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
       quit:
-        - "<Gamepad>/start"
+        - "<Keyboard>/backspace"
 
 Expressions:
   # Turn the action's analogue x/y outputs into a per-frame displacement.
@@ -165,7 +170,7 @@ Entities:
         Type: text label
         Properties:
           Label: ""
-          Text: "Move: WASD / Arrows / left stick   -   Reach the gold goal   -   Quit: Esc / Q / Start"
+          Text: "Reach the gold goal.   Desktop platform: WASD (quit Esc/Q).   Gamepad platform: Arrow keys (quit Backspace).   Switch via the Game Launcher Platform dropdown."
           FontSize: 18
           Rect:
             Anchor: top-left
