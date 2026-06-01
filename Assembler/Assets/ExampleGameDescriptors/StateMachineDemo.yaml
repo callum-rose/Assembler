@@ -1,0 +1,297 @@
+Game:
+  Title: State Machine Demo
+  Description: |
+    Demonstrates the `state machine` behaviour driving real, visible entity AI.
+
+    A green player (WASD) shares the field with a guard cube whose finite state
+    machine reacts to how close you get:
+
+      patrol  (blue)   - idle, waiting. Spots you within `chase range` -> chase.
+      chase   (red)    - drives toward you. If you escape past `lose range`
+                         it returns to patrol; if you crowd it within
+                         `flee range` it panics -> flee.
+      flee    (yellow) - sprints directly away. Get far (`safe range`) and it
+                         calms back to patrol; corner it within `catch range`
+                         and it is caught -> game over.
+
+    The machine only stores the current state (in the entity variable
+    `guard_state`, visible in the debug console). Everything visible is driven
+    off that state by ordinary behaviours:
+
+      - Each state's OnEnter hooks set `guard_mode` (an int) and `guard_colour`.
+        The body's `cube gizmo` reads `guard_colour` live, so it recolours on
+        every transition.
+      - One expression-driven `velocity` reads `guard_mode` + both entity
+        positions every frame and steers the guard (toward you / away / still).
+      - Transitions are `!expr` conditions comparing the distance between the
+        two entities, evaluated each frame in declared order (first match wins).
+
+    The `caught` state's OnEnter also fires a nested `- !gameover`, showing that
+    listener hooks (including `!gameover`) work inside a behaviour's properties.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  guard size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+  player size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+  player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+
+  # state colours
+  patrol colour: !colour { R: 0.40, G: 0.60, B: 0.90, A: 1 }   # blue
+  chase colour:  !colour { R: 0.90, G: 0.30, B: 0.30, A: 1 }   # red
+  flee colour:   !colour { R: 0.95, G: 0.85, B: 0.30, A: 1 }   # yellow
+  caught colour: !colour { R: 1.00, G: 1.00, B: 1.00, A: 1 }   # white
+
+  # tuning: distance thresholds (units) and guard speeds (units/sec)
+  chase range: 3.5
+  lose range: 5.0
+  flee range: 1.5
+  safe range: 4.5
+  catch range: 0.8
+  chase speed: 1.1
+  flee speed: 1.3
+
+  # Half-size of the square play field the guard is clamped to (units from centre).
+  # Kept just inside the camera's vertical view (size 6) so the guard stays on screen.
+  field bound: 5.5
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 6
+
+Expressions:
+  # Steer the guard from its current mode: 1 = toward target, 2 = away, else still.
+  guard velocity:
+    ArgumentTypes: [ int, vector, vector, float, float ]
+    ArgumentNames: [ mode, self_pos, target_pos, chase_speed, flee_speed ]
+    ReturnType: vector
+    Expression: |
+      return mode == 1 ? ScaleVector(Direction(self_pos, target_pos), chase_speed)
+           : mode == 2 ? ScaleVector(Direction(target_pos, self_pos), flee_speed)
+           : ScaleVector(self_pos, 0f);
+
+  closer than:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ a, b, threshold ]
+    ReturnType: bool
+    Expression: "return Distance(a, b) < threshold;"
+
+  farther than:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ a, b, threshold ]
+    ReturnType: bool
+    Expression: "return Distance(a, b) > threshold;"
+
+  # Clamp a position to a square [-bound, bound] box so the guard can't flee off-screen.
+  clamp to box:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ p, bound ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      return new UnityEngine.Vector3(Clamp(p.x, -bound, bound), Clamp(p.y, -bound, bound), p.z);
+
+Entities:
+  guard:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Variables:
+      guard_mode: 0                       # 0 idle, 1 chase, 2 flee, 3 caught (read by `guard velocity`)
+      guard_colour: !var patrol colour    # read live by the body's cube gizmo
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var guard size
+          IsWire: false
+          Colour: !var guard_colour
+
+      # Self-updating velocity: re-evaluates the expression every frame, so the
+      # guard tracks the (moving) player while in chase/flee.
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !expr
+            ExpressionId: guard velocity
+            Arguments:
+              - !var guard_mode
+              - !entity_position guard
+              - !entity_position player
+              - !var chase speed
+              - !var flee speed
+
+      # Keep the guard on screen: every frame, clamp its position to the play field
+      # so a fleeing guard can be cornered against a wall instead of escaping off-screen.
+      keep in bounds:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: guard, BehaviourId: clamp position }
+      clamp position:
+        Type: position setter
+        Properties:
+          Position: !expr
+            ExpressionId: clamp to box
+            Arguments:
+              - !entity_position guard
+              - !var field bound
+
+      ai:
+        Type: state machine
+        Properties:
+          StateVariable: guard_state
+          Initial: patrol
+          States:
+            patrol:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode idle }
+                - { EntityId: guard, BehaviourId: set colour patrol }
+            chase:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode chase }
+                - { EntityId: guard, BehaviourId: set colour chase }
+            flee:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode flee }
+                - { EntityId: guard, BehaviourId: set colour flee }
+            caught:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode caught }
+                - { EntityId: guard, BehaviourId: set colour caught }
+                - !gameover                 # nested gameover: cornering the guard ends the game
+          Transitions:
+            - from: patrol
+              to: chase
+              when: !expr
+                ExpressionId: closer than
+                Arguments: [ !entity_position guard, !entity_position player, !var chase range ]
+            - from: chase
+              to: flee
+              when: !expr
+                ExpressionId: closer than
+                Arguments: [ !entity_position guard, !entity_position player, !var flee range ]
+            - from: chase
+              to: patrol
+              when: !expr
+                ExpressionId: farther than
+                Arguments: [ !entity_position guard, !entity_position player, !var lose range ]
+            - from: flee
+              to: caught
+              when: !expr
+                ExpressionId: closer than
+                Arguments: [ !entity_position guard, !entity_position player, !var catch range ]
+            - from: flee
+              to: patrol
+              when: !expr
+                ExpressionId: farther than
+                Arguments: [ !entity_position guard, !entity_position player, !var safe range ]
+
+      # --- OnEnter hook targets: drive the movement mode and the live colour. ---
+      set mode idle:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 0 }
+      set mode chase:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 1 }
+      set mode flee:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 2 }
+      set mode caught:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 3 }
+
+      set colour patrol:
+        Type: colour variable setter
+        Properties: { VariableId: !var guard_colour, Value: !var patrol colour }
+      set colour chase:
+        Type: colour variable setter
+        Properties: { VariableId: !var guard_colour, Value: !var chase colour }
+      set colour flee:
+        Type: colour variable setter
+        Properties: { VariableId: !var guard_colour, Value: !var flee colour }
+      set colour caught:
+        Type: colour variable setter
+        Properties: { VariableId: !var guard_colour, Value: !var caught colour }
+
+  player:
+    Position: !vec { X: 4, Y: -2, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+
+      # --- WASD: each key-hold trigger nudges the player while held. ---
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - { EntityId: player, BehaviourId: move left }
+      move left:
+        Type: translate
+        Properties: { Displacement: !vec { X: -0.024, Y: 0, Z: 0 } }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - { EntityId: player, BehaviourId: move right }
+      move right:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0.024, Y: 0, Z: 0 } }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - { EntityId: player, BehaviourId: move up }
+      move up:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0.024, Z: 0 } }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - { EntityId: player, BehaviourId: move down }
+      move down:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: -0.024, Z: 0 } }
+
+      # Press Q to quit. Top-level `!gameover` also satisfies the build's
+      # requirement that every game declare a game-over path.
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Label: ""
+          Text: "WASD: move the green player. Guard: blue=patrol, red=chasing you, yellow=fleeing. Corner it to trigger game over. Q to quit. Watch guard_state in the debug console."
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 820
+            Height: 60
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

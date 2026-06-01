@@ -56,6 +56,13 @@ namespace Assembler.Parsing.Info
 	/// key plus any runtime arguments that fill the localised template's <c>{0}</c>/<c>{1}</c> placeholders.</summary>
 	public sealed record TextRef(string Key, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
 
+	/// <summary>Marker produced by a nested <c>!gameover</c> tag (e.g. inside a state machine's
+	/// <c>OnEnter</c>/<c>OnExit</c> hook list). Top-level <c>Listeners:</c> handle <c>!gameover</c>
+	/// directly via <see cref="Assembler.Parsing.Info.GameOverListenerInfo"/>; nested occurrences
+	/// flow through the property pipeline as this marker and are turned back into a
+	/// <see cref="Assembler.Parsing.Info.GameOverListenerInfo"/> by the nested-listener parser.</summary>
+	public sealed record GameOverMarker : AssemblerValue;
+
 	public sealed record DictValue(IReadOnlyDictionary<string, AssemblerValue> Value) : AssemblerValue;
 
 	public sealed record ListValue(IReadOnlyList<AssemblerValue> Value) : AssemblerValue;

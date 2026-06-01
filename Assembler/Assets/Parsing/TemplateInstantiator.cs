@@ -161,7 +161,7 @@ namespace Assembler.Parsing
 			};
 		}
 
-		private static IReadOnlyList<ListenerInfo> SubstituteListeners(
+		internal static IReadOnlyList<ListenerInfo> SubstituteListeners(
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> parameters)
 		{
