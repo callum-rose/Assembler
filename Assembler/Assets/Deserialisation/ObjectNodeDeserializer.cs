@@ -198,6 +198,15 @@ namespace Assembler.Deserialisation
 
 		private static object ParseScalar(Scalar scalar)
 		{
+			// Honour YAML quoting: a quoted or block scalar is a string regardless of its
+			// contents (matches the implicit tag:yaml.org,2002:str of a quoted scalar).
+			// Only plain (unquoted) scalars get numeric/bool type inference, so `Key: "1"`
+			// stays the string "1" while bare `1` is still an int.
+			if (scalar.Style != ScalarStyle.Plain)
+			{
+				return scalar.Value;
+			}
+
 			if (int.TryParse(scalar.Value, out var intValue))
 			{
 				return intValue;
