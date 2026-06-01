@@ -42,13 +42,13 @@ string text = "Hello";
 var auto = 10;  // inferred as int
 ```
 
-> **No implicit numeric conversion.** Arithmetic and comparison operators are built
-> directly with no widening, so mixing numeric types throws at compile time (e.g.
-> `float + int` → *"binary operator Add is not defined for the types Single and
-> Int32"*). Both operands must be the same type — cast explicitly: `someFloat +
-> (float)someInt`, `(float)i < limitFloat`. This applies to `+ - * / %` **and**
-> `< > <= >= == !=`. Integer literals like `0` are `int`; use `0f` (or `(float)0`)
-> to compare/operate against floats, and the `f` suffix for float literals (`3.14f`).
+> **Implicit numeric promotion.** Mixing numeric types in a binary op widens the narrower
+> operand up the `int → long → float → double` ladder, mirroring C# (e.g. `float + int`
+> yields `float`, `int < float` compares as `float`). This applies to `+ - * / %`, the
+> comparisons `< > <= >= == !=`, and compound assignments `+= -= *= /=` (where the result is
+> narrowed back to the target's type, like C#). Explicit casts are no longer required for
+> mixed-type math, but remain available when you want a specific type. Use the `f` suffix for
+> float literals (`3.14f`); a bare `3.14` is a `double`.
 
 ---
 
@@ -586,10 +586,10 @@ The following C# features are **NOT** supported and will cause errors:
 
 ## Known Limitations
 
-Behaviours that commonly surprise authors (each is backed by a test in `Assets/Tests/Compiler/CompilerTests.cs`):
+Behaviours that commonly surprise authors (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
 
-- **No implicit numeric conversion.** `float + int`, `(float) < int`, etc. throw at compile time. Keep both operands the same type and cast explicitly. (See the note under [Basic Types](#basic-types).)
-- **Integer division truncates.** `5 / 2` is `2`, not `2.5` — both operands are `int`. Use float/double literals (`5f / 2f`) for fractional results.
+- **Integer division truncates.** `5 / 2` is `2`, not `2.5` — both operands are `int`. Mix in a float/double for a fractional result: `5 / 2f` is `2.5` (the `int` promotes — see [Basic Types](#basic-types)).
+- **Compound assignment narrows back to the target's type.** `int total = 5; total += 2.9f;` leaves `total == 7`, mirroring C#.
 - **String escapes are not interpreted.** Only `\"` and `\\` are meaningful; `\n`/`\t` become the literal characters `n`/`t`.
 - **`break` / `continue` only inside loops.** Using them elsewhere throws (`"… outside of loop"`).
 - **Casts must be valid CLR conversions.** The syntax accepts `(int) (float) (double) (bool) (string)`, but the underlying conversion must be legal at runtime (e.g. `(double)5` is fine; `(bool)someInt` is not).

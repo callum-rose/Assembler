@@ -1,0 +1,17 @@
+OVDF v1.1
+Assembler.Behaviours.GameBehaviour, Assembler.Behaviours
+MetaGuid:f8135483a0b1412fa442d501e60694d3
+
+# tags
++ [Sirenix.OdinInspector.ReadOnlyAttribute]
+
+# <Id>k__BackingField
+Position: $root:0
+Visibility: Shown
++ [Sirenix.OdinInspector.DisplayAsStringAttribute]
+
+# Execute(TriggerContext)
+Visibility: Hidden
+
+# NotifyListeners(TriggerContext)
+Visibility: Hidden

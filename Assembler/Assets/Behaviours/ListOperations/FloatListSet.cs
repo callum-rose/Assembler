@@ -1,0 +1,5 @@
+namespace Assembler.Behaviours.ListOperations
+{
+	/// <summary>Replaces the entire contents of the target float list with another list when Executed. See <see cref="ListSetBehaviour{T}"/>.</summary>
+	public class FloatListSet : ListSetBehaviour<float> { }
+}

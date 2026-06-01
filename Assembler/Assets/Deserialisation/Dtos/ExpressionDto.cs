@@ -8,5 +8,6 @@ namespace Assembler.Deserialisation.Dtos
         public string[]? RegisterTypes { get; init; }
         public string[]? RegisterTypeStatics { get; init; }
         public string? Expression { get; init; }
+        public string? CallableAs { get; init; }
     }
 }

@@ -2,9 +2,10 @@
     "name": "Assembler.Resolving",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.Parsing.Phase2",
         "Assembler.Compiler",
-        "Assembler.Parsing"
+        "Assembler.Parsing",
+        "Assembler.Extensions",
+        "Assembler.Libraries"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

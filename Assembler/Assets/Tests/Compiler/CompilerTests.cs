@@ -1077,16 +1077,6 @@ namespace Tests.Compiler
 			Assert.That(func(testList), Is.EqualTo(15));
 		}
 
-		// No implicit numeric conversion: float + int must fail at compile time.
-		[Test]
-		public void NoImplicitNumericConversionThrows()
-		{
-			var compiler = new ExpressionMethodCompiler();
-			Assert.That(
-				() => compiler.CompileFunc<float, float>("return x + 1;", "x"),
-				Throws.Exception);
-		}
-
 		// String escapes are not interpreted: the lexer only strips the backslash.
 		[Test]
 		public void StringEscapesAreNotInterpreted()
@@ -1094,6 +1084,193 @@ namespace Tests.Compiler
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<string>("return \"a\\nb\";");
 			Assert.That(func(), Is.EqualTo("anb"));
+		}
+
+		// Implicit numeric promotion in binary operations (issue #73)
+		[Test]
+		public void FloatPlusIntPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, float>("return x + y;", "x", "y");
+			Assert.That(func(1.5f, 2), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntPlusFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x + y;", "x", "y");
+			Assert.That(func(2, 1.5f), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntMinusFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x - y;", "x", "y");
+			Assert.That(func(5, 1.5f), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntTimesFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x * y;", "x", "y");
+			Assert.That(func(3, 2.5f), Is.EqualTo(7.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntDividedByFloatPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, float>("return x / y;", "x", "y");
+			Assert.That(func(5, 2f), Is.EqualTo(2.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatModuloIntPromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, float>("return x % y;", "x", "y");
+			Assert.That(func(5.5f, 2), Is.EqualTo(1.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntPlusDoublePromotes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, double, double>("return x + y;", "x", "y");
+			Assert.That(func(2, 1.5), Is.EqualTo(3.5).Within(0.0001));
+		}
+
+		[Test]
+		public void MixedLessThanComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, bool>("return x < y;", "x", "y");
+			Assert.That(func(1.5f, 2), Is.True);
+			Assert.That(func(2.5f, 2), Is.False);
+		}
+
+		[Test]
+		public void MixedGreaterThanOrEqualComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float, bool>("return x >= y;", "x", "y");
+			Assert.That(func(3, 2.5f), Is.True);
+			Assert.That(func(2, 2.5f), Is.False);
+		}
+
+		[Test]
+		public void MixedEqualityComparison()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int, bool>("return x == y;", "x", "y");
+			Assert.That(func(2f, 2), Is.True);
+			Assert.That(func(2.5f, 2), Is.False);
+		}
+
+		[Test]
+		public void FloatVariablePlusEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 1.5f;
+				total += x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2), Is.EqualTo(3.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatVariableMinusEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 5f;
+				total -= x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2), Is.EqualTo(3f).Within(0.0001f));
+		}
+
+		[Test]
+		public void FloatVariableTimesEqualsInt()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, float>(
+				$$"""
+				float total = 2.5f;
+				total *= x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(3), Is.EqualTo(7.5f).Within(0.0001f));
+		}
+
+		[Test]
+		public void IntVariablePlusEqualsFloatNarrowsBack()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float, int>(
+				$$"""
+				int total = 5;
+				total += x;
+				return total;
+				""",
+				"x");
+			Assert.That(func(2.9f), Is.EqualTo(7));
+		}
+
+		// --- Cross-expression calls (issue #72) ---
+
+		[Test]
+		public void RegisteredExpressionCanBeCalledByAnother()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<int, int, int> add = (a, b) => a + b;
+			compiler.RegisterExpression("add", add, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			var func = compiler.CompileFunc<int, int>("return add(x, 10);", "x");
+
+			Assert.That(func(5), Is.EqualTo(15));
+		}
+
+		[Test]
+		public void RegisteredExpressionCallsAreNested()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<int, int, int> add = (a, b) => a + b;
+			compiler.RegisterExpression("add", add, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			// "doubleAdd" is itself a compiled expression that calls "add", then is
+			// registered and called by a third expression -> nested call chain.
+			var doubleAdd = compiler.CompileFunc<int, int, int>("return add(add(a, b), b);", "a", "b");
+			compiler.RegisterExpression("doubleAdd", doubleAdd, new[] { typeof(int), typeof(int) }, typeof(int));
+
+			var func = compiler.CompileFunc<int, int>("return doubleAdd(x, 1);", "x");
+
+			Assert.That(func(5), Is.EqualTo(7));
+		}
+
+		[Test]
+		public void RegisteredExpressionConvertsArgumentTypes()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Func<float, float> half = v => v * 0.5f;
+			compiler.RegisterExpression("half", half, new[] { typeof(float) }, typeof(float));
+
+			// Passes an int literal where the callee expects a float.
+			var func = compiler.CompileFunc<float>("return half(10);");
+
+			Assert.That(func(), Is.EqualTo(5f).Within(0.001f));
 		}
 	}
 

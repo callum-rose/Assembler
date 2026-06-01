@@ -10,6 +10,7 @@
         "Assembler.Parsing.Phase3",
         "Assembler.Building",
         "Assembler.Behaviours",
+        "Assembler.Libraries",
         "Assembler.Core"
     ],
     "includePlatforms": [

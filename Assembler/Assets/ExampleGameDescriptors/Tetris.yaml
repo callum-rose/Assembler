@@ -1,0 +1,837 @@
+Game:
+  Title: Tetris
+  Description: >
+    Classic Tetris. A tetromino falls one row per gravity tick into a 10x20
+    well. Move with A/D, rotate with W, soft-drop with S, hard-drop with Space.
+    A piece locks when it can't fall further; full rows clear and the stack
+    above shifts down. Game over when a new piece can't spawn.
+
+    Architecture notes (this game pushes the behaviour catalogue hard):
+      * The active piece is a single parent entity with 4 child blocks. Its
+        logical state is `origin` (pivot cell) + `rot` (0-3). Moves/rotations
+        are validated by expressions against the global `occupied` cell list
+        BEFORE committing, then the parent transform is moved/rotated so the
+        children follow.
+      * On lock the piece bakes its 4 cells into `occupied`, spawns 4 standalone
+        `settled_block` entities, then a deferred 3-phase broadcast
+        (snapshot -> apply -> rebuild) clears full rows and shifts survivors.
+      * The 10x20 well uses the engine grid primitive (GridMath): cell (col,row)
+        maps to world via CellToWorld(cell, -4.5, -9.5), bounds via
+        InBoundsOpenTop, and occupancy/line scans via IsOccupied/RowFull/
+        FullRowCount/FullRowsBelow. col 0-9, row 0-19.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0a0a14"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # Grid definition (the well). Cells are (col,row,0); world origin places cell
+  # (0,0) at (-4.5,-9.5) so the 10x20 well is centred. The origin is passed into
+  # the cell<->world expressions; width/height (10/20) are the well extents.
+  grid width: 10
+  grid height: 20
+  grid origin x: -4.5
+  grid origin y: -9.5
+
+  spawn origin: !vec { X: 4, Y: 18 }
+  fall interval: 0.8
+  soft interval: 0.04
+  block size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 11
+
+Variables:
+  # All settled (locked) cells as (col,row,0). Rebuilt after every line clear.
+  occupied: !vec []
+  # Which tetromino the factory will spawn next (0-6).
+  next shape: 0
+  score: 0
+  lines cleared: 0
+  # Scratch: number of rows cleared by the most recent lock.
+  lines now: 0
+  is dead: false
+  # True while the S key is held (global so a piece spawned mid-hold keeps dropping).
+  soft dropping: false
+
+Expressions:
+  # ---- pure helpers -------------------------------------------------------
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "return a + b;"
+
+  add score:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ score, lines ]
+    ReturnType: int
+    Expression: >
+      if (lines <= 0) { return score; }
+      if (lines == 1) { return score + 40; }
+      if (lines == 2) { return score + 100; }
+      if (lines == 3) { return score + 300; }
+      return score + 1200;
+
+  format score:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ s ]
+    ReturnType: string
+    Expression: "return \"Score: \" + s;"
+
+  format lines:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ l ]
+    ReturnType: string
+    Expression: "return \"Lines: \" + l;"
+
+  random shape:
+    ReturnType: int
+    RegisterTypes: [ UnityEngine.Random ]
+    Expression: "return UnityEngine.Random.Range(0, 7);"
+
+  colour for shape:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ s ]
+    ReturnType: colour
+    Expression: >
+      if (s == 0) { return new Color(0f, 1f, 1f, 1f); }
+      if (s == 1) { return new Color(1f, 1f, 0f, 1f); }
+      if (s == 2) { return new Color(0.6f, 0f, 0.9f, 1f); }
+      if (s == 3) { return new Color(0f, 1f, 0f, 1f); }
+      if (s == 4) { return new Color(1f, 0f, 0f, 1f); }
+      if (s == 5) { return new Color(0f, 0.4f, 1f, 1f); }
+      return new Color(1f, 0.5f, 0f, 1f);
+
+  # ---- world mapping ------------------------------------------------------
+  cell to world:
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ cell, originX, originY ]
+    ReturnType: vector
+    Expression: "return CellToWorld(cell, originX, originY);"
+
+  move origin:
+    ArgumentTypes: [ vector, int, int ]
+    ArgumentNames: [ origin, dx, dy ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(origin.x + (float)dx, origin.y + (float)dy, 0f);"
+
+  shift down:
+    ArgumentTypes: [ vector, int ]
+    ArgumentNames: [ cell, by ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(cell.x, cell.y - (float)by, 0f);"
+
+  should shift:
+    ArgumentTypes: [ bool, int ]
+    ArgumentNames: [ pendingClear, dropBy ]
+    ReturnType: bool
+    Expression: "return (!pendingClear) && dropBy > 0;"
+
+  alive kept:
+    ArgumentTypes: [ bool, bool ]
+    ArgumentNames: [ dead, pendingClear ]
+    ReturnType: bool
+    Expression: "return (!dead) && (!pendingClear);"
+
+  # ---- line scanning ------------------------------------------------------
+  row is full:
+    ArgumentTypes: [ vector list, vector ]
+    ArgumentNames: [ occupied, cell ]
+    ReturnType: bool
+    Expression: "return RowFull(occupied, cell.y, 10f);"
+
+  full rows below:
+    ArgumentTypes: [ vector list, vector ]
+    ArgumentNames: [ occupied, cell ]
+    ReturnType: int
+    Expression: "return FullRowsBelow(occupied, cell.y, 10f, 20f);"
+
+  full row count:
+    ArgumentTypes: [ vector list ]
+    ArgumentNames: [ occupied ]
+    ReturnType: int
+    Expression: "return FullRowCount(occupied, 10f, 20f);"
+
+  # ---- geometry (single offset table; rotation + bounds/occupancy reuse it
+  #      via cross-expression calls to baseOffset / cellGrid) ----------------
+  base offset:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ s, i ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: >
+      float ox(int s, int i)
+      {
+          if (s == 0) { if (i == 0) { return -1f; } if (i == 1) { return 0f; } if (i == 2) { return 1f; } return 2f; }
+          if (s == 1) { if (i == 0) { return 0f; } if (i == 1) { return 1f; } if (i == 2) { return 0f; } return 1f; }
+          if (s == 2) { if (i == 0) { return -1f; } if (i == 1) { return 0f; } if (i == 2) { return 1f; } return 0f; }
+          if (s == 3) { if (i == 0) { return -1f; } if (i == 1) { return 0f; } if (i == 2) { return 0f; } return 1f; }
+          if (s == 4) { if (i == 0) { return 0f; } if (i == 1) { return 1f; } if (i == 2) { return -1f; } return 0f; }
+          if (s == 5) { if (i == 0) { return -1f; } if (i == 1) { return -1f; } if (i == 2) { return 0f; } return 1f; }
+          if (i == 0) { return 1f; } if (i == 1) { return -1f; } if (i == 2) { return 0f; } return 1f;
+      }
+      float oy(int s, int i)
+      {
+          if (s == 0) { return 0f; }
+          if (s == 1) { if (i == 0) { return 0f; } if (i == 1) { return 0f; } return 1f; }
+          if (s == 2) { if (i == 3) { return 1f; } return 0f; }
+          if (s == 3) { if (i == 0) { return 0f; } if (i == 1) { return 0f; } return 1f; }
+          if (s == 4) { if (i == 0) { return 0f; } if (i == 1) { return 0f; } return 1f; }
+          if (s == 5) { if (i == 0) { return 1f; } return 0f; }
+          if (i == 0) { return 1f; } return 0f;
+      }
+      return new Vector3(ox(s, i), oy(s, i), 0f);
+  # cell (col,row,0) of block `i` for a piece at origin/rot/shape. Reuses the
+  # single offset table in `base offset` and the shared rotation helper.
+  cell grid:
+    ArgumentTypes: [ vector, int, int, int ]
+    ArgumentNames: [ origin, s, rot, i ]
+    ReturnType: vector
+    Expression: >
+      var rotated = RotateCellCW(baseOffset(s, i), rot);
+      return NeighbourCell(origin, rotated.x, rotated.y);
+
+  # world position of block `i` (grid cell mapped to world space).
+  cell world:
+    ArgumentTypes: [ vector, int, int, int, float, float ]
+    ArgumentNames: [ origin, s, rot, i, originX, originY ]
+    ReturnType: vector
+    Expression: "return CellToWorld(cellGrid(origin, s, rot, i), originX, originY);"
+
+  # true if the piece can occupy origin+(dx,dy) at rot without leaving the
+  # well or overlapping a settled cell.
+  can move:
+    ArgumentTypes: [ vector, int, int, vector list, int, int ]
+    ArgumentNames: [ origin, s, rot, occupied, dx, dy ]
+    ReturnType: bool
+    Expression: >
+      bool free = true;
+      for (int i = 0; i < 4; i++)
+      {
+          var c = cellGrid(origin, s, rot, i);
+          float col = c.x + (float)dx;
+          float row = c.y + (float)dy;
+          if (!InBoundsOpenTop(col, row, 10f)) { free = false; }
+          if (IsOccupied(occupied, col, row)) { free = false; }
+      }
+      return free;
+
+  # true if the piece can rotate one step clockwise (rot+1).
+  can rotate:
+    ArgumentTypes: [ vector, int, int, vector list ]
+    ArgumentNames: [ origin, s, rot, occupied ]
+    ReturnType: bool
+    Expression: >
+      bool free = true;
+      for (int i = 0; i < 4; i++)
+      {
+          var c = cellGrid(origin, s, rot + 1, i);
+          float col = c.x;
+          float row = c.y;
+          if (!InBoundsOpenTop(col, row, 10f)) { free = false; }
+          if (IsOccupied(occupied, col, row)) { free = false; }
+      }
+      return free;
+
+  # true if the piece cannot fall one more row (i.e. it should lock).
+  blocked down:
+    ArgumentTypes: [ vector, int, int, vector list ]
+    ArgumentNames: [ origin, s, rot, occupied ]
+    ReturnType: bool
+    Expression: >
+      bool free = true;
+      for (int i = 0; i < 4; i++)
+      {
+          var c = cellGrid(origin, s, rot, i);
+          float col = c.x;
+          float row = c.y - 1f;
+          if (!InBoundsOpenTop(col, row, 10f)) { free = false; }
+          if (IsOccupied(occupied, col, row)) { free = false; }
+      }
+      return !free;
+
+  # true if the freshly-spawned piece already overlaps the stack (game over).
+  blocked at spawn:
+    ArgumentTypes: [ vector, int, int, vector list ]
+    ArgumentNames: [ origin, s, rot, occupied ]
+    ReturnType: bool
+    Expression: >
+      bool clash = false;
+      for (int i = 0; i < 4; i++)
+      {
+          var c = cellGrid(origin, s, rot, i);
+          if (IsOccupied(occupied, c.x, c.y)) { clash = true; }
+      }
+      return clash;
+
+  # landing origin for a hard drop: origin shifted down by the fall distance.
+  drop to:
+    ArgumentTypes: [ vector, int, int, vector list ]
+    ArgumentNames: [ origin, s, rot, occupied ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: >
+      int d = 0;
+      while (d < 25)
+      {
+          int nd = d + 1;
+          bool ok = true;
+          for (int i = 0; i < 4; i++)
+          {
+              var c = cellGrid(origin, s, rot, i);
+              float col = c.x;
+              float row = c.y - (float)nd;
+              if (!InBoundsOpenTop(col, row, 10f)) { ok = false; }
+              if (IsOccupied(occupied, col, row)) { ok = false; }
+          }
+          if (!ok) { break; }
+          d = nd;
+      }
+      return new Vector3(origin.x, origin.y - (float)d, 0f);
+Templates:
+  # ===== Active falling piece =============================================
+  # One parent entity with 4 child blocks. Logical state lives in `origin`
+  # (pivot cell) and `rot` (0-3). `shape` and `tint` are fixed per piece.
+  piece:
+    Tags: [ piece ]
+    Variables:
+      origin: !vec { X: 4, Y: 18 }
+      rot: 0
+    Behaviours:
+      # ---- spawn-time game-over check ----
+      on spawn:
+        Type: on start trigger
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: spawn check
+      spawn check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: blocked at spawn
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+        Listeners:
+          - EntityId: well manager
+            BehaviourId: set dead
+
+      # ---- gravity ----
+      gravity tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var fall interval
+          Count: 0
+          AutoStart: true
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: fall ok gate
+          - EntityId: !parameter self_id
+            BehaviourId: fall blocked gate
+      fall ok gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: can move
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, 0, -1 ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: apply fall
+          - EntityId: !parameter self_id
+            BehaviourId: reposition
+      apply fall:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var origin
+          Value: !expr
+            ExpressionId: move origin
+            Arguments: [ !var origin, 0, -1 ]
+      reposition:
+        Type: position setter
+        Properties:
+          Position: !expr
+            ExpressionId: cell to world
+            Arguments: [ !var origin, !var grid origin x, !var grid origin y ]
+
+      # ---- horizontal movement ----
+      left key:
+        Type: key down trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: left gate
+      left gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: can move
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, -1, 0 ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: apply left
+          - EntityId: !parameter self_id
+            BehaviourId: reposition
+      apply left:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var origin
+          Value: !expr
+            ExpressionId: move origin
+            Arguments: [ !var origin, -1, 0 ]
+      right key:
+        Type: key down trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: right gate
+      right gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: can move
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, 1, 0 ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: apply right
+          - EntityId: !parameter self_id
+            BehaviourId: reposition
+      apply right:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var origin
+          Value: !expr
+            ExpressionId: move origin
+            Arguments: [ !var origin, 1, 0 ]
+
+      # ---- rotation ----
+      rotate key:
+        Type: key down trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: rotate gate
+      rotate gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: can rotate
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: apply rotate state
+          - EntityId: !parameter self_id
+            BehaviourId: apply rotate transform
+      apply rotate state:
+        Type: int variable setter
+        Properties:
+          VariableId: !var rot
+          Value: !expr
+            ExpressionId: int add
+            Arguments: [ !var rot, 1 ]
+      # rot is only ever read mod 4 inside expressions, so we don't wrap it
+      # here; the transform rotates -90 deg per step to match (x,y)->(y,-x).
+      apply rotate transform:
+        Type: rotate
+        Properties:
+          Displacement: !vec { X: 0, Y: 0, Z: -90 }
+
+      # ---- soft drop (hold S to fall fast until it lands) ----
+      # key down/up toggle a global flag; a fast interval ticks every
+      # `soft interval` seconds and, while the flag is set, drives the same
+      # fall-ok / fall-blocked gates as gravity (so it locks on landing).
+      soft press:
+        Type: key down trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: set soft on
+      soft release:
+        Type: key up trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: set soft off
+      set soft on:
+        Type: bool variable setter
+        Properties: { VariableId: !var soft dropping, Value: true }
+      set soft off:
+        Type: bool variable setter
+        Properties: { VariableId: !var soft dropping, Value: false }
+      soft tick:
+        Type: interval trigger
+        Properties: { Interval: !var soft interval, Count: 0, AutoStart: true }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: soft gate
+      soft gate:
+        Type: condition gate
+        Properties: { Condition: !var soft dropping }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: fall ok gate
+          - EntityId: !parameter self_id
+            BehaviourId: fall blocked gate
+
+      # ---- hard drop (teleport to landing, then lock) ----
+      hard drop key:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: apply hard drop
+          - EntityId: !parameter self_id
+            BehaviourId: reposition
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 0
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 1
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 2
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 3
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 0
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 1
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 2
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 3
+          - EntityId: well manager
+            BehaviourId: begin resolve
+          - EntityId: piece factory
+            BehaviourId: roll shape
+          - EntityId: piece factory
+            BehaviourId: spawn piece
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      apply hard drop:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var origin
+          Value: !expr
+            ExpressionId: drop to
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+
+      # ---- lock (shared by gravity/soft-drop blocked path) ----
+      fall blocked gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            ExpressionId: blocked down
+            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 0
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 1
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 2
+          - EntityId: !parameter self_id
+            BehaviourId: lock add 3
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 0
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 1
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 2
+          - EntityId: !parameter self_id
+            BehaviourId: spawn block 3
+          - EntityId: well manager
+            BehaviourId: begin resolve
+          - EntityId: piece factory
+            BehaviourId: roll shape
+          - EntityId: piece factory
+            BehaviourId: spawn piece
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+
+      lock add 0:
+        Type: vector list add
+        Properties:
+          List: !var occupied
+          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
+      lock add 1:
+        Type: vector list add
+        Properties:
+          List: !var occupied
+          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
+      lock add 2:
+        Type: vector list add
+        Properties:
+          List: !var occupied
+          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
+      lock add 3:
+        Type: vector list add
+        Properties:
+          List: !var occupied
+          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
+
+      spawn block 0:
+        Type: spawner
+        Properties:
+          TemplateId: settled_block
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 0, !var grid origin x, !var grid origin y ] }
+          Parameters:
+            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
+            tint: !parameter tint
+      spawn block 1:
+        Type: spawner
+        Properties:
+          TemplateId: settled_block
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 1, !var grid origin x, !var grid origin y ] }
+          Parameters:
+            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
+            tint: !parameter tint
+      spawn block 2:
+        Type: spawner
+        Properties:
+          TemplateId: settled_block
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 2, !var grid origin x, !var grid origin y ] }
+          Parameters:
+            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
+            tint: !parameter tint
+      spawn block 3:
+        Type: spawner
+        Properties:
+          TemplateId: settled_block
+          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 3, !var grid origin x, !var grid origin y ] }
+          Parameters:
+            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
+            tint: !parameter tint
+
+      self destruct:
+        Type: destroy
+    Children:
+      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 0 ] }
+        Behaviours:
+          block:
+            Type: cube gizmo
+            Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
+      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 1 ] }
+        Behaviours:
+          block:
+            Type: cube gizmo
+            Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
+      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 2 ] }
+        Behaviours:
+          block:
+            Type: cube gizmo
+            Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
+      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 3 ] }
+        Behaviours:
+          block:
+            Type: cube gizmo
+            Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
+
+  # ===== Settled block ====================================================
+  # One cell of the locked stack. Participates in the 3-phase line clear:
+  #   snapshot -> compute pendingClear + dropBy from the current `occupied`
+  #   apply    -> destroy if its row is full, else shift down by dropBy
+  #   rebuild  -> survivors re-add their (shifted) cell to `occupied`
+  settled_block:
+    Tags: [ settled ]
+    Variables:
+      cell: !parameter cell
+      pendingClear: false
+      dropBy: 0
+      dead: false
+    Behaviours:
+      block:
+        Type: cube gizmo
+        Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
+
+      # phase 1: snapshot (both setters fire on the broadcast)
+      set pending:
+        Type: bool variable setter
+        Tags: [ clear-snapshot ]
+        Properties:
+          VariableId: !var pendingClear
+          Value: !expr { ExpressionId: row is full, Arguments: [ !var occupied, !var cell ] }
+      set dropby:
+        Type: int variable setter
+        Tags: [ clear-snapshot ]
+        Properties:
+          VariableId: !var dropBy
+          Value: !expr { ExpressionId: full rows below, Arguments: [ !var occupied, !var cell ] }
+
+      # phase 2: apply
+      destroy gate:
+        Type: condition gate
+        Tags: [ clear-apply ]
+        Properties:
+          Condition: !var pendingClear
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: mark dead
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      shift gate:
+        Type: condition gate
+        Tags: [ clear-apply ]
+        Properties:
+          Condition: !expr { ExpressionId: should shift, Arguments: [ !var pendingClear, !var dropBy ] }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: do shift
+          - EntityId: !parameter self_id
+            BehaviourId: reposition
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      self destruct:
+        Type: destroy
+      do shift:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var cell
+          Value: !expr { ExpressionId: shift down, Arguments: [ !var cell, !var dropBy ] }
+      reposition:
+        Type: position setter
+        Properties:
+          Position: !expr { ExpressionId: cell to world, Arguments: [ !var cell, !var grid origin x, !var grid origin y ] }
+
+      # phase 3: rebuild
+      rebuild gate:
+        Type: condition gate
+        Tags: [ clear-rebuild ]
+        Properties:
+          Condition: !expr { ExpressionId: alive kept, Arguments: [ !var dead, !var pendingClear ] }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: re-add
+      re-add:
+        Type: vector list add
+        Properties:
+          List: !var occupied
+          Value: !var cell
+Entities:
+  # ===== Well manager: line-clear orchestration + game-over flag ==========
+  well manager:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      # Invoked by a piece on lock. Deferred one beat so the 4 freshly-spawned
+      # settled blocks finish initialising before the clear broadcasts fire.
+      begin resolve:
+        Type: deferred trigger
+        Properties:
+          Delay: 0.03
+        Listeners:
+          - BehaviourTag: clear-snapshot
+          - EntityId: well manager
+            BehaviourId: set lines now
+          - EntityId: well manager
+            BehaviourId: add score
+          - EntityId: well manager
+            BehaviourId: add lines total
+          - EntityId: well manager
+            BehaviourId: clear occupied
+          - BehaviourTag: clear-apply
+          - BehaviourTag: clear-rebuild
+
+      set lines now:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lines now
+          Value: !expr { ExpressionId: full row count, Arguments: [ !var occupied ] }
+      add score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr { ExpressionId: add score, Arguments: [ !var score, !var lines now ] }
+      add lines total:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lines cleared
+          Value: !expr { ExpressionId: int add, Arguments: [ !var lines cleared, !var lines now ] }
+      clear occupied:
+        Type: vector list clear
+        Properties:
+          List: !var occupied
+
+      set dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var is dead, Value: true }
+
+  # ===== Piece factory ====================================================
+  piece factory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      on start:
+        Type: on start trigger
+        Listeners:
+          - EntityId: piece factory
+            BehaviourId: roll shape
+          - EntityId: piece factory
+            BehaviourId: spawn piece
+      roll shape:
+        Type: int variable setter
+        Properties:
+          VariableId: !var next shape
+          Value: !expr { ExpressionId: random shape }
+      spawn piece:
+        Type: spawner
+        Properties:
+          TemplateId: piece
+          Position: !expr { ExpressionId: cell to world, Arguments: [ !var spawn origin, !var grid origin x, !var grid origin y ] }
+          Parameters:
+            shape: !expr { ExpressionId: int add, Arguments: [ !var next shape, 0 ] }
+            tint: !expr { ExpressionId: colour for shape, Arguments: [ !var next shape ] }
+
+  # ===== Well border (cosmetic) ===========================================
+  left wall:
+    Position: !vec { X: -5, Y: 0, Z: 0 }
+    Behaviours:
+      g:
+        Type: cube gizmo
+        Properties: { Size: !vec { X: 0.1, Y: 20, Z: 0.1 }, IsWire: false, Colour: !colour grey }
+  right wall:
+    Position: !vec { X: 5, Y: 0, Z: 0 }
+    Behaviours:
+      g:
+        Type: cube gizmo
+        Properties: { Size: !vec { X: 0.1, Y: 20, Z: 0.1 }, IsWire: false, Colour: !colour grey }
+  bottom wall:
+    Position: !vec { X: 0, Y: -10, Z: 0 }
+    Behaviours:
+      g:
+        Type: cube gizmo
+        Properties: { Size: !vec { X: 10, Y: 0.1, Z: 0.1 }, IsWire: false, Colour: !colour grey }
+
+  # ===== HUD ==============================================================
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      score text:
+        Type: text label
+        Properties:
+          Text: !expr { ExpressionId: format score, Arguments: [ !var score ] }
+          FontSize: 28
+          Rect: { Anchor: top-left, X: 20, Y: 20, Width: 240, Height: 40 }
+      lines text:
+        Type: text label
+        Properties:
+          Text: !expr { ExpressionId: format lines, Arguments: [ !var lines cleared ] }
+          FontSize: 28
+          Rect: { Anchor: top-left, X: 20, Y: 60, Width: 240, Height: 40 }
+
+  # ===== Camera ===========================================================
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+GameOverCondition: !var is dead
+
+
+

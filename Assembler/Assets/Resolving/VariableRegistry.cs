@@ -25,6 +25,8 @@ namespace Assembler.Resolving
 					IValueProvider<T> typedProvider => typedProvider,
 					IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
 						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+					_ when typeof(T) == typeof(object) =>
+						(IValueProvider<T>)(object)new BoxingValueProvider(provider),
 					_ => throw new Exception(
 						$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {provider.GetType()}")
 				};

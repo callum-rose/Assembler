@@ -50,12 +50,12 @@ var auto = 10;        // type inferred from initializer
 
 Use `f` suffix for float literals: `3.14f`, not `3.14`.
 
-> **No implicit numeric conversion.** Arithmetic and comparison operators are built directly
-> with no widening, so mixing numeric types throws at compile time (e.g. `float + int` →
-> *"binary operator Add is not defined for the types Single and Int32"*). Both operands must be
-> the same type. Cast explicitly: `someFloat + (float)someInt`, `(float)i < limitFloat`. This
-> applies to `+ - * / %` **and** `< > <= >= == !=`. Integer literals like `0` are `int`, so
-> compare/operate against floats as `0f` / `(float)0`.
+> **Implicit numeric promotion.** Mixing numeric types in a binary op widens the narrower
+> operand up the `int → long → float → double` ladder, mirroring C# (e.g. `float + int` yields
+> `float`, `int < float` compares as `float`). This applies to `+ - * / %`, the comparisons
+> `< > <= >= == !=`, and compound assignments `+= -= *= /=` (where the result is narrowed back
+> to the target's type, like C#). Explicit casts are no longer required for mixed-type math, but
+> remain available when you want a specific type.
 
 ---
 
@@ -223,10 +223,10 @@ return v;
 
 ## Known Limitations
 
-Subtler gotchas (each backed by a test in `Assets/Tests/Compiler/CompilerTests.cs`):
+Subtler gotchas (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
 
-- **No implicit numeric conversion** — `float + int` throws at compile time. Cast explicitly and keep operand types equal (see the note under *Supported Types*).
-- **Integer division truncates** — `5 / 2` is `2`. Use float/double literals (`5f / 2f`) for fractional results.
+- **Integer division truncates** — `5 / 2` is `2` (both operands are `int`). Mix in a float/double for a fractional result: `5 / 2f` is `2.5` (the `int` promotes — see *Supported Types*).
+- **Compound assignment narrows back to the target's type** — `int total = 5; total += 2.9f;` leaves `total == 7`, mirroring C#.
 - **String escapes are not interpreted** — only `\"` and `\\` are meaningful; `\n`/`\t` become the literal `n`/`t`.
 - **`break` / `continue` only work inside a loop** — using them elsewhere throws.
 - **Casts must be legal CLR conversions** — the syntax parses `(int) (float) (double) (bool) (string)`, but the runtime conversion still has to be valid.

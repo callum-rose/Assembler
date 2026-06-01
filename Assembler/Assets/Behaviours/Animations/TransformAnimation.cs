@@ -5,12 +5,17 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Animations
 {
+	/// <summary>
+	/// Base class for transform tween animations (move/rotate/scale) driven by DOTween. On Execute it kills any
+	/// running tween, then animates <see cref="Current"/> from Start to End over Duration using the configured easing,
+	/// and notifies listeners on completion. Subclasses bind <see cref="Current"/> to the property being animated.
+	/// </summary>
 	/// <remarks>
 	/// Properties:
-	///   Start: Starting value; defaults to the transform's current value when left unset.
-	///   End: Target value to tween towards.
-	///   Duration: Tween length in seconds (clamped to a minimum of 0).
-	///   Easing: DOTween ease name, case- and space-insensitive (e.g. "InOutSine", "OutBack"). Defaults to InOutSine.
+	///   Start: Value to animate from. Falls back to the current transform value when unset.
+	///   End: Value to animate to.
+	///   Duration: Animation length in seconds (clamped to a minimum of 0).
+	///   Easing: Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine.
 	/// </remarks>
 	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>
 	{
