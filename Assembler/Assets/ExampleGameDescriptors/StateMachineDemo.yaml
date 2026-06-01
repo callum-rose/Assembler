@@ -1,0 +1,161 @@
+Game:
+  Title: State Machine Demo
+  Description: |
+    Demonstrates the `state machine` behaviour — a first-class finite state
+    machine for entity AI.
+
+    A single guard runs a three-state machine: patrol -> chase -> flee. The
+    current state lives in the entity variable `guard_state` (auto-declared by
+    the machine and seeded to the initial state), so it shows up in the in-game
+    debug console and is snapshot-able for free.
+
+    You drive the transitions with the number keys, each of which flips a bool
+    input the machine's transitions test:
+      1  see_player   -> patrol transitions to chase
+      2  low_health   -> chase  transitions to flee
+      3  lost_player  -> chase  transitions back to patrol
+
+    Each state declares `OnEnter` hooks (ordinary listeners) that write a label
+    into `guard_event` (visible in the debug console). The `flee` state's
+    OnEnter also fires a nested `- !gameover`, ending the game — showing that
+    listener hooks, including the `!gameover` tag, work inside a behaviour's
+    properties, not just at the top-level `Listeners:` position.
+
+    Transitions are evaluated every frame in declared order, first match wins.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  guard size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+  guard colour: !colour { R: 0.4, G: 0.6, B: 0.9, A: 1 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+# Global bool inputs the player toggles with the number keys; the machine's
+# transitions test these via `!var`.
+Variables:
+  see_player: false
+  low_health: false
+  lost_player: false
+
+Entities:
+  guard:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    # Per-entity variable written by the OnEnter hooks. `guard_state` is NOT
+    # declared here — the state machine auto-declares it (seeded to `patrol`).
+    Variables:
+      guard_event: "none"
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var guard size
+          IsWire: false
+          Colour: !var guard colour
+
+      ai:
+        Type: state machine
+        Properties:
+          StateVariable: guard_state
+          Initial: patrol
+          States:
+            patrol:
+              OnEnter:
+                - EntityId: guard
+                  BehaviourId: log patrol
+            chase:
+              OnEnter:
+                - EntityId: guard
+                  BehaviourId: log chase
+            flee:
+              OnEnter:
+                - EntityId: guard
+                  BehaviourId: log flee
+                - !gameover            # nested gameover: fleeing ends the game
+          Transitions:
+            - { from: patrol, to: chase,  when: !var see_player }
+            - { from: chase,  to: flee,   when: !var low_health }
+            - { from: chase,  to: patrol, when: !var lost_player }
+
+      # --- OnEnter hook targets: write the current event into a variable. ---
+      log patrol:
+        Type: string variable setter
+        Properties: { VariableId: !var guard_event, Value: "entered patrol" }
+      log chase:
+        Type: string variable setter
+        Properties: { VariableId: !var guard_event, Value: "entered chase" }
+      log flee:
+        Type: string variable setter
+        Properties: { VariableId: !var guard_event, Value: "entered flee - game over" }
+
+      # --- Number keys flip the transition inputs. ---
+      see key:
+        Type: key down trigger
+        Properties: { Key: "1" }
+        Listeners:
+          - EntityId: guard
+            BehaviourId: set see
+      set see:
+        Type: bool variable setter
+        Properties: { VariableId: !var see_player, Value: true }
+
+      low key:
+        Type: key down trigger
+        Properties: { Key: "2" }
+        Listeners:
+          - EntityId: guard
+            BehaviourId: set low
+      set low:
+        Type: bool variable setter
+        Properties: { VariableId: !var low_health, Value: true }
+
+      lost key:
+        Type: key down trigger
+        Properties: { Key: "3" }
+        Listeners:
+          - EntityId: guard
+            BehaviourId: set lost
+      set lost:
+        Type: bool variable setter
+        Properties: { VariableId: !var lost_player, Value: true }
+
+      # Press Q to quit. This top-level `!gameover` also satisfies the build's
+      # requirement that every game declare a game-over path (the nested
+      # `!gameover` in the flee state's OnEnter is not scanned for that check).
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Label: ""
+          Text: "1 = see player (patrol->chase) - 2 = low health (chase->flee, game over) - 3 = lost player (chase->patrol). Watch guard_state / guard_event in the debug console."
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 760
+            Height: 60
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

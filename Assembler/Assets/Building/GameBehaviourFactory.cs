@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Audio;
 using Assembler.Behaviours.Debug.UI;
@@ -627,6 +628,35 @@ namespace Assembler.Building
 					var b = go.AddComponent<UIInputField>();
 					return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
 						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(StateMachineInfo)] = new(typeof(StateMachine), (go, info, ctx) =>
+				{
+					var i = (StateMachineInfo)info;
+					var b = go.AddComponent<StateMachine>();
+
+					// Declare the state variable up-front (Create phase) so other behaviours referencing it
+					// via !var resolve regardless of initialisation order. Seeded to the initial state;
+					// respected if the entity already declares it (e.g. restored from a save).
+					var scope = ctx.Resolution.Scope;
+					if (!scope.TryGet(i.StateVariable, out _))
+					{
+						scope.Create(new ValueInfo(i.StateVariable, new StringValue(i.Initial)));
+					}
+
+					return (b, lr =>
+					{
+						var res = ctx.Resolution;
+						var current = res.Variables.Get<string>(i.StateVariable, scope);
+						var transitions = i.Transitions
+							.Select(t => new StateTransition(t.From, t.To, t.When.Resolve(res)))
+							.ToArray();
+						var states = i.States.ToDictionary(s => s.Name,
+							s => new StateMachineState(s.Name,
+								s.OnEnter.ToListeners(lr, res),
+								s.OnExit.ToListeners(lr, res)));
+						b.Initialise(new StateMachineData(i.Id, current, i.Initial, transitions, states),
+							i.Listeners.ToListeners(lr, res));
+					});
 				})
 			};
 
