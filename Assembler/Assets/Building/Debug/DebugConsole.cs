@@ -33,10 +33,15 @@ namespace Assembler.Building.Debug
 		private readonly Dictionary<string, string> _edits = new();
 		private readonly HashSet<BehaviourDescriptor> _expanded = new();
 
+		// Whole overlay is rendered through a 2x GUI matrix so it is easier to read; panel rects are
+		// therefore laid out in the halved "logical" coordinate space (Screen size / UiScale).
+		private const float UiScale = 2f;
+
 		private bool _open;
 		private bool _logging;
 		private string _logFilter = "";
 		private Vector2 _scroll;
+		private Vector2 _logScroll;
 		private GUIStyle? _header;
 		private GUIStyle? _rowButton;
 
@@ -114,15 +119,58 @@ namespace Assembler.Building.Debug
 				ApplyPendingRequests();
 			}
 
-			var width = Mathf.Min(480f, Screen.width - 20f);
-			GUILayout.BeginArea(new Rect(10f, 10f, width, Screen.height - 20f), GUI.skin.box);
+			// Scale the whole overlay up; Unity transforms input by the inverse, so clicks still land.
+			var prevMatrix = GUI.matrix;
+			GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(UiScale, UiScale, 1f));
+
+			var logicalWidth = Screen.width / UiScale;
+			var logicalHeight = Screen.height / UiScale;
+			var panelHeight = logicalHeight - 20f;
+
+			var rightWidth = Mathf.Min(360f, logicalWidth * 0.45f);
+			var leftWidth = Mathf.Min(480f, logicalWidth - rightWidth - 30f);
+
+			DrawMainPanel(new Rect(10f, 10f, leftWidth, panelHeight));
+			DrawLogPanel(new Rect(logicalWidth - rightWidth - 10f, 10f, rightWidth, panelHeight));
+
+			GUI.matrix = prevMatrix;
+		}
+
+		private void DrawMainPanel(Rect rect)
+		{
+			GUILayout.BeginArea(rect, GUI.skin.box);
 			GUILayout.Label("Debug Console  (` to close)", _header);
 
 			_scroll = GUILayout.BeginScrollView(_scroll);
 			DrawClockControls();
 			DrawGlobals();
 			DrawEntities();
-			DrawTriggerLog();
+			GUILayout.EndScrollView();
+
+			GUILayout.EndArea();
+		}
+
+		private void DrawLogPanel(Rect rect)
+		{
+			GUILayout.BeginArea(rect, GUI.skin.box);
+
+			GUILayout.BeginHorizontal();
+			GUILayout.Label("Trigger log", _header, GUILayout.ExpandWidth(true));
+			_logging = GUILayout.Toggle(_logging, "record", GUILayout.Width(70f));
+			if (GUILayout.Button("Clear", GUILayout.Width(50f)))
+			{
+				_log.Clear();
+			}
+
+			GUILayout.EndHorizontal();
+
+			GUILayout.BeginHorizontal();
+			GUILayout.Label("filter", GUILayout.Width(40f));
+			_logFilter = GUILayout.TextField(_logFilter, GUILayout.ExpandWidth(true));
+			GUILayout.EndHorizontal();
+
+			_logScroll = GUILayout.BeginScrollView(_logScroll);
+			DrawLogEntries();
 			GUILayout.EndScrollView();
 
 			GUILayout.EndArea();
@@ -268,7 +316,7 @@ namespace Assembler.Building.Debug
 			IReadOnlyDictionary<GameBehaviour, BehaviourDescriptor> descriptorByBehaviour)
 		{
 			var expanded = _expanded.Contains(descriptor);
-			var pinged = descriptor.Equals(_pingDescriptor) && Time.realtimeSinceStartup < _pingUntil;
+			var pinged = descriptor.Equals(_pingDescriptor) && UnityEngine.Time.realtimeSinceStartup < _pingUntil;
 
 			GUILayout.BeginHorizontal();
 			var prevColor = GUI.backgroundColor;
@@ -371,7 +419,7 @@ namespace Assembler.Building.Debug
 			if (_pingRequest is { } ping)
 			{
 				_pingDescriptor = ping;
-				_pingUntil = Time.realtimeSinceStartup + 2.5f;
+				_pingUntil = UnityEngine.Time.realtimeSinceStartup + 2.5f;
 				_expanded.Add(ping); // expand the target so its details are visible when highlighted
 				_pingRequest = null;
 			}
@@ -410,23 +458,8 @@ namespace Assembler.Building.Debug
 			GUILayout.EndHorizontal();
 		}
 
-		private void DrawTriggerLog()
+		private void DrawLogEntries()
 		{
-			GUILayout.BeginHorizontal();
-			GUILayout.Label("Trigger log", _header, GUILayout.ExpandWidth(true));
-			_logging = GUILayout.Toggle(_logging, "record", GUILayout.Width(70f));
-			if (GUILayout.Button("Clear", GUILayout.Width(50f)))
-			{
-				_log.Clear();
-			}
-
-			GUILayout.EndHorizontal();
-
-			GUILayout.BeginHorizontal();
-			GUILayout.Label("filter", GUILayout.Width(40f));
-			_logFilter = GUILayout.TextField(_logFilter, GUILayout.ExpandWidth(true));
-			GUILayout.EndHorizontal();
-
 			// Newest first.
 			foreach (var entry in _log.Entries().Reverse())
 			{
