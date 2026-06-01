@@ -1,0 +1,28 @@
+{
+    "name": "Tests.Determinism",
+    "rootNamespace": "",
+    "references": [
+        "Assembler.Building",
+        "Assembler.Behaviours",
+        "Assembler.Resolving",
+        "Assembler.Parsing",
+        "Assembler.Time",
+        "Assembler.Libraries",
+        "Assembler.Input",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
