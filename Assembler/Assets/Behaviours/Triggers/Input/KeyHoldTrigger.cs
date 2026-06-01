@@ -13,6 +13,11 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			var keyCode = Data.Key.Get() switch
 			{
 				"w" => KeyCode.W,
@@ -27,7 +32,7 @@ namespace Assembler.Behaviours.Triggers.Input
 			
 			if (UnityEngine.Input.GetKey(keyCode))
 			{
-				NotifyListeners(TriggerContext.Empty);
+				FireInput(TriggerContext.Empty);
 			}
 		}
 	}

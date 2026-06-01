@@ -22,6 +22,11 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 
@@ -52,7 +57,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 				if (delta != Vector2.zero)
 				{
-					NotifyListeners(TriggerContext.New(b =>
+					FireInput(TriggerContext.New(b =>
 					{
 						b["start"] = _startPosition;
 						b["position"] = position;

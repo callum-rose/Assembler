@@ -23,6 +23,11 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			if (Pointer.Count < 2)
 			{
 				_tracking = false;
@@ -54,7 +59,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				return;
 			}
 
-			NotifyListeners(TriggerContext.New(b =>
+			FireInput(TriggerContext.New(b =>
 			{
 				b["center"] = (first + second) * 0.5f;
 				b["distance"] = distance;

@@ -18,6 +18,11 @@ namespace Assembler.Behaviours.Triggers.Input
 
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			var current = UnityEngine.Input.mousePosition;
 			var delta = _hasLast ? current - _lastPosition : Vector3.zero;
 			_lastPosition = current;
@@ -28,7 +33,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			NotifyListeners(TriggerContext.New(b =>
+			FireInput(TriggerContext.New(b =>
 			{
 				b["mouse_position"] = current;
 				b["mouse_delta"] = delta;

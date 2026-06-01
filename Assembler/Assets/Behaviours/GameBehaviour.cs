@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using UnityEngine;
 
@@ -14,6 +15,12 @@ namespace Assembler.Behaviours
 			get => tags;
 			set => tags = value;
 		}
+
+		/// <summary>
+		/// This behaviour's stable identity (entity id + behaviour id), assigned by <c>BehaviourRegistry.Register</c>.
+		/// Used by record/replay to key input activations to the trigger that emitted them. Null until registered.
+		/// </summary>
+		public BehaviourDescriptor? Descriptor { get; set; }
 
 		protected string Id { get; private set; }
 

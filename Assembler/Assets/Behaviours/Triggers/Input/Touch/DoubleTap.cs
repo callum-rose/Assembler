@@ -31,6 +31,11 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
+			if (InputBoundary.ReplayActive)
+			{
+				return;
+			}
+
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 			var maxMovement = Data.MaxMovement.ValueOr(25f);
@@ -58,7 +63,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				         Clock.Time - _firstTapTime <= Data.MaxInterval.ValueOr(0.3f) &&
 				         (position - _firstTapPosition).sqrMagnitude <= maxMoveSqr)
 				{
-					NotifyListeners(TriggerContext.New("position", position));
+					FireInput(TriggerContext.New("position", position));
 					_hasFirstTap = false;
 				}
 				else
