@@ -29,6 +29,7 @@ namespace Assembler.Parsing
 				["set velocity"] = SetVelocityInfo.Create,
 				["set angular velocity"] = SetAngularVelocityInfo.Create,
 				["velocity"] = VelocityInfo.Create,
+				["acceleration"] = AccelerationInfo.Create,
 				["translate"] = TranslateInfo.Create,
 				["angular velocity"] = AngularVelocityInfo.Create,
 				["rotate"] = RotateInfo.Create,
