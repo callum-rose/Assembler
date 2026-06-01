@@ -337,6 +337,14 @@ int absolute = (int)Abs(-5);
 double power = Pow(2.0, 3.0);
 ```
 
+**Globally-registered library helpers.** The `Assembler.Libraries` assembly (`GridMath`,
+`VectorMath`, `NumberMath`, `RandomMath`, `ColorMath`, `HexMath`) is registered globally, so its
+static methods are callable by bare name from any expression with no per-expression registration —
+e.g. `Rotate2D(v, 90f)`, `Clamp(x, 0f, 1f)`, `RandomOnCircle(5f)`, `LerpColor(a, b, t)`,
+`CellToWorld(cell, ox, oy)`. All numeric parameters are `float`, so `int` arguments coerce. The full
+catalogue is auto-generated to `Assets/docs/Libraries.md` (Unity menu
+`Assembler > Generate Library Docs`).
+
 ### Method Overloading
 The compiler supports calling overloaded methods and will select the best matching overload based on argument types.
 
