@@ -52,6 +52,10 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ExprRef(string ExpressionId, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
 
+	/// <summary>A <c>!text &lt;key&gt;</c> reference into the localisation string table. Carries the lookup
+	/// key plus any runtime arguments that fill the localised template's <c>{0}</c>/<c>{1}</c> placeholders.</summary>
+	public sealed record TextRef(string Key, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
+
 	/// <summary>Marker produced by a nested <c>!gameover</c> tag (e.g. inside a state machine's
 	/// <c>OnEnter</c>/<c>OnExit</c> hook list). Top-level <c>Listeners:</c> handle <c>!gameover</c>
 	/// directly via <see cref="Assembler.Parsing.Info.GameOverListenerInfo"/>; nested occurrences
