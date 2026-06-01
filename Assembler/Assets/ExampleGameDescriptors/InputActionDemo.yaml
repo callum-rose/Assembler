@@ -42,8 +42,9 @@ Constants:
   goal size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
 
   # Per-frame step applied to the analogue move vector. The value action fires
-  # every frame, so this is the player's top speed in units/frame.
-  move step: 0.1
+  # every frame, so this is the player's top speed in units/frame. Kept low so
+  # the cube glides rather than darts across the small play area.
+  move step: 0.05
 
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera view: "orthographic"
