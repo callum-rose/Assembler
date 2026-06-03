@@ -16,7 +16,7 @@ namespace Assembler.Behaviours.VariableUpdaters
 		{
 			var value = Data.ValueToGet.Get(ctx);
 			Data.ValueToSet.Set(value);
-			UnityEngine.Debug.Log($"{Id} set to {value}");
+			UnityEngine.Debug.Log($"{Data.Id} set to {value}");
 		}
 	}
 }

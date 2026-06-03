@@ -30,14 +30,23 @@ namespace Editor
 		// garbage-collected mid-flight.
 		private static TestRunnerApi? _api;
 		private static Callbacks? _callbacks;
+		private static TestMode _mode = TestMode.EditMode;
 
-		public static void RunEditModeTests()
+		public static void RunEditModeTests() => Run(TestMode.EditMode);
+
+		// PlayMode entry point (e.g. the end-to-end DeterminismReplayTests). Invoked the same way as the
+		// EditMode runner but with -executeMethod Editor.TestBatch.RunPlayModeTests. PlayMode tests run across
+		// real play-mode frames, so the same "no -quit; exit from RunFinished" contract applies.
+		public static void RunPlayModeTests() => Run(TestMode.PlayMode);
+
+		private static void Run(TestMode mode)
 		{
 			try
 			{
+				_mode = mode;
 				string[] args = Environment.GetCommandLineArgs();
 
-				var filter = new Filter { testMode = TestMode.EditMode };
+				var filter = new Filter { testMode = mode };
 
 				string[] assemblies = ArgValues(args, "-testAssembly");
 				if (assemblies.Length > 0)
@@ -56,7 +65,7 @@ namespace Editor
 				_api.RegisterCallbacks(_callbacks);
 
 				var scope = DescribeScope(assemblies, nameRegexes, categories);
-				Debug.Log($"TestBatch: starting EditMode test run ({scope}).");
+				Debug.Log($"TestBatch: starting {mode} test run ({scope}).");
 
 				_api.Execute(new ExecutionSettings(filter));
 				// Returns immediately; Callbacks.RunFinished exits the editor when the run completes.
@@ -177,7 +186,7 @@ namespace Editor
 				{
 					string dir = Path.Combine(Directory.GetCurrentDirectory(), "TestResults");
 					Directory.CreateDirectory(dir);
-					string path = Path.Combine(dir, "EditMode-results.xml");
+					string path = Path.Combine(dir, $"{_mode}-results.xml");
 					File.WriteAllText(path, result.ToXml().OuterXml);
 					Debug.Log("TestBatch: wrote results XML to " + path);
 				}

@@ -7,7 +7,6 @@ using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using NUnit.Framework;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Tests.Resolving
 {
@@ -16,7 +15,7 @@ namespace Tests.Resolving
 		private const float Tol = 1e-3f;
 
 		[SetUp]
-		public void Seed() => Random.InitState(12345);
+		public void Seed() => RandomState.Seed(12345);
 
 		[Test]
 		public void RandomFloatStaysInRange()
