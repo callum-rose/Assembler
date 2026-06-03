@@ -190,6 +190,10 @@ historical reasons around scalar/mapping coexistence inside generic `object?` fi
 ## Step 5 — Verify
 
 1. Open `GameFileParser.cs` and visually confirm both lines are present and ordered consistently.
+   Then do a fast compile-only check that the converter builds (errors **and** warnings, no test run):
+   `Tools/check-compile.sh` — it boots Unity in batch mode, parses the compiler output, prints a
+   `Compile check` summary, and exits non-zero on any compiler error, so a typo surfaces in seconds
+   before you write or run tests.
 2. Add a parsing test if the user wants one. Pattern lives in
    `Assets/Tests/Parsing/TemplateTests.cs` — `new GameFileParser().Parse(yaml)` against an
    inline YAML string, then assert on the resulting DTO tree. Run it headlessly with
