@@ -71,7 +71,7 @@ namespace Assembler.Parsing
 					.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
 					.ToArray(),
 					CreateEntityVariables(kvp.Value.Variables),
-					BuildTemplateChildren(ctx, kvp.Value.Children, kvp.Key)))
+					BuildChildren(ctx, kvp.Value.Children)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
 			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
@@ -128,7 +128,7 @@ namespace Assembler.Parsing
 				var ownBehaviours = (entityDto.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(entityCtx, b.Key, b.Value));
 
-				var children = BuildChildren(ctx, entityDto.Children, entityId);
+				var children = BuildChildren(ctx, entityDto.Children);
 
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
@@ -143,40 +143,22 @@ namespace Assembler.Parsing
 			}
 		}
 
-		private static IReadOnlyList<ChildEntityInfo> BuildTemplateChildren(TransformContext ctx,
-			List<EntityDto>? children,
-			string templateId) =>
-			BuildChildren(ctx, children, $"template '{templateId}'");
-
+		// Children are a keyed mapping (id -> child), matching how top-level Entities are keyed, so the
+		// key is the child's relative id. Mapping order is preserved, which keeps sibling order stable.
 		private static IReadOnlyList<ChildEntityInfo> BuildChildren(TransformContext ctx,
-			List<EntityDto>? children,
-			string parentDescription)
+			Dictionary<string, EntityDto>? children)
 		{
 			if (children == null || children.Count == 0)
 			{
 				return Array.Empty<ChildEntityInfo>();
 			}
 
-			var result = new ChildEntityInfo[children.Count];
-
-			for (var i = 0; i < children.Count; i++)
-			{
-				result[i] = BuildChild(ctx, children[i], i, parentDescription);
-			}
-
-			return result;
+			return children.Select(kvp => BuildChild(ctx, kvp.Key, kvp.Value)).ToArray();
 		}
 
-		private static ChildEntityInfo BuildChild(TransformContext ctx,
-			EntityDto dto,
-			int index,
-			string parentDescription)
+		private static ChildEntityInfo BuildChild(TransformContext ctx, string idSuffix, EntityDto dto)
 		{
 			var templateRefId = dto.Template?.Id;
-			var explicitId = dto.Id;
-
-			var idSuffix = explicitId ??
-			               (templateRefId != null ? $"{templateRefId}_{index}" : $"child_{index}");
 
 			var ownParams = ConvertProps(dto.Template?.Parameters);
 			var childCtx = ctx.WithParameters(ownParams);
@@ -188,11 +170,10 @@ namespace Assembler.Parsing
 			var position = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Position));
 			var rotation = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Rotation));
 
-			var nestedChildren = BuildChildren(childCtx, dto.Children, explicitId ?? $"{parentDescription}[{index}]");
+			var nestedChildren = BuildChildren(childCtx, dto.Children);
 
 			return new ChildEntityInfo(
 				idSuffix,
-				explicitId,
 				templateRefId,
 				ownParams,
 				dto.Tags?.ToArray() ?? Array.Empty<string>(),
@@ -663,6 +644,16 @@ namespace Assembler.Parsing
 				_ => throw new ParsingException(
 					$"Unknown !clock property '{property}'. Expected one of: deltaTime, time, frameCount, unscaledDeltaTime")
 			};
+
+		/// <summary>
+		/// Like <see cref="CreateValueSource{T}"/> but with no implicit fallback: an absent value (null or
+		/// <see cref="NoValue"/>) resolves to <see cref="None{T}"/> — i.e. a <c>NullValueProvider</c> at
+		/// runtime — for value types as well as reference types. Use this for optional properties whose
+		/// default is supplied at the point of use via <c>ValueOr</c>; the base <see cref="CreateValueSource{T}"/>
+		/// would instead produce a <c>ConstantSource(default(T))</c> for value types (e.g. 0 / (0,0,0)).
+		/// </summary>
+		public static ValueSource<T> CreateOptionalValueSource<T>(TransformContext ctx, AssemblerValue? raw) =>
+			raw is null or NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
 
 		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
 			AssemblerValue raw,

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
 using Assembler.Parsing.Controls;
@@ -31,6 +32,7 @@ namespace Assembler.Building
 		private readonly Transform _root;
 		private readonly ControlsInfo _controls;
 		private readonly InputActionAsset _controlsAsset;
+		private readonly UiPrefabLibrary _uiPrefabs;
 
 		private int _spawnCounter;
 
@@ -46,7 +48,8 @@ namespace Assembler.Building
 			TransformContext parseContext,
 			Transform root,
 			ControlsInfo controls,
-			InputActionAsset controlsAsset)
+			InputActionAsset controlsAsset,
+			UiPrefabLibrary uiPrefabs)
 		{
 			_variables = variables;
 			_expressions = expressions;
@@ -61,11 +64,12 @@ namespace Assembler.Building
 			_root = root;
 			_controls = controls;
 			_controlsAsset = controlsAsset;
+			_uiPrefabs = uiPrefabs;
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
 
-		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent)
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent, int? siblingIndex = null)
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
@@ -83,6 +87,13 @@ namespace Assembler.Building
 			if (parent != null)
 			{
 				gameObject.transform.SetParent(parent, worldPositionStays: false);
+
+				// Pin sibling order to the descriptor's child order so layout groups (which arrange by
+				// sibling index) are deterministic regardless of when children are instantiated.
+				if (siblingIndex.HasValue)
+				{
+					gameObject.transform.SetSiblingIndex(siblingIndex.Value);
+				}
 			}
 
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
@@ -100,7 +111,8 @@ namespace Assembler.Building
 				_exclusiveGroups,
 				_controls,
 				_controlsAsset,
-				_clock);
+				_clock,
+				_uiPrefabs);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{
@@ -112,9 +124,11 @@ namespace Assembler.Building
 				initialisations.Add(initialise);
 			}
 
+			var childSiblingIndex = 0;
+
 			foreach (var child in entityInfo.Children)
 			{
-				var childId = child.AbsoluteId ?? $"{entityInfo.Id}/{child.IdSuffix}";
+				var childId = $"{entityInfo.Id}/{child.IdSuffix}";
 
 				EntityInfo childTemplate;
 
@@ -143,7 +157,7 @@ namespace Assembler.Building
 					child.Variables,
 					child.Children);
 
-				var childResult = Create(resolvedChild, gameObject.transform);
+				var childResult = Create(resolvedChild, gameObject.transform, childSiblingIndex++);
 
 				behaviours.AddRange(childResult.Behaviours);
 				initialisations.AddRange(childResult.Initialisations);
