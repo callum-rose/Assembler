@@ -13,7 +13,8 @@ namespace Assembler.Behaviours.Triggers.Physical
 	/// </summary>
 	/// <remarks>
 	/// Properties:
-	///   TagsToDetect: Entity tags a colliding object must have for the trigger to fire.
+	///   TagsToDetect: Entity tags a colliding object must have for the trigger to fire. Leave empty to fire on
+	///                 collisions with any entity.
 	/// </remarks>
 	public abstract class PhysicalTrigger : Trigger<PhysicalTriggerData>
 	{
@@ -21,11 +22,17 @@ namespace Assembler.Behaviours.Triggers.Physical
 		{
 			throw new Exception("Cannot execute an input trigger manually");
 		}
-		
+
 		protected bool IsOtherRelevant(GameObject other)
 		{
 			var otherGameEntity = other.GetComponent<GameEntity>();
-			return otherGameEntity != null && otherGameEntity.Tags.Intersect(Data.TagsToDetect).Any();
+			if (otherGameEntity == null)
+			{
+				return false;
+			}
+
+			// An empty TagsToDetect means "no tag filter" — fire on a collision with any entity.
+			return Data.TagsToDetect.Count == 0 || otherGameEntity.Tags.Intersect(Data.TagsToDetect).Any();
 		}
 	}
 }

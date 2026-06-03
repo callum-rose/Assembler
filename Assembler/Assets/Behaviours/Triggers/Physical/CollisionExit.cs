@@ -6,7 +6,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 	/// <summary>Fires when a non-trigger collision ends with another entity matching TagsToDetect.</summary>
 	/// <remarks>
 	/// Properties:
-	///   TagsToDetect: Only fire when the other entity has at least one of these tags.
+	///   TagsToDetect: Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity.
 	/// Outputs:
 	///   other_velocity [Vector3]: Other body's linear velocity at separation (zero if no Rigidbody).
 	///   other_position [Vector3]: Other entity's world position at separation.
