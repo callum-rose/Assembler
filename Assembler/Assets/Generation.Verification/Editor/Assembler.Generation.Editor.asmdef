@@ -5,6 +5,7 @@
         "Assembler.Generation",
         "Assembler.Anthropic",
         "Assembler.Voxels",
+        "Voxels.Editor",
         "Assembler.Generation.Verification"
     ],
     "includePlatforms": [
