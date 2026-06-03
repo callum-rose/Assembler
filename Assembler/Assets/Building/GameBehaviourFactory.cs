@@ -569,65 +569,59 @@ namespace Assembler.Building
 						i.End.Resolve(ctx.Resolution),
 						i.Colour.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(UICanvasInfo)] = new(typeof(UICanvas), (go, info, ctx) =>
+				{
+					var i = (UICanvasInfo)info;
+					var b = go.AddComponent<UICanvas>();
+					return (b, lr => b.Initialise(new UICanvasData(i.Id,
+						i.MatchWidthOrHeight.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(UIContainerInfo)] = new(typeof(UIContainer), (go, info, ctx) =>
+				{
+					var i = (UIContainerInfo)info;
+					var b = go.AddComponent<UIContainer>();
+					return (b, lr => b.Initialise(new UIContainerData(i.Id,
+						i.Direction.Resolve(ctx.Resolution),
+						i.Spacing.Resolve(ctx.Resolution),
+						i.Padding.Resolve(ctx.Resolution),
+						i.ChildAlignment.Resolve(ctx.Resolution),
+						i.FitContent.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx) =>
 				{
 					var i = (TextLabelInfo)info;
 					var b = go.AddComponent<TextLabel>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.labelPrefab, "text label");
 					return (b, lr => b.Initialise(new TextLabelData(i.Id,
 						i.Text.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
 						i.FontSize.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ProgressBarInfo)] = new(typeof(ProgressBar), (go, info, ctx) =>
-				{
-					var i = (ProgressBarInfo)info;
-					var b = go.AddComponent<ProgressBar>();
-					return (b, lr => b.Initialise(new ProgressBarData(i.Id,
-						i.Value.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIImageInfo)] = new(typeof(UIImage), (go, info, ctx) =>
-				{
-					var i = (UIImageInfo)info;
-					var b = go.AddComponent<UIImage>();
-					return (b, lr => b.Initialise(new UIImageData(i.Id,
-						i.Colour.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(UIButtonInfo)] = new(typeof(UIButton), (go, info, ctx) =>
 				{
 					var i = (UIButtonInfo)info;
 					var b = go.AddComponent<UIButton>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.buttonPrefab, "ui button");
 					return (b, lr => b.Initialise(new UIButtonData(i.Id,
 						i.Label.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIToggleInfo)] = new(typeof(UIToggle), (go, info, ctx) =>
-				{
-					var i = (UIToggleInfo)info;
-					var b = go.AddComponent<UIToggle>();
-					return (b, lr => b.Initialise(new UIToggleData(i.Id,
-						i.InitialValue.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx) =>
 				{
 					var i = (UISliderInfo)info;
 					var b = go.AddComponent<UISlider>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.sliderPrefab, "ui slider");
 					return (b, lr => b.Initialise(new UISliderData(i.Id,
 						i.InitialValue.Resolve(ctx.Resolution),
 						i.MinValue.Resolve(ctx.Resolution),
 						i.MaxValue.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIInputFieldInfo)] = new(typeof(UIInputField), (go, info, ctx) =>
-				{
-					var i = (UIInputFieldInfo)info;
-					var b = go.AddComponent<UIInputField>();
-					return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(StateMachineInfo)] = new(typeof(StateMachine), (go, info, ctx) =>
 				{
@@ -792,6 +786,31 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
+		}
+
+		private static GameObject RequireUiPrefab(
+			BehaviourBuildContext ctx,
+			Func<UiPrefabLibrary, GameObject> select,
+			string blockName)
+		{
+			if (ctx.UiPrefabs == null)
+			{
+				throw new InvalidOperationException(
+					$"The '{blockName}' UI block requires a UiPrefabLibrary at " +
+					$"Resources/{UiPrefabLibrary.DefaultResourcePath}, but none was found. " +
+					"Run 'Assembler > UI > Generate UI Prefabs' (or Tools/generate-ui-prefabs.sh) to create it.");
+			}
+
+			var prefab = select(ctx.UiPrefabs);
+
+			if (prefab == null)
+			{
+				throw new InvalidOperationException(
+					$"The '{blockName}' UI block's prefab is not assigned in the UiPrefabLibrary. " +
+					"Re-generate the prefabs or assign it on the asset.");
+			}
+
+			return prefab;
 		}
 
 		private static IReadOnlyList<Listener> ToListeners(this IReadOnlyList<ListenerInfo> listeners,

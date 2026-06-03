@@ -13,6 +13,8 @@
         "Assembler.Libraries",
         "Assembler.Core",
         "Assembler.Input",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

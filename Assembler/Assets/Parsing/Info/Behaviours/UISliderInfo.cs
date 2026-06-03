@@ -9,7 +9,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<float> InitialValue,
 		ValueSource<float> MinValue,
 		ValueSource<float> MaxValue,
-		ScreenRect Rect) : BehaviourInfo(Id, Listeners)
+		ValueSource<float> PreferredWidth,
+		ValueSource<float> PreferredHeight) : BehaviourInfo(Id, Listeners)
 	{
 		public static UISliderInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -20,7 +21,8 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("InitialValue"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MinValue"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MaxValue"), fallback: 1f),
-				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredWidth"), fallback: 0f),
+				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredHeight"), fallback: 0f));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
@@ -29,6 +31,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				InitialValue.SubstituteParameters(ctx),
 				MinValue.SubstituteParameters(ctx),
 				MaxValue.SubstituteParameters(ctx),
-				Rect);
+				PreferredWidth.SubstituteParameters(ctx),
+				PreferredHeight.SubstituteParameters(ctx));
 	}
 }

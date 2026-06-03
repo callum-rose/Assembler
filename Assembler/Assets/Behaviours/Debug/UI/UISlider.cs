@@ -1,40 +1,39 @@
+using Assembler.Behaviours.Debug.UI.Internal;
+using Assembler.Behaviours.Debug.UI.Views;
 using Assembler.Behaviours.Triggers;
-using Assembler.Parsing;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
-	/// <summary>Draws a horizontal slider. Fires listeners whenever the slider value changes.</summary>
+	/// <summary>A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.</summary>
 	/// <remarks>
 	/// Properties:
-	///   InitialValue: Starting slider value.
+	///   InitialValue: Starting value.
 	///   MinValue: Minimum value the slider can produce.
 	///   MaxValue: Maximum value the slider can produce.
-	///   Rect: Screen-space rectangle.
+	///   PreferredWidth: Preferred width for the parent layout (&lt;= 0 = let layout decide).
+	///   PreferredHeight: Preferred height for the parent layout (&lt;= 0 = let layout decide).
 	/// Outputs:
 	///   value [float]: The new slider value after the change.
 	/// </remarks>
 	public class UISlider : Trigger<UISliderData>
 	{
-		private float _current;
-
-		protected override void OnInitialise(UISliderData data)
-		{
-			_current = data.InitialValue.Get();
-		}
+		private UiSliderView? _view;
 
 		public override void Execute(TriggerContext ctx) { }
 
-		private void OnGUI()
+		protected override void OnInitialise(UISliderData data)
 		{
-			if (Data == null) return;
-			var next = GUI.HorizontalSlider(Data.Rect.ToUnityRect(), _current, Data.MinValue.Get(), Data.MaxValue.Get());
-			if (Mathf.Approximately(next, _current)) return;
+			var host = UiLayout.EnsureRectTransform(gameObject);
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.Get(), data.PreferredHeight.Get());
+			_view = UiLayout.InstantiateView<UiSliderView>(data.Prefab, host);
 
-			_current = next;
-			NotifyListeners(TriggerContext.New("value", _current));
+			var slider = _view.Slider;
+			slider.minValue = data.MinValue.Get();
+			slider.maxValue = data.MaxValue.Get();
+			slider.SetValueWithoutNotify(data.InitialValue.Get());
+			slider.onValueChanged.AddListener(value => NotifyListeners(TriggerContext.New("value", value)));
 		}
 	}
 }

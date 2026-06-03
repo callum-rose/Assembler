@@ -1,33 +1,44 @@
+using Assembler.Behaviours.Debug.UI.Internal;
+using Assembler.Behaviours.Debug.UI.Views;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Parsing;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Debug.UI
 {
-	/// <summary>Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.</summary>
+	/// <summary>Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so
+	/// binding it to a variable or expression shows live values (scores, timers, etc.).</summary>
 	/// <remarks>
 	/// Properties:
-	///   Text: Dynamic body text (re-read each frame; bind to a variable to display live values).
-	///   Label: Optional static prefix shown before Text (e.g. "Score: ").
-	///   FontSize: Font size in pixels.
-	///   Rect: Screen-space rectangle (see ScreenRect format).
+	///   Text: Body text (re-read each frame; bind to a variable/expression for live values).
+	///   FontSize: Font size in reference pixels.
+	///   PreferredWidth: Preferred width for the parent layout (&lt;= 0 = let layout decide).
+	///   PreferredHeight: Preferred height for the parent layout (&lt;= 0 = let layout decide).
 	/// </remarks>
 	public class TextLabel : GameBehaviour<TextLabelData>
 	{
-		private GUIStyle _style;
+		private UiLabelView? _view;
 
 		public override void Execute(TriggerContext ctx) { }
 
-		private void OnGUI()
+		protected override void OnInitialise(TextLabelData data)
 		{
-			if (Data == null) return;
-			_style ??= new GUIStyle(GUI.skin.label);
-			_style.fontSize = Data.FontSize.Get();
-			var label = Data.Label.Get();
-			var text = Data.Text.Get();
-			var display = string.IsNullOrEmpty(label) ? text : label + text;
-			GUI.Label(Data.Rect.ToUnityRect(), display, _style);
+			var host = UiLayout.EnsureRectTransform(gameObject);
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.Get(), data.PreferredHeight.Get());
+			_view = UiLayout.InstantiateView<UiLabelView>(data.Prefab, host);
+		}
+
+		private void Update()
+		{
+			if (_view == null) return;
+
+			_view.Text.text = Data.Text.Get();
+
+			var fontSize = Data.FontSize.Get();
+			if (fontSize > 0)
+			{
+				_view.Text.fontSize = fontSize;
+			}
 		}
 	}
 }
