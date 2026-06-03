@@ -21,8 +21,8 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("InitialValue"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MinValue"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MaxValue"), fallback: 1f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredWidth"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredHeight"), fallback: 0f));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

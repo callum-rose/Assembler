@@ -111,9 +111,13 @@ namespace Assembler.Building
 				eventSystem.AddComponent<InputSystemUIInputModule>();
 			}
 
-			// Reusable UI prefab library the leaf UI blocks instantiate. Null when no library asset exists;
-			// descriptors that use UI blocks then fail with a clear error in GameBehaviourFactory.
-			var uiPrefabs = Resources.Load<UiPrefabLibrary>(UiPrefabLibrary.DefaultResourcePath);
+			// Reusable UI prefab library the leaf UI blocks instantiate. The library asset is committed at
+			// Resources/UI, so it must always load; a missing asset is a project setup error, not a per-game
+			// condition, so fail fast here rather than threading a nullable reference through the build.
+			var uiPrefabs = Resources.Load<UiPrefabLibrary>(UiPrefabLibrary.DefaultResourcePath)
+				?? throw new InvalidOperationException(
+					$"UiPrefabLibrary not found at Resources/{UiPrefabLibrary.DefaultResourcePath}. " +
+					"Run 'Assembler > UI > Generate UI Prefabs' to create it.");
 
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,

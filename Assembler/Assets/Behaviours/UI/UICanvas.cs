@@ -10,6 +10,7 @@ namespace Assembler.Behaviours.UI
 	/// <remarks>
 	/// Properties:
 	///   MatchWidthOrHeight: CanvasScaler match (0 = match width, 1 = match height, 0.5 = balanced).
+	///   ReferenceResolution: Design resolution the UI scales from, as a vector (X = width, Y = height).
 	/// </remarks>
 	public class UICanvas : GameBehaviour<UICanvasData>
 	{
@@ -20,9 +21,11 @@ namespace Assembler.Behaviours.UI
 			var canvas = gameObject.AddComponent<Canvas>();
 			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
+			var referenceResolution = data.ReferenceResolution.Get();
+
 			var scaler = gameObject.AddComponent<CanvasScaler>();
 			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-			scaler.referenceResolution = new Vector2(1920f, 1080f);
+			scaler.referenceResolution = new Vector2(referenceResolution.x, referenceResolution.y);
 			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
 			scaler.matchWidthOrHeight = Mathf.Clamp01(data.MatchWidthOrHeight.Get());
 

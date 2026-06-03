@@ -12,8 +12,8 @@ namespace Assembler.Behaviours.UI
 	/// Properties:
 	///   Text: Body text (re-read each frame; bind to a variable/expression for live values).
 	///   FontSize: Font size in reference pixels.
-	///   PreferredWidth: Preferred width for the parent layout (&lt;= 0 = let layout decide).
-	///   PreferredHeight: Preferred height for the parent layout (&lt;= 0 = let layout decide).
+	///   PreferredWidth: Preferred width for the parent layout (omit to let the layout decide).
+	///   PreferredHeight: Preferred height for the parent layout (omit to let the layout decide).
 	/// </remarks>
 	public class TextLabel : GameBehaviour<TextLabelData>
 	{
@@ -24,7 +24,7 @@ namespace Assembler.Behaviours.UI
 		protected override void OnInitialise(TextLabelData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
-			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.Get(), data.PreferredHeight.Get());
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth, data.PreferredHeight);
 			_view = UiLayout.InstantiateView<UiLabelView>(data.Prefab, host);
 		}
 

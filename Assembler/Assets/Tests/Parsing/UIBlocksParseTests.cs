@@ -128,12 +128,10 @@ Entities:
 		}
 
 		[Test]
-		public void ListChildrenStillParse()
+		public void ListChildrenAreRejected()
 		{
-			var ui = Parse(ListChildrenYaml).Entities[0];
-
-			Assert.AreEqual(1, ui.Children.Count);
-			Assert.IsInstanceOf<TextLabelInfo>(ui.Children[0].Behaviours[0]);
+			// Children must be a keyed mapping; the sequence/list form is no longer supported.
+			Assert.Catch(() => Parse(ListChildrenYaml));
 		}
 	}
 }

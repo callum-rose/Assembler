@@ -6,14 +6,15 @@ using UnityEngine.UI;
 
 namespace Assembler.Behaviours.UI
 {
-	/// <summary>Auto-layout container. Arranges its child UI entities in a vertical or horizontal stack
-	/// using a uGUI layout group, so UIs reflow responsively without hand-placed coordinates.</summary>
+	/// <summary>Groups child UI entities. By default it arranges them in a vertical or horizontal stack
+	/// using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with
+	/// Direction "none" it adds no layout group and children are positioned manually.</summary>
 	/// <remarks>
 	/// Properties:
-	///   Direction: "vertical" (default) or "horizontal".
-	///   Spacing: Gap between children, in reference pixels.
-	///   Padding: Inner padding on all sides, in reference pixels.
-	///   ChildAlignment: e.g. "middle-center", "upper-left" (see TextAnchor names).
+	///   Direction: "vertical" (default), "horizontal", or "none" (no layout group — manual placement).
+	///   Spacing: Gap between children, in reference pixels (layout directions only).
+	///   Padding: Inner padding on all sides, in reference pixels (layout directions only).
+	///   ChildAlignment: e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only).
 	///   FitContent: When true, the container shrinks to fit its children (adds a ContentSizeFitter).
 	/// </remarks>
 	public class UIContainer : GameBehaviour<UIContainerData>
@@ -30,9 +31,16 @@ namespace Assembler.Behaviours.UI
 				UiLayout.StretchToFill(rect);
 			}
 
-			var horizontal = (data.Direction.Get() ?? string.Empty).Trim().ToLowerInvariant() == "horizontal";
+			var direction = (data.Direction.Get() ?? string.Empty).Trim().ToLowerInvariant();
 
-			HorizontalOrVerticalLayoutGroup group = horizontal
+			// "none" (or "manual"/"free"): no layout group — children keep whatever position/anchors they
+			// declare. Useful for absolute/overlay placement where auto-layout would get in the way.
+			if (direction is "none" or "manual" or "free")
+			{
+				return;
+			}
+
+			HorizontalOrVerticalLayoutGroup group = direction == "horizontal"
 				? gameObject.AddComponent<HorizontalLayoutGroup>()
 				: gameObject.AddComponent<VerticalLayoutGroup>();
 
@@ -45,12 +53,15 @@ namespace Assembler.Behaviours.UI
 			group.childForceExpandWidth = false;
 			group.childForceExpandHeight = false;
 
-			if (data.FitContent.Get())
+			data.FitContent.UseIfValueExists(fitContent =>
 			{
-				var fitter = gameObject.AddComponent<ContentSizeFitter>();
-				fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-				fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-			}
+				if (fitContent)
+				{
+					var fitter = gameObject.AddComponent<ContentSizeFitter>();
+					fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+					fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+				}
+			});
 		}
 	}
 }

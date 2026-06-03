@@ -22,7 +22,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Spacing"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Padding"), fallback: 0f),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("ChildAlignment"), fallback: "upper-center"),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("FitContent"), fallback: false));
+				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("FitContent")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

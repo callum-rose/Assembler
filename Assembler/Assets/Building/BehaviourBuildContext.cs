@@ -14,5 +14,5 @@ namespace Assembler.Building
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,
 		IGameClock Clock,
-		UiPrefabLibrary? UiPrefabs);
+		UiPrefabLibrary UiPrefabs);
 }

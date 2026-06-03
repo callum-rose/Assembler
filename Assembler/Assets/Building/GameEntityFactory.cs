@@ -32,7 +32,7 @@ namespace Assembler.Building
 		private readonly Transform _root;
 		private readonly ControlsInfo _controls;
 		private readonly InputActionAsset _controlsAsset;
-		private readonly UiPrefabLibrary? _uiPrefabs;
+		private readonly UiPrefabLibrary _uiPrefabs;
 
 		private int _spawnCounter;
 
@@ -49,7 +49,7 @@ namespace Assembler.Building
 			Transform root,
 			ControlsInfo controls,
 			InputActionAsset controlsAsset,
-			UiPrefabLibrary? uiPrefabs)
+			UiPrefabLibrary uiPrefabs)
 		{
 			_variables = variables;
 			_expressions = expressions;

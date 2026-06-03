@@ -574,7 +574,8 @@ namespace Assembler.Building
 					var i = (UICanvasInfo)info;
 					var b = go.AddComponent<UICanvas>();
 					return (b, lr => b.Initialise(new UICanvasData(i.Id,
-						i.MatchWidthOrHeight.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.MatchWidthOrHeight.Resolve(ctx.Resolution),
+						i.ReferenceResolution.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(UIContainerInfo)] = new(typeof(UIContainer), (go, info, ctx) =>
 				{
@@ -591,7 +592,7 @@ namespace Assembler.Building
 				{
 					var i = (TextLabelInfo)info;
 					var b = go.AddComponent<TextLabel>();
-					var prefab = RequireUiPrefab(ctx, lib => lib.labelPrefab, "text label");
+					var prefab = RequireUiPrefab(ctx, lib => lib.LabelPrefab, "text label");
 					return (b, lr => b.Initialise(new TextLabelData(i.Id,
 						i.Text.Resolve(ctx.Resolution),
 						i.FontSize.Resolve(ctx.Resolution),
@@ -603,7 +604,7 @@ namespace Assembler.Building
 				{
 					var i = (UIButtonInfo)info;
 					var b = go.AddComponent<UIButton>();
-					var prefab = RequireUiPrefab(ctx, lib => lib.buttonPrefab, "ui button");
+					var prefab = RequireUiPrefab(ctx, lib => lib.ButtonPrefab, "ui button");
 					return (b, lr => b.Initialise(new UIButtonData(i.Id,
 						i.Label.Resolve(ctx.Resolution),
 						i.PreferredWidth.Resolve(ctx.Resolution),
@@ -614,7 +615,7 @@ namespace Assembler.Building
 				{
 					var i = (UISliderInfo)info;
 					var b = go.AddComponent<UISlider>();
-					var prefab = RequireUiPrefab(ctx, lib => lib.sliderPrefab, "ui slider");
+					var prefab = RequireUiPrefab(ctx, lib => lib.SliderPrefab, "ui slider");
 					return (b, lr => b.Initialise(new UISliderData(i.Id,
 						i.InitialValue.Resolve(ctx.Resolution),
 						i.MinValue.Resolve(ctx.Resolution),
@@ -793,21 +794,13 @@ namespace Assembler.Building
 			Func<UiPrefabLibrary, GameObject> select,
 			string blockName)
 		{
-			if (ctx.UiPrefabs == null)
-			{
-				throw new InvalidOperationException(
-					$"The '{blockName}' UI block requires a UiPrefabLibrary at " +
-					$"Resources/{UiPrefabLibrary.DefaultResourcePath}, but none was found. " +
-					"Run 'Assembler > UI > Generate UI Prefabs' (or Tools/generate-ui-prefabs.sh) to create it.");
-			}
-
 			var prefab = select(ctx.UiPrefabs);
 
 			if (prefab == null)
 			{
 				throw new InvalidOperationException(
 					$"The '{blockName}' UI block's prefab is not assigned in the UiPrefabLibrary. " +
-					"Re-generate the prefabs or assign it on the asset.");
+					"Run 'Assembler > UI > Generate UI Prefabs' or assign it on the asset.");
 			}
 
 			return prefab;

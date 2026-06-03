@@ -12,7 +12,7 @@ Game:
     loop. The "Quit" button fires the framework's `!gameover` path to end the game.
 
     Requires the UI prefab library: run `Assembler > UI > Generate UI Prefabs`
-    (or Tools/generate-ui-prefabs.sh) once before playing.
+    once before playing.
 
 World:
   Dimensionality: 2

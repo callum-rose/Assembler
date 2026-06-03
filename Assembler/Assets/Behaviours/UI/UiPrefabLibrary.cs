@@ -13,10 +13,14 @@ namespace Assembler.Behaviours.UI
 		/// <summary>Resources path (sans extension) the Builder loads the default library from.</summary>
 		public const string DefaultResourcePath = "UI/UiPrefabLibrary";
 
-		// Assigned in the asset (by the editor or UiPrefabGenerator). Each prefab root carries the
+		// Wired in the asset (by the editor or UiPrefabGenerator). Each prefab root carries the
 		// matching view component (UiButtonView / UiLabelView / UiSliderView).
-		public GameObject buttonPrefab = null!;
-		public GameObject labelPrefab = null!;
-		public GameObject sliderPrefab = null!;
+		[SerializeField] private GameObject buttonPrefab = null!;
+		[SerializeField] private GameObject labelPrefab = null!;
+		[SerializeField] private GameObject sliderPrefab = null!;
+
+		public GameObject ButtonPrefab => buttonPrefab;
+		public GameObject LabelPrefab => labelPrefab;
+		public GameObject SliderPrefab => sliderPrefab;
 	}
 }

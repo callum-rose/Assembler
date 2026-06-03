@@ -39,9 +39,18 @@ namespace Tests.Behaviours
 			var label = labelGo.AddComponent<TextMeshProUGUI>();
 
 			var view = root.AddComponent<UiButtonView>();
-			view.Button = button;
-			view.Label = label;
+			Wire(view, "button", button);
+			Wire(view, "label", label);
 			return root;
+		}
+
+		// The view's references are [SerializeField] private (read-only public getters), so wire them the
+		// same way the editor/inspector does — through SerializedObject.
+		private static void Wire(UnityEngine.Object target, string field, UnityEngine.Object value)
+		{
+			var serialized = new UnityEditor.SerializedObject(target);
+			serialized.FindProperty(field).objectReferenceValue = value;
+			serialized.ApplyModifiedPropertiesWithoutUndo();
 		}
 
 		[Test]

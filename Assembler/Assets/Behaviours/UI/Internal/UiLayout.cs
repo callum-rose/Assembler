@@ -1,3 +1,5 @@
+using Assembler.Extensions;
+using Assembler.Resolving;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,27 +30,29 @@ namespace Assembler.Behaviours.UI.Internal
 		}
 
 		/// <summary>
-		/// Adds/updates a <see cref="LayoutElement"/> so a parent layout group sizes this element. Values
-		/// &lt;= 0 mean "let the layout/content decide" and are left unset.
+		/// Adds/updates a <see cref="LayoutElement"/> so a parent layout group sizes this element. Each
+		/// dimension is only constrained when the descriptor actually provides it (and the value is &gt; 0);
+		/// otherwise the layout/content decides.
 		/// </summary>
-		public static void ApplyPreferredSize(GameObject go, float preferredWidth, float preferredHeight)
+		public static void ApplyPreferredSize(GameObject go,
+			IValueProvider<float> preferredWidth,
+			IValueProvider<float> preferredHeight)
 		{
-			if (preferredWidth <= 0f && preferredHeight <= 0f)
+			preferredWidth.UseIfValueExists(width =>
 			{
-				return;
-			}
+				if (width > 0f)
+				{
+					go.GetOrAddComponent<LayoutElement>().preferredWidth = width;
+				}
+			});
 
-			var element = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
-
-			if (preferredWidth > 0f)
+			preferredHeight.UseIfValueExists(height =>
 			{
-				element.preferredWidth = preferredWidth;
-			}
-
-			if (preferredHeight > 0f)
-			{
-				element.preferredHeight = preferredHeight;
-			}
+				if (height > 0f)
+				{
+					go.GetOrAddComponent<LayoutElement>().preferredHeight = height;
+				}
+			});
 		}
 
 		/// <summary>

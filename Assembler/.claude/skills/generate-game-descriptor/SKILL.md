@@ -374,14 +374,14 @@ entity's children are auto-arranged.
 
 | Block | Kind | Key properties |
 |---|---|---|
-| `ui canvas` | behaviour (UI root) | `MatchWidthOrHeight` (float 0..1; CanvasScaler match) |
-| `ui container` | behaviour (auto-layout) | `Direction` ("vertical"/"horizontal"), `Spacing`, `Padding`, `ChildAlignment` (e.g. "middle-center","upper-left"), `FitContent` (bool) |
+| `ui canvas` | behaviour (UI root) | `MatchWidthOrHeight` (float 0..1; CanvasScaler match), `ReferenceResolution` (`!vec`; design resolution, X=width Y=height) |
+| `ui container` | behaviour (auto-layout) | `Direction` ("vertical"/"horizontal"/"none" — "none" = no layout group, manual placement), `Spacing`, `Padding`, `ChildAlignment` (e.g. "middle-center","upper-left"), `FitContent` (bool) |
 | `text label` | behaviour | `Text` (string; re-read each frame — bind via `!expr`/`!text`/`!var` for live values), `FontSize` (int), `PreferredWidth`, `PreferredHeight` |
 | `ui button` | trigger | `Label` (string), `PreferredWidth`, `PreferredHeight` — fires its `Listeners` on click |
 | `ui slider` | trigger | `InitialValue`, `MinValue`, `MaxValue`, `PreferredWidth`, `PreferredHeight` — emits output `value` [float] on change |
 
 Layout model (replaces the old `Rect`): leaf blocks expose `PreferredWidth`/`PreferredHeight`
-(`<= 0` = let the layout/content decide); the parent `ui container`'s `LayoutGroup` arranges its
+(omit to let the layout/content decide); the parent `ui container`'s `LayoutGroup` arranges its
 child entities in declaration order, and the `CanvasScaler` makes it responsive across screen sizes.
 
 ```yaml

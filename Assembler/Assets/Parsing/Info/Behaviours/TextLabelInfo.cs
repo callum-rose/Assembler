@@ -19,8 +19,8 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Text"), fallback: string.Empty),
 				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("FontSize"), fallback: 24),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredWidth"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("PreferredHeight"), fallback: 0f));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

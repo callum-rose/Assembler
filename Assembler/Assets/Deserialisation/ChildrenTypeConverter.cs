@@ -8,11 +8,11 @@ using YamlDotNet.Serialization;
 namespace Assembler.Deserialisation
 {
 	/// <summary>
-	/// Deserialises an entity's <c>Children</c> in either form:
-	/// a sequence of anonymous children (<c>- Template: ...</c>), or a keyed
-	/// mapping where the key is the child's id (matching the IDs-as-keys
-	/// convention used by top-level <c>Entities</c>). For the mapping form the
-	/// key is promoted to <see cref="EntityDto.Id"/> unless one is already set.
+	/// Deserialises an entity's <c>Children</c> as a keyed mapping where the key is
+	/// the child's id, matching the IDs-as-keys convention used by top-level
+	/// <c>Entities</c>. The key is promoted to <see cref="EntityDto.Id"/> unless one
+	/// is already set. The sequence/list form is intentionally rejected so there is a
+	/// single, consistent way to declare children.
 	/// </summary>
 	internal class ChildrenTypeConverter : IYamlTypeConverter
 	{
@@ -20,19 +20,15 @@ namespace Assembler.Deserialisation
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
-			var children = new List<EntityDto>();
-
-			if (parser.TryConsume<SequenceStart>(out _))
+			if (!parser.TryConsume<MappingStart>(out _))
 			{
-				while (!parser.TryConsume<SequenceEnd>(out _))
-				{
-					children.Add((EntityDto)rootDeserializer(typeof(EntityDto))!);
-				}
-
-				return children;
+				throw new YamlException(parser.Current?.Start ?? Mark.Empty, parser.Current?.End ?? Mark.Empty,
+					"Entity 'Children' must be a mapping of child-id -> child " +
+					"(e.g. `Children:` then `  myChild:` on the next line). The sequence/list form " +
+					"(`- ...`) is no longer supported — give each child an id key.");
 			}
 
-			parser.Consume<MappingStart>();
+			var children = new List<EntityDto>();
 
 			while (!parser.TryConsume<MappingEnd>(out _))
 			{

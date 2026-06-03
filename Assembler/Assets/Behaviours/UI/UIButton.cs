@@ -11,8 +11,8 @@ namespace Assembler.Behaviours.UI
 	/// <remarks>
 	/// Properties:
 	///   Label: Button caption (re-read each frame).
-	///   PreferredWidth: Preferred width for the parent layout (&lt;= 0 = let layout decide).
-	///   PreferredHeight: Preferred height for the parent layout (&lt;= 0 = let layout decide).
+	///   PreferredWidth: Preferred width for the parent layout (omit to let the layout decide).
+	///   PreferredHeight: Preferred height for the parent layout (omit to let the layout decide).
 	/// </remarks>
 	public class UIButton : Trigger<UIButtonData>
 	{
@@ -23,7 +23,7 @@ namespace Assembler.Behaviours.UI
 		protected override void OnInitialise(UIButtonData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
-			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.Get(), data.PreferredHeight.Get());
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth, data.PreferredHeight);
 			_view = UiLayout.InstantiateView<UiButtonView>(data.Prefab, host);
 			_view.Button.onClick.AddListener(() => NotifyListeners(TriggerContext.Empty));
 		}

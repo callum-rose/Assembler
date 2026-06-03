@@ -15,8 +15,7 @@ namespace Editor
 	/// unstyled prefabs so the UI blocks function immediately; restyle or replace the prefabs in the editor
 	/// afterwards (keep the view-component references wired) without touching code.
 	///
-	/// Run via the menu "Assembler > UI > Generate UI Prefabs" or headlessly through
-	/// Tools/generate-ui-prefabs.sh (-executeMethod Editor.UiPrefabGenerator.GenerateBatch).
+	/// Run via the menu "Assembler > UI > Generate UI Prefabs".
 	/// </summary>
 	public static class UiPrefabGenerator
 	{
@@ -43,30 +42,14 @@ namespace Editor
 				AssetDatabase.CreateAsset(library, LibraryPath);
 			}
 
-			library.buttonPrefab = buttonPrefab;
-			library.labelPrefab = labelPrefab;
-			library.sliderPrefab = sliderPrefab;
-			EditorUtility.SetDirty(library);
+			Wire(library, "buttonPrefab", buttonPrefab);
+			Wire(library, "labelPrefab", labelPrefab);
+			Wire(library, "sliderPrefab", sliderPrefab);
 
 			AssetDatabase.SaveAssets();
 			AssetDatabase.Refresh();
 
 			Debug.Log($"UiPrefabGenerator: wrote prefabs and library under {UiFolder}.");
-		}
-
-		// Headless entry point for Tools/generate-ui-prefabs.sh. Exits non-zero on failure.
-		public static void GenerateBatch()
-		{
-			try
-			{
-				Generate();
-				EditorApplication.Exit(0);
-			}
-			catch (Exception e)
-			{
-				Debug.LogError("UiPrefabGenerator failed: " + e);
-				EditorApplication.Exit(1);
-			}
 		}
 
 		private static void EnsureFolder()
@@ -104,8 +87,8 @@ namespace Editor
 			label.text = "Button";
 
 			var view = go.AddComponent<UiButtonView>();
-			view.Button = button;
-			view.Label = label;
+			Wire(view, "button", button);
+			Wire(view, "label", label);
 			return go;
 		}
 
@@ -117,7 +100,7 @@ namespace Editor
 			text.text = string.Empty;
 
 			var view = go.AddComponent<UiLabelView>();
-			view.Text = text;
+			Wire(view, "text", text);
 			return go;
 		}
 
@@ -127,8 +110,24 @@ namespace Editor
 			go.name = "UiSlider";
 
 			var view = go.AddComponent<UiSliderView>();
-			view.Slider = go.GetComponent<Slider>();
+			Wire(view, "slider", go.GetComponent<Slider>());
 			return go;
+		}
+
+		// Assigns a [SerializeField] private object-reference field by name, so the views/library can keep
+		// their runtime surface read-only (private field + public getter) while still being wired here.
+		private static void Wire(UnityEngine.Object target, string field, UnityEngine.Object value)
+		{
+			var serialized = new SerializedObject(target);
+			var property = serialized.FindProperty(field);
+			if (property == null)
+			{
+				throw new InvalidOperationException(
+					$"UiPrefabGenerator: no serialized field '{field}' on {target.GetType().Name}.");
+			}
+
+			property.objectReferenceValue = value;
+			serialized.ApplyModifiedPropertiesWithoutUndo();
 		}
 
 		private static GameObject SaveAsPrefab(GameObject instance, string path)

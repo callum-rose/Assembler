@@ -12,8 +12,8 @@ namespace Assembler.Behaviours.UI
 	///   InitialValue: Starting value.
 	///   MinValue: Minimum value the slider can produce.
 	///   MaxValue: Maximum value the slider can produce.
-	///   PreferredWidth: Preferred width for the parent layout (&lt;= 0 = let layout decide).
-	///   PreferredHeight: Preferred height for the parent layout (&lt;= 0 = let layout decide).
+	///   PreferredWidth: Preferred width for the parent layout (omit to let the layout decide).
+	///   PreferredHeight: Preferred height for the parent layout (omit to let the layout decide).
 	/// Outputs:
 	///   value [float]: The new slider value after the change.
 	/// </remarks>
@@ -26,7 +26,7 @@ namespace Assembler.Behaviours.UI
 		protected override void OnInitialise(UISliderData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
-			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.Get(), data.PreferredHeight.Get());
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth, data.PreferredHeight);
 			_view = UiLayout.InstantiateView<UiSliderView>(data.Prefab, host);
 
 			var slider = _view.Slider;

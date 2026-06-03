@@ -11,8 +11,11 @@ namespace Assembler.Behaviours.UI.Views
 	/// </summary>
 	public sealed class UiButtonView : MonoBehaviour
 	{
-		// Assigned in the prefab (by the editor or UiPrefabGenerator); never null at runtime.
-		public Button Button = null!;
-		public TMP_Text Label = null!;
+		// Wired in the prefab (by the editor or UiPrefabGenerator); never null at runtime.
+		[SerializeField] private Button button = null!;
+		[SerializeField] private TMP_Text label = null!;
+
+		public Button Button => button;
+		public TMP_Text Label => label;
 	}
 }

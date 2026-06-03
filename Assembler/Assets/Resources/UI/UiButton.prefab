@@ -271,5 +271,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a5268d2e72ba4711ab1f58212a74e7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.UI.Views.UiButtonView
-  Button: {fileID: 6497876643650431485}
-  Label: {fileID: 3225453275823595595}
+  button: {fileID: 6497876643650431485}
+  label: {fileID: 3225453275823595595}

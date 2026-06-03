@@ -1362,18 +1362,19 @@ Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place 
 | Name | Type | Description |
 |------|------|-------------|
 | MatchWidthOrHeight | float | CanvasScaler match (0 = match width, 1 = match height, 0.5 = balanced). |
+| ReferenceResolution | Vector3 | Design resolution the UI scales from, as a vector (X = width, Y = height). |
 
 ## `ui container`
-Auto-layout container. Arranges its child UI entities in a vertical or horizontal stack using a uGUI layout group, so UIs reflow responsively without hand-placed coordinates.
+Groups child UI entities. By default it arranges them in a vertical or horizontal stack using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with Direction "none" it adds no layout group and children are positioned manually.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Direction | string | "vertical" (default) or "horizontal". |
-| Spacing | float | Gap between children, in reference pixels. |
-| Padding | float | Inner padding on all sides, in reference pixels. |
-| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names). |
+| Direction | string | "vertical" (default), "horizontal", or "none" (no layout group — manual placement). |
+| Spacing | float | Gap between children, in reference pixels (layout directions only). |
+| Padding | float | Inner padding on all sides, in reference pixels (layout directions only). |
+| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
 | FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
 
 ## `text label`
@@ -1385,8 +1386,8 @@ Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every 
 |------|------|-------------|
 | Text | string | Body text (re-read each frame; bind to a variable/expression for live values). |
 | FontSize | int | Font size in reference pixels. |
-| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
-| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
+| PreferredWidth | float | Preferred width for the parent layout (omit to let the layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (omit to let the layout decide). |
 
 ## `ui button`
 A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
@@ -1396,8 +1397,8 @@ A clickable uGUI button. Acts as a trigger: notifies its listeners each time it 
 | Name | Type | Description |
 |------|------|-------------|
 | Label | string | Button caption (re-read each frame). |
-| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
-| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
+| PreferredWidth | float | Preferred width for the parent layout (omit to let the layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (omit to let the layout decide). |
 
 ## `ui slider`
 A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.
@@ -1409,8 +1410,8 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 | InitialValue | float | Starting value. |
 | MinValue | float | Minimum value the slider can produce. |
 | MaxValue | float | Maximum value the slider can produce. |
-| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
-| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
+| PreferredWidth | float | Preferred width for the parent layout (omit to let the layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (omit to let the layout decide). |
 
 ### Outputs
 
