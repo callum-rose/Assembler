@@ -121,7 +121,7 @@ Templates:
         Properties:
           VariableId: !parameter score_var
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: int add
             With:
               - !parameter score_var
               - !var score per goal
@@ -227,6 +227,11 @@ Expressions:
     Expression: "var speed = Magnitude(ball_vel);
       var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
       ScaleVector(Normalize(dir), speed);"
+  int add:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ a, b ]
+    ReturnType: int
+    Expression: "a + b;"
   int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]

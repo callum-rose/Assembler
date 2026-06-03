@@ -80,6 +80,12 @@ Expressions:
     Expression: |
       return new UnityEngine.Vector3(vel.x, jump, 0f);
 
+  max float:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ a, b ]
+    ReturnType: float
+    Expression: "return Max(a, b);"
+
   camera target:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ y, z ]
@@ -216,7 +222,7 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            Do: 'Max(arg0, arg1)'
+            Do: max float
             With:
               - !var max height
               - !expr
