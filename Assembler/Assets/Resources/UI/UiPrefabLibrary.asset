@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93b4df6bd57644996aef54ad488bbaa1, type: 3}
+  m_Name: UiPrefabLibrary
+  m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.Debug.UI.UiPrefabLibrary
+  buttonPrefab: {fileID: 7685138604416062118, guid: d657b57763cde42988d1797a8d403b6b, type: 3}
+  labelPrefab: {fileID: 4674936413897104694, guid: e202e9ecee3d3445082fc5d963034fd1, type: 3}
+  sliderPrefab: {fileID: 6658232367287790269, guid: 4becdf9c8399946979b46a66b7057d2c, type: 3}

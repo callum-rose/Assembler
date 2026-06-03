@@ -3,8 +3,8 @@ Game:
   Description: |
     Demonstrates the composable uGUI UI blocks: a `ui canvas` root, a vertical
     `ui container` that auto-lays-out its children responsively, two `text label`s
-    (one static, one bound to a live variable via an expression), and two
-    `ui button`s.
+    (one constant, one bound to a live variable), and two `ui button`s. Every
+    user-facing string routes through the `Localisation` table via `!text`.
 
     The "Click me" button is wired (via a listener) to an `int variable setter`
     that increments `clicks`; the counter label re-reads the value every frame, so
@@ -27,11 +27,15 @@ Expressions:
     ArgumentNames: [ n ]
     ReturnType: int
     Expression: 'return n + 1;'
-  format clicks:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ n ]
-    ReturnType: string
-    Expression: 'return "Clicks: " + n;'
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "UI System Demo"
+      hud.clicks: "Clicks: {0}"
+      btn.click: "Click me"
+      btn.quit: "Quit"
 
 Entities:
   ui:
@@ -56,7 +60,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: "UI System Demo"
+                  Text: !text hud.title
                   FontSize: 48
                   PreferredWidth: 500
                   PreferredHeight: 80
@@ -65,10 +69,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !expr
-                    ExpressionId: format clicks
-                    Arguments:
-                      - !var clicks
+                  Text: !text { Key: hud.clicks, Arguments: [ !var clicks ] }
                   FontSize: 32
                   PreferredWidth: 500
                   PreferredHeight: 60
@@ -77,7 +78,7 @@ Entities:
               button:
                 Type: ui button
                 Properties:
-                  Label: "Click me"
+                  Label: !text btn.click
                   PreferredWidth: 240
                   PreferredHeight: 70
                 Listeners:
@@ -88,7 +89,7 @@ Entities:
               button:
                 Type: ui button
                 Properties:
-                  Label: "Quit"
+                  Label: !text btn.quit
                   PreferredWidth: 240
                   PreferredHeight: 70
                 Listeners:

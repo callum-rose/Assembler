@@ -79,5 +79,61 @@ Entities:
 			Assert.AreEqual("hi", ((ConstantSource<string>)label.Text).Value);
 			Assert.AreEqual("Go", ((ConstantSource<string>)button.Label).Value);
 		}
+
+		private const string KeyedChildrenYaml = @"
+Entities:
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: hi
+";
+
+		private const string ListChildrenYaml = @"
+Entities:
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+    Children:
+      - Behaviours:
+          label:
+            Type: text label
+            Properties:
+              Text: hi
+";
+
+		[Test]
+		public void KeyedChildrenPromoteTheirKeyToTheRelativeId()
+		{
+			// The key becomes the child's relative IdSuffix, which the builder
+			// prefixes with the parent path (e.g. "ui/hud", "ui/hud/title") so
+			// listeners can target nested children by their full hierarchical id.
+			var ui = Parse(KeyedChildrenYaml).Entities[0];
+
+			Assert.AreEqual(1, ui.Children.Count);
+			Assert.AreEqual("hud", ui.Children[0].IdSuffix);
+			Assert.AreEqual("title", ui.Children[0].Children[0].IdSuffix);
+		}
+
+		[Test]
+		public void ListChildrenStillParse()
+		{
+			var ui = Parse(ListChildrenYaml).Entities[0];
+
+			Assert.AreEqual(1, ui.Children.Count);
+			Assert.IsInstanceOf<TextLabelInfo>(ui.Children[0].Behaviours[0]);
+		}
 	}
 }

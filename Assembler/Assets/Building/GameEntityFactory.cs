@@ -128,7 +128,7 @@ namespace Assembler.Building
 
 			foreach (var child in entityInfo.Children)
 			{
-				var childId = child.AbsoluteId ?? $"{entityInfo.Id}/{child.IdSuffix}";
+				var childId = $"{entityInfo.Id}/{child.IdSuffix}";
 
 				EntityInfo childTemplate;
 

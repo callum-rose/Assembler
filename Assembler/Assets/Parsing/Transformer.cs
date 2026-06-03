@@ -185,7 +185,6 @@ namespace Assembler.Parsing
 
 			return new ChildEntityInfo(
 				idSuffix,
-				explicitId,
 				templateRefId,
 				ownParams,
 				dto.Tags?.ToArray() ?? Array.Empty<string>(),

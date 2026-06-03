@@ -34,8 +34,10 @@ Constants:
   player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
   orb radius: 0.35
 
-  move step: !vec { X: 0.12, Y: 0, Z: 0 }
-  move step up: !vec { X: 0, Y: 0.12, Z: 0 }
+  # Per-frame movement steps. Left/down are derived by negating these (see the
+  # `negate` expression), so each axis has a single source of truth.
+  step right: !vec { X: 0.01, Y: 0, Z: 0 }
+  step up: !vec { X: 0, Y: 0.01, Z: 0 }
 
   spawn interval: 1.2
 
@@ -57,6 +59,12 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: float
     Expression: "a + b;"
+  negate:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ v ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(-v.x, -v.y, -v.z);"
   random spawn position:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
@@ -134,7 +142,7 @@ Entities:
       move left:
         Type: translate
         Properties:
-          Displacement: !vec { X: -0.12, Y: 0, Z: 0 }
+          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step right ] }
 
       hold right:
         Type: key hold trigger
@@ -145,7 +153,7 @@ Entities:
       move right:
         Type: translate
         Properties:
-          Displacement: !var move step
+          Displacement: !var step right
 
       hold up:
         Type: key hold trigger
@@ -156,7 +164,7 @@ Entities:
       move up:
         Type: translate
         Properties:
-          Displacement: !var move step up
+          Displacement: !var step up
 
       hold down:
         Type: key hold trigger
@@ -167,7 +175,7 @@ Entities:
       move down:
         Type: translate
         Properties:
-          Displacement: !vec { X: 0, Y: -0.12, Z: 0 }
+          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step up ] }
 
   # Spawns an orb on start and then every `spawn interval` seconds.
   orb spawner:
