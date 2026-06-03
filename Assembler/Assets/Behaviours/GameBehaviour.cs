@@ -31,7 +31,9 @@ namespace Assembler.Behaviours
 		public IReadOnlyList<Listener> DebugListeners => _listeners;
 #endif
 
-		public abstract void Execute(TriggerContext ctx);
+		/// <summary>Runs when a trigger notifies this behaviour. Passive/state-driven behaviours that don't
+		/// react to triggers can leave this as the default no-op.</summary>
+		public virtual void Execute(TriggerContext ctx) { }
 
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{

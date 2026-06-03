@@ -18,8 +18,6 @@ namespace Assembler.Behaviours.UI
 	{
 		private UiButtonView? _view;
 
-		public override void Execute(TriggerContext ctx) { }
-
 		protected override void OnInitialise(UIButtonData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
@@ -32,7 +30,7 @@ namespace Assembler.Behaviours.UI
 		{
 			if (_view != null)
 			{
-				_view.Label.text = Data.Label.Get();
+				_view.Label.text = Data.Label.ValueOr(string.Empty);
 			}
 		}
 	}

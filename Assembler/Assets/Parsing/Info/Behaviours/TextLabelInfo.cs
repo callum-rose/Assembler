@@ -17,8 +17,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Text"), fallback: string.Empty),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("FontSize"), fallback: 24),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Text")),
+				Transformer.CreateValueSource<int>(ctx, props.GetValueOrDefault("FontSize")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 

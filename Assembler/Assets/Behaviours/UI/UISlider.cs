@@ -21,8 +21,6 @@ namespace Assembler.Behaviours.UI
 	{
 		private UiSliderView? _view;
 
-		public override void Execute(TriggerContext ctx) { }
-
 		protected override void OnInitialise(UISliderData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
@@ -30,9 +28,9 @@ namespace Assembler.Behaviours.UI
 			_view = UiLayout.InstantiateView<UiSliderView>(data.Prefab, host);
 
 			var slider = _view.Slider;
-			slider.minValue = data.MinValue.Get();
-			slider.maxValue = data.MaxValue.Get();
-			slider.SetValueWithoutNotify(data.InitialValue.Get());
+			slider.minValue = data.MinValue.ValueOr(0f);
+			slider.maxValue = data.MaxValue.ValueOr(1f);
+			slider.SetValueWithoutNotify(data.InitialValue.ValueOr(0f));
 			slider.onValueChanged.AddListener(value => NotifyListeners(TriggerContext.New("value", value)));
 		}
 	}

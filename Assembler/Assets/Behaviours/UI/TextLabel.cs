@@ -19,8 +19,6 @@ namespace Assembler.Behaviours.UI
 	{
 		private UiLabelView? _view;
 
-		public override void Execute(TriggerContext ctx) { }
-
 		protected override void OnInitialise(TextLabelData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
@@ -32,9 +30,9 @@ namespace Assembler.Behaviours.UI
 		{
 			if (_view == null) return;
 
-			_view.Text.text = Data.Text.Get();
+			_view.Text.text = Data.Text.ValueOr(string.Empty);
 
-			var fontSize = Data.FontSize.Get();
+			var fontSize = Data.FontSize.ValueOr(0);
 			if (fontSize > 0)
 			{
 				_view.Text.fontSize = fontSize;

@@ -18,9 +18,9 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("InitialValue"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MinValue"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("MaxValue"), fallback: 1f),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("InitialValue")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MinValue")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxValue")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 

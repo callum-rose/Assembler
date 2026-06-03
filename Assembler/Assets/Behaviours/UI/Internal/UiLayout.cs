@@ -31,28 +31,32 @@ namespace Assembler.Behaviours.UI.Internal
 
 		/// <summary>
 		/// Adds/updates a <see cref="LayoutElement"/> so a parent layout group sizes this element. Each
-		/// dimension is only constrained when the descriptor actually provides it (and the value is &gt; 0);
-		/// otherwise the layout/content decides.
+		/// dimension is only constrained when the descriptor provides a value &gt; 0; otherwise the
+		/// layout/content decides.
 		/// </summary>
 		public static void ApplyPreferredSize(GameObject go,
 			IValueProvider<float> preferredWidth,
 			IValueProvider<float> preferredHeight)
 		{
-			preferredWidth.UseIfValueExists(width =>
-			{
-				if (width > 0f)
-				{
-					go.GetOrAddComponent<LayoutElement>().preferredWidth = width;
-				}
-			});
+			var width = preferredWidth.ValueOr(0f);
+			var height = preferredHeight.ValueOr(0f);
 
-			preferredHeight.UseIfValueExists(height =>
+			if (width <= 0f && height <= 0f)
 			{
-				if (height > 0f)
-				{
-					go.GetOrAddComponent<LayoutElement>().preferredHeight = height;
-				}
-			});
+				return;
+			}
+
+			var element = go.GetOrAddComponent<LayoutElement>();
+
+			if (width > 0f)
+			{
+				element.preferredWidth = width;
+			}
+
+			if (height > 0f)
+			{
+				element.preferredHeight = height;
+			}
 		}
 
 		/// <summary>

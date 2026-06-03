@@ -14,20 +14,18 @@ namespace Assembler.Behaviours.UI
 	/// </remarks>
 	public class UICanvas : GameBehaviour<UICanvasData>
 	{
-		public override void Execute(TriggerContext ctx) { }
-
 		protected override void OnInitialise(UICanvasData data)
 		{
 			var canvas = gameObject.AddComponent<Canvas>();
 			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
-			var referenceResolution = data.ReferenceResolution.Get();
+			var referenceResolution = data.ReferenceResolution.ValueOr(new Vector3(1920f, 1080f, 0f));
 
 			var scaler = gameObject.AddComponent<CanvasScaler>();
 			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
 			scaler.referenceResolution = new Vector2(referenceResolution.x, referenceResolution.y);
 			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-			scaler.matchWidthOrHeight = Mathf.Clamp01(data.MatchWidthOrHeight.Get());
+			scaler.matchWidthOrHeight = Mathf.Clamp01(data.MatchWidthOrHeight.ValueOr(0.5f));
 
 			gameObject.AddComponent<GraphicRaycaster>();
 		}

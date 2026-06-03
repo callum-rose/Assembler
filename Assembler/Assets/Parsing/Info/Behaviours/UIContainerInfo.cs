@@ -18,10 +18,10 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Direction"), fallback: "vertical"),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Spacing"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Padding"), fallback: 0f),
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("ChildAlignment"), fallback: "upper-center"),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Direction")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Spacing")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Padding")),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("ChildAlignment")),
 				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("FitContent")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,

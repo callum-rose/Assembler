@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Label"), fallback: string.Empty),
+				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Label")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 

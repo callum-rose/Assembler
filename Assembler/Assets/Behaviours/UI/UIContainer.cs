@@ -19,8 +19,6 @@ namespace Assembler.Behaviours.UI
 	/// </remarks>
 	public class UIContainer : GameBehaviour<UIContainerData>
 	{
-		public override void Execute(TriggerContext ctx) { }
-
 		protected override void OnInitialise(UIContainerData data)
 		{
 			var rect = UiLayout.EnsureRectTransform(gameObject);
@@ -31,7 +29,7 @@ namespace Assembler.Behaviours.UI
 				UiLayout.StretchToFill(rect);
 			}
 
-			var direction = (data.Direction.Get() ?? string.Empty).Trim().ToLowerInvariant();
+			var direction = data.Direction.ValueOr("vertical").Trim().ToLowerInvariant();
 
 			// "none" (or "manual"/"free"): no layout group — children keep whatever position/anchors they
 			// declare. Useful for absolute/overlay placement where auto-layout would get in the way.
@@ -44,24 +42,21 @@ namespace Assembler.Behaviours.UI
 				? gameObject.AddComponent<HorizontalLayoutGroup>()
 				: gameObject.AddComponent<VerticalLayoutGroup>();
 
-			var padding = Mathf.RoundToInt(data.Padding.Get());
+			var padding = (int)data.Padding.ValueOr(0f);
 			group.padding = new RectOffset(padding, padding, padding, padding);
-			group.spacing = data.Spacing.Get();
-			group.childAlignment = UiLayout.ParseAlignment(data.ChildAlignment.Get());
+			group.spacing = data.Spacing.ValueOr(0f);
+			group.childAlignment = UiLayout.ParseAlignment(data.ChildAlignment.ValueOr("upper-center"));
 			group.childControlWidth = true;
 			group.childControlHeight = true;
 			group.childForceExpandWidth = false;
 			group.childForceExpandHeight = false;
 
-			data.FitContent.UseIfValueExists(fitContent =>
+			if (data.FitContent.ValueOr(false))
 			{
-				if (fitContent)
-				{
-					var fitter = gameObject.AddComponent<ContentSizeFitter>();
-					fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-					fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-				}
-			});
+				var fitter = gameObject.AddComponent<ContentSizeFitter>();
+				fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+				fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+			}
 		}
 	}
 }
