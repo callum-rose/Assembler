@@ -4,6 +4,7 @@
     "references": [
         "Scripts",
         "Assembler.Deserialisation",
+        "Assembler.Validation",
         "Assembler.Parsing",
         "Assembler.Parsing.Phase1",
         "Assembler.Parsing.Phase2",
