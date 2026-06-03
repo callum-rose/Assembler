@@ -475,6 +475,16 @@ namespace Assembler.Parsing
 					$"Unknown !clock property '{property}'. Expected one of: deltaTime, time, frameCount, unscaledDeltaTime")
 			};
 
+		/// <summary>
+		/// Like <see cref="CreateValueSource{T}"/> but with no implicit fallback: an absent value (null or
+		/// <see cref="NoValue"/>) resolves to <see cref="None{T}"/> — i.e. a <c>NullValueProvider</c> at
+		/// runtime — for value types as well as reference types. Use this for optional properties whose
+		/// default is supplied at the point of use via <c>ValueOr</c>; the base <see cref="CreateValueSource{T}"/>
+		/// would instead produce a <c>ConstantSource(default(T))</c> for value types (e.g. 0 / (0,0,0)).
+		/// </summary>
+		public static ValueSource<T> CreateOptionalValueSource<T>(TransformContext ctx, AssemblerValue? raw) =>
+			raw is null or NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
+
 		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
 			AssemblerValue raw,
 			T? fallback = default) =>

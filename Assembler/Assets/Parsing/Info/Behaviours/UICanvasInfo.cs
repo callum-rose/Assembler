@@ -16,8 +16,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MatchWidthOrHeight")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("ReferenceResolution")));
+				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("MatchWidthOrHeight")),
+				Transformer.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("ReferenceResolution")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

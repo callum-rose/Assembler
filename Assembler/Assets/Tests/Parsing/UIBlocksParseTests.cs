@@ -3,6 +3,7 @@ using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Tests.Parsing
 {
@@ -48,6 +49,22 @@ Entities:
 			Assert.IsInstanceOf<UIContainerInfo>(behaviours[1]);
 			Assert.IsInstanceOf<TextLabelInfo>(behaviours[2]);
 			Assert.IsInstanceOf<UIButtonInfo>(behaviours[3]);
+		}
+
+		[Test]
+		public void OmittedValueTypePropertiesResolveToNone()
+		{
+			// Regression: an omitted value-type property must become None (NullValueProvider at runtime), not
+			// a ConstantSource of default(T). Otherwise the behaviour's ValueOr(default) never fires — which
+			// made `ui canvas` resolve ReferenceResolution to (0,0,0) and collapse the whole UI to size 0.
+			var behaviours = Parse(Yaml).Entities[0].Behaviours;
+			var canvas = (UICanvasInfo)behaviours[0];
+			var label = (TextLabelInfo)behaviours[2];
+
+			Assert.IsInstanceOf<None<Vector3>>(canvas.ReferenceResolution,
+				"Omitted ReferenceResolution must be None, else the CanvasScaler reference resolution becomes (0,0).");
+			Assert.IsInstanceOf<None<float>>(label.PreferredWidth,
+				"Omitted PreferredWidth must be None so the block's default size applies.");
 		}
 
 		[Test]

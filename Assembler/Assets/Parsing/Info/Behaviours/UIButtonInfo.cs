@@ -16,9 +16,9 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Label")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
+				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Label")),
+				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
