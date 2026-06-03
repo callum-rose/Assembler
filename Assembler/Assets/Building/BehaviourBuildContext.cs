@@ -1,3 +1,4 @@
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Parsing.Controls;
 using Assembler.Resolving;
@@ -12,5 +13,6 @@ namespace Assembler.Building
 		ExclusiveGroupRegistry ExclusiveGroups,
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,
-		IGameClock Clock);
+		IGameClock Clock,
+		UiPrefabLibrary UiPrefabs);
 }

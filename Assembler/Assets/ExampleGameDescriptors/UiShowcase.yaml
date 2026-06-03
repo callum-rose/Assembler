@@ -1,0 +1,325 @@
+Game:
+  Title: UI Showcase
+  Description: |
+    Shows off the composable uGUI UI system. A green player cube (WASD) collects
+    cyan orbs that spawn around the field; each orb adds points to a live score.
+
+    The UI is the star and is built entirely from composable blocks declared in
+    this descriptor:
+      - a `ui canvas` root + a vertical `ui container` that auto-lays-out the HUD
+        responsively (no hand-placed coordinates);
+      - a `text label` bound to the `score` variable via a localised template, so
+        it updates live as you play;
+      - a `ui slider` whose `value` output is written into the `points per pickup`
+        variable, so dragging it changes how many points each orb is worth — and a
+        second label reflects the current value live;
+      - a "Reset Score" `ui button` wired (through the listener system) to a
+        variable setter;
+      - a "Quit" `ui button` whose only listener is `- !gameover`.
+
+    The Quit button's `!gameover` listener also satisfies the build-time
+    requirement that every game have a way to end.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  orb colour: !colour cyan
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  orb radius: 0.35
+
+  # Per-frame movement steps. Left/down are derived by negating these (see the
+  # `negate` expression), so each axis has a single source of truth.
+  step right: !vec { X: 0.01, Y: 0, Z: 0 }
+  step up: !vec { X: 0, Y: 0.01, Z: 0 }
+
+  spawn interval: 1.2
+
+  start score: 0.0
+  start points: 1.0
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  # Seeded from decimal constants so they are float-typed (written by float setters).
+  score: !var start score
+  points per pickup: !var start points
+
+Expressions:
+  add:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ a, b ]
+    ReturnType: float
+    Expression: "a + b;"
+  negate:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ v ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(-v.x, -v.y, -v.z);"
+  random spawn position:
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0);"
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "UI Showcase"
+      hud.instructions: "WASD to move - collect the cyan orbs"
+      hud.score: "Score: {0}"
+      hud.points: "Points per orb: {0}"
+      btn.reset: "Reset Score"
+      btn.quit: "Quit"
+
+Templates:
+  # A collectable orb. Detects the player overlapping it, awards points, and
+  # destroys itself. Needs only a trigger collider; the player carries the
+  # rigidbody that makes the trigger event fire.
+  orb_template:
+    Tags: [ orb ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var orb radius
+          IsWire: false
+          Colour: !var orb colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: scorer
+            BehaviourId: add point
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- WASD movement: each key-hold trigger drives a translate while held. ---
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step right ] }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var step right
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move up
+      move up:
+        Type: translate
+        Properties:
+          Displacement: !var step up
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: move down
+      move down:
+        Type: translate
+        Properties:
+          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step up ] }
+
+  # Spawns an orb on start and then every `spawn interval` seconds.
+  orb spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      spawn first:
+        Type: on start trigger
+        Listeners:
+          - EntityId: orb spawner
+            BehaviourId: spawn orb
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var spawn interval
+        Listeners:
+          - EntityId: orb spawner
+            BehaviourId: spawn orb
+      spawn orb:
+        Type: spawner
+        Properties:
+          TemplateId: orb_template
+          Position: !expr { ExpressionId: random spawn position }
+
+  # Holds the score-mutating behaviours, targeted by the orbs and the UI buttons/slider.
+  scorer:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      add point:
+        Type: float variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            ExpressionId: add
+            Arguments:
+              - !var score
+              - !var points per pickup
+      reset score:
+        Type: float variable setter
+        Properties:
+          VariableId: !var score
+          Value: !var start score
+      # Driven by the slider: writes the slider's `value` output into the variable.
+      set points:
+        Type: float variable setter
+        Properties:
+          VariableId: !var points per pickup
+          Value: !output value
+
+  # ---- The UI tree: canvas -> vertical container -> labels, slider, buttons ----
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 12
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 36
+                  PreferredWidth: 600
+                  PreferredHeight: 56
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 20
+                  PreferredWidth: 600
+                  PreferredHeight: 32
+          score:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.score, Arguments: [ !var score ] }
+                  FontSize: 30
+                  PreferredWidth: 400
+                  PreferredHeight: 44
+          points:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.points, Arguments: [ !var points per pickup ] }
+                  FontSize: 22
+                  PreferredWidth: 400
+                  PreferredHeight: 36
+          points slider:
+            Behaviours:
+              slider:
+                Type: ui slider
+                Properties:
+                  InitialValue: !var start points
+                  MinValue: 1
+                  MaxValue: 10
+                  PreferredWidth: 320
+                  PreferredHeight: 30
+                Listeners:
+                  - EntityId: scorer
+                    BehaviourId: set points
+          reset button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.reset
+                  PreferredWidth: 240
+                  PreferredHeight: 56
+                Listeners:
+                  - EntityId: scorer
+                    BehaviourId: reset score
+          quit button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 240
+                  PreferredHeight: 56
+                Listeners:
+                  - !gameover
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

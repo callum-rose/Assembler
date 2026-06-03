@@ -1,6 +1,4 @@
-using System;
-using Assembler.Parsing;
-using System.Collections.Generic;
+using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
 {
@@ -9,12 +7,20 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> InitialValue { get; }
 		public IValueProvider<float> MinValue { get; }
 		public IValueProvider<float> MaxValue { get; }
-		public ScreenRect Rect { get; }
+		public IValueProvider<float> PreferredWidth { get; }
+		public IValueProvider<float> PreferredHeight { get; }
+
+		/// <summary>The uGUI prefab (carrying a UiSliderView) instantiated for this slider.</summary>
+		public GameObject Prefab { get; }
 
 		public UISliderData(string id,
-						IValueProvider<float> initialValue,
+			IValueProvider<float> initialValue,
 			IValueProvider<float> minValue,
 			IValueProvider<float> maxValue,
-			ScreenRect rect) : base(id) => (InitialValue, MinValue, MaxValue, Rect) = (initialValue, minValue, maxValue, rect);
+			IValueProvider<float> preferredWidth,
+			IValueProvider<float> preferredHeight,
+			GameObject prefab) : base(id) =>
+			(InitialValue, MinValue, MaxValue, PreferredWidth, PreferredHeight, Prefab) =
+				(initialValue, minValue, maxValue, preferredWidth, preferredHeight, prefab);
 	}
 }

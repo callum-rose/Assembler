@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
@@ -13,7 +14,9 @@ using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Time;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 
 namespace Assembler.Building
 {
@@ -97,6 +100,25 @@ namespace Assembler.Building
 			// individual input triggers never enable/disable (and never leak) the shared asset themselves.
 			gameRoot.AddComponent<ControlsAssetOwner>().Initialise(controlsAsset);
 
+			// uGUI needs exactly one EventSystem to deliver pointer input. The project is Input System-only
+			// (activeInputHandler == 2), so the Input System UI module is required — StandaloneInputModule
+			// would silently deliver no clicks. Parented to gameRoot so it unloads with the game.
+			if (EventSystem.current == null)
+			{
+				var eventSystem = new GameObject("EventSystem");
+				eventSystem.transform.SetParent(gameRoot.transform, worldPositionStays: false);
+				eventSystem.AddComponent<EventSystem>();
+				eventSystem.AddComponent<InputSystemUIInputModule>();
+			}
+
+			// Reusable UI prefab library the leaf UI blocks instantiate. The library asset is committed at
+			// Resources/UI, so it must always load; a missing asset is a project setup error, not a per-game
+			// condition, so fail fast here rather than threading a nullable reference through the build.
+			var uiPrefabs = Resources.Load<UiPrefabLibrary>(UiPrefabLibrary.DefaultResourcePath)
+				?? throw new InvalidOperationException(
+					$"UiPrefabLibrary not found at Resources/{UiPrefabLibrary.DefaultResourcePath}. " +
+					"Run 'Assembler > UI > Generate UI Prefabs' to create it.");
+
 			var gameEntityFactory = new GameEntityFactory(
 				variableRegistry,
 				compiledExpressionsRegistry,
@@ -110,7 +132,8 @@ namespace Assembler.Building
 				gameInfo.ParseContext,
 				gameRoot.transform,
 				controls,
-				controlsAsset);
+				controlsAsset,
+				uiPrefabs);
 
 			var initialisations = new InitialisationQueue();
 

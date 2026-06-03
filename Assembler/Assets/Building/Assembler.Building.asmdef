@@ -14,6 +14,7 @@
         "Assembler.Deserialisation",
         "Assembler.Resolving",
         "Unity.InputSystem",
+        "UnityEngine.UI",
         "Assembler.Input",
         "Assembler.Time"
     ],

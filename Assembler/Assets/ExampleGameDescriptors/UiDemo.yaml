@@ -1,0 +1,106 @@
+Game:
+  Title: UI System Demo
+  Description: |
+    Demonstrates the composable uGUI UI blocks: a `ui canvas` root, a vertical
+    `ui container` that auto-lays-out its children responsively, two `text label`s
+    (one constant, one bound to a live variable), and two `ui button`s. Every
+    user-facing string routes through the `Localisation` table via `!text`.
+
+    The "Click me" button is wired (via a listener) to an `int variable setter`
+    that increments `clicks`; the counter label re-reads the value every frame, so
+    it updates live — proving the click -> NotifyListeners -> setter -> bound-label
+    loop. The "Quit" button fires the framework's `!gameover` path to end the game.
+
+    Requires the UI prefab library: run `Assembler > UI > Generate UI Prefabs`
+    once before playing.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Variables:
+  clicks: 0
+
+Expressions:
+  increment:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ n ]
+    ReturnType: int
+    Expression: 'return n + 1;'
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "UI System Demo"
+      hud.clicks: "Clicks: {0}"
+      btn.click: "Click me"
+      btn.quit: "Quit"
+
+Entities:
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      root:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 16
+              Padding: 24
+              ChildAlignment: middle-center
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 48
+                  PreferredWidth: 500
+                  PreferredHeight: 80
+          counter:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.clicks, Arguments: [ !var clicks ] }
+                  FontSize: 32
+                  PreferredWidth: 500
+                  PreferredHeight: 60
+          click button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.click
+                  PreferredWidth: 240
+                  PreferredHeight: 70
+                Listeners:
+                  - EntityId: ui/root/logic
+                    BehaviourId: inc
+          quit button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 240
+                  PreferredHeight: 70
+                Listeners:
+                  - !gameover
+          logic:
+            Behaviours:
+              inc:
+                Type: int variable setter
+                Properties:
+                  VariableId: !var clicks
+                  Value: !expr
+                    ExpressionId: increment
+                    Arguments:
+                      - !var clicks

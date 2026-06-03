@@ -604,22 +604,26 @@ Templates:
       self destruct:
         Type: destroy
     Children:
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 0 ] }
+      block0:
+        Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 0 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 1 ] }
+      block1:
+        Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 1 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 2 ] }
+      block2:
+        Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 2 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 3 ] }
+      block3:
+        Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 3 ] }
         Behaviours:
           block:
             Type: cube gizmo
