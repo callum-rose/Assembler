@@ -54,12 +54,6 @@ Variables:
   is dead: false
 
 Expressions:
-  apply gravity:
-    ArgumentTypes: [ vector, float, float ]
-    ArgumentNames: [ vel, g, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
-
   apply input:
     ArgumentTypes: [ vector, bool, bool, float ]
     ArgumentNames: [ vel, left, right, speed ]
@@ -86,24 +80,6 @@ Expressions:
     Expression: |
       return new UnityEngine.Vector3(vel.x, jump, 0f);
 
-  is falling:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ vel ]
-    ReturnType: bool
-    Expression: "return vel.y < 0f;"
-
-  max float:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "return Max(a, b);"
-
-  position y:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ p ]
-    ReturnType: float
-    Expression: "return p.y;"
-
   camera target:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ y, z ]
@@ -118,24 +94,6 @@ Expressions:
     Expression: |
       float x = RandomFloat(-halfW, halfW);
       return new UnityEngine.Vector3(x, y, 0f);
-
-  should spawn next platform:
-    ArgumentTypes: [ float, float, float ]
-    ArgumentNames: [ next, maxY, lookahead ]
-    ReturnType: bool
-    Expression: "return next < maxY + lookahead;"
-
-  add float:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "return a + b;"
-
-  game over check:
-    ArgumentTypes: [ vector, float, float, bool ]
-    ArgumentNames: [ pos, maxY, window, dead ]
-    ReturnType: bool
-    Expression: "return dead || (pos.y < (maxY - window));"
 
   format score:
     ArgumentTypes: [ float ]
@@ -218,7 +176,7 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: apply gravity
+            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
             With:
               - !var player velocity
               - !var player gravity
@@ -258,11 +216,11 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            Do: max float
+            Do: 'Max(arg0, arg1)'
             With:
               - !var max height
               - !expr
-                  Do: position y
+                  Do: 'arg0.y'
                   With:
                     - !var player position
 
@@ -342,7 +300,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: is falling
+            Do: 'arg0.y < 0f'
             With:
               - !var player velocity
         Listeners:
@@ -389,7 +347,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: should spawn next platform
+            Do: 'arg0 < arg1 + arg2'
             With:
               - !var next platform y
               - !var max height
@@ -416,7 +374,7 @@ Entities:
         Properties:
           VariableId: !var next platform y
           Value: !expr
-            Do: add float
+            Do: 'arg0 + arg1'
             With:
               - !var next platform y
               - !var platform spacing
@@ -465,7 +423,7 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  Do: game over check
+  Do: 'arg3 || (arg0.y < (arg1 - arg2))'
   With:
     - !var player position
     - !var max height

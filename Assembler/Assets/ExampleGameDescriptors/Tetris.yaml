@@ -77,22 +77,6 @@ Expressions:
       if (lines == 3) { return score + 300; }
       return score + 1200;
 
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "return \"Score: \" + s;"
-
-  format lines:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ l ]
-    ReturnType: string
-    Expression: "return \"Lines: \" + l;"
-
-  random shape:
-    ReturnType: int
-    Expression: "return RandomInt(0, 6);"
-
   colour for shape:
     ArgumentTypes: [ int ]
     ArgumentNames: [ s ]
@@ -150,14 +134,6 @@ Expressions:
     ReturnType: int
     Expression: "return FullRowsBelow(occupied, cell.y, 10f, 20f);"
 
-  full row count:
-    ArgumentTypes: [ vector list ]
-    ArgumentNames: [ occupied ]
-    ReturnType: int
-    Expression: "return FullRowCount(occupied, 10f, 20f);"
-
-  # ---- geometry (single offset table; rotation + bounds/occupancy reuse it
-  #      via cross-expression calls to baseOffset / cellGrid) ----------------
   base offset:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ s, i ]
@@ -734,7 +710,7 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var lines now
-          Value: !expr { Do: full row count, With: [ !var occupied ] }
+          Value: !expr { Do: 'FullRowCount(arg0, 10f, 20f)', With: [ !var occupied ] }
       add score:
         Type: int variable setter
         Properties:
@@ -769,7 +745,7 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var next shape
-          Value: !expr { Do: random shape }
+          Value: !expr { Do: 'RandomInt(0, 6)' }
       spawn piece:
         Type: spawner
         Properties:
@@ -806,13 +782,13 @@ Entities:
       score text:
         Type: text label
         Properties:
-          Text: !expr { Do: format score, With: [ !var score ] }
+          Text: !expr { Do: '"Score: " + arg0', With: [ !var score ] }
           FontSize: 28
           Rect: { Anchor: top-left, X: 20, Y: 20, Width: 240, Height: 40 }
       lines text:
         Type: text label
         Properties:
-          Text: !expr { Do: format lines, With: [ !var lines cleared ] }
+          Text: !expr { Do: '"Lines: " + arg0', With: [ !var lines cleared ] }
           FontSize: 28
           Rect: { Anchor: top-left, X: 20, Y: 60, Width: 240, Height: 40 }
 

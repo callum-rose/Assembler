@@ -216,5 +216,40 @@ Entities:
 
 			Assert.IsTrue(info.Expressions.Count > 0, "Pong declares named expressions.");
 		}
+
+		// Descriptors that don't transform today for reasons unrelated to expressions (sequence-form
+		// Constants/Expressions blocks, and a voxel-mapping field) — pre-existing, so excluded here.
+		private static readonly string[] NonTransformableDescriptors = { "Snake 2.yaml", "VoxelDemo.yaml" };
+
+		// Transforms every descriptor and compiles all of its expressions (declared + synthesised
+		// inline bodies), so a broken inline body surfaces as a compile failure here.
+		[Test]
+		public void AllDescriptorExpressionsCompile()
+		{
+			var dir = Path.Combine(Application.dataPath, "ExampleGameDescriptors");
+			var failures = new System.Collections.Generic.List<string>();
+
+			foreach (var path in Directory.GetFiles(dir, "*.yaml"))
+			{
+				var name = Path.GetFileName(path);
+				if (System.Array.IndexOf(NonTransformableDescriptors, name) >= 0)
+				{
+					continue;
+				}
+
+				try
+				{
+					var info = Transformer.Transform(new GameFileParser().Parse(File.ReadAllText(path)));
+					new CompiledExpressionsRegistry(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler())
+						.CompileAndRegisterAll(info.Expressions);
+				}
+				catch (Exception e)
+				{
+					failures.Add($"{name}: {e.GetType().Name}: {e.Message}");
+				}
+			}
+
+			Assert.IsEmpty(failures, "Descriptors failed to transform/compile:\n" + string.Join("\n", failures));
+		}
 	}
 }

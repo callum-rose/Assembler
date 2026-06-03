@@ -46,18 +46,6 @@ Constants:
 Variables:
   score: 0
 
-Expressions:
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
-  all collected:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ score, total ]
-    ReturnType: bool
-    Expression: "score >= total;"
-
 Localisation:
   DefaultLocale: en
   Locales:
@@ -102,7 +90,7 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: int add
+            Do: 'arg0 + arg1'
             With:
               - !var score
               - !var one
@@ -230,7 +218,7 @@ Entities:
           - !gameover
 
 GameOverCondition: !expr
-  Do: all collected
+  Do: 'arg0 >= arg1'
   With:
     - !var score
     - !var total coins

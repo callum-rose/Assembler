@@ -78,7 +78,7 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: int less or equal
+            Do: 'arg0 <= arg1'
             With:
               - !var health
               - !var zero
@@ -161,22 +161,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
-  int equal zero:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ a ]
-    ReturnType: bool
-    Expression: "a <= 0;"
-  format remaining:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ n ]
-    ReturnType: string
-    Expression: "\"Enemies remaining: \" + n;"
-
 Entities:
   player:
     Template: { Id: player_template }
@@ -220,7 +204,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format remaining
+            Do: '"Enemies remaining: " + arg0'
             With:
               - !var enemies remaining
           FontSize: 28
@@ -232,6 +216,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  Do: int equal zero
+  Do: 'arg0 <= 0'
   With:
     - !var enemies remaining

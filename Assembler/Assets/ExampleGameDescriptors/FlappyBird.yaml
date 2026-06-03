@@ -56,18 +56,6 @@ Variables:
   current gap y: !var initial gap y
 
 Expressions:
-  apply gravity:
-    ArgumentTypes: [ vector, float, float ]
-    ArgumentNames: [ vel, g, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
-
-  random gap y:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ lo, hi ]
-    ReturnType: float
-    Expression: "return RandomFloat(lo, hi);"
-
   top pipe position:
     ArgumentTypes: [ float, float, float, float ]
     ArgumentNames: [ x, gap_y, gap_half, pipe_half ]
@@ -88,24 +76,6 @@ Expressions:
     ReturnType: vector
     Expression: |
       return new UnityEngine.Vector3(x, gap_y, 0f);
-
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
-
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "\"Score: \" + s;"
-
-  is dead expr:
-    ArgumentTypes: [ bool ]
-    ArgumentNames: [ d ]
-    ReturnType: bool
-    Expression: "d;"
 
 Templates:
   pipe_template:
@@ -203,7 +173,7 @@ Entities:
         Properties:
           VariableId: !var bird velocity
           Value: !expr
-            Do: apply gravity
+            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
             With:
               - !var bird velocity
               - !var bird gravity
@@ -286,7 +256,7 @@ Entities:
         Properties:
           VariableId: !var current gap y
           Value: !expr
-            Do: random gap y
+            Do: 'RandomFloat(arg0, arg1)'
             With:
               - !var gap y min
               - !var gap y max
@@ -337,7 +307,7 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: int add
+            Do: 'arg0 + arg1'
             With:
               - !var score
               - !var score per pipe
@@ -361,7 +331,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format score
+            Do: '"Score: " + arg0'
             With:
               - !var score
           FontSize: 32
@@ -373,6 +343,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  Do: is dead expr
+  Do: 'arg0'
   With:
     - !var is dead

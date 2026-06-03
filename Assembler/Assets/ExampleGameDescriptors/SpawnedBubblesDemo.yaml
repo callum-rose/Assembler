@@ -85,12 +85,6 @@ Expressions:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "new Vector3(RandomFloat(-4f, 4f), -4.5f, 0);"
-  format stats:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ spawned, popped ]
-    ReturnType: string
-    Expression: "\"Spawned: \" + spawned + \"   Popped: \" + popped;"
-
 Entities:
   bubble spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -140,7 +134,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format stats
+            Do: '"Spawned: " + arg0 + "   Popped: " + arg1'
             With:
               - !var bubbles spawned
               - !var bubbles popped

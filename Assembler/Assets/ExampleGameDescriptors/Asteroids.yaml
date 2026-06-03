@@ -60,94 +60,23 @@ Variables:
   ship facing: !var ship initial facing
 
 Expressions:
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
-
-  int sub:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a - b;"
-
   int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
 
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
-
-  is game over:
-    ArgumentTypes: [ int, int, bool ]
-    ArgumentNames: [ score, target, dead ]
-    ReturnType: bool
-    Expression: "score >= target || dead;"
-
-  # Rotate a 2D vector counter-clockwise by 1 degree
-  rotate left:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ v ]
-    ReturnType: vector
-    Expression: "return Rotate2D(v, 1f);"
-
-  # Rotate a 2D vector clockwise by 1 degree
-  rotate right:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ v ]
-    ReturnType: vector
-    Expression: "return Rotate2D(v, -1f);"
-
-  # vel + facing * impulse
-  apply thrust:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ vel, facing, impulse ]
-    ReturnType: vector
-    Expression: "return AddVector(vel, ScaleVector(facing, impulse));"
-
-  # pos + vel * dt (per-frame integration for position tracking)
-  integrate position:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ pos, vel, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(pos, vel, dt);"
-
-  # facing * speed
   scale vec:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ v, k ]
     ReturnType: vector
     Expression: "return ScaleVector(v, k);"
 
-  # Random spawn point on a circle of radius 6.8 around origin
-  random asteroid position:
-    ReturnType: vector
-    Expression: "return RandomOnCircle(6.8f);"
-
-  # Random velocity vector aimed roughly toward the centre, with jitter
   random asteroid velocity:
     ArgumentTypes: [ float ]
     ArgumentNames: [ speed ]
     ReturnType: vector
     Expression: "return RandomOnCircle(speed);"
-
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "\"Score: \" + s;"
-
-  format lives:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ l ]
-    ReturnType: string
-    Expression: "\"Lives: \" + l;"
 
 Templates:
   bullet_template:
@@ -287,7 +216,7 @@ Entities:
         Properties:
           VariableId: !var ship position
           Value: !expr
-            Do: integrate position
+            Do: 'IntegratePosition(arg0, arg1, arg2)'
             With:
               - !var ship position
               - !var ship velocity
@@ -305,7 +234,7 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            Do: rotate left
+            Do: 'Rotate2D(arg0, 1f)'
             With:
               - !var ship facing
 
@@ -320,7 +249,7 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            Do: rotate right
+            Do: 'Rotate2D(arg0, -1f)'
             With:
               - !var ship facing
 
@@ -336,7 +265,7 @@ Entities:
         Properties:
           VariableId: !var ship velocity
           Value: !expr
-            Do: apply thrust
+            Do: 'AddVector(arg0, ScaleVector(arg1, arg2))'
             With:
               - !var ship velocity
               - !var ship facing
@@ -383,7 +312,7 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: int add
+            Do: 'arg0 + arg1'
             With:
               - !var score
               - !var score per asteroid
@@ -397,7 +326,7 @@ Entities:
         Properties:
           VariableId: !var lives
           Value: !expr
-            Do: int sub
+            Do: 'arg0 - arg1'
             With:
               - !var lives
               - !var life cost
@@ -405,7 +334,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: int less or equal
+            Do: 'arg0 <= arg1'
             With:
               - !var lives
               - !var zero int
@@ -433,7 +362,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: asteroid_template
-          Position: !expr { Do: random asteroid position }
+          Position: !expr { Do: 'RandomOnCircle(6.8f)' }
           Parameters:
             initial_velocity: !expr
               Do: random asteroid velocity
@@ -460,7 +389,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format score
+            Do: '"Score: " + arg0'
             With:
               - !var score
           FontSize: 28
@@ -478,7 +407,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format lives
+            Do: '"Lives: " + arg0'
             With:
               - !var lives
           FontSize: 28
@@ -490,7 +419,7 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  Do: is game over
+  Do: 'arg0 >= arg1 || arg2'
   With:
     - !var score
     - !var score to win

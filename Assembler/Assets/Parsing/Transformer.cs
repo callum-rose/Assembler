@@ -580,6 +580,8 @@ namespace Assembler.Parsing
 				StringValue => "string",
 				Vector2Value or Vector3Value or VecValue => "vector",
 				ColorValue or ColourValue => "colour",
+				TypedListValue typed when TryGetTypeName(ctx,
+					typeof(List<>).MakeGenericType(typed.ElementType), out var listName) => listName,
 				VarRef varRef => TryResolveValue(ctx, varRef.Id, out var resolved)
 					? InferTypeName(ctx, resolved)
 					: "float",
