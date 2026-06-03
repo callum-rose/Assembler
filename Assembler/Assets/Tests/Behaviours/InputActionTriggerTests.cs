@@ -35,7 +35,7 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void ValueAction_ForwardsVector2AsAxisXY()
+		public void ValueAction_ForwardsVector3AsAxisXY()
 		{
 			var go = new GameObject("InputActionValueTest");
 			try
@@ -43,15 +43,15 @@ namespace Tests.Behaviours
 				var trigger = go.AddComponent<InputActionTrigger>();
 				var listener = new CapturingListener();
 
-				// Null InputAction: the notify path under test takes the Vector2 directly, so no device is needed.
+				// Null InputAction: the notify path under test takes the Vector3 directly, so no device is needed.
 				trigger.Initialise(
 					new InputActionTriggerData("aim", "aim", ActionKind.Value, ButtonPhase.Hold, new InputAction()),
 					new List<Listener> { listener });
 
-				trigger.Emit(new Vector2(0.5f, -0.25f));
+				trigger.Emit(new Vector3(0.5f, -0.25f, 0f));
 
 				Assert.AreEqual(1, listener.CallCount);
-				Assert.AreEqual(new Vector2(0.5f, -0.25f), listener.Last!.Get<Vector2>("axis"));
+				Assert.AreEqual(new Vector3(0.5f, -0.25f, 0f), listener.Last!.Get<Vector3>("axis"));
 				Assert.AreEqual(0.5f, listener.Last!.Get<float>("x"));
 				Assert.AreEqual(-0.25f, listener.Last!.Get<float>("y"));
 			}
@@ -64,9 +64,9 @@ namespace Tests.Behaviours
 		[Test]
 		public void BuildValueContext_MirrorsAxisTriggerOutputs()
 		{
-			var ctx = InputActionTrigger.BuildValueContext(new Vector2(1f, 2f));
+			var ctx = InputActionTrigger.BuildValueContext(new Vector3(1f, 2f, 0f));
 
-			Assert.AreEqual(new Vector2(1f, 2f), ctx.Get<Vector2>("axis"));
+			Assert.AreEqual(new Vector3(1f, 2f, 0f), ctx.Get<Vector3>("axis"));
 			Assert.AreEqual(1f, ctx.Get<float>("x"));
 			Assert.AreEqual(2f, ctx.Get<float>("y"));
 		}

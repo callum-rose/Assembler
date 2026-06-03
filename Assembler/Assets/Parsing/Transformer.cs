@@ -513,15 +513,10 @@ namespace Assembler.Parsing
 					BuildExpressionArguments(ctx, exprRef)),
 				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
 					(T)(object)vec.ToVector3(ctx.Values)),
-				VecValue vec when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
-					(T)(object)vec.ToVector2(ctx.Values)),
 				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(ctx.Values)),
 				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
 					(T)(object)col.ToColor(ctx.Values)),
 				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
-				Vector3Value v3 when typeof(T) == typeof(Vector2) => new ConstantSource<T>(
-					(T)(object)new Vector2(v3.Value.x, v3.Value.y)),
-				Vector2Value v2 when typeof(T) == typeof(Vector2) => new ConstantSource<T>((T)(object)v2.Value),
 				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
 				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
 					new ConstantSource<T>((T)BuildTypedList(typed)),
@@ -608,7 +603,6 @@ namespace Assembler.Parsing
 				FloatValue f when expectedType == typeof(float) => f.Value,
 				BoolValue b when expectedType == typeof(bool) => b.Value,
 				StringValue s when expectedType == typeof(string) => s.Value,
-				Vector2Value v when expectedType == typeof(Vector2) => v.Value,
 				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
 				ColorValue c when expectedType == typeof(Color) => c.Value,
 				_ => throw new ParsingException(
@@ -639,7 +633,6 @@ namespace Assembler.Parsing
 				FloatValue f => f.Value,
 				BoolValue b => b.Value,
 				StringValue s => s.Value,
-				Vector2Value v => v.Value,
 				Vector3Value v => v.Value,
 				ColorValue c => c.Value,
 				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")

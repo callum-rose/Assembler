@@ -258,7 +258,7 @@ No properties.
 
 | Name | Type | Description |
 |------|------|-------------|
-| scroll_delta | Vector2 | Scroll wheel delta for this frame (y is the common vertical scroll). |
+| scroll_delta | Vector3 | Scroll wheel delta for this frame (y is the common vertical scroll; z is 0). |
 
 ## `axis trigger`
 Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
@@ -274,12 +274,15 @@ Fires every frame with the current value(s) of one or two Unity input axes (1D o
 
 | Name | Type | Description |
 |------|------|-------------|
-| axis | Vector2 | Combined (x, y) axis value; y is 0 when YAxis is unset. |
+| axis | Vector3 | Combined (x, y, 0) axis value; y is 0 when YAxis is unset. |
 | x | float | Current XAxis value. |
 | y | float | Current YAxis value, or 0 when YAxis is unset. |
 
 ## `input action`
-Relays an abstract input action (declared in the descriptor's Controls section and bound to a physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis trigger, emitting axis/x/y every frame.
+Relays an abstract input action (declared in the descriptor's Controls section and bound to a
+            physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action
+            behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis
+            trigger, emitting axis/x/y every frame.
 
 ### Properties
 
@@ -291,7 +294,7 @@ Relays an abstract input action (declared in the descriptor's Controls section a
 
 | Name | Type | Description |
 |------|------|-------------|
-| axis | Vector2 | For value actions, the current (x, y) value of the action each frame. |
+| axis | Vector3 | For value actions, the current (x, y, 0) value of the action each frame. |
 | x | float | For value actions, the current x component. |
 | y | float | For value actions, the current y component. |
 
@@ -319,7 +322,7 @@ Fires once when the pointer is pressed and released quickly without moving (a ta
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position where the tap was released. |
+| position | Vector3 | Screen-space position where the tap was released (z is 0). |
 
 ## `double tap trigger`
 Fires when two quick taps land close together within a short interval (a double-tap).
@@ -335,7 +338,7 @@ Fires when two quick taps land close together within a short interval (a double-
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position where the second tap was released. |
+| position | Vector3 | Screen-space position where the second tap was released (z is 0). |
 
 ## `long press trigger`
 Fires once when the pointer is held still for a threshold time (a long press).
@@ -351,7 +354,7 @@ Fires once when the pointer is held still for a threshold time (a long press).
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position of the press when the threshold was reached. |
+| position | Vector3 | Screen-space position of the press when the threshold was reached (z is 0). |
 | hold_duration | float | Seconds the pointer had been held when the trigger fired (at least Duration). |
 
 ## `swipe trigger`
@@ -368,11 +371,11 @@ Fires when the pointer is dragged far enough, fast enough, and then released (a 
 
 | Name | Type | Description |
 |------|------|-------------|
-| start | Vector2 | Screen-space position where the swipe began. |
-| position | Vector2 | Screen-space position where the swipe ended. |
-| delta | Vector2 | Vector from start to end. |
+| start | Vector3 | Screen-space position where the swipe began (z is 0). |
+| position | Vector3 | Screen-space position where the swipe ended (z is 0). |
+| delta | Vector3 | Vector from start to end (z is 0). |
 | distance | float | Length of the swipe in pixels. |
-| direction | Vector2 | Normalised swipe direction. |
+| direction | Vector3 | Normalised swipe direction (z is 0). |
 
 ## `drag trigger`
 Fires every frame the pointer moves while held down (a drag), reporting the per-frame movement.
@@ -387,9 +390,9 @@ Fires every frame the pointer moves while held down (a drag), reporting the per-
 
 | Name | Type | Description |
 |------|------|-------------|
-| start | Vector2 | Screen-space position where the drag began. |
-| position | Vector2 | Current screen-space pointer position. |
-| delta | Vector2 | Screen-space movement since the previous frame. |
+| start | Vector3 | Screen-space position where the drag began (z is 0). |
+| position | Vector3 | Current screen-space pointer position (z is 0). |
+| delta | Vector3 | Screen-space movement since the previous frame (z is 0). |
 
 ## `pinch and rotate trigger`
 Fires every frame two fingers change their separation or orientation (a pinch / zoom and twist).
@@ -400,7 +403,7 @@ No properties.
 
 | Name | Type | Description |
 |------|------|-------------|
-| center | Vector2 | Screen-space midpoint between the two fingers. |
+| center | Vector3 | Screen-space midpoint between the two fingers (z is 0). |
 | distance | float | Current distance between the two fingers, in pixels. |
 | delta | float | Change in finger distance since the previous frame (positive = spreading apart). |
 | scale | float | Ratio of the current distance to the previous frame's (greater than 1 = zooming in). |
@@ -615,6 +618,22 @@ Forwards an upstream trigger to listeners only if no other trigger sharing the s
 | Name | Type | Description |
 |------|------|-------------|
 | Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
+
+## `state machine`
+Finite state machine for entity AI. Holds the current state in an entity string-variable and
+            transitions between declared states when a transition's condition becomes true. Transitions are
+            evaluated every frame in declared order, first match wins (one transition per frame), so behaviour
+            is deterministic. On a transition it fires the old state's OnExit hooks then the new state's
+            OnEnter hooks; the initial state's OnEnter fires once on start.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| StateVariable | string | Id of the string entity variable holding the current state. Auto-declared (seeded to Initial) if not already present, so it shows up in the debug console and save snapshots. |
+| Initial | string | The starting state. Must be one of States. |
+| States | IReadOnlyList<StateInfo> | Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover). |
+| Transitions | IReadOnlyList<TransitionInfo> | Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken. |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
@@ -1298,7 +1317,7 @@ Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
 | Name | Type | Description |
 |------|------|-------------|
 | Sprite | Sprite | Asset reference to the sprite to display. |
-| Size | Vector2 | Target world-space size in units; the sprite is scaled to fit. |
+| Size | Vector3 | Target world-space size in units; the sprite is scaled to fit. |
 
 ## `voxel mesh`
 Renders a voxel mesh asset as a child of the entity.
@@ -1355,7 +1374,8 @@ Debug-draws a line gizmo between two points in the entity's local transform spac
 | Colour | Color | Gizmo colour. |
 
 ## `ui canvas`
-Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI entities (containers, labels, buttons) under this entity to compose the interface.
+Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI
+            entities (containers, labels, buttons) under this entity to compose the interface.
 
 ### Properties
 
@@ -1365,7 +1385,9 @@ Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place 
 | ReferenceResolution | Vector3 | Design resolution the UI scales from, as a vector (X = width, Y = height). |
 
 ## `ui container`
-Groups child UI entities. By default it arranges them in a vertical or horizontal stack using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with Direction "none" it adds no layout group and children are positioned manually.
+Groups child UI entities. By default it arranges them in a vertical or horizontal stack
+            using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with
+            Direction "none" it adds no layout group and children are positioned manually.
 
 ### Properties
 
@@ -1378,7 +1400,8 @@ Groups child UI entities. By default it arranges them in a vertical or horizonta
 | FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
 
 ## `text label`
-Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so binding it to a variable or expression shows live values (scores, timers, etc.).
+Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so
+            binding it to a variable or expression shows live values (scores, timers, etc.).
 
 ### Properties
 
@@ -1390,7 +1413,8 @@ Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every 
 | PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
 
 ## `ui button`
-A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
+A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is
+            clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
 
 ### Properties
 

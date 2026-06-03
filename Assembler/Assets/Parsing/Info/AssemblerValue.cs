@@ -19,8 +19,6 @@ namespace Assembler.Parsing.Info
 
 	public sealed record StringValue(string Value) : AssemblerValue;
 
-	public sealed record Vector2Value(Vector2 Value) : AssemblerValue;
-
 	public sealed record Vector3Value(Vector3 Value) : AssemblerValue;
 
 	public sealed record ColorValue(Color Value) : AssemblerValue;

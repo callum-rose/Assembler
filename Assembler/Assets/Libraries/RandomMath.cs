@@ -44,8 +44,8 @@ namespace Assembler.Libraries
 		/// <returns>A random Vector3 inside the disc, in the XY plane.</returns>
 		public static Vector3 RandomInsideCircle(float radius)
 		{
-			Vector2 p = Random.insideUnitCircle * radius;
-			return new Vector3(p.x, p.y, 0f);
+			// Random.insideUnitCircle is a Vector2; it widens to a Vector3 (z = 0) on return.
+			return Random.insideUnitCircle * radius;
 		}
 
 		/// <summary>A random fully-opaque RGB colour.</summary>

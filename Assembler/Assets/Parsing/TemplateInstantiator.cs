@@ -148,7 +148,7 @@ namespace Assembler.Parsing
 				bool b => new BoolValue(b),
 				string s => new StringValue(s),
 				Vector3 v => new Vector3Value(v),
-				Vector2 v => new Vector2Value(v),
+				Vector2 v => new Vector3Value(v),
 				Color c => new ColorValue(c),
 				_ => throw new ParsingException(
 					$"Cannot adapt runtime parameter '{key}' (type {value.GetType()}) for template instantiation")

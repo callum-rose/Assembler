@@ -46,7 +46,6 @@ namespace Assembler.Resolving
 				FloatValue f => new ValueProvider<float>(f.Value),
 				BoolValue b => new ValueProvider<bool>(b.Value),
 				StringValue s => new ValueProvider<string>(s.Value),
-				Vector2Value vec2 => new ValueProvider<Vector2>(vec2.Value),
 				Vector3Value vec3 => new ValueProvider<Vector3>(vec3.Value),
 				ColorValue c => new ValueProvider<Color>(c.Value),
 				TypedListValue typed => BuildListProvider(typed),
@@ -61,7 +60,6 @@ namespace Assembler.Resolving
 			if (typed.ElementType == typeof(float)) return BuildListProvider<float>(typed);
 			if (typed.ElementType == typeof(bool)) return BuildListProvider<bool>(typed);
 			if (typed.ElementType == typeof(string)) return BuildListProvider<string>(typed);
-			if (typed.ElementType == typeof(Vector2)) return BuildListProvider<Vector2>(typed);
 			if (typed.ElementType == typeof(Vector3)) return BuildListProvider<Vector3>(typed);
 			if (typed.ElementType == typeof(Color)) return BuildListProvider<Color>(typed);
 
@@ -89,7 +87,6 @@ namespace Assembler.Resolving
 				FloatValue f when typeof(T) == typeof(float) => (T)(object)f.Value,
 				BoolValue b when typeof(T) == typeof(bool) => (T)(object)b.Value,
 				StringValue s when typeof(T) == typeof(string) => (T)(object)s.Value,
-				Vector2Value v when typeof(T) == typeof(Vector2) => (T)(object)v.Value,
 				Vector3Value v when typeof(T) == typeof(Vector3) => (T)(object)v.Value,
 				ColorValue c when typeof(T) == typeof(Color) => (T)(object)c.Value,
 				_ => throw new Exception($"Cannot unwrap {value.GetType().Name} to {typeof(T).Name}")
