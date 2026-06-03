@@ -1,5 +1,4 @@
 using Assembler.Extensions;
-using Assembler.Resolving;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -34,28 +33,23 @@ namespace Assembler.Behaviours.UI.Internal
 		/// dimension is only constrained when the descriptor provides a value &gt; 0; otherwise the
 		/// layout/content decides.
 		/// </summary>
-		public static void ApplyPreferredSize(GameObject go,
-			IValueProvider<float> preferredWidth,
-			IValueProvider<float> preferredHeight)
+		public static void ApplyPreferredSize(GameObject go, float preferredWidth, float preferredHeight)
 		{
-			var width = preferredWidth.ValueOr(0f);
-			var height = preferredHeight.ValueOr(0f);
-
-			if (width <= 0f && height <= 0f)
+			if (preferredWidth <= 0f && preferredHeight <= 0f)
 			{
 				return;
 			}
 
 			var element = go.GetOrAddComponent<LayoutElement>();
 
-			if (width > 0f)
+			if (preferredWidth > 0f)
 			{
-				element.preferredWidth = width;
+				element.preferredWidth = preferredWidth;
 			}
 
-			if (height > 0f)
+			if (preferredHeight > 0f)
 			{
-				element.preferredHeight = height;
+				element.preferredHeight = preferredHeight;
 			}
 		}
 

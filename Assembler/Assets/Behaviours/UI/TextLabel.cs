@@ -22,7 +22,7 @@ namespace Assembler.Behaviours.UI
 		protected override void OnInitialise(TextLabelData data)
 		{
 			var host = UiLayout.EnsureRectTransform(gameObject);
-			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth, data.PreferredHeight);
+			UiLayout.ApplyPreferredSize(gameObject, data.PreferredWidth.ValueOr(0f), data.PreferredHeight.ValueOr(0f));
 			_view = UiLayout.InstantiateView<UiLabelView>(data.Prefab, host);
 		}
 
