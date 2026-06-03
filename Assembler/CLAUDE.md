@@ -119,6 +119,10 @@ Assembler supports **deterministic execution and record/replay**: the same descr
 
 ## Workflow
 
+### Committing & Pushing
+
+- **Always commit and push at the end of a session's work** — if a branch exists for the session's work, commit any outstanding changes and push them at the end without asking. Don't wait for the user to request it.
+
 ### Git Worktrees
 
 AI work happens in a worktree so the user can keep using the main repo. The user's flow is: work in a worktree → open a PR → check the branch out in the main repo to run it in Unity. To support that, the worktree must be cleaned up once a PR exists and recreated when more work is requested.
