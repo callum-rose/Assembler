@@ -63,8 +63,8 @@ Templates:
         Properties:
           VariableId: !var enemies destroyed
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var enemies destroyed
               - !var one
       self destruct:
@@ -77,8 +77,8 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var score
               - !var one
 
@@ -126,15 +126,15 @@ Entities:
         Properties:
           VariableId: !var enemies spawned
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var enemies spawned
               - !var one
       spawn enemy:
         Type: spawner
         Properties:
           TemplateId: enemy_template
-          Position: !expr { ExpressionId: random spawn position }
+          Position: !expr { Do: random spawn position }
 
   # The whole point of the demo lives in this one entity.
   # `fire` is a tagged listener: one keypress destroys every enemy
@@ -158,8 +158,8 @@ Entities:
         Properties:
           VariableId: !var zap count
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var zap count
               - !var one
 
@@ -200,8 +200,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format alive
-            Arguments:
+            Do: format alive
+            With:
               - !var enemies spawned
               - !var enemies destroyed
           FontSize: 22
@@ -215,8 +215,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format totals
-            Arguments:
+            Do: format totals
+            With:
               - !var enemies spawned
               - !var enemies destroyed
               - !var zap count

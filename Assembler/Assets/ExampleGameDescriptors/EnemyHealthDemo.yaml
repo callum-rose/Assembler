@@ -70,16 +70,16 @@ Templates:
         Properties:
           VariableId: !var health
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: int sub
+            With:
               - !var health
               - !var damage per hit
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int less or equal
-            Arguments:
+            Do: int less or equal
+            With:
               - !var health
               - !var zero
         Listeners:
@@ -92,8 +92,8 @@ Templates:
         Properties:
           VariableId: !var enemies remaining
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: int sub
+            With:
               - !var enemies remaining
               - !var damage per hit
       self destruct:
@@ -220,8 +220,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format remaining
-            Arguments:
+            Do: format remaining
+            With:
               - !var enemies remaining
           FontSize: 28
           Rect:
@@ -232,6 +232,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: int equal zero
-  Arguments:
+  Do: int equal zero
+  With:
     - !var enemies remaining

@@ -287,8 +287,8 @@ Entities:
         Properties:
           VariableId: !var ship position
           Value: !expr
-            ExpressionId: integrate position
-            Arguments:
+            Do: integrate position
+            With:
               - !var ship position
               - !var ship velocity
               - !clock deltaTime
@@ -305,8 +305,8 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            ExpressionId: rotate left
-            Arguments:
+            Do: rotate left
+            With:
               - !var ship facing
 
       rotate right key:
@@ -320,8 +320,8 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            ExpressionId: rotate right
-            Arguments:
+            Do: rotate right
+            With:
               - !var ship facing
 
       # --- Thrust (W held) ---
@@ -336,8 +336,8 @@ Entities:
         Properties:
           VariableId: !var ship velocity
           Value: !expr
-            ExpressionId: apply thrust
-            Arguments:
+            Do: apply thrust
+            With:
               - !var ship velocity
               - !var ship facing
               - !var thrust impulse
@@ -369,8 +369,8 @@ Entities:
           Position: !var ship position
           Parameters:
             initial_velocity: !expr
-              ExpressionId: scale vec
-              Arguments:
+              Do: scale vec
+              With:
                 - !var ship facing
                 - !var bullet speed
 
@@ -383,8 +383,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var score
               - !var score per asteroid
 
@@ -397,16 +397,16 @@ Entities:
         Properties:
           VariableId: !var lives
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: int sub
+            With:
               - !var lives
               - !var life cost
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int less or equal
-            Arguments:
+            Do: int less or equal
+            With:
               - !var lives
               - !var zero int
         Listeners:
@@ -433,11 +433,11 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: asteroid_template
-          Position: !expr { ExpressionId: random asteroid position }
+          Position: !expr { Do: random asteroid position }
           Parameters:
             initial_velocity: !expr
-              ExpressionId: random asteroid velocity
-              Arguments:
+              Do: random asteroid velocity
+              With:
                 - !var asteroid speed
 
   # --- Camera ---
@@ -460,8 +460,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: format score
+            With:
               - !var score
           FontSize: 28
           Rect:
@@ -478,8 +478,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format lives
-            Arguments:
+            Do: format lives
+            With:
               - !var lives
           FontSize: 28
           Rect:
@@ -490,8 +490,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
+  Do: is game over
+  With:
     - !var score
     - !var score to win
     - !var is dead

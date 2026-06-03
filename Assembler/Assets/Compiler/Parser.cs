@@ -62,9 +62,32 @@ namespace Assembler.Compiler.Compiler
 			}
 		}
 
+		// Unity's Vector2/Vector3 arithmetic operators take a float scalar (e.g. Vector3 * float).
+		// An integer literal like `2` lexes to int, so `v * 2` would otherwise fail to resolve an
+		// operator. Widen a non-float numeric scalar to float whenever the other operand is a vector
+		// so the struct's op_Multiply/op_Division (and friends) bind.
+		private static void PromoteVectorScalarOperands(ref Expression left, ref Expression right)
+		{
+			if (IsVectorType(left.Type) && IsNonFloatNumeric(right.Type))
+			{
+				right = Expression.Convert(right, typeof(float));
+			}
+			else if (IsVectorType(right.Type) && IsNonFloatNumeric(left.Type))
+			{
+				left = Expression.Convert(left, typeof(float));
+			}
+		}
+
+		private static bool IsVectorType(Type type) =>
+			type == typeof(UnityEngine.Vector3) || type == typeof(UnityEngine.Vector2);
+
+		private static bool IsNonFloatNumeric(Type type) =>
+			NumericRank.ContainsKey(type) && type != typeof(float);
+
 		private static Expression BuildBinary(Func<Expression, Expression, Expression> factory, Expression left, Expression right)
 		{
 			PromoteNumericOperands(ref left, ref right);
+			PromoteVectorScalarOperands(ref left, ref right);
 			return factory(left, right);
 		}
 
@@ -1165,12 +1188,27 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseLogicalAnd()
 		{
-			var left = ParseEquality();
+			var left = ParseXor();
 
 			while (Match(TokenType.And))
 			{
-				var right = ParseEquality();
+				var right = ParseXor();
 				left = Expression.AndAlso(left, right);
+			}
+
+			return left;
+		}
+
+		// `^` sits between `&&` and `==` in C#'s precedence ladder. For bool operands it is
+		// logical XOR; for integral operands it is bitwise XOR. Expression.ExclusiveOr resolves
+		// both (and any struct op_ExclusiveOr) via the same factory.
+		private Expression ParseXor()
+		{
+			var left = ParseEquality();
+
+			while (Match(TokenType.Xor))
+			{
+				left = BuildBinary(Expression.ExclusiveOr, left, ParseEquality());
 			}
 
 			return left;

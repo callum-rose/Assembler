@@ -116,8 +116,8 @@ Entities:
         Type: velocity
         Properties:
           Velocity: !expr
-            ExpressionId: guard velocity
-            Arguments:
+            Do: guard velocity
+            With:
               - !var guard_mode
               - !entity_position guard
               - !entity_position player
@@ -134,8 +134,8 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: clamp to box
-            Arguments:
+            Do: clamp to box
+            With:
               - !entity_position guard
               - !var field bound
 
@@ -166,28 +166,28 @@ Entities:
             - from: patrol
               to: chase
               when: !expr
-                ExpressionId: closer than
-                Arguments: [ !entity_position guard, !entity_position player, !var chase range ]
+                Do: closer than
+                With: [ !entity_position guard, !entity_position player, !var chase range ]
             - from: chase
               to: flee
               when: !expr
-                ExpressionId: closer than
-                Arguments: [ !entity_position guard, !entity_position player, !var flee range ]
+                Do: closer than
+                With: [ !entity_position guard, !entity_position player, !var flee range ]
             - from: chase
               to: patrol
               when: !expr
-                ExpressionId: farther than
-                Arguments: [ !entity_position guard, !entity_position player, !var lose range ]
+                Do: farther than
+                With: [ !entity_position guard, !entity_position player, !var lose range ]
             - from: flee
               to: caught
               when: !expr
-                ExpressionId: closer than
-                Arguments: [ !entity_position guard, !entity_position player, !var catch range ]
+                Do: closer than
+                With: [ !entity_position guard, !entity_position player, !var catch range ]
             - from: flee
               to: patrol
               when: !expr
-                ExpressionId: farther than
-                Arguments: [ !entity_position guard, !entity_position player, !var safe range ]
+                Do: farther than
+                With: [ !entity_position guard, !entity_position player, !var safe range ]
 
       # --- OnEnter hook targets: drive the movement mode and the live colour. ---
       set mode idle:

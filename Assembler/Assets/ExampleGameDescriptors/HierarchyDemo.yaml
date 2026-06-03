@@ -157,9 +157,9 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: drone
-          Position: !expr { ExpressionId: random spawn x }
+          Position: !expr { Do: random spawn x }
           Parameters:
-            colour: !expr { ExpressionId: random colour }
+            colour: !expr { Do: random colour }
 
   camera:
     Tags: [ camera ]

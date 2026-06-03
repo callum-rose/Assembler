@@ -65,8 +65,8 @@ Templates:
         Properties:
           VariableId: !var bubbles popped
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var bubbles popped
               - !var one
       self destruct:
@@ -110,17 +110,17 @@ Entities:
         Properties:
           VariableId: !var bubbles spawned
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var bubbles spawned
               - !var one
       spawn bubble:
         Type: spawner
         Properties:
           TemplateId: bubble_template
-          Position: !expr { ExpressionId: random spawn position }
+          Position: !expr { Do: random spawn position }
           Parameters:
-            life_seconds: !expr { ExpressionId: random lifetime }
+            life_seconds: !expr { Do: random lifetime }
 
   camera:
     Tags: [ camera ]
@@ -140,8 +140,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format stats
-            Arguments:
+            Do: format stats
+            With:
               - !var bubbles spawned
               - !var bubbles popped
           FontSize: 28

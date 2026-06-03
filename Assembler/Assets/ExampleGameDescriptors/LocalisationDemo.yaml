@@ -102,8 +102,8 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var score
               - !var one
       self destruct:
@@ -230,7 +230,7 @@ Entities:
           - !gameover
 
 GameOverCondition: !expr
-  ExpressionId: all collected
-  Arguments:
+  Do: all collected
+  With:
     - !var score
     - !var total coins

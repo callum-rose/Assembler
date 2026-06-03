@@ -1272,6 +1272,90 @@ namespace Tests.Compiler
 
 			Assert.That(func(), Is.EqualTo(5f).Within(0.001f));
 		}
+
+		// --- ^ (XOR) operator ---
+
+		[Test]
+		public void BooleanXor()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool, bool, bool>("return a ^ b;", "a", "b");
+
+			Assert.That(func(true, false), Is.True);
+			Assert.That(func(true, true), Is.False);
+			Assert.That(func(false, false), Is.False);
+		}
+
+		[Test]
+		public void IntegerXor()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int>("return 6 ^ 3;");
+
+			Assert.That(func(), Is.EqualTo(5));
+		}
+
+		[Test]
+		public void XorBindsLooserThanEqualityAndTighterThanLogicalAnd()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			// Parsed as (1 == 1) ^ (2 == 3) => true ^ false => true.
+			var xorOverEquality = compiler.CompileFunc<bool>("return 1 == 1 ^ 2 == 3;");
+			Assert.That(xorOverEquality(), Is.True);
+
+			// Parsed as true && (true ^ true) => true && false => false.
+			var andOverXor = compiler.CompileFunc<bool>("return true && true ^ true;");
+			Assert.That(andOverXor(), Is.False);
+		}
+
+		// --- Vector3 operators ---
+
+		[Test]
+		public void Vector3UnaryNegation()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Vector3, Vector3>("return -v;", "v");
+
+			Assert.That(func(new Vector3(1, -2, 3)), Is.EqualTo(new Vector3(-1, 2, -3)));
+		}
+
+		[Test]
+		public void Vector3Addition()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Vector3, Vector3, Vector3>("return a + b;", "a", "b");
+
+			Assert.That(func(new Vector3(1, 2, 3), new Vector3(4, 5, 6)), Is.EqualTo(new Vector3(5, 7, 9)));
+		}
+
+		[Test]
+		public void Vector3MultiplyByFloatScalar()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Vector3, Vector3>("return v * 2f;", "v");
+
+			Assert.That(func(new Vector3(1, 2, 3)), Is.EqualTo(new Vector3(2, 4, 6)));
+		}
+
+		[Test]
+		public void Vector3MultiplyByIntScalarPromotesToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			// `2` lexes to int; the vector operator takes a float, so the scalar must widen.
+			var func = compiler.CompileFunc<Vector3, Vector3>("return v * 2;", "v");
+
+			Assert.That(func(new Vector3(1, 2, 3)), Is.EqualTo(new Vector3(2, 4, 6)));
+		}
+
+		[Test]
+		public void Vector3DivideByScalar()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Vector3, Vector3>("return v / 2;", "v");
+
+			Assert.That(func(new Vector3(2, 4, 6)), Is.EqualTo(new Vector3(1, 2, 3)));
+		}
 	}
 
 	public class TestVector3

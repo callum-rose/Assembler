@@ -121,8 +121,8 @@ Templates:
         Properties:
           VariableId: !parameter score_var
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !parameter score_var
               - !var score per goal
 
@@ -164,8 +164,8 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            ExpressionId: paddle bounce
-            Arguments:
+            Do: paddle bounce
+            With:
               - !var ball velocity
               - !output hit_point
               - !output paddle_position
@@ -183,8 +183,8 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            ExpressionId: vec multiply
-            Arguments:
+            Do: vec multiply
+            With:
               - !var ball velocity
               - !vec { X: 1, Y: -1 }
       goal detector:
@@ -315,16 +315,16 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int greater or equal
-            Arguments:
+            Do: int greater or equal
+            With:
               - !var left score
               - !var score to win
       right score win condition gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int greater or equal
-            Arguments:
+            Do: int greater or equal
+            With:
               - !var right score
               - !var score to win
   ball spawner:
@@ -339,7 +339,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: ball_template
-          Position: !expr { ExpressionId: random ball initial position }
+          Position: !expr { Do: random ball initial position }
 
   left score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -348,8 +348,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format left score
-            Arguments:
+            Do: format left score
+            With:
               - !var left score
           FontSize: 32
           Rect:
@@ -366,8 +366,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format right score
-            Arguments:
+            Do: format right score
+            With:
               - !var right score
           FontSize: 32
           Rect:
@@ -378,8 +378,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
+  Do: is game over
+  With:
     - !var left score
     - !var right score
     - !var score to win

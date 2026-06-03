@@ -218,8 +218,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: apply gravity
-            Arguments:
+            Do: apply gravity
+            With:
               - !var player velocity
               - !var player gravity
               - !clock deltaTime
@@ -229,8 +229,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: apply input
-            Arguments:
+            Do: apply input
+            With:
               - !var player velocity
               - !var left held
               - !var right held
@@ -241,8 +241,8 @@ Entities:
         Properties:
           VariableId: !var player position
           Value: !expr
-            ExpressionId: integrate position
-            Arguments:
+            Do: integrate position
+            With:
               - !var player position
               - !var player velocity
               - !var world half width
@@ -258,12 +258,12 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            ExpressionId: max float
-            Arguments:
+            Do: max float
+            With:
               - !var max height
               - !expr
-                  ExpressionId: position y
-                  Arguments:
+                  Do: position y
+                  With:
                     - !var player position
 
       # ---- Input: track left/right held state via key down + key up ----
@@ -342,8 +342,8 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: is falling
-            Arguments:
+            Do: is falling
+            With:
               - !var player velocity
         Listeners:
           - EntityId: player
@@ -353,8 +353,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: bounce velocity
-            Arguments:
+            Do: bounce velocity
+            With:
               - !var player velocity
               - !var player jump speed
 
@@ -389,8 +389,8 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: should spawn next platform
-            Arguments:
+            Do: should spawn next platform
+            With:
               - !var next platform y
               - !var max height
               - !var spawn lookahead
@@ -405,8 +405,8 @@ Entities:
         Properties:
           TemplateId: platform_template
           Position: !expr
-            ExpressionId: random platform position
-            Arguments:
+            Do: random platform position
+            With:
               - !var next platform y
               - !var world half width
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
@@ -416,8 +416,8 @@ Entities:
         Properties:
           VariableId: !var next platform y
           Value: !expr
-            ExpressionId: add float
-            Arguments:
+            Do: add float
+            With:
               - !var next platform y
               - !var platform spacing
 
@@ -440,8 +440,8 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: camera target
-            Arguments:
+            Do: camera target
+            With:
               - !var max height
               - !var camera z
 
@@ -453,8 +453,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: format score
+            With:
               - !var max height
           FontSize: 32
           Rect:
@@ -465,8 +465,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: game over check
-  Arguments:
+  Do: game over check
+  With:
     - !var player position
     - !var max height
     - !var game over distance

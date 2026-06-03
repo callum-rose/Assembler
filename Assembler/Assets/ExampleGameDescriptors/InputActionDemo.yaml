@@ -126,8 +126,8 @@ Entities:
           # x/y come from the move action's TriggerContext; the expression scales
           # them into this frame's displacement.
           Displacement: !expr
-            ExpressionId: move vector
-            Arguments:
+            Do: move vector
+            With:
               - !output x
               - !output y
               - !var move step

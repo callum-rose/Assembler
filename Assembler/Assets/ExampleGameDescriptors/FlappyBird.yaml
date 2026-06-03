@@ -203,8 +203,8 @@ Entities:
         Properties:
           VariableId: !var bird velocity
           Value: !expr
-            ExpressionId: apply gravity
-            Arguments:
+            Do: apply gravity
+            With:
               - !var bird velocity
               - !var bird gravity
               - !clock deltaTime
@@ -286,8 +286,8 @@ Entities:
         Properties:
           VariableId: !var current gap y
           Value: !expr
-            ExpressionId: random gap y
-            Arguments:
+            Do: random gap y
+            With:
               - !var gap y min
               - !var gap y max
 
@@ -296,8 +296,8 @@ Entities:
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            ExpressionId: top pipe position
-            Arguments:
+            Do: top pipe position
+            With:
               - !var pipe spawn x
               - !var current gap y
               - !var gap half height
@@ -309,8 +309,8 @@ Entities:
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            ExpressionId: bottom pipe position
-            Arguments:
+            Do: bottom pipe position
+            With:
               - !var pipe spawn x
               - !var current gap y
               - !var gap half height
@@ -322,8 +322,8 @@ Entities:
         Properties:
           TemplateId: score_zone_template
           Position: !expr
-            ExpressionId: score zone position
-            Arguments:
+            Do: score zone position
+            With:
               - !var pipe spawn x
               - !var current gap y
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
@@ -337,8 +337,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var score
               - !var score per pipe
 
@@ -361,8 +361,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: format score
+            With:
               - !var score
           FontSize: 32
           Rect:
@@ -373,6 +373,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is dead expr
-  Arguments:
+  Do: is dead expr
+  With:
     - !var is dead
