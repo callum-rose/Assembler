@@ -381,7 +381,7 @@ entity's children are auto-arranged.
 | `ui slider` | trigger | `InitialValue`, `MinValue`, `MaxValue`, `PreferredWidth`, `PreferredHeight` — emits output `value` [float] on change |
 
 Layout model (replaces the old `Rect`): leaf blocks expose `PreferredWidth`/`PreferredHeight`
-(omit to let the layout/content decide); the parent `ui container`'s `LayoutGroup` arranges its
+(omit for a sensible default); the parent `ui container`'s `LayoutGroup` arranges its
 child entities in declaration order, and the `CanvasScaler` makes it responsive across screen sizes.
 
 ```yaml

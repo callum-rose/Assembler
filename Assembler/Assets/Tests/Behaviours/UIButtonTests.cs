@@ -92,6 +92,36 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
+		public void Initialise_WithoutExplicitSize_AddsNonZeroLayoutElement()
+		{
+			// The content lives in a stretch-to-fill child prefab, so the entity reports no intrinsic size.
+			// Without a non-zero default it would collapse to 0x0 under a parent layout group — regression test.
+			var prefab = CreateButtonPrefab();
+			var entity = new GameObject("ButtonEntity");
+
+			try
+			{
+				var uiButton = entity.AddComponent<UIButton>();
+				uiButton.Initialise(
+					new UIButtonData("b", new ValueProvider<string>(""),
+						NullValueProvider<float>.Instance, NullValueProvider<float>.Instance, prefab),
+					new List<Listener>());
+
+				var layoutElement = entity.GetComponent<LayoutElement>();
+				Assert.IsNotNull(layoutElement,
+					"A UI element with no explicit size must still get a LayoutElement so the parent layout " +
+					"group doesn't collapse it to zero.");
+				Assert.Greater(layoutElement.preferredWidth, 0f, "Default preferred width must be non-zero.");
+				Assert.Greater(layoutElement.preferredHeight, 0f, "Default preferred height must be non-zero.");
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(entity);
+				UnityEngine.Object.DestroyImmediate(prefab);
+			}
+		}
+
+		[Test]
 		public void Initialise_UpgradesEntityToRectTransform()
 		{
 			var prefab = CreateButtonPrefab();
