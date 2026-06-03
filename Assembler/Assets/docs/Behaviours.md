@@ -478,7 +478,7 @@ Fires when a non-trigger collision begins with another entity matching TagsToDet
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
 ### Outputs
 
@@ -496,7 +496,7 @@ Fires when an entity matching TagsToDetect enters this entity's trigger collider
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
 ### Outputs
 
@@ -511,7 +511,7 @@ Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
 ### Outputs
 
@@ -526,7 +526,7 @@ Fires when a non-trigger collision ends with another entity matching TagsToDetec
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
 ### Outputs
 
@@ -542,7 +542,7 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 
 | Name | Type | Description |
 |------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. |
+| TagsToDetect | IReadOnlyList<string> | Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
 ### Outputs
 

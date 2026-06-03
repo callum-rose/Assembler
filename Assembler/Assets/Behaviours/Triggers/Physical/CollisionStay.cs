@@ -6,7 +6,7 @@ namespace Assembler.Behaviours.Triggers.Physical
 	/// <summary>Fires every physics frame while colliding with another entity matching TagsToDetect.</summary>
 	/// <remarks>
 	/// Properties:
-	///   TagsToDetect: Only fire when the other entity has at least one of these tags.
+	///   TagsToDetect: Only fire when the other entity has at least one of these tags. Leave empty to fire on any entity.
 	/// Outputs:
 	///   contact_point [Vector3]: World-space point of contact for this frame.
 	///   contact_normal [Vector3]: Surface normal at the contact point.
