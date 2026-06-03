@@ -1354,97 +1354,69 @@ Debug-draws a line gizmo between two points in the entity's local transform spac
 | End | Vector3 | Line end point in local transform space. |
 | Colour | Color | Gizmo colour. |
 
+## `ui canvas`
+Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI entities (containers, labels, buttons) under this entity to compose the interface.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| MatchWidthOrHeight | float | CanvasScaler match (0 = match width, 1 = match height, 0.5 = balanced). |
+
+## `ui container`
+Auto-layout container. Arranges its child UI entities in a vertical or horizontal stack using a uGUI layout group, so UIs reflow responsively without hand-placed coordinates.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Direction | string | "vertical" (default) or "horizontal". |
+| Spacing | float | Gap between children, in reference pixels. |
+| Padding | float | Inner padding on all sides, in reference pixels. |
+| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names). |
+| FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
+
 ## `text label`
-Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.
+Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so binding it to a variable or expression shows live values (scores, timers, etc.).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Text | string | Dynamic body text (re-read each frame; bind to a variable to display live values). |
-| Label | string | Optional static prefix shown before Text (e.g. "Score: "). |
-| FontSize | int | Font size in pixels. |
-| Rect | ScreenRect | Screen-space rectangle (see ScreenRect format). |
-
-## `progress bar`
-Draws a horizontal fill bar; the filled fraction is Value clamped to [0, 1].
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Value | float | Progress in [0, 1]. Re-read each frame. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-## `ui image`
-Draws a solid-coloured rectangle on-screen. Useful as a simple HUD backdrop or indicator.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Colour | Color | Fill colour. |
-| Rect | ScreenRect | Screen-space rectangle. |
+| Text | string | Body text (re-read each frame; bind to a variable/expression for live values). |
+| FontSize | int | Font size in reference pixels. |
+| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
 
 ## `ui button`
-Draws a button. Acts as a trigger: notifies listeners each time the button is clicked.
+A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Label | string | Button caption. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-## `ui toggle`
-Draws a toggle (checkbox). Fires listeners whenever the toggle's state changes.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| InitialValue | bool | Starting checked/unchecked state. |
-| Label | string | Caption shown next to the toggle. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| value | bool | The new toggle state after the change. |
+| Label | string | Button caption (re-read each frame). |
+| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
 
 ## `ui slider`
-Draws a horizontal slider. Fires listeners whenever the slider value changes.
+A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| InitialValue | float | Starting slider value. |
+| InitialValue | float | Starting value. |
 | MinValue | float | Minimum value the slider can produce. |
 | MaxValue | float | Maximum value the slider can produce. |
-| Rect | ScreenRect | Screen-space rectangle. |
+| PreferredWidth | float | Preferred width for the parent layout (<= 0 = let layout decide). |
+| PreferredHeight | float | Preferred height for the parent layout (<= 0 = let layout decide). |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | value | float | The new slider value after the change. |
-
-## `ui input field`
-Draws a text input field. Fires listeners when the user presses Enter to submit the typed text.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Rect | ScreenRect | Screen-space rectangle. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| text | string | The submitted text. The field is cleared after submission. |
 
 ---
 
