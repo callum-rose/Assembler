@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace Assembler.Behaviours.Debug.UI.Views
+namespace Assembler.Behaviours.UI.Views
 {
 	/// <summary>Typed handle to the text element of the label prefab, wired in the prefab.</summary>
 	public sealed class UiLabelView : MonoBehaviour

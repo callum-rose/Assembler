@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Assembler.Behaviours.Debug.UI.Internal
+namespace Assembler.Behaviours.UI.Internal
 {
 	/// <summary>
 	/// Shared uGUI plumbing for the composable UI blocks: ensuring a <see cref="RectTransform"/> on an

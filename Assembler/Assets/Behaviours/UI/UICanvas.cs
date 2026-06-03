@@ -3,7 +3,7 @@ using Assembler.Resolving.Behaviours;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Assembler.Behaviours.Debug.UI
+namespace Assembler.Behaviours.UI
 {
 	/// <summary>Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI
 	/// entities (containers, labels, buttons) under this entity to compose the interface.</summary>

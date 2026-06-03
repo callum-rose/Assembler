@@ -288,7 +288,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 56127d96e88fa44beb906c37d5cdf62c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.Debug.UI.Views.UiSliderView
+  m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.UI.Views.UiSliderView
   Slider: {fileID: 4256432222426955987}
 --- !u!1 &7047833405455056077
 GameObject:

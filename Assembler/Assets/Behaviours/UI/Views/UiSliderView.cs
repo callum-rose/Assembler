@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Assembler.Behaviours.Debug.UI.Views
+namespace Assembler.Behaviours.UI.Views
 {
 	/// <summary>Typed handle to the <see cref="Slider"/> of the slider prefab, wired in the prefab.</summary>
 	public sealed class UiSliderView : MonoBehaviour

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using Assembler.Behaviours.Debug.UI;
-using Assembler.Behaviours.Debug.UI.Views;
+using Assembler.Behaviours.UI;
+using Assembler.Behaviours.UI.Views;
 using TMPro;
 using UnityEditor;
 using UnityEngine;

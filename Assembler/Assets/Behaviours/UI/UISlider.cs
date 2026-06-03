@@ -1,10 +1,10 @@
-using Assembler.Behaviours.Debug.UI.Internal;
-using Assembler.Behaviours.Debug.UI.Views;
+using Assembler.Behaviours.UI.Internal;
+using Assembler.Behaviours.UI.Views;
 using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
-namespace Assembler.Behaviours.Debug.UI
+namespace Assembler.Behaviours.UI
 {
 	/// <summary>A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.</summary>
 	/// <remarks>

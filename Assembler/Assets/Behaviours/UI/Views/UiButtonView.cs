@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Assembler.Behaviours.Debug.UI.Views
+namespace Assembler.Behaviours.UI.Views
 {
 	/// <summary>
 	/// Typed handle to the interactive parts of the button prefab, wired in the prefab itself so the

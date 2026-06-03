@@ -1,10 +1,10 @@
-using Assembler.Behaviours.Debug.UI.Internal;
-using Assembler.Behaviours.Debug.UI.Views;
+using Assembler.Behaviours.UI.Internal;
+using Assembler.Behaviours.UI.Views;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
-namespace Assembler.Behaviours.Debug.UI
+namespace Assembler.Behaviours.UI
 {
 	/// <summary>Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so
 	/// binding it to a variable or expression shows live values (scores, timers, etc.).</summary>

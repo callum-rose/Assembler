@@ -1,4 +1,4 @@
-using Assembler.Behaviours.Debug.UI;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Parsing.Controls;
 using Assembler.Resolving;

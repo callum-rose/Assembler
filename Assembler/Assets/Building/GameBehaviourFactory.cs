@@ -5,7 +5,7 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Audio;
-using Assembler.Behaviours.Debug.UI;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.ListOperations;

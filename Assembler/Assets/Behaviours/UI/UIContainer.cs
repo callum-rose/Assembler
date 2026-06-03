@@ -1,10 +1,10 @@
-using Assembler.Behaviours.Debug.UI.Internal;
+using Assembler.Behaviours.UI.Internal;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Assembler.Behaviours.Debug.UI
+namespace Assembler.Behaviours.UI
 {
 	/// <summary>Auto-layout container. Arranges its child UI entities in a vertical or horizontal stack
 	/// using a uGUI layout group, so UIs reflow responsively without hand-placed coordinates.</summary>

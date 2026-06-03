@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.Behaviours.Debug.UI
+namespace Assembler.Behaviours.UI
 {
 	/// <summary>
 	/// Holds the reusable uGUI prefabs that the leaf UI blocks (button, label, slider) instantiate at

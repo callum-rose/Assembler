@@ -149,5 +149,5 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: db881c3fff52b47a78749c73db5f8cf2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.Debug.UI.Views.UiLabelView
+  m_EditorClassIdentifier: Assembler.Behaviours::Assembler.Behaviours.UI.Views.UiLabelView
   Text: {fileID: 8764763417573695136}

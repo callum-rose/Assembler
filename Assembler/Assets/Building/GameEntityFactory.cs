@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
-using Assembler.Behaviours.Debug.UI;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Extensions;
 using Assembler.Parsing.Controls;
