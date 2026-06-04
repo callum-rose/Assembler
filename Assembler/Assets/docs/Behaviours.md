@@ -114,13 +114,74 @@ Moves the entity each frame by Velocity * deltaTime.
 | Velocity | Vector3 | World-space velocity in units per second. |
 
 ## `acceleration`
-Integrates Acceleration into an internal velocity each frame, then moves the entity by that velocity.
+Integrates Acceleration into a velocity each frame.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Acceleration | Vector3 | World-space acceleration in units per second squared. |
+| Velocity | Vector3 | Optional shared velocity variable to integrate into (e.g. !var velocity). |
+
+## `drag`
+Exponentially decays a shared velocity variable each frame, modelling linear drag.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Velocity | Vector3 | Writable shared velocity variable to decay (required, e.g. !var velocity). |
+| Coefficient | float | Drag rate per second; larger values bleed speed off faster. |
+
+## `speed limit`
+Clamps a shared velocity variable's magnitude to Max each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Velocity | Vector3 | Writable shared velocity variable to clamp (required, e.g. !var velocity). |
+| Max | float | Maximum allowed speed (magnitude) in units per second. |
+
+## `move towards`
+Moves the entity toward Target at a constant Speed, never overshooting.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space position to move toward. |
+| Speed | float | Movement speed in units per second; a step never passes the target. |
+
+## `smooth move`
+Eases the entity toward Target with a critically-damped spring (Vector3.SmoothDamp).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space position to ease toward. |
+| SmoothTime | float | Approximate time (seconds) to reach the target; larger is slower and softer. |
+
+## `clamp position`
+Constrains the entity's position to the axis-aligned box between Min and Max each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Min | Vector3 | Lower per-axis bound of the allowed region. |
+| Max | Vector3 | Upper per-axis bound of the allowed region. |
+
+## `wrap position`
+Wraps the entity's position around the box between Min and Max each frame (toroidal screen-wrap).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Min | Vector3 | Lower per-axis bound; crossing it teleports the entity to the matching Max edge. |
+| Max | Vector3 | Upper per-axis bound; crossing it teleports the entity to the matching Min edge. |
 
 ## `translate`
 Adds Displacement to the entity's world position each time it Executes (e.g. via a trigger).

@@ -1,0 +1,113 @@
+Game:
+  Title: Shared Velocity Demo
+  Description: |
+    Demonstrates the composable shared-velocity system. The falling box owns one
+    per-entity `velocity` variable (declared in its Variables block). Four
+    movement behaviours layer onto that single variable each frame, in
+    registration order:
+      acceleration (gravity) -> drag -> speed limit -> velocity (integrator).
+    The `velocity` behaviour is the integrator: it reads the shared variable and
+    moves the entity, while the others only mutate the variable. A `wrap position`
+    keeps the box on-screen by teleporting it back to the top when it falls off the
+    bottom. A second box uses `move towards` to chase a fixed point, and a third
+    uses `clamp position` to stay inside a box.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101820"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  box size: !vec { X: 0.6, Y: 0.6 }
+  gravity accel: !vec { X: 0, Y: -9.8, Z: 0 }
+  bounds min: !vec { X: -6, Y: -4, Z: -1 }
+  bounds max: !vec { X: 6, Y: 4, Z: 1 }
+  chase target: !vec { X: 4, Y: 3, Z: 0 }
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 6
+
+Entities:
+  falling box:
+    Position: !vec { X: -4, Y: 4, Z: 0 }
+    Variables:
+      # Per-entity, shared and writable. Every behaviour below resolves !var
+      # velocity to this same provider, so they compose on one velocity.
+      velocity: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var box size
+          IsWire: false
+          Colour: !colour cyan
+      gravity:
+        Type: acceleration
+        Properties:
+          Acceleration: !var gravity accel
+          Velocity: !var velocity
+      drag:
+        Type: drag
+        Properties:
+          Velocity: !var velocity
+          Coefficient: 0.5
+      speed cap:
+        Type: speed limit
+        Properties:
+          Velocity: !var velocity
+          Max: 8
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var velocity
+      wrap:
+        Type: wrap position
+        Properties:
+          Min: !var bounds min
+          Max: !var bounds max
+
+  chaser:
+    Position: !vec { X: -4, Y: -3, Z: 0 }
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var box size
+          IsWire: false
+          Colour: !colour magenta
+      seek:
+        Type: move towards
+        Properties:
+          Target: !var chase target
+          Speed: 3
+
+  clamped box:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var box size
+          IsWire: false
+          Colour: !colour yellow
+      drift:
+        Type: velocity
+        Properties:
+          Velocity: !vec { X: 5, Y: 0, Z: 0 }
+      keep in bounds:
+        Type: clamp position
+        Properties:
+          Min: !var bounds min
+          Max: !var bounds max
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
