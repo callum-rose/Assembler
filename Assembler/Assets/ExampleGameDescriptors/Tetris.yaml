@@ -103,37 +103,6 @@ Expressions:
     ReturnType: vector
     Expression: "return NeighbourCell(origin, dx, dy);"
 
-  shift down:
-    ArgumentTypes: [ vector, int ]
-    ArgumentNames: [ cell, by ]
-    ReturnType: vector
-    Expression: "return NeighbourCell(cell, 0, -by);"
-
-  should shift:
-    ArgumentTypes: [ bool, int ]
-    ArgumentNames: [ pendingClear, dropBy ]
-    ReturnType: bool
-    Expression: "return (!pendingClear) && dropBy > 0;"
-
-  alive kept:
-    ArgumentTypes: [ bool, bool ]
-    ArgumentNames: [ dead, pendingClear ]
-    ReturnType: bool
-    Expression: "return (!dead) && (!pendingClear);"
-
-  # ---- line scanning ------------------------------------------------------
-  row is full:
-    ArgumentTypes: [ vector list, vector ]
-    ArgumentNames: [ occupied, cell ]
-    ReturnType: bool
-    Expression: "return RowFull(occupied, cell.y, 10f);"
-
-  full rows below:
-    ArgumentTypes: [ vector list, vector ]
-    ArgumentNames: [ occupied, cell ]
-    ReturnType: int
-    Expression: "return FullRowsBelow(occupied, cell.y, 10f, 20f);"
-
   base offset:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ s, i ]
@@ -628,13 +597,13 @@ Templates:
         Tags: [ clear-snapshot ]
         Properties:
           VariableId: !var pendingClear
-          Value: !expr { Do: row is full, With: [ !var occupied, !var cell ] }
+          Value: !expr { Do: 'RowFull(arg0, arg1.y, 10f)', With: [ !var occupied, !var cell ], ArgumentTypes: [ vector list, vector ] }
       set dropby:
         Type: int variable setter
         Tags: [ clear-snapshot ]
         Properties:
           VariableId: !var dropBy
-          Value: !expr { Do: full rows below, With: [ !var occupied, !var cell ] }
+          Value: !expr { Do: 'FullRowsBelow(arg0, arg1.y, 10f, 20f)', With: [ !var occupied, !var cell ], ArgumentTypes: [ vector list, vector ] }
 
       # phase 2: apply
       destroy gate:
@@ -651,7 +620,7 @@ Templates:
         Type: condition gate
         Tags: [ clear-apply ]
         Properties:
-          Condition: !expr { Do: should shift, With: [ !var pendingClear, !var dropBy ] }
+          Condition: !expr { Do: '(!arg0) && arg1 > 0', With: [ !var pendingClear, !var dropBy ], ArgumentTypes: [ bool, int ] }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: do shift
@@ -666,7 +635,7 @@ Templates:
         Type: vector variable setter
         Properties:
           VariableId: !var cell
-          Value: !expr { Do: shift down, With: [ !var cell, !var dropBy ] }
+          Value: !expr { Do: 'NeighbourCell(arg0, 0, -arg1)', With: [ !var cell, !var dropBy ], ArgumentTypes: [ vector, int ] }
       reposition:
         Type: position setter
         Properties:
@@ -677,7 +646,7 @@ Templates:
         Type: condition gate
         Tags: [ clear-rebuild ]
         Properties:
-          Condition: !expr { Do: alive kept, With: [ !var dead, !var pendingClear ] }
+          Condition: !expr { Do: '(!arg0) && (!arg1)', With: [ !var dead, !var pendingClear ], ArgumentTypes: [ bool, bool ] }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: re-add

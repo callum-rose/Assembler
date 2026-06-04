@@ -60,11 +60,6 @@ Expressions:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "return new Vector3(-v.x, -v.y, -v.z);"
-  random spawn position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0);"
-
 Localisation:
   DefaultLocale: en
   Locales:
@@ -192,7 +187,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: orb_template
-          Position: !expr { Do: random spawn position }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
 
   # Holds the score-mutating behaviours, targeted by the orbs and the UI buttons/slider.
   scorer:

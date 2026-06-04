@@ -121,7 +121,8 @@ Templates:
         Properties:
           VariableId: !parameter score_var
           Value: !expr
-            Do: int add
+            Do: 'arg0 + arg1'
+            ArgumentTypes: [ int, int ]
             With:
               - !parameter score_var
               - !var score per goal
@@ -227,20 +228,11 @@ Expressions:
     Expression: "var speed = Magnitude(ball_vel);
       var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
       ScaleVector(Normalize(dir), speed);"
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
   int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
-  random ball initial position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(0, RandomFloat(-2f, 2f), 0);"
 Entities:
   left paddle:
     Template:
@@ -318,7 +310,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: ball_template
-          Position: !expr { Do: random ball initial position }
+          Position: !expr { Do: 'new Vector3(0, RandomFloat(-2f, 2f), 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
 
   left score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }

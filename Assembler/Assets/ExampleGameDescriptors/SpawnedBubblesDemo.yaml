@@ -78,13 +78,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
-  random lifetime:
-    ReturnType: float
-    Expression: "RandomFloat(1.5f, 5.0f);"
-  random spawn position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-4f, 4f), -4.5f, 0);"
 Entities:
   bubble spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -112,9 +105,9 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: bubble_template
-          Position: !expr { Do: random spawn position }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-4f, 4f), -4.5f, 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
           Parameters:
-            life_seconds: !expr { Do: random lifetime }
+            life_seconds: !expr { Do: 'RandomFloat(1.5f, 5.0f)', ReturnType: float }
 
   camera:
     Tags: [ camera ]

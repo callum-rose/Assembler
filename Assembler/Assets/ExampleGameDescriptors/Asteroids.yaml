@@ -66,18 +66,6 @@ Expressions:
     ReturnType: bool
     Expression: "a >= b;"
 
-  scale vec:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ v, k ]
-    ReturnType: vector
-    Expression: "return ScaleVector(v, k);"
-
-  random asteroid velocity:
-    ArgumentTypes: [ float ]
-    ArgumentNames: [ speed ]
-    ReturnType: vector
-    Expression: "return RandomOnCircle(speed);"
-
 Templates:
   bullet_template:
     Tags: [ bullet ]
@@ -298,7 +286,8 @@ Entities:
           Position: !var ship position
           Parameters:
             initial_velocity: !expr
-              Do: scale vec
+              Do: 'ScaleVector(arg0, arg1)'
+              ReturnType: vector
               With:
                 - !var ship facing
                 - !var bullet speed
@@ -365,7 +354,8 @@ Entities:
           Position: !expr { Do: 'RandomOnCircle(6.8f)' }
           Parameters:
             initial_velocity: !expr
-              Do: random asteroid velocity
+              Do: 'RandomOnCircle(arg0)'
+              ReturnType: vector
               With:
                 - !var asteroid speed
 

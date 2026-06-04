@@ -93,10 +93,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  random spawn position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0);"
 Entities:
   enemy spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -123,7 +119,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: enemy_template
-          Position: !expr { Do: random spawn position }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
 
   # The whole point of the demo lives in this one entity.
   # `fire` is a tagged listener: one keypress destroys every enemy

@@ -73,26 +73,6 @@ Expressions:
       if (nx < -halfW) nx = nx + 2f * halfW;
       return new UnityEngine.Vector3(nx, p.y, 0f);
 
-  bounce velocity:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ vel, jump ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(vel.x, jump, 0f);
-
-  max float:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "return Max(a, b);"
-
-  camera target:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ y, z ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(0f, y, z);
-
   random platform position:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ y, halfW ]
@@ -222,7 +202,8 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            Do: max float
+            Do: 'Max(arg0, arg1)'
+            ArgumentTypes: [ float, float ]
             With:
               - !var max height
               - !expr
@@ -317,7 +298,7 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: bounce velocity
+            Do: 'new UnityEngine.Vector3(arg0.x, arg1, 0f)'
             With:
               - !var player velocity
               - !var player jump speed
@@ -404,7 +385,7 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: camera target
+            Do: 'new UnityEngine.Vector3(0f, arg0, arg1)'
             With:
               - !var max height
               - !var camera z

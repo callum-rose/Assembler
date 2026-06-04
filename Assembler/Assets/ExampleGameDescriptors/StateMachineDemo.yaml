@@ -87,15 +87,6 @@ Expressions:
     ReturnType: bool
     Expression: "return Distance(a, b) > threshold;"
 
-  # Clamp a position to a square [-bound, bound] box so the guard can't flee off-screen.
-  clamp to box:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ p, bound ]
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: |
-      return new UnityEngine.Vector3(Clamp(p.x, -bound, bound), Clamp(p.y, -bound, bound), p.z);
-
 Entities:
   guard:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -134,7 +125,9 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: clamp to box
+            Do: 'new UnityEngine.Vector3(Clamp(arg0.x, -arg1, arg1), Clamp(arg0.y, -arg1, arg1), arg0.z)'
+            ArgumentTypes: [ vector, float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
             With:
               - !entity_position guard
               - !var field bound

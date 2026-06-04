@@ -78,7 +78,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: int less or equal
+            Do: 'arg0 <= arg1'
+            ArgumentTypes: [ int, int ]
             With:
               - !var health
               - !var zero
@@ -161,11 +162,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
 Entities:
   player:
     Template: { Id: player_template }
