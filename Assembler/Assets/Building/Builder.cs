@@ -34,6 +34,16 @@ namespace Assembler.Building
 		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
 
 		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+			=> Instantiate(Resolve(gameInfo, controls, overridePlatform));
+
+		/// <summary>
+		/// First build phase: validate the descriptor's game-over path and controls, then stand up all the
+		/// registries (variables, expressions, assets, localisation) and the live input asset. Performs no
+		/// scene instantiation, so it can be run on its own (e.g. by the sandbox validator) to attribute
+		/// resolution-time failures separately from instantiation-time ones. The returned handle carries the
+		/// resolved state into <see cref="Instantiate"/>.
+		/// </summary>
+		public static ResolvedGame Resolve(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
@@ -77,6 +87,33 @@ namespace Assembler.Building
 			var localeSettings = new LocaleSettings("en");
 			var stringTableRegistry = new StringTableRegistry(localeSettings);
 			stringTableRegistry.LoadAll(gameInfo.Localisation);
+
+			return new ResolvedGame(
+				gameInfo,
+				controls,
+				controlsAsset,
+				hasCondition,
+				variableRegistry,
+				compiledExpressionsRegistry,
+				assetRegistry,
+				stringTableRegistry);
+		}
+
+		/// <summary>
+		/// Second build phase: instantiate the game root, every entity/behaviour and the implicit game-over
+		/// controller from an already-<see cref="Resolve"/>d game, then run deferred behaviour initialisation.
+		/// Returns the root "Game" GameObject so callers can tear the whole game down by destroying it (the
+		/// sandbox validator relies on this).
+		/// </summary>
+		public static GameObject Instantiate(ResolvedGame resolved)
+		{
+			var gameInfo = resolved.GameInfo;
+			var controls = resolved.Controls;
+			var controlsAsset = resolved.ControlsAsset;
+			var variableRegistry = resolved.VariableRegistry;
+			var compiledExpressionsRegistry = resolved.CompiledExpressionsRegistry;
+			var assetRegistry = resolved.AssetRegistry;
+			var stringTableRegistry = resolved.StringTableRegistry;
 
 			// 3. Instantiate Entities and Behaviours
 			var behaviourRegistry = new BehaviourRegistry();
@@ -139,7 +176,7 @@ namespace Assembler.Building
 
 			// 4. Append the implicit game-over controller so it builds through the normal pipeline.
 			var entities = gameInfo.Entities
-				.Append(BuildGameOverControllerInfo(hasCondition ? gameInfo.GameOverCondition : null));
+				.Append(BuildGameOverControllerInfo(resolved.HasCondition ? gameInfo.GameOverCondition : null));
 
 			foreach (var entityInfo in entities)
 			{
@@ -156,6 +193,8 @@ namespace Assembler.Building
 			gameRoot.AddComponent<Assembler.Building.Debug.DebugConsole>()
 				.Initialise(behaviourRegistry, gameClock, variableRegistry, gameRoot.GetComponent<GameController>());
 #endif
+
+			return gameRoot;
 		}
 
 		/// <summary>
@@ -205,5 +244,42 @@ namespace Assembler.Building
 
 			return gameInfo.Entities.Any(InEntity) || gameInfo.Templates.Any(InEntity);
 		}
+	}
+
+	/// <summary>
+	/// Opaque handle produced by <see cref="Builder.Resolve"/> and consumed by <see cref="Builder.Instantiate"/>,
+	/// carrying the registries and validated state between the two build phases. Treat as a one-shot token: pass
+	/// the value straight from Resolve into Instantiate.
+	/// </summary>
+	public sealed class ResolvedGame
+	{
+		internal ResolvedGame(
+			GameInfo gameInfo,
+			ControlsInfo controls,
+			InputActionAsset controlsAsset,
+			bool hasCondition,
+			VariableRegistry variableRegistry,
+			CompiledExpressionsRegistry compiledExpressionsRegistry,
+			AssetRegistry assetRegistry,
+			StringTableRegistry stringTableRegistry)
+		{
+			GameInfo = gameInfo;
+			Controls = controls;
+			ControlsAsset = controlsAsset;
+			HasCondition = hasCondition;
+			VariableRegistry = variableRegistry;
+			CompiledExpressionsRegistry = compiledExpressionsRegistry;
+			AssetRegistry = assetRegistry;
+			StringTableRegistry = stringTableRegistry;
+		}
+
+		internal GameInfo GameInfo { get; }
+		internal ControlsInfo Controls { get; }
+		internal InputActionAsset ControlsAsset { get; }
+		internal bool HasCondition { get; }
+		internal VariableRegistry VariableRegistry { get; }
+		internal CompiledExpressionsRegistry CompiledExpressionsRegistry { get; }
+		internal AssetRegistry AssetRegistry { get; }
+		internal StringTableRegistry StringTableRegistry { get; }
 	}
 }
