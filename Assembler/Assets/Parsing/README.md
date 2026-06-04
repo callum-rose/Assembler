@@ -45,5 +45,26 @@ Value: !expr { Do: <name-or-body>, With: [ <operand>, ... ] }
   declared ones. A bare expression body gets an implicit `return … ;`; a body containing
   `;` is passed through as hand-written statements.
 
+  An inline body may carry optional hints (mirroring the `Expressions:` block), used only
+  when inference isn't enough:
+
+  ```yaml
+  # An object-typed slot (e.g. a spawner Parameters value) can't infer a return type,
+  # so declare it; add types/static sources the body needs.
+  colour: !expr { Do: 'RandomColorBetween(a, b)', With: [ !var lo, !var hi ], ReturnType: colour }
+  spin:   !expr { Do: 'Mathf.PI * arg0', With: [ !var t ], RegisterTypes: [ UnityEngine.Mathf ] }
+  sum:    !expr { Do: 'arg0 + arg1',     With: [ 1, 2 ],   ArgumentTypes: [ float, float ] }
+  ```
+
+  - `ReturnType` — the body's return type; required where the use-site type is `object`
+    (spawner/template `Parameters:`, `!text`/condition arguments).
+  - `ArgumentTypes` — explicit types for `arg0`, `arg1`, … (positional to `With`), overriding
+    per-operand inference (e.g. when an operand is an entity-local `!var` whose type isn't known).
+  - `RegisterTypes` / `RegisterTypeStatics` — extra types / static-method sources for the body,
+    exactly as on a declared expression.
+
+  These are inline-only: on a **named** `Do` call they are logged and ignored (the named
+  expression already declares them).
+
 Variable operands stay explicit `!var foo` tags inside `With`; everything resolves through
 the same `ValueSource<T>` → `IValueProvider<T>` pipeline as any other value.

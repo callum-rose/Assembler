@@ -221,8 +221,10 @@ namespace Assembler.Parsing
 					SubstituteAssemblerValue(col.B, parameters),
 					SubstituteAssemblerValue(col.A, parameters),
 					col.Raw),
-				ExprRef exprRef => new ExprRef(exprRef.Do,
-					exprRef.With.Select(a => SubstituteAssemblerValue(a, parameters)).ToArray()),
+				ExprRef exprRef => exprRef with
+				{
+					With = exprRef.With.Select(a => SubstituteAssemblerValue(a, parameters)).ToArray()
+				},
 				_ => value
 			};
 		}
@@ -429,6 +431,7 @@ namespace Assembler.Parsing
 		{
 			if (TryResolveNamedExpression(ctx, exprRef.Do, out var named))
 			{
+				WarnIfInlineHintsIgnored(exprRef, named.Id);
 				return new ExpressionSource<T>(named.Id, BuildNamedExpressionArguments(ctx, exprRef, named));
 			}
 
@@ -490,39 +493,70 @@ namespace Assembler.Parsing
 			return args;
 		}
 
-		// Synthesises an anonymous ExpressionInfo for an inline `Do: '<C# body>'` and accumulates it
-		// on the context. Operand (arg0, arg1, …) types are inferred from `With`; the return type is
-		// the use-site T where mappable, otherwise inferred from the first operand. The body itself is
-		// handed verbatim to the compiler, which binds argN to the synthesised params and resolves any
-		// other identifier (method, `new`, registered expression) exactly as in any `Expressions:` body.
+		// The inline-only hints (ReturnType / ArgumentTypes / RegisterTypes / RegisterTypeStatics) belong
+		// on the declared expression, not the call site, so warn and ignore them when Do names one.
+		private static void WarnIfInlineHintsIgnored(ExprRef exprRef, string id)
+		{
+			if (exprRef.ReturnType != null || exprRef.ArgumentTypes != null
+				|| exprRef.RegisterTypes != null || exprRef.RegisterTypeStatics != null)
+			{
+				UnityEngine.Debug.LogWarning(
+					$"!expr 'Do: {exprRef.Do}' names the declared expression '{id}', so ReturnType / " +
+					"ArgumentTypes / RegisterTypes / RegisterTypeStatics on the call site are ignored " +
+					"(they are declared on the expression itself).");
+			}
+		}
+
+		// Synthesises an anonymous ExpressionInfo for an inline `Do: '<C# body>'` and accumulates it on
+		// the context. Operand (arg0, arg1, …) types are taken from an explicit ArgumentTypes hint when
+		// given, otherwise inferred from `With`; the return type is an explicit ReturnType hint when
+		// given, otherwise the use-site T (falling back to the first operand). Any RegisterTypes /
+		// RegisterTypeStatics hints flow onto the synthesised expression so the body can use them. The
+		// body itself is handed verbatim to the compiler, which binds argN to the synthesised params and
+		// resolves any other identifier (method, `new`, registered expression) as in any declared body.
 		private static ValueSource<T> CreateInlineExpressionSource<T>(TransformContext ctx, ExprRef exprRef)
 		{
+			var explicitArgTypes = exprRef.ArgumentTypes;
+
+			if (explicitArgTypes != null && explicitArgTypes.Count != exprRef.With.Count)
+			{
+				throw new ParsingException(
+					$"Inline expression '{exprRef.Do}' declares {explicitArgTypes.Count} ArgumentTypes " +
+					$"but supplies {exprRef.With.Count} operand(s) in With.");
+			}
+
 			var argInfos = new (string type, string name)[exprRef.With.Count];
 			var argTypes = new Type[exprRef.With.Count];
 
 			for (int i = 0; i < exprRef.With.Count; i++)
 			{
-				var typeName = InferTypeName(ctx, exprRef.With[i]);
+				var typeName = explicitArgTypes != null ? explicitArgTypes[i] : InferTypeName(ctx, exprRef.With[i]);
 
 				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
 						$"Inline expression '{exprRef.Do}' could not resolve a type for argument {i} " +
-						$"(inferred '{typeName}').");
+						$"('{typeName}').");
 				}
 
 				argInfos[i] = (typeName, $"arg{i}");
 				argTypes[i] = argType;
 			}
 
-			var returnTypeName = InferReturnTypeName<T>(ctx, argInfos);
+			var returnTypeName = exprRef.ReturnType ?? InferReturnTypeName<T>(ctx, argInfos);
+
+			if (!ctx.TypeRegistry.ContainsKey(returnTypeName))
+			{
+				throw new ParsingException(
+					$"Inline expression '{exprRef.Do}' has unknown ReturnType '{returnTypeName}'.");
+			}
 
 			var id = ctx.InlineExpressions.Add(generatedId => new ExpressionInfo(
 				generatedId,
 				argInfos,
 				returnTypeName,
-				Array.Empty<string>(),
-				Array.Empty<string>(),
+				exprRef.RegisterTypes?.ToArray() ?? Array.Empty<string>(),
+				exprRef.RegisterTypeStatics?.ToArray() ?? Array.Empty<string>(),
 				WrapInlineBody(exprRef.Do)));
 
 			var args = new IValueSourceArg[exprRef.With.Count];
@@ -926,7 +960,11 @@ namespace Assembler.Parsing
 				// nested-listener parser can rebuild a GameOverListenerInfo.
 				GameOverListenerDto => new GameOverMarker(),
 				ExprRefDto v => new ExprRef(v.Do ?? string.Empty,
-					v.With.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
+					v.With.EmptyIfNull().Select(ToAssemblerValue).ToArray(),
+					v.ReturnType,
+					v.ArgumentTypes,
+					v.RegisterTypes,
+					v.RegisterTypeStatics),
 				TextRefDto v => new TextRef(v.Key ?? string.Empty,
 					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
 				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),

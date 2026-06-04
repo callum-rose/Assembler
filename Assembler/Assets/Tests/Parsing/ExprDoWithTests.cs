@@ -217,6 +217,135 @@ Entities:
 			Assert.IsTrue(info.Expressions.Count > 0, "Pong declares named expressions.");
 		}
 
+		// --- optional inline hints: ReturnType / ArgumentTypes / RegisterTypes / RegisterTypeStatics ---
+
+		[Test]
+		public void InlineArgumentTypesHintOverridesInference()
+		{
+			// With: [1, 2] would infer int operands; the explicit hint forces float.
+			var info = Parse(EntityWithPositionExpr(
+				"!expr { Do: 'arg0 + arg1', With: [ 1, 2 ], ArgumentTypes: [ float, float ] }"));
+
+			var synthesised = info.Expressions.Single(e => e.Id.StartsWith("__inline_"));
+
+			Assert.AreEqual(("float", "arg0"), synthesised.Arguments[0]);
+			Assert.AreEqual(("float", "arg1"), synthesised.Arguments[1]);
+		}
+
+		[Test]
+		public void InlineArgumentTypesCountMismatchThrows()
+		{
+			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!expr { Do: 'arg0 + arg1', With: [ !var v ], ArgumentTypes: [ vector, vector ] }")));
+		}
+
+		[Test]
+		public void InlineUnknownReturnTypeThrows()
+		{
+			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!expr { Do: '-arg0', With: [ !var v ], ReturnType: nonsense }")));
+		}
+
+		[Test]
+		public void InlineReturnTypeHintFlowsToSynthesisedExpression()
+		{
+			var info = Parse(EntityWithPositionExpr("!expr { Do: '-arg0', With: [ !var v ], ReturnType: vector }"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+
+			Assert.AreEqual("vector", synthesised.ReturnType);
+		}
+
+		// In an object-typed context (a !text argument) the use-site type can't be inferred for a
+		// zero-operand body, so an explicit ReturnType is what makes it work.
+		[Test]
+		public void InlineReturnTypeUnlocksObjectContext()
+		{
+			var yaml = @"
+Localisation:
+  DefaultLocale: en
+  Locales: { en: { k: ""value {0}"" } }
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: k, Arguments: [ !expr { Do: 'RandomInt(0, 6)', ReturnType: int } ] }
+";
+			GameInfo info = null!;
+			Assert.DoesNotThrow(() => info = Parse(yaml));
+
+			var synthesised = info.Expressions.Single(e => e.Id.StartsWith("__inline_"));
+			Assert.AreEqual("int", synthesised.ReturnType);
+
+			Assert.DoesNotThrow(() =>
+				new CompiledExpressionsRegistry(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler())
+					.CompileAndRegisterAll(info.Expressions));
+		}
+
+		[Test]
+		public void ZeroOperandInlineInObjectContextWithoutReturnTypeThrows()
+		{
+			var yaml = @"
+Localisation:
+  DefaultLocale: en
+  Locales: { en: { k: ""value {0}"" } }
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: k, Arguments: [ !expr { Do: 'RandomInt(0, 6)' } ] }
+";
+			Assert.Throws<ParsingException>(() => Parse(yaml));
+		}
+
+		// RegisterTypes makes a type available to the inline body by short name; without it
+		// `Mathf` (unqualified) would not resolve.
+		[Test]
+		public void InlineRegisterTypesEnableShortTypeNameAndCompile()
+		{
+			var info = Parse(@"
+Entities:
+  e:
+    Position: !expr { Do: 'new UnityEngine.Vector3(Mathf.PI, 0f, 0f)', RegisterTypes: [ UnityEngine.Mathf ] }
+    Behaviours: {}
+");
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+			Assert.Contains("UnityEngine.Mathf", synthesised.RegisterTypes);
+
+			var registry = new CompiledExpressionsRegistry(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler());
+			registry.CompileAndRegisterAll(info.Expressions);
+
+			var func = (Func<Vector3>)registry.GetCompiled(source.ExpressionId).@delegate;
+			Assert.AreEqual(Mathf.PI, func().x, 0.0001f);
+		}
+
+		[Test]
+		public void NamedCallIgnoresInlineHints()
+		{
+			// ReturnType on a named call is ignored (logged); the source still targets the named id
+			// and no inline expression is synthesised.
+			var info = Parse(EntityWithPositionExpr(
+				"!expr { Do: shift up, With: [ !var v ], ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
+				extraTop: @"
+Expressions:
+  shift up:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    Expression: 'return a + new UnityEngine.Vector3(0, 1, 0);'"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+
+			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.IsFalse(info.Expressions.Any(e => e.Id.StartsWith("__inline_")));
+		}
+
 		// Descriptors that don't transform today for reasons unrelated to expressions (sequence-form
 		// Constants/Expressions blocks, and a voxel-mapping field) — pre-existing, so excluded here.
 		private static readonly string[] NonTransformableDescriptors = { "Snake 2.yaml", "VoxelDemo.yaml" };

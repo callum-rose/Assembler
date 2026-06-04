@@ -17,6 +17,10 @@ namespace Assembler.Deserialisation
 
 			string? @do = null;
 			object[]? with = null;
+			string? returnType = null;
+			string[]? argumentTypes = null;
+			string[]? registerTypes = null;
+			string[]? registerTypeStatics = null;
 
 			while (!parser.TryConsume<MappingEnd>(out _))
 			{
@@ -27,8 +31,19 @@ namespace Assembler.Deserialisation
 						@do = parser.Consume<Scalar>().Value;
 						break;
 					case "With":
-						var args = rootDeserializer(typeof(List<object>));
-						with = ((List<object>)args).ToArray();
+						with = (rootDeserializer(typeof(List<object>)) as List<object>)?.ToArray();
+						break;
+					case "ReturnType":
+						returnType = parser.Consume<Scalar>().Value;
+						break;
+					case "ArgumentTypes":
+						argumentTypes = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
+						break;
+					case "RegisterTypes":
+						registerTypes = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
+						break;
+					case "RegisterTypeStatics":
+						registerTypeStatics = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
 						break;
 					default:
 						parser.SkipThisAndNestedEvents();
@@ -44,7 +59,11 @@ namespace Assembler.Deserialisation
 			return new ExprRefDto
 			{
 				Do = @do,
-				With = with
+				With = with,
+				ReturnType = returnType,
+				ArgumentTypes = argumentTypes,
+				RegisterTypes = registerTypes,
+				RegisterTypeStatics = registerTypeStatics
 			};
 		}
 
