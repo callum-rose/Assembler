@@ -464,7 +464,39 @@ namespace Assembler.Building
 					var b = go.AddComponent<CameraBehaviour>();
 					return (b, lr => b.Initialise(new CameraData(i.Id,
 						i.View.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.Size.Resolve(ctx.Resolution),
+						i.DefaultBlend.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(CameraFollowInfo)] = new(typeof(CameraFollow), (go, info, ctx) =>
+				{
+					var i = (CameraFollowInfo)info;
+					var b = go.AddComponent<CameraFollow>();
+					return (b, lr =>
+					{
+						var res = ctx.Resolution;
+
+						// Closure over the live registry: an entity tag -> the distinct transforms of matching
+						// entities, re-queried on every read so tag targets catch entities spawned after build.
+						IReadOnlyList<Transform> ResolveByEntityTag(string tag) =>
+							lr.GetByEntityTag(tag).Select(x => x.transform).Distinct().ToArray();
+
+						var follow = i.Target is null
+							? null
+							: CameraTargetResolver.Resolve(i.Target, res, ResolveByEntityTag);
+						var lookAt = i.LookAt is null
+							? null
+							: CameraTargetResolver.Resolve(i.LookAt, res, ResolveByEntityTag);
+
+						b.Initialise(new CameraFollowData(i.Id,
+							follow,
+							lookAt,
+							i.Priority.Resolve(res),
+							i.Lens.Resolve(res),
+							i.Damping.Resolve(res),
+							i.DeadZone.Resolve(res),
+							i.ScreenOffset.Resolve(res),
+							i.FollowOffset.Resolve(res)), i.Listeners.ToListeners(lr, res));
+					});
 				}),
 				[typeof(SpawnerInfo)] = new(typeof(SpawnerBehaviour), (go, info, ctx) =>
 				{

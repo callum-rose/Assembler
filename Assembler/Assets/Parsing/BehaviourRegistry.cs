@@ -72,6 +72,7 @@ namespace Assembler.Parsing
 				["destroy"] = DestroyInfo.Create,
 				["position setter"] = SetPositionInfo.Create,
 				["camera"] = CameraInfo.Create,
+				["camera follow"] = CameraFollowInfo.Create,
 				["condition gate"] = ConditionGateInfo.Create,
 				["inverse condition gate"] = InverseConditionGateInfo.Create,
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
