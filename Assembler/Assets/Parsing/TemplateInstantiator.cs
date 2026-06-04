@@ -148,6 +148,9 @@ namespace Assembler.Parsing
 				bool b => new BoolValue(b),
 				string s => new StringValue(s),
 				Vector3 v => new Vector3Value(v),
+				// A runtime expression can still evaluate to a Vector2 (the compiler resolves any
+				// loaded type, e.g. Random.insideUnitCircle); widen it to a Vector3 (z = 0), since
+				// Vector2 is no longer a domain value type.
 				Vector2 v => new Vector3Value(v),
 				Color c => new ColorValue(c),
 				_ => throw new ParsingException(
