@@ -55,58 +55,6 @@ Variables:
   score: !var initial score
   current gap y: !var initial gap y
 
-Expressions:
-  apply gravity:
-    ArgumentTypes: [ vector, float, float ]
-    ArgumentNames: [ vel, g, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
-
-  random gap y:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ lo, hi ]
-    ReturnType: float
-    Expression: "return RandomFloat(lo, hi);"
-
-  top pipe position:
-    ArgumentTypes: [ float, float, float, float ]
-    ArgumentNames: [ x, gap_y, gap_half, pipe_half ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(x, gap_y + gap_half + pipe_half, 0f);
-
-  bottom pipe position:
-    ArgumentTypes: [ float, float, float, float ]
-    ArgumentNames: [ x, gap_y, gap_half, pipe_half ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(x, gap_y - gap_half - pipe_half, 0f);
-
-  score zone position:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ x, gap_y ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(x, gap_y, 0f);
-
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
-
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "\"Score: \" + s;"
-
-  is dead expr:
-    ArgumentTypes: [ bool ]
-    ArgumentNames: [ d ]
-    ReturnType: bool
-    Expression: "d;"
-
 Templates:
   pipe_template:
     Tags: [ pipe ]
@@ -203,8 +151,8 @@ Entities:
         Properties:
           VariableId: !var bird velocity
           Value: !expr
-            ExpressionId: apply gravity
-            Arguments:
+            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
+            With:
               - !var bird velocity
               - !var bird gravity
               - !clock deltaTime
@@ -286,8 +234,8 @@ Entities:
         Properties:
           VariableId: !var current gap y
           Value: !expr
-            ExpressionId: random gap y
-            Arguments:
+            Do: 'RandomFloat(arg0, arg1)'
+            With:
               - !var gap y min
               - !var gap y max
 
@@ -296,8 +244,8 @@ Entities:
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            ExpressionId: top pipe position
-            Arguments:
+            Do: 'new UnityEngine.Vector3(arg0, arg1 + arg2 + arg3, 0f)'
+            With:
               - !var pipe spawn x
               - !var current gap y
               - !var gap half height
@@ -309,8 +257,8 @@ Entities:
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            ExpressionId: bottom pipe position
-            Arguments:
+            Do: 'new UnityEngine.Vector3(arg0, arg1 - arg2 - arg3, 0f)'
+            With:
               - !var pipe spawn x
               - !var current gap y
               - !var gap half height
@@ -322,8 +270,8 @@ Entities:
         Properties:
           TemplateId: score_zone_template
           Position: !expr
-            ExpressionId: score zone position
-            Arguments:
+            Do: 'new UnityEngine.Vector3(arg0, arg1, 0f)'
+            With:
               - !var pipe spawn x
               - !var current gap y
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
@@ -337,8 +285,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: 'arg0 + arg1'
+            With:
               - !var score
               - !var score per pipe
 
@@ -361,8 +309,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: '"Score: " + arg0'
+            With:
               - !var score
           FontSize: 32
           Rect:
@@ -373,6 +321,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is dead expr
-  Arguments:
+  Do: 'arg0'
+  With:
     - !var is dead

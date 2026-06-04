@@ -65,8 +65,8 @@ Templates:
         Properties:
           VariableId: !var bubbles popped
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var bubbles popped
               - !var one
       self destruct:
@@ -78,19 +78,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
-  random lifetime:
-    ReturnType: float
-    Expression: "RandomFloat(1.5f, 5.0f);"
-  random spawn position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-4f, 4f), -4.5f, 0);"
-  format stats:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ spawned, popped ]
-    ReturnType: string
-    Expression: "\"Spawned: \" + spawned + \"   Popped: \" + popped;"
-
 Entities:
   bubble spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -110,17 +97,17 @@ Entities:
         Properties:
           VariableId: !var bubbles spawned
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var bubbles spawned
               - !var one
       spawn bubble:
         Type: spawner
         Properties:
           TemplateId: bubble_template
-          Position: !expr { ExpressionId: random spawn position }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-4f, 4f), -4.5f, 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
           Parameters:
-            life_seconds: !expr { ExpressionId: random lifetime }
+            life_seconds: !expr { Do: 'RandomFloat(1.5f, 5.0f)', ReturnType: float }
 
   camera:
     Tags: [ camera ]
@@ -140,8 +127,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format stats
-            Arguments:
+            Do: '"Spawned: " + arg0 + "   Popped: " + arg1'
+            With:
               - !var bubbles spawned
               - !var bubbles popped
           FontSize: 28

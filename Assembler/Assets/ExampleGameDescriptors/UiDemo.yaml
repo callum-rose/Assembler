@@ -21,13 +21,6 @@ World:
 Variables:
   clicks: 0
 
-Expressions:
-  increment:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ n ]
-    ReturnType: int
-    Expression: 'return n + 1;'
-
 Localisation:
   DefaultLocale: en
   Locales:
@@ -101,6 +94,6 @@ Entities:
                 Properties:
                   VariableId: !var clicks
                   Value: !expr
-                    ExpressionId: increment
-                    Arguments:
+                    Do: 'arg0 + 1'
+                    With:
                       - !var clicks

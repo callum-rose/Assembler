@@ -54,12 +54,6 @@ Variables:
   is dead: false
 
 Expressions:
-  apply gravity:
-    ArgumentTypes: [ vector, float, float ]
-    ArgumentNames: [ vel, g, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(vel, new UnityEngine.Vector3(0f, -g, 0f), dt);"
-
   apply input:
     ArgumentTypes: [ vector, bool, bool, float ]
     ArgumentNames: [ vel, left, right, speed ]
@@ -79,38 +73,6 @@ Expressions:
       if (nx < -halfW) nx = nx + 2f * halfW;
       return new UnityEngine.Vector3(nx, p.y, 0f);
 
-  bounce velocity:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ vel, jump ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(vel.x, jump, 0f);
-
-  is falling:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ vel ]
-    ReturnType: bool
-    Expression: "return vel.y < 0f;"
-
-  max float:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "return Max(a, b);"
-
-  position y:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ p ]
-    ReturnType: float
-    Expression: "return p.y;"
-
-  camera target:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ y, z ]
-    ReturnType: vector
-    Expression: |
-      return new UnityEngine.Vector3(0f, y, z);
-
   random platform position:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ y, halfW ]
@@ -119,24 +81,6 @@ Expressions:
       float x = RandomFloat(-halfW, halfW);
       return new UnityEngine.Vector3(x, y, 0f);
 
-  should spawn next platform:
-    ArgumentTypes: [ float, float, float ]
-    ArgumentNames: [ next, maxY, lookahead ]
-    ReturnType: bool
-    Expression: "return next < maxY + lookahead;"
-
-  add float:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "return a + b;"
-
-  game over check:
-    ArgumentTypes: [ vector, float, float, bool ]
-    ArgumentNames: [ pos, maxY, window, dead ]
-    ReturnType: bool
-    Expression: "return dead || (pos.y < (maxY - window));"
-
   format score:
     ArgumentTypes: [ float ]
     ArgumentNames: [ y ]
@@ -144,12 +88,6 @@ Expressions:
     Expression: |
       int s = (int)(y * 10f);
       return "Score: " + s;
-
-  passthrough bool:
-    ArgumentTypes: [ bool ]
-    ArgumentNames: [ d ]
-    ReturnType: bool
-    Expression: "return d;"
 
 Templates:
   platform_template:
@@ -218,8 +156,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: apply gravity
-            Arguments:
+            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
+            With:
               - !var player velocity
               - !var player gravity
               - !clock deltaTime
@@ -229,8 +167,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: apply input
-            Arguments:
+            Do: apply input
+            With:
               - !var player velocity
               - !var left held
               - !var right held
@@ -241,8 +179,8 @@ Entities:
         Properties:
           VariableId: !var player position
           Value: !expr
-            ExpressionId: integrate position
-            Arguments:
+            Do: integrate position
+            With:
               - !var player position
               - !var player velocity
               - !var world half width
@@ -258,12 +196,13 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            ExpressionId: max float
-            Arguments:
+            Do: 'Max(arg0, arg1)'
+            ArgumentTypes: [ float, float ]
+            With:
               - !var max height
               - !expr
-                  ExpressionId: position y
-                  Arguments:
+                  Do: 'arg0.y'
+                  With:
                     - !var player position
 
       # ---- Input: track left/right held state via key down + key up ----
@@ -342,8 +281,8 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: is falling
-            Arguments:
+            Do: 'arg0.y < 0f'
+            With:
               - !var player velocity
         Listeners:
           - EntityId: player
@@ -353,8 +292,8 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            ExpressionId: bounce velocity
-            Arguments:
+            Do: 'new UnityEngine.Vector3(arg0.x, arg1, 0f)'
+            With:
               - !var player velocity
               - !var player jump speed
 
@@ -389,8 +328,8 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: should spawn next platform
-            Arguments:
+            Do: 'arg0 < arg1 + arg2'
+            With:
               - !var next platform y
               - !var max height
               - !var spawn lookahead
@@ -405,8 +344,8 @@ Entities:
         Properties:
           TemplateId: platform_template
           Position: !expr
-            ExpressionId: random platform position
-            Arguments:
+            Do: random platform position
+            With:
               - !var next platform y
               - !var world half width
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
@@ -416,8 +355,8 @@ Entities:
         Properties:
           VariableId: !var next platform y
           Value: !expr
-            ExpressionId: add float
-            Arguments:
+            Do: 'arg0 + arg1'
+            With:
               - !var next platform y
               - !var platform spacing
 
@@ -440,8 +379,8 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: camera target
-            Arguments:
+            Do: 'new UnityEngine.Vector3(0f, arg0, arg1)'
+            With:
               - !var max height
               - !var camera z
 
@@ -453,8 +392,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: format score
+            With:
               - !var max height
           FontSize: 32
           Rect:
@@ -465,8 +404,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: game over check
-  Arguments:
+  Do: 'arg3 || (arg0.y < (arg1 - arg2))'
+  With:
     - !var player position
     - !var max height
     - !var game over distance

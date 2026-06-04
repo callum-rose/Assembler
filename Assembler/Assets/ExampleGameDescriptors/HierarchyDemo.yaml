@@ -71,15 +71,6 @@ Templates:
           IsWire: false
           Colour: !parameter tint
 
-Expressions:
-  random colour:
-    ReturnType: colour
-    Expression: "return RandomColorBetween(new Color(0.4f, 0.4f, 0.4f, 1f), new Color(1f, 1f, 1f, 1f));"
-  random spawn x:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-3.5f, 3.5f), -4.5f, 0);"
-
 Entities:
   ship:
     Position: !vec { X: -3, Y: 0, Z: 0 }
@@ -162,9 +153,9 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: drone
-          Position: !expr { ExpressionId: random spawn x }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-3.5f, 3.5f), -4.5f, 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
           Parameters:
-            colour: !expr { ExpressionId: random colour }
+            colour: !expr { Do: 'RandomColorBetween(new Color(0.4f, 0.4f, 0.4f, 1f), new Color(1f, 1f, 1f, 1f))', ReturnType: colour }
 
   camera:
     Tags: [ camera ]

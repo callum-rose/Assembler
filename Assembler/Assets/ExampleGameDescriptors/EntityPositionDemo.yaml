@@ -67,8 +67,8 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: shift y
-            Arguments:
+            Do: shift y
+            With:
               - !entity_position leader
               - !var follower above offset y
 
@@ -143,8 +143,8 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: shift y
-            Arguments:
+            Do: shift y
+            With:
               - !entity_position leader
               - !var follower below offset y
 

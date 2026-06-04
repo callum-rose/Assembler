@@ -54,22 +54,12 @@ Variables:
   points per pickup: !var start points
 
 Expressions:
-  add:
-    ArgumentTypes: [ float, float ]
-    ArgumentNames: [ a, b ]
-    ReturnType: float
-    Expression: "a + b;"
   negate:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ v ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "return new Vector3(-v.x, -v.y, -v.z);"
-  random spawn position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0);"
-
 Localisation:
   DefaultLocale: en
   Locales:
@@ -142,7 +132,7 @@ Entities:
       move left:
         Type: translate
         Properties:
-          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step right ] }
+          Displacement: !expr { Do: negate, With: [ !var step right ] }
 
       hold right:
         Type: key hold trigger
@@ -175,7 +165,7 @@ Entities:
       move down:
         Type: translate
         Properties:
-          Displacement: !expr { ExpressionId: negate, Arguments: [ !var step up ] }
+          Displacement: !expr { Do: negate, With: [ !var step up ] }
 
   # Spawns an orb on start and then every `spawn interval` seconds.
   orb spawner:
@@ -197,7 +187,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: orb_template
-          Position: !expr { ExpressionId: random spawn position }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-4f, 4f), RandomFloat(-3f, 3f), 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
 
   # Holds the score-mutating behaviours, targeted by the orbs and the UI buttons/slider.
   scorer:
@@ -208,8 +198,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: add
-            Arguments:
+            Do: 'arg0 + arg1'
+            With:
               - !var score
               - !var points per pickup
       reset score:

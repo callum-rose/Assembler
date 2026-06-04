@@ -70,16 +70,17 @@ Templates:
         Properties:
           VariableId: !var health
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: int sub
+            With:
               - !var health
               - !var damage per hit
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int less or equal
-            Arguments:
+            Do: 'arg0 <= arg1'
+            ArgumentTypes: [ int, int ]
+            With:
               - !var health
               - !var zero
         Listeners:
@@ -92,8 +93,8 @@ Templates:
         Properties:
           VariableId: !var enemies remaining
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: int sub
+            With:
               - !var enemies remaining
               - !var damage per hit
       self destruct:
@@ -161,22 +162,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
-  int equal zero:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ a ]
-    ReturnType: bool
-    Expression: "a <= 0;"
-  format remaining:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ n ]
-    ReturnType: string
-    Expression: "\"Enemies remaining: \" + n;"
-
 Entities:
   player:
     Template: { Id: player_template }
@@ -220,8 +205,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format remaining
-            Arguments:
+            Do: '"Enemies remaining: " + arg0'
+            With:
               - !var enemies remaining
           FontSize: 28
           Rect:
@@ -232,6 +217,6 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: int equal zero
-  Arguments:
+  Do: 'arg0 <= 0'
+  With:
     - !var enemies remaining

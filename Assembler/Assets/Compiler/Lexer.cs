@@ -131,6 +131,7 @@ namespace Assembler.Compiler.Compiler
 				'*' => new Token(TokenType.Multiply, "*", _line, _column),
 				'/' => new Token(TokenType.Divide, "/", _line, _column),
 				'%' => new Token(TokenType.Modulo, "%", _line, _column),
+				'^' => new Token(TokenType.Xor, "^", _line, _column),
 				'<' => new Token(TokenType.LessThan, "<", _line, _column),
 				'>' => new Token(TokenType.GreaterThan, ">", _line, _column),
 				'!' => new Token(TokenType.Not, "!", _line, _column),
