@@ -52,16 +52,6 @@ namespace Assembler.Parsing
 			IReadOnlyList<ValueInfo> values,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
 			IReadOnlyDictionary<string, ExpressionInfo> expressionsById,
-			IReadOnlyDictionary<string, Type> typeRegistry)
-			: this(values, parameters, expressionsById, typeRegistry, new Dictionary<Type, MethodInfo>(),
-				new InlineExpressionAccumulator())
-		{
-		}
-
-		private TransformContext(
-			IReadOnlyList<ValueInfo> values,
-			IReadOnlyDictionary<string, AssemblerValue> parameters,
-			IReadOnlyDictionary<string, ExpressionInfo> expressionsById,
 			IReadOnlyDictionary<string, Type> typeRegistry,
 			Dictionary<Type, MethodInfo> exprArgFactoryCache,
 			InlineExpressionAccumulator inlineExpressions)

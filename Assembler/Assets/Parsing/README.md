@@ -6,65 +6,16 @@ Every property value is wrapped in a deferred "value source" — covering consta
 
 ## Expressions: the `!expr { Do, With }` call site
 
-Every expression call site in a descriptor uses one uniform form:
+Every expression call site uses one form — `!expr { Do: <name-or-body>, With: [ <operand>, … ] }` —
+dispatched by registry membership (**name wins**):
 
-```yaml
-Value: !expr { Do: <name-or-body>, With: [ <operand>, ... ] }
-```
+- **Named call** — `Do` matches a declared `Expressions:` entry (by id or `CallableAs`); `With` binds
+  to its declared parameters: `!expr { Do: int add, With: [ !var score, 1 ] }`.
+- **Inline body** — otherwise `Do` is a one-off C# body ([compiler syntax](../Compiler/COMPILER_SYNTAX_REFERENCE.md))
+  with `With` bound positionally to `arg0`, `arg1`, …: `!expr { Do: 'arg0 * 2', With: [ !var velocity ] }`.
+  Operand and return types are inferred (return type from the use-site); a body without `;` gets an
+  implicit `return … ;`. Each becomes an anonymous expression compiled with the declared ones.
 
-`Do` is dispatched deterministically by registry membership (**name wins**):
-
-- **Named call** — if `Do` matches a declared expression (by its id or its `CallableAs`
-  alias in the top-level `Expressions:` block), it's a call into that expression. `With`
-  binds positionally to the expression's declared parameters, typed by its `ArgumentTypes`.
-
-  ```yaml
-  Expressions:
-    int add:
-      ArgumentTypes: [ int, int ]
-      ArgumentNames: [ a, b ]
-      ReturnType: int
-      Expression: 'return a + b;'
-  # …
-  Value: !expr { Do: int add, With: [ !var score, 1 ] }
-  ```
-
-- **Inline anonymous body** — otherwise `Do` is compiled as a one-off C# body (full
-  [compiler syntax](../Compiler/COMPILER_SYNTAX_REFERENCE.md), so precedence and multiple
-  operators work for free). `With` binds positionally to params `arg0`, `arg1`, `arg2`, …:
-
-  ```yaml
-  Position: !expr { Do: '-arg0',      With: [ !var velocity ] }
-  Position: !expr { Do: 'arg0 * 2',   With: [ !var velocity ] }
-  Health:   !expr { Do: 'arg0 + arg1', With: [ !var hp, !var bonus ] }
-  ```
-
-  Operand types are inferred (constants by literal kind, `!var` by its resolved value,
-  a nested named `!expr` by its return type); the return type is the use-site type. Each
-  inline body becomes an anonymous expression (`__inline_N`) compiled alongside the
-  declared ones. A bare expression body gets an implicit `return … ;`; a body containing
-  `;` is passed through as hand-written statements.
-
-  An inline body may carry optional hints (mirroring the `Expressions:` block), used only
-  when inference isn't enough:
-
-  ```yaml
-  # An object-typed slot (e.g. a spawner Parameters value) can't infer a return type,
-  # so declare it; add types/static sources the body needs.
-  colour: !expr { Do: 'RandomColorBetween(a, b)', With: [ !var lo, !var hi ], ReturnType: colour }
-  spin:   !expr { Do: 'Mathf.PI * arg0', With: [ !var t ], RegisterTypes: [ UnityEngine.Mathf ] }
-  sum:    !expr { Do: 'arg0 + arg1',     With: [ 1, 2 ],   ArgumentTypes: [ float, float ] }
-  ```
-
-  - `ReturnType` — the body's return type; required where the use-site type is `object`
-    (spawner/template `Parameters:`, `!text`/condition arguments).
-  - `ArgumentTypes` — explicit types for `arg0`, `arg1`, … (positional to `With`), overriding
-    per-operand inference (e.g. when an operand is an entity-local `!var` whose type isn't known).
-  - `RegisterTypes` / `RegisterTypeStatics` — extra types / static-method sources for the body,
-    exactly as on a declared expression.
-
-  These are inline-only: on a **named** `Do` call they are logged and ignored (the named
-  expression already declares them).
-
-Variable operands stay explicit `!var foo` tags inside `With`; everything resolves through
-the same `ValueSource<T>` → `IValueProvider<T>` pipeline as any other value.
+Inline bodies may add hints — `ReturnType`, `ArgumentTypes`, `RegisterTypes`, `RegisterTypeStatics` —
+for when inference can't reach (e.g. an `object`-typed spawner `Parameters:` slot needs `ReturnType`).
+On a named call they're ignored (logged).

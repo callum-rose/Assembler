@@ -59,7 +59,9 @@ namespace Assembler.Parsing
 				values,
 				new Dictionary<string, AssemblerValue>(),
 				expressions.ToDictionary(e => e.Id),
-				BuiltInTypeRegistry.Default);
+				BuiltInTypeRegistry.Default,
+				new Dictionary<Type, MethodInfo>(),
+				new InlineExpressionAccumulator());
 
 			var templates = gameDto.Templates?
 				.Select(kvp => new ConcreteEntityInfo(

@@ -155,6 +155,14 @@ Expressions:
 			Assert.That(ex!.ToString(), Does.Contain("Do"));
 		}
 
+		[Test]
+		public void EmptyDoThrows()
+		{
+			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '', With: [ !var v ] }")));
+
+			Assert.That(ex!.ToString(), Does.Contain("Do"));
+		}
+
 		// End-to-end: YAML -> ExpressionSource -> compiled delegate -> value, for inline `-arg0`
 		// and `arg0 * 2` plus a named call, confirming the whole pipeline agrees on types/results.
 		[Test]

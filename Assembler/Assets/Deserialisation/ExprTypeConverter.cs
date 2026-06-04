@@ -51,9 +51,9 @@ namespace Assembler.Deserialisation
 				}
 			}
 
-			if (@do is null)
+			if (string.IsNullOrWhiteSpace(@do))
 			{
-				throw new YamlException("!expr requires a 'Do' key (an expression name or an inline C# body).");
+				throw new YamlException("!expr requires a non-empty 'Do' key (an expression name or an inline C# body).");
 			}
 
 			return new ExprRefDto
