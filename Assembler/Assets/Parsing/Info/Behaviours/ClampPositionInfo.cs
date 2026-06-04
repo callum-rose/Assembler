@@ -3,27 +3,27 @@ using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record AccelerationInfo(
+	public record ClampPositionInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<Vector3> Acceleration,
-		ValueSource<Vector3> Velocity)
+		ValueSource<Vector3> Min,
+		ValueSource<Vector3> Max)
 		: BehaviourInfo(Id, Listeners)
 	{
-		public static AccelerationInfo Create(string id,
+		public static ClampPositionInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Acceleration")),
-				Transformer.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("Velocity")));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Min")),
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Max")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
-			new AccelerationInfo(Id,
+			new ClampPositionInfo(Id,
 				substitutedListeners,
-				Acceleration.SubstituteParameters(ctx),
-				Velocity.SubstituteParameters(ctx));
+				Min.SubstituteParameters(ctx),
+				Max.SubstituteParameters(ctx));
 	}
 }

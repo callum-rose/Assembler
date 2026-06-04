@@ -179,7 +179,56 @@ namespace Assembler.Building
 					var i = (AccelerationInfo)info;
 					var b = go.AddComponent<Acceleration>();
 					return (b, lr => b.Initialise(new AccelerationData(i.Id,
-						i.Acceleration.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.Acceleration.Resolve(ctx.Resolution),
+						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(DragInfo)] = new(typeof(DragBehaviour), (go, info, ctx) =>
+				{
+					var i = (DragInfo)info;
+					var b = go.AddComponent<DragBehaviour>();
+					return (b, lr => b.Initialise(new DragData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution),
+						i.Coefficient.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SpeedLimitInfo)] = new(typeof(SpeedLimit), (go, info, ctx) =>
+				{
+					var i = (SpeedLimitInfo)info;
+					var b = go.AddComponent<SpeedLimit>();
+					return (b, lr => b.Initialise(new SpeedLimitData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MoveTowardsInfo)] = new(typeof(MoveTowards), (go, info, ctx) =>
+				{
+					var i = (MoveTowardsInfo)info;
+					var b = go.AddComponent<MoveTowards>();
+					return (b, lr => b.Initialise(new MoveTowardsData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SmoothMoveInfo)] = new(typeof(SmoothMove), (go, info, ctx) =>
+				{
+					var i = (SmoothMoveInfo)info;
+					var b = go.AddComponent<SmoothMove>();
+					return (b, lr => b.Initialise(new SmoothMoveData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.SmoothTime.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ClampPositionInfo)] = new(typeof(ClampPosition), (go, info, ctx) =>
+				{
+					var i = (ClampPositionInfo)info;
+					var b = go.AddComponent<ClampPosition>();
+					return (b, lr => b.Initialise(new ClampPositionData(i.Id,
+						i.Min.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(WrapPositionInfo)] = new(typeof(WrapPosition), (go, info, ctx) =>
+				{
+					var i = (WrapPositionInfo)info;
+					var b = go.AddComponent<WrapPosition>();
+					return (b, lr => b.Initialise(new WrapPositionData(i.Id,
+						i.Min.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(TranslateInfo)] = new(typeof(Translate), (go, info, ctx) =>
 				{

@@ -148,7 +148,8 @@ namespace Tests.Behaviours
 			{
 				var fake = new FakeGameClock { DeltaTime = 1f };
 				var acceleration = NewBehaviour<Acceleration>(go, fake);
-				acceleration.Initialise(new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 1f, 0f))),
+				acceleration.Initialise(new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 1f, 0f)),
+						NullValueProvider<Vector3>.Instance),
 					Array.Empty<Listener>());
 
 				// Frame 1: v = (0,1,0); pos += v*dt = (0,1,0)
@@ -174,13 +175,170 @@ namespace Tests.Behaviours
 				var fake = new FakeGameClock();
 				fake.Pause();
 				var acceleration = NewBehaviour<Acceleration>(go, fake);
-				acceleration.Initialise(new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 9f, 0f))),
+				acceleration.Initialise(new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 9f, 0f)),
+						NullValueProvider<Vector3>.Instance),
 					Array.Empty<Listener>());
 
 				acceleration.Execute(TriggerContext.Empty);
 				acceleration.Execute(TriggerContext.Empty);
 
 				Assert.AreEqual(Vector3.zero, go.transform.position);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		// ---- Shared velocity: Acceleration (shared mode) + Velocity integrator ----
+
+		[Test]
+		public void Acceleration_SharedMode_WritesVelocityAndLeavesPositionToIntegrator()
+		{
+			var go = new GameObject("shared velocity");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 1f };
+
+				// One shared, writable velocity variable that both behaviours touch.
+				var shared = new ValueProvider<Vector3>(Vector3.zero);
+
+				var acceleration = NewBehaviour<Acceleration>(go, fake);
+				acceleration.Initialise(
+					new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 10f, 0f)), shared),
+					Array.Empty<Listener>());
+
+				acceleration.Execute(TriggerContext.Empty);
+
+				// Shared mode: it integrates into the shared velocity but does NOT move the entity.
+				Assert.AreEqual(new Vector3(0f, 10f, 0f), shared.Get(TriggerContext.Empty));
+				Assert.AreEqual(Vector3.zero, go.transform.position);
+
+				// The Velocity integrator, fed the SAME provider, moves the entity by vel*dt.
+				var velocity = NewBehaviour<Velocity>(go, fake);
+				velocity.Initialise(new VelocityData("v", shared), Array.Empty<Listener>());
+
+				velocity.Execute(TriggerContext.Empty);
+
+				Assert.AreEqual(new Vector3(0f, 10f, 0f), go.transform.position);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		// ---- Drag (exponential decay on shared velocity) ----
+
+		[Test]
+		public void Drag_DecaysVelocityExponentially()
+		{
+			var go = new GameObject("drag");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 0.5f };
+				var shared = new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f));
+
+				var drag = NewBehaviour<DragBehaviour>(go, fake);
+				drag.Initialise(new DragData("d", shared, new ValueProvider<float>(2f)), Array.Empty<Listener>());
+
+				drag.Execute(TriggerContext.Empty);
+
+				// magnitude == 10 * exp(-2 * 0.5) == 10 * exp(-1)
+				Assert.AreEqual(10f * Mathf.Exp(-1f), shared.Get(TriggerContext.Empty).magnitude, 1e-4f);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		[Test]
+		public void Drag_RequiresWritableVelocity()
+		{
+			var go = new GameObject("drag");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 0.5f };
+				var drag = NewBehaviour<DragBehaviour>(go, fake);
+
+				Assert.Throws<InvalidOperationException>(() =>
+					drag.Initialise(new DragData("d", NullValueProvider<Vector3>.Instance, new ValueProvider<float>(2f)),
+						Array.Empty<Listener>()));
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		// ---- MoveTowards ----
+
+		[Test]
+		public void MoveTowards_StepsTowardTargetAtSpeed()
+		{
+			var go = new GameObject("move towards");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 0.5f };
+				var move = NewBehaviour<MoveTowards>(go, fake);
+				move.Initialise(new MoveTowardsData("m",
+					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
+					new ValueProvider<float>(2f)), Array.Empty<Listener>());
+
+				move.Execute(TriggerContext.Empty); // 2 units/s * 0.5s = 1 unit toward (10,0,0)
+
+				Assert.AreEqual(new Vector3(1f, 0f, 0f), go.transform.position);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		[Test]
+		public void MoveTowards_DoesNotOvershootTarget()
+		{
+			var go = new GameObject("move towards");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 1f };
+				go.transform.position = new Vector3(9.5f, 0f, 0f);
+
+				var move = NewBehaviour<MoveTowards>(go, fake);
+				move.Initialise(new MoveTowardsData("m",
+					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
+					new ValueProvider<float>(100f)), Array.Empty<Listener>()); // step far exceeds remaining 0.5
+
+				move.Execute(TriggerContext.Empty);
+
+				Assert.AreEqual(new Vector3(10f, 0f, 0f), go.transform.position);
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
+		// ---- SmoothMove ----
+
+		[Test]
+		public void SmoothMove_EasesTowardTargetWithoutOvershoot()
+		{
+			var go = new GameObject("smooth move");
+			try
+			{
+				var fake = new FakeGameClock { DeltaTime = 0.1f };
+				var smooth = NewBehaviour<SmoothMove>(go, fake);
+				smooth.Initialise(new SmoothMoveData("s",
+					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
+					new ValueProvider<float>(1f)), Array.Empty<Listener>());
+
+				smooth.Execute(TriggerContext.Empty);
+
+				// Moved toward the target but nowhere near overshooting it.
+				Assert.Greater(go.transform.position.x, 0f);
+				Assert.Less(go.transform.position.x, 10f);
 			}
 			finally
 			{
