@@ -11,7 +11,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   Duration: Seconds the pointer must be held before the trigger fires. Defaults to 0.5.
 	///   MaxMovement: Largest screen-space drift, in pixels, allowed while holding; moving further cancels the press. Defaults to 25.
 	/// Outputs:
-	///   position [Vector2]: Screen-space position of the press when the threshold was reached.
+	///   position [Vector3]: Screen-space position of the press when the threshold was reached (z is 0).
 	///   hold_duration [float]: Seconds the pointer had been held when the trigger fired (at least Duration).
 	/// </remarks>
 	public class LongPress : InputTrigger<LongPressTriggerData>, INeedsGameClock
@@ -20,7 +20,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private bool _pressed;
 		private double _startTime;
-		private Vector2 _startPosition;
+		private Vector3 _startPosition;
 		private bool _resolved;
 
 		private void Update()

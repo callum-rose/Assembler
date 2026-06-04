@@ -17,16 +17,16 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				? UnityEngine.Input.GetTouch(0).phase is not (TouchPhase.Ended or TouchPhase.Canceled)
 				: UnityEngine.Input.GetMouseButton(0);
 
-		/// <summary>Screen-space position of the primary pointer this frame.</summary>
-		public static Vector2 Position =>
+		/// <summary>Screen-space position of the primary pointer this frame (z is 0).</summary>
+		public static Vector3 Position =>
 			UnityEngine.Input.touchCount > 0
-				? UnityEngine.Input.GetTouch(0).position
-				: (Vector2)UnityEngine.Input.mousePosition;
+				? (Vector3)UnityEngine.Input.GetTouch(0).position
+				: UnityEngine.Input.mousePosition;
 
 		/// <summary>Number of active touches (always 0 when only a mouse is present).</summary>
 		public static int Count => UnityEngine.Input.touchCount;
 
-		/// <summary>Screen-space position of the touch at <paramref name="index"/>.</summary>
-		public static Vector2 TouchPosition(int index) => UnityEngine.Input.GetTouch(index).position;
+		/// <summary>Screen-space position of the touch at <paramref name="index"/> (z is 0).</summary>
+		public static Vector3 TouchPosition(int index) => UnityEngine.Input.GetTouch(index).position;
 	}
 }

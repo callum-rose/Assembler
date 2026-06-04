@@ -11,7 +11,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   MaxInterval: Longest gap, in seconds, allowed between the two taps. Defaults to 0.3.
 	///   MaxMovement: Largest screen-space drift, in pixels, allowed both during a tap and between the two taps. Defaults to 25.
 	/// Outputs:
-	///   position [Vector2]: Screen-space position where the second tap was released.
+	///   position [Vector3]: Screen-space position where the second tap was released (z is 0).
 	/// </remarks>
 	public class DoubleTap : InputTrigger<DoubleTapTriggerData>, INeedsGameClock
 	{
@@ -22,12 +22,12 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private bool _pressed;
 		private double _pressStartTime;
-		private Vector2 _pressStartPosition;
+		private Vector3 _pressStartPosition;
 		private float _pressMoveSqr;
 
 		private bool _hasFirstTap;
 		private double _firstTapTime;
-		private Vector2 _firstTapPosition;
+		private Vector3 _firstTapPosition;
 
 		private void Update()
 		{

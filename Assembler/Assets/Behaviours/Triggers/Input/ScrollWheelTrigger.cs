@@ -8,14 +8,14 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// <remarks>
 	/// Properties:
 	/// Outputs:
-	///   scroll_delta [Vector2]: Scroll wheel delta for this frame (y is the common vertical scroll).
+	///   scroll_delta [Vector3]: Scroll wheel delta for this frame (y is the common vertical scroll; z is 0).
 	/// </remarks>
 	public class ScrollWheelTrigger : InputTrigger<ScrollWheelTriggerData>
 	{
 		private void Update()
 		{
-			var delta = UnityEngine.Input.mouseScrollDelta;
-			if (delta == Vector2.zero)
+			Vector3 delta = UnityEngine.Input.mouseScrollDelta;
+			if (delta == Vector3.zero)
 			{
 				return;
 			}

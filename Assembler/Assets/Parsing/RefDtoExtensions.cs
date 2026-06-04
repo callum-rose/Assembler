@@ -67,9 +67,6 @@ namespace Assembler.Parsing
 				case StringValue sv when typeof(T) == typeof(string):
 					value = (T)(object)sv.Value;
 					return true;
-				case Vector2Value v when typeof(T) == typeof(Vector2):
-					value = (T)(object)v.Value;
-					return true;
 				case Vector3Value v when typeof(T) == typeof(Vector3):
 					value = (T)(object)v.Value;
 					return true;

@@ -11,11 +11,11 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   MinDistance: Minimum screen-space travel, in pixels, required to count as a swipe. Defaults to 75.
 	///   MaxDuration: Longest press, in seconds, that still counts as a swipe rather than a slow drag. Defaults to 0.5.
 	/// Outputs:
-	///   start [Vector2]: Screen-space position where the swipe began.
-	///   position [Vector2]: Screen-space position where the swipe ended.
-	///   delta [Vector2]: Vector from start to end.
+	///   start [Vector3]: Screen-space position where the swipe began (z is 0).
+	///   position [Vector3]: Screen-space position where the swipe ended (z is 0).
+	///   delta [Vector3]: Vector from start to end (z is 0).
 	///   distance [float]: Length of the swipe in pixels.
-	///   direction [Vector2]: Normalised swipe direction.
+	///   direction [Vector3]: Normalised swipe direction (z is 0).
 	/// </remarks>
 	public class Swipe : InputTrigger<SwipeTriggerData>, INeedsGameClock
 	{
@@ -23,7 +23,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private bool _pressed;
 		private double _startTime;
-		private Vector2 _startPosition;
+		private Vector3 _startPosition;
 
 		private void Update()
 		{

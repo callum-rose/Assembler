@@ -17,7 +17,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// Properties:
 	///   Action: Name of the abstract action to listen for (must be declared under Controls.Actions).
 	/// Outputs:
-	///   axis [Vector2]: For value actions, the current (x, y) value of the action each frame.
+	///   axis [Vector3]: For value actions, the current (x, y, 0) value of the action each frame.
 	///   x [float]: For value actions, the current x component.
 	///   y [float]: For value actions, the current y component.
 	/// </remarks>
@@ -100,9 +100,10 @@ namespace Assembler.Behaviours.Triggers.Input
 
 		// Exposed for unit testing: live device polling is impractical to drive in a unit test, so the
 		// value-forwarding shape (axis/x/y, mirroring AxisTrigger) is verified through this seam.
-		internal void Emit(Vector2 value) => NotifyListeners(BuildValueContext(value));
+		// The action reads a Vector2 from its binding; it widens to a Vector3 (z = 0) here.
+		internal void Emit(Vector3 value) => NotifyListeners(BuildValueContext(value));
 
-		internal static TriggerContext BuildValueContext(Vector2 value) =>
+		internal static TriggerContext BuildValueContext(Vector3 value) =>
 			TriggerContext.New(b =>
 			{
 				b["axis"] = value;

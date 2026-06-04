@@ -7,7 +7,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<Sprite> Sprite,
-		ValueSource<Vector2> Size)
+		ValueSource<Vector3> Size)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static SpriteInfo Create(string id,
@@ -17,7 +17,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				Transformer.CreateValueSource<Sprite>(ctx, props.GetValueOrDefault("Sprite")),
-				Transformer.CreateValueSource<Vector2>(ctx, props.GetValueOrDefault("Size")));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Size")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

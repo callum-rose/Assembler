@@ -8,7 +8,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	/// <remarks>
 	/// Properties:
 	/// Outputs:
-	///   center [Vector2]: Screen-space midpoint between the two fingers.
+	///   center [Vector3]: Screen-space midpoint between the two fingers (z is 0).
 	///   distance [float]: Current distance between the two fingers, in pixels.
 	///   delta [float]: Change in finger distance since the previous frame (positive = spreading apart).
 	///   scale [float]: Ratio of the current distance to the previous frame's (greater than 1 = zooming in).
