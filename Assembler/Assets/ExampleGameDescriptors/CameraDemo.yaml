@@ -124,4 +124,5 @@ Entities:
           Lens: 5
           Damping: 0.6
           DeadZone: 0.1
+          CameraDistance: 10
           ScreenOffset: !vec { X: 0, Y: 0 }

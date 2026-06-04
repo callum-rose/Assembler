@@ -18,6 +18,7 @@ namespace Assembler.Behaviours.Camera
 	///   Lens: Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection.
 	///   Damping: How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim.
 	///   DeadZone: 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting.
+	///   CameraDistance: 2D only — distance the camera keeps in front of the target along its view axis (default 10). Must be &gt; 0 or an orthographic camera sits on the target's plane and sees nothing.
 	///   ScreenOffset [Vector2]: 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5).
 	///   FollowOffset [Vector3]: 3D only — world-space offset the camera maintains from the target. Presence selects the 3D rig.
 	/// </remarks>
@@ -48,6 +49,12 @@ namespace Assembler.Behaviours.Camera
 			else if (data.Follow != null)
 			{
 				var composer = gameObject.AddComponent<CinemachinePositionComposer>();
+
+				// Cinemachine only sets CameraDistance's default in Reset() (editor-only), so a runtime-added
+				// composer starts at 0 — which puts an orthographic camera on the target's z-plane where it
+				// can't see it. Default to 10 (overridable) so the camera always stays in front of the target.
+				composer.CameraDistance = data.CameraDistance.ValueOr(10f);
+
 				data.Damping.UseIfValueExists(d => composer.Damping = new Vector3(d, d, d));
 
 				var composition = composer.Composition;

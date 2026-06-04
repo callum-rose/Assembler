@@ -12,6 +12,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<float> Lens,
 		ValueSource<float> Damping,
 		ValueSource<float> DeadZone,
+		ValueSource<float> CameraDistance,
 		ValueSource<Vector2> ScreenOffset,
 		ValueSource<Vector3> FollowOffset) : BehaviourInfo(Id, Listeners)
 	{
@@ -27,6 +28,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Lens")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Damping")),
 				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("DeadZone")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("CameraDistance")),
 				Transformer.CreateValueSource<Vector2>(ctx, props.GetValueOrDefault("ScreenOffset")),
 				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FollowOffset")));
 
@@ -40,6 +42,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Lens.SubstituteParameters(ctx),
 				Damping.SubstituteParameters(ctx),
 				DeadZone.SubstituteParameters(ctx),
+				CameraDistance.SubstituteParameters(ctx),
 				ScreenOffset.SubstituteParameters(ctx),
 				FollowOffset.SubstituteParameters(ctx));
 	}

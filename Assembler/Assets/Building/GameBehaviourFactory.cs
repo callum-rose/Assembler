@@ -494,6 +494,7 @@ namespace Assembler.Building
 							i.Lens.Resolve(res),
 							i.Damping.Resolve(res),
 							i.DeadZone.Resolve(res),
+							i.CameraDistance.Resolve(res),
 							i.ScreenOffset.Resolve(res),
 							i.FollowOffset.Resolve(res)), i.Listeners.ToListeners(lr, res));
 					});
