@@ -59,13 +59,6 @@ Variables:
   ship velocity: !var ship initial velocity
   ship facing: !var ship initial facing
 
-Expressions:
-  int greater or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a >= b;"
-
 Templates:
   bullet_template:
     Tags: [ bullet ]

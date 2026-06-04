@@ -89,12 +89,6 @@ Expressions:
       int s = (int)(y * 10f);
       return "Score: " + s;
 
-  passthrough bool:
-    ArgumentTypes: [ bool ]
-    ArgumentNames: [ d ]
-    ReturnType: bool
-    Expression: "return d;"
-
 Templates:
   platform_template:
     Tags: [ platform ]

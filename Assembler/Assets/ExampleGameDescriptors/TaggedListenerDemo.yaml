@@ -88,11 +88,6 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
-  int sub:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a - b;"
 Entities:
   enemy spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
