@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Resolving;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Assembler.Behaviours
@@ -29,6 +31,8 @@ namespace Assembler.Behaviours
 
 		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
 		public IReadOnlyList<Listener> DebugListeners => _listeners;
+		
+		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours;
 #endif
 
 		/// <summary>Runs when a trigger notifies this behaviour. Passive/state-driven behaviours that don't
@@ -39,6 +43,10 @@ namespace Assembler.Behaviours
 		{
 			Id = behaviourData.Id;
 			_listeners = listeners;
+
+#if DEBUG_CONSOLE
+			_listeningBehaviours = _listeners.SelectMany(l => l.DebugTargets()).ToArray();
+#endif
 		}
 
 		protected void NotifyListeners(TriggerContext ctx)
