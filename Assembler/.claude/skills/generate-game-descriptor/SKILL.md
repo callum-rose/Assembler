@@ -704,8 +704,8 @@ These are conventions, not rules. Reach for them when they fit.
 - **`Outputs:` binding + `!output` + `!expr`** for reactions that need data from the trigger event
   (collision contact point, other entity's velocity, slider value, axis x/y).
 - **Camera that follows the player**: a `camera` entity plus a `camera follow` vcam targeting the
-  player by tag. Use the **3d** form (`Mode: "3d"`, `FollowOffset`) as the reliable pattern — see
-  `CameraDemo3D.yaml`. (The 2D `ScreenOffset` path is currently broken — see **Offering feedback**.)
+  player by tag (`Target: { Tag: player }`). Check `Behaviours.md` for the `Mode`/offset properties,
+  and validate the result builds (see **Verifying your work**).
 
 ---
 
@@ -724,21 +724,16 @@ worktree does a one-time cold import.
 `validate-game.sh` is the authoritative "does it actually build" check. Pass a single file to scope
 it; with no argument it sweeps everything in `Assets/ExampleGameDescriptors/`.
 
-### Canonical examples to learn from (these build cleanly)
+### Learning from the example descriptors
 
-`Pong.yaml`, `Asteroids.yaml`, `Tetris.yaml`, `FlappyBird.yaml`, `DoodleJump.yaml`,
-`GameOverDemo.yaml`, `InputActionDemo.yaml`, `UiShowcase.yaml`, `CameraDemo3D.yaml`,
-`StateMachineDemo.yaml`, `TaggedListenerDemo.yaml`, `EnemyHealthDemo.yaml`, `SpawnedBubblesDemo.yaml`.
+The descriptors in `Assets/ExampleGameDescriptors/` are the best reference for real, working
+structure — read them to see how movement, scoring, spawning, UI, and cameras are wired together.
 
-### Descriptors that do **not** build — do not copy their patterns
-
-- **`Snake 2.yaml`** — uses an outdated YAML shape; fails to deserialise.
-- **`VoxelDemo.yaml`** — fails to deserialise.
-- **`CameraDemo.yaml`** — 2D `camera follow` with `ScreenOffset`/`DeadZone` throws on parse. Use
-  `CameraDemo3D.yaml` as the camera-follow reference instead.
-
-If you copy structure from an example, prefer one of the canonical list above and double-check it
-still validates.
+**But do not assume any example is current.** Descriptors fall out of date as the engine evolves, and
+some in that folder no longer build. **Before you copy patterns from an example, run
+`Tools/validate-game.sh <that-file>` and confirm it builds** — if it fails, don't model your work on
+it. Treat a clean `validate-game.sh` (not the file's mere presence) as the signal that a pattern is
+safe to copy.
 
 ---
 
@@ -786,9 +781,9 @@ Volunteer feedback when you notice any of the following while authoring or revie
 - **A missing behaviour.** The user's intent requires something the catalogue doesn't cover, and the
   workaround via expressions / chained behaviours is awkward or impossible.
 - **A faulty or surprising behaviour.** A property name, default, or behaviour that doesn't match what
-  the user reasonably expects. (Current known example: the **2D `camera follow`** path with
-  `ScreenOffset`/`DeadZone` throws an `InvalidCastException` at parse — `CameraDemo.yaml` does not
-  build, while the 3D form in `CameraDemo3D.yaml` works.)
+  the user reasonably expects, or one that fails to build for a particular property combination. (If a
+  validator surfaces a stage failure that traces to a specific behaviour/property — e.g. a property
+  whose type doesn't round-trip through the parser — report it concretely with the failing config.)
 - **A naming inconsistency.** `colour list *` vs `color` elsewhere, `trigger enter trigger` vs
   `collision enter trigger` shape mismatch, or properties with the same role named differently across
   behaviours.
