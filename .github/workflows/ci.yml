@@ -1,55 +1,55 @@
-# CI — runs the repo's own Tools/ check scripts on push/PR.
+# CI — DISABLED until a self-hosted runner exists.
 #
-# PREREQUISITE: a self-hosted macOS runner with Unity 6000.4.5f1 installed via Unity Hub at the
-# standard path (/Applications/Unity/Hub/Editor/<version>/...) and a valid Unity licence activated.
-# The Tools/*.sh scripts boot that local editor in batch mode (there is no headless CLI build), so a
-# GitHub-hosted Linux runner cannot run them as-is. To run on GitHub-hosted runners instead, swap the
-# job over to game-ci (https://game.ci) with UNITY_LICENSE/UNITY_EMAIL/UNITY_PASSWORD secrets — but
-# that bypasses these scripts, so the self-hosted route keeps CI and local checks identical.
+# This workflow runs the repo's own Tools/ check scripts (compile, format, docs-drift, EditMode
+# tests), which boot a locally-installed Unity 6000.4.5f1 in batch mode — so it requires a
+# self-hosted macOS runner with Unity installed and licensed. None is configured yet, so the whole
+# workflow is commented out to avoid runs queueing indefinitely against a non-existent runner.
 #
-# The first run on a fresh runner checkout does a one-time cold asset import (~minutes); later runs
-# reuse the Library/ cache. The scripts refuse to run if an editor already has this exact path open,
-# so keep one checkout per runner (or use the default unique workspace path).
-
-name: CI
-
-on:
-  push:
-    branches: [master]
-  pull_request:
-
-# Newer pushes to the same branch cancel older in-flight runs.
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  checks:
-    name: Compile, format, docs & tests
-    runs-on: [self-hosted, macOS]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          # Full history so the scripts can diff the changed .cs against master.
-          fetch-depth: 0
-
-      - name: Compile check
-        run: Assembler/Tools/check-compile.sh
-
-      - name: Format check
-        run: Assembler/Tools/check-format.sh
-
-      - name: Docs drift check
-        run: Assembler/Tools/check-docs.sh
-
-      - name: EditMode tests
-        run: Assembler/Tools/run-tests.sh
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: editmode-test-results
-          path: Assembler/TestResults/EditMode-results.xml
-          if-no-files-found: ignore
+# TO RE-ENABLE: register a self-hosted macOS runner (repo Settings > Actions > Runners), then
+# uncomment everything below. The runner auto-gets the `self-hosted` and `macOS` labels this job
+# requires. The first run does a one-time cold asset import (~minutes); later runs reuse Library/.
+# (Alternative for GitHub-hosted runners: switch the job to game-ci with UNITY_LICENSE secrets —
+# but that bypasses these scripts, so the self-hosted route keeps CI and local checks identical.)
+#
+# name: CI
+#
+# on:
+#   push:
+#     branches: [master]
+#   pull_request:
+#
+# # Newer pushes to the same branch cancel older in-flight runs.
+# concurrency:
+#   group: ci-${{ github.ref }}
+#   cancel-in-progress: true
+#
+# jobs:
+#   checks:
+#     name: Compile, format, docs & tests
+#     runs-on: [self-hosted, macOS]
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#         with:
+#           # Full history so the scripts can diff the changed .cs against master.
+#           fetch-depth: 0
+#
+#       - name: Compile check
+#         run: Assembler/Tools/check-compile.sh
+#
+#       - name: Format check
+#         run: Assembler/Tools/check-format.sh
+#
+#       - name: Docs drift check
+#         run: Assembler/Tools/check-docs.sh
+#
+#       - name: EditMode tests
+#         run: Assembler/Tools/run-tests.sh
+#
+#       - name: Upload test results
+#         if: always()
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: editmode-test-results
+#           path: Assembler/TestResults/EditMode-results.xml
+#           if-no-files-found: ignore
