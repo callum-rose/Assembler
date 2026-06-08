@@ -160,7 +160,7 @@ namespace Assembler.Generation.Verification
 			{
 				if (run.Sink == null) return;
 				if (type is LogType.Error or LogType.Exception or LogType.Assert)
-					run.Sink.Add(string.IsNullOrEmpty(stackTrace) ? condition : condition + "\n" + stackTrace);
+					run.Sink.Add(condition + FilterFrames(stackTrace));
 			}
 
 			// Snapshot existing scene roots so teardown destroys only what this build created — even if
@@ -198,6 +198,45 @@ namespace Assembler.Generation.Verification
 				if (!preexisting.Contains(root))
 					Object.DestroyImmediate(root);
 			}
+		}
+
+		// Compactly formats a thrown exception for an LLM reader: the message chain (including inner
+		// exceptions) plus only the stack frames in our own code. A raw exception trace here is dominated by
+		// dozens of YamlDotNet/BCL internal frames that don't help locate the fault in a descriptor.
+		private static string Summarise(Exception ex)
+		{
+			var sb = new StringBuilder();
+			for (Exception? e = ex; e != null; e = e.InnerException)
+			{
+				if (!ReferenceEquals(e, ex))
+					sb.Append("\n  caused by ");
+				sb.Append(e.GetType().Name).Append(": ").Append(e.Message.Trim());
+			}
+
+			sb.Append(FilterFrames(ex.StackTrace));
+			return sb.ToString();
+		}
+
+		// Drops framework/engine internals from a stack trace, keeping only frames in our own code (Assembler
+		// types or Assets/ paths). Returns the kept frames as indented lines each prefixed with a newline, or
+		// an empty string when none qualify — so callers can append it directly after a message.
+		private static string FilterFrames(string? stackTrace)
+		{
+			if (string.IsNullOrEmpty(stackTrace))
+				return string.Empty;
+
+			var sb = new StringBuilder();
+			foreach (var line in stackTrace.Split('\n'))
+			{
+				var trimmed = line.Trim();
+				if (trimmed.Length == 0)
+					continue;
+
+				if (trimmed.Contains("Assembler.") || trimmed.Contains("Assets/"))
+					sb.Append("\n    ").Append(trimmed);
+			}
+
+			return sb.ToString();
 		}
 
 		// Carries the parse stage's two products (game + controls) to the resolve stage.
@@ -238,7 +277,7 @@ namespace Assembler.Generation.Verification
 				}
 				catch (Exception ex)
 				{
-					errors.Add(failPrefix + ": " + ex);
+					errors.Add(failPrefix + ": " + Summarise(ex));
 				}
 				finally
 				{

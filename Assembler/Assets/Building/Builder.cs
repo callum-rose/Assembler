@@ -253,32 +253,12 @@ namespace Assembler.Building
 	/// carrying the registries and validated state between the two build phases. Treat as a one-shot token: pass
 	/// the value straight from Resolve into Instantiate.
 	/// </summary>
-	public sealed record ResolvedGame
-	{
-		internal ResolvedGame(
-			GameInfo gameInfo,
-			ControlsInfo controls,
-			InputActionAsset controlsAsset,
-			VariableRegistry variableRegistry,
-			CompiledExpressionsRegistry compiledExpressionsRegistry,
-			AssetRegistry assetRegistry,
-			StringTableRegistry stringTableRegistry)
-		{
-			GameInfo = gameInfo;
-			Controls = controls;
-			ControlsAsset = controlsAsset;
-			VariableRegistry = variableRegistry;
-			CompiledExpressionsRegistry = compiledExpressionsRegistry;
-			AssetRegistry = assetRegistry;
-			StringTableRegistry = stringTableRegistry;
-		}
-
-		internal GameInfo GameInfo { get; }
-		internal ControlsInfo Controls { get; }
-		internal InputActionAsset ControlsAsset { get; }
-		internal VariableRegistry VariableRegistry { get; }
-		internal CompiledExpressionsRegistry CompiledExpressionsRegistry { get; }
-		internal AssetRegistry AssetRegistry { get; }
-		internal StringTableRegistry StringTableRegistry { get; }
-	}
+	public sealed record ResolvedGame(
+		GameInfo GameInfo,
+		ControlsInfo Controls,
+		InputActionAsset ControlsAsset,
+		VariableRegistry VariableRegistry,
+		CompiledExpressionsRegistry CompiledExpressionsRegistry,
+		AssetRegistry AssetRegistry,
+		StringTableRegistry StringTableRegistry);
 }
