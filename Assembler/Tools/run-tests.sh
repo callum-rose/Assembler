@@ -47,6 +47,16 @@ if [[ ! -x "$UNITY" ]]; then
 	exit 1
 fi
 
+# Refuse to run if an editor already has THIS exact project path open — two Unity processes on one
+# path corrupt the Library. An editor on a different path (your main checkout) is fine and expected.
+if ps -axww -o command= | awk -v u="$UNITY" -v p="$PROJECT" 'index($0, u) == 1 && index($0, p)' | grep -q .; then
+	echo "error: a Unity editor already has this project path open:" >&2
+	echo "         $PROJECT" >&2
+	echo "       Unity cannot open the same path from two processes. Close that editor and re-run." >&2
+	echo "       (Running alongside an editor open on a DIFFERENT path — e.g. your main checkout — is fine.)" >&2
+	exit 1
+fi
+
 # Translate friendly CLI args into the -testAssembly/-testFilter/-testCategory flags that
 # TestBatch reads from the command line. Bare positional args are treated as assembly names.
 FILTER_ARGS=()

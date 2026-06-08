@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
 
 namespace Assembler.Behaviours.VariableUpdaters
 {
@@ -16,7 +15,6 @@ namespace Assembler.Behaviours.VariableUpdaters
 		{
 			var value = Data.ValueToGet.Get(ctx);
 			Data.ValueToSet.Set(value);
-			UnityEngine.Debug.Log($"{Id} set to {value}");
 		}
 	}
 }
