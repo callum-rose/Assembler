@@ -19,7 +19,9 @@ namespace Editor
 			for (int i = 0; i < args.Length - 1; i++)
 			{
 				if (args[i] == flag)
+				{
 					values.Add(args[i + 1]);
+				}
 			}
 
 			return values;

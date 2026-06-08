@@ -42,7 +42,7 @@ namespace Assembler.Resolving
 		public bool TryGetTemplate(string key, out string template)
 		{
 			if (TryGetFrom(_locale.Current, key, out template) ||
-			    TryGetFrom(_defaultLocale, key, out template))
+				TryGetFrom(_defaultLocale, key, out template))
 			{
 				return true;
 			}
@@ -54,8 +54,8 @@ namespace Assembler.Resolving
 		private bool TryGetFrom(string locale, string key, out string template)
 		{
 			if (!string.IsNullOrEmpty(locale) &&
-			    _locales.TryGetValue(locale, out var table) &&
-			    table.TryGetValue(key, out var found))
+				_locales.TryGetValue(locale, out var table) &&
+				table.TryGetValue(key, out var found))
 			{
 				template = found;
 				return true;

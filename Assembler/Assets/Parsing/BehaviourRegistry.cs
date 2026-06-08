@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
-using SphereGizmoInfo = Assembler.Parsing.Info.Behaviours.SphereGizmoInfo;
 using CubeGizmoInfo = Assembler.Parsing.Info.Behaviours.CubeGizmoInfo;
+using SphereGizmoInfo = Assembler.Parsing.Info.Behaviours.SphereGizmoInfo;
 
 namespace Assembler.Parsing
 {

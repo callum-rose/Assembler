@@ -16,14 +16,25 @@ namespace Assembler.Voxels
 	{
 		public static VoxelModel Read(byte[] bytes)
 		{
-			if (bytes == null) throw new ArgumentNullException(nameof(bytes));
+			if (bytes == null)
+			{
+				throw new ArgumentNullException(nameof(bytes));
+			}
 
 			using var ms = new MemoryStream(bytes);
 			using var r = new BinaryReader(ms);
 
-			if (ms.Length < 8) throw new InvalidDataException(".vox file too short.");
+			if (ms.Length < 8)
+			{
+				throw new InvalidDataException(".vox file too short.");
+			}
+
 			var magic = new string(r.ReadChars(4));
-			if (magic != "VOX ") throw new InvalidDataException(".vox file missing 'VOX ' magic.");
+			if (magic != "VOX ")
+			{
+				throw new InvalidDataException(".vox file missing 'VOX ' magic.");
+			}
+
 			r.ReadInt32(); // version
 
 			var voxels = new List<(byte x, byte y, byte z, byte index)>();
@@ -31,7 +42,11 @@ namespace Assembler.Voxels
 
 			while (ms.Position < ms.Length)
 			{
-				if (ms.Length - ms.Position < 12) break;
+				if (ms.Length - ms.Position < 12)
+				{
+					break;
+				}
+
 				var id = new string(r.ReadChars(4));
 				var contentSize = r.ReadInt32();
 				var childrenSize = r.ReadInt32();
@@ -89,7 +104,10 @@ namespace Assembler.Voxels
 			// the way VoxWriter (and GoxelTextParser) build palettes — sequential,
 			// 1-based, no holes.
 			var usedIndices = new SortedSet<byte>();
-			foreach (var v in voxels) usedIndices.Add(v.index);
+			foreach (var v in voxels)
+			{
+				usedIndices.Add(v.index);
+			}
 
 			var remap = new Dictionary<byte, byte>();
 			var compactPalette = new List<Color32>();

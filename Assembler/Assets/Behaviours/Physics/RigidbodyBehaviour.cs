@@ -36,18 +36,42 @@ namespace Assembler.Behaviours.Physics
 		private static RigidbodyConstraints ApplyPositionFreeze(RigidbodyConstraints current, Vector3 freeze)
 		{
 			current &= ~(RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ);
-			if (freeze.x != 0f) current |= RigidbodyConstraints.FreezePositionX;
-			if (freeze.y != 0f) current |= RigidbodyConstraints.FreezePositionY;
-			if (freeze.z != 0f) current |= RigidbodyConstraints.FreezePositionZ;
+			if (freeze.x != 0f)
+			{
+				current |= RigidbodyConstraints.FreezePositionX;
+			}
+
+			if (freeze.y != 0f)
+			{
+				current |= RigidbodyConstraints.FreezePositionY;
+			}
+
+			if (freeze.z != 0f)
+			{
+				current |= RigidbodyConstraints.FreezePositionZ;
+			}
+
 			return current;
 		}
 
 		private static RigidbodyConstraints ApplyRotationFreeze(RigidbodyConstraints current, Vector3 freeze)
 		{
 			current &= ~(RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ);
-			if (freeze.x != 0f) current |= RigidbodyConstraints.FreezeRotationX;
-			if (freeze.y != 0f) current |= RigidbodyConstraints.FreezeRotationY;
-			if (freeze.z != 0f) current |= RigidbodyConstraints.FreezeRotationZ;
+			if (freeze.x != 0f)
+			{
+				current |= RigidbodyConstraints.FreezeRotationX;
+			}
+
+			if (freeze.y != 0f)
+			{
+				current |= RigidbodyConstraints.FreezeRotationY;
+			}
+
+			if (freeze.z != 0f)
+			{
+				current |= RigidbodyConstraints.FreezeRotationZ;
+			}
+
 			return current;
 		}
 	}

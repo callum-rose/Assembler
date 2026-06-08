@@ -57,12 +57,16 @@ namespace Assembler.Validation
 			var label = issue.Severity == YamlValidationSeverity.Error ? "error" : "warning";
 			sb.Append("  ").Append(label);
 			if (issue.HasLocation)
+			{
 				sb.Append(" at line ").Append(issue.Line).Append(", column ").Append(issue.Column);
+			}
 
 			sb.Append(": ").Append(issue.Message);
 
 			if (issue.HasLocation)
+			{
 				AppendSnippet(sb, issue);
+			}
 		}
 
 		// Renders the offending line with a caret beneath the flagged column, e.g.
@@ -73,7 +77,9 @@ namespace Assembler.Validation
 		{
 			var lineNo = issue.Line;
 			if (lineNo < 1 || lineNo > _lines.Length)
+			{
 				return;
+			}
 
 			var line = _lines[lineNo - 1];
 			var gutter = new string(' ', lineNo.ToString().Length);
@@ -81,13 +87,20 @@ namespace Assembler.Validation
 			var col = issue.Column < 1 ? 1 : issue.Column;
 			var caretPad = col - 1;
 			if (caretPad > line.Length)
+			{
 				caretPad = line.Length;
+			}
+
 			if (caretPad < 0)
+			{
 				caretPad = 0;
+			}
 
 			var caretLen = 1;
 			if (issue.EndLine == issue.Line && issue.EndColumn > issue.Column)
+			{
 				caretLen = issue.EndColumn - issue.Column;
+			}
 
 			sb.Append('\n').Append("    ").Append(lineNo).Append(" | ").Append(line);
 			sb.Append('\n').Append("    ").Append(gutter).Append(" | ")

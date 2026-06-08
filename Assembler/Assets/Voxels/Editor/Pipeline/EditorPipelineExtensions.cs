@@ -41,13 +41,21 @@ namespace Assembler.Voxels.Editor.Pipeline
 
 		public async Task<VoxelPipelineContext> ExecuteAsync(VoxelPipelineContext ctx, CancellationToken ct)
 		{
-			if (ctx.VoxBytes == null) throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			if (ctx.VoxBytes == null)
+			{
+				throw new InvalidOperationException($"{Name}: VoxBytes is required.");
+			}
+
 			var bytes = ctx.VoxBytes;
 			var path = _scratchPath;
 			await ctx.MainThread.RunAsync(() =>
 			{
 				var dir = Path.GetDirectoryName(path);
-				if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+				if (!string.IsNullOrEmpty(dir))
+				{
+					Directory.CreateDirectory(dir);
+				}
+
 				File.WriteAllBytes(path, bytes);
 			}).ConfigureAwait(false);
 			return ctx;

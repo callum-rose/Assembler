@@ -31,10 +31,30 @@ namespace Assembler.Voxels.Pipeline
 		private readonly IVoxelPipelineObserver[] _observers;
 		public CompositeVoxelPipelineObserver(params IVoxelPipelineObserver[] observers) => _observers = observers;
 
-		public void OnStageStarted(string stageName) { foreach (var o in _observers) o.OnStageStarted(stageName); }
-		public void OnStageFinished(string stageName, TimeSpan elapsed) { foreach (var o in _observers) o.OnStageFinished(stageName, elapsed); }
-		public void OnStageFailed(string stageName, Exception ex) { foreach (var o in _observers) o.OnStageFailed(stageName, ex); }
-		public void OnLog(string message) { foreach (var o in _observers) o.OnLog(message); }
-		public void OnStreamDelta(string delta) { foreach (var o in _observers) o.OnStreamDelta(delta); }
+		public void OnStageStarted(string stageName) { foreach (var o in _observers)
+			{
+				o.OnStageStarted(stageName);
+			}
+		}
+		public void OnStageFinished(string stageName, TimeSpan elapsed) { foreach (var o in _observers)
+			{
+				o.OnStageFinished(stageName, elapsed);
+			}
+		}
+		public void OnStageFailed(string stageName, Exception ex) { foreach (var o in _observers)
+			{
+				o.OnStageFailed(stageName, ex);
+			}
+		}
+		public void OnLog(string message) { foreach (var o in _observers)
+			{
+				o.OnLog(message);
+			}
+		}
+		public void OnStreamDelta(string delta) { foreach (var o in _observers)
+			{
+				o.OnStreamDelta(delta);
+			}
+		}
 	}
 }

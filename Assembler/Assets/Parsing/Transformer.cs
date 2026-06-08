@@ -97,7 +97,8 @@ namespace Assembler.Parsing
 				allExpressions,
 				templates,
 				entities,
-				gameOverCondition) { ParseContext = ctx };
+				gameOverCondition)
+			{ ParseContext = ctx };
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
 				new(kvp.Key,
@@ -292,7 +293,7 @@ namespace Assembler.Parsing
 					var entityId = l.EntityId switch
 					{
 						ParamRefDto paramRefDto => ctx.Parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
-						                           && pv is StringValue sv
+												   && pv is StringValue sv
 							? sv.Value
 							: ParameterEntityIdSentinel + (paramRefDto.Id ?? string.Empty),
 						VarRefDto varRefDto => varRefDto.ResolveValue<string>(ctx.Values),
@@ -742,8 +743,8 @@ namespace Assembler.Parsing
 			var genericDef = t.GetGenericTypeDefinition();
 
 			if (genericDef != typeof(IReadOnlyList<>) &&
-			    genericDef != typeof(IEnumerable<>) &&
-			    genericDef != typeof(List<>))
+				genericDef != typeof(IEnumerable<>) &&
+				genericDef != typeof(List<>))
 			{
 				return false;
 			}
@@ -763,8 +764,8 @@ namespace Assembler.Parsing
 			var genericDef = t.GetGenericTypeDefinition();
 
 			if (genericDef != typeof(IReadOnlyList<>) &&
-			    genericDef != typeof(IEnumerable<>) &&
-			    genericDef != typeof(List<>))
+				genericDef != typeof(IEnumerable<>) &&
+				genericDef != typeof(List<>))
 			{
 				return false;
 			}
@@ -886,7 +887,7 @@ namespace Assembler.Parsing
 					.ToArray();
 
 				return $"Cannot convert value of type {obj.GetType()} to a value{forField} " +
-				       $"(element types: {string.Join(", ", elementTypes)})";
+					   $"(element types: {string.Join(", ", elementTypes)})";
 			}
 
 			return $"Cannot convert value of type {obj.GetType()} to a value{forField}";

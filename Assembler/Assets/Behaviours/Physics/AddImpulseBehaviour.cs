@@ -20,8 +20,15 @@ namespace Assembler.Behaviours.Physics
 
 		public override void Execute(TriggerContext ctx)
 		{
-			if (_rigidbody == null) _rigidbody = GetComponent<Rigidbody>();
-			if (_rigidbody != null) _rigidbody.AddForce(Data.Impulse.Get(ctx), ForceMode.Impulse);
+			if (_rigidbody == null)
+			{
+				_rigidbody = GetComponent<Rigidbody>();
+			}
+
+			if (_rigidbody != null)
+			{
+				_rigidbody.AddForce(Data.Impulse.Get(ctx), ForceMode.Impulse);
+			}
 		}
 	}
 }

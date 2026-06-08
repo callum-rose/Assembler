@@ -43,7 +43,11 @@ namespace Assembler.Voxels
 		{
 			var json = File.ReadAllText(path);
 			var project = JsonUtility.FromJson<VoxelProject>(json);
-			if (project == null) throw new InvalidDataException(".voxproj could not be parsed.");
+			if (project == null)
+			{
+				throw new InvalidDataException(".voxproj could not be parsed.");
+			}
+
 			project.history ??= new List<HistoryEntry>();
 			return project;
 		}

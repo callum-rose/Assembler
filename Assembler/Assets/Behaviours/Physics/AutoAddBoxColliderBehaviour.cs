@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddBoxColliderBehaviour : GameBehaviour<BoxColliderData>
 	{
 		private BoxCollider _boxCollider;
-		
+
 		protected override void OnInitialise(BoxColliderData data)
 		{
 			_boxCollider = gameObject.AddComponent<BoxCollider>();

@@ -18,10 +18,14 @@ namespace Assembler.Generation.Verification
 			foreach (var stage in result.Stages)
 			{
 				if (stage is not RanResult { Success: false } failed)
+				{
 					continue;
+				}
 
 				foreach (var error in failed.Errors)
+				{
 					errors.Add($"[{failed.Stage}] {error}");
+				}
 			}
 
 			// ParsedDto is no longer surfaced (no caller reads it); kept on the record for source compat.
