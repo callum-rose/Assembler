@@ -595,7 +595,7 @@ namespace Assembler.Parsing
 				FloatValue => "float",
 				BoolValue => "bool",
 				StringValue => "string",
-				Vector2Value or Vector3Value or VecValue => "vector",
+				Vector3Value or VecValue => "vector",
 				ColorValue or ColourValue => "colour",
 				TypedListValue typed when TryGetTypeName(ctx,
 					typeof(List<>).MakeGenericType(typed.ElementType), out var listName) => listName,
