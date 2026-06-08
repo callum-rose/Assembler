@@ -41,15 +41,21 @@ namespace Editor
 
 				string[] assemblies = EditorBatchCli.ArgValues(args, "-testAssembly").ToArray();
 				if (assemblies.Length > 0)
+				{
 					filter.assemblyNames = assemblies;
+				}
 
 				string[] nameRegexes = EditorBatchCli.ArgValues(args, "-testFilter").ToArray();
 				if (nameRegexes.Length > 0)
+				{
 					filter.groupNames = nameRegexes;
+				}
 
 				string[] categories = EditorBatchCli.ArgValues(args, "-testCategory").ToArray();
 				if (categories.Length > 0)
+				{
 					filter.categoryNames = categories;
+				}
 
 				_api = ScriptableObject.CreateInstance<TestRunnerApi>();
 				_callbacks = new Callbacks();
@@ -72,11 +78,20 @@ namespace Editor
 		{
 			var parts = new List<string>();
 			if (assemblies.Length > 0)
+			{
 				parts.Add("assemblies=" + string.Join(",", assemblies));
+			}
+
 			if (nameRegexes.Length > 0)
+			{
 				parts.Add("filter=" + string.Join(",", nameRegexes));
+			}
+
 			if (categories.Length > 0)
+			{
 				parts.Add("category=" + string.Join(",", categories));
+			}
+
 			return parts.Count > 0 ? string.Join(" ", parts) : "all EditMode tests";
 		}
 
@@ -118,9 +133,14 @@ namespace Editor
 						{
 							sb.AppendLine($"  ✗ {f.FullName}");
 							if (!string.IsNullOrWhiteSpace(f.Message))
+							{
 								sb.AppendLine("      " + f.Message.Trim().Replace("\n", "\n      "));
+							}
+
 							if (!string.IsNullOrWhiteSpace(f.StackTrace))
+							{
 								sb.AppendLine("      " + f.StackTrace.Trim().Replace("\n", "\n      "));
+							}
 						}
 					}
 
@@ -131,9 +151,13 @@ namespace Editor
 
 					bool ok = failed == 0 && inconclusive == 0;
 					if (ok)
+					{
 						Debug.Log(sb.ToString());
+					}
 					else
+					{
 						Debug.LogError(sb.ToString());
+					}
 
 					EditorApplication.Exit(ok ? 0 : 1);
 				}
@@ -148,13 +172,19 @@ namespace Editor
 			{
 				bool isLeaf = !result.HasChildren;
 				if (isLeaf && result.TestStatus == TestStatus.Failed)
+				{
 					failures.Add(result);
+				}
 
 				if (result.Children == null)
+				{
 					return;
+				}
 
 				foreach (ITestResultAdaptor child in result.Children)
+				{
 					CollectFailures(child, failures);
+				}
 			}
 
 			private static void TryWriteXml(ITestResultAdaptor result)

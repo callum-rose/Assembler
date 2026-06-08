@@ -9,6 +9,17 @@ using Assembler.Parsing.Info;
 
 namespace Assembler.Resolving
 {
+	// One expression's outcome from a best-effort compile sweep: the expression plus its compile error
+	// message, or a null Error when it compiled cleanly.
+	public readonly struct ExpressionCompileResult
+	{
+		public bool Success => Error is null;
+		public ExpressionInfo Info { get; }
+		public string? Error { get; }
+
+		public ExpressionCompileResult(ExpressionInfo info, string? error) => (Info, Error) = (info, error);
+	}
+
 	public class CompiledExpressionsRegistry
 	{
 		private readonly IReadOnlyDictionary<string, Type> _typeRegistry;
@@ -17,7 +28,8 @@ namespace Assembler.Resolving
 		private readonly Dictionary<string, (Type delegateType, Delegate @delegate)> _compiledExpressions = new();
 		private readonly Dictionary<string, ExpressionInfo> _expressionInfos = new();
 
-		public CompiledExpressionsRegistry(IReadOnlyDictionary<string, Type> typeRegistry, ExpressionMethodCompiler compiler)
+		public CompiledExpressionsRegistry(IReadOnlyDictionary<string, Type> typeRegistry,
+			ExpressionMethodCompiler compiler)
 		{
 			_typeRegistry = typeRegistry;
 			_compiler = compiler;
@@ -47,41 +59,41 @@ namespace Assembler.Resolving
 			foreach (var typeName in expressionInfo.RegisterTypes)
 			{
 				var type = Type.GetType(typeName);
-				
+
 				if (type is null)
 				{
 					type = AppDomain.CurrentDomain.GetAssemblies()
 						.SelectMany(a => a.GetTypes())
 						.FirstOrDefault(t => t.FullName == typeName);
-					
+
 					if (type is null)
 					{
 						throw new Exception($"Type not found for name: {typeName}");
 					}
 				}
-				
+
 				_compiler.RegisterType(type);
 			}
 
 			foreach (var typeName in expressionInfo.RegisterTypeStatics)
 			{
 				var type = Type.GetType(typeName);
-				
+
 				if (type is null)
 				{
 					type = AppDomain.CurrentDomain.GetAssemblies()
 						.SelectMany(a => a.GetTypes())
 						.FirstOrDefault(t => t.FullName == typeName);
-					
+
 					if (type is null)
 					{
 						throw new Exception($"Type not found for name: {typeName}");
 					}
 				}
-				
+
 				_compiler.RegisterStaticMethods(type);
 			}
-			
+
 			var compiledExpression = _compiler.Compile(
 				expressionInfo.Expression,
 				_typeRegistry[expressionInfo.ReturnType],
@@ -94,7 +106,9 @@ namespace Assembler.Resolving
 			// Make this expression callable by name from later-compiled expressions.
 			var callableName = GetCallableName(expressionInfo);
 			var paramTypes = expressionInfo.Arguments.Select(a => _typeRegistry[a.type]).ToArray();
-			_compiler.RegisterExpression(callableName, compiledExpression, paramTypes,
+			_compiler.RegisterExpression(callableName,
+				compiledExpression,
+				paramTypes,
 				_typeRegistry[expressionInfo.ReturnType]);
 		}
 
@@ -104,9 +118,11 @@ namespace Assembler.Resolving
 		public void CompileAndRegisterAll(IReadOnlyList<ExpressionInfo> expressions)
 		{
 			var byCallableName = new Dictionary<string, ExpressionInfo>();
+
 			foreach (var info in expressions)
 			{
 				var name = GetCallableName(info);
+
 				if (byCallableName.TryGetValue(name, out var existing))
 				{
 					throw new Exception(
@@ -121,6 +137,83 @@ namespace Assembler.Resolving
 			{
 				CompileAndRegister(info);
 			}
+		}
+
+		// Best-effort counterpart to CompileAndRegisterAll: compiles every expression in dependency
+		// order but captures each one's compile error instead of throwing on the first failure, so a
+		// caller can report all failures in a single pass. A successfully compiled expression is still
+		// registered so later expressions that call it resolve; a failed one is skipped (its dependents
+		// then fail too, but the root cause is reported against the offending expression). Used by the
+		// standalone expression check (Tools/check-expression.sh) to audit expressions without booting a
+		// game. Returns one result per input expression, in the input order.
+		public IReadOnlyList<ExpressionCompileResult> CompileAndRegisterAllBestEffort(
+			IReadOnlyList<ExpressionInfo> expressions)
+		{
+			var byCallableName = new Dictionary<string, ExpressionInfo>();
+
+			foreach (var info in expressions)
+			{
+				var name = GetCallableName(info);
+
+				if (byCallableName.TryGetValue(name, out var existing))
+				{
+					// A callable-name collision is a whole-set error; attribute it to the duplicate so the
+					// report names the offending expression, and don't attempt to compile (ordering is moot).
+					return expressions
+						.Select(e => new ExpressionCompileResult(e,
+							ReferenceEquals(e, info)
+								? $"Expression callable-name collision: '{name}' is also produced by '{existing.Id}'. " +
+								  "Set a 'CallableAs' alias on one of them to disambiguate."
+								: null))
+						.ToList();
+				}
+
+				byCallableName[name] = info;
+			}
+
+			IReadOnlyList<ExpressionInfo> ordered;
+
+			try
+			{
+				ordered = OrderByDependencies(expressions, byCallableName);
+			}
+			catch (Exception e)
+			{
+				// A dependency cycle can't be attributed to a single expression; report it against them all.
+				return expressions.Select(x => new ExpressionCompileResult(x, FlattenMessage(e))).ToList();
+			}
+
+			var errorById = new Dictionary<string, string?>();
+
+			foreach (var info in ordered)
+			{
+				try
+				{
+					CompileAndRegister(info);
+					errorById[info.Id] = null;
+				}
+				catch (Exception e)
+				{
+					errorById[info.Id] = FlattenMessage(e);
+				}
+			}
+
+			return expressions.Select(e => new ExpressionCompileResult(e, errorById[e.Id])).ToList();
+		}
+
+		// Flattens an exception (and its inner exceptions) into a single-line-per-cause message. The
+		// compiler embeds source positions (e.g. "at line 3") in these messages, so they carry the
+		// position information the check surfaces.
+		private static string FlattenMessage(Exception ex)
+		{
+			var parts = new List<string>();
+
+			for (Exception? e = ex; e != null; e = e.InnerException)
+			{
+				parts.Add(e.Message.Trim());
+			}
+
+			return string.Join(" → caused by ", parts);
 		}
 
 		// Returns the expressions ordered so that each one comes after every other
@@ -186,6 +279,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Compiled expression not found for id: {id}");
 			}
+
 			return typeAndDelegate;
 		}
 
@@ -195,6 +289,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Expression info not found for id: {id}");
 			}
+
 			return info;
 		}
 
@@ -204,6 +299,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Type not registered: {typeName}");
 			}
+
 			return type;
 		}
 

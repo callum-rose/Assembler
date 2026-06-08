@@ -20,14 +20,21 @@ namespace Assembler.Behaviours.Debug
 
 		private void OnDrawGizmos()
 		{
-			if (Data == null) return;
+			if (Data == null)
+			{
+				return;
+			}
 
 			Gizmos.color = Data.Colour.Get();
 
 			if (Data.IsWire.Get())
+			{
 				Gizmos.DrawWireSphere(transform.position, Data.Radius.Get());
+			}
 			else
+			{
 				Gizmos.DrawSphere(transform.position, Data.Radius.Get());
+			}
 		}
 	}
 }

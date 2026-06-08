@@ -47,12 +47,18 @@ namespace Editor
 			}
 		}
 
-		// Builds the markdown and writes it to disk, returning the output path. Shared by the
-		// menu item and the headless DocsBatch entry point. Does not call AssetDatabase.Refresh —
+		// Committed home of the generated markdown, and the file name the check tool diffs against.
+		internal const string FileName = "Behaviours.md";
+		private const string DefaultOutputDir = "Assets/docs";
+
+		// Builds the markdown and writes it to disk, returning the output path. Shared by the menu
+		// item and the headless DocsBatch entry point. Pass outputDir to redirect the write to a
+		// scratch location (the doc-drift check writes to a temp dir instead of the committed file);
+		// null writes to the committed Assets/docs path. Does not call AssetDatabase.Refresh —
 		// callers decide whether/when to refresh.
-		internal static string WriteDocs()
+		internal static string WriteDocs(string? outputDir = null)
 		{
-			const string outputPath = "Assets/docs/Behaviours.md";
+			string outputPath = Path.Combine(outputDir ?? DefaultOutputDir, FileName);
 			Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 			File.WriteAllText(outputPath, GenerateMarkdown());
 			Debug.Log($"Wrote {outputPath}");

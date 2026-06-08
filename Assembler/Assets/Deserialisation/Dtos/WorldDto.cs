@@ -1,8 +1,8 @@
 namespace Assembler.Deserialisation.Dtos
 {
-    public sealed record WorldDto
-    {
-        public int? Dimensionality { get; init; }
-        public ColourDto? BackgroundColor { get; init; }
-    }
+	public sealed record WorldDto
+	{
+		public int? Dimensionality { get; init; }
+		public ColourDto? BackgroundColor { get; init; }
+	}
 }

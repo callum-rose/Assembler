@@ -20,7 +20,10 @@ namespace Assembler.Behaviours.Debug
 
 		private void OnDrawGizmos()
 		{
-			if (Data == null) return;
+			if (Data == null)
+			{
+				return;
+			}
 
 			Gizmos.color = Data.Colour.Get();
 			Gizmos.DrawLine(

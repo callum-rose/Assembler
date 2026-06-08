@@ -1,6 +1,6 @@
+using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.UI.Internal;
 using Assembler.Behaviours.UI.Views;
-using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 

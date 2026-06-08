@@ -16,7 +16,7 @@ namespace Assembler.Resolving
 		{
 			_global[valueInfo.Id] = BuildProvider(valueInfo);
 		}
-		
+
 		public IValueProvider<T> Get<T>(string id) => Get<T>(id, new EntityVariableScope());
 
 		public IValueProvider<T> Get<T>(string id, EntityVariableScope scope)
@@ -56,12 +56,35 @@ namespace Assembler.Resolving
 
 		private static IValueProvider BuildListProvider(TypedListValue typed)
 		{
-			if (typed.ElementType == typeof(int)) return BuildListProvider<int>(typed);
-			if (typed.ElementType == typeof(float)) return BuildListProvider<float>(typed);
-			if (typed.ElementType == typeof(bool)) return BuildListProvider<bool>(typed);
-			if (typed.ElementType == typeof(string)) return BuildListProvider<string>(typed);
-			if (typed.ElementType == typeof(Vector3)) return BuildListProvider<Vector3>(typed);
-			if (typed.ElementType == typeof(Color)) return BuildListProvider<Color>(typed);
+			if (typed.ElementType == typeof(int))
+			{
+				return BuildListProvider<int>(typed);
+			}
+
+			if (typed.ElementType == typeof(float))
+			{
+				return BuildListProvider<float>(typed);
+			}
+
+			if (typed.ElementType == typeof(bool))
+			{
+				return BuildListProvider<bool>(typed);
+			}
+
+			if (typed.ElementType == typeof(string))
+			{
+				return BuildListProvider<string>(typed);
+			}
+
+			if (typed.ElementType == typeof(Vector3))
+			{
+				return BuildListProvider<Vector3>(typed);
+			}
+
+			if (typed.ElementType == typeof(Color))
+			{
+				return BuildListProvider<Color>(typed);
+			}
 
 			throw new Exception($"Unsupported list element type: {typed.ElementType}");
 		}

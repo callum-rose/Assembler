@@ -1,9 +1,9 @@
 #if UNITY_EDITOR
 using System;
 using System.Threading;
+using Assembler.Anthropic;
 using UnityEditor;
 using UnityEngine;
-using Assembler.Anthropic;
 
 namespace Assembler.Generation.Verification.Editor
 {

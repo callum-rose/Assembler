@@ -5,7 +5,6 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Audio;
-using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.ListOperations;
@@ -15,14 +14,15 @@ using Assembler.Behaviours.Rotation;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.Sprites;
 using Assembler.Behaviours.Time;
-using Assembler.Behaviours.Visual;
 using Assembler.Behaviours.Triggers;
 using Assembler.Behaviours.Triggers.Conditionals;
 using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Input.Touch;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.VariableUpdaters;
+using Assembler.Behaviours.Visual;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
@@ -709,7 +709,8 @@ namespace Assembler.Building
 								s.OnExit.ToListeners(lr, res)));
 						b.Initialise(new StateMachineData(i.Id, current, i.Initial, transitions, states),
 							i.Listeners.ToListeners(lr, res));
-					});
+					}
+					);
 				})
 			};
 

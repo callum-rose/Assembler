@@ -9,6 +9,8 @@
         "Assembler.Parsing.Phase1",
         "Assembler.Parsing.Phase2",
         "Assembler.Parsing.Phase3",
+        "Assembler.Resolving",
+        "Assembler.Compiler",
         "Assembler.Building",
         "Assembler.Generation.Verification",
         "Assembler.Behaviours",

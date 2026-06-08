@@ -48,7 +48,11 @@ namespace Assembler.Voxels.Pipeline
 		public Task WriteAsync(string path, byte[] bytes, CancellationToken ct)
 		{
 			var dir = Path.GetDirectoryName(path);
-			if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+			if (!string.IsNullOrEmpty(dir))
+			{
+				Directory.CreateDirectory(dir);
+			}
+
 			File.WriteAllBytes(path, bytes);
 			return Task.CompletedTask;
 		}

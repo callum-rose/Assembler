@@ -40,7 +40,11 @@ namespace Assembler.Voxels.Pipeline
 
 		public static VoxelGenerationPipeline FromExisting(VoxelPipelineResult prior, VoxelPipelineServices? services = null)
 		{
-			if (prior == null) throw new ArgumentNullException(nameof(prior));
+			if (prior == null)
+			{
+				throw new ArgumentNullException(nameof(prior));
+			}
+
 			var ctx = prior.Context;
 			if (services != null)
 			{
@@ -100,7 +104,11 @@ namespace Assembler.Voxels.Pipeline
 			// so a re-used pipeline doesn't accidentally run RefineGoxelTextStage.
 			_ctx = _ctx with { RefinementInstruction = null, UseChatHistory = false };
 			EnsureLoadSystemPrompt();
-			if (!ContainsStage<GenerateGoxelTextStage>()) _stages.Add(new GenerateGoxelTextStage());
+			if (!ContainsStage<GenerateGoxelTextStage>())
+			{
+				_stages.Add(new GenerateGoxelTextStage());
+			}
+
 			return this;
 		}
 
@@ -122,7 +130,11 @@ namespace Assembler.Voxels.Pipeline
 		public VoxelGenerationPipeline GenerateGoxelText()
 		{
 			EnsureLoadSystemPrompt();
-			if (!ContainsStage<GenerateGoxelTextStage>()) _stages.Add(new GenerateGoxelTextStage());
+			if (!ContainsStage<GenerateGoxelTextStage>())
+			{
+				_stages.Add(new GenerateGoxelTextStage());
+			}
+
 			return this;
 		}
 
@@ -257,17 +269,30 @@ namespace Assembler.Voxels.Pipeline
 
 		private void EnsureParseModel()
 		{
-			if (!ContainsStage<ParseGoxelTextStage>()) _stages.Add(new ParseGoxelTextStage());
+			if (!ContainsStage<ParseGoxelTextStage>())
+			{
+				_stages.Add(new ParseGoxelTextStage());
+			}
 		}
 
 		private void EnsureEncodeVox()
 		{
-			if (!ContainsStage<EncodeVoxStage>()) _stages.Add(new EncodeVoxStage());
+			if (!ContainsStage<EncodeVoxStage>())
+			{
+				_stages.Add(new EncodeVoxStage());
+			}
 		}
 
 		private bool ContainsStage<T>() where T : IVoxelStage
 		{
-			foreach (var s in _stages) if (s is T) return true;
+			foreach (var s in _stages)
+			{
+				if (s is T)
+				{
+					return true;
+				}
+			}
+
 			return false;
 		}
 	}

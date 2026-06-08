@@ -4,7 +4,7 @@ namespace Assembler.Deserialisation.Dtos
 {
 	public record ListenerDto
 	{
-		public object? EntityId  { get; init; }
+		public object? EntityId { get; init; }
 		public string? BehaviourId { get; init; }
 		public object? EntityTag { get; init; }
 		public object? BehaviourTag { get; init; }

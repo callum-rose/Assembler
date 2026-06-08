@@ -30,10 +30,10 @@ namespace Tests.Behaviours
 				Last = Prepare(ctx);
 				CallCount++;
 			}
-			
+
 			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
-		
+
 		private sealed class FakeGameClock : IGameClock
 		{
 			public float DeltaTime { get; set; }

@@ -111,7 +111,7 @@ namespace Assembler.Voxels.Scripting
 			{
 				using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(inputJson) ? "{}" : inputJson);
 				if (!doc.RootElement.TryGetProperty("script", out var scriptElement) ||
-				    scriptElement.ValueKind != JsonValueKind.String)
+					scriptElement.ValueKind != JsonValueKind.String)
 				{
 					error = "Tool input must be a JSON object with a string 'script' field.";
 					return false;
@@ -137,8 +137,8 @@ namespace Assembler.Voxels.Scripting
 		{
 			var size = model.Size;
 			return $"OK: built {model.Voxels.Count} voxels, " +
-			       $"bounds min ({model.Min.x}, {model.Min.y}, {model.Min.z}) max ({model.Max.x}, {model.Max.y}, {model.Max.z}), " +
-			       $"size {size.x}x{size.y}x{size.z}, {model.Palette.Length} colour(s).";
+				   $"bounds min ({model.Min.x}, {model.Min.y}, {model.Min.z}) max ({model.Max.x}, {model.Max.y}, {model.Max.z}), " +
+				   $"size {size.x}x{size.y}x{size.z}, {model.Palette.Length} colour(s).";
 		}
 	}
 }

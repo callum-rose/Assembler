@@ -31,7 +31,7 @@ namespace Assembler.Behaviours
 
 		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
 		public IReadOnlyList<Listener> DebugListeners => _listeners;
-		
+
 		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours;
 #endif
 
