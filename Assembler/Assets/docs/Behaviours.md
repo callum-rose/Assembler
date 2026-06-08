@@ -1390,6 +1390,17 @@ Renders a voxel mesh asset as a child of the entity.
 | Mesh | Mesh | Asset reference to the Mesh to display. |
 | Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
 
+## `primitive`
+Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Shape | string | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive child. |
+
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
 
