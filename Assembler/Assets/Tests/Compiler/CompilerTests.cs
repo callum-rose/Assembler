@@ -938,7 +938,7 @@ namespace Tests.Compiler
 
 			Assert.That(func(testList), Is.EqualTo(55));
 		}
-		
+
 		[Test]
 		public void ComplexListParameterTest()
 		{

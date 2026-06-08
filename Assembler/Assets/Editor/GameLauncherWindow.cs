@@ -65,8 +65,15 @@ namespace Editor
 					var dto = parser.Parse(yaml);
 					if (dto?.Game != null)
 					{
-						if (!string.IsNullOrWhiteSpace(dto.Game.Title)) title = dto.Game.Title!;
-						if (!string.IsNullOrWhiteSpace(dto.Game.Description)) description = dto.Game.Description!;
+						if (!string.IsNullOrWhiteSpace(dto.Game.Title))
+						{
+							title = dto.Game.Title!;
+						}
+
+						if (!string.IsNullOrWhiteSpace(dto.Game.Description))
+						{
+							description = dto.Game.Description!;
+						}
 					}
 				}
 				catch
@@ -79,8 +86,15 @@ namespace Editor
 
 			_entries.Sort((a, b) => string.Compare(a.Title, b.Title, System.StringComparison.OrdinalIgnoreCase));
 
-			if (_selectedIndex >= _entries.Count) _selectedIndex = _entries.Count - 1;
-			if (_selectedIndex < 0 && _entries.Count > 0) _selectedIndex = 0;
+			if (_selectedIndex >= _entries.Count)
+			{
+				_selectedIndex = _entries.Count - 1;
+			}
+
+			if (_selectedIndex < 0 && _entries.Count > 0)
+			{
+				_selectedIndex = 0;
+			}
 		}
 
 		private void OnGUI()
@@ -186,10 +200,16 @@ namespace Editor
 
 		private static void OnPlayModeStateChanged(PlayModeStateChange change)
 		{
-			if (change != PlayModeStateChange.EnteredPlayMode) return;
+			if (change != PlayModeStateChange.EnteredPlayMode)
+			{
+				return;
+			}
 
 			var pending = SessionState.GetString(PendingLaunchKey, "");
-			if (string.IsNullOrEmpty(pending)) return;
+			if (string.IsNullOrEmpty(pending))
+			{
+				return;
+			}
 
 			var platformIndex = SessionState.GetInt(PendingPlatformKey, 0);
 
@@ -218,7 +238,11 @@ namespace Editor
 		{
 			get
 			{
-				if (_selectedButtonStyle != null) return _selectedButtonStyle;
+				if (_selectedButtonStyle != null)
+				{
+					return _selectedButtonStyle;
+				}
+
 				_selectedButtonStyle = new GUIStyle(EntryButtonStyle)
 				{
 					fontStyle = FontStyle.Bold,

@@ -14,7 +14,7 @@ namespace Assembler.Resolving
 
 		/// <summary>The keys currently present in this context. Used by debug tooling to show what a fired trigger carried.</summary>
 		public IEnumerable<string> Keys => _values.Keys;
-		
+
 		public static TriggerContext New(string key, object value) => Empty.With(key, value);
 
 		public static TriggerContext New(Action<ImmutableDictionary<string, object>.Builder> builder) => Empty.With(builder);

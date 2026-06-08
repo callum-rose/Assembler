@@ -23,7 +23,7 @@ namespace Tests.Behaviours
 			}
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
-			
+
 			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 

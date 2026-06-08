@@ -36,7 +36,10 @@ namespace Assembler.Behaviours.UI
 
 		private void Update()
 		{
-			if (_view == null) return;
+			if (_view == null)
+			{
+				return;
+			}
 
 			_view.Text.text = Data.Text.ValueOr(string.Empty);
 

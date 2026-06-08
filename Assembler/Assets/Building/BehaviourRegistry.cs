@@ -46,11 +46,18 @@ namespace Assembler.Building
 		{
 			_behaviours.Add(descriptor, behaviour);
 			_registrationIndex[behaviour] = _nextIndex++;
-			if (behaviourTags == null) return;
+			if (behaviourTags == null)
+			{
+				return;
+			}
+
 			foreach (var tag in behaviourTags)
 			{
 				if (!_behavioursByTag.TryGetValue(tag, out var list))
+				{
 					_behavioursByTag[tag] = list = new List<GameBehaviour>();
+				}
+
 				list.Add(behaviour);
 			}
 		}
@@ -58,7 +65,9 @@ namespace Assembler.Building
 		public IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null)
 		{
 			if (!_behavioursByTag.TryGetValue(behaviourTag, out var list))
+			{
 				return Array.Empty<GameBehaviour>();
+			}
 
 			return entityTag == null
 				? list.Where(b => b).ToArray()
@@ -69,8 +78,8 @@ namespace Assembler.Building
 		{
 			return _behaviours
 				.Where(kv => kv.Key.BehaviourId == behaviourId
-				             && kv.Value
-				             && kv.Value.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
+							 && kv.Value
+							 && kv.Value.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
 				.Select(kv => kv.Value)
 				.OrderBy(b => _registrationIndex[b])
 				.ToArray();

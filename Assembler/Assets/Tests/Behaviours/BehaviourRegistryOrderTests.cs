@@ -35,7 +35,13 @@ namespace Tests.Behaviours
 		public void TearDown()
 		{
 			foreach (var go in _created)
-				if (go) Object.DestroyImmediate(go);
+			{
+				if (go)
+				{
+					Object.DestroyImmediate(go);
+				}
+			}
+
 			_created.Clear();
 		}
 

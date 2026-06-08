@@ -1,5 +1,5 @@
-using Assembler.Parsing.Info.Behaviours;
 using Assembler.Parsing.Controls;
+using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
 using UnityEngine.InputSystem;
 

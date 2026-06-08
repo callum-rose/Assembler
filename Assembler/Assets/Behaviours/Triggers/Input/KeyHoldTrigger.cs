@@ -24,7 +24,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				"up" => KeyCode.UpArrow,
 				"down" => KeyCode.DownArrow
 			};
-			
+
 			if (UnityEngine.Input.GetKey(keyCode))
 			{
 				NotifyListeners(TriggerContext.Empty);

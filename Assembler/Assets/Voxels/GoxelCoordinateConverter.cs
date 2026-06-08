@@ -26,9 +26,9 @@ namespace Assembler.Voxels
 				{
 					var parts = line.Split(new[] { ' ', '\t' }, 4, StringSplitOptions.RemoveEmptyEntries);
 					if (parts.Length >= 4
-					    && int.TryParse(parts[0], out _)
-					    && int.TryParse(parts[1], out _)
-					    && int.TryParse(parts[2], out _))
+						&& int.TryParse(parts[0], out _)
+						&& int.TryParse(parts[1], out _)
+						&& int.TryParse(parts[2], out _))
 					{
 						sb.Append(parts[0]).Append(' ').Append(parts[2]).Append(' ').Append(parts[1]).Append(' ').Append(parts[3]);
 					}
@@ -37,7 +37,10 @@ namespace Assembler.Voxels
 						sb.Append(line);
 					}
 				}
-				if (i < lines.Length - 1) sb.Append('\n');
+				if (i < lines.Length - 1)
+				{
+					sb.Append('\n');
+				}
 			}
 			return sb.ToString();
 		}

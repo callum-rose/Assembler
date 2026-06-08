@@ -1,7 +1,7 @@
 namespace Assembler.Generation.Verification
 {
 	public abstract record Attempt(int AttemptNumber);
-	
+
 	public sealed record RequestFailedAttempt(
 		int AttemptNumber,
 		string Error) : Attempt(AttemptNumber);

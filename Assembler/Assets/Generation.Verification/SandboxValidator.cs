@@ -70,7 +70,9 @@ namespace Assembler.Generation.Verification
 						foreach (var error in ran.Errors)
 						{
 							foreach (var line in error.Split('\n'))
+							{
 								sb.Append("        ").Append(line).Append('\n');
+							}
 						}
 
 						break;
@@ -125,7 +127,9 @@ namespace Assembler.Generation.Verification
 
 			// Stages 2-5 touch live engine state; run them under a log hook with teardown.
 			if (!run.Aborted)
+			{
 				RunBuildStages(yaml, run);
+			}
 
 			run.FillNotRun(Order);
 
@@ -141,7 +145,9 @@ namespace Assembler.Generation.Verification
 			{
 				var structure = YamlStructureValidator.Validate(yaml);
 				if (!structure.IsValid)
+				{
 					errors.Add(structure.FormatReport());
+				}
 			}
 			catch (Exception ex)
 			{
@@ -158,9 +164,15 @@ namespace Assembler.Generation.Verification
 		{
 			void OnLog(string condition, string stackTrace, LogType type)
 			{
-				if (run.Sink == null) return;
+				if (run.Sink == null)
+				{
+					return;
+				}
+
 				if (type is LogType.Error or LogType.Exception or LogType.Assert)
+				{
 					run.Sink.Add(condition + FilterFrames(stackTrace));
+				}
 			}
 
 			// Snapshot existing scene roots so teardown destroys only what this build created — even if
@@ -196,7 +208,9 @@ namespace Assembler.Generation.Verification
 			foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
 			{
 				if (!preexisting.Contains(root))
+				{
 					Object.DestroyImmediate(root);
+				}
 			}
 		}
 
@@ -209,7 +223,10 @@ namespace Assembler.Generation.Verification
 			for (Exception? e = ex; e != null; e = e.InnerException)
 			{
 				if (!ReferenceEquals(e, ex))
+				{
 					sb.Append("\n  caused by ");
+				}
+
 				sb.Append(e.GetType().Name).Append(": ").Append(e.Message.Trim());
 			}
 
@@ -223,17 +240,23 @@ namespace Assembler.Generation.Verification
 		private static string FilterFrames(string? stackTrace)
 		{
 			if (string.IsNullOrEmpty(stackTrace))
+			{
 				return string.Empty;
+			}
 
 			var sb = new StringBuilder();
 			foreach (var line in stackTrace.Split('\n'))
 			{
 				var trimmed = line.Trim();
 				if (trimmed.Length == 0)
+				{
 					continue;
+				}
 
 				if (trimmed.Contains("Assembler.") || trimmed.Contains("Assets/"))
+				{
 					sb.Append("\n    ").Append(trimmed);
+				}
 			}
 
 			return sb.ToString();
@@ -257,7 +280,9 @@ namespace Assembler.Generation.Verification
 			{
 				Stages.Add(result);
 				if (!result.Success)
+				{
 					Aborted = true;
+				}
 			}
 
 			// Runs one stage's work under the log hook, recording a RanResult. Returns the produced artifact,
@@ -266,7 +291,9 @@ namespace Assembler.Generation.Verification
 			public T? Run<T>(BuildStage stage, string failPrefix, Func<T> work) where T : class
 			{
 				if (Aborted)
+				{
 					return null;
+				}
 
 				var errors = new List<string>();
 				Sink = errors;
@@ -294,7 +321,9 @@ namespace Assembler.Generation.Verification
 				foreach (var stage in order)
 				{
 					if (Stages.All(s => s.Stage != stage))
+					{
 						Stages.Add(new NotRunResult(stage));
+					}
 				}
 			}
 		}

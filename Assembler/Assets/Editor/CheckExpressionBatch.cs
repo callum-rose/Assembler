@@ -55,13 +55,19 @@ namespace Editor
 
 				// Default to a full audit of the example descriptors when no input is specified.
 				if (rawExprs.Count == 0 && descriptorPaths.Count == 0)
+				{
 					descriptorPaths.Add(DefaultDescriptorDir);
+				}
 
 				bool ok = Run(rawExprs, returnType, argSpecs, descriptorPaths, out string report);
 				if (ok)
+				{
 					Debug.Log(report);
+				}
 				else
+				{
 					Debug.LogError(report);
+				}
 
 				EditorApplication.Exit(ok ? 0 : 1);
 			}
@@ -79,9 +85,13 @@ namespace Editor
 			bool ok = Run(new List<string>(), DefaultReturnType, new List<string>(),
 				new List<string> { DefaultDescriptorDir }, out string report);
 			if (ok)
+			{
 				Debug.Log(report);
+			}
 			else
+			{
 				Debug.LogError(report);
+			}
 		}
 
 		// Builds the combined report across both input modes. Returns true when every expression compiled.
@@ -106,7 +116,10 @@ namespace Editor
 				{
 					total++;
 					if (!ok)
+					{
 						failed++;
+					}
+
 					sb.AppendLine(line);
 				}
 
@@ -135,7 +148,9 @@ namespace Editor
 					failed += fails;
 					unreadable += couldNotRead ? 1 : 0;
 					foreach (var line in lines)
+					{
 						sb.AppendLine(line);
+					}
 				}
 			}
 
@@ -144,7 +159,10 @@ namespace Editor
 				? $"All {total} expression(s) compiled cleanly."
 				: $"{failed} of {total} expression(s) failed to compile.");
 			if (unreadable > 0)
+			{
 				sb.AppendLine($"{unreadable} descriptor(s) could not be read (reported above).");
+			}
+
 			sb.AppendLine("===== end report =====");
 
 			report = sb.ToString();
@@ -205,7 +223,9 @@ namespace Editor
 
 			var expressions = gameInfo.Expressions;
 			if (expressions.Count == 0)
+			{
 				return (new[] { $"{rel}: no expressions" }, 0, 0, false);
+			}
 
 			var registry = new CompiledExpressionsRegistry(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler());
 			var results = registry.CompileAndRegisterAllBestEffort(expressions);

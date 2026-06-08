@@ -21,5 +21,5 @@ namespace Assembler.Deserialisation
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>
 			throw new NotSupportedException();
-	}	
+	}
 }

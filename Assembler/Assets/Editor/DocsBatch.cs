@@ -32,7 +32,9 @@ namespace Editor
 				// Only refresh when we wrote to the committed Assets/docs location; a redirected
 				// scratch dir lives outside the project so the AssetDatabase has nothing to pick up.
 				if (outputDir is null)
+				{
 					AssetDatabase.Refresh();
+				}
 
 				Debug.Log($"DocsBatch: generated {BehaviourDocs.FileName} and {LibraryDocs.FileName}"
 					+ (outputDir is null ? "." : $" into {outputDir}."));

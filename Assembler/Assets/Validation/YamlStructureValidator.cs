@@ -60,8 +60,10 @@ namespace Assembler.Validation
 				parser.Consume<StreamEnd>();
 
 				if (!sawContent)
+				{
 					issues.Add(new YamlValidationIssue(
 						YamlValidationSeverity.Warning, "document is empty (no content)"));
+				}
 			}
 			catch (YamlException ex)
 			{
@@ -163,7 +165,9 @@ namespace Assembler.Validation
 			{
 				parser.Consume<SequenceStart>();
 				while (!parser.Accept<SequenceEnd>(out _))
+				{
 					WalkNode(parser, issues);
+				}
 
 				parser.Consume<SequenceEnd>();
 				return;
@@ -181,11 +185,15 @@ namespace Assembler.Validation
 		private static string CleanMessage(string message)
 		{
 			if (message == null)
+			{
 				return string.Empty;
+			}
 
 			var dash = message.IndexOf(") - ", StringComparison.Ordinal);
 			if (message.StartsWith("(Line:", StringComparison.Ordinal) && dash >= 0)
+			{
 				message = message.Substring(dash + 4);
+			}
 
 			return message.Trim();
 		}

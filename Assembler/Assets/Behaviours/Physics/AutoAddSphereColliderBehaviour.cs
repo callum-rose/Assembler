@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
 	{
 		private SphereCollider _sphereCollider;
-		
+
 		protected override void OnInitialise(SphereColliderData data)
 		{
 			_sphereCollider = gameObject.AddComponent<SphereCollider>();
