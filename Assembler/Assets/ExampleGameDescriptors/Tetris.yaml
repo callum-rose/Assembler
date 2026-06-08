@@ -656,6 +656,23 @@ Templates:
           List: !var occupied
           Value: !var cell
 Entities:
+  # Game-over poll: every frame the gate checks the end condition; when it
+  # holds, the gate fires !gameover, which ends and unloads the game.
+  game over:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: game over
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !var is dead
+        Listeners:
+          - !gameover
+
   # ===== Well manager: line-clear orchestration + game-over flag ==========
   well manager:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -775,8 +792,3 @@ Entities:
         Properties:
           View: !var camera view
           Size: !var camera size
-
-GameOverCondition: !var is dead
-
-
-
