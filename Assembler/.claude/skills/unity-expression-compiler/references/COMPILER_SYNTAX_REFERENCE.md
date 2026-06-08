@@ -124,6 +124,20 @@ a % b               // modulo (remainder)
 -a                  // negation (unary minus)
 ```
 
+`UnityEngine.Vector3` and `Vector2` arithmetic is supported via their built-in operators:
+```csharp
+-v                  // unary negation
+v1 + v2             // component-wise addition
+v1 - v2             // component-wise subtraction
+v * s               // scale by a scalar (s may be int or float — int is widened to float)
+v / s               // divide by a scalar
+```
+
+### XOR Operator
+```csharp
+a ^ b               // bool: logical XOR; integers: bitwise XOR
+```
+
 ### Comparison Operators
 ```csharp
 a == b              // equality
@@ -550,7 +564,8 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ❌ Bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`)
+- ✅ `^` (XOR) IS supported — see the Operators section
+- ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
 - ❌ Range operators (`..`, `^`)

@@ -9,6 +9,8 @@
         "Assembler.Resolving",
         "Assembler.Parsing",
         "Unity.InputSystem",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "Assembler.Time"
     ],
     "includePlatforms": [],

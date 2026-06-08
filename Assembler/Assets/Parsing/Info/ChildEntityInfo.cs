@@ -5,7 +5,6 @@ namespace Assembler.Parsing.Info
 {
 	public sealed record ChildEntityInfo(
 		string IdSuffix,
-		string? AbsoluteId,
 		string? TemplateRefId,
 		IReadOnlyDictionary<string, AssemblerValue> Parameters,
 		IReadOnlyList<string> Tags,

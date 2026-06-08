@@ -77,22 +77,6 @@ Expressions:
       if (lines == 3) { return score + 300; }
       return score + 1200;
 
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "return \"Score: \" + s;"
-
-  format lines:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ l ]
-    ReturnType: string
-    Expression: "return \"Lines: \" + l;"
-
-  random shape:
-    ReturnType: int
-    Expression: "return RandomInt(0, 6);"
-
   colour for shape:
     ArgumentTypes: [ int ]
     ArgumentNames: [ s ]
@@ -119,45 +103,6 @@ Expressions:
     ReturnType: vector
     Expression: "return NeighbourCell(origin, dx, dy);"
 
-  shift down:
-    ArgumentTypes: [ vector, int ]
-    ArgumentNames: [ cell, by ]
-    ReturnType: vector
-    Expression: "return NeighbourCell(cell, 0, -by);"
-
-  should shift:
-    ArgumentTypes: [ bool, int ]
-    ArgumentNames: [ pendingClear, dropBy ]
-    ReturnType: bool
-    Expression: "return (!pendingClear) && dropBy > 0;"
-
-  alive kept:
-    ArgumentTypes: [ bool, bool ]
-    ArgumentNames: [ dead, pendingClear ]
-    ReturnType: bool
-    Expression: "return (!dead) && (!pendingClear);"
-
-  # ---- line scanning ------------------------------------------------------
-  row is full:
-    ArgumentTypes: [ vector list, vector ]
-    ArgumentNames: [ occupied, cell ]
-    ReturnType: bool
-    Expression: "return RowFull(occupied, cell.y, 10f);"
-
-  full rows below:
-    ArgumentTypes: [ vector list, vector ]
-    ArgumentNames: [ occupied, cell ]
-    ReturnType: int
-    Expression: "return FullRowsBelow(occupied, cell.y, 10f, 20f);"
-
-  full row count:
-    ArgumentTypes: [ vector list ]
-    ArgumentNames: [ occupied ]
-    ReturnType: int
-    Expression: "return FullRowCount(occupied, 10f, 20f);"
-
-  # ---- geometry (single offset table; rotation + bounds/occupancy reuse it
-  #      via cross-expression calls to baseOffset / cellGrid) ----------------
   base offset:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ s, i ]
@@ -311,8 +256,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: blocked at spawn
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+            Do: blocked at spawn
+            With: [ !var origin, !parameter shape, !var rot, !var occupied ]
         Listeners:
           - EntityId: well manager
             BehaviourId: set dead
@@ -333,8 +278,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: can move
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, 0, -1 ]
+            Do: can move
+            With: [ !var origin, !parameter shape, !var rot, !var occupied, 0, -1 ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: apply fall
@@ -345,14 +290,14 @@ Templates:
         Properties:
           VariableId: !var origin
           Value: !expr
-            ExpressionId: move origin
-            Arguments: [ !var origin, 0, -1 ]
+            Do: move origin
+            With: [ !var origin, 0, -1 ]
       reposition:
         Type: position setter
         Properties:
           Position: !expr
-            ExpressionId: cell to world
-            Arguments: [ !var origin, !var grid origin x, !var grid origin y ]
+            Do: cell to world
+            With: [ !var origin, !var grid origin x, !var grid origin y ]
 
       # ---- horizontal movement ----
       left key:
@@ -365,8 +310,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: can move
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, -1, 0 ]
+            Do: can move
+            With: [ !var origin, !parameter shape, !var rot, !var occupied, -1, 0 ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: apply left
@@ -377,8 +322,8 @@ Templates:
         Properties:
           VariableId: !var origin
           Value: !expr
-            ExpressionId: move origin
-            Arguments: [ !var origin, -1, 0 ]
+            Do: move origin
+            With: [ !var origin, -1, 0 ]
       right key:
         Type: key down trigger
         Properties: { Key: "d" }
@@ -389,8 +334,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: can move
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied, 1, 0 ]
+            Do: can move
+            With: [ !var origin, !parameter shape, !var rot, !var occupied, 1, 0 ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: apply right
@@ -401,8 +346,8 @@ Templates:
         Properties:
           VariableId: !var origin
           Value: !expr
-            ExpressionId: move origin
-            Arguments: [ !var origin, 1, 0 ]
+            Do: move origin
+            With: [ !var origin, 1, 0 ]
 
       # ---- rotation ----
       rotate key:
@@ -415,8 +360,8 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: can rotate
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+            Do: can rotate
+            With: [ !var origin, !parameter shape, !var rot, !var occupied ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: apply rotate state
@@ -427,8 +372,8 @@ Templates:
         Properties:
           VariableId: !var rot
           Value: !expr
-            ExpressionId: int add
-            Arguments: [ !var rot, 1 ]
+            Do: int add
+            With: [ !var rot, 1 ]
       # rot is only ever read mod 4 inside expressions, so we don't wrap it
       # here; the transform rotates -90 deg per step to match (x,y)->(y,-x).
       apply rotate transform:
@@ -511,16 +456,16 @@ Templates:
         Properties:
           VariableId: !var origin
           Value: !expr
-            ExpressionId: drop to
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+            Do: drop to
+            With: [ !var origin, !parameter shape, !var rot, !var occupied ]
 
       # ---- lock (shared by gravity/soft-drop blocked path) ----
       fall blocked gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: blocked down
-            Arguments: [ !var origin, !parameter shape, !var rot, !var occupied ]
+            Do: blocked down
+            With: [ !var origin, !parameter shape, !var rot, !var occupied ]
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: lock add 0
@@ -551,75 +496,79 @@ Templates:
         Type: vector list add
         Properties:
           List: !var occupied
-          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
+          Value: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 0 ] }
       lock add 1:
         Type: vector list add
         Properties:
           List: !var occupied
-          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
+          Value: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 1 ] }
       lock add 2:
         Type: vector list add
         Properties:
           List: !var occupied
-          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
+          Value: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 2 ] }
       lock add 3:
         Type: vector list add
         Properties:
           List: !var occupied
-          Value: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
+          Value: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 3 ] }
 
       spawn block 0:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 0, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell world, With: [ !var origin, !parameter shape, !var rot, 0, !var grid origin x, !var grid origin y ] }
           Parameters:
-            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 0 ] }
+            cell: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 0 ] }
             tint: !parameter tint
       spawn block 1:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 1, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell world, With: [ !var origin, !parameter shape, !var rot, 1, !var grid origin x, !var grid origin y ] }
           Parameters:
-            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 1 ] }
+            cell: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 1 ] }
             tint: !parameter tint
       spawn block 2:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 2, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell world, With: [ !var origin, !parameter shape, !var rot, 2, !var grid origin x, !var grid origin y ] }
           Parameters:
-            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 2 ] }
+            cell: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 2 ] }
             tint: !parameter tint
       spawn block 3:
         Type: spawner
         Properties:
           TemplateId: settled_block
-          Position: !expr { ExpressionId: cell world, Arguments: [ !var origin, !parameter shape, !var rot, 3, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell world, With: [ !var origin, !parameter shape, !var rot, 3, !var grid origin x, !var grid origin y ] }
           Parameters:
-            cell: !expr { ExpressionId: cell grid, Arguments: [ !var origin, !parameter shape, !var rot, 3 ] }
+            cell: !expr { Do: cell grid, With: [ !var origin, !parameter shape, !var rot, 3 ] }
             tint: !parameter tint
 
       self destruct:
         Type: destroy
     Children:
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 0 ] }
+      block0:
+        Position: !expr { Do: base offset, With: [ !parameter shape, 0 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 1 ] }
+      block1:
+        Position: !expr { Do: base offset, With: [ !parameter shape, 1 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 2 ] }
+      block2:
+        Position: !expr { Do: base offset, With: [ !parameter shape, 2 ] }
         Behaviours:
           block:
             Type: cube gizmo
             Properties: { Size: !var block size, IsWire: false, Colour: !parameter tint }
-      - Position: !expr { ExpressionId: base offset, Arguments: [ !parameter shape, 3 ] }
+      block3:
+        Position: !expr { Do: base offset, With: [ !parameter shape, 3 ] }
         Behaviours:
           block:
             Type: cube gizmo
@@ -648,13 +597,13 @@ Templates:
         Tags: [ clear-snapshot ]
         Properties:
           VariableId: !var pendingClear
-          Value: !expr { ExpressionId: row is full, Arguments: [ !var occupied, !var cell ] }
+          Value: !expr { Do: 'RowFull(arg0, arg1.y, 10f)', With: [ !var occupied, !var cell ], ArgumentTypes: [ vector list, vector ] }
       set dropby:
         Type: int variable setter
         Tags: [ clear-snapshot ]
         Properties:
           VariableId: !var dropBy
-          Value: !expr { ExpressionId: full rows below, Arguments: [ !var occupied, !var cell ] }
+          Value: !expr { Do: 'FullRowsBelow(arg0, arg1.y, 10f, 20f)', With: [ !var occupied, !var cell ], ArgumentTypes: [ vector list, vector ] }
 
       # phase 2: apply
       destroy gate:
@@ -671,7 +620,7 @@ Templates:
         Type: condition gate
         Tags: [ clear-apply ]
         Properties:
-          Condition: !expr { ExpressionId: should shift, Arguments: [ !var pendingClear, !var dropBy ] }
+          Condition: !expr { Do: '(!arg0) && arg1 > 0', With: [ !var pendingClear, !var dropBy ], ArgumentTypes: [ bool, int ] }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: do shift
@@ -686,18 +635,18 @@ Templates:
         Type: vector variable setter
         Properties:
           VariableId: !var cell
-          Value: !expr { ExpressionId: shift down, Arguments: [ !var cell, !var dropBy ] }
+          Value: !expr { Do: 'NeighbourCell(arg0, 0, -arg1)', With: [ !var cell, !var dropBy ], ArgumentTypes: [ vector, int ] }
       reposition:
         Type: position setter
         Properties:
-          Position: !expr { ExpressionId: cell to world, Arguments: [ !var cell, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell to world, With: [ !var cell, !var grid origin x, !var grid origin y ] }
 
       # phase 3: rebuild
       rebuild gate:
         Type: condition gate
         Tags: [ clear-rebuild ]
         Properties:
-          Condition: !expr { ExpressionId: alive kept, Arguments: [ !var dead, !var pendingClear ] }
+          Condition: !expr { Do: '(!arg0) && (!arg1)', With: [ !var dead, !var pendingClear ], ArgumentTypes: [ bool, bool ] }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: re-add
@@ -734,17 +683,17 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var lines now
-          Value: !expr { ExpressionId: full row count, Arguments: [ !var occupied ] }
+          Value: !expr { Do: 'FullRowCount(arg0, 10f, 20f)', With: [ !var occupied ] }
       add score:
         Type: int variable setter
         Properties:
           VariableId: !var score
-          Value: !expr { ExpressionId: add score, Arguments: [ !var score, !var lines now ] }
+          Value: !expr { Do: add score, With: [ !var score, !var lines now ] }
       add lines total:
         Type: int variable setter
         Properties:
           VariableId: !var lines cleared
-          Value: !expr { ExpressionId: int add, Arguments: [ !var lines cleared, !var lines now ] }
+          Value: !expr { Do: int add, With: [ !var lines cleared, !var lines now ] }
       clear occupied:
         Type: vector list clear
         Properties:
@@ -769,15 +718,15 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var next shape
-          Value: !expr { ExpressionId: random shape }
+          Value: !expr { Do: 'RandomInt(0, 6)' }
       spawn piece:
         Type: spawner
         Properties:
           TemplateId: piece
-          Position: !expr { ExpressionId: cell to world, Arguments: [ !var spawn origin, !var grid origin x, !var grid origin y ] }
+          Position: !expr { Do: cell to world, With: [ !var spawn origin, !var grid origin x, !var grid origin y ] }
           Parameters:
-            shape: !expr { ExpressionId: int add, Arguments: [ !var next shape, 0 ] }
-            tint: !expr { ExpressionId: colour for shape, Arguments: [ !var next shape ] }
+            shape: !expr { Do: int add, With: [ !var next shape, 0 ] }
+            tint: !expr { Do: colour for shape, With: [ !var next shape ] }
 
   # ===== Well border (cosmetic) ===========================================
   left wall:
@@ -806,13 +755,13 @@ Entities:
       score text:
         Type: text label
         Properties:
-          Text: !expr { ExpressionId: format score, Arguments: [ !var score ] }
+          Text: !expr { Do: '"Score: " + arg0', With: [ !var score ] }
           FontSize: 28
           Rect: { Anchor: top-left, X: 20, Y: 20, Width: 240, Height: 40 }
       lines text:
         Type: text label
         Properties:
-          Text: !expr { ExpressionId: format lines, Arguments: [ !var lines cleared ] }
+          Text: !expr { Do: '"Lines: " + arg0', With: [ !var lines cleared ] }
           FontSize: 28
           Rect: { Anchor: top-left, X: 20, Y: 60, Width: 240, Height: 40 }
 

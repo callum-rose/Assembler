@@ -112,6 +112,20 @@ a % b               // modulo (remainder)
 -a                  // negation (unary minus)
 ```
 
+`UnityEngine.Vector3` and `Vector2` arithmetic is supported via their built-in operators:
+```csharp
+-v                  // unary negation
+v1 + v2             // component-wise addition
+v1 - v2             // component-wise subtraction
+v * s               // scale by a scalar (s may be int or float — int is widened to float)
+v / s               // divide by a scalar
+```
+
+### XOR Operator
+```csharp
+a ^ b               // bool: logical XOR; integers: bitwise XOR
+```
+
 ### Comparison Operators
 ```csharp
 a == b              // equality
@@ -157,10 +171,11 @@ int category = x > 20 ? 2 : (x > 10 ? 1 : 0);
 4. Additive (`+`, `-`)
 5. Comparison (`<`, `>`, `<=`, `>=`)
 6. Equality (`==`, `!=`)
-7. Logical AND (`&&`)
-8. Logical OR (`||`)
-9. Ternary conditional (`? :`)
-10. Assignment (`=`, `+=`, `-=`, `*=`, `/=`)
+7. XOR (`^`)
+8. Logical AND (`&&`)
+9. Logical OR (`||`)
+10. Ternary conditional (`? :`)
+11. Assignment (`=`, `+=`, `-=`, `*=`, `/=`)
 
 ---
 
@@ -530,10 +545,11 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ❌ Bitwise operators (`&`, `|`, `^`, `~`, `<<`, `>>`)
+- ✅ `^` (XOR) IS supported — see [Operators](#xor-operator)
+- ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
-- ❌ Range operators (`..`, `^`)
+- ❌ Range / index-from-end operators (`..`)
 - ❌ typeof, sizeof, nameof
 - ❌ is, as operators
 - ❌ default operator

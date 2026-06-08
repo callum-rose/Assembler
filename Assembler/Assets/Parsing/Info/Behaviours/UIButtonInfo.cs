@@ -7,7 +7,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> Label,
-		ScreenRect Rect) : BehaviourInfo(Id, Listeners)
+		ValueSource<float> PreferredWidth,
+		ValueSource<float> PreferredHeight) : BehaviourInfo(Id, Listeners)
 	{
 		public static UIButtonInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -15,14 +16,16 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource(ctx, props.GetValueOrDefault("Label"), fallback: string.Empty),
-				ScreenRectParser.Parse(props.GetValueOrDefault("Rect")));
+				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Label")),
+				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
 			new UIButtonInfo(Id,
 				substitutedListeners,
 				Label.SubstituteParameters(ctx),
-				Rect);
+				PreferredWidth.SubstituteParameters(ctx),
+				PreferredHeight.SubstituteParameters(ctx));
 	}
 }

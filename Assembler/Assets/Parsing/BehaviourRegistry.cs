@@ -30,6 +30,12 @@ namespace Assembler.Parsing
 				["set angular velocity"] = SetAngularVelocityInfo.Create,
 				["velocity"] = VelocityInfo.Create,
 				["acceleration"] = AccelerationInfo.Create,
+				["drag"] = DragInfo.Create,
+				["speed limit"] = SpeedLimitInfo.Create,
+				["move towards"] = MoveTowardsInfo.Create,
+				["smooth move"] = SmoothMoveInfo.Create,
+				["clamp position"] = ClampPositionInfo.Create,
+				["wrap position"] = WrapPositionInfo.Create,
 				["translate"] = TranslateInfo.Create,
 				["angular velocity"] = AngularVelocityInfo.Create,
 				["rotate"] = RotateInfo.Create,
@@ -154,13 +160,11 @@ namespace Assembler.Parsing
 				["sphere gizmo"] = SphereGizmoInfo.Create,
 				["cube gizmo"] = CubeGizmoInfo.Create,
 				["line gizmo"] = LineGizmoInfo.Create,
+				["ui canvas"] = UICanvasInfo.Create,
+				["ui container"] = UIContainerInfo.Create,
 				["text label"] = TextLabelInfo.Create,
-				["progress bar"] = ProgressBarInfo.Create,
-				["ui image"] = UIImageInfo.Create,
 				["ui button"] = UIButtonInfo.Create,
-				["ui toggle"] = UIToggleInfo.Create,
 				["ui slider"] = UISliderInfo.Create,
-				["ui input field"] = UIInputFieldInfo.Create,
 			};
 	}
 }

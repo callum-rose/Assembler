@@ -59,96 +59,6 @@ Variables:
   ship velocity: !var ship initial velocity
   ship facing: !var ship initial facing
 
-Expressions:
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
-
-  int sub:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a - b;"
-
-  int greater or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a >= b;"
-
-  int less or equal:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: bool
-    Expression: "a <= b;"
-
-  is game over:
-    ArgumentTypes: [ int, int, bool ]
-    ArgumentNames: [ score, target, dead ]
-    ReturnType: bool
-    Expression: "score >= target || dead;"
-
-  # Rotate a 2D vector counter-clockwise by 1 degree
-  rotate left:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ v ]
-    ReturnType: vector
-    Expression: "return Rotate2D(v, 1f);"
-
-  # Rotate a 2D vector clockwise by 1 degree
-  rotate right:
-    ArgumentTypes: [ vector ]
-    ArgumentNames: [ v ]
-    ReturnType: vector
-    Expression: "return Rotate2D(v, -1f);"
-
-  # vel + facing * impulse
-  apply thrust:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ vel, facing, impulse ]
-    ReturnType: vector
-    Expression: "return AddVector(vel, ScaleVector(facing, impulse));"
-
-  # pos + vel * dt (per-frame integration for position tracking)
-  integrate position:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ pos, vel, dt ]
-    ReturnType: vector
-    Expression: "return IntegratePosition(pos, vel, dt);"
-
-  # facing * speed
-  scale vec:
-    ArgumentTypes: [ vector, float ]
-    ArgumentNames: [ v, k ]
-    ReturnType: vector
-    Expression: "return ScaleVector(v, k);"
-
-  # Random spawn point on a circle of radius 6.8 around origin
-  random asteroid position:
-    ReturnType: vector
-    Expression: "return RandomOnCircle(6.8f);"
-
-  # Random velocity vector aimed roughly toward the centre, with jitter
-  random asteroid velocity:
-    ArgumentTypes: [ float ]
-    ArgumentNames: [ speed ]
-    ReturnType: vector
-    Expression: "return RandomOnCircle(speed);"
-
-  format score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ s ]
-    ReturnType: string
-    Expression: "\"Score: \" + s;"
-
-  format lives:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ l ]
-    ReturnType: string
-    Expression: "\"Lives: \" + l;"
-
 Templates:
   bullet_template:
     Tags: [ bullet ]
@@ -287,8 +197,8 @@ Entities:
         Properties:
           VariableId: !var ship position
           Value: !expr
-            ExpressionId: integrate position
-            Arguments:
+            Do: 'IntegratePosition(arg0, arg1, arg2)'
+            With:
               - !var ship position
               - !var ship velocity
               - !clock deltaTime
@@ -305,8 +215,8 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            ExpressionId: rotate left
-            Arguments:
+            Do: 'Rotate2D(arg0, 1f)'
+            With:
               - !var ship facing
 
       rotate right key:
@@ -320,8 +230,8 @@ Entities:
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            ExpressionId: rotate right
-            Arguments:
+            Do: 'Rotate2D(arg0, -1f)'
+            With:
               - !var ship facing
 
       # --- Thrust (W held) ---
@@ -336,8 +246,8 @@ Entities:
         Properties:
           VariableId: !var ship velocity
           Value: !expr
-            ExpressionId: apply thrust
-            Arguments:
+            Do: 'AddVector(arg0, ScaleVector(arg1, arg2))'
+            With:
               - !var ship velocity
               - !var ship facing
               - !var thrust impulse
@@ -369,8 +279,9 @@ Entities:
           Position: !var ship position
           Parameters:
             initial_velocity: !expr
-              ExpressionId: scale vec
-              Arguments:
+              Do: 'ScaleVector(arg0, arg1)'
+              ReturnType: vector
+              With:
                 - !var ship facing
                 - !var bullet speed
 
@@ -383,8 +294,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: 'arg0 + arg1'
+            With:
               - !var score
               - !var score per asteroid
 
@@ -397,16 +308,16 @@ Entities:
         Properties:
           VariableId: !var lives
           Value: !expr
-            ExpressionId: int sub
-            Arguments:
+            Do: 'arg0 - arg1'
+            With:
               - !var lives
               - !var life cost
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int less or equal
-            Arguments:
+            Do: 'arg0 <= arg1'
+            With:
               - !var lives
               - !var zero int
         Listeners:
@@ -433,11 +344,12 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: asteroid_template
-          Position: !expr { ExpressionId: random asteroid position }
+          Position: !expr { Do: 'RandomOnCircle(6.8f)' }
           Parameters:
             initial_velocity: !expr
-              ExpressionId: random asteroid velocity
-              Arguments:
+              Do: 'RandomOnCircle(arg0)'
+              ReturnType: vector
+              With:
                 - !var asteroid speed
 
   # --- Camera ---
@@ -460,8 +372,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: '"Score: " + arg0'
+            With:
               - !var score
           FontSize: 28
           Rect:
@@ -478,8 +390,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format lives
-            Arguments:
+            Do: '"Lives: " + arg0'
+            With:
               - !var lives
           FontSize: 28
           Rect:
@@ -490,8 +402,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
+  Do: 'arg0 >= arg1 || arg2'
+  With:
     - !var score
     - !var score to win
     - !var is dead

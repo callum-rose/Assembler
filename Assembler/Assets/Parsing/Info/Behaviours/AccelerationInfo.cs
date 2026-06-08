@@ -3,7 +3,11 @@ using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record AccelerationInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<Vector3> Acceleration)
+	public record AccelerationInfo(
+		string Id,
+		IReadOnlyList<ListenerInfo> Listeners,
+		ValueSource<Vector3> Acceleration,
+		ValueSource<Vector3> Velocity)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static AccelerationInfo Create(string id,
@@ -12,12 +16,14 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Acceleration")));
+				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Acceleration")),
+				Transformer.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("Velocity")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
 			new AccelerationInfo(Id,
 				substitutedListeners,
-				Acceleration.SubstituteParameters(ctx));
+				Acceleration.SubstituteParameters(ctx),
+				Velocity.SubstituteParameters(ctx));
 	}
 }

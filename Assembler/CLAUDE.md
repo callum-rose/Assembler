@@ -11,16 +11,35 @@ Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games dec
 - **Be concise** in all responses — favour short, direct answers and avoid unnecessary preamble or repetition.
 - **Nullable reference types** are enabled project-wide (`Assets/Parsing/csc.rsp`). All new and modified code must respect nullable annotations — use `?` for nullable references, avoid `null!` suppression unless justified, and handle nullability properly.
 - **Unity `.meta` files** never need to be created manually — Unity generates them automatically. Don't author or hand-create `.meta` files for new assets or scripts.
+- **2D quantities are `Vector3` (z=0), not `Vector2`.** The `Vector2Value` type has been removed from the value pipeline; the `!vec` YAML tag produces `Vector3Value`, and domain code (sprite sizes, input axes/positions, etc.) uses `Vector3` throughout. Keep `Vector2` only at Unity API boundaries that force it (`RectTransform` anchors/offsets, `CanvasScaler.referenceResolution`, `InputAction.ReadValue<Vector2>`, `Random.insideUnitCircle`), widening to `Vector3` as values cross into domain code.
+
+### C# Style
+
+Favour modern C# and a functional style. These are preferences, not absolutes — break them when clarity demands it.
+
+- **Use modern language features** available on this Unity/C# version rather than older equivalents.
+- **Records** for immutable data types (e.g. the Info records) — prefer them over hand-written classes where a value type fits. Update with `with` expressions, not mutation.
+- **Null object pattern over nullable types** — prefer a sentinel/null-object (the existing `None<T>` / `NullValueProvider<T>` pattern) to returning or branching on `null`. Nullable reference types stay enabled and must be honoured where `null` genuinely crosses a boundary, but design to avoid that where practical.
+- **Switch expressions** over switch statements and if/else chains; lean on **pattern matching** generally (property, relational, and `is` patterns), not just type switches.
+- **Functional style** — prefer pure functions and LINQ pipelines over imperative loops and mutable accumulation; avoid hidden side effects.
+- **Expression-bodied members** (`=>`) wherever a method/property/ctor is a single expression.
+- **Ternary expressions** over short if/else when assigning or returning a value.
+- **Immutability by default** — `init`-only setters, `readonly` fields, and `IReadOnlyList<T>`/`IEnumerable<T>` in signatures over mutable collection types.
+- **Guard clauses / early returns** over deep nesting.
+- **Target-typed `new()`** to cut redundant type noise.
+- **`var`** for obvious types, `nameof`, and string interpolation throughout.
+- **Primary constructors** for records.
 
 ## Build & Test
 
 This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5f1.
 
-- **Run game**: Unity Editor menu `Test > Build` (invokes `Builder.TestBuild()` which loads `Assets/GameDescriptors/Pong.yaml`)
+- **Run game**: Unity Editor menu `Assembler > Game Launcher` opens a window that auto-discovers every descriptor in `Assets/ExampleGameDescriptors/`, lets you pick one (and optionally simulate a target platform), and enters Play mode running it via `Builder.Build(yamlPath)`.
 - **Check compilation**: run `Tools/check-compile.sh` for a fast headless check that the project's C# compiles — it surfaces compiler **errors and warnings** without running the (slower) test suite, so it's the quickest way to verify a code change before committing. It boots Unity in batch mode, parses the compiler diagnostics (`error CS…` / `warning CS…`) out of the log, prints a short `Compile check` summary, and exits non-zero on any error (or, with `--warnings-as-errors`/`-w`, on any warning). It parses the log rather than collecting messages in C# because Unity's `CompilationPipeline` callbacks don't reliably deliver warnings in batch mode. Errors are reported wherever they occur; warnings are filtered to your own code under `Assets/` (excluding `Assets/Plugins`) to avoid third-party noise. **Default (incremental):** a `-batchmode -quit` boot recompiles only what changed on disk since the last compile, so the report is scoped to the code you just edited and its dependents — not the project's ~50 pre-existing nullable warnings. **`--all`:** invokes `Editor.CompileCheckBatch.RecompileAll` to force a clean recompile of every assembly so all warnings resurface (slower; for a full audit). Same concurrency rules as the other scripts (runs alongside an editor on a *different* path; refuses if one already has *this* path open; first run in a fresh worktree does a one-time cold import).
 - **Run tests**: run `Tools/run-tests.sh` to execute the EditMode test suites headlessly (boots Unity in batch mode and invokes the same tests as Window > General > Test Runner, via `Editor.TestBatch.RunEditModeTests` — no UI needed, so Claude can run and verify it). It prints a pass/fail summary and exits non-zero on failure; full NUnit XML lands in `TestResults/EditMode-results.xml`. Pass assembly names to scope the run (`Tools/run-tests.sh Tests.Compiler`), or `--filter <regex>` / `--category <name>`. The in-editor Window > General > Test Runner still works too. Test assemblies live in `Assets/Tests/` per area (`Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`, `Tests.Input`, `Tests.Resolving`).
 - **Generate behaviour/library docs**: run `Tools/generate-docs.sh` to regenerate both `Assets/docs/Behaviours.md` and `Assets/docs/Libraries.md` headlessly (boots Unity in batch mode and invokes the same code as the editor menus — no UI needed, so Claude can run and verify it). The in-editor menu items `Assembler > Generate Behaviour Docs` / `Generate Library Docs` still work too. This runs fine **concurrently with an editor open on a different path** (e.g. your main checkout), so a branch's docs can be generated in its worktree without checking the branch out — the script refuses only if an editor already has *this* path open. The first run in a fresh worktree does a one-time cold import (~3 min); pass `SEED_LIBRARY=1` to instead clone the main worktree's `Library/` first (only faster when the editor is idle — see the script header).
 - **Validate descriptor YAML**: run `Tools/validate-yaml.sh` for a basic structural sanity check on game descriptor YAML (well-formedness + duplicate-key detection) — run it after editing or generating a descriptor to catch syntax errors. It boots Unity in batch mode and invokes `Editor.YamlValidatorBatch.Validate`, reporting each problem with line/column and a source snippet and exiting non-zero if anything is invalid. With no arguments it validates everything in `Assets/ExampleGameDescriptors/`; pass file/dir paths to scope it. It validates YAML *structure* only, not the descriptor schema. The validation itself lives in the **runtime** `Assembler.Validation` assembly (`YamlStructureValidator.Validate(string)` → `YamlValidationResult`), so the engine can validate a descriptor at runtime in a player build on any platform — the script and the `Assembler > Validate Descriptor YAML` editor menu item are just front-ends for the same code.
+- **Validate a game boots** (deeper check): run `Tools/validate-game.sh` to confirm a descriptor doesn't just parse but actually *builds a runnable game*. It boots Unity in batch mode and invokes `Editor.GameSandboxValidatorBatch.Validate`, which runs each descriptor through the full load pipeline in a throwaway sandbox — **structure → deserialise → parse → resolve → instantiate** — and reports the outcome **per stage**, so a failure pinpoints the exact stage (and shows the thrown exception / `Debug.LogError`). This catches what structural validation can't: unknown behaviours, bad expressions, missing assets, unbound controls, instantiation errors, no game-over path, etc. The sandbox destroys everything it instantiates after each file, so a whole directory validates in one run. It checks the game *starts* error-free (behaviour `Awake`/`OnEnable` + initialisation wiring run) but does **not** run the per-frame game loop. With no arguments it sandbox-builds everything in `Assets/ExampleGameDescriptors/`; pass file/dir paths to scope it, and it exits non-zero if any file fails. The orchestration lives in `Assembler.Generation.Verification` (`SandboxValidator.Validate(string)` → `SandboxValidationResult`), reusing `Builder.Resolve`/`Builder.Instantiate`; the generation fix-loop (`BuildHarness`) and the `Assembler > Validate Game (sandbox build)` menu item share the same code.
 
 ## Architecture
 
@@ -40,10 +59,16 @@ Each stage has its own assembly (`.asmdef`) and namespace under `Assembler.*`.
 | `Assembler.Resolving` | `Assembler.Resolving` | Resolves `ValueSource<T>` → `IValueProvider<T>` at runtime |
 | `Assembler.Building` | `Assembler.Building` | Orchestrates the full pipeline; `Builder.cs` is the entry point |
 | `Assembler.Core` | `Assembler.Core` | `GameEntity` and `GameBehaviour<TData>` base MonoBehaviours |
-| `Assembler.Behaviours` | `Assembler.Behaviours` | Concrete behaviour implementations (movement, physics, triggers, etc.) |
+| `Assembler.Behaviours` | `Assembler.Behaviours` | Concrete behaviour implementations (movement, physics, triggers, etc.). The composable uGUI UI blocks live under `Assembler.Behaviours.UI` |
+| `Assembler.Input` | `Assembler.Input` | Input System wiring: `InputPlatform`, platform selection/fallback, controls validation, `InputActionBuilder` |
+| `Assembler.Time` | `Assembler.Time` | Game clock abstraction (`IGameClock`, `RealtimeGameClock`, `FixedStepGameClock`) driving deterministic time |
+| `Assembler.Libraries` | `Assembler.Libraries` | Static helper libraries callable from expressions (`VectorMath`, `RandomMath`, `ColorMath`, `GridMath`, `HexMath`, `NumberMath`, etc.) |
+| `Assembler.Validation` | `Assembler.Validation` | Runtime YAML structure validator (`YamlStructureValidator`); platform-agnostic so a player build can validate descriptors |
+| `Assembler.Extensions` | `Assembler.Extensions` | Shared extension methods (`VectorExtensions`, `EnumerableExtensions`, `GameObjectExtensions`, `StringExtensions`) |
 | `Assembler.Voxels` | `Assembler.Voxels` | Goxel `.txt` voxel format parsing/writing and coordinate conversion |
 | `Assembler.Anthropic` | `Assembler.Anthropic` | Minimal HTTP client for the Anthropic Messages API |
 | `Assembler.Generation` | `Assembler.Generation` | LLM-driven YAML game-descriptor generation; wraps `AnthropicClient` with a system prompt built from the behaviour catalogue |
+| `Assembler.Generation.Verification` | `Assembler.Generation.Verification` | Generate → build → verify loop (`GenerationOrchestrator`, `BuildHarness`) that retries generation until a descriptor builds cleanly |
 
 Note: `BehaviourRegistry` exists in two places — `Assembler.Parsing.BehaviourRegistry` is the *static catalogue* mapping behaviour names to factories (used during parsing), while `Assembler.Building.BehaviourRegistry` is the *runtime instance* registry mapping `BehaviourDescriptor` to live `GameBehaviour` components (used during wiring/execution).
 
@@ -67,7 +92,19 @@ Behaviours communicate via a listener/observer pattern: triggers notify downstre
 - `EntityTaggedListenerInfo` — targets behaviours on any entity matching an entity tag (optionally filtered by behaviour ID)
 - `BehaviourTaggedListenerInfo` — targets any behaviour matching a behaviour tag, regardless of entity
 
-Tag values are `ValueSource<string>`, so they can be constants, references, or expressions resolved at runtime. See `Assets/GameDescriptors/TaggedListenerDemo.yaml` for example usage.
+Tag values are `ValueSource<string>`, so they can be constants, references, or expressions resolved at runtime. See `Assets/ExampleGameDescriptors/TaggedListenerDemo.yaml` for example usage.
+
+### UI System (composable uGUI blocks)
+
+UI is built from regular behaviours under `Assets/Behaviours/UI/` (`Assembler.Behaviours.UI`), composed via the entity hierarchy — there is no separate UI assembly and the old IMGUI/`ScreenRect` widgets have been removed. The blocks:
+
+- **`ui canvas`** — roots a UI tree with a screen-space `Canvas` + `CanvasScaler` (ScaleWithScreenSize) + `GraphicRaycaster`. Child UI entities compose the interface.
+- **`ui container`** — groups child UI entities, auto-laying them out with a vertical/horizontal uGUI layout group (or `Direction: none` for manual positioning), driven by `PreferredWidth`/`PreferredHeight`.
+- **`text label`** — a TextMeshPro label; `Text` is re-read every frame, so binding it to a variable/expression shows live values.
+- **`ui button`** — a clickable button that acts as a trigger (`NotifyListeners` on click); `Label` is re-read each frame.
+- **`ui slider`** — a slider that acts as a trigger, emitting a `value` output whenever it changes.
+
+Prefabs come from a `UiPrefabLibrary` ScriptableObject loaded from `Resources/UI/UiPrefabLibrary`, with typed view components (`UiButtonView`/`UiLabelView`/`UiSliderView` in `UI/Views/`). The `Assembler > UI > Generate UI Prefabs` editor menu regenerates baseline prefabs; restyle them without code changes. `Builder` bootstraps a single `EventSystem` with `InputSystemUIInputModule` (the project is Input System-only) and threads the loaded library through `BehaviourBuildContext`. `GameEntityFactory` pins child sibling order to descriptor order for deterministic layout. See `UiDemo.yaml` and `UiShowcase.yaml`.
 
 ### Two-Phase Initialization
 
@@ -83,7 +120,7 @@ Building uses deferred initialization. `GameBehaviourFactory.Create()` returns a
 
 ### Key Entry Points
 
-- `Builder.TestBuild()` — end-to-end pipeline from YAML to running game
+- `Builder.Build(yamlPath)` — end-to-end pipeline from a YAML descriptor to a running game (also bootstraps the UI `EventSystem` and prefab library)
 - `Transformer.Transform()` — converts `GameDto` → `GameInfo`
 - `GameEntityFactory.Create()` — instantiates a single entity with all its behaviours
 - `GameBehaviourFactory.Create()` — maps `BehaviourInfo` type to concrete `GameBehaviour` component
@@ -96,7 +133,7 @@ Building uses deferred initialization. `GameBehaviourFactory.Create()` returns a
 
 ### Game Definitions
 
-Example YAML game files are in `Assets/GameDescriptors/` (e.g. `Pong.yaml`, `Snake.yaml`, `Snake 2.yaml`, `TaggedListenerDemo.yaml`). They define: metadata, assets, constants, variables (including list-typed variables, e.g. `!vec []` for empty vector lists), templates, entities (with behaviours and listeners), and expressions.
+Example YAML game files are in `Assets/ExampleGameDescriptors/` (e.g. `Pong.yaml`, `Snake 2.yaml`, `Asteroids.yaml`, `Tetris.yaml`, `FlappyBird.yaml`, `TaggedListenerDemo.yaml`, `UiShowcase.yaml`). They define: metadata, assets, constants, variables (including list-typed variables, e.g. `!vec []` for empty vector lists), templates, entities (with behaviours and listeners), and expressions.
 
 IDs for definitions (entities, behaviours, templates, variables, etc.) are promoted to YAML keys at the definition site rather than being a separate `id:` property — i.e. the mapping key *is* the identifier.
 
@@ -124,6 +161,16 @@ Assembler supports **deterministic execution and record/replay**: the same descr
 ### Committing & Pushing
 
 - **Always commit and push at the end of a session's work** — if a branch exists for the session's work, commit any outstanding changes and push them at the end without asking. Don't wait for the user to request it.
+
+### Addressing PR comments
+
+PR feedback lives in **two separate streams**, and you must fetch **both** — review comments left on a line in the "Files changed" tab do NOT include top-level conversation comments, and it's easy to silently miss a whole category of feedback (as happened once with a "trim stack traces" comment that was only in the conversation stream).
+
+- **Inline review comments** (attached to a file/line): `gh api repos/<owner>/<repo>/pulls/<n>/comments` — this is the "review comments" endpoint.
+- **Top-level conversation / issue comments** (not attached to any line): `gh api repos/<owner>/<repo>/issues/<n>/comments` — PRs are issues, so general comments come through the issues endpoint.
+- **Review summaries** (the body of an approve/request-changes/comment review): `gh pr view <n> --json reviews`.
+
+Always check all three before declaring PR comments addressed, and enumerate them explicitly so none are dropped. When you finish, reply on the PR mapping each comment to its resolution.
 
 ### Git Worktrees
 

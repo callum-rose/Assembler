@@ -121,8 +121,9 @@ Templates:
         Properties:
           VariableId: !parameter score_var
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: 'arg0 + arg1'
+            ArgumentTypes: [ int, int ]
+            With:
               - !parameter score_var
               - !var score per goal
 
@@ -164,8 +165,8 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            ExpressionId: paddle bounce
-            Arguments:
+            Do: paddle bounce
+            With:
               - !var ball velocity
               - !output hit_point
               - !output paddle_position
@@ -183,8 +184,8 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            ExpressionId: vec multiply
-            Arguments:
+            Do: 'new UnityEngine.Vector3(arg0.x * arg1.x, arg0.y * arg1.y, arg0.z * arg1.z)'
+            With:
               - !var ball velocity
               - !vec { X: 1, Y: -1 }
       goal detector:
@@ -227,41 +228,11 @@ Expressions:
     Expression: "var speed = Magnitude(ball_vel);
       var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
       ScaleVector(Normalize(dir), speed);"
-  vec multiply:
-    ArgumentTypes: [ vector, vector ]
-    ArgumentNames: [ a, b ]
-    ReturnType: vector
-    Expression: "new UnityEngine.Vector3(a.x * b.x, a.y * b.y, a.z * b.z);"
-  int add:
-    ArgumentTypes: [ int, int ]
-    ArgumentNames: [ a, b ]
-    ReturnType: int
-    Expression: "a + b;"
   int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
-  random ball initial position:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(0, RandomFloat(-2f, 2f), 0);"
-  is game over:
-    ArgumentTypes: [ int, int, int ]
-    ArgumentNames: [ a, b, w ]
-    ReturnType: bool
-    Expression: "a >= w || b >= w;"
-  format left score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ score ]
-    ReturnType: string
-    Expression: "\"P1: \" + score;"
-  format right score:
-    ArgumentTypes: [ int ]
-    ArgumentNames: [ score ]
-    ReturnType: string
-    Expression: "\"P2: \" + score;"
-
 Entities:
   left paddle:
     Template:
@@ -315,16 +286,16 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int greater or equal
-            Arguments:
+            Do: int greater or equal
+            With:
               - !var left score
               - !var score to win
       right score win condition gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            ExpressionId: int greater or equal
-            Arguments:
+            Do: int greater or equal
+            With:
               - !var right score
               - !var score to win
   ball spawner:
@@ -339,7 +310,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: ball_template
-          Position: !expr { ExpressionId: random ball initial position }
+          Position: !expr { Do: 'new Vector3(0, RandomFloat(-2f, 2f), 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
 
   left score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -348,8 +319,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format left score
-            Arguments:
+            Do: '"P1: " + arg0'
+            With:
               - !var left score
           FontSize: 32
           Rect:
@@ -366,8 +337,8 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            ExpressionId: format right score
-            Arguments:
+            Do: '"P2: " + arg0'
+            With:
               - !var right score
           FontSize: 32
           Rect:
@@ -378,8 +349,8 @@ Entities:
             Height: 50
 
 GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
+  Do: 'arg0 >= arg2 || arg1 >= arg2'
+  With:
     - !var left score
     - !var right score
     - !var score to win

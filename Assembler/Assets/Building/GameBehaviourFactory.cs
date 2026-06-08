@@ -5,7 +5,7 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Audio;
-using Assembler.Behaviours.Debug.UI;
+using Assembler.Behaviours.UI;
 using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.ListOperations;
@@ -179,7 +179,56 @@ namespace Assembler.Building
 					var i = (AccelerationInfo)info;
 					var b = go.AddComponent<Acceleration>();
 					return (b, lr => b.Initialise(new AccelerationData(i.Id,
-						i.Acceleration.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.Acceleration.Resolve(ctx.Resolution),
+						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(DragInfo)] = new(typeof(DragBehaviour), (go, info, ctx) =>
+				{
+					var i = (DragInfo)info;
+					var b = go.AddComponent<DragBehaviour>();
+					return (b, lr => b.Initialise(new DragData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution),
+						i.Coefficient.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SpeedLimitInfo)] = new(typeof(SpeedLimit), (go, info, ctx) =>
+				{
+					var i = (SpeedLimitInfo)info;
+					var b = go.AddComponent<SpeedLimit>();
+					return (b, lr => b.Initialise(new SpeedLimitData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(MoveTowardsInfo)] = new(typeof(MoveTowards), (go, info, ctx) =>
+				{
+					var i = (MoveTowardsInfo)info;
+					var b = go.AddComponent<MoveTowards>();
+					return (b, lr => b.Initialise(new MoveTowardsData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(SmoothMoveInfo)] = new(typeof(SmoothMove), (go, info, ctx) =>
+				{
+					var i = (SmoothMoveInfo)info;
+					var b = go.AddComponent<SmoothMove>();
+					return (b, lr => b.Initialise(new SmoothMoveData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.SmoothTime.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ClampPositionInfo)] = new(typeof(ClampPosition), (go, info, ctx) =>
+				{
+					var i = (ClampPositionInfo)info;
+					var b = go.AddComponent<ClampPosition>();
+					return (b, lr => b.Initialise(new ClampPositionData(i.Id,
+						i.Min.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(WrapPositionInfo)] = new(typeof(WrapPosition), (go, info, ctx) =>
+				{
+					var i = (WrapPositionInfo)info;
+					var b = go.AddComponent<WrapPosition>();
+					return (b, lr => b.Initialise(new WrapPositionData(i.Id,
+						i.Min.Resolve(ctx.Resolution),
+						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(TranslateInfo)] = new(typeof(Translate), (go, info, ctx) =>
 				{
@@ -569,65 +618,60 @@ namespace Assembler.Building
 						i.End.Resolve(ctx.Resolution),
 						i.Colour.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(UICanvasInfo)] = new(typeof(UICanvas), (go, info, ctx) =>
+				{
+					var i = (UICanvasInfo)info;
+					var b = go.AddComponent<UICanvas>();
+					return (b, lr => b.Initialise(new UICanvasData(i.Id,
+						i.MatchWidthOrHeight.Resolve(ctx.Resolution),
+						i.ReferenceResolution.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(UIContainerInfo)] = new(typeof(UIContainer), (go, info, ctx) =>
+				{
+					var i = (UIContainerInfo)info;
+					var b = go.AddComponent<UIContainer>();
+					return (b, lr => b.Initialise(new UIContainerData(i.Id,
+						i.Direction.Resolve(ctx.Resolution),
+						i.Spacing.Resolve(ctx.Resolution),
+						i.Padding.Resolve(ctx.Resolution),
+						i.ChildAlignment.Resolve(ctx.Resolution),
+						i.FitContent.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx) =>
 				{
 					var i = (TextLabelInfo)info;
 					var b = go.AddComponent<TextLabel>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.LabelPrefab, "text label");
 					return (b, lr => b.Initialise(new TextLabelData(i.Id,
 						i.Text.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
 						i.FontSize.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ProgressBarInfo)] = new(typeof(ProgressBar), (go, info, ctx) =>
-				{
-					var i = (ProgressBarInfo)info;
-					var b = go.AddComponent<ProgressBar>();
-					return (b, lr => b.Initialise(new ProgressBarData(i.Id,
-						i.Value.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIImageInfo)] = new(typeof(UIImage), (go, info, ctx) =>
-				{
-					var i = (UIImageInfo)info;
-					var b = go.AddComponent<UIImage>();
-					return (b, lr => b.Initialise(new UIImageData(i.Id,
-						i.Colour.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(UIButtonInfo)] = new(typeof(UIButton), (go, info, ctx) =>
 				{
 					var i = (UIButtonInfo)info;
 					var b = go.AddComponent<UIButton>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.ButtonPrefab, "ui button");
 					return (b, lr => b.Initialise(new UIButtonData(i.Id,
 						i.Label.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIToggleInfo)] = new(typeof(UIToggle), (go, info, ctx) =>
-				{
-					var i = (UIToggleInfo)info;
-					var b = go.AddComponent<UIToggle>();
-					return (b, lr => b.Initialise(new UIToggleData(i.Id,
-						i.InitialValue.Resolve(ctx.Resolution),
-						i.Label.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx) =>
 				{
 					var i = (UISliderInfo)info;
 					var b = go.AddComponent<UISlider>();
+					var prefab = RequireUiPrefab(ctx, lib => lib.SliderPrefab, "ui slider");
 					return (b, lr => b.Initialise(new UISliderData(i.Id,
 						i.InitialValue.Resolve(ctx.Resolution),
 						i.MinValue.Resolve(ctx.Resolution),
 						i.MaxValue.Resolve(ctx.Resolution),
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIInputFieldInfo)] = new(typeof(UIInputField), (go, info, ctx) =>
-				{
-					var i = (UIInputFieldInfo)info;
-					var b = go.AddComponent<UIInputField>();
-					return (b, lr => b.Initialise(new UIInputFieldData(i.Id,
-						i.Rect), i.Listeners.ToListeners(lr, ctx.Resolution)));
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
 				[typeof(StateMachineInfo)] = new(typeof(StateMachine), (go, info, ctx) =>
 				{
@@ -792,6 +836,23 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
+		}
+
+		private static GameObject RequireUiPrefab(
+			BehaviourBuildContext ctx,
+			Func<UiPrefabLibrary, GameObject> select,
+			string blockName)
+		{
+			var prefab = select(ctx.UiPrefabs);
+
+			if (prefab == null)
+			{
+				throw new InvalidOperationException(
+					$"The '{blockName}' UI block's prefab is not assigned in the UiPrefabLibrary. " +
+					"Run 'Assembler > UI > Generate UI Prefabs' or assign it on the asset.");
+			}
+
+			return prefab;
 		}
 
 		private static IReadOnlyList<Listener> ToListeners(this IReadOnlyList<ListenerInfo> listeners,

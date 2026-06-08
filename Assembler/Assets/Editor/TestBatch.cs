@@ -39,15 +39,15 @@ namespace Editor
 
 				var filter = new Filter { testMode = TestMode.EditMode };
 
-				string[] assemblies = ArgValues(args, "-testAssembly");
+				string[] assemblies = EditorBatchCli.ArgValues(args, "-testAssembly").ToArray();
 				if (assemblies.Length > 0)
 					filter.assemblyNames = assemblies;
 
-				string[] nameRegexes = ArgValues(args, "-testFilter");
+				string[] nameRegexes = EditorBatchCli.ArgValues(args, "-testFilter").ToArray();
 				if (nameRegexes.Length > 0)
 					filter.groupNames = nameRegexes;
 
-				string[] categories = ArgValues(args, "-testCategory");
+				string[] categories = EditorBatchCli.ArgValues(args, "-testCategory").ToArray();
 				if (categories.Length > 0)
 					filter.categoryNames = categories;
 
@@ -66,20 +66,6 @@ namespace Editor
 				Debug.LogError("TestBatch failed to start: " + e);
 				EditorApplication.Exit(1);
 			}
-		}
-
-		// Collects every value that immediately follows an occurrence of flag, e.g. for
-		// "-testAssembly A -testAssembly B" returns { "A", "B" }.
-		private static string[] ArgValues(string[] args, string flag)
-		{
-			var values = new List<string>();
-			for (int i = 0; i < args.Length - 1; i++)
-			{
-				if (args[i] == flag)
-					values.Add(args[i + 1]);
-			}
-
-			return values.ToArray();
 		}
 
 		private static string DescribeScope(string[] assemblies, string[] nameRegexes, string[] categories)

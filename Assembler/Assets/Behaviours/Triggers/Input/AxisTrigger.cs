@@ -10,7 +10,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	///   XAxis: Name of the Unity input axis read into the x component (e.g. "Horizontal").
 	///   YAxis: Optional. Name of the Unity input axis read into the y component (e.g. "Vertical"). Leave unset for a 1D axis.
 	/// Outputs:
-	///   axis [Vector2]: Combined (x, y) axis value; y is 0 when YAxis is unset.
+	///   axis [Vector3]: Combined (x, y, 0) axis value; y is 0 when YAxis is unset.
 	///   x [float]: Current XAxis value.
 	///   y [float]: Current YAxis value, or 0 when YAxis is unset.
 	/// </remarks>
@@ -26,7 +26,7 @@ namespace Assembler.Behaviours.Triggers.Input
 
 			NotifyListeners(TriggerContext.New(b =>
 			{
-				b["axis"] = new Vector2(x, y);
+				b["axis"] = new Vector3(x, y, 0f);
 				b["x"] = x;
 				b["y"] = y;
 			}));

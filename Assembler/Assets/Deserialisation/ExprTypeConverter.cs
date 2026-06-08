@@ -15,20 +15,35 @@ namespace Assembler.Deserialisation
 		{
 			parser.Consume<MappingStart>();
 
-			string? expressionId = null;
-			object[]? arguments = null;
-			
+			string? @do = null;
+			object[]? with = null;
+			string? returnType = null;
+			string[]? argumentTypes = null;
+			string[]? registerTypes = null;
+			string[]? registerTypeStatics = null;
+
 			while (!parser.TryConsume<MappingEnd>(out _))
 			{
 				var key = parser.Consume<Scalar>().Value;
 				switch (key)
 				{
-					case "ExpressionId":
-						expressionId = parser.Consume<Scalar>().Value;
+					case "Do":
+						@do = parser.Consume<Scalar>().Value;
 						break;
-					case "Arguments":
-						var args = rootDeserializer(typeof(List<object>));
-						arguments = ((List<object>)args).ToArray();
+					case "With":
+						with = (rootDeserializer(typeof(List<object>)) as List<object>)?.ToArray();
+						break;
+					case "ReturnType":
+						returnType = parser.Consume<Scalar>().Value;
+						break;
+					case "ArgumentTypes":
+						argumentTypes = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
+						break;
+					case "RegisterTypes":
+						registerTypes = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
+						break;
+					case "RegisterTypeStatics":
+						registerTypeStatics = (rootDeserializer(typeof(List<string>)) as List<string>)?.ToArray();
 						break;
 					default:
 						parser.SkipThisAndNestedEvents();
@@ -36,10 +51,19 @@ namespace Assembler.Deserialisation
 				}
 			}
 
+			if (string.IsNullOrWhiteSpace(@do))
+			{
+				throw new YamlException("!expr requires a non-empty 'Do' key (an expression name or an inline C# body).");
+			}
+
 			return new ExprRefDto
 			{
-				ExpressionId = expressionId,
-				Arguments = arguments
+				Do = @do,
+				With = with,
+				ReturnType = returnType,
+				ArgumentTypes = argumentTypes,
+				RegisterTypes = registerTypes,
+				RegisterTypeStatics = registerTypeStatics
 			};
 		}
 

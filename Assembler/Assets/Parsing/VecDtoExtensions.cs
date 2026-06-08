@@ -79,14 +79,6 @@ namespace Assembler.Parsing
 
 	public static class VecDtoExtensions
 	{
-		public static Vector2 ToVector2(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
-		{
-			return new Vector2(
-				FloatHelper.Resolve(dto.X, resolvedValues),
-				FloatHelper.Resolve(dto.Y, resolvedValues)
-			);
-		}
-
 		public static Vector3 ToVector3(this VecDto dto, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			return new Vector3(
@@ -99,14 +91,6 @@ namespace Assembler.Parsing
 
 	public static class VecValueExtensions
 	{
-		public static Vector2 ToVector2(this VecValue value, IReadOnlyList<ValueInfo> resolvedValues)
-		{
-			return new Vector2(
-				FloatHelper.Resolve(value.X, resolvedValues),
-				FloatHelper.Resolve(value.Y, resolvedValues)
-			);
-		}
-
 		public static Vector3 ToVector3(this VecValue value, IReadOnlyList<ValueInfo> resolvedValues)
 		{
 			return new Vector3(

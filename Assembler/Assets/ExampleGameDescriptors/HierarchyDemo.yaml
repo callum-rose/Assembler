@@ -5,11 +5,11 @@ Game:
     Unity's parent/child relationships declaratively.
 
       * The `ship` entity is a static parent that drifts to the right. Its
-        children include:
-          - an inline child with an explicit `Id: bridge` so it could be
-            referenced by listeners,
-          - an inline anonymous turret with its own nested child (the barrel),
-          - two inline wings.
+        children are declared as a keyed mapping (the key is each child's id,
+        matching how top-level `Entities` are keyed):
+          - `bridge`, referenceable by listeners via its id,
+          - a `turret` with its own nested child (the `barrel`),
+          - two wings (`upper wing` / `lower wing`).
         All children move with the ship because they're parented under it.
 
       * The `drone spawner` periodically spawns `drone` template instances.
@@ -53,7 +53,8 @@ Templates:
       # Child template instance. The drone's `colour` parameter is forwarded
       # into the trail's `tint` parameter — demonstrating parameter pass-
       # through across template levels.
-      - Template:
+      trail:
+        Template:
           Id: thruster trail
           Parameters:
             tint: !parameter colour
@@ -70,15 +71,6 @@ Templates:
           IsWire: false
           Colour: !parameter tint
 
-Expressions:
-  random colour:
-    ReturnType: colour
-    Expression: "return RandomColorBetween(new Color(0.4f, 0.4f, 0.4f, 1f), new Color(1f, 1f, 1f, 1f));"
-  random spawn x:
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Vector3 ]
-    Expression: "new Vector3(RandomFloat(-3.5f, 3.5f), -4.5f, 0);"
-
 Entities:
   ship:
     Position: !vec { X: -3, Y: 0, Z: 0 }
@@ -94,8 +86,8 @@ Entities:
         Properties:
           Velocity: !var ship velocity
     Children:
-      # Inline child with an explicit Id — addressable by listeners as `bridge`.
-      - Id: bridge
+      # Child keyed by its id — addressable by listeners as `bridge`.
+      bridge:
         Position: !vec { X: -0.4, Y: 0.4, Z: 0 }
         Behaviours:
           dome:
@@ -105,9 +97,10 @@ Entities:
               IsWire: false
               Colour: !colour cyan
 
-      # Inline anonymous child: a turret on top of the ship, with its own
-      # nested child (the barrel). Two levels deep.
-      - Position: !vec { X: 0.2, Y: 0.45, Z: 0 }
+      # A turret on top of the ship, with its own nested child (the barrel).
+      # Two levels deep.
+      turret:
+        Position: !vec { X: 0.2, Y: 0.45, Z: 0 }
         Behaviours:
           base:
             Type: cube gizmo
@@ -116,7 +109,8 @@ Entities:
               IsWire: false
               Colour: !colour { R: 0.55, G: 0.55, B: 0.65, A: 1 }
         Children:
-          - Position: !vec { X: 0.25, Y: 0, Z: 0 }
+          barrel:
+            Position: !vec { X: 0.25, Y: 0, Z: 0 }
             Behaviours:
               barrel:
                 Type: cube gizmo
@@ -125,8 +119,9 @@ Entities:
                   IsWire: false
                   Colour: !colour { R: 0.2, G: 0.2, B: 0.25, A: 1 }
 
-      # Inline anonymous wings, positioned via local offsets.
-      - Position: !vec { X: -0.3, Y: 0.45, Z: 0 }
+      # Wings, positioned via local offsets.
+      upper wing:
+        Position: !vec { X: -0.3, Y: 0.45, Z: 0 }
         Behaviours:
           wing:
             Type: cube gizmo
@@ -134,7 +129,8 @@ Entities:
               Size: !vec { X: 0.4, Y: 0.1, Z: 0.4 }
               IsWire: false
               Colour: !colour { R: 0.2, G: 0.3, B: 0.5, A: 1 }
-      - Position: !vec { X: -0.3, Y: -0.45, Z: 0 }
+      lower wing:
+        Position: !vec { X: -0.3, Y: -0.45, Z: 0 }
         Behaviours:
           wing:
             Type: cube gizmo
@@ -157,9 +153,9 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: drone
-          Position: !expr { ExpressionId: random spawn x }
+          Position: !expr { Do: 'new Vector3(RandomFloat(-3.5f, 3.5f), -4.5f, 0)', RegisterTypes: [ UnityEngine.Vector3 ] }
           Parameters:
-            colour: !expr { ExpressionId: random colour }
+            colour: !expr { Do: 'RandomColorBetween(new Color(0.4f, 0.4f, 0.4f, 1f), new Color(1f, 1f, 1f, 1f))', ReturnType: colour }
 
   camera:
     Tags: [ camera ]

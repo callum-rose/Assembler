@@ -365,22 +365,74 @@ Key points:
 
 ---
 
-## UI elements — the `Rect` field
+## UI elements — composable uGUI blocks
 
-UI behaviours (`text label`, `progress bar`, `ui image`, `ui button`, `ui toggle`, `ui slider`,
-`ui input field`) draw to screen space. They take a `Rect`:
+The UI system is **composable uGUI**, built from these blocks (NOT IMGUI, NOT a `Rect`/anchor
+model — those were removed). A UI element is an entity (GameObject), so UI composes with the *same*
+`Children` nesting as everything else: a `ui canvas` entity holds child entities; a `ui container`
+entity's children are auto-arranged.
+
+| Block | Kind | Key properties |
+|---|---|---|
+| `ui canvas` | behaviour (UI root) | `MatchWidthOrHeight` (float 0..1; CanvasScaler match), `ReferenceResolution` (`!vec`; design resolution, X=width Y=height) |
+| `ui container` | behaviour (auto-layout) | `Direction` ("vertical"/"horizontal"/"none" — "none" = no layout group, manual placement), `Spacing`, `Padding`, `ChildAlignment` (e.g. "middle-center","upper-left"), `FitContent` (bool) |
+| `text label` | behaviour | `Text` (string; re-read each frame — bind via `!expr`/`!text`/`!var` for live values), `FontSize` (int), `PreferredWidth`, `PreferredHeight` |
+| `ui button` | trigger | `Label` (string), `PreferredWidth`, `PreferredHeight` — fires its `Listeners` on click |
+| `ui slider` | trigger | `InitialValue`, `MinValue`, `MaxValue`, `PreferredWidth`, `PreferredHeight` — emits output `value` [float] on change |
+
+Layout model (replaces the old `Rect`): leaf blocks expose `PreferredWidth`/`PreferredHeight`
+(omit for a sensible default); the parent `ui container`'s `LayoutGroup` arranges its
+child entities in declaration order, and the `CanvasScaler` makes it responsive across screen sizes.
 
 ```yaml
-Rect:
-  Anchor: top-left            # or top-right, bottom-left, bottom-right, top-center, etc.
-  X: 20                       # pixel offset from the anchor; can be negative for right/bottom anchors
-  Y: 20
-  Width: 200
-  Height: 50
+ui:                                  # canvas root entity
+  Behaviours:
+    canvas: { Type: ui canvas, Properties: { MatchWidthOrHeight: 0.5 } }
+  Children:
+    hud:                             # a vertical auto-layout container
+      Behaviours:
+        layout:
+          Type: ui container
+          Properties: { Direction: vertical, Spacing: 12, Padding: 24, ChildAlignment: upper-left }
+      Children:
+        score:
+          Behaviours:
+            label:
+              Type: text label
+              Properties:
+                Text: !text { Key: hud.score, Arguments: [ !var score ] }   # live, localised
+                FontSize: 30
+                PreferredHeight: 44
+        volume:
+          Behaviours:
+            slider:
+              Type: ui slider
+              Properties: { InitialValue: 1, MinValue: 0, MaxValue: 10, PreferredWidth: 320, PreferredHeight: 30 }
+              Listeners:
+                - EntityId: settings           # slider's `value` output -> a variable setter
+                  BehaviourId: set volume
+        quit:
+          Behaviours:
+            button:
+              Type: ui button
+              Properties: { Label: !text btn.quit, PreferredWidth: 240, PreferredHeight: 56 }
+              Listeners:
+                - !gameover
 ```
 
-Use anchors to pin HUD elements to corners regardless of screen size. Negative `X` with `top-right`
-gives a right-pinned element offset inward.
+Key points:
+- **Nested child entity ids are path-joined** (entity `ui` with child `hud` → `ui/hud`; its child
+  `score` → `ui/hud/score`). Use the full path in `EntityId:` when targeting a UI element, and use
+  top-level entity ids (e.g. `settings`, `scorer`) for the behaviours UI buttons/sliders drive.
+- **`ui slider` output**: bind/read `value` like any trigger output — e.g. a listener targeting a
+  `float variable setter` whose `Value: !output value`.
+- **`ui button`/`ui slider` are triggers** — wire `Listeners` exactly like any other trigger
+  (direct `EntityId`/`BehaviourId`, tags, or `- !gameover`).
+- **Prerequisite**: the leaf blocks (`text label`, `ui button`, `ui slider`) instantiate prefabs
+  from a `UiPrefabLibrary` asset. It must exist before a UI descriptor will build — generate it once
+  via **Assembler > UI > Generate UI Prefabs** (or `Tools/generate-ui-prefabs.sh`), after importing
+  TMP Essentials (`Window > TextMeshPro > Import TMP Essential Resources`). See
+  `Assets/ExampleGameDescriptors/UiShowcase.yaml` for a complete worked example.
 
 ---
 
@@ -416,8 +468,9 @@ These are conventions, not rules. Reach for them when they fit.
   lifetime, bubble lifespan). Seed the per-entity variable from a `!parameter`.
 - **Score / counter tracker entity** with one or more `*_variable_setter` behaviours, targeted by
   listeners on the triggers that should increment/decrement.
-- **HUD entities** at `Position: !vec { X: 0, Y: 0, Z: 0 }`, each containing a UI behaviour with a
-  `Rect` anchored to a screen corner. UI behaviours don't care about world position.
+- **HUD** as a `ui canvas` entity with a `ui container` child that auto-lays-out its child UI
+  entities (labels, buttons, sliders). Bind a `text label`'s `Text` to a variable/expression for
+  live values. See **UI elements — composable uGUI blocks** above.
 - **Tagged broadcast** (`EntityTag`, `BehaviourTag`) for "do this to everything matching" — e.g. one
   keypress destroys every enemy, or scores 1 point per alive enemy. Avoids hard-coding entity ids.
 - **`Outputs:` binding + `!output` + `!expr`** for reactions that need data from the trigger event

@@ -9,16 +9,16 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	/// Properties:
 	///   Threshold: Screen-space distance, in pixels, the pointer must travel from the press point before drag events start firing. Defaults to 25.
 	/// Outputs:
-	///   start [Vector2]: Screen-space position where the drag began.
-	///   position [Vector2]: Current screen-space pointer position.
-	///   delta [Vector2]: Screen-space movement since the previous frame.
+	///   start [Vector3]: Screen-space position where the drag began (z is 0).
+	///   position [Vector3]: Current screen-space pointer position (z is 0).
+	///   delta [Vector3]: Screen-space movement since the previous frame (z is 0).
 	/// </remarks>
 	public class Drag : InputTrigger<DragTriggerData>
 	{
 		private bool _pressed;
 		private bool _dragging;
-		private Vector2 _startPosition;
-		private Vector2 _lastPosition;
+		private Vector3 _startPosition;
+		private Vector3 _lastPosition;
 
 		private void Update()
 		{
@@ -50,7 +50,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				var delta = position - _lastPosition;
 				_lastPosition = position;
 
-				if (delta != Vector2.zero)
+				if (delta != Vector3.zero)
 				{
 					NotifyListeners(TriggerContext.New(b =>
 					{

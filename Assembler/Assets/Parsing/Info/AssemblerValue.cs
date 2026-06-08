@@ -19,8 +19,6 @@ namespace Assembler.Parsing.Info
 
 	public sealed record StringValue(string Value) : AssemblerValue;
 
-	public sealed record Vector2Value(Vector2 Value) : AssemblerValue;
-
 	public sealed record Vector3Value(Vector3 Value) : AssemblerValue;
 
 	public sealed record ColorValue(Color Value) : AssemblerValue;
@@ -50,7 +48,18 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ParamRef(string Id) : AssemblerRef(Id);
 
-	public sealed record ExprRef(string ExpressionId, IReadOnlyList<AssemblerValue> Arguments) : AssemblerValue;
+	/// <summary>A <c>!expr { Do, With }</c> call site. <see cref="Do"/> is either a declared
+	/// expression's name/alias (a named call) or an anonymous inline C# body; <see cref="With"/>
+	/// carries the operands. The remaining fields are optional hints for an inline body
+	/// (return type, per-operand types, and extra types / static-method sources); they are
+	/// ignored on a named call.</summary>
+	public sealed record ExprRef(
+		string Do,
+		IReadOnlyList<AssemblerValue> With,
+		string? ReturnType = null,
+		IReadOnlyList<string>? ArgumentTypes = null,
+		IReadOnlyList<string>? RegisterTypes = null,
+		IReadOnlyList<string>? RegisterTypeStatics = null) : AssemblerValue;
 
 	/// <summary>A <c>!text &lt;key&gt;</c> reference into the localisation string table. Carries the lookup
 	/// key plus any runtime arguments that fill the localised template's <c>{0}</c>/<c>{1}</c> placeholders.</summary>

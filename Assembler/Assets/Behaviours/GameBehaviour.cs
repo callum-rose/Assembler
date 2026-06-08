@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Resolving;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 namespace Assembler.Behaviours
@@ -29,14 +31,22 @@ namespace Assembler.Behaviours
 
 		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
 		public IReadOnlyList<Listener> DebugListeners => _listeners;
+		
+		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours;
 #endif
 
-		public abstract void Execute(TriggerContext ctx);
+		/// <summary>Runs when a trigger notifies this behaviour. Passive/state-driven behaviours that don't
+		/// react to triggers can leave this as the default no-op.</summary>
+		public virtual void Execute(TriggerContext ctx) { }
 
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{
 			Id = behaviourData.Id;
 			_listeners = listeners;
+
+#if DEBUG_CONSOLE
+			_listeningBehaviours = _listeners.SelectMany(l => l.DebugTargets()).ToArray();
+#endif
 		}
 
 		protected void NotifyListeners(TriggerContext ctx)

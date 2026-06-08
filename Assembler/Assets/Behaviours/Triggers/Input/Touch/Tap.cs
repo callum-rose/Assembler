@@ -11,7 +11,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 	///   MaxDuration: Longest press, in seconds, that still counts as a tap. Defaults to 0.3.
 	///   MaxMovement: Largest screen-space drift, in pixels, allowed during the press. Defaults to 25.
 	/// Outputs:
-	///   position [Vector2]: Screen-space position where the tap was released.
+	///   position [Vector3]: Screen-space position where the tap was released (z is 0).
 	/// </remarks>
 	public class Tap : InputTrigger<TapTriggerData>, INeedsGameClock
 	{
@@ -19,7 +19,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private bool _pressed;
 		private double _startTime;
-		private Vector2 _startPosition;
+		private Vector3 _startPosition;
 		private float _maxMoveSqr;
 
 		private void Update()

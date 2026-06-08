@@ -363,8 +363,8 @@ Entities:
         Properties:
           VariableId: !var head pos
           Value: !expr
-            ExpressionId: vec add
-            Arguments:
+            Do: vec add
+            With:
               - !var head pos
               - !var direction
 
@@ -476,8 +476,8 @@ Entities:
         Properties:
           VariableId: !var segment lifetime
           Value: !expr
-            ExpressionId: float add
-            Arguments:
+            Do: float add
+            With:
               - !var segment lifetime
               - !var step interval
 
@@ -490,8 +490,8 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            ExpressionId: int add
-            Arguments:
+            Do: int add
+            With:
               - !var score
               - !var score per food
 
@@ -512,8 +512,8 @@ Entities:
         Properties:
           TemplateId: food_template
           Position: !expr
-            ExpressionId: next food position
-            Arguments:
+            Do: next food position
+            With:
               - !var segment positions
 
   # --- Game Manager ---
@@ -534,8 +534,8 @@ Entities:
         Id: score text
         Properties:
           Text: !expr
-            ExpressionId: format score
-            Arguments:
+            Do: format score
+            With:
               - !var score
           FontSize: 32
           Rect:
@@ -559,8 +559,8 @@ Entities:
           Size: !var camera size
 
 GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
+  Do: is game over
+  With:
     - !var score
     - !var score to win
     - !var is dead
