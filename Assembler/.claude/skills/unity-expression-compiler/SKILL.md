@@ -71,6 +71,9 @@ a == b   a != b   a < b   a > b   a <= b   a >= b
 // Logical
 a && b   a || b   !a
 
+// XOR — the one bitwise-family operator that IS supported
+a ^ b   // bool operands: logical XOR; int operands: bitwise XOR
+
 // Ternary
 condition ? trueValue : falseValue
 
@@ -251,7 +254,7 @@ vs vector `LerpVector` vs colour `LerpColor`.
 | **Statements** | `switch`, `try/catch`, `throw`, `using`, `lock` |
 | **Lambdas** | Multi-param `(x, y) => ...`, zero-param `() => ...`, statement bodies `x => { ... }`, typed params `(int x) => ...` |
 | **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }`, index access `arr[0]` |
-| **Operators** | Bitwise `&` `\|` `^` `~` `<<` `>>`, range `..`, `typeof`, `is`, `as`, `default` |
+| **Operators** | Bitwise `&` `\|` `~` `<<` `>>` (but `^` XOR **is** supported — see Operators), range `..`, `typeof`, `is`, `as`, `default` |
 | **OOP** | Classes, structs, interfaces, events, generics (definition) |
 | **Misc** | `async/await`, `ref/out/in` params, `params`, named args, `this`, `base`, `static`, LINQ query syntax |
 | **Comments** | Multi-line `/* */`, XML doc `///` |
@@ -267,6 +270,31 @@ Subtler gotchas (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
 - **String escapes are not interpreted** — only `\"` and `\\` are meaningful; `\n`/`\t` become the literal `n`/`t`.
 - **`break` / `continue` only work inside a loop** — using them elsewhere throws.
 - **Casts must be legal CLR conversions** — the syntax parses `(int) (float) (double) (bool) (string)`, but the runtime conversion still has to be valid.
+
+---
+
+## Verifying an Expression Compiles
+
+The syntax mistakes this guide warns about normally only surface at **runtime**. To catch them
+first, run the expression through the standalone `Tools/check-expression.sh` — a cheap, sub-second
+check that feeds the snippet straight through `ExpressionMethodCompiler` (no game boot) and exits
+non-zero with the compiler's position-annotated error on any failure. Run it from the `Assembler/`
+project dir (first run in a fresh worktree does a one-time ~3 min import; later runs are fast).
+
+```bash
+# Raw snippet — treated exactly like an inline `Do:` body (a bare expression is
+# auto-wrapped as `return <body>;`). Default return type is float.
+Tools/check-expression.sh -e 'Clamp(x, 0f, 1f)' -a 'float:x'
+
+# Non-float return type + multiple declared args (-a '<type>:<name>', repeatable):
+Tools/check-expression.sh -r vector -a 'vector:vel' -a 'float:dt' \
+    -e 'return AddVector(vel, ScaleVector(vel, dt));'
+
+# Sweep every expression embedded in a descriptor (named + inline) and compile each:
+Tools/check-expression.sh Assets/ExampleGameDescriptors/Pong.yaml
+```
+
+With no arguments it audits every descriptor under `Assets/ExampleGameDescriptors/`.
 
 ---
 
