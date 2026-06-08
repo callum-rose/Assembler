@@ -1077,13 +1077,13 @@ namespace Tests.Compiler
 			Assert.That(func(testList), Is.EqualTo(15));
 		}
 
-		// String escapes are not interpreted: the lexer only strips the backslash.
+		// String escape sequences are translated: "\n" becomes a real newline, not a literal 'n'.
 		[Test]
-		public void StringEscapesAreNotInterpreted()
+		public void StringEscapesAreInterpreted()
 		{
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<string>("return \"a\\nb\";");
-			Assert.That(func(), Is.EqualTo("anb"));
+			Assert.That(func(), Is.EqualTo("a\nb"));
 		}
 
 		// Implicit numeric promotion in binary operations (issue #73)
@@ -1355,6 +1355,81 @@ namespace Tests.Compiler
 			var func = compiler.CompileFunc<Vector3, Vector3>("return v / 2;", "v");
 
 			Assert.That(func(new Vector3(2, 4, 6)), Is.EqualTo(new Vector3(1, 2, 3)));
+		}
+
+		// --- Error reporting ---
+
+		[Test]
+		public void StringEscapeSequencesAreTranslated()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<string>("return \"a\\nb\\tc\";");
+
+			Assert.That(func(), Is.EqualTo("a\nb\tc"));
+		}
+
+		[Test]
+		public void UnterminatedStringIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<string>("return \"oops;"));
+			Assert.That(ex.Message, Does.Contain("Unterminated string"));
+		}
+
+		[Test]
+		public void MalformedNumberIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<double>("return 1.2.3;"));
+			Assert.That(ex.Message, Does.Contain("Malformed number"));
+		}
+
+		[Test]
+		public void UnrecognisedEscapeIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Assert.Throws<CompileException>(() => compiler.CompileFunc<string>("return \"a\\qb\";"));
+		}
+
+		[Test]
+		public void AssigningUndeclaredVariableReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileAction("missing = 5;"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+			Assert.That(ex.Message, Does.Contain("missing"));
+		}
+
+		[Test]
+		public void CompoundAssignUndeclaredVariableReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileAction("missing += 5;"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+		}
+
+		[Test]
+		public void CompileExceptionCarriesLineAndColumn()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			// Unexpected character '@' on the second line.
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("int x = 1;\nreturn @;"));
+			Assert.That(ex.Line, Is.EqualTo(2));
+			Assert.That(ex.Column, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void UnexpectedCharacterIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("return 1 @ 2;"));
 		}
 	}
 

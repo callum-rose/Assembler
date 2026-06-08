@@ -17,10 +17,6 @@ namespace Assembler.Compiler.Compiler
 			["else"] = TokenType.Else,
 			["for"] = TokenType.For,
 			["while"] = TokenType.While,
-			["foreach"] = TokenType.Foreach,
-			["switch"] = TokenType.Switch,
-			["case"] = TokenType.Case,
-			["default"] = TokenType.Default,
 			["return"] = TokenType.Return,
 			["break"] = TokenType.Break,
 			["continue"] = TokenType.Continue,
@@ -147,7 +143,7 @@ namespace Assembler.Compiler.Compiler
 				']' => new Token(TokenType.RightBracket, "]", _line, _column),
 				'?' => new Token(TokenType.Question, "?", _line, _column),
 				':' => new Token(TokenType.Colon, ":", _line, _column),
-				_ => throw new Exception($"Unexpected character '{c}' at line {_line}, column {_column}")
+				_ => throw new CompileException($"Unexpected character '{c}'", _line, _column)
 			};
 
 			_position++;
@@ -159,9 +155,17 @@ namespace Assembler.Compiler.Compiler
 		{
 			var startColumn = _column;
 			var sb = new StringBuilder();
+			var dotCount = 0;
 
 			while (_position < _code.Length && (char.IsDigit(_code[_position]) || _code[_position] == '.'))
 			{
+				if (_code[_position] == '.' && ++dotCount > 1)
+				{
+					// A second '.' means a malformed number like "1.2.3" — catch it here rather than
+					// letting it lex as one token and blow up opaquely later at double.Parse.
+					throw new CompileException($"Malformed number literal '{sb}.'", _line, startColumn);
+				}
+
 				sb.Append(_code[_position]);
 				_position++;
 				_column++;
@@ -191,6 +195,7 @@ namespace Assembler.Compiler.Compiler
 		private Token ReadString()
 		{
 			var startColumn = _column;
+			var startLine = _line;
 			var sb = new StringBuilder();
 
 			_position++;// Skip opening quote
@@ -198,25 +203,64 @@ namespace Assembler.Compiler.Compiler
 
 			while (_position < _code.Length && _code[_position] != '"')
 			{
-				if (_code[_position] == '\\' && _position + 1 < _code.Length)
+				var c = _code[_position];
+
+				if (c == '\n')
 				{
+					// A newline before the closing quote means the literal was never terminated.
+					throw new CompileException("Unterminated string literal", startLine, startColumn);
+				}
+
+				if (c == '\\')
+				{
+					if (_position + 1 >= _code.Length)
+					{
+						throw new CompileException("Unterminated string literal", startLine, startColumn);
+					}
+
 					_position++;
 					_column++;
-					sb.Append(_code[_position]);
+					sb.Append(TranslateEscape(_code[_position], startLine, _column));
 				}
 				else
 				{
-					sb.Append(_code[_position]);
+					sb.Append(c);
 				}
 
 				_position++;
 				_column++;
 			}
 
+			if (_position >= _code.Length)
+			{
+				// Ran off the end of the source without ever seeing a closing quote.
+				throw new CompileException("Unterminated string literal", startLine, startColumn);
+			}
+
 			_position++;// Skip closing quote
 			_column++;
 
-			return new Token(TokenType.String, sb.ToString(), _line, startColumn);
+			return new Token(TokenType.String, sb.ToString(), startLine, startColumn);
+		}
+
+		// Translates the character following a backslash into the character it escapes, so that e.g.
+		// "\n" in source becomes a real newline in the string value rather than a literal 'n'.
+		private char TranslateEscape(char escaped, int line, int column)
+		{
+			return escaped switch
+			{
+				'n' => '\n',
+				't' => '\t',
+				'r' => '\r',
+				'0' => '\0',
+				'b' => '\b',
+				'f' => '\f',
+				'v' => '\v',
+				'\\' => '\\',
+				'"' => '"',
+				'\'' => '\'',
+				_ => throw new CompileException($"Unrecognised escape sequence '\\{escaped}'", line, column)
+			};
 		}
 
 		private void SkipWhitespace()
