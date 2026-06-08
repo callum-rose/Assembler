@@ -30,7 +30,7 @@ namespace Assembler.Generation.Verification.Editor
 	/// Produces one asset type. Implementations do their own generation + persistence
 	/// to <c>Assets/Resources/&lt;ResourcesPath&gt;.&lt;ext&gt;</c> and make NO
 	/// <c>AssetDatabase</c>/<c>Resources</c> calls inside <see cref="GenerateAsync"/>
-	/// — the batch owns the single import pass and runs <see cref="TryLoadGenerated"/>
+	/// — the batch owns the single import pass and runs <see cref="CanLoadGenerated"/>
 	/// on the main thread.
 	/// </summary>
 	public interface IAssetGenerator
@@ -42,14 +42,17 @@ namespace Assembler.Generation.Verification.Editor
 		/// Generate one asset to disk. Returns the project-relative path written.
 		/// Must not touch <c>AssetDatabase</c>/<c>Resources</c>.
 		/// </summary>
-		Task<string> GenerateAsync(AssetRequest req, string apiKey, AssetGenerationOptions opts,
-			IGeneratorLogger? logger, CancellationToken ct);
+		Task<string> GenerateAsync(AssetRequest req,
+			string apiKey,
+			AssetGenerationOptions opts,
+			IGeneratorLogger logger,
+			CancellationToken ct);
 
 		/// <summary>
-		/// Main-thread probe: does the generated asset now load? (e.g. via
+		/// Main-thread probe: can the generated asset now load? (e.g. via
 		/// <c>Resources.Load</c>). The batch calls this after the import pass.
 		/// </summary>
-		bool TryLoadGenerated(AssetRequest req);
+		bool CanLoadGenerated(AssetRequest req);
 	}
 
 	/// <summary>
@@ -59,21 +62,16 @@ namespace Assembler.Generation.Verification.Editor
 	/// </summary>
 	public sealed class AssetGeneratorRegistry
 	{
-		private readonly Dictionary<string, IAssetGenerator> _generators =
-			new(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, IAssetGenerator> _generators = new(StringComparer.OrdinalIgnoreCase);
 
 		public AssetGeneratorRegistry Register(IAssetGenerator generator)
 		{
-			if (generator == null) throw new ArgumentNullException(nameof(generator));
 			_generators[generator.AssetType] = generator;
 			return this;
 		}
 
-		public IAssetGenerator? Get(string? type)
-		{
-			if (string.IsNullOrWhiteSpace(type)) return null;
-			return _generators.TryGetValue(type!, out var g) ? g : null;
-		}
+		public IAssetGenerator? Get(string? type) =>
+			string.IsNullOrWhiteSpace(type) ? null : _generators.GetValueOrDefault(type!);
 
 		/// <summary>The asset types we can generate — surfaced to Claude in the prompt.</summary>
 		public IReadOnlyList<string> SupportedTypes => new List<string>(_generators.Keys);

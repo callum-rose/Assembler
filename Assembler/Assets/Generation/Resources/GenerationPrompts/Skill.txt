@@ -4,8 +4,7 @@ description: >
   Use this skill whenever the user asks to author, generate, edit, or review a game descriptor YAML
   file for the Assembler project. Trigger on requests like "make me a Tetris game", "write a yaml for
   a top-down shooter", "add a power-up to this descriptor", "review my descriptor", or any task where
-  the deliverable is a `.yaml` game definition under `Assets/GameDescriptors/` or
-  `Assets/ExampleGameDescriptors/`. Also trigger when the user wants feedback on whether existing
+  the deliverable is a `.yaml` game definition under `Assets/ExampleGameDescriptors/`. Also trigger when the user wants feedback on whether existing
   behaviours are sufficient, well-designed, or missing functionality for a game idea — this skill is
   expected to push back on the behaviour catalogue when something is awkward, faulty, or missing.
 ---
@@ -24,7 +23,17 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 > 2. **Use the expression compiler skill for any code.** Any value inside an `Expression:` field is
 >    code, not YAML. It must be authored via the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 >    skill — that compiler is strict and the wrong syntax will fail at runtime. Always invoke that
->    skill when writing or editing expression bodies.
+>    skill when writing or editing expression bodies. That skill also documents the **library
+>    helpers** (see [`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md)): reusable
+>    functions like `CellToWorld`, `Rotate2D`, `Clamp`, `RandomFloat`, `LerpColor`, callable by bare
+>    name from any expression with no `RegisterTypes` / `RegisterTypeStatics`. Prefer them over
+>    hand-rolling vector/scalar/random/colour math.
+> 3. **Register a `Test/Build <GameName>` menu item in `Assets/Building/Builder.cs`** whenever you
+>    create a new descriptor under `Assets/ExampleGameDescriptors/`. The
+>    Unity Editor only exposes games that have a corresponding `[MenuItem("Test/Build …")]` method
+>    inside the `#if UNITY_EDITOR` block — without one, the user has no way to launch the game.
+>    Follow the existing pattern verbatim (read the file, parse, transform, `Build(gameInfo)`). Do
+>    this in the same turn that you write the YAML, without being asked.
 
 You do not need to understand or reference the C# implementation, the build pipeline, the parsing
 layer, or the runtime. Treat the descriptor as a self-contained authoring format.
@@ -45,6 +54,7 @@ Variables:           # runtime mutable named values
 Expressions:         # named code snippets, called from !expr
 Templates:           # reusable entity blueprints
 Entities:            # the actual entities in the scene
+Localisation:        # per-locale string table; referenced via !text
 GameOverCondition:   # boolean !expr; game ends when true
 ```
 
@@ -98,7 +108,7 @@ Named code snippets that can be called via `!expr`. Each entry:
 expression name:
   ArgumentTypes:   [ int, int ]              # optional, omit if no args
   ArgumentNames:   [ a, b ]                  # optional, must match ArgumentTypes length
-  ReturnType:      int                       # required: int | float | bool | string | vector
+  ReturnType:      int                       # required: int | float | bool | string | vector | colour
   RegisterTypes:   [ UnityEngine.Vector3 ]   # optional; lets the body use the bare type name
   RegisterTypeStatics: [ UnityEngine.Random ]# optional; lets the body call statics without the type prefix
   Expression: "a + b;"                       # the method body
@@ -106,6 +116,15 @@ expression name:
 
 The `Expression:` field is code. **Always invoke the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 skill when authoring it.** It is a strict procedural subset of C#; ordinary C# will fail to parse.
+
+**Prefer the library helpers over registering statics.** Functions documented in
+[`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md) (e.g. `ScaleVector`, `Rotate2D`,
+`IntegratePosition`, `Clamp`, `Max`, `RandomFloat`, `RandomOnCircle`, `RandomColor`, `LerpColor`,
+plus all of `GridMath`) are registered globally and callable by bare name — so you usually do **not**
+need `RegisterTypeStatics: [ UnityEngine.Random / Mathf ]`, and often not `RegisterTypes` either.
+Reach for these first; only register a `UnityEngine.*` type when no helper covers what you need
+(`new Vector3(...)` still needs `RegisterTypes: [ UnityEngine.Vector3 ]`, though `new Color(...)` is
+already available globally).
 
 ### `Templates`
 Reusable entity blueprints. An entity that references a template inherits its `Tags`, `Variables`,
@@ -143,8 +162,49 @@ as shown.
 | `!parameter` | `!parameter slot_name` | Inside a template, refers to a parameter slot supplied at instantiation. `!parameter self_id` is the special implicit slot for the entity's own id (use when a template behaviour needs to refer to "this entity"). |
 | `!expr` | `!expr { ExpressionId: …, Arguments: [ … ] }` | Calls a named expression from the `Expressions:` section. |
 | `!output` | `!output local_name` | Reads a trigger output that was bound by an upstream listener (see **Trigger outputs**). |
+| `!clock` | `!clock deltaTime` | Reads a property of the game clock (`deltaTime`, `time`, `frameCount`, `unscaledDeltaTime`) as a number. Respects pause / slow-mo (`set timescale`): `deltaTime` is 0 while paused. Use it to pass the frame delta into per-frame `!expr` physics, e.g. `IntegratePosition(pos, vel, dt)` with `dt` supplied as `!clock deltaTime`. |
+| `!text` | `!text menu.start` or `!text { Key: hud.score, Arguments: [ !var score ] }` | Resolves a localisation key to a string from the `Localisation:` table. Use the scalar form for static text and the mapping form for text with runtime values — the localised template owns the `{0}`/`{1}` placeholders that the arguments fill. **Always use `!text` for user-facing strings instead of inline literals** (see **Localisation**). |
 
 Lists of values can use either flow `[ a, b ]` or block `- a` syntax — both work.
+
+---
+
+## Localisation — user-facing text
+
+**All user-facing strings must go through the localisation layer, never inline literals.** This is
+cheap to do up front and miserable to retrofit. Whenever you author text a player will read (HUD
+labels, instructions, button captions, titles), emit a `!text` key and add the string to the
+`Localisation:` table — do **not** write the literal directly into a property or build it with a
+string-concatenation `!expr`.
+
+The `Localisation:` block is a per-locale string table:
+
+```yaml
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.score: "Score: {0}"
+      hud.lives: "Lives: {0}"
+      menu.start: "Press Space to start"
+```
+
+Reference keys with `!text`:
+
+```yaml
+# Static text — scalar form:
+Text: !text menu.start
+
+# Dynamic text — mapping form; arguments fill the template's {0}, {1}, … placeholders:
+Text: !text { Key: hud.score, Arguments: [ !var score ] }
+```
+
+Notes:
+- Placeholders use `string.Format` indices (`{0}`, `{1}`); escape literal braces as `{{`/`}}`.
+- The template owns word order, so translators can reorder placeholders — prefer the mapping form
+  over a format `!expr` for dynamic HUD text.
+- A missing key renders as a visible `#key#` marker rather than crashing, so gaps are obvious.
+- Only `en` need be authored for now; the layer falls back to the default locale.
 
 ---
 
@@ -384,6 +444,9 @@ Run through this before handing a descriptor back:
       entities involved (the catalogue notes this for `collision enter trigger`).
 - [ ] A `camera` entity exists, with a `camera` behaviour, otherwise nothing renders.
 - [ ] Every `Expression:` body has been authored via the `unity-expression-compiler` skill.
+- [ ] Math-heavy expressions reuse the bare-name library helpers from
+      [`Libraries.md`](../../../Assets/docs/Libraries.md) instead of hand-rolling them, and no
+      `RegisterTypeStatics`/`RegisterTypes` entry remains that the helpers made unnecessary.
 - [ ] `GameOverCondition` evaluates to `false` initially and there is at least one path to make it
       `true`, OR it is omitted intentionally for an endless game.
 
@@ -420,6 +483,9 @@ When giving feedback, be concrete:
 > "There's no `text variable setter` in the catalogue, so the HUD label has to be rebuilt every
 > frame via a format expression. Consider adding `string variable setter` for direct text writes, or
 > a `format and set` behaviour for the common case."
+
+For HUD text with runtime values, prefer a `!text { Key, Arguments }` (the localised template owns the
+placeholders) over a string-concatenation format `!expr` — see **Localisation**.
 
 Don't gold-plate — only raise it if it actually bites the current task or would clearly bite the
 next similar one.

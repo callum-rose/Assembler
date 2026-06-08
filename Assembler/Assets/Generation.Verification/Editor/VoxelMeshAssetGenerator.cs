@@ -19,10 +19,10 @@ namespace Assembler.Generation.Verification.Editor
 		public string AssetType => "mesh";
 
 		public async Task<string> GenerateAsync(AssetRequest req, string apiKey, AssetGenerationOptions opts,
-			IGeneratorLogger? logger, CancellationToken ct)
+			IGeneratorLogger logger, CancellationToken ct)
 		{
 			var savePath = $"Assets/Resources/{req.ResourcesPath}.vox";
-			logger?.Log($"[mesh:{req.Id}] generating voxel model -> {savePath}");
+			logger.Log($"[mesh:{req.Id}] generating voxel model -> {savePath}");
 
 			using var client = new AnthropicClient(apiKey);
 			var executor = new VoxelScriptExecutor(opts.VoxelLimits);
@@ -38,11 +38,11 @@ namespace Assembler.Generation.Verification.Editor
 				.SaveAsVoxFile(savePath)
 				.ExecuteAsync(ct);
 
-			logger?.Log($"[mesh:{req.Id}] wrote {savePath}");
+			logger.Log($"[mesh:{req.Id}] wrote {savePath}");
 			return savePath;
 		}
 
-		public bool TryLoadGenerated(AssetRequest req)
+		public bool CanLoadGenerated(AssetRequest req)
 		{
 			return Resources.Load<Mesh>(req.ResourcesPath) != null;
 		}

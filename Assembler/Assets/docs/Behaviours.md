@@ -279,7 +279,10 @@ Fires every frame with the current value(s) of one or two Unity input axes (1D o
 | y | float | Current YAxis value, or 0 when YAxis is unset. |
 
 ## `input action`
-Relays an abstract input action (declared in the descriptor's Controls section and bound to a physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis trigger, emitting axis/x/y every frame.
+Relays an abstract input action (declared in the descriptor's Controls section and bound to a
+            physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action
+            behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis
+            trigger, emitting axis/x/y every frame.
 
 ### Properties
 
@@ -615,6 +618,22 @@ Forwards an upstream trigger to listeners only if no other trigger sharing the s
 | Name | Type | Description |
 |------|------|-------------|
 | Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
+
+## `state machine`
+Finite state machine for entity AI. Holds the current state in an entity string-variable and
+            transitions between declared states when a transition's condition becomes true. Transitions are
+            evaluated every frame in declared order, first match wins (one transition per frame), so behaviour
+            is deterministic. On a transition it fires the old state's OnExit hooks then the new state's
+            OnEnter hooks; the initial state's OnEnter fires once on start.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| StateVariable | string | Id of the string entity variable holding the current state. Auto-declared (seeded to Initial) if not already present, so it shows up in the debug console and save snapshots. |
+| Initial | string | The starting state. Must be one of States. |
+| States | IReadOnlyList<StateInfo> | Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover). |
+| Transitions | IReadOnlyList<TransitionInfo> | Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken. |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.

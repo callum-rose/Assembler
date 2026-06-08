@@ -22,7 +22,7 @@ namespace Assembler.Generation.Verification.Editor
 			string apiKey,
 			AssetGenerationOptions opts,
 			int maxConcurrency,
-			IGeneratorLogger? logger,
+			IGeneratorLogger logger,
 			CancellationToken ct)
 		{
 			var count = requests.Count;
@@ -51,7 +51,7 @@ namespace Assembler.Generation.Verification.Editor
 				for (var i = 0; i < count; i++)
 				{
 					if (generators[i] == null) continue;
-					try { alreadyLoadable[i] = generators[i]!.TryLoadGenerated(requests[i]); }
+					try { alreadyLoadable[i] = generators[i]!.CanLoadGenerated(requests[i]); }
 					catch { alreadyLoadable[i] = false; }
 				}
 			});
@@ -61,7 +61,7 @@ namespace Assembler.Generation.Verification.Editor
 				if (results[i] == null && generators[i] != null && alreadyLoadable[i])
 				{
 					results[i] = new AssetResult(requests[i], true, null);
-					logger?.Log($"Asset '{requests[i].Id}' ({requests[i].Type}) already present — skipping.");
+					logger.Log($"Asset '{requests[i].Id}' ({requests[i].Type}) already present — skipping.");
 				}
 			}
 
@@ -111,7 +111,7 @@ namespace Assembler.Generation.Verification.Editor
 					}
 
 					bool ok;
-					try { ok = generators[i]!.TryLoadGenerated(requests[i]); }
+					try { ok = generators[i]!.CanLoadGenerated(requests[i]); }
 					catch (Exception ex)
 					{
 						results[i] = new AssetResult(requests[i], false, "load probe threw: " + ex.Message);
@@ -135,7 +135,7 @@ namespace Assembler.Generation.Verification.Editor
 
 		private static async Task GenerateOneAsync(
 			IAssetGenerator generator, AssetRequest req, string apiKey, AssetGenerationOptions opts,
-			IGeneratorLogger? logger, SemaphoreSlim sem, string?[] writtenPaths, string?[] genErrors,
+			IGeneratorLogger logger, SemaphoreSlim sem, string?[] writtenPaths, string?[] genErrors,
 			int idx, CancellationToken ct)
 		{
 			await sem.WaitAsync(ct);
@@ -150,7 +150,7 @@ namespace Assembler.Generation.Verification.Editor
 			catch (Exception ex)
 			{
 				genErrors[idx] = ex.Message;
-				logger?.Log($"Asset '{req.Id}' ({req.Type}) generation failed: {ex.Message}");
+				logger.Log($"Asset '{req.Id}' ({req.Type}) generation failed: {ex.Message}");
 			}
 			finally
 			{

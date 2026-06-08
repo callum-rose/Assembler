@@ -12,13 +12,41 @@ namespace Assembler.Generation.Verification.Editor
 	{
 		public static string Build(string userPrompt, string gameSlug, IReadOnlyList<string> supportedTypes)
 		{
-			var types = (supportedTypes == null || supportedTypes.Count == 0)
-				? "(none)"
-				: string.Join(", ", supportedTypes);
-
 			var sb = new StringBuilder();
 			sb.AppendLine(userPrompt);
 			sb.AppendLine();
+			AppendProtocol(sb, gameSlug, supportedTypes);
+			return sb.ToString();
+		}
+
+		/// <summary>
+		/// Frames a user-driven revision of the previously generated game. The conversation
+		/// already holds the prior descriptor, so this just states the requested change and
+		/// re-states the asset protocol (same slug + supported types).
+		/// </summary>
+		public static string BuildRevision(string instruction, string gameSlug, IReadOnlyList<string> supportedTypes)
+		{
+			var sb = new StringBuilder();
+			sb.AppendLine("Revise the game you produced above. Requested change:");
+			sb.AppendLine();
+			sb.AppendLine(instruction);
+			sb.AppendLine();
+			sb.AppendLine("Return the FULL updated descriptor in the usual two-fenced-block format");
+			sb.AppendLine("(```yaml ...``` then ```feedback ...```). Keep everything that should stay the");
+			sb.AppendLine($"same; reuse the same game slug ({gameSlug}) for asset paths. Only add an");
+			sb.AppendLine("```assets block for assets that are newly referenced by this revision —");
+			sb.AppendLine("assets generated for the previous version still exist and need not be re-listed.");
+			sb.AppendLine();
+			AppendProtocol(sb, gameSlug, supportedTypes);
+			return sb.ToString();
+		}
+
+		private static void AppendProtocol(StringBuilder sb, string gameSlug, IReadOnlyList<string> supportedTypes)
+		{
+			var types = supportedTypes.Count is 0
+				? "(none)"
+				: string.Join(", ", supportedTypes);
+
 			sb.AppendLine("================ ASSET GENERATION PROTOCOL ================");
 			sb.AppendLine();
 			sb.AppendLine($"Game slug for this run: {gameSlug}");
