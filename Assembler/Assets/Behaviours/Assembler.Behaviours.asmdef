@@ -9,6 +9,7 @@
         "Assembler.Resolving",
         "Assembler.Parsing",
         "Unity.InputSystem",
+        "Unity.Cinemachine",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "Assembler.Time"

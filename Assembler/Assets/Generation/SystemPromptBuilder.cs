@@ -10,6 +10,7 @@ namespace Assembler.Generation
 		{
 			var skill = LoadRequired("Skill");
 			var behaviours = LoadRequired("Behaviours");
+			var libraries = LoadRequired("Libraries");
 			var compilerSyntax = LoadRequired("CompilerSyntax");
 
 			return $$"""
@@ -29,6 +30,9 @@ namespace Assembler.Generation
 
 			         ==== EXPRESSION COMPILER SYNTAX REFERENCE ====
 			         {{compilerSyntax}}
+
+			         ==== LIBRARY CATALOGUE ====
+			         {{libraries}}
 			         """;
 		}
 

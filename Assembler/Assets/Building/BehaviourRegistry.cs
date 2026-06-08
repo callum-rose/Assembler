@@ -11,6 +11,7 @@ namespace Assembler.Building
 		GameBehaviour this[BehaviourDescriptor descriptor] { get; }
 		IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null);
 		IReadOnlyList<GameBehaviour> GetByEntityTagAndBehaviourId(string entityTag, string behaviourId);
+		IReadOnlyList<GameBehaviour> GetByEntityTag(string entityTag);
 	}
 
 	public static class BehaviourRegistryExtensions
@@ -81,6 +82,14 @@ namespace Assembler.Building
 							 && kv.Value
 							 && kv.Value.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
 				.Select(kv => kv.Value)
+				.OrderBy(b => _registrationIndex[b])
+				.ToArray();
+		}
+
+		public IReadOnlyList<GameBehaviour> GetByEntityTag(string entityTag)
+		{
+			return _behaviours.Values
+				.Where(b => b && b.gameObject.GetComponent<GameEntity>()?.Tags.Contains(entityTag) == true)
 				.OrderBy(b => _registrationIndex[b])
 				.ToArray();
 		}

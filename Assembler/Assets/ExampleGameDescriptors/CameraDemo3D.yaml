@@ -1,0 +1,139 @@
+Game:
+  Title: Camera Follow Demo (3D)
+  Description: >
+    A player cube driven by WASD across a 3D field of pillars, chased by a
+    Cinemachine virtual camera in 3D mode. Demonstrates the perspective output
+    camera plus a `camera follow` vcam that keeps a world-space FollowOffset
+    behind and above the player (re-targeted by tag) and aims at it via LookAt.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#141821"
+
+Constants:
+  step forward: !vec { X: 0, Y: 0, Z: 0.12 }
+  step back: !vec { X: 0, Y: 0, Z: -0.12 }
+  step left: !vec { X: -0.12, Y: 0, Z: 0 }
+  step right: !vec { X: 0.12, Y: 0, Z: 0 }
+  follow offset: !vec { X: 0, Y: 5, Z: -10 }
+  camera start: !vec { X: 0, Y: 5, Z: -10 }
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold forward:
+        Type: key hold trigger
+        Properties:
+          Key: "w"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move forward
+      move forward:
+        Type: translate
+        Properties:
+          Displacement: !var step forward
+      hold back:
+        Type: key hold trigger
+        Properties:
+          Key: "s"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move back
+      move back:
+        Type: translate
+        Properties:
+          Displacement: !var step back
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "a"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var step left
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var step right
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 40, Y: 0.1, Z: 40 }
+          IsWire: true
+          Colour: !colour grey
+
+  pillar a:
+    Position: !vec { X: -6, Y: 1.5, Z: 6 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 3, Z: 1 }
+          IsWire: false
+          Colour: !colour red
+
+  pillar b:
+    Position: !vec { X: 6, Y: 1.5, Z: 10 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 3, Z: 1 }
+          IsWire: false
+          Colour: !colour blue
+
+  pillar c:
+    Position: !vec { X: 0, Y: 1.5, Z: 14 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 3, Z: 1 }
+          IsWire: false
+          Colour: !colour yellow
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.5
+
+  camera rig:
+    Position: !var camera start
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          LookAt: { Tag: player }
+          Mode: "3d"
+          Priority: 10
+          Lens: 60
+          Damping: 0.5
+          FollowOffset: !var follow offset
