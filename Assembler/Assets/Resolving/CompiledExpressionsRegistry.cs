@@ -11,9 +11,13 @@ namespace Assembler.Resolving
 {
 	// One expression's outcome from a best-effort compile sweep: the expression plus its compile error
 	// message, or a null Error when it compiled cleanly.
-	public readonly record struct ExpressionCompileResult(ExpressionInfo Info, string? Error)
+	public readonly struct ExpressionCompileResult
 	{
 		public bool Success => Error is null;
+		public ExpressionInfo Info { get; }
+		public string? Error { get; }
+
+		public ExpressionCompileResult(ExpressionInfo info, string? error) => (Info, Error) = (info, error);
 	}
 
 	public class CompiledExpressionsRegistry
@@ -24,7 +28,8 @@ namespace Assembler.Resolving
 		private readonly Dictionary<string, (Type delegateType, Delegate @delegate)> _compiledExpressions = new();
 		private readonly Dictionary<string, ExpressionInfo> _expressionInfos = new();
 
-		public CompiledExpressionsRegistry(IReadOnlyDictionary<string, Type> typeRegistry, ExpressionMethodCompiler compiler)
+		public CompiledExpressionsRegistry(IReadOnlyDictionary<string, Type> typeRegistry,
+			ExpressionMethodCompiler compiler)
 		{
 			_typeRegistry = typeRegistry;
 			_compiler = compiler;
@@ -54,41 +59,41 @@ namespace Assembler.Resolving
 			foreach (var typeName in expressionInfo.RegisterTypes)
 			{
 				var type = Type.GetType(typeName);
-				
+
 				if (type is null)
 				{
 					type = AppDomain.CurrentDomain.GetAssemblies()
 						.SelectMany(a => a.GetTypes())
 						.FirstOrDefault(t => t.FullName == typeName);
-					
+
 					if (type is null)
 					{
 						throw new Exception($"Type not found for name: {typeName}");
 					}
 				}
-				
+
 				_compiler.RegisterType(type);
 			}
 
 			foreach (var typeName in expressionInfo.RegisterTypeStatics)
 			{
 				var type = Type.GetType(typeName);
-				
+
 				if (type is null)
 				{
 					type = AppDomain.CurrentDomain.GetAssemblies()
 						.SelectMany(a => a.GetTypes())
 						.FirstOrDefault(t => t.FullName == typeName);
-					
+
 					if (type is null)
 					{
 						throw new Exception($"Type not found for name: {typeName}");
 					}
 				}
-				
+
 				_compiler.RegisterStaticMethods(type);
 			}
-			
+
 			var compiledExpression = _compiler.Compile(
 				expressionInfo.Expression,
 				_typeRegistry[expressionInfo.ReturnType],
@@ -101,7 +106,9 @@ namespace Assembler.Resolving
 			// Make this expression callable by name from later-compiled expressions.
 			var callableName = GetCallableName(expressionInfo);
 			var paramTypes = expressionInfo.Arguments.Select(a => _typeRegistry[a.type]).ToArray();
-			_compiler.RegisterExpression(callableName, compiledExpression, paramTypes,
+			_compiler.RegisterExpression(callableName,
+				compiledExpression,
+				paramTypes,
 				_typeRegistry[expressionInfo.ReturnType]);
 		}
 
@@ -111,9 +118,11 @@ namespace Assembler.Resolving
 		public void CompileAndRegisterAll(IReadOnlyList<ExpressionInfo> expressions)
 		{
 			var byCallableName = new Dictionary<string, ExpressionInfo>();
+
 			foreach (var info in expressions)
 			{
 				var name = GetCallableName(info);
+
 				if (byCallableName.TryGetValue(name, out var existing))
 				{
 					throw new Exception(
@@ -141,18 +150,21 @@ namespace Assembler.Resolving
 			IReadOnlyList<ExpressionInfo> expressions)
 		{
 			var byCallableName = new Dictionary<string, ExpressionInfo>();
+
 			foreach (var info in expressions)
 			{
 				var name = GetCallableName(info);
+
 				if (byCallableName.TryGetValue(name, out var existing))
 				{
 					// A callable-name collision is a whole-set error; attribute it to the duplicate so the
 					// report names the offending expression, and don't attempt to compile (ordering is moot).
 					return expressions
-						.Select(e => new ExpressionCompileResult(e, ReferenceEquals(e, info)
-							? $"Expression callable-name collision: '{name}' is also produced by '{existing.Id}'. " +
-							  "Set a 'CallableAs' alias on one of them to disambiguate."
-							: null))
+						.Select(e => new ExpressionCompileResult(e,
+							ReferenceEquals(e, info)
+								? $"Expression callable-name collision: '{name}' is also produced by '{existing.Id}'. " +
+								  "Set a 'CallableAs' alias on one of them to disambiguate."
+								: null))
 						.ToList();
 				}
 
@@ -160,6 +172,7 @@ namespace Assembler.Resolving
 			}
 
 			IReadOnlyList<ExpressionInfo> ordered;
+
 			try
 			{
 				ordered = OrderByDependencies(expressions, byCallableName);
@@ -171,6 +184,7 @@ namespace Assembler.Resolving
 			}
 
 			var errorById = new Dictionary<string, string?>();
+
 			foreach (var info in ordered)
 			{
 				try
@@ -193,6 +207,7 @@ namespace Assembler.Resolving
 		private static string FlattenMessage(Exception ex)
 		{
 			var parts = new List<string>();
+
 			for (Exception? e = ex; e != null; e = e.InnerException)
 			{
 				parts.Add(e.Message.Trim());
@@ -264,6 +279,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Compiled expression not found for id: {id}");
 			}
+
 			return typeAndDelegate;
 		}
 
@@ -273,6 +289,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Expression info not found for id: {id}");
 			}
+
 			return info;
 		}
 
@@ -282,6 +299,7 @@ namespace Assembler.Resolving
 			{
 				throw new Exception($"Type not registered: {typeName}");
 			}
+
 			return type;
 		}
 
