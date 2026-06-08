@@ -8,16 +8,25 @@ namespace Assembler.Resolving.Behaviours
 	/// <summary>
 	/// Runtime-resolved camera target. Id targets resolve a single transform captured from the build-time
 	/// entity-transform registry; tag targets re-query the live behaviour registry on every read, so they
-	/// pick up entities spawned after build. A tag can match several entities (used by <c>camera group</c>).
-	/// Cinemachine-free so it can live in the resolving layer alongside the camera <c>*Data</c> classes.
+	/// pick up entities spawned after build. Cinemachine-free so it can live in the resolving layer
+	/// alongside the camera <c>*Data</c> classes.
 	/// </summary>
 	public interface ICameraTarget
 	{
-		/// <summary>The first matching transform, or false when none currently exist.</summary>
+		/// <summary>The current target transform, or false when none currently exists.</summary>
 		bool TryGetTransform(out Transform transform);
+	}
 
-		/// <summary>All currently matching transforms (empty when none).</summary>
-		IReadOnlyList<Transform> GetTransforms();
+	/// <summary>The absence of a target — never resolves a transform.</summary>
+	public sealed class NoCameraTarget : ICameraTarget
+	{
+		public readonly static NoCameraTarget Instance = new();
+
+		public bool TryGetTransform(out Transform transform)
+		{
+			transform = null!;
+			return false;
+		}
 	}
 
 	/// <summary>An <c>{ Id: … }</c> target — one entity, resolved (and cached) from the transform registry.</summary>
@@ -36,12 +45,9 @@ namespace Assembler.Resolving.Behaviours
 			transform = _cached;
 			return transform != null;
 		}
-
-		public IReadOnlyList<Transform> GetTransforms() =>
-			TryGetTransform(out var t) ? new[] { t } : Array.Empty<Transform>();
 	}
 
-	/// <summary>A <c>{ Tag: … }</c> target — every entity carrying the tag, re-queried each read (catches spawns).</summary>
+	/// <summary>A <c>{ Tag: … }</c> target — re-queried each read so it catches entities spawned after build.</summary>
 	public sealed class TagCameraTarget : ICameraTarget
 	{
 		private readonly IValueProvider<string> _tag;
@@ -50,19 +56,14 @@ namespace Assembler.Resolving.Behaviours
 		public TagCameraTarget(IValueProvider<string> tag, Func<string, IReadOnlyList<Transform>> resolveByTag) =>
 			(_tag, _resolveByTag) = (tag, resolveByTag);
 
-		public IReadOnlyList<Transform> GetTransforms()
-		{
-			var tag = _tag.Get();
-			return string.IsNullOrEmpty(tag) ? Array.Empty<Transform>() : _resolveByTag(tag);
-		}
-
 		public bool TryGetTransform(out Transform transform)
 		{
-			var transforms = GetTransforms();
-			if (transforms.Count > 0)
+			var tag = _tag.Get();
+			var matches = string.IsNullOrEmpty(tag) ? Array.Empty<Transform>() : _resolveByTag(tag);
+			if (matches.Count > 0 && matches[0] != null)
 			{
-				transform = transforms[0];
-				return transform != null;
+				transform = matches[0];
+				return true;
 			}
 
 			transform = null!;
@@ -84,6 +85,7 @@ namespace Assembler.Resolving.Behaviours
 			Func<string, IReadOnlyList<Transform>> resolveByEntityTag) =>
 			source switch
 			{
+				NoCameraTargetSource => NoCameraTarget.Instance,
 				IdTarget id => new IdCameraTarget(ctx.EntityTransforms, id.Id),
 				TagTarget tag => new TagCameraTarget(tag.Tag.Resolve(ctx), resolveByEntityTag),
 				_ => throw new ArgumentException($"Unsupported camera target source '{source.GetType()}'")

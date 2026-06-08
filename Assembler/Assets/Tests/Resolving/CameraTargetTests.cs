@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using NUnit.Framework;
@@ -40,11 +39,10 @@ namespace Tests.Resolving
 
 			Assert.IsTrue(target.TryGetTransform(out var resolved));
 			Assert.AreSame(player, resolved);
-			CollectionAssert.AreEqual(new[] { player }, target.GetTransforms());
 		}
 
 		[Test]
-		public void TagTarget_resolves_all_matching_transforms()
+		public void TagTarget_resolves_the_first_matching_transform()
 		{
 			var a = NewTransform("a");
 			var b = NewTransform("b");
@@ -54,7 +52,6 @@ namespace Tests.Resolving
 				new ValueProvider<string>("enemy"),
 				tag => byTag.TryGetValue(tag, out var list) ? list : new List<Transform>());
 
-			CollectionAssert.AreEquivalent(new[] { a, b }, target.GetTransforms());
 			Assert.IsTrue(target.TryGetTransform(out var first));
 			Assert.AreSame(a, first);
 		}
@@ -62,20 +59,20 @@ namespace Tests.Resolving
 		[Test]
 		public void TagTarget_is_requeried_each_read_so_it_catches_spawned_entities()
 		{
-			var initial = NewTransform("first");
-			var matches = new List<Transform> { initial };
+			var matches = new List<Transform>();
 
 			ICameraTarget target = new TagCameraTarget(
 				new ValueProvider<string>("mob"),
 				_ => matches);
 
-			Assert.AreEqual(1, target.GetTransforms().Count);
+			Assert.IsFalse(target.TryGetTransform(out _), "no entity carries the tag yet");
 
 			// Simulate an entity spawning after build: the same target picks it up on the next read.
 			var spawned = NewTransform("spawned");
 			matches.Add(spawned);
 
-			CollectionAssert.AreEquivalent(new[] { initial, spawned }, target.GetTransforms());
+			Assert.IsTrue(target.TryGetTransform(out var resolved));
+			Assert.AreSame(spawned, resolved);
 		}
 
 		[Test]
@@ -86,7 +83,12 @@ namespace Tests.Resolving
 				_ => new List<Transform>());
 
 			Assert.IsFalse(target.TryGetTransform(out _));
-			Assert.IsEmpty(target.GetTransforms());
+		}
+
+		[Test]
+		public void NoCameraTarget_never_resolves_a_transform()
+		{
+			Assert.IsFalse(NoCameraTarget.Instance.TryGetTransform(out _));
 		}
 	}
 }

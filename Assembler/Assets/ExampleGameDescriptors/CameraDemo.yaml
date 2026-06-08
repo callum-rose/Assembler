@@ -120,6 +120,7 @@ Entities:
         Type: camera follow
         Properties:
           Target: { Tag: player }
+          Mode: "2d"
           Priority: 10
           Lens: 5
           Damping: 0.6

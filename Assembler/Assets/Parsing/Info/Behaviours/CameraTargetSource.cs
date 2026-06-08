@@ -8,17 +8,19 @@ namespace Assembler.Parsing.Info.Behaviours
 	/// A discriminated union parsed from a structured property: <c>{ Tag: player }</c> resolves every
 	/// entity carrying the entity-tag (re-queried at runtime so spawned entities are caught), while
 	/// <c>{ Id: player }</c> resolves the single entity with that id (captured at build time).
+	/// Absence is modelled by <see cref="NoCameraTargetSource"/> rather than null, mirroring
+	/// <see cref="None{T}"/> on <see cref="ValueSource{T}"/>.
 	/// </summary>
 	public abstract record CameraTargetSource
 	{
 		public abstract CameraTargetSource SubstituteParameters(TransformContext ctx);
 
-		/// <summary>Parse a single <c>{ Tag: … }</c> / <c>{ Id: … }</c> target, or null when the property is absent.</summary>
-		public static CameraTargetSource? Parse(TransformContext ctx, AssemblerValue? raw, string behaviourId, string field)
+		/// <summary>Parse a single <c>{ Tag: … }</c> / <c>{ Id: … }</c> target; <see cref="NoValue"/> yields <see cref="NoCameraTargetSource"/>.</summary>
+		public static CameraTargetSource Parse(TransformContext ctx, AssemblerValue raw, string behaviourId, string field)
 		{
-			if (raw is null or NoValue)
+			if (raw is NoValue)
 			{
-				return null;
+				return NoCameraTargetSource.Instance;
 			}
 
 			if (raw is not DictValue dict)
@@ -48,9 +50,9 @@ namespace Assembler.Parsing.Info.Behaviours
 		}
 
 		/// <summary>Parse a list of targets (for <c>camera group</c>). Accepts a list of <c>{ Tag/Id }</c> maps.</summary>
-		public static IReadOnlyList<CameraTargetSource> ParseList(TransformContext ctx, AssemblerValue? raw, string behaviourId, string field)
+		public static IReadOnlyList<CameraTargetSource> ParseList(TransformContext ctx, AssemblerValue raw, string behaviourId, string field)
 		{
-			if (raw is null or NoValue)
+			if (raw is NoValue)
 			{
 				return System.Array.Empty<CameraTargetSource>();
 			}
@@ -61,11 +63,16 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"Camera behaviour '{behaviourId}': {field} must be a list of {{ Tag: … }} / {{ Id: … }} entries.");
 			}
 
-			return list.Value
-				.Select(item => Parse(ctx, item, behaviourId, field)
-					?? throw new ParsingException($"Camera behaviour '{behaviourId}': {field} contains an empty entry."))
-				.ToArray();
+			return list.Value.Select(item => Parse(ctx, item, behaviourId, field)).ToArray();
 		}
+	}
+
+	/// <summary>The absence of a target (e.g. a follow camera with only a look-at). Mirrors <see cref="None{T}"/>.</summary>
+	public sealed record NoCameraTargetSource : CameraTargetSource
+	{
+		public readonly static NoCameraTargetSource Instance = new();
+
+		public override CameraTargetSource SubstituteParameters(TransformContext ctx) => this;
 	}
 
 	/// <summary>Resolves all entities carrying <see cref="Tag"/>, re-queried at runtime (catches spawns).</summary>

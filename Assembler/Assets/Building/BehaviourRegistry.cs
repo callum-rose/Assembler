@@ -11,9 +11,6 @@ namespace Assembler.Building
 		GameBehaviour this[BehaviourDescriptor descriptor] { get; }
 		IReadOnlyList<GameBehaviour> GetByBehaviourTag(string behaviourTag, string? entityTag = null);
 		IReadOnlyList<GameBehaviour> GetByEntityTagAndBehaviourId(string entityTag, string behaviourId);
-
-		/// <summary>All behaviours on entities carrying <paramref name="entityTag"/>, in stable registration order.
-		/// Used by camera targets to resolve an entity tag to its transform(s) at runtime.</summary>
 		IReadOnlyList<GameBehaviour> GetByEntityTag(string entityTag);
 	}
 

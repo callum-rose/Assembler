@@ -480,16 +480,10 @@ namespace Assembler.Building
 						IReadOnlyList<Transform> ResolveByEntityTag(string tag) =>
 							lr.GetByEntityTag(tag).Select(x => x.transform).Distinct().ToArray();
 
-						var follow = i.Target is null
-							? null
-							: CameraTargetResolver.Resolve(i.Target, res, ResolveByEntityTag);
-						var lookAt = i.LookAt is null
-							? null
-							: CameraTargetResolver.Resolve(i.LookAt, res, ResolveByEntityTag);
-
 						b.Initialise(new CameraFollowData(i.Id,
-							follow,
-							lookAt,
+							CameraTargetResolver.Resolve(i.Target, res, ResolveByEntityTag),
+							CameraTargetResolver.Resolve(i.LookAt, res, ResolveByEntityTag),
+							i.Mode.Resolve(res),
 							i.Priority.Resolve(res),
 							i.Lens.Resolve(res),
 							i.Damping.Resolve(res),
