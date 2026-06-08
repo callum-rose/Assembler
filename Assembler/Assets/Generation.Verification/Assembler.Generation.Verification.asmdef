@@ -7,7 +7,8 @@
         "Assembler.Building",
         "Assembler.Parsing",
         "Assembler.Deserialisation",
-        "Assembler.Input"
+        "Assembler.Input",
+        "Assembler.Validation"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

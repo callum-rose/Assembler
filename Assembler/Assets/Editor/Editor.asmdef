@@ -10,6 +10,7 @@
         "Assembler.Parsing.Phase2",
         "Assembler.Parsing.Phase3",
         "Assembler.Building",
+        "Assembler.Generation.Verification",
         "Assembler.Behaviours",
         "Assembler.Libraries",
         "Assembler.Core",
