@@ -30,7 +30,6 @@ using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 using UnityEngine;
 using Rotate = Assembler.Behaviours.Rotation.Rotate;
-using Plane = Assembler.Behaviours.Visual.Plane;
 
 namespace Assembler.Building
 {
@@ -555,35 +554,12 @@ namespace Assembler.Building
 						i.Mesh.Resolve(ctx.Resolution),
 						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(CubeInfo)] = new(typeof(Cube), (go, info, ctx) =>
+				[typeof(PrimitiveInfo)] = new(typeof(Primitive), (go, info, ctx) =>
 				{
-					var i = (CubeInfo)info;
-					var b = go.AddComponent<Cube>();
+					var i = (PrimitiveInfo)info;
+					var b = go.AddComponent<Primitive>();
 					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
-						i.Colour.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SphereInfo)] = new(typeof(Sphere), (go, info, ctx) =>
-				{
-					var i = (SphereInfo)info;
-					var b = go.AddComponent<Sphere>();
-					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
-						i.Colour.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CapsuleInfo)] = new(typeof(Capsule), (go, info, ctx) =>
-				{
-					var i = (CapsuleInfo)info;
-					var b = go.AddComponent<Capsule>();
-					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
-						i.Colour.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(PlaneInfo)] = new(typeof(Plane), (go, info, ctx) =>
-				{
-					var i = (PlaneInfo)info;
-					var b = go.AddComponent<Plane>();
-					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
+						i.Shape.Resolve(ctx.Resolution),
 						i.Colour.Resolve(ctx.Resolution),
 						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
