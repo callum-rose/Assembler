@@ -554,6 +554,15 @@ namespace Assembler.Building
 						i.Mesh.Resolve(ctx.Resolution),
 						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(PrimitiveInfo)] = new(typeof(Primitive), (go, info, ctx) =>
+				{
+					var i = (PrimitiveInfo)info;
+					var b = go.AddComponent<Primitive>();
+					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
+						i.Shape.Resolve(ctx.Resolution),
+						i.Colour.Resolve(ctx.Resolution),
+						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(ActivePollInfo)] = new(typeof(ActivePoll), (go, info, ctx) =>
 				{
 					var i = (ActivePollInfo)info;
