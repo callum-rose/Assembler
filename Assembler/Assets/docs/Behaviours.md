@@ -1390,6 +1390,46 @@ Renders a voxel mesh asset as a child of the entity.
 | Mesh | Mesh | Asset reference to the Mesh to display. |
 | Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
 
+## `cube`
+Adds a 3D cube primitive mesh as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive (defaults to a 1×1×1 unit cube). |
+
+## `sphere`
+Adds a 3D sphere primitive mesh as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive (defaults to a 1-unit-diameter sphere). |
+
+## `capsule`
+Adds a 3D capsule primitive mesh as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive (defaults to a 1-wide, 2-tall capsule). |
+
+## `plane`
+Adds a flat 3D plane primitive mesh as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive (the base plane spans 10×10 units at scale 1). |
+
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
 

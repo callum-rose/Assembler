@@ -156,6 +156,10 @@ namespace Assembler.Parsing
 
 				["sprite"] = SpriteInfo.Create,
 				["voxel mesh"] = VoxelMeshInfo.Create,
+				["cube"] = CubeInfo.Create,
+				["sphere"] = SphereInfo.Create,
+				["capsule"] = CapsuleInfo.Create,
+				["plane"] = PlaneInfo.Create,
 				["audio source"] = AudioSourceInfo.Create,
 				["sphere gizmo"] = SphereGizmoInfo.Create,
 				["cube gizmo"] = CubeGizmoInfo.Create,
