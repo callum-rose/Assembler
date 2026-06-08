@@ -46,13 +46,10 @@ namespace Assembler.Building
 		public static ResolvedGame Resolve(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
-			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
-
-			if (!hasCondition && !HasGameOverListener(gameInfo))
+			if (!HasGameOverListener(gameInfo))
 			{
 				throw new InvalidOperationException(
-					"Game descriptor must declare a game-over path (a top-level GameOverCondition " +
-					"or a !gameover listener).");
+					"Game descriptor must declare a game-over path (at least one !gameover listener).");
 			}
 
 			// 0b. Resolve the active platform group and hard-fail on any used-but-unbound input action, then
@@ -173,12 +170,9 @@ namespace Assembler.Building
 
 			var initialisations = new InitialisationQueue();
 
-			// 4. Append the implicit game-over controller so it builds through the normal pipeline. A top-level
-			// GameOverCondition (if any) drives it; derived here rather than carried on ResolvedGame since it's
-			// a pure function of the game info.
-			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
-			var entities = gameInfo.Entities
-				.Append(BuildGameOverControllerInfo(hasCondition ? gameInfo.GameOverCondition : null));
+			// 4. Append the implicit game-over controller so it builds through the normal pipeline. It hosts
+			// the end-game behaviour that every !gameover listener targets.
+			var entities = gameInfo.Entities.Append(BuildGameOverControllerInfo());
 
 			foreach (var entityInfo in entities)
 			{
@@ -200,32 +194,21 @@ namespace Assembler.Building
 		}
 
 		/// <summary>
-		/// Builds the implicit entity that ends the game. It always hosts an <see cref="EndGameInfo"/>
-		/// behaviour (targeted by the <c>!gameover</c> listener); when a top-level GameOverCondition is
-		/// present it also gets an every-frame trigger gated by that condition, both driving the same
-		/// end-game behaviour.
+		/// Builds the implicit entity that ends the game. It hosts a single <see cref="EndGameInfo"/>
+		/// behaviour, targeted by every <c>!gameover</c> listener. Descriptors that want to end on a
+		/// per-frame condition wire their own every-frame trigger + condition gate to a <c>!gameover</c>.
 		/// </summary>
-		private static ConcreteEntityInfo BuildGameOverControllerInfo(ValueSource<bool>? condition)
+		private static ConcreteEntityInfo BuildGameOverControllerInfo()
 		{
-			var entityId = GameOverController.EntityId;
 			var endId = GameOverController.EndBehaviourId;
 
-			var behaviours = new List<BehaviourInfo>
+			var behaviours = new BehaviourInfo[]
 			{
 				new EndGameInfo(endId, Array.Empty<ListenerInfo>())
 			};
 
-			if (condition != null)
-			{
-				var toEnd = new ListenerInfo[] { new DirectListenerInfo(new BehaviourDescriptor(entityId, endId)) };
-				var toGate = new ListenerInfo[] { new DirectListenerInfo(new BehaviourDescriptor(entityId, "gate")) };
-
-				behaviours.Add(new EveryFrameTriggerInfo("tick", toGate));
-				behaviours.Add(new ConditionGateInfo("gate", toEnd, condition));
-			}
-
 			return new ConcreteEntityInfo(
-				entityId,
+				GameOverController.EntityId,
 				Array.Empty<string>(),
 				new ConstantSource<Vector3>(Vector3.zero),
 				new ConstantSource<Vector3>(Vector3.zero),

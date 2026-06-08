@@ -288,6 +288,28 @@ Templates:
         Id: self destruct
 
 Entities:
+  # Game-over poll: every frame the gate checks the end condition; when it
+  # holds, the gate fires !gameover, which ends and unloads the game.
+  - Id: game over
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      - Type: every frame trigger
+        Id: tick
+        Listeners:
+          - EntityId: game over
+            BehaviourId: gate
+      - Type: condition gate
+        Id: gate
+        Properties:
+          Condition: !expr
+            Do: is game over
+            With:
+              - !var score
+              - !var score to win
+              - !var is dead
+        Listeners:
+          - !gameover
+
   # --- Walls ---
   - Id: top wall
     Template: { Id: h_wall_template }
@@ -557,10 +579,3 @@ Entities:
         Properties:
           View: !var camera view
           Size: !var camera size
-
-GameOverCondition: !expr
-  Do: is game over
-  With:
-    - !var score
-    - !var score to win
-    - !var is dead

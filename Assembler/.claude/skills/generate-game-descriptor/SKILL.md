@@ -55,7 +55,6 @@ Expressions:         # named code snippets, called from !expr
 Templates:           # reusable entity blueprints
 Entities:            # the actual entities in the scene
 Localisation:        # per-locale string table; referenced via !text
-GameOverCondition:   # boolean !expr; game ends when true
 ```
 
 ### `Game`
@@ -135,16 +134,40 @@ below.
 A map of `entity id → entity definition`. The entity id is the YAML key. See **Entity structure**
 below.
 
-### `GameOverCondition`
-A boolean `!expr`. When it evaluates to true, the game ends.
+### Ending the game
+Every descriptor must declare at least one `!gameover` listener, or the build fails — this guarantees
+a game can never get stuck unfinishable. The `!gameover` tag targets the framework's implicit end-game
+behaviour, which unloads the whole game. Wire it onto the `Listeners` of any trigger that detects the
+ending event (a collision, a key press, a UI button):
 
 ```yaml
-GameOverCondition: !expr
-  ExpressionId: is game over
-  Arguments:
-    - !var left score
-    - !var right score
-    - !var score to win
+Listeners:
+  - !gameover
+```
+
+To end on a continuously-evaluated condition rather than a discrete event, poll it: an
+`every frame trigger` feeds a `condition gate` whose `!gameover` listener fires only while the
+condition holds.
+
+```yaml
+game over:
+  Behaviours:
+    tick:
+      Type: every frame trigger
+      Listeners:
+        - EntityId: game over
+          BehaviourId: gate
+    gate:
+      Type: condition gate
+      Properties:
+        Condition: !expr
+          Do: is game over
+          With:
+            - !var left score
+            - !var right score
+            - !var score to win
+      Listeners:
+        - !gameover
 ```
 
 ---
@@ -500,8 +523,8 @@ Run through this before handing a descriptor back:
 - [ ] Math-heavy expressions reuse the bare-name library helpers from
       [`Libraries.md`](../../../Assets/docs/Libraries.md) instead of hand-rolling them, and no
       `RegisterTypeStatics`/`RegisterTypes` entry remains that the helpers made unnecessary.
-- [ ] `GameOverCondition` evaluates to `false` initially and there is at least one path to make it
-      `true`, OR it is omitted intentionally for an endless game.
+- [ ] At least one `!gameover` listener exists and is reachable (a discrete event, or a
+      `condition gate` polled by an `every frame trigger`), so the game can actually end.
 
 ---
 

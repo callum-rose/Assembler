@@ -79,8 +79,6 @@ namespace Assembler.Parsing
 			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
 				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
 
-			var gameOverCondition = CreateValueSource<bool>(ctx, ToAssemblerValue(gameDto.GameOverCondition));
-
 			// Inline `!expr { Do: '<C# body>' }` call sites synthesised anonymous expressions onto the
 			// context as they were transformed above. Append them so the builder compiles and registers
 			// them alongside the declared ones.
@@ -96,8 +94,7 @@ namespace Assembler.Parsing
 				values,
 				allExpressions,
 				templates,
-				entities,
-				gameOverCondition)
+				entities)
 			{ ParseContext = ctx };
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
