@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Assembler.Building;
 using Assembler.Deserialisation;
+using Assembler.Generation;
 using Assembler.Input;
 using UnityEditor;
 using UnityEngine;
@@ -45,14 +46,24 @@ namespace Editor
 		{
 			_entries = new List<GameEntry>();
 
-			if (!Directory.Exists(DescriptorsFolder))
+			var parser = new GameFileParser();
+			AddEntriesFrom(DescriptorsFolder, "Example", parser);
+			AddEntriesFrom(DescriptorFileWriter.FolderPath, "Generated", parser);
+
+			_entries.Sort((a, b) => string.Compare(a.Title, b.Title, System.StringComparison.OrdinalIgnoreCase));
+
+			if (_selectedIndex >= _entries.Count) _selectedIndex = _entries.Count - 1;
+			if (_selectedIndex < 0 && _entries.Count > 0) _selectedIndex = 0;
+		}
+
+		private void AddEntriesFrom(string folder, string source, GameFileParser parser)
+		{
+			if (!Directory.Exists(folder))
 			{
 				return;
 			}
 
-			var parser = new GameFileParser();
-
-			foreach (var path in Directory.GetFiles(DescriptorsFolder, "*.yaml"))
+			foreach (var path in Directory.GetFiles(folder, "*.yaml"))
 			{
 				var normalised = path.Replace('\\', '/');
 				var fileName = Path.GetFileNameWithoutExtension(normalised);
@@ -74,13 +85,8 @@ namespace Editor
 					description = "(Failed to parse descriptor.)";
 				}
 
-				_entries.Add(new GameEntry(normalised, fileName, title, description));
+				_entries.Add(new GameEntry(normalised, fileName, title, description, source));
 			}
-
-			_entries.Sort((a, b) => string.Compare(a.Title, b.Title, System.StringComparison.OrdinalIgnoreCase));
-
-			if (_selectedIndex >= _entries.Count) _selectedIndex = _entries.Count - 1;
-			if (_selectedIndex < 0 && _entries.Count > 0) _selectedIndex = 0;
 		}
 
 		private void OnGUI()
@@ -134,7 +140,7 @@ namespace Editor
 				var entry = _entries[_selectedIndex];
 
 				EditorGUILayout.LabelField(entry.Title, TitleStyle);
-				EditorGUILayout.LabelField(entry.FileName + ".yaml", EditorStyles.miniLabel);
+				EditorGUILayout.LabelField($"{entry.FileName}.yaml  ·  {entry.Source}", EditorStyles.miniLabel);
 
 				EditorGUILayout.Space();
 
@@ -251,6 +257,6 @@ namespace Editor
 			return tex;
 		}
 
-		private record GameEntry(string Path, string FileName, string Title, string Description);
+		private record GameEntry(string Path, string FileName, string Title, string Description, string Source);
 	}
 }

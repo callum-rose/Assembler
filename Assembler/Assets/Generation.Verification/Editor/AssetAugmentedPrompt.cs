@@ -87,8 +87,6 @@ namespace Assembler.Generation.Verification.Editor
 			sb.AppendLine("  an unsupported asset type, do NOT add it to the ```assets block — the user will");
 			sb.AppendLine("  supply it manually; reference it in the descriptor as usual.");
 			sb.AppendLine("- If the game needs no generated assets, omit the ```assets block (or emit []).");
-
-			return sb.ToString();
 		}
 	}
 }

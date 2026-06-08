@@ -120,6 +120,18 @@ namespace Tests.Generation
 
 			StringAssert.Contains("(none)", result);
 		}
+
+		[Test]
+		public void BuildRevision_includes_instruction_slug_and_protocol()
+		{
+			var result = AssetAugmentedPrompt.BuildRevision("make the ship red", "my-slug", new[] { "mesh" });
+
+			StringAssert.Contains("make the ship red", result);
+			StringAssert.Contains("my-slug", result);
+			StringAssert.Contains("Revise", result);
+			StringAssert.Contains("```assets", result);
+			StringAssert.Contains("mesh", result);
+		}
 	}
 
 	public class AssetGeneratorRegistryTests

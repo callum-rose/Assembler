@@ -60,6 +60,17 @@ namespace Assembler.Generation
 			return SendAndRecordAsync(ct);
 		}
 
+		/// <summary>
+		/// Continue the conversation with a user-driven revision instruction (not a
+		/// build-error fix). The full prior exchange stays in history, so Claude revises
+		/// the descriptor it last produced.
+		/// </summary>
+		public Task<GeneratorResponse> RequestReviseAsync(string instruction, CancellationToken ct)
+		{
+			_history.Add(new AnthropicMessage("user", instruction));
+			return SendAndRecordAsync(ct);
+		}
+
 		private async Task<GeneratorResponse> SendAndRecordAsync(CancellationToken ct)
 		{
 			var raw = await _client.SendAsync(_systemPrompt, _history, ct);

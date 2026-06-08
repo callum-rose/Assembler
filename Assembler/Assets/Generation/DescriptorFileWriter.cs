@@ -7,7 +7,8 @@ namespace Assembler.Generation
 {
 	public static class DescriptorFileWriter
 	{
-		private readonly static string FolderPath = Path.Combine(Application.persistentDataPath, "GeneratedGameDescriptors");
+		/// <summary>Folder generated descriptors are written to (under persistent data).</summary>
+		public static string FolderPath { get; } = Path.Combine(Application.persistentDataPath, "GeneratedGameDescriptors");
 
 		public static string Write(string yaml, string? title)
 		{
