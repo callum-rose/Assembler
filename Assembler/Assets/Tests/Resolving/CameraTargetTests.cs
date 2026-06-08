@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using NUnit.Framework;
@@ -22,73 +24,57 @@ namespace Tests.Resolving
 		{
 			foreach (var go in _created)
 			{
-				Object.DestroyImmediate(go);
+				UnityEngine.Object.DestroyImmediate(go);
 			}
 
 			_created.Clear();
 		}
 
 		[Test]
-		public void IdTarget_resolves_the_registered_transform()
+		public void Provider_returns_the_wrapped_transform()
 		{
-			var registry = new EntityTransformRegistry();
 			var player = NewTransform("player");
-			registry.Register("player", player);
 
-			ICameraTarget target = new IdCameraTarget(registry, "player");
+			IValueProvider<Transform> target = new CameraTargetProvider(() => player);
 
-			Assert.IsTrue(target.TryGetTransform(out var resolved));
-			Assert.AreSame(player, resolved);
+			Assert.AreSame(player, target.Get());
 		}
 
 		[Test]
-		public void TagTarget_resolves_the_first_matching_transform()
-		{
-			var a = NewTransform("a");
-			var b = NewTransform("b");
-			var byTag = new Dictionary<string, List<Transform>> { ["enemy"] = new() { a, b } };
-
-			ICameraTarget target = new TagCameraTarget(
-				new ValueProvider<string>("enemy"),
-				tag => byTag.TryGetValue(tag, out var list) ? list : new List<Transform>());
-
-			Assert.IsTrue(target.TryGetTransform(out var first));
-			Assert.AreSame(a, first);
-		}
-
-		[Test]
-		public void TagTarget_is_requeried_each_read_so_it_catches_spawned_entities()
+		public void Provider_is_requeried_each_read_so_it_catches_spawned_entities()
 		{
 			var matches = new List<Transform>();
 
-			ICameraTarget target = new TagCameraTarget(
-				new ValueProvider<string>("mob"),
-				_ => matches);
+			// Models a tag target: first match (or null) re-evaluated on every read.
+			IValueProvider<Transform> target = new CameraTargetProvider(
+				() => matches.Count > 0 ? matches[0] : null);
 
-			Assert.IsFalse(target.TryGetTransform(out _), "no entity carries the tag yet");
+			Assert.IsNull(target.Get(), "no entity carries the tag yet");
 
-			// Simulate an entity spawning after build: the same target picks it up on the next read.
+			// Simulate an entity spawning after build: the same provider picks it up on the next read.
 			var spawned = NewTransform("spawned");
 			matches.Add(spawned);
 
-			Assert.IsTrue(target.TryGetTransform(out var resolved));
-			Assert.AreSame(spawned, resolved);
+			Assert.AreSame(spawned, target.Get());
 		}
 
 		[Test]
-		public void TagTarget_with_no_matches_reports_no_transform()
+		public void Provider_returns_null_when_the_target_is_absent()
 		{
-			ICameraTarget target = new TagCameraTarget(
-				new ValueProvider<string>("ghost"),
-				_ => new List<Transform>());
+			IValueProvider<Transform> target = new CameraTargetProvider(() => null);
 
-			Assert.IsFalse(target.TryGetTransform(out _));
+			Assert.IsNull(target.Get());
 		}
 
 		[Test]
-		public void NoCameraTarget_never_resolves_a_transform()
+		public void Resolver_maps_an_absent_source_to_the_null_provider()
 		{
-			Assert.IsFalse(NoCameraTarget.Instance.TryGetTransform(out _));
+			var resolved = CameraTargetResolver.Resolve(
+				NoCameraTargetSource.Instance,
+				ctx: null!,
+				resolveByEntityTag: _ => Array.Empty<Transform>());
+
+			Assert.AreSame(NullValueProvider<Transform>.Instance, resolved);
 		}
 	}
 }

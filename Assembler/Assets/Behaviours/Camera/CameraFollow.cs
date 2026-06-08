@@ -1,3 +1,4 @@
+using System;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Unity.Cinemachine;
@@ -42,7 +43,7 @@ namespace Assembler.Behaviours.Camera
 				AddScreenComposer(data);
 			}
 
-			if (data.LookAt is not NoCameraTarget)
+			if (data.LookAt is not NullValueProvider<Transform>)
 			{
 				AddAim(data);
 			}
@@ -101,14 +102,23 @@ namespace Assembler.Behaviours.Camera
 		// Re-resolve targets each frame so tag targets follow entities spawned after build.
 		private void Update()
 		{
-			if (Data.Follow.TryGetTransform(out var follow))
+			ApplyTarget(Data.Follow, t => _cam.Follow = t);
+			ApplyTarget(Data.LookAt, t => _cam.LookAt = t);
+		}
+
+		// Skip unconfigured targets (NullValueProvider) and ones whose entity isn't present this frame
+		// (the provider returns null until a tag match spawns / after the target is destroyed).
+		private static void ApplyTarget(IValueProvider<Transform> target, Action<Transform> apply)
+		{
+			if (target is NullValueProvider<Transform>)
 			{
-				_cam.Follow = follow;
+				return;
 			}
 
-			if (Data.LookAt.TryGetTransform(out var lookAt))
+			var transform = target.Get();
+			if (transform != null)
 			{
-				_cam.LookAt = lookAt;
+				apply(transform);
 			}
 		}
 	}

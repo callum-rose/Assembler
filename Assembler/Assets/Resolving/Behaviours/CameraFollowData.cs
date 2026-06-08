@@ -4,8 +4,8 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class CameraFollowData : BehaviourData
 	{
-		public ICameraTarget Follow { get; }
-		public ICameraTarget LookAt { get; }
+		public IValueProvider<Transform> Follow { get; }
+		public IValueProvider<Transform> LookAt { get; }
 		public IValueProvider<string> Mode { get; }
 		public IValueProvider<int> Priority { get; }
 		public IValueProvider<float> Lens { get; }
@@ -16,8 +16,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<Vector3> FollowOffset { get; }
 
 		public CameraFollowData(string id,
-			ICameraTarget follow,
-			ICameraTarget lookAt,
+			IValueProvider<Transform> follow,
+			IValueProvider<Transform> lookAt,
 			IValueProvider<string> mode,
 			IValueProvider<int> priority,
 			IValueProvider<float> lens,
