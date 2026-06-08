@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using Assembler.Building;
 using Assembler.Deserialisation;
-using Assembler.Deserialisation.Dtos;
 using Assembler.Parsing;
 using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
@@ -26,11 +25,20 @@ namespace Assembler.Generation.Verification
 	}
 
 	/// <summary>
-	/// Outcome of one pipeline stage. <see cref="Ran"/> is false for stages skipped because an earlier stage
-	/// failed (the pipeline stops at the first failure). <see cref="Errors"/> collects both thrown exceptions
-	/// and any <c>Debug.LogError</c>s emitted while the stage was running.
+	/// Outcome of one pipeline stage — a discriminated union of <see cref="RanResult"/> (the stage executed)
+	/// and <see cref="NotRunResult"/> (skipped because an earlier stage failed; the pipeline stops at the first
+	/// failure).
 	/// </summary>
-	public sealed record StageResult(BuildStage Stage, bool Ran, bool Success, IReadOnlyList<string> Errors);
+	public abstract record StageResult(BuildStage Stage);
+
+	/// <summary>
+	/// A stage that executed. <see cref="Errors"/> collects both thrown exceptions and any
+	/// <c>Debug.LogError</c>s emitted while the stage was running; <see cref="Success"/> is true iff it's empty.
+	/// </summary>
+	public sealed record RanResult(BuildStage Stage, bool Success, IReadOnlyList<string> Errors) : StageResult(Stage);
+
+	/// <summary>A stage that never ran because an earlier stage failed.</summary>
+	public sealed record NotRunResult(BuildStage Stage) : StageResult(Stage);
 
 	/// <summary>
 	/// Result of running a descriptor through the full load pipeline in a sandbox: a per-stage breakdown plus
@@ -39,33 +47,41 @@ namespace Assembler.Generation.Verification
 	/// </summary>
 	public sealed record SandboxValidationResult(bool Success, IReadOnlyList<StageResult> Stages)
 	{
-		/// <summary>The first stage that failed, or null when every stage that ran succeeded.</summary>
-		public StageResult? FailedStage => Stages.FirstOrDefault(s => s.Ran && !s.Success);
+		/// <summary>The first stage that ran and failed, or null when every stage that ran succeeded.</summary>
+		public BuildStage? FailedStage => Stages
+			.OfType<RanResult>()
+			.Where(s => !s.Success)
+			.Select(s => (BuildStage?)s.Stage)
+			.FirstOrDefault();
 
 		public string FormatReport()
 		{
 			var sb = new StringBuilder();
 			foreach (var stage in Stages)
 			{
-				if (!stage.Ran)
+				switch (stage)
 				{
-					sb.Append("  -     ").Append(Name(stage.Stage)).Append(" (not run)").Append('\n');
-					continue;
-				}
+					case NotRunResult notRun:
+						sb.Append("  -     ").Append(StageName(notRun.Stage)).Append(" (not run)").Append('\n');
+						break;
 
-				sb.Append(stage.Success ? "  OK    " : "  FAIL  ").Append(Name(stage.Stage)).Append('\n');
+					case RanResult ran:
+						sb.Append(ran.Success ? "  OK    " : "  FAIL  ").Append(StageName(ran.Stage)).Append('\n');
+						foreach (var error in ran.Errors)
+						{
+							foreach (var line in error.Split('\n'))
+								sb.Append("        ").Append(line).Append('\n');
+						}
 
-				foreach (var error in stage.Errors)
-				{
-					foreach (var line in error.Split('\n'))
-						sb.Append("        ").Append(line).Append('\n');
+						break;
 				}
 			}
 
 			return sb.ToString().TrimEnd('\n');
 		}
 
-		private static string Name(BuildStage stage) => stage switch
+		/// <summary>The lower-case display name of a stage, shared by the report and by callers.</summary>
+		public static string StageName(BuildStage stage) => stage switch
 		{
 			BuildStage.Structure => "structure",
 			BuildStage.Deserialise => "deserialise",
@@ -100,37 +116,51 @@ namespace Assembler.Generation.Verification
 
 		public static SandboxValidationResult Validate(string yaml)
 		{
-			var stages = new List<StageResult>();
+			var run = new PipelineRun();
 
 			// Stage 1 — Structure. Pure, no engine state, so it runs outside the log hook. A structurally
-			// invalid document means downstream stages would silently build from dropped/garbled data, so we
-			// stop here.
-			var structureErrors = new List<string>();
+			// invalid document means downstream stages would silently build from dropped/garbled data, so a
+			// failure here aborts the rest of the pipeline.
+			run.Record(ValidateStructure(yaml));
+
+			// Stages 2-5 touch live engine state; run them under a log hook with teardown.
+			if (!run.Aborted)
+				RunBuildStages(yaml, run);
+
+			run.FillNotRun(Order);
+
+			var success = run.Stages.All(s => s is RanResult { Success: true });
+			return new SandboxValidationResult(success, run.Stages);
+		}
+
+		// Stage 1: structural well-formedness. Reported as a failure when the document is structurally invalid.
+		private static RanResult ValidateStructure(string yaml)
+		{
+			var errors = new List<string>();
 			try
 			{
 				var structure = YamlStructureValidator.Validate(yaml);
 				if (!structure.IsValid)
-					structureErrors.Add(structure.FormatReport());
+					errors.Add(structure.FormatReport());
 			}
 			catch (Exception ex)
 			{
-				structureErrors.Add("Structural validation threw: " + ex);
+				errors.Add("Structural validation threw: " + ex);
 			}
 
-			stages.Add(new StageResult(BuildStage.Structure, true, structureErrors.Count == 0, structureErrors));
-			if (structureErrors.Count > 0)
-				return Stop(stages, BuildStage.Structure);
+			return new RanResult(BuildStage.Structure, errors.Count == 0, errors);
+		}
 
-			// Stages 2-5 run against live engine state. Hook the log so behaviours that report failures via
-			// Debug.LogError (rather than throwing) are still captured, attributed to the running stage via
-			// the moving `sink` reference.
-			List<string>? sink = null;
-
+		// Stages 2-5: deserialise → parse → resolve → instantiate. Each stage's work runs under a log hook
+		// (so behaviours that report failures via Debug.LogError rather than throwing are still captured) and
+		// is skipped once an earlier stage has failed. Everything instantiated is torn down before returning.
+		private static void RunBuildStages(string yaml, PipelineRun run)
+		{
 			void OnLog(string condition, string stackTrace, LogType type)
 			{
-				if (sink == null) return;
+				if (run.Sink == null) return;
 				if (type is LogType.Error or LogType.Exception or LogType.Assert)
-					sink.Add(string.IsNullOrEmpty(stackTrace) ? condition : condition + "\n" + stackTrace);
+					run.Sink.Add(string.IsNullOrEmpty(stackTrace) ? condition : condition + "\n" + stackTrace);
 			}
 
 			// Snapshot existing scene roots so teardown destroys only what this build created — even if
@@ -140,78 +170,20 @@ namespace Assembler.Generation.Verification
 			Application.logMessageReceivedThreaded += OnLog;
 			try
 			{
-				// Stage 2 — Deserialise.
-				var deserialiseErrors = new List<string>();
-				sink = deserialiseErrors;
-				GameDto? dto = null;
-				try
-				{
-					dto = new GameFileParser().Parse(yaml);
-				}
-				catch (Exception ex)
-				{
-					deserialiseErrors.Add("Deserialisation failed: " + ex);
-				}
+				var dto = run.Run(BuildStage.Deserialise, "Deserialisation failed",
+					() => new GameFileParser().Parse(yaml));
 
-				stages.Add(new StageResult(BuildStage.Deserialise, true, deserialiseErrors.Count == 0, deserialiseErrors));
-				if (deserialiseErrors.Count > 0 || dto == null)
-					return Stop(stages, BuildStage.Deserialise);
+				var parsed = run.Run(BuildStage.Parse, "Parsing failed",
+					() => new ParsedGame(Transformer.Transform(dto!), ControlsTransformer.Transform(dto!.Controls)));
 
-				// Stage 3 — Parse / Transform (game structure + controls).
-				var parseErrors = new List<string>();
-				sink = parseErrors;
-				GameInfo? gameInfo = null;
-				ControlsInfo controls = ControlsInfo.Empty;
-				try
-				{
-					gameInfo = Transformer.Transform(dto);
-					controls = ControlsTransformer.Transform(dto.Controls);
-				}
-				catch (Exception ex)
-				{
-					parseErrors.Add("Parsing failed: " + ex);
-				}
+				var resolved = run.Run(BuildStage.Resolve, "Resolving failed",
+					() => parsed!.GameInfo.Resolve(parsed.Controls, null));
 
-				stages.Add(new StageResult(BuildStage.Parse, true, parseErrors.Count == 0, parseErrors));
-				if (parseErrors.Count > 0 || gameInfo == null)
-					return Stop(stages, BuildStage.Parse);
-
-				// Stage 4 — Resolve (registries, expression compilation, asset loading, controls validation).
-				var resolveErrors = new List<string>();
-				sink = resolveErrors;
-				ResolvedGame? resolved = null;
-				try
-				{
-					resolved = Builder.Resolve(gameInfo, controls, null);
-				}
-				catch (Exception ex)
-				{
-					resolveErrors.Add("Resolving failed: " + ex);
-				}
-
-				stages.Add(new StageResult(BuildStage.Resolve, true, resolveErrors.Count == 0, resolveErrors));
-				if (resolveErrors.Count > 0 || resolved == null)
-					return Stop(stages, BuildStage.Resolve);
-
-				// Stage 5 — Instantiate entities + behaviours and run deferred initialisation.
-				var instantiateErrors = new List<string>();
-				sink = instantiateErrors;
-				try
-				{
-					Builder.Instantiate(resolved);
-				}
-				catch (Exception ex)
-				{
-					instantiateErrors.Add("Entity instantiation failed: " + ex);
-				}
-
-				stages.Add(new StageResult(BuildStage.Instantiate, true, instantiateErrors.Count == 0, instantiateErrors));
-
-				return new SandboxValidationResult(stages.All(s => !s.Ran || s.Success), stages);
+				run.Run(BuildStage.Instantiate, "Entity instantiation failed",
+					() => resolved!.Instantiate());
 			}
 			finally
 			{
-				sink = null;
 				Application.logMessageReceivedThreaded -= OnLog;
 				Teardown(preexisting);
 			}
@@ -228,14 +200,64 @@ namespace Assembler.Generation.Verification
 			}
 		}
 
-		// Records the stages after `failedAt` as not-run and returns the failed result.
-		private static SandboxValidationResult Stop(List<StageResult> stages, BuildStage failedAt)
-		{
-			var failedIndex = Array.IndexOf(Order, failedAt);
-			for (var i = failedIndex + 1; i < Order.Length; i++)
-				stages.Add(new StageResult(Order[i], false, false, Array.Empty<string>()));
+		// Carries the parse stage's two products (game + controls) to the resolve stage.
+		private sealed record ParsedGame(GameInfo GameInfo, ControlsInfo Controls);
 
-			return new SandboxValidationResult(false, stages);
+		// Drives the staged pipeline: records each stage's result, captures logged errors via the moving Sink,
+		// and short-circuits every remaining stage once one fails.
+		private sealed class PipelineRun
+		{
+			public readonly List<StageResult> Stages = new();
+
+			// The error list of the stage currently executing; the log hook appends to it. Null between stages.
+			public List<string>? Sink;
+
+			public bool Aborted { get; private set; }
+
+			public void Record(RanResult result)
+			{
+				Stages.Add(result);
+				if (!result.Success)
+					Aborted = true;
+			}
+
+			// Runs one stage's work under the log hook, recording a RanResult. Returns the produced artifact,
+			// or null if the pipeline has already aborted or this stage failed (so callers can guard the next
+			// stage's lambda with `!`, knowing it won't run when the prior artifact is null).
+			public T? Run<T>(BuildStage stage, string failPrefix, Func<T> work) where T : class
+			{
+				if (Aborted)
+					return null;
+
+				var errors = new List<string>();
+				Sink = errors;
+				T? artifact = null;
+				try
+				{
+					artifact = work();
+				}
+				catch (Exception ex)
+				{
+					errors.Add(failPrefix + ": " + ex);
+				}
+				finally
+				{
+					Sink = null;
+				}
+
+				Record(new RanResult(stage, errors.Count == 0, errors));
+				return errors.Count == 0 ? artifact : null;
+			}
+
+			// Appends a NotRunResult for every stage that never ran (always the trailing stages after a failure).
+			public void FillNotRun(IReadOnlyList<BuildStage> order)
+			{
+				foreach (var stage in order)
+				{
+					if (Stages.All(s => s.Stage != stage))
+						Stages.Add(new NotRunResult(stage));
+				}
+			}
 		}
 	}
 }

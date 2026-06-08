@@ -34,7 +34,7 @@ namespace Assembler.Building
 		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
 
 		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
-			=> Instantiate(Resolve(gameInfo, controls, overridePlatform));
+			=> gameInfo.Resolve(controls, overridePlatform).Instantiate();
 
 		/// <summary>
 		/// First build phase: validate the descriptor's game-over path and controls, then stand up all the
@@ -43,7 +43,7 @@ namespace Assembler.Building
 		/// resolution-time failures separately from instantiation-time ones. The returned handle carries the
 		/// resolved state into <see cref="Instantiate"/>.
 		/// </summary>
-		public static ResolvedGame Resolve(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+		public static ResolvedGame Resolve(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
@@ -92,7 +92,6 @@ namespace Assembler.Building
 				gameInfo,
 				controls,
 				controlsAsset,
-				hasCondition,
 				variableRegistry,
 				compiledExpressionsRegistry,
 				assetRegistry,
@@ -105,7 +104,7 @@ namespace Assembler.Building
 		/// Returns the root "Game" GameObject so callers can tear the whole game down by destroying it (the
 		/// sandbox validator relies on this).
 		/// </summary>
-		public static GameObject Instantiate(ResolvedGame resolved)
+		public static GameObject Instantiate(this ResolvedGame resolved)
 		{
 			var gameInfo = resolved.GameInfo;
 			var controls = resolved.Controls;
@@ -174,9 +173,12 @@ namespace Assembler.Building
 
 			var initialisations = new InitialisationQueue();
 
-			// 4. Append the implicit game-over controller so it builds through the normal pipeline.
+			// 4. Append the implicit game-over controller so it builds through the normal pipeline. A top-level
+			// GameOverCondition (if any) drives it; derived here rather than carried on ResolvedGame since it's
+			// a pure function of the game info.
+			var hasCondition = gameInfo.GameOverCondition is not None<bool>;
 			var entities = gameInfo.Entities
-				.Append(BuildGameOverControllerInfo(resolved.HasCondition ? gameInfo.GameOverCondition : null));
+				.Append(BuildGameOverControllerInfo(hasCondition ? gameInfo.GameOverCondition : null));
 
 			foreach (var entityInfo in entities)
 			{
@@ -251,13 +253,12 @@ namespace Assembler.Building
 	/// carrying the registries and validated state between the two build phases. Treat as a one-shot token: pass
 	/// the value straight from Resolve into Instantiate.
 	/// </summary>
-	public sealed class ResolvedGame
+	public sealed record ResolvedGame
 	{
 		internal ResolvedGame(
 			GameInfo gameInfo,
 			ControlsInfo controls,
 			InputActionAsset controlsAsset,
-			bool hasCondition,
 			VariableRegistry variableRegistry,
 			CompiledExpressionsRegistry compiledExpressionsRegistry,
 			AssetRegistry assetRegistry,
@@ -266,7 +267,6 @@ namespace Assembler.Building
 			GameInfo = gameInfo;
 			Controls = controls;
 			ControlsAsset = controlsAsset;
-			HasCondition = hasCondition;
 			VariableRegistry = variableRegistry;
 			CompiledExpressionsRegistry = compiledExpressionsRegistry;
 			AssetRegistry = assetRegistry;
@@ -276,7 +276,6 @@ namespace Assembler.Building
 		internal GameInfo GameInfo { get; }
 		internal ControlsInfo Controls { get; }
 		internal InputActionAsset ControlsAsset { get; }
-		internal bool HasCondition { get; }
 		internal VariableRegistry VariableRegistry { get; }
 		internal CompiledExpressionsRegistry CompiledExpressionsRegistry { get; }
 		internal AssetRegistry AssetRegistry { get; }

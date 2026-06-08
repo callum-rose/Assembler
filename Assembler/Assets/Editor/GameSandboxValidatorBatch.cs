@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Assembler.Generation.Verification;
 using UnityEditor;
@@ -32,7 +31,7 @@ namespace Editor
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();
-				List<string> targets = ArgValues(args, "-yamlPath");
+				List<string> targets = EditorBatchCli.ArgValues(args, "-yamlPath");
 				if (targets.Count == 0)
 					targets.Add(DefaultDescriptorDir);
 
@@ -69,7 +68,7 @@ namespace Editor
 			List<string> files;
 			try
 			{
-				files = CollectYamlFiles(targets);
+				files = EditorBatchCli.CollectYamlFiles(targets);
 			}
 			catch (Exception e)
 			{
@@ -91,7 +90,7 @@ namespace Editor
 			int failed = 0;
 			foreach (string file in files)
 			{
-				string rel = ToProjectRelative(file);
+				string rel = EditorBatchCli.ToProjectRelative(file);
 
 				SandboxValidationResult result;
 				try
@@ -113,8 +112,9 @@ namespace Editor
 				}
 
 				failed++;
-				var failedStage = result.FailedStage;
-				string where = failedStage != null ? $"  (failed at {Name(failedStage.Stage)})" : string.Empty;
+				string where = result.FailedStage is { } stage
+					? $"  (failed at {SandboxValidationResult.StageName(stage)})"
+					: string.Empty;
 				sb.AppendLine($"FAIL  {rel}{where}");
 				sb.AppendLine(result.FormatReport());
 			}
@@ -127,67 +127,6 @@ namespace Editor
 
 			report = sb.ToString();
 			return failed == 0;
-		}
-
-		private static string Name(BuildStage stage) => stage switch
-		{
-			BuildStage.Structure => "structure",
-			BuildStage.Deserialise => "deserialise",
-			BuildStage.Parse => "parse",
-			BuildStage.Resolve => "resolve",
-			BuildStage.Instantiate => "instantiate",
-			_ => stage.ToString().ToLowerInvariant()
-		};
-
-		// Expands the given files/directories into a stable, de-duplicated list of YAML files.
-		private static List<string> CollectYamlFiles(IReadOnlyList<string> targets)
-		{
-			var result = new List<string>();
-			foreach (string target in targets)
-			{
-				if (Directory.Exists(target))
-				{
-					result.AddRange(Directory.EnumerateFiles(target, "*.yaml", SearchOption.AllDirectories));
-					result.AddRange(Directory.EnumerateFiles(target, "*.yml", SearchOption.AllDirectories));
-				}
-				else if (File.Exists(target))
-				{
-					result.Add(target);
-				}
-				else
-				{
-					throw new FileNotFoundException("no such file or directory: " + target);
-				}
-			}
-
-			return result
-				.Select(Path.GetFullPath)
-				.Distinct()
-				.OrderBy(p => p, StringComparer.Ordinal)
-				.ToList();
-		}
-
-		// Collects every value that immediately follows an occurrence of flag, e.g. for
-		// "-yamlPath A -yamlPath B" returns { "A", "B" }.
-		private static List<string> ArgValues(string[] args, string flag)
-		{
-			var values = new List<string>();
-			for (int i = 0; i < args.Length - 1; i++)
-			{
-				if (args[i] == flag)
-					values.Add(args[i + 1]);
-			}
-
-			return values;
-		}
-
-		private static string ToProjectRelative(string fullPath)
-		{
-			string root = Directory.GetCurrentDirectory();
-			string full = Path.GetFullPath(fullPath);
-			return full.StartsWith(root, StringComparison.Ordinal)
-				? full.Substring(root.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-				: full;
 		}
 	}
 }

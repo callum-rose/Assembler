@@ -17,11 +17,11 @@ namespace Assembler.Generation.Verification
 			var errors = new List<string>();
 			foreach (var stage in result.Stages)
 			{
-				if (!stage.Ran || stage.Success)
+				if (stage is not RanResult { Success: false } failed)
 					continue;
 
-				foreach (var error in stage.Errors)
-					errors.Add($"[{stage.Stage}] {error}");
+				foreach (var error in failed.Errors)
+					errors.Add($"[{failed.Stage}] {error}");
 			}
 
 			// ParsedDto is no longer surfaced (no caller reads it); kept on the record for source compat.
