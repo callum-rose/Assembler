@@ -6,7 +6,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> View,
-		ValueSource<float> Size) : BehaviourInfo(Id, Listeners)
+		ValueSource<float> Size,
+		ValueSource<float> DefaultBlend) : BehaviourInfo(Id, Listeners)
 	{
 		public static CameraInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -15,13 +16,15 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("View")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")));
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")),
+				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("DefaultBlend")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
 			new CameraInfo(Id,
 				substitutedListeners,
 				View.SubstituteParameters(ctx),
-				Size.SubstituteParameters(ctx));
+				Size.SubstituteParameters(ctx),
+				DefaultBlend.SubstituteParameters(ctx));
 	}
 }

@@ -644,7 +644,8 @@ Sets the entity's world position to Position when Executed (typically via a trig
 | Position | Vector3 | World-space position to teleport the entity to on each execution. |
 
 ## `camera`
-Adds a Unity Camera component to the entity; chooses orthographic vs perspective and sets size.
+Adds the output Unity Camera plus a Cinemachine brain, so virtual cameras (e.g. camera follow)
+            can drive and blend this camera. Also adds an impulse listener so camera shake is visible.
 
 ### Properties
 
@@ -652,6 +653,27 @@ Adds a Unity Camera component to the entity; chooses orthographic vs perspective
 |------|------|-------------|
 | View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
 | Size | float | Orthographic size in world units (only used when View = "orthographic"). |
+| DefaultBlend | float | Default blend time in seconds when the brain cuts between virtual cameras (0 = instant cut). |
+
+## `camera follow`
+Adds a Cinemachine virtual camera that follows and/or looks at a target entity, blended by the brain on
+            the output camera. Mode picks a 2D screen-space rig or a 3D world-offset rig; omit Target
+            for a pure look-at camera.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Tag/Id | Entity to follow, as { Tag: <entity-tag> } or { Id: <entity-id> }. Omit for look-at only. |
+| LookAt | Tag/Id | Entity to aim at, as { Tag: … } or { Id: … }. Adds an aim composer. |
+| Mode | string | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Lens | float | Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection. |
+| Damping | float | How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim. |
+| DeadZone | float | 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting. |
+| CameraDistance | float | 2D only — distance the camera keeps in front of the target along its view axis (default 10). Must be > 0 or an orthographic camera sits on the target's plane and sees nothing. |
+| ScreenOffset | Vector2 | 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5). |
+| FollowOffset | Vector3 | 3D only — world-space offset the camera maintains from the target. |
 
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
