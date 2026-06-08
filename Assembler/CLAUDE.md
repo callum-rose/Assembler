@@ -13,6 +13,23 @@ Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games dec
 - **Unity `.meta` files** never need to be created manually — Unity generates them automatically. Don't author or hand-create `.meta` files for new assets or scripts.
 - **2D quantities are `Vector3` (z=0), not `Vector2`.** The `Vector2Value` type has been removed from the value pipeline; the `!vec` YAML tag produces `Vector3Value`, and domain code (sprite sizes, input axes/positions, etc.) uses `Vector3` throughout. Keep `Vector2` only at Unity API boundaries that force it (`RectTransform` anchors/offsets, `CanvasScaler.referenceResolution`, `InputAction.ReadValue<Vector2>`, `Random.insideUnitCircle`), widening to `Vector3` as values cross into domain code.
 
+### C# Style
+
+Favour modern C# and a functional style. These are preferences, not absolutes — break them when clarity demands it.
+
+- **Use modern language features** available on this Unity/C# version rather than older equivalents.
+- **Records** for immutable data types (e.g. the Info records) — prefer them over hand-written classes where a value type fits. Update with `with` expressions, not mutation.
+- **Null object pattern over nullable types** — prefer a sentinel/null-object (the existing `None<T>` / `NullValueProvider<T>` pattern) to returning or branching on `null`. Nullable reference types stay enabled and must be honoured where `null` genuinely crosses a boundary, but design to avoid that where practical.
+- **Switch expressions** over switch statements and if/else chains; lean on **pattern matching** generally (property, relational, and `is` patterns), not just type switches.
+- **Functional style** — prefer pure functions and LINQ pipelines over imperative loops and mutable accumulation; avoid hidden side effects.
+- **Expression-bodied members** (`=>`) wherever a method/property/ctor is a single expression.
+- **Ternary expressions** over short if/else when assigning or returning a value.
+- **Immutability by default** — `init`-only setters, `readonly` fields, and `IReadOnlyList<T>`/`IEnumerable<T>` in signatures over mutable collection types.
+- **Guard clauses / early returns** over deep nesting.
+- **Target-typed `new()`** to cut redundant type noise.
+- **`var`** for obvious types, `nameof`, and string interpolation throughout.
+- **Primary constructors** for records.
+
 ## Build & Test
 
 This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5f1.
