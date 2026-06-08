@@ -55,8 +55,8 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 					_hasFirstTap = false;
 				}
 				else if (_hasFirstTap &&
-				         Clock.Time - _firstTapTime <= Data.MaxInterval.ValueOr(0.3f) &&
-				         (position - _firstTapPosition).sqrMagnitude <= maxMoveSqr)
+						 Clock.Time - _firstTapTime <= Data.MaxInterval.ValueOr(0.3f) &&
+						 (position - _firstTapPosition).sqrMagnitude <= maxMoveSqr)
 				{
 					NotifyListeners(TriggerContext.New("position", position));
 					_hasFirstTap = false;

@@ -200,7 +200,7 @@ namespace Assembler.Anthropic
 		private static ToolUnion BuildTool(AnthropicTool tool)
 		{
 			var schema = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(tool.InputJsonSchema)
-			             ?? new Dictionary<string, JsonElement>();
+						 ?? new Dictionary<string, JsonElement>();
 			return new Tool
 			{
 				Name = tool.Name,
@@ -217,7 +217,7 @@ namespace Assembler.Anthropic
 			}
 
 			return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
-			       ?? new Dictionary<string, JsonElement>();
+				   ?? new Dictionary<string, JsonElement>();
 		}
 
 		private static Role RoleFromString(string role)

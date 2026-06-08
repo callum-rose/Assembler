@@ -57,10 +57,14 @@ namespace Assembler.Voxels.Scripting
 			Order(ref y0, ref y1);
 			Order(ref z0, ref z1);
 			for (var x = x0; x <= x1; x++)
-			for (var y = y0; y <= y1; y++)
-			for (var z = z0; z <= z1; z++)
 			{
-				SetInternal(x, y, z, c);
+				for (var y = y0; y <= y1; y++)
+				{
+					for (var z = z0; z <= z1; z++)
+					{
+						SetInternal(x, y, z, c);
+					}
+				}
 			}
 		}
 
@@ -70,13 +74,17 @@ namespace Assembler.Voxels.Scripting
 			Order(ref y0, ref y1);
 			Order(ref z0, ref z1);
 			for (var x = x0; x <= x1; x++)
-			for (var y = y0; y <= y1; y++)
-			for (var z = z0; z <= z1; z++)
 			{
-				var onShell = x == x0 || x == x1 || y == y0 || y == y1 || z == z0 || z == z1;
-				if (onShell)
+				for (var y = y0; y <= y1; y++)
 				{
-					SetInternal(x, y, z, c);
+					for (var z = z0; z <= z1; z++)
+					{
+						var onShell = x == x0 || x == x1 || y == y0 || y == y1 || z == z0 || z == z1;
+						if (onShell)
+						{
+							SetInternal(x, y, z, c);
+						}
+					}
 				}
 			}
 		}
@@ -92,15 +100,19 @@ namespace Assembler.Voxels.Scripting
 			}
 
 			for (var x = -rx; x <= rx; x++)
-			for (var y = -ry; y <= ry; y++)
-			for (var z = -rz; z <= rz; z++)
 			{
-				var fx = rx == 0 ? 0f : (float)x / (rx + 0.5f);
-				var fy = ry == 0 ? 0f : (float)y / (ry + 0.5f);
-				var fz = rz == 0 ? 0f : (float)z / (rz + 0.5f);
-				if (fx * fx + fy * fy + fz * fz <= 1f)
+				for (var y = -ry; y <= ry; y++)
 				{
-					SetInternal(cx + x, cy + y, cz + z, c);
+					for (var z = -rz; z <= rz; z++)
+					{
+						var fx = rx == 0 ? 0f : (float)x / (rx + 0.5f);
+						var fy = ry == 0 ? 0f : (float)y / (ry + 0.5f);
+						var fz = rz == 0 ? 0f : (float)z / (rz + 0.5f);
+						if (fx * fx + fy * fy + fz * fz <= 1f)
+						{
+							SetInternal(cx + x, cy + y, cz + z, c);
+						}
+					}
 				}
 			}
 		}
@@ -120,15 +132,19 @@ namespace Assembler.Voxels.Scripting
 
 			var half = (height - 1) / 2;
 			for (var h = -half; h <= height - 1 - half; h++)
-			for (var u = -radius; u <= radius; u++)
-			for (var v = -radius; v <= radius; v++)
 			{
-				if (u * u + v * v > radius * radius)
+				for (var u = -radius; u <= radius; u++)
 				{
-					continue;
-				}
+					for (var v = -radius; v <= radius; v++)
+					{
+						if (u * u + v * v > radius * radius)
+						{
+							continue;
+						}
 
-				PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+						PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+					}
+				}
 			}
 		}
 
@@ -151,14 +167,16 @@ namespace Assembler.Voxels.Scripting
 				var t = 1f - (float)i / Mathf.Max(1, height - 1);
 				var ringRadius = Mathf.RoundToInt(radius * t);
 				for (var u = -ringRadius; u <= ringRadius; u++)
-				for (var v = -ringRadius; v <= ringRadius; v++)
 				{
-					if (u * u + v * v > ringRadius * ringRadius)
+					for (var v = -ringRadius; v <= ringRadius; v++)
 					{
-						continue;
-					}
+						if (u * u + v * v > ringRadius * ringRadius)
+						{
+							continue;
+						}
 
-					PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+						PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+					}
 				}
 			}
 		}
@@ -172,13 +190,17 @@ namespace Assembler.Voxels.Scripting
 
 			var extent = majorR + minorR;
 			for (var h = -minorR; h <= minorR; h++)
-			for (var u = -extent; u <= extent; u++)
-			for (var v = -extent; v <= extent; v++)
 			{
-				var ring = Mathf.Sqrt(u * u + v * v) - majorR;
-				if (ring * ring + h * h <= minorR * minorR)
+				for (var u = -extent; u <= extent; u++)
 				{
-					PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+					for (var v = -extent; v <= extent; v++)
+					{
+						var ring = Mathf.Sqrt(u * u + v * v) - majorR;
+						if (ring * ring + h * h <= minorR * minorR)
+						{
+							PlacePlanar(axis, cx, cy, cz, h, u, v, c);
+						}
+					}
 				}
 			}
 		}
@@ -205,7 +227,11 @@ namespace Assembler.Voxels.Scripting
 				while (true)
 				{
 					SetInternal(x, y, z, c);
-					if (x == x1) break;
+					if (x == x1)
+					{
+						break;
+					}
+
 					if (p1 >= 0) { y += sy; p1 -= 2 * dx; }
 					if (p2 >= 0) { z += sz; p2 -= 2 * dx; }
 					p1 += 2 * dy;
@@ -220,7 +246,11 @@ namespace Assembler.Voxels.Scripting
 				while (true)
 				{
 					SetInternal(x, y, z, c);
-					if (y == y1) break;
+					if (y == y1)
+					{
+						break;
+					}
+
 					if (p1 >= 0) { x += sx; p1 -= 2 * dy; }
 					if (p2 >= 0) { z += sz; p2 -= 2 * dy; }
 					p1 += 2 * dx;
@@ -235,7 +265,11 @@ namespace Assembler.Voxels.Scripting
 				while (true)
 				{
 					SetInternal(x, y, z, c);
-					if (z == z1) break;
+					if (z == z1)
+					{
+						break;
+					}
+
 					if (p1 >= 0) { y += sy; p1 -= 2 * dz; }
 					if (p2 >= 0) { x += sx; p2 -= 2 * dz; }
 					p1 += 2 * dy;
@@ -256,19 +290,21 @@ namespace Assembler.Voxels.Scripting
 			Order(ref u0, ref u1);
 			Order(ref v0, ref v1);
 			for (var u = u0; u <= u1; u++)
-			for (var v = v0; v <= v1; v++)
 			{
-				switch (axis)
+				for (var v = v0; v <= v1; v++)
 				{
-					case VoxelAxis.X:
-						SetInternal(plane, u, v, c);
-						break;
-					case VoxelAxis.Y:
-						SetInternal(u, plane, v, c);
-						break;
-					default:
-						SetInternal(u, v, plane, c);
-						break;
+					switch (axis)
+					{
+						case VoxelAxis.X:
+							SetInternal(plane, u, v, c);
+							break;
+						case VoxelAxis.Y:
+							SetInternal(u, plane, v, c);
+							break;
+						default:
+							SetInternal(u, v, plane, c);
+							break;
+					}
 				}
 			}
 		}
@@ -346,8 +382,8 @@ namespace Assembler.Voxels.Scripting
 			ComputeBounds(out var min, out var max);
 			var start = new Vector3Int(x, y, z);
 			if (start.x < min.x || start.x > max.x ||
-			    start.y < min.y || start.y > max.y ||
-			    start.z < min.z || start.z > max.z)
+				start.y < min.y || start.y > max.y ||
+				start.z < min.z || start.z > max.z)
 			{
 				return;
 			}

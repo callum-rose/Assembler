@@ -26,19 +26,28 @@ namespace Assembler.Voxels
 			foreach (var rawLine in lines)
 			{
 				var line = rawLine.Trim();
-				if (line.Length == 0 || line[0] == '#') continue;
-
-				var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-				if (parts.Length < 4) continue;
-
-				if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
-				    !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ||
-				    !int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z))
+				if (line.Length == 0 || line[0] == '#')
 				{
 					continue;
 				}
 
-				if (!TryParseHexColor(parts[3], out var colour)) continue;
+				var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length < 4)
+				{
+					continue;
+				}
+
+				if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
+					!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ||
+					!int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z))
+				{
+					continue;
+				}
+
+				if (!TryParseHexColor(parts[3], out var colour))
+				{
+					continue;
+				}
 
 				if (!paletteIndex.TryGetValue(colour, out var index))
 				{
@@ -79,7 +88,10 @@ namespace Assembler.Voxels
 		private static bool TryParseHexColor(string hex, out Color32 colour)
 		{
 			colour = default;
-			if (hex.Length >= 1 && hex[0] == '#') hex = hex.Substring(1);
+			if (hex.Length >= 1 && hex[0] == '#')
+			{
+				hex = hex.Substring(1);
+			}
 
 			if (hex.Length == 6)
 			{
@@ -92,7 +104,7 @@ namespace Assembler.Voxels
 			else if (hex.Length == 8)
 			{
 				if (TryHexByte(hex, 0, out var r) && TryHexByte(hex, 2, out var g) &&
-				    TryHexByte(hex, 4, out var b) && TryHexByte(hex, 6, out var a))
+					TryHexByte(hex, 4, out var b) && TryHexByte(hex, 6, out var a))
 				{
 					colour = new Color32(r, g, b, a);
 					return true;

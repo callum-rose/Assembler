@@ -31,13 +31,19 @@ namespace Editor
 				string[] args = Environment.GetCommandLineArgs();
 				List<string> targets = EditorBatchCli.ArgValues(args, "-yamlPath");
 				if (targets.Count == 0)
+				{
 					targets.Add(DefaultDescriptorDir);
+				}
 
 				bool ok = Run(targets, out string report);
 				if (ok)
+				{
 					Debug.Log(report);
+				}
 				else
+				{
 					Debug.LogError(report);
+				}
 
 				EditorApplication.Exit(ok ? 0 : 1);
 			}
@@ -54,9 +60,13 @@ namespace Editor
 		{
 			bool ok = Run(new List<string> { DefaultDescriptorDir }, out string report);
 			if (ok)
+			{
 				Debug.Log(report);
+			}
 			else
+			{
 				Debug.LogError(report);
+			}
 		}
 
 		// Validates every YAML file under the given files/directories, building a combined report.
@@ -102,7 +112,10 @@ namespace Editor
 					invalid++;
 					string summary = result.ErrorCount + (result.ErrorCount == 1 ? " error" : " errors");
 					if (result.WarningCount > 0)
+					{
 						summary += $", {result.WarningCount} warning{(result.WarningCount == 1 ? "" : "s")}";
+					}
+
 					sb.AppendLine($"FAIL  {rel}  ({summary})");
 				}
 				else

@@ -51,7 +51,10 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_apiKey = EditorGUILayout.PasswordField(_apiKey);
-				if (scope.changed) EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -59,7 +62,10 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_maxAttempts = Mathf.Max(1, EditorGUILayout.IntField(_maxAttempts));
-				if (scope.changed) EditorPrefs.SetInt(MaxAttemptsPref, _maxAttempts);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(MaxAttemptsPref, _maxAttempts);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -68,7 +74,10 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_prompt = EditorGUILayout.TextArea(_prompt, GUILayout.ExpandHeight(true));
-				if (scope.changed) EditorPrefs.SetString(PromptPref, _prompt);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(PromptPref, _prompt);
+				}
 			}
 			EditorGUILayout.EndScrollView();
 
@@ -192,7 +201,9 @@ namespace Assembler.Generation.Verification.Editor
 						{
 							sb.AppendLine("--- build errors ---");
 							foreach (var e in build.BuildResult.Errors)
+							{
 								sb.AppendLine("- " + e);
+							}
 						}
 						break;
 				}

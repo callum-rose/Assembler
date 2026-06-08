@@ -13,8 +13,8 @@ namespace Assembler.Deserialisation
 			out object? value, ObjectDeserializer rootDeserializer)
 		{
 			if (expectedType != typeof(object) &&
-			    expectedType != typeof(IDictionary<object, object>) &&
-			    expectedType != typeof(Dictionary<object, object>))
+				expectedType != typeof(IDictionary<object, object>) &&
+				expectedType != typeof(Dictionary<object, object>))
 			{
 				value = null;
 				return false;
@@ -78,125 +78,125 @@ namespace Assembler.Deserialisation
 					return true;
 
 				case MappingStart:
-				{
-					var dict = new Dictionary<string, object>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<MappingEnd>(out _))
 					{
-						var key = reader.Consume<Scalar>().Value;
-						var entryValue = rootDeserializer(typeof(object));
-						dict[key] = entryValue!;
-					}
+						var dict = new Dictionary<string, object>();
+						reader.MoveNext();
 
-					value = dict;
-					return true;
-				}
+						while (!reader.TryConsume<MappingEnd>(out _))
+						{
+							var key = reader.Consume<Scalar>().Value;
+							var entryValue = rootDeserializer(typeof(object));
+							dict[key] = entryValue!;
+						}
+
+						value = dict;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!vec":
-				{
-					var list = new List<VecDto>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var item = nestedObjectDeserializer(reader, typeof(VecDto));
-						list.Add((VecDto)item!);
-					}
+						var list = new List<VecDto>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var item = nestedObjectDeserializer(reader, typeof(VecDto));
+							list.Add((VecDto)item!);
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!colour":
-				{
-					var list = new List<ColourDto>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var item = nestedObjectDeserializer(reader, typeof(ColourDto));
-						list.Add((ColourDto)item!);
-					}
+						var list = new List<ColourDto>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var item = nestedObjectDeserializer(reader, typeof(ColourDto));
+							list.Add((ColourDto)item!);
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!int":
-				{
-					var list = new List<int>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var s = reader.Consume<Scalar>();
-						list.Add(int.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
-					}
+						var list = new List<int>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var s = reader.Consume<Scalar>();
+							list.Add(int.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!float":
-				{
-					var list = new List<float>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var s = reader.Consume<Scalar>();
-						list.Add(float.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
-					}
+						var list = new List<float>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var s = reader.Consume<Scalar>();
+							list.Add(float.Parse(s.Value, System.Globalization.CultureInfo.InvariantCulture));
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!bool":
-				{
-					var list = new List<bool>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var s = reader.Consume<Scalar>();
-						list.Add(bool.Parse(s.Value));
-					}
+						var list = new List<bool>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var s = reader.Consume<Scalar>();
+							list.Add(bool.Parse(s.Value));
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart sequenceStart when sequenceStart.Tag == "!string":
-				{
-					var list = new List<string>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var s = reader.Consume<Scalar>();
-						list.Add(s.Value);
-					}
+						var list = new List<string>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var s = reader.Consume<Scalar>();
+							list.Add(s.Value);
+						}
+
+						value = list;
+						return true;
+					}
 
 				case SequenceStart:
-				{
-					var list = new List<object>();
-					reader.MoveNext();
-
-					while (!reader.TryConsume<SequenceEnd>(out _))
 					{
-						var item = rootDeserializer(typeof(object));
-						list.Add(item!);
-					}
+						var list = new List<object>();
+						reader.MoveNext();
 
-					value = list;
-					return true;
-				}
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var item = rootDeserializer(typeof(object));
+							list.Add(item!);
+						}
+
+						value = list;
+						return true;
+					}
 
 				default:
 					value = null;

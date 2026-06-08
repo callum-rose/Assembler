@@ -57,7 +57,7 @@ namespace Tests.Behaviours
 			}
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
-			
+
 			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
 		}
 
@@ -438,7 +438,7 @@ namespace Tests.Behaviours
 					new List<Listener> { new ActionListener(_ => fires++) });
 
 				debounced.Execute(TriggerContext.Empty); // first: forwarded
-				// Time frozen (e.g. paused): every subsequent trigger is within the interval.
+														 // Time frozen (e.g. paused): every subsequent trigger is within the interval.
 				debounced.Execute(TriggerContext.Empty);
 				debounced.Execute(TriggerContext.Empty);
 

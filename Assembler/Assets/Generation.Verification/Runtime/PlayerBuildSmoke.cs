@@ -27,13 +27,13 @@ namespace Assembler.Generation.Verification.Runtime
 				}
 
 				_cts = new CancellationTokenSource();
-				
+
 				var orchestrator = GenerationOrchestrator.CreateDefault(apiKey, this);
-				
+
 				Debug.Log("PlayerBuildSmoke: starting generation...");
-				
+
 				var result = await orchestrator.GenerateAsync(userPrompt, maxAttempts, _cts.Token);
-				
+
 				Debug.Log(result is SuccessfulGeneration success
 					? $"PlayerBuildSmoke: SUCCESS — descriptor at {success.YamlPath}"
 					: $"PlayerBuildSmoke: FAILED after {result.Attempts.Count} attempt(s).");

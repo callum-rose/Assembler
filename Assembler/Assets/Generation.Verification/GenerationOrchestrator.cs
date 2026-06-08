@@ -13,7 +13,7 @@ namespace Assembler.Generation.Verification
 		private readonly static Regex TitleRegex = new(
 			@"(?im)^\s*title\s*:\s*(?<value>.+?)\s*$",
 			RegexOptions.Compiled);
-		
+
 		private readonly Func<GameDescriptorGenerator> _generatorFactory;
 		private readonly Func<string, BuildResult> _builder;
 		private readonly IGeneratorLogger? _logger;
@@ -41,7 +41,10 @@ namespace Assembler.Generation.Verification
 			int maxAttempts,
 			CancellationToken cancellationToken)
 		{
-			if (maxAttempts < 1) maxAttempts = 1;
+			if (maxAttempts < 1)
+			{
+				maxAttempts = 1;
+			}
 
 			var attempts = new List<Attempt>();
 			var generator = _generatorFactory();
@@ -114,7 +117,11 @@ namespace Assembler.Generation.Verification
 		internal static string? TryExtractTitle(string yaml)
 		{
 			var m = TitleRegex.Match(yaml);
-			if (!m.Success) return null;
+			if (!m.Success)
+			{
+				return null;
+			}
+
 			var value = m.Groups["value"].Value.Trim().Trim('"', '\'');
 			return string.IsNullOrWhiteSpace(value) ? null : value;
 		}

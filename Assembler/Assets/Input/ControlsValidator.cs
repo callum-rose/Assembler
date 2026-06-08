@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
-using Assembler.Parsing.Controls;
 
 namespace Assembler.Input
 {
@@ -42,8 +42,8 @@ namespace Assembler.Input
 				}
 
 				var hasBinding = groupBindings != null
-				                 && groupBindings.TryGetValue(actionName, out var bindings)
-				                 && bindings.Count > 0;
+								 && groupBindings.TryGetValue(actionName, out var bindings)
+								 && bindings.Count > 0;
 
 				if (!hasBinding)
 				{
@@ -72,7 +72,7 @@ namespace Assembler.Input
 			foreach (var behaviour in behaviours)
 			{
 				if (behaviour is InputActionTriggerInfo trigger
-				    && TryResolveActionName(trigger.Action, gameInfo, out var name))
+					&& TryResolveActionName(trigger.Action, gameInfo, out var name))
 				{
 					usedActions.Add(name);
 				}
