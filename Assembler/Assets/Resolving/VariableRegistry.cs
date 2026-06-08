@@ -30,12 +30,12 @@ namespace Assembler.Resolving
 						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
 					_ when typeof(T) == typeof(object) =>
 						(IValueProvider<T>)(object)new BoxingValueProvider(provider),
-					_ => throw new Exception(
+					_ => throw new ResolveException(
 						$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {provider.GetType()}")
 				};
 			}
 
-			throw new Exception($"Variable not registered for id: {id}");
+			throw new ResolveException($"Variable not registered for id: {id}");
 		}
 
 		internal static IValueProvider BuildProvider(ValueInfo valueInfo)
@@ -49,7 +49,7 @@ namespace Assembler.Resolving
 				Vector3Value vec3 => new ValueProvider<Vector3>(vec3.Value),
 				ColorValue c => new ValueProvider<Color>(c.Value),
 				TypedListValue typed => BuildListProvider(typed),
-				_ => throw new Exception(
+				_ => throw new ResolveException(
 					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
 			};
 		}
@@ -86,7 +86,7 @@ namespace Assembler.Resolving
 				return BuildListProvider<Color>(typed);
 			}
 
-			throw new Exception($"Unsupported list element type: {typed.ElementType}");
+			throw new ResolveException($"Unsupported list element type: {typed.ElementType}");
 		}
 
 		private static IValueProvider BuildListProvider<T>(TypedListValue typed)
@@ -112,7 +112,7 @@ namespace Assembler.Resolving
 				StringValue s when typeof(T) == typeof(string) => (T)(object)s.Value,
 				Vector3Value v when typeof(T) == typeof(Vector3) => (T)(object)v.Value,
 				ColorValue c when typeof(T) == typeof(Color) => (T)(object)c.Value,
-				_ => throw new Exception($"Cannot unwrap {value.GetType().Name} to {typeof(T).Name}")
+				_ => throw new ResolveException($"Cannot unwrap {value.GetType().Name} to {typeof(T).Name}")
 			};
 		}
 	}

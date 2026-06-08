@@ -289,24 +289,14 @@ return value;        // return a value
 return x + y;        // return expression result
 ```
 
-**Important:** Early returns are supported but are preprocessed. The following:
+**Important:** Early returns are supported. The following works as written — the `return`
+exits the method, and any code after the `if` block runs only when the condition is false:
 ```csharp
 if (condition)
 {
     return x;
 }
 // more code
-```
-Is automatically transformed to:
-```csharp
-if (condition)
-{
-    return x;
-}
-else
-{
-    // more code
-}
 ```
 
 ---
@@ -535,8 +525,8 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ String interpolation (`$"text {variable}"`)
 
 ### Not Supported - Statements
-- ❌ switch expressions (switch statements with case/default ARE supported - see below)
-- ❌ foreach loops (NOT supported despite token existing)
+- ❌ switch statements and switch expressions
+- ❌ foreach loops
 - ❌ do-while loops
 - ❌ try-catch-finally
 - ❌ throw statements
@@ -579,12 +569,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ this keyword
 - ❌ base keyword
 - ❌ static keyword (outside registered types)
-
----
-
-## Switch Statements
-
-**IMPORTANT:** While the lexer has tokens for `switch`, `case`, and `default`, the parser does **NOT** implement switch statement parsing. Do not use switch statements.
 
 ---
 
@@ -677,7 +661,7 @@ return result + category + sq;
 
 5. **Types must be registered** before using them with `new`. Check what types are available before generating construction code.
 
-6. **Early returns are OK** but remember they're transformed - avoid complex logic after early returns.
+6. **Early returns are OK** - a `return` inside an `if` exits the method, and code after the `if` runs only when the condition was false.
 
 7. **Use LINQ method syntax**, not query syntax (`from x in list`).
 

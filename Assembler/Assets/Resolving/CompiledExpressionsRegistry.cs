@@ -68,7 +68,7 @@ namespace Assembler.Resolving
 
 					if (type is null)
 					{
-						throw new Exception($"Type not found for name: {typeName}");
+						throw new ResolveException($"Type not found for name: {typeName}");
 					}
 				}
 
@@ -87,7 +87,7 @@ namespace Assembler.Resolving
 
 					if (type is null)
 					{
-						throw new Exception($"Type not found for name: {typeName}");
+						throw new ResolveException($"Type not found for name: {typeName}");
 					}
 				}
 
@@ -125,7 +125,7 @@ namespace Assembler.Resolving
 
 				if (byCallableName.TryGetValue(name, out var existing))
 				{
-					throw new Exception(
+					throw new ResolveException(
 						$"Expression callable-name collision: '{name}' is produced by both '{existing.Id}' and " +
 						$"'{info.Id}'. Set a 'CallableAs' alias on one of them to disambiguate.");
 				}
@@ -247,7 +247,7 @@ namespace Assembler.Resolving
 					{
 						if (onStack.Contains(entry.Value.Id))
 						{
-							throw new Exception(
+							throw new ResolveException(
 								$"Cyclic expression dependency detected involving '{info.Id}' and '{entry.Value.Id}'.");
 						}
 
@@ -277,7 +277,7 @@ namespace Assembler.Resolving
 		{
 			if (!_compiledExpressions.TryGetValue(id, out var typeAndDelegate))
 			{
-				throw new Exception($"Compiled expression not found for id: {id}");
+				throw new ResolveException($"Compiled expression not found for id: {id}");
 			}
 
 			return typeAndDelegate;
@@ -287,7 +287,7 @@ namespace Assembler.Resolving
 		{
 			if (!_expressionInfos.TryGetValue(id, out var info))
 			{
-				throw new Exception($"Expression info not found for id: {id}");
+				throw new ResolveException($"Expression info not found for id: {id}");
 			}
 
 			return info;
@@ -297,7 +297,7 @@ namespace Assembler.Resolving
 		{
 			if (!_typeRegistry.TryGetValue(typeName, out var type))
 			{
-				throw new Exception($"Type not registered: {typeName}");
+				throw new ResolveException($"Type not registered: {typeName}");
 			}
 
 			return type;
@@ -307,12 +307,12 @@ namespace Assembler.Resolving
 		{
 			if (!_compiledExpressions.TryGetValue(id, out var typeAndDelegate))
 			{
-				throw new Exception($"Compiled expression not found for id: {id}");
+				throw new ResolveException($"Compiled expression not found for id: {id}");
 			}
 
 			if (typeAndDelegate.delegateType != typeof(T))
 			{
-				throw new Exception(
+				throw new ResolveException(
 					$"Compiled expression type mismatch for id: {id}, expected {typeof(T)}, got {typeAndDelegate.delegateType}");
 			}
 
