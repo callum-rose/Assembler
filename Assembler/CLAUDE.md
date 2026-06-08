@@ -145,6 +145,16 @@ Assembler supports **deterministic execution and record/replay**: the same descr
 
 - **Always commit and push at the end of a session's work** — if a branch exists for the session's work, commit any outstanding changes and push them at the end without asking. Don't wait for the user to request it.
 
+### Addressing PR comments
+
+PR feedback lives in **two separate streams**, and you must fetch **both** — review comments left on a line in the "Files changed" tab do NOT include top-level conversation comments, and it's easy to silently miss a whole category of feedback (as happened once with a "trim stack traces" comment that was only in the conversation stream).
+
+- **Inline review comments** (attached to a file/line): `gh api repos/<owner>/<repo>/pulls/<n>/comments` — this is the "review comments" endpoint.
+- **Top-level conversation / issue comments** (not attached to any line): `gh api repos/<owner>/<repo>/issues/<n>/comments` — PRs are issues, so general comments come through the issues endpoint.
+- **Review summaries** (the body of an approve/request-changes/comment review): `gh pr view <n> --json reviews`.
+
+Always check all three before declaring PR comments addressed, and enumerate them explicitly so none are dropped. When you finish, reply on the PR mapping each comment to its resolution.
+
 ### Git Worktrees
 
 AI work happens in a worktree so the user can keep using the main repo. The user's flow is: work in a worktree → open a PR → check the branch out in the main repo to run it in Unity. To support that, the worktree must be cleaned up once a PR exists and recreated when more work is requested.
