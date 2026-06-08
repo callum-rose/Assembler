@@ -175,7 +175,7 @@ as shown.
 | Tag | Form | Meaning |
 |---|---|---|
 | `!vec` | `!vec { X: 0, Y: 0, Z: 0 }` (Z optional) | Vector literal (always a `Vector3`; Z defaults to 0 for 2D). There is no `Vector2` value type — even 2D quantities are `Vector3` with Z=0. |
-| `!colour` | `!colour red` or `!colour { R: 1, G: 0, B: 0, A: 1 }` | Named colour (`red`, `blue`, `white`, `cyan`, `grey`, …) or RGBA literal (A optional, defaults to 1). |
+| `!colour` | `!colour red`, `!colour "#FF8800"`, or `!colour { R: 1, G: 0, B: 0, A: 1 }` | Named colour (`red`, `blue`, `white`, `cyan`, `grey`, …), a hex string (`"#RGB"`, `"#RRGGBB"`, or `"#RRGGBBAA"` — quote it so YAML doesn't treat `#` as a comment), or an RGBA literal (A optional, defaults to 1). |
 | `!var` | `!var some name` | Reads a value by id. Resolves against per-entity variables first, then global Variables, then Constants. This is the only read tag — there is no separate `!const` form. |
 | `!parameter` | `!parameter slot_name` | Inside a template, refers to a parameter slot supplied at instantiation. `!parameter self_id` is the special implicit slot for the entity's own id (use when a template behaviour needs to refer to "this entity"). |
 | `!expr` | `!expr { Do: …, With: [ … ] }` | Evaluates code. `Do` is either a **named** expression id (calls an `Expressions:` entry) **or** an inline C# body; `With` supplies the arguments. See **Expressions and `!expr`** below. |
