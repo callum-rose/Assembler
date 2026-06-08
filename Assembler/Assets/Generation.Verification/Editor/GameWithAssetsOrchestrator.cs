@@ -83,7 +83,10 @@ namespace Assembler.Generation.Verification.Editor
 		private async Task<GameWithAssetsResult> RunAsync(
 			Func<CancellationToken, Task<GeneratorResponse>> firstRequest, int maxAttempts, CancellationToken ct)
 		{
-			if (maxAttempts < 1) maxAttempts = 1;
+			if (maxAttempts < 1)
+			{
+				maxAttempts = 1;
+			}
 
 			var attempts = new List<Attempt>();
 			var assetResultsByKey = new Dictionary<string, AssetResult>();
@@ -202,7 +205,11 @@ namespace Assembler.Generation.Verification.Editor
 		private static string? TryExtractTitle(string yaml)
 		{
 			var m = TitleRegex.Match(yaml);
-			if (!m.Success) return null;
+			if (!m.Success)
+			{
+				return null;
+			}
+
 			var value = m.Groups["value"].Value.Trim().Trim('"', '\'');
 			return string.IsNullOrWhiteSpace(value) ? null : value;
 		}

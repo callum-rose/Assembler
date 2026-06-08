@@ -27,7 +27,10 @@ namespace Assembler.Generation.Verification.Editor
 		{
 			var count = requests.Count;
 			var results = new AssetResult?[count];
-			if (count == 0) return Array.Empty<AssetResult>();
+			if (count == 0)
+			{
+				return Array.Empty<AssetResult>();
+			}
 
 			// Resolve generators; unknown types fail immediately.
 			var generators = new IAssetGenerator?[count];
@@ -50,7 +53,11 @@ namespace Assembler.Generation.Verification.Editor
 			{
 				for (var i = 0; i < count; i++)
 				{
-					if (generators[i] == null) continue;
+					if (generators[i] == null)
+					{
+						continue;
+					}
+
 					try { alreadyLoadable[i] = generators[i]!.CanLoadGenerated(requests[i]); }
 					catch { alreadyLoadable[i] = false; }
 				}
@@ -72,7 +79,11 @@ namespace Assembler.Generation.Verification.Editor
 			var tasks = new List<Task>();
 			for (var i = 0; i < count; i++)
 			{
-				if (results[i] != null) continue; // unknown type or already present
+				if (results[i] != null)
+				{
+					continue; // unknown type or already present
+				}
+
 				var idx = i;
 				tasks.Add(GenerateOneAsync(generators[idx]!, requests[idx], apiKey, opts, logger,
 					sem, writtenPaths, genErrors, idx, ct));
@@ -89,7 +100,11 @@ namespace Assembler.Generation.Verification.Editor
 				for (var i = 0; i < count; i++)
 				{
 					var path = writtenPaths[i];
-					if (string.IsNullOrEmpty(path)) continue;
+					if (string.IsNullOrEmpty(path))
+					{
+						continue;
+					}
+
 					try
 					{
 						AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
@@ -102,7 +117,10 @@ namespace Assembler.Generation.Verification.Editor
 
 				for (var i = 0; i < count; i++)
 				{
-					if (results[i] != null) continue;
+					if (results[i] != null)
+					{
+						continue;
+					}
 
 					if (genErrors[i] != null)
 					{

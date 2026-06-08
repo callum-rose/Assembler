@@ -68,7 +68,10 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_apiKey = EditorGUILayout.PasswordField(_apiKey);
-				if (scope.changed) EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(ApiKeyPref, _apiKey);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -76,14 +79,20 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_maxAttempts = Mathf.Max(1, EditorGUILayout.IntField(_maxAttempts));
-				if (scope.changed) EditorPrefs.SetInt(MaxAttemptsPref, _maxAttempts);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(MaxAttemptsPref, _maxAttempts);
+				}
 			}
 
 			EditorGUILayout.LabelField("Asset generation concurrency", EditorStyles.boldLabel);
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_concurrency = Mathf.Clamp(EditorGUILayout.IntField(_concurrency), 1, 16);
-				if (scope.changed) EditorPrefs.SetInt(ConcurrencyPref, _concurrency);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(ConcurrencyPref, _concurrency);
+				}
 			}
 
 			EditorGUILayout.Space();
@@ -92,7 +101,10 @@ namespace Assembler.Generation.Verification.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_prompt = EditorGUILayout.TextArea(_prompt, GUILayout.ExpandHeight(true));
-				if (scope.changed) EditorPrefs.SetString(PromptPref, _prompt);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(PromptPref, _prompt);
+				}
 			}
 			EditorGUILayout.EndScrollView();
 
@@ -126,7 +138,10 @@ namespace Assembler.Generation.Verification.Editor
 		private void DrawReviseSection()
 		{
 			var canRevise = _orchestrator is { CanRevise: true };
-			if (!canRevise) return;
+			if (!canRevise)
+			{
+				return;
+			}
 
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Revise last game", EditorStyles.boldLabel);
@@ -168,7 +183,10 @@ namespace Assembler.Generation.Verification.Editor
 				}
 			}
 
-			if (!_summaryExpanded) return;
+			if (!_summaryExpanded)
+			{
+				return;
+			}
 
 			_summaryScroll = EditorGUILayout.BeginScrollView(_summaryScroll, GUILayout.MinHeight(120));
 			EditorGUILayout.TextArea(BuildSummaryText(), WrapTextAreaStyle, GUILayout.ExpandHeight(true));
@@ -292,9 +310,20 @@ namespace Assembler.Generation.Verification.Editor
 		private static string SummariseAssets(GameWithAssetsResult result)
 		{
 			var total = result.Assets.Count;
-			if (total == 0) return "No generated assets.";
+			if (total == 0)
+			{
+				return "No generated assets.";
+			}
+
 			var ok = 0;
-			foreach (var a in result.Assets) if (a.Success) ok++;
+			foreach (var a in result.Assets)
+			{
+				if (a.Success)
+				{
+					ok++;
+				}
+			}
+
 			return $"Assets: {ok}/{total} generated.";
 		}
 
@@ -349,7 +378,9 @@ namespace Assembler.Generation.Verification.Editor
 						{
 							sb.AppendLine("build errors:");
 							foreach (var e in build.BuildResult.Errors)
+							{
 								sb.AppendLine("- " + e);
+							}
 						}
 						break;
 				}

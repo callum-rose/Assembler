@@ -52,8 +52,15 @@ namespace Editor
 
 			_entries.Sort((a, b) => string.Compare(a.Title, b.Title, System.StringComparison.OrdinalIgnoreCase));
 
-			if (_selectedIndex >= _entries.Count) _selectedIndex = _entries.Count - 1;
-			if (_selectedIndex < 0 && _entries.Count > 0) _selectedIndex = 0;
+			if (_selectedIndex >= _entries.Count)
+			{
+				_selectedIndex = _entries.Count - 1;
+			}
+
+			if (_selectedIndex < 0 && _entries.Count > 0)
+			{
+				_selectedIndex = 0;
+			}
 		}
 
 		private void AddEntriesFrom(string folder, string source, GameFileParser parser)

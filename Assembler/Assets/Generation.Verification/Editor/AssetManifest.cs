@@ -22,10 +22,16 @@ namespace Assembler.Generation.Verification.Editor
 		public static IReadOnlyList<AssetRequest> Extract(string? rawReply)
 		{
 			var result = new List<AssetRequest>();
-			if (string.IsNullOrWhiteSpace(rawReply)) return result;
+			if (string.IsNullOrWhiteSpace(rawReply))
+			{
+				return result;
+			}
 
 			var json = FencedBlockExtractor.Extract(rawReply!, "assets");
-			if (string.IsNullOrWhiteSpace(json)) return result;
+			if (string.IsNullOrWhiteSpace(json))
+			{
+				return result;
+			}
 
 			List<AssetEntryDto>? entries;
 			try
@@ -37,21 +43,41 @@ namespace Assembler.Generation.Verification.Editor
 				return result;
 			}
 
-			if (entries == null) return result;
+			if (entries == null)
+			{
+				return result;
+			}
 
 			foreach (var e in entries)
 			{
-				if (e == null) continue;
+				if (e == null)
+				{
+					continue;
+				}
 
 				var type = e.type;
 				var rawId = e.id;
 				var prompt = e.prompt;
-				if (string.IsNullOrWhiteSpace(type)) continue;
-				if (string.IsNullOrWhiteSpace(rawId)) continue;
-				if (string.IsNullOrWhiteSpace(prompt)) continue;
+				if (string.IsNullOrWhiteSpace(type))
+				{
+					continue;
+				}
+
+				if (string.IsNullOrWhiteSpace(rawId))
+				{
+					continue;
+				}
+
+				if (string.IsNullOrWhiteSpace(prompt))
+				{
+					continue;
+				}
 
 				var id = DescriptorFileWriter.Sanitise(rawId);
-				if (string.IsNullOrEmpty(id)) continue;
+				if (string.IsNullOrEmpty(id))
+				{
+					continue;
+				}
 
 				var path = SanitisePath(e.path) ?? id;
 
@@ -67,14 +93,20 @@ namespace Assembler.Generation.Verification.Editor
 		/// </summary>
 		private static string? SanitisePath(string? rawPath)
 		{
-			if (string.IsNullOrWhiteSpace(rawPath)) return null;
+			if (string.IsNullOrWhiteSpace(rawPath))
+			{
+				return null;
+			}
 
 			var segments = rawPath!.Replace('\\', '/').Split('/');
 			var clean = new List<string>();
 			foreach (var seg in segments)
 			{
 				var s = DescriptorFileWriter.Sanitise(seg);
-				if (!string.IsNullOrEmpty(s)) clean.Add(s);
+				if (!string.IsNullOrEmpty(s))
+				{
+					clean.Add(s);
+				}
 			}
 
 			return clean.Count == 0 ? null : string.Join("/", clean);
