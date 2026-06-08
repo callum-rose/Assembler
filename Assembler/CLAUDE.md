@@ -140,24 +140,24 @@ Example YAML game files are in `Assets/ExampleGameDescriptors/` (e.g. `Pong.yaml
 
 IDs for definitions (entities, behaviours, templates, variables, etc.) are promoted to YAML keys at the definition site rather than being a separate `id:` property — i.e. the mapping key *is* the identifier.
 
-## Determinism (Level 1)
+## Determinism (partially implemented — goal, not yet a guarantee)
 
-Assembler supports **deterministic execution and record/replay**: the same descriptor, seed, and input log reproduce a byte-identical run. This makes generated games debuggable (capture a session and replay it exactly) and testable (play a descriptor through a scripted input log and assert on the outcome).
+Deterministic execution and record/replay (same descriptor + seed + input log → identical run) is a **design goal** for Assembler, intended to make generated games debuggable (capture a session, replay it exactly) and testable (play a descriptor through a scripted input log and assert on the outcome). **It is only partially implemented today — there is currently no end-to-end determinism guarantee.** Do not write code that assumes a fixed-step clock, a seeded RNG, or replay infrastructure exists; the relevant types below are noted as present or missing.
 
-**The guarantee (Level 1 — same build, same machine):** given a fixed *seed*, *fixed delta time*, and *input log*, a descriptor produces identical execution **on the same build running on the same machine**. This is **NOT cross-platform lockstep** — floating-point and physics results may differ across CPUs, OSes, or Unity versions, so a replay captured on one machine is not guaranteed to reproduce on another.
+**What is in place today:**
 
-**Physics caveat:** physics-driven games are **excluded from the determinism guarantee**. Unity's `PhysicsScene` stepping is tied to the engine and not controlled here; manual `Physics.Simulate` is noted as future work. Treat physics as same-machine-best-effort only.
+1. **A clock abstraction** — `IGameClock` (`Assets/Time/`) is threaded through time-dependent behaviours and triggers (they read `Clock.DeltaTime` / `WaitForGameSeconds`, not `Time.deltaTime`). Only `RealtimeGameClock` (wall-clock delta) exists, so this is the *seam* for a future fixed-step clock, not a deterministic clock itself.
+2. **Stable iteration order** — `Assembler.Building.BehaviourRegistry` assigns each behaviour a `_registrationIndex` in registration order and sorts tag queries by it (`GetByEntityTag`/`GetByEntityTagAndBehaviourId` `OrderBy` the index; `GetByBehaviourTag` is List-backed and stable). Covered by `Tests/Behaviours/BehaviourRegistryOrderTests.cs`. This piece genuinely is deterministic.
 
-**Controlled nondeterminism sources:**
+**What is NOT yet implemented (despite earlier docs claiming otherwise):**
 
-1. **Time** → `FixedStepGameClock` advances a constant delta per tick (vs. `RealtimeGameClock`'s wall-clock delta).
-2. **Randomness** → a single seeded per-run PRNG (`DeterministicRng` / `RandomState`); `RandomMath` routes through it.
-3. **Iteration order** → a stable registration index in `BehaviourRegistry`. Queries that would otherwise iterate the unordered `_behaviours` dictionary (`GetByEntityTagAndBehaviourId`) sort by registration order; `GetByBehaviourTag` is already List-backed and stable.
-4. **Input** → record/replay at the trigger boundary (`InputTrigger.NotifyListeners` → `TriggerContext`), capturing the ordered set of `(trigger, emitted context)` per logical tick.
+- **`FixedStepGameClock`** — does not exist; there is no constant-delta-per-tick clock, and `Builder.Instantiate` always news up `RealtimeGameClock` with no injection seam.
+- **Seeded PRNG (`RandomState` / `DeterministicRng`)** — do not exist. `RandomMath` (`Assets/Libraries/RandomMath.cs`) calls `UnityEngine.Random` directly (the engine's **global, uncaptured** state), so randomness is **not** currently reproducible.
+- **Input record/replay** — there is no recorder/replay or input-log capture at the trigger boundary.
 
-**Ordering guarantees:** registration runs in stable entity/behaviour list order, so the registration index is deterministic. Within a single tick, the recorder captures an *ordered* activation list and replay re-injects in recorded order, so downstream behaviour is reproduced regardless of Unity's (unspecified) intra-frame `Update` order among equal-`DefaultExecutionOrder` components.
+**If/when implementing the full guarantee**, the intended shape is: a fixed-delta clock selected for deterministic runs, a single seeded per-run PRNG that `RandomMath` routes through (replacing the direct `UnityEngine.Random` calls), and record/replay at the trigger boundary (`InputTrigger.NotifyListeners` → `TriggerContext`) capturing the ordered `(trigger, emitted context)` set per tick. The target would be **Level 1 (same build, same machine)** only — not cross-platform lockstep (floating-point/physics differ across CPUs/OSes/Unity versions). Physics-driven games would remain excluded (Unity's `PhysicsScene` stepping isn't controlled here; manual `Physics.Simulate` is future work).
 
-**Rule — no raw `UnityEngine.Random` in behaviours:** behaviours and libraries must draw randomness through `RandomMath` / `RandomState.Current`, never `UnityEngine.Random` directly. Raw `UnityEngine.Random` reads the engine's global, uncaptured state and breaks replay determinism.
+**Convention to preserve now (forward-compatibility):** prefer routing randomness through `RandomMath` rather than calling `UnityEngine.Random` directly in behaviours/libraries — not because it is seeded today (it isn't), but so that a future seeded PRNG only needs to change one place. Note that `RandomMath` itself currently uses the global RNG and is the spot that must change.
 
 ## Workflow
 
