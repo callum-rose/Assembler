@@ -1,0 +1,4 @@
+# Files CSharpier should not format — third-party / vendored code we don't own the style of.
+# (check-format.sh already scopes CSharpier to Assets/, so Library/, Temp/, obj/, bin/ never appear.)
+Assets/Plugins
+Assets/TextMesh Pro
