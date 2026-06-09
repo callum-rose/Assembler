@@ -58,6 +58,7 @@ Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 | AngularDamping | float | Damping applied to angular velocity (Unity's Rigidbody.angularDamping). |
 | FreezePosition | Vector3 | Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z). |
 | FreezeRotation | Vector3 | Per-axis rotation freeze (any non-zero component locks that axis). |
+| CentreOfMass | Vector3 | Local-space centre of mass offset. Overrides Unity's auto-computed centre so the body rotates and balances about this point (e.g. push it back to spin a vehicle about its rear axle). Omit to keep the automatic centre. |
 
 ## `add force`
 Adds a continuous world-space force to the entity's Rigidbody when Executed (typically via a trigger).

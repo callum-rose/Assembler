@@ -59,9 +59,12 @@ Constants:
   turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
   grip speed: 3         # speed (units/sec) at which steering reaches full authority
   lateral grip: 1     # how fast sideways slide bleeds off (per sec); lower = longer, looser drifts
-  rear axle offset: 0.9 # distance (units) the pivot sits behind the car's centre; the car turns about
-                        # this rear-axle point (the wheels' arc) instead of spinning on the spot. Car is
-                        # 2 long, so 0.9 ≈ the rear axle. Larger = rear stays more planted, nose sweeps wider
+  # The car's centre of mass, pushed back along its local -Z (the rear). Unity spins
+  # the body about its centre of mass, so offsetting it to the rear axle makes the car
+  # turn about the rear wheels' arc — nose sweeps wide, tail tracks — like a real car
+  # instead of pivoting on the spot. Car is 2 long, so z=-0.9 ≈ the rear axle; push it
+  # further back (more negative) to plant the rear harder and sweep the nose wider.
+  com offset: !vec { X: 0, Y: 0, Z: -0.9 }
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
@@ -75,7 +78,11 @@ Variables:
 Expressions:
   # The car's new world-space velocity, set fresh every frame, built from the live
   # velocity decomposed against the car's heading into a forward and a lateral
-  # (sideways) component.
+  # (sideways) component. Because the rigidbody's centre of mass is pushed back to
+  # the rear axle (see the car's `rb` behaviour), Unity already spins the body about
+  # that rear-axle point — the velocity here is the rear axle's velocity, so this
+  # expression only has to manage forward drive and sideways grip; the turn geometry
+  # (nose sweeps wide, tail tracks) falls out of the offset centre of mass for free.
   #
   # The heading is the car's Y euler angle: Rotate2D turns the unit +Y vector into a
   # (sin, cos) pair we map onto the XZ ground plane to get the forward unit vector;
@@ -84,39 +91,26 @@ Expressions:
   # throttle-driven target — `top` forward, the weaker `reverse` backward — using
   # `accel`, or the stronger `brake` rate when the throttle opposes the motion.
   #
-  # The lateral component carries two effects, kept separate:
-  #  - Rear-axle pivot (`b`, kinematic): Unity spins the body about its centre, but
-  #    a real car turns about its rear axle (the arc its wheels trace). A body
-  #    yawing at rate omega about a pivot `b` behind the centre gives the centre a
-  #    matching sideways speed (-omega*b against `right`); adding exactly that makes
-  #    the rear axle roll along its own line while the nose sweeps wide — i.e. it
-  #    relocates the turn pivot from the centre back to the rear axle. omega is the
-  #    body's *actual* angular velocity (read from the rigidbody after `apply steer`
-  #    has set it this frame), so the coupling always matches the real spin.
-  #  - Drift (`grip`): the leftover lateral *beyond* that kinematic part is genuine
-  #    tyre slip. It is retained and only bled off gradually by `grip`, so cranking
-  #    the wheel at speed steps the tail out and the car slides until grip recovers.
-  # The new lateral velocity is the decayed slip plus the (undecayed) kinematic
-  # pivot term. dt makes every easing frame-rate independent.
+  # The lateral speed is the velocity projected onto `right` — the rear axle's
+  # sideways slip. It eases toward zero at the `grip` rate, so normally the rear
+  # grips and the car carves cleanly, but a low `grip` lets the tail step out and
+  # slide (a drift) before recovering. dt makes both easings frame-rate independent.
   drive velocity:
-    ArgumentTypes: [ vector, vector, vector, float, float, float, float, float, float, float, float ]
-    ArgumentNames: [ rotation, velocity, angVel, throttle, top, reverse, accel, brake, grip, b, dt ]
+    ArgumentTypes: [ vector, vector, float, float, float, float, float, float, float ]
+    ArgumentNames: [ rotation, velocity, throttle, top, reverse, accel, brake, grip, dt ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
       var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
       var forward = new Vector3(heading.x, 0f, heading.y);
       var right = new Vector3(forward.z, 0f, -forward.x);
-      var omega = angVel.y;
       var current = Dot(velocity, forward);
-      var kinematic = -omega * b;
-      var slip = Dot(velocity, right) - kinematic;
+      var lateral = Dot(velocity, right);
       var target = throttle >= 0f ? throttle * top : throttle * reverse;
       var ease = target * current < 0f ? brake : accel;
       var next = Lerp(current, target, Clamp01(ease * dt));
-      var keptSlip = Lerp(slip, 0f, Clamp01(grip * dt));
-      var lateral = keptSlip + kinematic;
-      return AddVector(ScaleVector(forward, next), ScaleVector(right, lateral));
+      var keptLateral = Lerp(lateral, 0f, Clamp01(grip * dt));
+      return AddVector(ScaleVector(forward, next), ScaleVector(right, keptLateral));
 
   # Desired yaw angular velocity (rad/s about +Y) from the move action's x (steer,
   # in [-1, 1]). Authority ramps in with the car's total speed (the live velocity's
@@ -183,22 +177,20 @@ Entities:
           AngularDamping: 0       # yaw is set directly, not accumulated via torque
           FreezePosition: !vec { X: 0, Y: 1, Z: 0 }   # pin to the ground plane
           FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }   # upright; only yaw is free
+          CentreOfMass: !var com offset               # pivot about the rear axle, not the centre
 
       # --- Input: one value action drives both throttle (y) and steering (x).
       # It fires every frame with the current stick/key values (zero included), so
       # both the velocity and the steering are recomputed each frame — which is why
       # the car coasts to a stop when the throttle is released.
-      # `apply steer` runs FIRST so it sets the body's angular velocity, then
-      # `apply drive` reads that fresh yaw rate to place the turn pivot at the rear
-      # axle (see `drive velocity`). Keep this order.
       drive input:
         Type: input action
         Properties: { Action: move }
         Listeners:
           - EntityId: car
-            BehaviourId: apply steer
-          - EntityId: car
             BehaviourId: apply drive
+          - EntityId: car
+            BehaviourId: apply steer
       apply drive:
         Type: set velocity
         Properties:
@@ -207,14 +199,12 @@ Entities:
             With:
               - !entity { Id: car, Property: Rotation }
               - !rigidbody { Id: car, Property: Velocity }
-              - !rigidbody { Id: car, Property: AngularVelocity }
               - !output y
               - !var max speed
               - !var reverse max
               - !var accel
               - !var brake
               - !var lateral grip
-              - !var rear axle offset
               - !clock deltaTime
       apply steer:
         Type: set angular velocity
