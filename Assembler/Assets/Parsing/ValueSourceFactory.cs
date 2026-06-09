@@ -102,6 +102,10 @@ namespace Assembler.Parsing
 					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
 				EntityPropertyRef entityPropertyRef => throw new ParsingException(
 					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
+				RigidbodyPropertyRef rigidbodyPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
+					new RigidbodyPropertySource<T>(rigidbodyPropertyRef.Id, rigidbodyPropertyRef.Property),
+				RigidbodyPropertyRef rigidbodyPropertyRef => throw new ParsingException(
+					$"!rigidbody '{rigidbodyPropertyRef.Id}' property '{rigidbodyPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
 					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
 					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),

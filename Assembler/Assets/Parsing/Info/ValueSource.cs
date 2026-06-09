@@ -57,6 +57,11 @@ namespace Assembler.Parsing.Info
 	/// <c>!entity</c> tag (resolved live each read). <typeparamref name="T"/> must be <c>Vector3</c>.</summary>
 	public sealed record EntityPropertySource<T>(string EntityId, EntityProperty Property) : ValueSource<T>;
 
+	/// <summary>A physics property (velocity/angular velocity/position) sourced from an entity's
+	/// <c>Rigidbody</c> by id via the <c>!rigidbody</c> tag (resolved live each read).
+	/// <typeparamref name="T"/> must be <c>Vector3</c>.</summary>
+	public sealed record RigidbodyPropertySource<T>(string EntityId, RigidbodyProperty Property) : ValueSource<T>;
+
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
 
 	/// <summary>Properties exposed by the game clock to descriptor expressions via the <c>!clock</c> tag.</summary>

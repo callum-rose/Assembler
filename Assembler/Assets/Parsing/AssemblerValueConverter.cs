@@ -77,6 +77,7 @@ namespace Assembler.Parsing
 				(VarRefDto v, { ResolvedValues: null }) => new VarRef(v.Id ?? string.Empty),
 				(AssetRefDto v, { ResolvedValues: null }) => new AssetRef(v.Id ?? string.Empty),
 				(EntityRefDto v, { ResolvedValues: null }) => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
+				(RigidbodyRefDto v, { ResolvedValues: null }) => new RigidbodyPropertyRef(v.Id ?? string.Empty, ParseRigidbodyProperty(v.Property)),
 				(ClockRefDto v, { ResolvedValues: null }) => new ClockRef(v.Property ?? string.Empty),
 				(OutputRefDto v, { ResolvedValues: null }) => new OutputRef(v.Id ?? string.Empty),
 				(ParamRefDto v, { ResolvedValues: null }) => new ParamRef(v.Id ?? string.Empty),
@@ -166,6 +167,16 @@ namespace Assembler.Parsing
 				"scale" => EntityProperty.Scale,
 				_ => throw new ParsingException(
 					$"Unknown !entity property '{property}'. Expected one of: Position, Rotation, Scale")
+			};
+
+		private static RigidbodyProperty ParseRigidbodyProperty(string? property) =>
+			(property ?? string.Empty).Trim().ToLowerInvariant() switch
+			{
+				"velocity" => RigidbodyProperty.Velocity,
+				"angularvelocity" => RigidbodyProperty.AngularVelocity,
+				"position" => RigidbodyProperty.Position,
+				_ => throw new ParsingException(
+					$"Unknown !rigidbody property '{property}'. Expected one of: Velocity, AngularVelocity, Position")
 			};
 
 		public static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)

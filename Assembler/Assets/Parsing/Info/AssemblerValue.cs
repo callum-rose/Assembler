@@ -50,6 +50,19 @@ namespace Assembler.Parsing.Info
 	/// rotation, scale) off an entity by id at runtime. Resolves to a live <c>Vector3</c>.</summary>
 	public sealed record EntityPropertyRef(string Id, EntityProperty Property) : AssemblerRef(Id);
 
+	/// <summary>A physics property exposed by the <c>!rigidbody { Id, Property }</c> tag.</summary>
+	public enum RigidbodyProperty
+	{
+		Velocity,
+		AngularVelocity,
+		Position
+	}
+
+	/// <summary>A <c>!rigidbody { Id, Property }</c> reference — reads a physics property (velocity,
+	/// angular velocity, position) off an entity's <c>Rigidbody</c> by id at runtime. Resolves to a
+	/// live <c>Vector3</c> (zero when the entity has no rigidbody).</summary>
+	public sealed record RigidbodyPropertyRef(string Id, RigidbodyProperty Property) : AssemblerRef(Id);
+
 	/// <summary>A <c>!clock &lt;property&gt;</c> reference (e.g. <c>!clock deltaTime</c>), resolved at
 	/// runtime against the injected game clock. Carries the requested property name verbatim.</summary>
 	public sealed record ClockRef(string Property) : AssemblerValue;
