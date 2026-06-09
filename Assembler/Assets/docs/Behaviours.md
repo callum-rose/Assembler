@@ -618,13 +618,15 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 | other_position | Vector3 | Other entity's world position. |
 
 ## `spawner`
-Spawns an instance of a named template at a position when Executed.
+Spawns an instance of a template at a position when Executed.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TemplateId | string | Id of the template to instantiate. |
+| TemplateId | string | Id of the template to instantiate. Used as a fallback when Templates is empty. |
+| Templates | IReadOnlyList<SpawnTemplateInfo> | Optional list of template ids (or { Template, Weight } maps); one is chosen per spawn. Takes precedence over TemplateId when non-empty. |
+| Selection | string | How Templates is sampled: 'random' (weighted, the default) or 'sequential' (round-robin in list order; weights ignored). |
 | Position | Vector3 | World-space position for the spawned entity. |
 | Rotation | Vector3 | Euler rotation in degrees for the spawned entity. |
 | Parameters | IReadOnlyDictionary<string, ValueSource<object>> | Optional name→value overrides forwarded to the template's parameter slots. |
