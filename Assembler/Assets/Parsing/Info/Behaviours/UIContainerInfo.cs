@@ -18,11 +18,11 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Direction")),
-				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Spacing")),
-				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Padding")),
-				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("ChildAlignment")),
-				Transformer.CreateOptionalValueSource<bool>(ctx, props.GetValueOrDefault("FitContent")));
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Direction")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Spacing")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Padding")),
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("ChildAlignment")),
+				ValueSourceFactory.CreateOptionalValueSource<bool>(ctx, props.GetValueOrDefault("FitContent")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

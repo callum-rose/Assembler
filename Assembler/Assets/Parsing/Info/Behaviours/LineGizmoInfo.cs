@@ -16,9 +16,9 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
-				Transformer.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")));
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
+				ValueSourceFactory.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

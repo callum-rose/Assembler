@@ -14,8 +14,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MinDistance")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxDuration")));
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("MinDistance")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxDuration")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

@@ -16,8 +16,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Min")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Max")));
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Min")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Max")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

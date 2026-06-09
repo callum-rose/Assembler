@@ -12,7 +12,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Force")));
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Force")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

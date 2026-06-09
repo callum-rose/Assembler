@@ -15,8 +15,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("XAxis")),
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("YAxis")));
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("XAxis")),
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("YAxis")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

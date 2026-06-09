@@ -384,7 +384,7 @@ namespace Assembler.Compiler.Compiler
 				body = Expression.Block(body, Expression.Empty());
 			}
 
-			var delegateType = GetDelegateType(returnType, parameters.Select(p => p.type).ToArray());
+			var delegateType = DelegateTypeHelper.GetDelegateType(returnType, parameters.Select(p => p.type).ToArray());
 			var lambda = Expression.Lambda(delegateType, body, paramExprs);
 			var compiled = lambda.Compile();
 
@@ -452,84 +452,6 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			return null;
-		}
-
-		private MethodInfo MakeConcreteGenericMethod(MethodInfo genericMethod, Type instanceType, Type[] argTypes)
-		{
-			// This method attempts to resolve generic type parameters for extension methods
-			// Common case: List<int>.Where(x => ...) where Where is defined as Where<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate)
-			// Complex case: List<int>.Select(x => x * 2) where Select is defined as Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector)
-
-			var genericArgs = genericMethod.GetGenericArguments();
-			var typeMap = new Dictionary<Type, Type>();
-
-			// Try to infer generic types from the instance type (the 'this' parameter)
-			var firstParam = genericMethod.GetParameters()[0];
-			if (firstParam.ParameterType.IsGenericParameter)
-			{
-				// Simple case: this T source
-				typeMap[firstParam.ParameterType] = instanceType;
-			}
-			else if (firstParam.ParameterType.IsGenericType)
-			{
-				// Complex case: this IEnumerable<T> source
-				var paramGenericDef = firstParam.ParameterType.GetGenericTypeDefinition();
-
-				// Find matching interface on instance type
-				Type? matchingInterface = null;
-				if (instanceType.IsGenericType && instanceType.GetGenericTypeDefinition() == paramGenericDef)
-				{
-					matchingInterface = instanceType;
-				}
-				else
-				{
-					foreach (var iface in instanceType.GetInterfaces())
-					{
-						if (iface.IsGenericType && iface.GetGenericTypeDefinition() == paramGenericDef)
-						{
-							matchingInterface = iface;
-							break;
-						}
-					}
-				}
-
-				if (matchingInterface != null)
-				{
-					var paramGenericArgs = firstParam.ParameterType.GetGenericArguments();
-					var ifaceGenericArgs = matchingInterface.GetGenericArguments();
-
-					for (int i = 0; i < paramGenericArgs.Length && i < ifaceGenericArgs.Length; i++)
-					{
-						if (paramGenericArgs[i].IsGenericParameter)
-						{
-							typeMap[paramGenericArgs[i]] = ifaceGenericArgs[i];
-						}
-					}
-				}
-			}
-
-			// Try to infer from lambda return types
-			// We need to look at the actual argument expressions to check if they're lambdas
-			// Unfortunately we only have argTypes here, but lambdas show up as LambdaExpression type
-			// We'll need to pass the actual arguments, not just types
-			// For now, use the lambdas we already parsed if argTypes contains LambdaExpression
-
-			// Build the concrete type arguments array
-			var concreteTypes = new Type[genericArgs.Length];
-			for (int i = 0; i < genericArgs.Length; i++)
-			{
-				if (typeMap.TryGetValue(genericArgs[i], out var mappedType))
-				{
-					concreteTypes[i] = mappedType;
-				}
-				else
-				{
-					// Couldn't infer - this might fail, but let's try with object as fallback
-					concreteTypes[i] = typeof(object);
-				}
-			}
-
-			return genericMethod.MakeGenericMethod(concreteTypes);
 		}
 
 		private MethodInfo MakeConcreteGenericMethodWithArgs(MethodInfo genericMethod, Type instanceType, List<Expression> arguments)
@@ -701,33 +623,16 @@ namespace Assembler.Compiler.Compiler
 				   type == typeof(float) || type == typeof(double) || type == typeof(decimal);
 		}
 
-		private Type GetDelegateType(Type returnType, Type[] parameterTypes)
-		{
-			if (returnType == typeof(void))
-			{
-				return parameterTypes.Length switch
-				{
-					0 => typeof(Action),
-					1 => typeof(Action<>).MakeGenericType(parameterTypes),
-					2 => typeof(Action<,>).MakeGenericType(parameterTypes),
-					3 => typeof(Action<,,>).MakeGenericType(parameterTypes),
-					_ => throw new NotSupportedException()
-				};
-			}
-
-			var allTypes = parameterTypes.Append(returnType).ToArray();
-			return allTypes.Length switch
-			{
-				1 => typeof(Func<>).MakeGenericType(allTypes),
-				2 => typeof(Func<,>).MakeGenericType(allTypes),
-				3 => typeof(Func<,,>).MakeGenericType(allTypes),
-				4 => typeof(Func<,,,>).MakeGenericType(allTypes),
-				_ => throw new NotSupportedException()
-			};
-		}
-
 		private Expression ParseStatement()
 		{
+			// A registered/resolvable type name used in declaration position (e.g. `Vector3 dir = ...;`)
+			// looks like a bare identifier to the lexer, so disambiguate it from an expression statement
+			// with lookahead before falling through to the keyword cases below.
+			if (Current.Type == TokenType.Identifier && IsTypedDeclaration())
+			{
+				return ParseVariableDeclaration();
+			}
+
 			return Current.Type switch
 			{
 				TokenType.If => ParseIf(),
@@ -745,6 +650,53 @@ namespace Assembler.Compiler.Compiler
 				TokenType.LeftBrace => ParseBlock(),
 				_ => ParseExpressionStatement()
 			};
+		}
+
+		// Looks ahead (without consuming tokens) to decide whether the current identifier begins a typed
+		// local declaration: a resolvable type name (possibly dotted, e.g. `UnityEngine.Vector3`) followed
+		// by a variable name and then `=` or `;`. Requiring the type to resolve keeps expression statements
+		// like `foo.bar = x;` from being misread as declarations.
+		private bool IsTypedDeclaration()
+		{
+			var savedPosition = _position;
+			try
+			{
+				if (Current.Type != TokenType.Identifier)
+				{
+					return false;
+				}
+
+				var typeName = Current.Value;
+				Advance();
+
+				while (Current.Type == TokenType.Dot)
+				{
+					Advance();
+					if (Current.Type != TokenType.Identifier)
+					{
+						return false;
+					}
+					typeName += "." + Current.Value;
+					Advance();
+				}
+
+				if (Current.Type != TokenType.Identifier)
+				{
+					return false;
+				}
+				Advance();
+
+				if (Current.Type != TokenType.Assign && Current.Type != TokenType.Semicolon)
+				{
+					return false;
+				}
+
+				return TryResolveType(typeName) != null;
+			}
+			finally
+			{
+				_position = savedPosition;
+			}
 		}
 
 		private Expression ParseBlock()
@@ -959,12 +911,40 @@ namespace Assembler.Compiler.Compiler
 			return Expression.Continue(_continueLabels.Peek());
 		}
 
+		// Parses the declared type of a local: a built-in keyword (`var`/`int`/`float`/…) or a resolvable
+		// type name (possibly dotted, e.g. `UnityEngine.Vector3`). `var` resolves to object here and is
+		// inferred from the initializer by the caller.
+		private Type ParseDeclarationType()
+		{
+			if (Current.Type is TokenType.Var
+				or TokenType.Int
+				or TokenType.String_
+				or TokenType.Bool
+				or TokenType.Float
+				or TokenType.Double)
+			{
+				var typeToken = Current;
+				Advance();
+				return GetTypeFromToken(typeToken.Type);
+			}
+
+			var typeNameToken = Expect(TokenType.Identifier);
+			var typeName = typeNameToken.Value;
+
+			while (Current.Type == TokenType.Dot)
+			{
+				Match(TokenType.Dot);
+				typeName += "." + Expect(TokenType.Identifier).Value;
+			}
+
+			return TryResolveType(typeName)
+				?? throw Error($"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					typeNameToken);
+		}
+
 		private Expression ParseVariableDeclaration()
 		{
-			var typeToken = Current;
-			Advance();
-
-			var type = GetTypeFromToken(typeToken.Type);
+			var type = ParseDeclarationType();
 
 			var name = Expect(TokenType.Identifier).Value;
 
@@ -1248,6 +1228,60 @@ namespace Assembler.Compiler.Compiler
 			var memberToken = Expect(TokenType.Identifier);
 			var memberName = memberToken.Value;
 
+			// Static member / namespace-sentinel access (e.g. UnityEngine.Random.Range(...)).
+			var staticAccess = ResolveStaticTypeContext(instance, memberName);
+			if (staticAccess != null)
+			{
+				return staticAccess;
+			}
+
+			// Method call
+			if (Current.Type == TokenType.LeftParen)
+			{
+				Match(TokenType.LeftParen);
+
+				// Gather candidate methods up front to provide type context for lambda arguments.
+				var instanceMethods = instance.Type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+					.Where(m => m.Name == memberName).ToList();
+
+				List<MethodInfo> extensionMethods = new();
+				if (_availableMethods.TryGetValue(memberName, out var registeredMethods))
+				{
+					extensionMethods = registeredMethods
+						.Where(m => m.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
+						.Where(m => m.GetParameters().Length > 0)
+						.ToList();
+				}
+
+				var arguments = ParseCallArguments(instance, instanceMethods, extensionMethods);
+
+				Expect(TokenType.RightParen);
+
+				var method = FindAndValidateMethod(instance, memberName, memberToken, arguments, out var isExtensionMethod);
+				var convertedArgs = ConvertArguments(method, arguments, isExtensionMethod);
+
+				return isExtensionMethod
+					? Expression.Call(null, method, new[] { instance }.Concat(convertedArgs))
+					: Expression.Call(instance, method, convertedArgs);
+			}
+
+			// Assignment to member
+			if (Match(TokenType.Assign))
+			{
+				var value = ParseExpression();
+				var member = Expression.PropertyOrField(instance, memberName);
+				return Expression.Assign(member, value);
+			}
+
+			// Property or field access
+			return Expression.PropertyOrField(instance, memberName);
+		}
+
+		// Resolves static member / namespace-sentinel access. Returns the resulting expression when the
+		// instance is a Type or namespace sentinel, or null when it is an ordinary instance to be handled
+		// by the caller.
+		private Expression? ResolveStaticTypeContext(Expression instance, string memberName)
+		{
 			// Detect "type sentinel" used for static member access (e.g. UnityEngine.Random.Range(...)).
 			// ParsePrimary returns Expression.Constant(type, typeof(Type)) when an identifier resolves to a Type.
 			Type? staticTargetType = null;
@@ -1258,7 +1292,7 @@ namespace Assembler.Compiler.Compiler
 
 			// Handle nested type / namespace continuation (e.g. UnityEngine.Random where UnityEngine alone
 			// isn't a Type yet). If we have a "namespace sentinel", the previous step stored the partial
-			// dotted name in _pendingNamespacePrefix; try to resolve again with the new segment.
+			// dotted name in the sentinel string; try to resolve again with the new segment.
 			if (staticTargetType == null && instance is ConstantExpression ns && ns.Type == typeof(string) &&
 				ns.Value is string nsPrefix && nsPrefix.StartsWith("__ns:"))
 			{
@@ -1273,240 +1307,214 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			// Static member access on a resolved Type.
-			if (staticTargetType != null)
+			return staticTargetType != null ? ParseStaticMemberAccess(staticTargetType, memberName) : null;
+		}
+
+		// Parses the comma-separated argument list of a method call (caller has already consumed '('),
+		// inferring lambda parameter types from the candidate method signatures.
+		private List<Expression> ParseCallArguments(Expression instance, List<MethodInfo> instanceMethods,
+			List<MethodInfo> extensionMethods)
+		{
+			var arguments = new List<Expression>();
+
+			if (Current.Type != TokenType.RightParen)
 			{
-				return ParseStaticMemberAccess(staticTargetType, memberName);
-			}
-
-			// Check if it's a method call
-			if (Current.Type == TokenType.LeftParen)
-			{
-				Match(TokenType.LeftParen);
-
-				// Find potential methods first to provide type context for lambdas
-				MethodInfo? candidateInstanceMethod = null;
-				MethodInfo? candidateExtensionMethod = null;
-
-				// Try instance method first
-				var instanceMethods = instance.Type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-					.Where(m => m.Name == memberName).ToList();
-
-				// Try extension methods
-				List<MethodInfo> extensionMethods = new();
-				if (_availableMethods.TryGetValue(memberName, out var registeredMethods))
+				do
 				{
-					extensionMethods = registeredMethods
-						.Where(m => m.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
-						.Where(m => m.GetParameters().Length > 0)
-						.ToList();
-				}
-
-				var arguments = new List<Expression>();
-
-				if (Current.Type != TokenType.RightParen)
-				{
-					do
+					// Check if this is a lambda expression
+					if (Current.Type == TokenType.Identifier && PeekNextToken()?.Type == TokenType.Arrow)
 					{
-						// Check if this is a lambda expression
-						if (Current.Type == TokenType.Identifier && PeekNextToken()?.Type == TokenType.Arrow)
-						{
-							// This is a lambda - try to infer its type from method signature
-							Type? lambdaParamType = null;
-							int argIndex = arguments.Count;
-
-							// Try to infer from extension methods first
-							foreach (var extMethod in extensionMethods)
-							{
-								var extParams = extMethod.GetParameters();
-								if (extParams.Length > argIndex + 1) // +1 because first param is 'this'
-								{
-									var paramType = extParams[argIndex + 1].ParameterType;
-
-									// Handle generic types
-									if (paramType.IsGenericParameter)
-									{
-										// This is a generic parameter like TFunc - try to find the concrete type
-										// For List<int>.Where(x => ...), the TSource should be int
-										var elementType = GetEnumerableElementType(instance.Type);
-										if (elementType != null)
-										{
-											lambdaParamType = elementType;
-											break;
-										}
-									}
-									else if (paramType.IsGenericType)
-									{
-										var genDef = paramType.GetGenericTypeDefinition();
-										if (genDef == typeof(Func<,>) || genDef == typeof(Func<,,>))
-										{
-											var genArgs = paramType.GetGenericArguments();
-											// First generic argument is the parameter type for the lambda
-											if (genArgs.Length >= 1)
-											{
-												if (genArgs[0].IsGenericParameter)
-												{
-													// Resolve generic parameter from instance type
-													var elementType = GetEnumerableElementType(instance.Type);
-													if (elementType != null)
-													{
-														lambdaParamType = elementType;
-														break;
-													}
-												}
-												else
-												{
-													lambdaParamType = genArgs[0];
-													break;
-												}
-											}
-										}
-									}
-								}
-							}
-
-							// Try instance methods if no extension method matched
-							if (lambdaParamType == null)
-							{
-								foreach (var instMethod in instanceMethods)
-								{
-									var instParams = instMethod.GetParameters();
-									if (instParams.Length > argIndex)
-									{
-										var paramType = instParams[argIndex].ParameterType;
-										if (paramType.IsGenericType)
-										{
-											var genDef = paramType.GetGenericTypeDefinition();
-											if (genDef == typeof(Func<,>) || genDef == typeof(Func<,,>))
-											{
-												var genArgs = paramType.GetGenericArguments();
-												if (genArgs.Length >= 1)
-												{
-													lambdaParamType = genArgs[0];
-													break;
-												}
-											}
-										}
-									}
-								}
-							}
-
-							arguments.Add(ParseLambdaWithType(lambdaParamType));
-						}
-						else
-						{
-							arguments.Add(ParseExpression());
-						}
-					}
-					while (Match(TokenType.Comma));
-				}
-
-				Expect(TokenType.RightParen);
-
-				// Try to find instance method
-				var argTypes = arguments.Select(a => a.Type).ToArray();
-				var method = instance.Type.GetMethod(memberName, BindingFlags.Public | BindingFlags.Instance, null, argTypes, null);
-
-				bool isExtensionMethod = false;
-				if (method == null)
-				{
-					// Try to find extension method - use better matching that considers lambda parameter counts
-					method = FindBestExtensionMethod(instance.Type, memberName, arguments);
-
-					if (method != null)
-					{
-						isExtensionMethod = true;
-
-						// If it's a generic method definition, make it concrete
-						if (method.IsGenericMethodDefinition)
-						{
-							method = MakeConcreteGenericMethodWithArgs(method, instance.Type, arguments);
-						}
+						var lambdaParamType =
+							InferLambdaParameterType(instance, instanceMethods, extensionMethods, arguments.Count);
+						arguments.Add(ParseLambdaWithType(lambdaParamType));
 					}
 					else
 					{
-						throw Error($"Method '{memberName}' not found on type '{instance.Type.Name}'", memberToken);
+						arguments.Add(ParseExpression());
 					}
 				}
+				while (Match(TokenType.Comma));
+			}
 
-				// Convert arguments if needed (NOW that we have the concrete method)
-				var parameters = method.GetParameters();
-				var convertedArgs = new List<Expression>();
+			return arguments;
+		}
 
-				// For extension methods, the first parameter is the instance (this parameter)
-				int startIndex = isExtensionMethod ? 1 : 0;
-
-				for (int i = 0; i < arguments.Count; i++)
+		// Infers the parameter type for a lambda argument at argIndex from extension- then instance-method
+		// signatures (e.g. List<int>.Where(x => ...) infers x as int). Returns null when it can't be inferred.
+		private Type? InferLambdaParameterType(Expression instance, List<MethodInfo> instanceMethods,
+			List<MethodInfo> extensionMethods, int argIndex)
+		{
+			// Try to infer from extension methods first
+			foreach (var extMethod in extensionMethods)
+			{
+				var extParams = extMethod.GetParameters();
+				if (extParams.Length > argIndex + 1) // +1 because first param is 'this'
 				{
-					var targetParamType = parameters[i + startIndex].ParameterType;
-					var arg = arguments[i];
+					var paramType = extParams[argIndex + 1].ParameterType;
 
-					// Special handling for lambda expressions
-					if (arg is LambdaExpression lambdaExpr)
+					// Handle generic types
+					if (paramType.IsGenericParameter)
 					{
-						// Re-create the lambda with the correct delegate type
-						if (targetParamType.IsSubclassOf(typeof(Delegate)) || targetParamType == typeof(Delegate))
+						// This is a generic parameter like TFunc - try to find the concrete type
+						// For List<int>.Where(x => ...), the TSource should be int
+						var elementType = GetEnumerableElementType(instance.Type);
+						if (elementType != null)
 						{
-							// Validate parameter count matches
-							var invokeMethod = targetParamType.GetMethod("Invoke");
-							if (invokeMethod != null && invokeMethod.GetParameters().Length == lambdaExpr.Parameters.Count)
+							return elementType;
+						}
+					}
+					else if (paramType.IsGenericType)
+					{
+						var genDef = paramType.GetGenericTypeDefinition();
+						if (genDef == typeof(Func<,>) || genDef == typeof(Func<,,>))
+						{
+							var genArgs = paramType.GetGenericArguments();
+							// First generic argument is the parameter type for the lambda
+							if (genArgs.Length >= 1)
 							{
-								var lambdaBody = lambdaExpr.Body;
-
-								// Check if return type needs conversion
-								if (invokeMethod.ReturnType != lambdaBody.Type)
+								if (genArgs[0].IsGenericParameter)
 								{
-									if (invokeMethod.ReturnType.IsAssignableFrom(lambdaBody.Type))
+									// Resolve generic parameter from instance type
+									var elementType = GetEnumerableElementType(instance.Type);
+									if (elementType != null)
 									{
-										lambdaBody = Expression.Convert(lambdaBody, invokeMethod.ReturnType);
-									}
-									else if (IsNumericType(lambdaBody.Type) && IsNumericType(invokeMethod.ReturnType))
-									{
-										lambdaBody = Expression.Convert(lambdaBody, invokeMethod.ReturnType);
+										return elementType;
 									}
 								}
+								else
+								{
+									return genArgs[0];
+								}
+							}
+						}
+					}
+				}
+			}
 
-								convertedArgs.Add(Expression.Lambda(targetParamType, lambdaBody, lambdaExpr.Parameters));
-							}
-							else
+			// Try instance methods if no extension method matched
+			foreach (var instMethod in instanceMethods)
+			{
+				var instParams = instMethod.GetParameters();
+				if (instParams.Length > argIndex)
+				{
+					var paramType = instParams[argIndex].ParameterType;
+					if (paramType.IsGenericType)
+					{
+						var genDef = paramType.GetGenericTypeDefinition();
+						if (genDef == typeof(Func<,>) || genDef == typeof(Func<,,>))
+						{
+							var genArgs = paramType.GetGenericArguments();
+							if (genArgs.Length >= 1)
 							{
-								// Can't convert - parameter count mismatch
-								convertedArgs.Add(arg);
+								return genArgs[0];
 							}
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+
+		// Resolves the target method for a call: instance method first, then extension method (made concrete
+		// if it's a generic definition). Throws when no overload matches.
+		private MethodInfo FindAndValidateMethod(Expression instance, string memberName, Token memberToken,
+			List<Expression> arguments, out bool isExtensionMethod)
+		{
+			isExtensionMethod = false;
+
+			// Try to find instance method
+			var argTypes = arguments.Select(a => a.Type).ToArray();
+			var method = instance.Type.GetMethod(memberName, BindingFlags.Public | BindingFlags.Instance, null, argTypes, null);
+
+			if (method == null)
+			{
+				// Try to find extension method - use better matching that considers lambda parameter counts
+				method = FindBestExtensionMethod(instance.Type, memberName, arguments);
+
+				if (method != null)
+				{
+					isExtensionMethod = true;
+
+					// If it's a generic method definition, make it concrete
+					if (method.IsGenericMethodDefinition)
+					{
+						method = MakeConcreteGenericMethodWithArgs(method, instance.Type, arguments);
+					}
+				}
+				else
+				{
+					throw Error($"Method '{memberName}' not found on type '{instance.Type.Name}'", memberToken);
+				}
+			}
+
+			return method;
+		}
+
+		// Converts call arguments to their target parameter types now that the concrete method is known,
+		// re-creating lambdas with the correct delegate type and inserting numeric/reference conversions.
+		private List<Expression> ConvertArguments(MethodInfo method, List<Expression> arguments, bool isExtensionMethod)
+		{
+			var parameters = method.GetParameters();
+			var convertedArgs = new List<Expression>();
+
+			// For extension methods, the first parameter is the instance (this parameter)
+			int startIndex = isExtensionMethod ? 1 : 0;
+
+			for (int i = 0; i < arguments.Count; i++)
+			{
+				var targetParamType = parameters[i + startIndex].ParameterType;
+				var arg = arguments[i];
+
+				// Special handling for lambda expressions
+				if (arg is LambdaExpression lambdaExpr)
+				{
+					// Re-create the lambda with the correct delegate type
+					if (targetParamType.IsSubclassOf(typeof(Delegate)) || targetParamType == typeof(Delegate))
+					{
+						// Validate parameter count matches
+						var invokeMethod = targetParamType.GetMethod("Invoke");
+						if (invokeMethod != null && invokeMethod.GetParameters().Length == lambdaExpr.Parameters.Count)
+						{
+							var lambdaBody = lambdaExpr.Body;
+
+							// Check if return type needs conversion
+							if (invokeMethod.ReturnType != lambdaBody.Type)
+							{
+								if (invokeMethod.ReturnType.IsAssignableFrom(lambdaBody.Type))
+								{
+									lambdaBody = Expression.Convert(lambdaBody, invokeMethod.ReturnType);
+								}
+								else if (IsNumericType(lambdaBody.Type) && IsNumericType(invokeMethod.ReturnType))
+								{
+									lambdaBody = Expression.Convert(lambdaBody, invokeMethod.ReturnType);
+								}
+							}
+
+							convertedArgs.Add(Expression.Lambda(targetParamType, lambdaBody, lambdaExpr.Parameters));
 						}
 						else
 						{
+							// Can't convert - parameter count mismatch
 							convertedArgs.Add(arg);
 						}
-					}
-					else if (arg.Type != targetParamType)
-					{
-						convertedArgs.Add(Expression.Convert(arg, targetParamType));
 					}
 					else
 					{
 						convertedArgs.Add(arg);
 					}
 				}
-
-				// For extension methods, add instance as first argument
-				if (isExtensionMethod)
+				else if (arg.Type != targetParamType)
 				{
-					return Expression.Call(null, method, new[] { instance }.Concat(convertedArgs));
+					convertedArgs.Add(Expression.Convert(arg, targetParamType));
 				}
-
-				return Expression.Call(instance, method, convertedArgs);
+				else
+				{
+					convertedArgs.Add(arg);
+				}
 			}
 
-			// Check for assignment to member
-			if (Match(TokenType.Assign))
-			{
-				var value = ParseExpression();
-				var member = Expression.PropertyOrField(instance, memberName);
-				return Expression.Assign(member, value);
-			}
-
-			// Property or field access
-			return Expression.PropertyOrField(instance, memberName);
+			return convertedArgs;
 		}
 
 		private MethodInfo? FindBestExtensionMethod(Type instanceType, string methodName, List<Expression> arguments)

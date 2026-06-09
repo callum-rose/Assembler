@@ -13,7 +13,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.ConvertStringList(props.GetValueOrDefault("TagsToDetect")));
+				ValueSourceFactory.ConvertStringList(props.GetValueOrDefault("TagsToDetect")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

@@ -47,7 +47,7 @@ namespace Assembler.Parsing.Info
 	{
 		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
 			ctx.Parameters.TryGetValue(ParameterId, out var raw)
-				? Transformer.CreateValueSource<T>(ctx, raw)
+				? ValueSourceFactory.CreateValueSource<T>(ctx, raw)
 				: throw new ParsingException($"Parameter '{ParameterId}' not supplied during template instantiation");
 	}
 

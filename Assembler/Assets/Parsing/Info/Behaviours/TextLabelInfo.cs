@@ -17,10 +17,10 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Text")),
-				Transformer.CreateOptionalValueSource<int>(ctx, props.GetValueOrDefault("FontSize")),
-				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
-				Transformer.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Text")),
+				ValueSourceFactory.CreateOptionalValueSource<int>(ctx, props.GetValueOrDefault("FontSize")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
