@@ -88,11 +88,11 @@ Expressions:
   #  - Rear-axle pivot (`b`, kinematic): Unity spins the body about its centre, but
   #    a real car turns about its rear axle (the arc its wheels trace). A body
   #    yawing at rate omega about a pivot `b` behind the centre gives the centre a
-  #    sideways speed of omega*b; adding exactly that makes the rear axle roll along
-  #    its own line while the nose sweeps wide — i.e. it relocates the turn pivot
-  #    from the centre back to the rear axle. omega is the body's *actual* angular
-  #    velocity (read from the rigidbody after `apply steer` has set it this frame),
-  #    so the coupling always matches the real spin.
+  #    matching sideways speed (-omega*b against `right`); adding exactly that makes
+  #    the rear axle roll along its own line while the nose sweeps wide — i.e. it
+  #    relocates the turn pivot from the centre back to the rear axle. omega is the
+  #    body's *actual* angular velocity (read from the rigidbody after `apply steer`
+  #    has set it this frame), so the coupling always matches the real spin.
   #  - Drift (`grip`): the leftover lateral *beyond* that kinematic part is genuine
   #    tyre slip. It is retained and only bled off gradually by `grip`, so cranking
   #    the wheel at speed steps the tail out and the car slides until grip recovers.
@@ -109,7 +109,7 @@ Expressions:
       var right = new Vector3(forward.z, 0f, -forward.x);
       var omega = angVel.y;
       var current = Dot(velocity, forward);
-      var kinematic = omega * b;
+      var kinematic = -omega * b;
       var slip = Dot(velocity, right) - kinematic;
       var target = throttle >= 0f ? throttle * top : throttle * reverse;
       var ease = target * current < 0f ? brake : accel;
