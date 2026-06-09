@@ -2,11 +2,13 @@ Game:
   Title: Mini Racer 3D
   Description: >
     A small 3D racing game driven by real physics. The car is a non-kinematic
-    rigidbody: W/S apply a forward/reverse force along the car's heading and
-    A/D apply a steering torque, so momentum, coasting and wall collisions all
-    behave physically. The car is constrained to the ground plane (Y position
-    and pitch/roll are frozen). Drive around the solid central infield, between
-    it and the outer walls. You must pass the far checkpoint and then cross the
+    rigidbody: W/S apply a forward/reverse force along the car's heading (with
+    linear drag, so it builds speed and coasts), and A/D steer. Steering only
+    works while on the throttle and turns at a controlled rate, so the car
+    can't pivot on the spot like a top. Momentum and wall collisions behave
+    physically. The car is constrained to the ground plane (Y position and
+    pitch/roll are frozen). Drive around the solid central infield, between it
+    and the outer walls. You must pass the far checkpoint and then cross the
     start/finish line for a lap to count — three laps wins.
 
 World:
@@ -18,10 +20,10 @@ Physics:
 
 Constants:
   # --- Handling (tune these for feel) ---
-  drive force: 26       # forward thrust (W)
-  reverse force: -13    # reverse thrust (S); negative = backwards along heading
-  steer torque: 4.5     # right steering torque about +Y (D)
-  steer torque left: -4.5  # left steering torque about +Y (A)
+  # Cruise speed ~= drive force / linear damping; bigger damping = more drag.
+  drive force: 2.6      # forward thrust (W)
+  reverse force: -1.3   # reverse thrust (S); negative = backwards along heading
+  turn rate: 1.6        # steering yaw rate in radians/sec (~92 deg/sec) while driving
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
@@ -31,6 +33,8 @@ Constants:
 Variables:
   laps: 0
   lap armed: false   # set when the checkpoint is crossed; cleared when a lap is scored
+  steer input: 0     # -1 = steering left (A), +1 = right (D), 0 = straight
+  driving: false     # true while a throttle key (W/S) is held; gates steering
 
 Expressions:
   # World-space force along the car's heading. The heading is the car's Y euler
@@ -45,6 +49,18 @@ Expressions:
     Expression: |
       var dir = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
       return new Vector3(dir.x * force, 0f, dir.y * force);
+
+  # Desired yaw angular velocity (rad/s about +Y). Zero unless the throttle is
+  # held, so the car cannot rotate on the spot; set as a steady state every
+  # frame so steering is smooth rather than torque-accumulated.
+  steer angular velocity:
+    ArgumentTypes: [ int, float, bool ]
+    ArgumentNames: [ steer, rate, driving ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var gate = driving ? 1f : 0f;
+      return new Vector3(0f, steer * rate * gate, 0f);
 
   next lap:
     ArgumentTypes: [ int ]
@@ -84,12 +100,12 @@ Entities:
           UseGravity: false
           IsKinematic: false
           Mass: 1
-          LinearDamping: 1.5      # coast-down / rolling resistance
-          AngularDamping: 5       # steering settles instead of spinning forever
+          LinearDamping: 0.5      # drag: builds speed gradually and coasts to a stop
+          AngularDamping: 0.05    # low: yaw is driven directly, not by torque
           FreezePosition: !vec { X: 0, Y: 1, Z: 0 }   # pin to the ground plane
           FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }   # upright; only yaw is free
 
-      # Throttle: apply force along the car's heading every frame the key is held
+      # --- Throttle: continuous force along the car's heading while held ----
       hold forward:
         Type: key hold trigger
         Properties: { Key: "w" }
@@ -119,27 +135,88 @@ Entities:
               - !entity { Id: car, Property: Rotation }
               - !var reverse force
 
-      # Steering: apply a yaw torque about world +Y while the key is held
-      hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
+      # --- "On the throttle" flag (gates steering so there's no on-spot spin)
+      throttle down w:
+        Type: key down trigger
+        Properties: { Key: "W" }
         Listeners:
           - EntityId: car
-            BehaviourId: steer left
-      steer left:
-        Type: add torque
-        Properties:
-          Torque: !vec { X: 0, Y: !var steer torque left, Z: 0 }
-      hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
+            BehaviourId: start driving
+      throttle up w:
+        Type: key up trigger
+        Properties: { Key: "W" }
         Listeners:
           - EntityId: car
-            BehaviourId: steer right
-      steer right:
-        Type: add torque
+            BehaviourId: stop driving
+      throttle down s:
+        Type: key down trigger
+        Properties: { Key: "S" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: start driving
+      throttle up s:
+        Type: key up trigger
+        Properties: { Key: "S" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: stop driving
+      start driving:
+        Type: bool variable setter
+        Properties: { VariableId: !var driving, Value: true }
+      stop driving:
+        Type: bool variable setter
+        Properties: { VariableId: !var driving, Value: false }
+
+      # --- Steering input (A/D set the steer direction; releasing centres it)
+      steer left down:
+        Type: key down trigger
+        Properties: { Key: "A" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: set steer left
+      steer left up:
+        Type: key up trigger
+        Properties: { Key: "A" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: set steer centre
+      steer right down:
+        Type: key down trigger
+        Properties: { Key: "D" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: set steer right
+      steer right up:
+        Type: key up trigger
+        Properties: { Key: "D" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: set steer centre
+      set steer left:
+        Type: int variable setter
+        Properties: { VariableId: !var steer input, Value: -1 }
+      set steer right:
+        Type: int variable setter
+        Properties: { VariableId: !var steer input, Value: 1 }
+      set steer centre:
+        Type: int variable setter
+        Properties: { VariableId: !var steer input, Value: 0 }
+
+      # --- Apply steering: set yaw angular velocity directly each frame ------
+      steer tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: car
+            BehaviourId: apply steer
+      apply steer:
+        Type: set angular velocity
         Properties:
-          Torque: !vec { X: 0, Y: !var steer torque, Z: 0 }
+          AngularVelocity: !expr
+            Do: steer angular velocity
+            With:
+              - !var steer input
+              - !var turn rate
+              - !var driving
     Children:
       roof:
         Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
