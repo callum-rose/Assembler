@@ -38,7 +38,17 @@ namespace Assembler.Parsing.Info
 
 	public sealed record AssetRef(string Id) : AssemblerRef(Id);
 
-	public sealed record EntityPositionRef(string Id) : AssemblerRef(Id);
+	/// <summary>A transform property exposed by the <c>!entity { Id, Property }</c> tag.</summary>
+	public enum EntityProperty
+	{
+		Position,
+		Rotation,
+		Scale
+	}
+
+	/// <summary>A <c>!entity { Id, Property }</c> reference — reads a transform property (position,
+	/// rotation, scale) off an entity by id at runtime. Resolves to a live <c>Vector3</c>.</summary>
+	public sealed record EntityPropertyRef(string Id, EntityProperty Property) : AssemblerRef(Id);
 
 	/// <summary>A <c>!clock &lt;property&gt;</c> reference (e.g. <c>!clock deltaTime</c>), resolved at
 	/// runtime against the injected game clock. Carries the requested property name verbatim.</summary>

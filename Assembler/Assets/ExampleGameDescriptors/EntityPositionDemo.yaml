@@ -1,13 +1,14 @@
 Game:
   Title: Entity Position Demo
   Description: |
-    Demonstrates the `!entity_position <id>` YAML tag — a live wrapper around
+    Demonstrates the `!entity { Id, Property }` YAML tag — a live wrapper around
     another entity's Transform that always returns the current frame's
-    position, never a stale value.
+    property (Position, Rotation, or Scale), never a stale value.
 
       * The `leader` cube moves left/right with A/D (and up/down with W/S).
-      * Two followers track the leader by reading `!entity_position leader`
-        every frame and applying an offset.
+      * Two followers track the leader by reading
+        `!entity { Id: leader, Property: Position }` every frame and applying
+        an offset.
       * The `follower above` is declared in YAML BEFORE the leader, proving
         that declaration order does not matter — the registry is populated
         for every entity before any behaviour resolves its properties.
@@ -47,7 +48,7 @@ Expressions:
 
 Entities:
   # Declared BEFORE `leader` on purpose: proves declaration order is irrelevant
-  # for `!entity_position` reads. Property resolution happens after every
+  # for `!entity` reads. Property resolution happens after every
   # entity has registered its transform.
   follower above:
     Position: !vec { X: 0, Y: 1.5, Z: 0 }
@@ -69,7 +70,7 @@ Entities:
           Position: !expr
             Do: shift y
             With:
-              - !entity_position leader
+              - !entity { Id: leader, Property: Position }
               - !var follower above offset y
 
   leader:
@@ -145,7 +146,7 @@ Entities:
           Position: !expr
             Do: shift y
             With:
-              - !entity_position leader
+              - !entity { Id: leader, Property: Position }
               - !var follower below offset y
 
   camera:

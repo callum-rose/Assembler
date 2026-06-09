@@ -15,8 +15,8 @@ namespace Assembler.Resolving
 				ValueReferenceSource<T> variableRef => ctx.Variables.Get<T>(variableRef.VariableId, ctx.Scope),
 				ExpressionSource<T> expressionRef => new ExpressionValueProvider<T>(BuildExpressionContainer(expressionRef, ctx)),
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
-				EntityPositionSource<T> ep when typeof(T) == typeof(Vector3) =>
-					(IValueProvider<T>)(object)new TransformPositionProvider(ctx.EntityTransforms.Get(ep.EntityId)),
+				EntityPropertySource<T> ep when typeof(T) == typeof(Vector3) =>
+					(IValueProvider<T>)(object)new TransformPropertyProvider(ctx.EntityTransforms.Get(ep.EntityId), ep.Property),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),

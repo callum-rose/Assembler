@@ -679,6 +679,16 @@ namespace Assembler.Parsing
 					$"Unknown !clock property '{property}'. Expected one of: deltaTime, time, frameCount, unscaledDeltaTime")
 			};
 
+		private static EntityProperty ParseEntityProperty(string? property) =>
+			(property ?? string.Empty).Trim().ToLowerInvariant() switch
+			{
+				"position" => EntityProperty.Position,
+				"rotation" => EntityProperty.Rotation,
+				"scale" => EntityProperty.Scale,
+				_ => throw new ParsingException(
+					$"Unknown !entity property '{property}'. Expected one of: Position, Rotation, Scale")
+			};
+
 		/// <summary>
 		/// Like <see cref="CreateValueSource{T}"/> but with no implicit fallback: an absent value (null or
 		/// <see cref="NoValue"/>) resolves to <see cref="None{T}"/> — i.e. a <c>NullValueProvider</c> at
@@ -698,10 +708,10 @@ namespace Assembler.Parsing
 					? CreateValueSource(ctx, paramValue, fallback)
 					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
-				EntityPositionRef entityPositionRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
-					new EntityPositionSource<T>(entityPositionRef.Id),
-				EntityPositionRef entityPositionRef => throw new ParsingException(
-					$"!entity_position '{entityPositionRef.Id}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
+				EntityPropertyRef entityPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
+					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
+				EntityPropertyRef entityPropertyRef => throw new ParsingException(
+					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
 					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
 					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),
@@ -944,7 +954,7 @@ namespace Assembler.Parsing
 				string s => new StringValue(s),
 				VarRefDto v => new VarRef(v.Id ?? string.Empty),
 				AssetRefDto v => new AssetRef(v.Id ?? string.Empty),
-				EntityPositionRefDto v => new EntityPositionRef(v.Id ?? string.Empty),
+				EntityRefDto v => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
 				ClockRefDto v => new ClockRef(v.Property ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
