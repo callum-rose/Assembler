@@ -114,13 +114,74 @@ Moves the entity each frame by Velocity * deltaTime.
 | Velocity | Vector3 | World-space velocity in units per second. |
 
 ## `acceleration`
-Integrates Acceleration into an internal velocity each frame, then moves the entity by that velocity.
+Integrates Acceleration into a velocity each frame.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Acceleration | Vector3 | World-space acceleration in units per second squared. |
+| Velocity | Vector3 | Optional shared velocity variable to integrate into (e.g. !var velocity). |
+
+## `drag`
+Exponentially decays a shared velocity variable each frame, modelling linear drag.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Velocity | Vector3 | Writable shared velocity variable to decay (required, e.g. !var velocity). |
+| Coefficient | float | Drag rate per second; larger values bleed speed off faster. |
+
+## `speed limit`
+Clamps a shared velocity variable's magnitude to Max each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Velocity | Vector3 | Writable shared velocity variable to clamp (required, e.g. !var velocity). |
+| Max | float | Maximum allowed speed (magnitude) in units per second. |
+
+## `move towards`
+Moves the entity toward Target at a constant Speed, never overshooting.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space position to move toward. |
+| Speed | float | Movement speed in units per second; a step never passes the target. |
+
+## `smooth move`
+Eases the entity toward Target with a critically-damped spring (Vector3.SmoothDamp).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space position to ease toward. |
+| SmoothTime | float | Approximate time (seconds) to reach the target; larger is slower and softer. |
+
+## `clamp position`
+Constrains the entity's position to the axis-aligned box between Min and Max each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Min | Vector3 | Lower per-axis bound of the allowed region. |
+| Max | Vector3 | Upper per-axis bound of the allowed region. |
+
+## `wrap position`
+Wraps the entity's position around the box between Min and Max each frame (toroidal screen-wrap).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Min | Vector3 | Lower per-axis bound; crossing it teleports the entity to the matching Max edge. |
+| Max | Vector3 | Upper per-axis bound; crossing it teleports the entity to the matching Min edge. |
 
 ## `translate`
 Adds Displacement to the entity's world position each time it Executes (e.g. via a trigger).
@@ -258,7 +319,7 @@ No properties.
 
 | Name | Type | Description |
 |------|------|-------------|
-| scroll_delta | Vector2 | Scroll wheel delta for this frame (y is the common vertical scroll). |
+| scroll_delta | Vector3 | Scroll wheel delta for this frame (y is the common vertical scroll; z is 0). |
 
 ## `axis trigger`
 Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
@@ -274,7 +335,7 @@ Fires every frame with the current value(s) of one or two Unity input axes (1D o
 
 | Name | Type | Description |
 |------|------|-------------|
-| axis | Vector2 | Combined (x, y) axis value; y is 0 when YAxis is unset. |
+| axis | Vector3 | Combined (x, y, 0) axis value; y is 0 when YAxis is unset. |
 | x | float | Current XAxis value. |
 | y | float | Current YAxis value, or 0 when YAxis is unset. |
 
@@ -294,7 +355,7 @@ Relays an abstract input action (declared in the descriptor's Controls section a
 
 | Name | Type | Description |
 |------|------|-------------|
-| axis | Vector2 | For value actions, the current (x, y) value of the action each frame. |
+| axis | Vector3 | For value actions, the current (x, y, 0) value of the action each frame. |
 | x | float | For value actions, the current x component. |
 | y | float | For value actions, the current y component. |
 
@@ -322,7 +383,7 @@ Fires once when the pointer is pressed and released quickly without moving (a ta
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position where the tap was released. |
+| position | Vector3 | Screen-space position where the tap was released (z is 0). |
 
 ## `double tap trigger`
 Fires when two quick taps land close together within a short interval (a double-tap).
@@ -338,7 +399,7 @@ Fires when two quick taps land close together within a short interval (a double-
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position where the second tap was released. |
+| position | Vector3 | Screen-space position where the second tap was released (z is 0). |
 
 ## `long press trigger`
 Fires once when the pointer is held still for a threshold time (a long press).
@@ -354,7 +415,7 @@ Fires once when the pointer is held still for a threshold time (a long press).
 
 | Name | Type | Description |
 |------|------|-------------|
-| position | Vector2 | Screen-space position of the press when the threshold was reached. |
+| position | Vector3 | Screen-space position of the press when the threshold was reached (z is 0). |
 | hold_duration | float | Seconds the pointer had been held when the trigger fired (at least Duration). |
 
 ## `swipe trigger`
@@ -371,11 +432,11 @@ Fires when the pointer is dragged far enough, fast enough, and then released (a 
 
 | Name | Type | Description |
 |------|------|-------------|
-| start | Vector2 | Screen-space position where the swipe began. |
-| position | Vector2 | Screen-space position where the swipe ended. |
-| delta | Vector2 | Vector from start to end. |
+| start | Vector3 | Screen-space position where the swipe began (z is 0). |
+| position | Vector3 | Screen-space position where the swipe ended (z is 0). |
+| delta | Vector3 | Vector from start to end (z is 0). |
 | distance | float | Length of the swipe in pixels. |
-| direction | Vector2 | Normalised swipe direction. |
+| direction | Vector3 | Normalised swipe direction (z is 0). |
 
 ## `drag trigger`
 Fires every frame the pointer moves while held down (a drag), reporting the per-frame movement.
@@ -390,9 +451,9 @@ Fires every frame the pointer moves while held down (a drag), reporting the per-
 
 | Name | Type | Description |
 |------|------|-------------|
-| start | Vector2 | Screen-space position where the drag began. |
-| position | Vector2 | Current screen-space pointer position. |
-| delta | Vector2 | Screen-space movement since the previous frame. |
+| start | Vector3 | Screen-space position where the drag began (z is 0). |
+| position | Vector3 | Current screen-space pointer position (z is 0). |
+| delta | Vector3 | Screen-space movement since the previous frame (z is 0). |
 
 ## `pinch and rotate trigger`
 Fires every frame two fingers change their separation or orientation (a pinch / zoom and twist).
@@ -403,7 +464,7 @@ No properties.
 
 | Name | Type | Description |
 |------|------|-------------|
-| center | Vector2 | Screen-space midpoint between the two fingers. |
+| center | Vector3 | Screen-space midpoint between the two fingers (z is 0). |
 | distance | float | Current distance between the two fingers, in pixels. |
 | delta | float | Change in finger distance since the previous frame (positive = spreading apart). |
 | scale | float | Ratio of the current distance to the previous frame's (greater than 1 = zooming in). |
@@ -583,7 +644,8 @@ Sets the entity's world position to Position when Executed (typically via a trig
 | Position | Vector3 | World-space position to teleport the entity to on each execution. |
 
 ## `camera`
-Adds a Unity Camera component to the entity; chooses orthographic vs perspective and sets size.
+Adds the output Unity Camera plus a Cinemachine brain, so virtual cameras (e.g. camera follow)
+            can drive and blend this camera. Also adds an impulse listener so camera shake is visible.
 
 ### Properties
 
@@ -591,6 +653,27 @@ Adds a Unity Camera component to the entity; chooses orthographic vs perspective
 |------|------|-------------|
 | View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
 | Size | float | Orthographic size in world units (only used when View = "orthographic"). |
+| DefaultBlend | float | Default blend time in seconds when the brain cuts between virtual cameras (0 = instant cut). |
+
+## `camera follow`
+Adds a Cinemachine virtual camera that follows and/or looks at a target entity, blended by the brain on
+            the output camera. Mode picks a 2D screen-space rig or a 3D world-offset rig; omit Target
+            for a pure look-at camera.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Tag/Id | Entity to follow, as { Tag: <entity-tag> } or { Id: <entity-id> }. Omit for look-at only. |
+| LookAt | Tag/Id | Entity to aim at, as { Tag: … } or { Id: … }. Adds an aim composer. |
+| Mode | string | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Lens | float | Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection. |
+| Damping | float | How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim. |
+| DeadZone | float | 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting. |
+| CameraDistance | float | 2D only — distance the camera keeps in front of the target along its view axis (default 10). Must be > 0 or an orthographic camera sits on the target's plane and sees nothing. |
+| ScreenOffset | Vector2 | 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5). |
+| FollowOffset | Vector3 | 3D only — world-space offset the camera maintains from the target. |
 
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
@@ -1317,7 +1400,7 @@ Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
 | Name | Type | Description |
 |------|------|-------------|
 | Sprite | Sprite | Asset reference to the sprite to display. |
-| Size | Vector2 | Target world-space size in units; the sprite is scaled to fit. |
+| Size | Vector3 | Target world-space size in units; the sprite is scaled to fit. |
 
 ## `voxel mesh`
 Renders a voxel mesh asset as a child of the entity.
@@ -1328,6 +1411,17 @@ Renders a voxel mesh asset as a child of the entity.
 |------|------|-------------|
 | Mesh | Mesh | Asset reference to the Mesh to display. |
 | Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
+
+## `primitive`
+Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Shape | string | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
+| Colour | Color | Optional tint applied to the primitive's material. |
+| Size | Vector3 | Optional local scale of the primitive child. |
 
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
@@ -1373,97 +1467,75 @@ Debug-draws a line gizmo between two points in the entity's local transform spac
 | End | Vector3 | Line end point in local transform space. |
 | Colour | Color | Gizmo colour. |
 
+## `ui canvas`
+Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI
+            entities (containers, labels, buttons) under this entity to compose the interface.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| MatchWidthOrHeight | float | CanvasScaler match (0 = match width, 1 = match height, 0.5 = balanced). |
+| ReferenceResolution | Vector3 | Design resolution the UI scales from, as a vector (X = width, Y = height). |
+
+## `ui container`
+Groups child UI entities. By default it arranges them in a vertical or horizontal stack
+            using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with
+            Direction "none" it adds no layout group and children are positioned manually.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Direction | string | "vertical" (default), "horizontal", or "none" (no layout group — manual placement). |
+| Spacing | float | Gap between children, in reference pixels (layout directions only). |
+| Padding | float | Inner padding on all sides, in reference pixels (layout directions only). |
+| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
+| FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
+
 ## `text label`
-Draws a text label on-screen using IMGUI. Useful for debug HUD and scoreboards.
+Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so
+            binding it to a variable or expression shows live values (scores, timers, etc.).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Text | string | Dynamic body text (re-read each frame; bind to a variable to display live values). |
-| Label | string | Optional static prefix shown before Text (e.g. "Score: "). |
-| FontSize | int | Font size in pixels. |
-| Rect | ScreenRect | Screen-space rectangle (see ScreenRect format). |
-
-## `progress bar`
-Draws a horizontal fill bar; the filled fraction is Value clamped to [0, 1].
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Value | float | Progress in [0, 1]. Re-read each frame. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-## `ui image`
-Draws a solid-coloured rectangle on-screen. Useful as a simple HUD backdrop or indicator.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Colour | Color | Fill colour. |
-| Rect | ScreenRect | Screen-space rectangle. |
+| Text | string | Body text (re-read each frame; bind to a variable/expression for live values). |
+| FontSize | int | Font size in reference pixels. |
+| PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
+| PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
 
 ## `ui button`
-Draws a button. Acts as a trigger: notifies listeners each time the button is clicked.
+A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is
+            clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Label | string | Button caption. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-## `ui toggle`
-Draws a toggle (checkbox). Fires listeners whenever the toggle's state changes.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| InitialValue | bool | Starting checked/unchecked state. |
-| Label | string | Caption shown next to the toggle. |
-| Rect | ScreenRect | Screen-space rectangle. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| value | bool | The new toggle state after the change. |
+| Label | string | Button caption (re-read each frame). |
+| PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
+| PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
 
 ## `ui slider`
-Draws a horizontal slider. Fires listeners whenever the slider value changes.
+A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| InitialValue | float | Starting slider value. |
+| InitialValue | float | Starting value. |
 | MinValue | float | Minimum value the slider can produce. |
 | MaxValue | float | Maximum value the slider can produce. |
-| Rect | ScreenRect | Screen-space rectangle. |
+| PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
+| PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
 
 ### Outputs
 
 | Name | Type | Description |
 |------|------|-------------|
 | value | float | The new slider value after the change. |
-
-## `ui input field`
-Draws a text input field. Fires listeners when the user presses Enter to submit the typed text.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Rect | ScreenRect | Screen-space rectangle. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| text | string | The submitted text. The field is cleared after submission. |
 
 ---
 
