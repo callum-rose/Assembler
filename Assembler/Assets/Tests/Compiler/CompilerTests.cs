@@ -1631,6 +1631,139 @@ namespace Tests.Compiler
 
 			Assert.Throws<CompileException>(() => compiler.CompileFunc<int, int>("return x[0];", "x"));
 		}
+
+		// --- Collection / dictionary initializers ---
+
+		[Test]
+		public void ListInitializerWithInlineGeneric()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<List<int>>("return new List<int> { 1, 2, 3 };");
+
+			Assert.That(func(), Is.EqualTo(new List<int> { 1, 2, 3 }));
+		}
+
+		[Test]
+		public void ListInitializerWithEmptyParens()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<List<int>>("return new List<int>() { 10, 20 };");
+
+			Assert.That(func(), Is.EqualTo(new List<int> { 10, 20 }));
+		}
+
+		[Test]
+		public void ListInitializerWithComputedElements()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, List<int>>("return new List<int> { x, x * 2, x + 1 };", "x");
+
+			Assert.That(func(5), Is.EqualTo(new List<int> { 5, 10, 6 }));
+		}
+
+		[Test]
+		public void ListInitializerWithTrailingComma()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<List<int>>("return new List<int> { 1, 2, 3, };");
+
+			Assert.That(func(), Is.EqualTo(new List<int> { 1, 2, 3 }));
+		}
+
+		[Test]
+		public void EmptyListInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<List<int>>("return new List<int> { };");
+
+			Assert.That(func(), Is.Empty);
+		}
+
+		[Test]
+		public void ListInitializerThenIndexAndCount()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int>(
+				"""
+				var nums = new List<int> { 4, 5, 6 };
+				return nums[0] + nums[nums.Count - 1];
+				""");
+
+			Assert.That(func(), Is.EqualTo(10));
+		}
+
+		[Test]
+		public void StringListInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<List<string>>("return new List<string> { \"a\", \"b\" };");
+
+			Assert.That(func(), Is.EqualTo(new List<string> { "a", "b" }));
+		}
+
+		[Test]
+		public void DictionaryInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Dictionary<string, int>>(
+				"return new Dictionary<string, int> { { \"a\", 1 }, { \"b\", 2 } };");
+
+			var result = func();
+			Assert.That(result["a"], Is.EqualTo(1));
+			Assert.That(result["b"], Is.EqualTo(2));
+		}
+
+		[Test]
+		public void DictionaryInitializerWithComputedValues()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<int, Dictionary<int, int>>(
+				"return new Dictionary<int, int> { { 1, n }, { 2, n * n } };", "n");
+
+			var result = func(4);
+			Assert.That(result[1], Is.EqualTo(4));
+			Assert.That(result[2], Is.EqualTo(16));
+		}
+
+		[Test]
+		public void NestedGenericListInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<Dictionary<string, List<int>>>(
+				"return new Dictionary<string, List<int>> { };");
+
+			Assert.That(func(), Is.Empty);
+		}
+
+		[Test]
+		public void ListInitializerFeedsLinq()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(System.Linq.Enumerable));
+			var func = compiler.CompileFunc<int>("return new List<int> { 1, 2, 3, 4 }.Where(x => x > 2).Sum();");
+
+			Assert.That(func(), Is.EqualTo(7));
+		}
+
+		[Test]
+		public void RegisteredAliasCollectionInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(List<int>), "IntList");
+			var func = compiler.CompileFunc<List<int>>("return new IntList { 7, 8 };");
+
+			Assert.That(func(), Is.EqualTo(new List<int> { 7, 8 }));
+		}
+
+		[Test]
+		public void InitializerOnTypeWithoutAddIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(TestVector3), "TestVector3");
+
+			Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<TestVector3>("return new TestVector3(1, 2, 3) { 4 };"));
+		}
 	}
 
 	public class TestVector3

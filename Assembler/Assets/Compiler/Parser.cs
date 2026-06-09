@@ -2220,40 +2220,32 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseNewExpression()
 		{
-			// Parse type name (could be simple name, alias, or fully qualified)
-			var typeNameToken = Expect(TokenType.Identifier);
-			var typeName = typeNameToken.Value;
+			// Parse the type being constructed: a simple/aliased/qualified name, optionally with generic
+			// arguments (`new List<int>(...)`, `new Dictionary<int, string>()`). Keep the leading token for
+			// error positioning.
+			var typeNameToken = Current;
+			var type = ParseTypeReference();
 
-			// Handle generic types or nested types with dots
-			while (Current.Type == TokenType.Dot)
-			{
-				Match(TokenType.Dot);
-				typeName += "." + Expect(TokenType.Identifier).Value;
-			}
-
-			// Try to resolve the type
-			Type? type = TryResolveType(typeName);
-
-			if (type == null)
-			{
-				throw Error($"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
-					typeNameToken);
-			}
-
-			// Expect constructor call
-			Expect(TokenType.LeftParen);
+			// Constructor arguments are optional when a collection/dictionary initializer follows, mirroring
+			// C#'s `new List<int> { 1, 2, 3 }`. Otherwise an explicit constructor call is required.
 			var arguments = new List<Expression>();
-
-			if (Current.Type != TokenType.RightParen)
+			if (Match(TokenType.LeftParen))
 			{
-				do
+				if (Current.Type != TokenType.RightParen)
 				{
-					arguments.Add(ParseExpression());
+					do
+					{
+						arguments.Add(ParseExpression());
+					}
+					while (Match(TokenType.Comma));
 				}
-				while (Match(TokenType.Comma));
-			}
 
-			Expect(TokenType.RightParen);
+				Expect(TokenType.RightParen);
+			}
+			else if (Current.Type != TokenType.LeftBrace)
+			{
+				throw Error("Expected '(' or '{' after type in 'new' expression", typeNameToken);
+			}
 
 			// Find matching constructor
 			var argTypes = arguments.Select(a => a.Type).ToArray();
@@ -2289,7 +2281,7 @@ namespace Assembler.Compiler.Compiler
 
 				if (constructor == null)
 				{
-					throw Error($"No matching constructor found for type '{typeName}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}",
+					throw Error($"No matching constructor found for type '{type.Name}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}",
 						typeNameToken);
 				}
 			}
@@ -2309,7 +2301,239 @@ namespace Assembler.Compiler.Compiler
 				}
 			}
 
-			return Expression.New(constructor, finalArgs);
+			var newExpr = Expression.New(constructor, finalArgs);
+
+			// A trailing `{ ... }` is a collection / dictionary initializer over the just-constructed object.
+			if (Current.Type == TokenType.LeftBrace)
+			{
+				return ParseCollectionInitializer(newExpr);
+			}
+
+			return newExpr;
+		}
+
+		// Parses a collection/dictionary initializer (caller verified the next token is '{'). Each entry is
+		// desugared to an `Add` call: a bare element `{ x }` → `Add(x)` (List<T> etc.), a nested brace group
+		// `{ k, v }` → `Add(k, v)` (Dictionary<K,V> etc.). Builds an Expression.ListInit so the whole
+		// `new T { ... }` is a single value expression usable inline. An empty `{ }` is just the construction.
+		private Expression ParseCollectionInitializer(NewExpression newExpr)
+		{
+			Expect(TokenType.LeftBrace);
+
+			var initializers = new List<ElementInit>();
+			while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
+			{
+				var elementArgs = ParseInitializerElement();
+				var argTypes = elementArgs.Select(a => a.Type).ToArray();
+
+				var addMethod = FindAddMethod(newExpr.Type, argTypes)
+					?? throw Error(
+						$"No 'Add' method on type '{newExpr.Type.Name}' accepting argument types: " +
+						$"{string.Join(", ", argTypes.Select(t => t.Name))}");
+
+				var addParams = addMethod.GetParameters();
+				var convertedArgs = new Expression[elementArgs.Count];
+				for (int i = 0; i < elementArgs.Count; i++)
+				{
+					convertedArgs[i] = elementArgs[i].Type != addParams[i].ParameterType
+						? Expression.Convert(elementArgs[i], addParams[i].ParameterType)
+						: elementArgs[i];
+				}
+
+				initializers.Add(Expression.ElementInit(addMethod, convertedArgs));
+
+				// Allow (and stop on) a trailing comma before the closing brace.
+				if (!Match(TokenType.Comma))
+				{
+					break;
+				}
+			}
+
+			Expect(TokenType.RightBrace);
+
+			// Expression.ListInit requires at least one initializer; an empty initializer is just the `new`.
+			return initializers.Count == 0 ? newExpr : Expression.ListInit(newExpr, initializers);
+		}
+
+		// Parses a single collection-initializer entry into the argument list for its `Add` call. A nested
+		// brace group `{ a, b, ... }` (e.g. a dictionary key/value pair) yields multiple arguments; anything
+		// else is a single-expression element.
+		private List<Expression> ParseInitializerElement()
+		{
+			if (Match(TokenType.LeftBrace))
+			{
+				var args = new List<Expression> { ParseExpression() };
+				while (Match(TokenType.Comma))
+				{
+					args.Add(ParseExpression());
+				}
+
+				Expect(TokenType.RightBrace);
+				return args;
+			}
+
+			return new List<Expression> { ParseExpression() };
+		}
+
+		// Finds a public instance `Add` overload matching the given argument types — exact match preferred,
+		// then a conversion-compatible one — mirroring FindIndexer's resolution. Used to desugar collection
+		// and dictionary initializers.
+		private MethodInfo? FindAddMethod(Type type, Type[] argTypes)
+		{
+			var candidates = type.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+				.Where(m => m.Name == "Add" && m.GetParameters().Length == argTypes.Length)
+				.ToList();
+
+			foreach (var method in candidates)
+			{
+				var parameters = method.GetParameters();
+				if (!argTypes.Where((t, i) => parameters[i].ParameterType != t).Any())
+				{
+					return method;
+				}
+			}
+
+			foreach (var method in candidates)
+			{
+				var parameters = method.GetParameters();
+				if (Enumerable.Range(0, argTypes.Length).All(i => IsCompatibleType(argTypes[i], parameters[i].ParameterType)))
+				{
+					return method;
+				}
+			}
+
+			return null;
+		}
+
+		// Parses a type reference in a `new` / generic-argument position: a primitive keyword (`int`,
+		// `float`, …), or a simple/aliased/dotted identifier, optionally followed by generic arguments
+		// (`List<int>`, `Dictionary<int, List<string>>`). Returns the resolved (closed) Type.
+		private Type ParseTypeReference()
+		{
+			if (Match(TokenType.Int))
+			{
+				return typeof(int);
+			}
+
+			if (Match(TokenType.Float))
+			{
+				return typeof(float);
+			}
+
+			if (Match(TokenType.Double))
+			{
+				return typeof(double);
+			}
+
+			if (Match(TokenType.Bool))
+			{
+				return typeof(bool);
+			}
+
+			if (Match(TokenType.String_))
+			{
+				return typeof(string);
+			}
+
+			var nameToken = Expect(TokenType.Identifier);
+			var typeName = nameToken.Value;
+
+			// Nested types / namespace-qualified names with dots.
+			while (Current.Type == TokenType.Dot)
+			{
+				Match(TokenType.Dot);
+				typeName += "." + Expect(TokenType.Identifier).Value;
+			}
+
+			if (Match(TokenType.LessThan))
+			{
+				var typeArgs = new List<Type> { ParseTypeReference() };
+				while (Match(TokenType.Comma))
+				{
+					typeArgs.Add(ParseTypeReference());
+				}
+
+				Expect(TokenType.GreaterThan);
+				return ResolveGenericType(typeName, typeArgs.ToArray(), nameToken);
+			}
+
+			return TryResolveType(typeName)
+				?? throw Error(
+					$"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					nameToken);
+		}
+
+		// Resolves a closed generic type from a name and its type arguments, e.g. ("List", [int]) →
+		// List<int>. Looks up the open generic definition by arity, then constructs it with the arguments.
+		private Type ResolveGenericType(string typeName, Type[] typeArgs, Token at)
+		{
+			var definition = ResolveGenericTypeDefinition(typeName, typeArgs.Length)
+				?? throw Error(
+					$"Generic type '{typeName}' with {typeArgs.Length} type argument(s) not found. " +
+					"Make sure to register custom types or use fully qualified names.",
+					at);
+
+			try
+			{
+				return definition.MakeGenericType(typeArgs);
+			}
+			catch (Exception e)
+			{
+				throw Error($"Cannot construct '{typeName}' with the given type arguments: {e.Message}", at);
+			}
+		}
+
+		// Finds the open generic type definition (e.g. List`1, Dictionary`2) for a simple/dotted name and
+		// arity. Tries registered types and direct resolution first, then the System.Collections.Generic
+		// namespace (covering List/Dictionary/HashSet/Queue/Stack/…), then a full assembly scan as a
+		// last resort. Returns null if nothing matches.
+		private Type? ResolveGenericTypeDefinition(string typeName, int arity)
+		{
+			var mangled = typeName + "`" + arity;
+
+			if (_registeredTypes.TryGetValue(mangled, out var registered))
+			{
+				return registered;
+			}
+
+			var direct = TryResolveType(mangled) ?? Type.GetType(mangled);
+			if (direct != null)
+			{
+				return direct;
+			}
+
+			if (!typeName.Contains('.'))
+			{
+				var sys = Type.GetType("System.Collections.Generic." + mangled);
+				if (sys != null)
+				{
+					return sys;
+				}
+			}
+
+			var simpleName = typeName.Contains('.') ? typeName[(typeName.LastIndexOf('.') + 1)..] : typeName;
+			var simpleMangled = simpleName + "`" + arity;
+			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+			{
+				Type[] types;
+				try
+				{
+					types = assembly.GetTypes();
+				}
+				catch
+				{
+					// Some assemblies fail to fully load their types under reflection; skip them.
+					continue;
+				}
+
+				var match = types.FirstOrDefault(t => t.IsGenericTypeDefinition && t.Name == simpleMangled);
+				if (match != null)
+				{
+					return match;
+				}
+			}
+
+			return null;
 		}
 
 		private Type? TryResolveType(string typeName)
