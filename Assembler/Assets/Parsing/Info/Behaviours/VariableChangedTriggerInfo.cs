@@ -5,7 +5,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record VariableChangedTriggerInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		[property: YamlName("VariableId")] ValueSource<T> Variable) : BehaviourInfo(Id, Listeners)
+		ValueSource<T> VariableId) : BehaviourInfo(Id, Listeners)
 	{
 		public static VariableChangedTriggerInfo<T> Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -19,6 +19,6 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new VariableChangedTriggerInfo<T>(Id,
 				substitutedListeners,
-				Variable.SubstituteParameters(ctx));
+				VariableId.SubstituteParameters(ctx));
 	}
 }

@@ -15,28 +15,20 @@ namespace Assembler.Behaviours.Triggers.Variables
 	/// </remarks>
 	public abstract class VariableChangedTrigger<T> : Trigger<VariableChangedTriggerData<T>>
 	{
-		private IObservableValueProvider? _observable;
+		// The builder guarantees the resolved variable is observable (it hard-fails otherwise), so this cast is safe.
+		private IObservableValueProvider<T>? _observable;
 
 		protected override void OnInitialise(VariableChangedTriggerData<T> data)
 		{
-			if (data.Variable is IObservableValueProvider observable)
-			{
-				_observable = observable;
-				_observable.Changed += OnVariableChanged;
-			}
-			else
-			{
-				UnityEngine.Debug.LogWarning(
-					$"'{Id}': VariableId does not reference a writable variable of type {typeof(T).Name}; " +
-					"variable changed trigger will never fire.");
-			}
+			_observable = (IObservableValueProvider<T>)data.Variable;
+			_observable.Changed += OnVariableChanged;
 		}
 
-		private void OnVariableChanged(object previous, object current) =>
+		private void OnVariableChanged(T previous, T current) =>
 			NotifyListeners(TriggerContext.New(b =>
 			{
-				b["value"] = current;
-				b["previous"] = previous;
+				b["value"] = current!;
+				b["previous"] = previous!;
 			}));
 
 		private void OnDestroy()

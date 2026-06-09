@@ -804,9 +804,32 @@ namespace Assembler.Building
 			map[typeof(VariableChangedTriggerInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx) =>
 			{
 				var i = (VariableChangedTriggerInfo<T>)info;
+
+				// A change trigger can only observe a writable variable, so VariableId must be a !var reference —
+				// a constant/expression/clock value has nothing to subscribe to. Hard-fail rather than silently
+				// wiring a trigger that can never fire.
+				if (i.VariableId is not ValueReferenceSource<T>)
+				{
+					throw new ResolveException(
+						$"'{i.Id}': a variable changed trigger's VariableId must be a !var reference to a writable variable.");
+				}
+
 				var b = go.AddComponent<TBehaviour>();
-				return (b, lr => b.Initialise(new VariableChangedTriggerData<T>(i.Id,
-					i.Variable.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				return (b, lr =>
+				{
+					var provider = i.VariableId.Resolve(ctx.Resolution);
+
+					// Guards against a !var of the wrong declared type (resolves to a non-observable adapter, e.g. an
+					// int variable referenced as float). The game would not work as declared, so hard-fail.
+					if (provider is not IObservableValueProvider<T>)
+					{
+						throw new ResolveException(
+							$"'{i.Id}': VariableId must reference a writable variable of type {typeof(T).Name}.");
+					}
+
+					b.Initialise(new VariableChangedTriggerData<T>(i.Id, provider),
+						i.Listeners.ToListeners(lr, ctx.Resolution));
+				});
 			});
 		}
 

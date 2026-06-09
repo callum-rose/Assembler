@@ -10,14 +10,14 @@ namespace Tests.Resolving
 		public void Set_RaisesChangedWithPreviousAndCurrent()
 		{
 			var provider = new ValueProvider<int>(1);
-			var events = new List<(object previous, object current)>();
+			var events = new List<(int previous, int current)>();
 			provider.Changed += (previous, current) => events.Add((previous, current));
 
 			provider.Set(2);
 			provider.Set(5);
 
 			CollectionAssert.AreEqual(
-				new[] { ((object)1, (object)2), ((object)2, (object)5) },
+				new[] { (1, 2), (2, 5) },
 				events);
 		}
 
@@ -39,7 +39,7 @@ namespace Tests.Resolving
 		{
 			var provider = new ValueProvider<int>(0);
 			var count = 0;
-			void Handler(object previous, object current) => count++;
+			void Handler(int previous, int current) => count++;
 
 			provider.Changed += Handler;
 			provider.Set(1);
