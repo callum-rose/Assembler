@@ -89,7 +89,7 @@ namespace Assembler.Parsing
 				allExpressions,
 				templates,
 				entities)
-			{ ParseContext = ctx };
+			{ ParseContext = ctx, Navigation = CreateNavigationInfo(gameDto.Navigation, values) };
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
 				new(kvp.Key,
@@ -261,6 +261,26 @@ namespace Assembler.Parsing
 			}
 
 			return new LocalisationInfo(dto.DefaultLocale ?? string.Empty, locales);
+		}
+
+		private static NavigationInfo CreateNavigationInfo(NavigationDto? dto, IReadOnlyList<ValueInfo> values)
+		{
+			if (dto is null)
+			{
+				return NavigationInfo.Default;
+			}
+
+			var defaults = NavigationInfo.Default;
+			var min = dto.Bounds?.Min?.ToVector3(values) ?? new Vector3(defaults.MinX, defaults.MinY, 0f);
+			var max = dto.Bounds?.Max?.ToVector3(values) ?? new Vector3(defaults.MaxX, defaults.MaxY, 0f);
+
+			return new NavigationInfo(
+				dto.CellSize ?? defaults.CellSize,
+				min.x,
+				min.y,
+				max.x,
+				max.y,
+				dto.ObstacleTag ?? defaults.ObstacleTag);
 		}
 	}
 }

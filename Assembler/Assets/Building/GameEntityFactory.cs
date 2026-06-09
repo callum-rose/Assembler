@@ -28,6 +28,7 @@ namespace Assembler.Building
 		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly EntityQueryService _entityQuery;
 		private readonly LineOfSightService _sight;
+		private readonly NavGridService _nav;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IGameClock _clock;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
@@ -47,6 +48,7 @@ namespace Assembler.Building
 			EntityTransformRegistry entityTransforms,
 			EntityQueryService entityQuery,
 			LineOfSightService sight,
+			NavGridService nav,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IGameClock clock,
 			IReadOnlyDictionary<string, EntityInfo> templates,
@@ -64,6 +66,7 @@ namespace Assembler.Building
 			_entityTransforms = entityTransforms;
 			_entityQuery = entityQuery;
 			_sight = sight;
+			_nav = nav;
 			_exclusiveGroups = exclusiveGroups;
 			_clock = clock;
 			_templates = templates;
@@ -129,7 +132,8 @@ namespace Assembler.Building
 				_clock,
 				_uiPrefabs,
 				_entityQuery,
-				_sight);
+				_sight,
+				_nav);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

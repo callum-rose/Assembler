@@ -751,7 +751,7 @@ Blends a weighted list of steering forces into one velocity each frame.
 | Output | Vector3 | Name of the vector variable to write the blended velocity into (omit to move the entity directly). |
 
 ## `navigate`
-Moves an entity toward a target, easing to a stop on arrival.
+Moves an entity to a target along a grid path, recomputed on a cadence.
 
 ### Properties
 
@@ -761,7 +761,7 @@ Moves an entity toward a target, easing to a stop on arrival.
 | Speed | float | Movement speed in units per second. |
 | SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
 | Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
-| Mode | string | "astar" or "flowfield" — selects the grid path source once a nav grid is present. |
+| Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
 
 ## `vector variable setter`

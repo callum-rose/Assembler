@@ -121,6 +121,11 @@ namespace Assembler.Building
 			var entityQueryService = new EntityQueryService();
 			var lineOfSightService = new LineOfSightService();
 
+			var nav = gameInfo.Navigation;
+			var navGridService = new Assembler.Behaviours.AI.NavGridService(
+				new Assembler.Behaviours.AI.NavGridSettings(
+					nav.CellSize, nav.MinX, nav.MinY, nav.MaxX, nav.MaxY, nav.ObstacleTag));
+
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
 			// (ahead of every behaviour Update via DefaultExecutionOrder).
@@ -167,6 +172,7 @@ namespace Assembler.Building
 				entityTransformRegistry,
 				entityQueryService,
 				lineOfSightService,
+				navGridService,
 				exclusiveGroupRegistry,
 				gameClock,
 				templatesById,
