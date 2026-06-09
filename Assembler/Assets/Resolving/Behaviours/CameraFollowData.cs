@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
@@ -6,7 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Transform> Follow { get; }
 		public IValueProvider<Transform> LookAt { get; }
-		public IValueProvider<string> Mode { get; }
+		public IValueProvider<CameraFollowMode> Mode { get; }
 		public IValueProvider<int> Priority { get; }
 		public IValueProvider<float> Lens { get; }
 		public IValueProvider<float> Damping { get; }
@@ -18,7 +19,7 @@ namespace Assembler.Resolving.Behaviours
 		public CameraFollowData(string id,
 			IValueProvider<Transform> follow,
 			IValueProvider<Transform> lookAt,
-			IValueProvider<string> mode,
+			IValueProvider<CameraFollowMode> mode,
 			IValueProvider<int> priority,
 			IValueProvider<float> lens,
 			IValueProvider<float> damping,

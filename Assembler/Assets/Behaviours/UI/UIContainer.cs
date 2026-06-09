@@ -1,4 +1,5 @@
 using Assembler.Behaviours.UI.Internal;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace Assembler.Behaviours.UI
 	/// Direction "none" it adds no layout group and children are positioned manually.</summary>
 	/// <remarks>
 	/// Properties:
-	///   Direction: "vertical" (default), "horizontal", or "none" (no layout group — manual placement).
+	///   Direction: "vertical" (default), "horizontal", or "none"/"manual"/"free" (no layout group — manual placement).
 	///   Spacing: Gap between children, in reference pixels (layout directions only).
 	///   Padding: Inner padding on all sides, in reference pixels (layout directions only).
 	///   ChildAlignment: e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only).
@@ -29,23 +30,23 @@ namespace Assembler.Behaviours.UI
 				UiLayout.StretchToFill(rect);
 			}
 
-			var direction = data.Direction.ValueOr("vertical").Trim().ToLowerInvariant();
+			var direction = data.Direction.ValueOr(LayoutDirection.Vertical);
 
-			// "none" (or "manual"/"free"): no layout group — children keep whatever position/anchors they
-			// declare. Useful for absolute/overlay placement where auto-layout would get in the way.
-			if (direction is "none" or "manual" or "free")
+			// None/Manual/Free: no layout group — children keep whatever position/anchors they declare.
+			// Useful for absolute/overlay placement where auto-layout would get in the way.
+			if (direction is LayoutDirection.None or LayoutDirection.Manual or LayoutDirection.Free)
 			{
 				return;
 			}
 
-			HorizontalOrVerticalLayoutGroup group = direction == "horizontal"
+			HorizontalOrVerticalLayoutGroup group = direction == LayoutDirection.Horizontal
 				? gameObject.AddComponent<HorizontalLayoutGroup>()
 				: gameObject.AddComponent<VerticalLayoutGroup>();
 
 			var padding = (int)data.Padding.ValueOr(0f);
 			group.padding = new RectOffset(padding, padding, padding, padding);
 			group.spacing = data.Spacing.ValueOr(0f);
-			group.childAlignment = UiLayout.ParseAlignment(data.ChildAlignment.ValueOr("upper-center"));
+			group.childAlignment = data.ChildAlignment.ValueOr(TextAnchor.UpperCenter);
 			group.childControlWidth = true;
 			group.childControlHeight = true;
 			group.childForceExpandWidth = false;

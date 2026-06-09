@@ -6,7 +6,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record PrimitiveInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<string> Shape,
+		ValueSource<PrimitiveType> Shape,
 		ValueSource<Color> Colour,
 		ValueSource<Vector3> Size)
 		: BehaviourInfo(Id, Listeners)
@@ -17,7 +17,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Shape")),
+				ValueSourceFactory.CreateEnumSource(ctx, props.GetValueOrDefault("Shape"), PrimitiveType.Cube),
 				ValueSourceFactory.CreateValueSource<Color>(ctx, props.GetValueOrDefault("Colour")),
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Size")));
 

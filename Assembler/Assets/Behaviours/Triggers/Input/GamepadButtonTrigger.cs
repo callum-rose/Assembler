@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -20,11 +21,10 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			var mode = Data.Mode.ValueOr("down");
-			var fired = mode switch
+			var fired = Data.Mode.ValueOr(ButtonPhase.Down) switch
 			{
-				"up" => UnityEngine.Input.GetKeyUp(button),
-				"hold" => UnityEngine.Input.GetKey(button),
+				ButtonPhase.Up => UnityEngine.Input.GetKeyUp(button),
+				ButtonPhase.Hold => UnityEngine.Input.GetKey(button),
 				_ => UnityEngine.Input.GetKeyDown(button)
 			};
 

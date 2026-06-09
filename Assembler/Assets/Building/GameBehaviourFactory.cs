@@ -520,7 +520,7 @@ namespace Assembler.Building
 			Func<TInfo, ValueSource<Vector3>> start,
 			Func<TInfo, ValueSource<Vector3>> end,
 			Func<TInfo, ValueSource<float>> duration,
-			Func<TInfo, ValueSource<string>> easing)
+			Func<TInfo, ValueSource<Easing>> easing)
 			where TInfo : BehaviourInfo
 			where TBehaviour : GameBehaviour<TransformAnimationData>
 		{

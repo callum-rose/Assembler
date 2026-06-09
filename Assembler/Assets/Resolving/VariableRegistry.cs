@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Resolving
@@ -28,6 +29,11 @@ namespace Assembler.Resolving
 					IValueProvider<T> typedProvider => typedProvider,
 					IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
 						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+					// An enum-bound `!var` reads a plain string constant once and hands back a genuine
+					// ValueProvider<TEnum> with a real enum value — not a per-read string mapping. The enum
+					// type is known here (the read site is ValueReferenceSource<TEnum>), so parse in place.
+					IValueProvider<string> str when typeof(T).IsEnum =>
+						(IValueProvider<T>)(object)BuildEnumProvider(typeof(T), str.Get(TriggerContext.Empty)),
 					_ when typeof(T) == typeof(object) =>
 						(IValueProvider<T>)(object)new BoxingValueProvider(provider),
 					_ => throw new ResolveException(
@@ -37,6 +43,18 @@ namespace Assembler.Resolving
 
 			throw new ResolveException($"Variable not registered for id: {id}");
 		}
+
+		// Parses a constant string variable into a typed enum provider. Each arm has the concrete enum, so it
+		// calls the generic BehaviourEnums.Parse directly (Get<T>'s T is unconstrained and can't).
+		private static IValueProvider BuildEnumProvider(Type enumType, string raw) =>
+			enumType == typeof(Easing) ? new ValueProvider<Easing>(BehaviourEnums.Parse<Easing>(raw)) :
+			enumType == typeof(LayoutDirection) ? new ValueProvider<LayoutDirection>(BehaviourEnums.Parse<LayoutDirection>(raw)) :
+			enumType == typeof(PrimitiveType) ? new ValueProvider<PrimitiveType>(BehaviourEnums.Parse<PrimitiveType>(raw)) :
+			enumType == typeof(TextAnchor) ? new ValueProvider<TextAnchor>(BehaviourEnums.Parse<TextAnchor>(raw)) :
+			enumType == typeof(CameraProjection) ? new ValueProvider<CameraProjection>(BehaviourEnums.Parse<CameraProjection>(raw)) :
+			enumType == typeof(CameraFollowMode) ? new ValueProvider<CameraFollowMode>(BehaviourEnums.Parse<CameraFollowMode>(raw)) :
+			enumType == typeof(ButtonPhase) ? new ValueProvider<ButtonPhase>(BehaviourEnums.Parse<ButtonPhase>(raw)) :
+			throw new ResolveException($"No enum variable provider registered for type '{enumType}'");
 
 		internal static IValueProvider BuildProvider(ValueInfo valueInfo)
 		{

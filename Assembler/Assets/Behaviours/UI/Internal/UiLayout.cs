@@ -73,21 +73,5 @@ namespace Assembler.Behaviours.UI.Internal
 
 			return view;
 		}
-
-		/// <summary>Maps a descriptor alignment string (e.g. "middle-center") to a <see cref="TextAnchor"/>.</summary>
-		public static TextAnchor ParseAlignment(string? alignment) =>
-			(alignment ?? string.Empty).Trim().ToLowerInvariant() switch
-			{
-				"upper-left" or "top-left" => TextAnchor.UpperLeft,
-				"upper-center" or "top-center" or "top" => TextAnchor.UpperCenter,
-				"upper-right" or "top-right" => TextAnchor.UpperRight,
-				"middle-left" or "left" => TextAnchor.MiddleLeft,
-				"middle-center" or "center" or "centre" => TextAnchor.MiddleCenter,
-				"middle-right" or "right" => TextAnchor.MiddleRight,
-				"lower-left" or "bottom-left" => TextAnchor.LowerLeft,
-				"lower-center" or "bottom-center" or "bottom" => TextAnchor.LowerCenter,
-				"lower-right" or "bottom-right" => TextAnchor.LowerRight,
-				_ => TextAnchor.UpperCenter
-			};
 	}
 }

@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -17,11 +18,10 @@ namespace Assembler.Behaviours.Triggers.Input
 		private void Update()
 		{
 			var button = Data.Button.Get();
-			var phase = Data.Phase.ValueOr("down");
-			var fired = phase switch
+			var fired = Data.Phase.ValueOr(ButtonPhase.Down) switch
 			{
-				"up" => UnityEngine.Input.GetMouseButtonUp(button),
-				"hold" => UnityEngine.Input.GetMouseButton(button),
+				ButtonPhase.Up => UnityEngine.Input.GetMouseButtonUp(button),
+				ButtonPhase.Hold => UnityEngine.Input.GetMouseButton(button),
 				_ => UnityEngine.Input.GetMouseButtonDown(button)
 			};
 

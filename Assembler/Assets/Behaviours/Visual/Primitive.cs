@@ -1,4 +1,3 @@
-using System;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -20,7 +19,7 @@ namespace Assembler.Behaviours.Visual
 
 		protected override void OnInitialise(PrimitiveData data)
 		{
-			var shape = ParseShape(data.Shape.Get());
+			var shape = data.Shape.ValueOr(PrimitiveType.Cube);
 			var primitive = GameObject.CreatePrimitive(shape);
 			primitive.name = shape.ToString();
 			primitive.transform.SetParent(transform, false);
@@ -34,18 +33,6 @@ namespace Assembler.Behaviours.Visual
 				block.SetColor(ColorId, colour);
 				primitive.GetComponent<MeshRenderer>().SetPropertyBlock(block);
 			});
-		}
-
-		private PrimitiveType ParseShape(string shape) =>
-			Enum.TryParse<PrimitiveType>(shape, ignoreCase: true, out var type)
-				? type
-				: LogUnknownAndFallBack(shape);
-
-		private PrimitiveType LogUnknownAndFallBack(string shape)
-		{
-			UnityEngine.Debug.LogWarning(
-				$"Primitive '{Id}': unknown shape '{shape}', falling back to cube.");
-			return PrimitiveType.Cube;
 		}
 
 		public override void Execute(TriggerContext ctx) { }

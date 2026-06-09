@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using DG.Tweening;
@@ -15,7 +16,9 @@ namespace Assembler.Behaviours.Animations
 	///   Start: Value to animate from. Falls back to the current transform value when unset.
 	///   End: Value to animate to.
 	///   Duration: Animation length in seconds (clamped to a minimum of 0).
-	///   Easing: Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine.
+	///   Easing: Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad,
+	///     inCubic/…, inQuart/…, inQuint/…, inExpo/…, inCirc/…, inElastic/…, inBack/…, inBounce/…, and the
+	///     flash variants (flash, inFlash, outFlash, inOutFlash). Case/space-insensitive. Defaults to inOutSine.
 	/// </remarks>
 	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>
 	{
@@ -30,7 +33,7 @@ namespace Assembler.Behaviours.Animations
 			var start = Data.Start.ValueOr(ctx, Current);
 			var end = Data.End.Get(ctx);
 			var duration = Mathf.Max(0f, Data.Duration.Get(ctx));
-			var ease = ParseEase(Data.Easing.ValueOr(ctx, string.Empty));
+			var ease = ToEase(Data.Easing.ValueOr(ctx, Easing.InOutSine));
 
 			Current = start;
 
@@ -50,44 +53,45 @@ namespace Assembler.Behaviours.Animations
 				});
 		}
 
-		private static Ease ParseEase(string name) =>
-			name.ToLower().Replace(" ", "") switch
+		// The Easing members mirror DOTween's Ease names one-for-one, so this maps straight across.
+		private static Ease ToEase(Easing easing) =>
+			easing switch
 			{
-				"linear" => Ease.Linear,
-				"insine" => Ease.InSine,
-				"outsine" => Ease.OutSine,
-				"inoutsine" => Ease.InOutSine,
-				"inquad" => Ease.InQuad,
-				"outquad" => Ease.OutQuad,
-				"inoutquad" => Ease.InOutQuad,
-				"incubic" => Ease.InCubic,
-				"outcubic" => Ease.OutCubic,
-				"inoutcubic" => Ease.InOutCubic,
-				"inquart" => Ease.InQuart,
-				"outquart" => Ease.OutQuart,
-				"inoutquart" => Ease.InOutQuart,
-				"inquint" => Ease.InQuint,
-				"outquint" => Ease.OutQuint,
-				"inoutquint" => Ease.InOutQuint,
-				"inexpo" => Ease.InExpo,
-				"outexpo" => Ease.OutExpo,
-				"inoutexpo" => Ease.InOutExpo,
-				"incirc" => Ease.InCirc,
-				"outcirc" => Ease.OutCirc,
-				"inoutcirc" => Ease.InOutCirc,
-				"inelastic" => Ease.InElastic,
-				"outelastic" => Ease.OutElastic,
-				"inoutelastic" => Ease.InOutElastic,
-				"inback" => Ease.InBack,
-				"outback" => Ease.OutBack,
-				"inoutback" => Ease.InOutBack,
-				"inbounce" => Ease.InBounce,
-				"outbounce" => Ease.OutBounce,
-				"inoutbounce" => Ease.InOutBounce,
-				"flash" => Ease.Flash,
-				"inflash" => Ease.InFlash,
-				"outflash" => Ease.OutFlash,
-				"inoutflash" => Ease.InOutFlash,
+				Easing.Linear => Ease.Linear,
+				Easing.InSine => Ease.InSine,
+				Easing.OutSine => Ease.OutSine,
+				Easing.InOutSine => Ease.InOutSine,
+				Easing.InQuad => Ease.InQuad,
+				Easing.OutQuad => Ease.OutQuad,
+				Easing.InOutQuad => Ease.InOutQuad,
+				Easing.InCubic => Ease.InCubic,
+				Easing.OutCubic => Ease.OutCubic,
+				Easing.InOutCubic => Ease.InOutCubic,
+				Easing.InQuart => Ease.InQuart,
+				Easing.OutQuart => Ease.OutQuart,
+				Easing.InOutQuart => Ease.InOutQuart,
+				Easing.InQuint => Ease.InQuint,
+				Easing.OutQuint => Ease.OutQuint,
+				Easing.InOutQuint => Ease.InOutQuint,
+				Easing.InExpo => Ease.InExpo,
+				Easing.OutExpo => Ease.OutExpo,
+				Easing.InOutExpo => Ease.InOutExpo,
+				Easing.InCirc => Ease.InCirc,
+				Easing.OutCirc => Ease.OutCirc,
+				Easing.InOutCirc => Ease.InOutCirc,
+				Easing.InElastic => Ease.InElastic,
+				Easing.OutElastic => Ease.OutElastic,
+				Easing.InOutElastic => Ease.InOutElastic,
+				Easing.InBack => Ease.InBack,
+				Easing.OutBack => Ease.OutBack,
+				Easing.InOutBack => Ease.InOutBack,
+				Easing.InBounce => Ease.InBounce,
+				Easing.OutBounce => Ease.OutBounce,
+				Easing.InOutBounce => Ease.InOutBounce,
+				Easing.Flash => Ease.Flash,
+				Easing.InFlash => Ease.InFlash,
+				Easing.OutFlash => Ease.OutFlash,
+				Easing.InOutFlash => Ease.InOutFlash,
 				_ => Ease.InOutSine
 			};
 

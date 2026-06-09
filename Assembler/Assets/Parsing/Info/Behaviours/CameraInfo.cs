@@ -5,7 +5,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	public record CameraInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<string> View,
+		ValueSource<CameraProjection> View,
 		ValueSource<float> Size,
 		ValueSource<float> DefaultBlend) : BehaviourInfo(Id, Listeners)
 	{
@@ -15,7 +15,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("View")),
+				ValueSourceFactory.CreateEnumSource(ctx, props.GetValueOrDefault("View"), CameraProjection.Perspective),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("DefaultBlend")));
 
