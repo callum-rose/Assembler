@@ -56,6 +56,29 @@ namespace Tests.Resolving
 		}
 
 		[Test]
+		public void ResolvesRotationAsEulerAnglesFromRigidbody()
+		{
+			_rigidbody.rotation = Quaternion.Euler(10, 20, 30);
+
+			var euler = Resolve(RigidbodyProperty.Rotation).Get(TriggerContext.Empty);
+
+			Assert.AreEqual(10f, euler.x, 0.01f);
+			Assert.AreEqual(20f, euler.y, 0.01f);
+			Assert.AreEqual(30f, euler.z, 0.01f);
+		}
+
+		[Test]
+		public void SetRotationWritesEulerAnglesBackToRigidbody()
+		{
+			Resolve(RigidbodyProperty.Rotation).Set(new Vector3(10, 20, 30));
+
+			var euler = _rigidbody.rotation.eulerAngles;
+			Assert.AreEqual(10f, euler.x, 0.01f);
+			Assert.AreEqual(20f, euler.y, 0.01f);
+			Assert.AreEqual(30f, euler.z, 0.01f);
+		}
+
+		[Test]
 		public void ReadIsLiveNotSnapshotted()
 		{
 			_rigidbody.linearVelocity = new Vector3(1, 1, 1);
