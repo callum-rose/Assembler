@@ -17,6 +17,7 @@
         "Assembler.Libraries",
         "Assembler.Core",
         "Assembler.Input",
+        "Assembler.Generation",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "UnityEngine.TestRunner",

@@ -98,10 +98,10 @@ namespace Assembler.Parsing
 					? CreateValueSource(ctx, paramValue, fallback)
 					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
-				EntityPositionRef entityPositionRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
-					new EntityPositionSource<T>(entityPositionRef.Id),
-				EntityPositionRef entityPositionRef => throw new ParsingException(
-					$"!entity_position '{entityPositionRef.Id}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
+				EntityPropertyRef entityPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
+					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
+				EntityPropertyRef entityPropertyRef => throw new ParsingException(
+					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
 					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
 					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),

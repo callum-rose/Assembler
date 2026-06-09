@@ -53,7 +53,9 @@ namespace Assembler.Parsing.Info
 
 	public sealed record AssetSource<T>(string AssetId) : ValueSource<T>;
 
-	public sealed record EntityPositionSource<T>(string EntityId) : ValueSource<T>;
+	/// <summary>A transform property (position/rotation/scale) sourced from an entity by id via the
+	/// <c>!entity</c> tag (resolved live each read). <typeparamref name="T"/> must be <c>Vector3</c>.</summary>
+	public sealed record EntityPropertySource<T>(string EntityId, EntityProperty Property) : ValueSource<T>;
 
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
 

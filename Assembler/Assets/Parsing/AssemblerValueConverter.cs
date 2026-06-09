@@ -76,7 +76,7 @@ namespace Assembler.Parsing
 				// stage never receives DTOs.
 				(VarRefDto v, { ResolvedValues: null }) => new VarRef(v.Id ?? string.Empty),
 				(AssetRefDto v, { ResolvedValues: null }) => new AssetRef(v.Id ?? string.Empty),
-				(EntityPositionRefDto v, { ResolvedValues: null }) => new EntityPositionRef(v.Id ?? string.Empty),
+				(EntityRefDto v, { ResolvedValues: null }) => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
 				(ClockRefDto v, { ResolvedValues: null }) => new ClockRef(v.Property ?? string.Empty),
 				(OutputRefDto v, { ResolvedValues: null }) => new OutputRef(v.Id ?? string.Empty),
 				(ParamRefDto v, { ResolvedValues: null }) => new ParamRef(v.Id ?? string.Empty),
@@ -157,6 +157,16 @@ namespace Assembler.Parsing
 
 		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues) =>
 			resolvedValues.ResolveValue(refDto.Id);
+
+		private static EntityProperty ParseEntityProperty(string? property) =>
+			(property ?? string.Empty).Trim().ToLowerInvariant() switch
+			{
+				"position" => EntityProperty.Position,
+				"rotation" => EntityProperty.Rotation,
+				"scale" => EntityProperty.Scale,
+				_ => throw new ParsingException(
+					$"Unknown !entity property '{property}'. Expected one of: Position, Rotation, Scale")
+			};
 
 		public static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)
 		{

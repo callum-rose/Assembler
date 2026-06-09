@@ -12,7 +12,7 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> Damping { get; }
 		public IValueProvider<float> DeadZone { get; }
 		public IValueProvider<float> CameraDistance { get; }
-		public IValueProvider<Vector2> ScreenOffset { get; }
+		public IValueProvider<Vector3> ScreenOffset { get; }
 		public IValueProvider<Vector3> FollowOffset { get; }
 
 		public CameraFollowData(string id,
@@ -24,7 +24,7 @@ namespace Assembler.Resolving.Behaviours
 			IValueProvider<float> damping,
 			IValueProvider<float> deadZone,
 			IValueProvider<float> cameraDistance,
-			IValueProvider<Vector2> screenOffset,
+			IValueProvider<Vector3> screenOffset,
 			IValueProvider<Vector3> followOffset) : base(id) =>
 			(Follow, LookAt, Mode, Priority, Lens, Damping, DeadZone, CameraDistance, ScreenOffset, FollowOffset) =
 			(follow, lookAt, mode, priority, lens, damping, deadZone, cameraDistance, screenOffset, followOffset);

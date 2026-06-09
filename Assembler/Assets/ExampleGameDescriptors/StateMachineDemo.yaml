@@ -110,8 +110,8 @@ Entities:
             Do: guard velocity
             With:
               - !var guard_mode
-              - !entity_position guard
-              - !entity_position player
+              - !entity { Id: guard, Property: Position }
+              - !entity { Id: player, Property: Position }
               - !var chase speed
               - !var flee speed
 
@@ -129,7 +129,7 @@ Entities:
             ArgumentTypes: [ vector, float ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             With:
-              - !entity_position guard
+              - !entity { Id: guard, Property: Position }
               - !var field bound
 
       ai:
@@ -160,27 +160,27 @@ Entities:
               to: chase
               when: !expr
                 Do: closer than
-                With: [ !entity_position guard, !entity_position player, !var chase range ]
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var chase range ]
             - from: chase
               to: flee
               when: !expr
                 Do: closer than
-                With: [ !entity_position guard, !entity_position player, !var flee range ]
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var flee range ]
             - from: chase
               to: patrol
               when: !expr
                 Do: farther than
-                With: [ !entity_position guard, !entity_position player, !var lose range ]
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var lose range ]
             - from: flee
               to: caught
               when: !expr
                 Do: closer than
-                With: [ !entity_position guard, !entity_position player, !var catch range ]
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
             - from: flee
               to: patrol
               when: !expr
                 Do: farther than
-                With: [ !entity_position guard, !entity_position player, !var safe range ]
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var safe range ]
 
       # --- OnEnter hook targets: drive the movement mode and the live colour. ---
       set mode idle:
