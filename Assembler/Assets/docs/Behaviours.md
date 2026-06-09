@@ -778,6 +778,102 @@ Writes a Color value into the referenced variable when Executed. See VariableSet
 | VariableId | Color | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
 | Value | Color | Source value to assign. Can be a constant, expression, or another variable reference. |
 
+## `int variable changed trigger`
+Fires when an int variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | int | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `float variable changed trigger`
+Fires when a float variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | float | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `bool variable changed trigger`
+Fires when a bool variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | bool | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `string variable changed trigger`
+Fires when a string variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | string | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `vector variable changed trigger`
+Fires when a vector variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Vector3 | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `colour variable changed trigger`
+Fires when a colour variable changes. See VariableChangedTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Color | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
 ## `vector list add`
 Appends a Vector3 value to the end of the target list when Executed. See ListAddBehaviour.
 
