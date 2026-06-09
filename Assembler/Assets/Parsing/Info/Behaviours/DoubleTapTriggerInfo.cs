@@ -14,8 +14,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxInterval")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxMovement")));
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxInterval")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("MaxMovement")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

@@ -21,13 +21,13 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("UseGravity")),
-				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsKinematic")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Mass")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("LinearDamping")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("AngularDamping")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezePosition")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezeRotation")));
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("UseGravity")),
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsKinematic")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Mass")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("LinearDamping")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("AngularDamping")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezePosition")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezeRotation")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

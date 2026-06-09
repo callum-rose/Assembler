@@ -40,7 +40,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 			if (hasTag)
 			{
-				return new TagTarget(Transformer.CreateValueSource<string>(ctx, tagValue!));
+				return new TagTarget(ValueSourceFactory.CreateValueSource<string>(ctx, tagValue!));
 			}
 
 			return idValue is StringValue s

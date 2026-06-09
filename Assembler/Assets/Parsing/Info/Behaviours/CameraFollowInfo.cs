@@ -25,14 +25,14 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				CameraTargetSource.Parse(ctx, props.GetValueOrDefault("Target") ?? NoValue.Instance, id, "Target"),
 				CameraTargetSource.Parse(ctx, props.GetValueOrDefault("LookAt") ?? NoValue.Instance, id, "LookAt"),
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Mode")),
-				Transformer.CreateValueSource<int>(ctx, props.GetValueOrDefault("Priority")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Lens")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Damping")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("DeadZone")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("CameraDistance")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("ScreenOffset")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FollowOffset")));
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Mode")),
+				ValueSourceFactory.CreateValueSource<int>(ctx, props.GetValueOrDefault("Priority")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Lens")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Damping")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("DeadZone")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("CameraDistance")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("ScreenOffset")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FollowOffset")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

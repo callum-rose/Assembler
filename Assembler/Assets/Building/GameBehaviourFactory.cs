@@ -81,83 +81,44 @@ namespace Assembler.Building
 		{
 			var map = new Dictionary<Type, BuilderEntry>
 			{
-				[typeof(BoxColliderInfo)] = new(typeof(AutoAddBoxColliderBehaviour), (go, info, ctx) =>
-				{
-					var i = (BoxColliderInfo)info;
-					var b = go.AddComponent<AutoAddBoxColliderBehaviour>();
-					return (b, lr => b.Initialise(new BoxColliderData(i.Id,
+				[typeof(BoxColliderInfo)] = Entry<BoxColliderInfo, AutoAddBoxColliderBehaviour, BoxColliderData>(
+					(i, ctx) => new BoxColliderData(i.Id,
 						i.Size.Resolve(ctx.Resolution),
-						i.IsTrigger.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SphereColliderInfo)] = new(typeof(AutoAddSphereColliderBehaviour), (go, info, ctx) =>
-				{
-					var i = (SphereColliderInfo)info;
-					var b = go.AddComponent<AutoAddSphereColliderBehaviour>();
-					return (b, lr => b.Initialise(new SphereColliderData(i.Id,
-						i.Radius.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CapsuleColliderInfo)] = new(typeof(AutoAddCapsuleColliderBehaviour), (go, info, ctx) =>
-				{
-					var i = (CapsuleColliderInfo)info;
-					var b = go.AddComponent<AutoAddCapsuleColliderBehaviour>();
-					return (b, lr => b.Initialise(new CapsuleColliderData(i.Id)
+						i.IsTrigger.Resolve(ctx.Resolution))),
+				[typeof(SphereColliderInfo)] = Entry<SphereColliderInfo, AutoAddSphereColliderBehaviour, SphereColliderData>(
+					(i, ctx) => new SphereColliderData(i.Id,
+						i.Radius.Resolve(ctx.Resolution))),
+				[typeof(CapsuleColliderInfo)] = Entry<CapsuleColliderInfo, AutoAddCapsuleColliderBehaviour, CapsuleColliderData>(
+					(i, ctx) => new CapsuleColliderData(i.Id)
 					{
 						Radius = i.Radius.Resolve(ctx.Resolution),
 						Height = i.Height.Resolve(ctx.Resolution),
 						Direction = i.Direction.Resolve(ctx.Resolution),
 						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
-					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MeshColliderInfo)] = new(typeof(AutoAddMeshColliderBehaviour), (go, info, ctx) =>
-				{
-					var i = (MeshColliderInfo)info;
-					var b = go.AddComponent<AutoAddMeshColliderBehaviour>();
-					return (b, lr => b.Initialise(new MeshColliderData(i.Id)
+					}),
+				[typeof(MeshColliderInfo)] = Entry<MeshColliderInfo, AutoAddMeshColliderBehaviour, MeshColliderData>(
+					(i, ctx) => new MeshColliderData(i.Id)
 					{
 						Convex = i.Convex.Resolve(ctx.Resolution),
 						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
-					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AddForceInfo)] = new(typeof(AddForceBehaviour), (go, info, ctx) =>
-				{
-					var i = (AddForceInfo)info;
-					var b = go.AddComponent<AddForceBehaviour>();
-					return (b, lr => b.Initialise(new AddForceData(i.Id,
-						i.Force.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AddImpulseInfo)] = new(typeof(AddImpulseBehaviour), (go, info, ctx) =>
-				{
-					var i = (AddImpulseInfo)info;
-					var b = go.AddComponent<AddImpulseBehaviour>();
-					return (b, lr => b.Initialise(new AddImpulseData(i.Id,
-						i.Impulse.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AddTorqueInfo)] = new(typeof(AddTorqueBehaviour), (go, info, ctx) =>
-				{
-					var i = (AddTorqueInfo)info;
-					var b = go.AddComponent<AddTorqueBehaviour>();
-					return (b, lr => b.Initialise(new AddTorqueData(i.Id,
-						i.Torque.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SetVelocityInfo)] = new(typeof(SetVelocityBehaviour), (go, info, ctx) =>
-				{
-					var i = (SetVelocityInfo)info;
-					var b = go.AddComponent<SetVelocityBehaviour>();
-					return (b, lr => b.Initialise(new SetVelocityData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SetAngularVelocityInfo)] = new(typeof(SetAngularVelocityBehaviour), (go, info, ctx) =>
-				{
-					var i = (SetAngularVelocityInfo)info;
-					var b = go.AddComponent<SetAngularVelocityBehaviour>();
-					return (b, lr => b.Initialise(new SetAngularVelocityData(i.Id,
-						i.AngularVelocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(RigidbodyInfo)] = new(typeof(RigidbodyBehaviour), (go, info, ctx) =>
-				{
-					var i = (RigidbodyInfo)info;
-					var b = go.AddComponent<RigidbodyBehaviour>();
-					return (b, lr => b.Initialise(new RigidbodyData(i.Id)
+					}),
+				[typeof(AddForceInfo)] = Entry<AddForceInfo, AddForceBehaviour, AddForceData>(
+					(i, ctx) => new AddForceData(i.Id,
+						i.Force.Resolve(ctx.Resolution))),
+				[typeof(AddImpulseInfo)] = Entry<AddImpulseInfo, AddImpulseBehaviour, AddImpulseData>(
+					(i, ctx) => new AddImpulseData(i.Id,
+						i.Impulse.Resolve(ctx.Resolution))),
+				[typeof(AddTorqueInfo)] = Entry<AddTorqueInfo, AddTorqueBehaviour, AddTorqueData>(
+					(i, ctx) => new AddTorqueData(i.Id,
+						i.Torque.Resolve(ctx.Resolution))),
+				[typeof(SetVelocityInfo)] = Entry<SetVelocityInfo, SetVelocityBehaviour, SetVelocityData>(
+					(i, ctx) => new SetVelocityData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution))),
+				[typeof(SetAngularVelocityInfo)] = Entry<SetAngularVelocityInfo, SetAngularVelocityBehaviour, SetAngularVelocityData>(
+					(i, ctx) => new SetAngularVelocityData(i.Id,
+						i.AngularVelocity.Resolve(ctx.Resolution))),
+				[typeof(RigidbodyInfo)] = Entry<RigidbodyInfo, RigidbodyBehaviour, RigidbodyData>(
+					(i, ctx) => new RigidbodyData(i.Id)
 					{
 						UseGravity = i.UseGravity.Resolve(ctx.Resolution),
 						IsKinematic = i.IsKinematic.Resolve(ctx.Resolution),
@@ -166,99 +127,50 @@ namespace Assembler.Building
 						AngularDamping = i.AngularDamping.Resolve(ctx.Resolution),
 						FreezePosition = i.FreezePosition.Resolve(ctx.Resolution),
 						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution)
-					}, i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(VelocityInfo)] = new(typeof(Velocity), (go, info, ctx) =>
-				{
-					var i = (VelocityInfo)info;
-					var b = go.AddComponent<Velocity>();
-					return (b, lr => b.Initialise(new VelocityData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AccelerationInfo)] = new(typeof(Acceleration), (go, info, ctx) =>
-				{
-					var i = (AccelerationInfo)info;
-					var b = go.AddComponent<Acceleration>();
-					return (b, lr => b.Initialise(new AccelerationData(i.Id,
+					}),
+				[typeof(VelocityInfo)] = Entry<VelocityInfo, Velocity, VelocityData>(
+					(i, ctx) => new VelocityData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution))),
+				[typeof(AccelerationInfo)] = Entry<AccelerationInfo, Acceleration, AccelerationData>(
+					(i, ctx) => new AccelerationData(i.Id,
 						i.Acceleration.Resolve(ctx.Resolution),
-						i.Velocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DragInfo)] = new(typeof(DragBehaviour), (go, info, ctx) =>
-				{
-					var i = (DragInfo)info;
-					var b = go.AddComponent<DragBehaviour>();
-					return (b, lr => b.Initialise(new DragData(i.Id,
+						i.Velocity.Resolve(ctx.Resolution))),
+				[typeof(DragInfo)] = Entry<DragInfo, DragBehaviour, DragData>(
+					(i, ctx) => new DragData(i.Id,
 						i.Velocity.Resolve(ctx.Resolution),
-						i.Coefficient.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SpeedLimitInfo)] = new(typeof(SpeedLimit), (go, info, ctx) =>
-				{
-					var i = (SpeedLimitInfo)info;
-					var b = go.AddComponent<SpeedLimit>();
-					return (b, lr => b.Initialise(new SpeedLimitData(i.Id,
+						i.Coefficient.Resolve(ctx.Resolution))),
+				[typeof(SpeedLimitInfo)] = Entry<SpeedLimitInfo, SpeedLimit, SpeedLimitData>(
+					(i, ctx) => new SpeedLimitData(i.Id,
 						i.Velocity.Resolve(ctx.Resolution),
-						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MoveTowardsInfo)] = new(typeof(MoveTowards), (go, info, ctx) =>
-				{
-					var i = (MoveTowardsInfo)info;
-					var b = go.AddComponent<MoveTowards>();
-					return (b, lr => b.Initialise(new MoveTowardsData(i.Id,
+						i.Max.Resolve(ctx.Resolution))),
+				[typeof(MoveTowardsInfo)] = Entry<MoveTowardsInfo, MoveTowards, MoveTowardsData>(
+					(i, ctx) => new MoveTowardsData(i.Id,
 						i.Target.Resolve(ctx.Resolution),
-						i.Speed.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SmoothMoveInfo)] = new(typeof(SmoothMove), (go, info, ctx) =>
-				{
-					var i = (SmoothMoveInfo)info;
-					var b = go.AddComponent<SmoothMove>();
-					return (b, lr => b.Initialise(new SmoothMoveData(i.Id,
+						i.Speed.Resolve(ctx.Resolution))),
+				[typeof(SmoothMoveInfo)] = Entry<SmoothMoveInfo, SmoothMove, SmoothMoveData>(
+					(i, ctx) => new SmoothMoveData(i.Id,
 						i.Target.Resolve(ctx.Resolution),
-						i.SmoothTime.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ClampPositionInfo)] = new(typeof(ClampPosition), (go, info, ctx) =>
-				{
-					var i = (ClampPositionInfo)info;
-					var b = go.AddComponent<ClampPosition>();
-					return (b, lr => b.Initialise(new ClampPositionData(i.Id,
+						i.SmoothTime.Resolve(ctx.Resolution))),
+				[typeof(ClampPositionInfo)] = Entry<ClampPositionInfo, ClampPosition, ClampPositionData>(
+					(i, ctx) => new ClampPositionData(i.Id,
 						i.Min.Resolve(ctx.Resolution),
-						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(WrapPositionInfo)] = new(typeof(WrapPosition), (go, info, ctx) =>
-				{
-					var i = (WrapPositionInfo)info;
-					var b = go.AddComponent<WrapPosition>();
-					return (b, lr => b.Initialise(new WrapPositionData(i.Id,
+						i.Max.Resolve(ctx.Resolution))),
+				[typeof(WrapPositionInfo)] = Entry<WrapPositionInfo, WrapPosition, WrapPositionData>(
+					(i, ctx) => new WrapPositionData(i.Id,
 						i.Min.Resolve(ctx.Resolution),
-						i.Max.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(TranslateInfo)] = new(typeof(Translate), (go, info, ctx) =>
-				{
-					var i = (TranslateInfo)info;
-					var b = go.AddComponent<Translate>();
-					return (b, lr => b.Initialise(new TranslateData(i.Id,
-						i.Displacement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AngularVelocityInfo)] = new(typeof(AngularVelocity), (go, info, ctx) =>
-				{
-					var i = (AngularVelocityInfo)info;
-					var b = go.AddComponent<AngularVelocity>();
-					return (b, lr => b.Initialise(new AngularVelocityData(i.Id,
-						i.AngularVelocity.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(RotateInfo)] = new(typeof(Rotate), (go, info, ctx) =>
-				{
-					var i = (RotateInfo)info;
-					var b = go.AddComponent<Rotate>();
-					return (b, lr => b.Initialise(new RotateData(i.Id,
-						i.Displacement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SetRotationInfo)] = new(typeof(SetRotation), (go, info, ctx) =>
-				{
-					var i = (SetRotationInfo)info;
-					var b = go.AddComponent<SetRotation>();
-					return (b, lr => b.Initialise(new SetRotationData(i.Id,
-						i.ValueExpression.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
+						i.Max.Resolve(ctx.Resolution))),
+				[typeof(TranslateInfo)] = Entry<TranslateInfo, Translate, TranslateData>(
+					(i, ctx) => new TranslateData(i.Id,
+						i.Displacement.Resolve(ctx.Resolution))),
+				[typeof(AngularVelocityInfo)] = Entry<AngularVelocityInfo, AngularVelocity, AngularVelocityData>(
+					(i, ctx) => new AngularVelocityData(i.Id,
+						i.AngularVelocity.Resolve(ctx.Resolution))),
+				[typeof(RotateInfo)] = Entry<RotateInfo, Rotate, RotateData>(
+					(i, ctx) => new RotateData(i.Id,
+						i.Displacement.Resolve(ctx.Resolution))),
+				[typeof(SetRotationInfo)] = Entry<SetRotationInfo, SetRotation, SetRotationData>(
+					(i, ctx) => new SetRotationData(i.Id,
+						i.ValueExpression.Resolve(ctx.Resolution))),
 				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
 					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
@@ -268,64 +180,30 @@ namespace Assembler.Building
 				[typeof(RotateAnimationInfo)] = new(typeof(RotateAnimation), (go, info, ctx) =>
 					BuildTransformAnimation<RotateAnimationInfo, RotateAnimation>(go, (RotateAnimationInfo)info, ctx,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(SetPositionInfo)] = new(typeof(SetPosition), (go, info, ctx) =>
-				{
-					var i = (SetPositionInfo)info;
-					var b = go.AddComponent<SetPosition>();
-					return (b, lr => b.Initialise(new SetPositionData(i.Id,
-						i.ValueExpression.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(KeyHoldTriggerInfo)] = new(typeof(KeyHoldTrigger), (go, info, ctx) =>
-				{
-					var i = (KeyHoldTriggerInfo)info;
-					var b = go.AddComponent<KeyHoldTrigger>();
-					return (b, lr => b.Initialise(new KeyHoldTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(KeyDownTriggerInfo)] = new(typeof(KeyDownTrigger), (go, info, ctx) =>
-				{
-					var i = (KeyDownTriggerInfo)info;
-					var b = go.AddComponent<KeyDownTrigger>();
-					return (b, lr => b.Initialise(new KeyDownTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(KeyUpTriggerInfo)] = new(typeof(KeyUpTrigger), (go, info, ctx) =>
-				{
-					var i = (KeyUpTriggerInfo)info;
-					var b = go.AddComponent<KeyUpTrigger>();
-					return (b, lr => b.Initialise(new KeyUpTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MouseButtonTriggerInfo)] = new(typeof(MouseButtonTrigger), (go, info, ctx) =>
-				{
-					var i = (MouseButtonTriggerInfo)info;
-					var b = go.AddComponent<MouseButtonTrigger>();
-					return (b, lr => b.Initialise(new MouseButtonTriggerData(i.Id,
+				[typeof(SetPositionInfo)] = Entry<SetPositionInfo, SetPosition, SetPositionData>(
+					(i, ctx) => new SetPositionData(i.Id,
+						i.ValueExpression.Resolve(ctx.Resolution))),
+				[typeof(KeyHoldTriggerInfo)] = Entry<KeyHoldTriggerInfo, KeyHoldTrigger, KeyHoldTriggerData>(
+					(i, ctx) => new KeyHoldTriggerData(i.Id,
+						i.Key.Resolve(ctx.Resolution))),
+				[typeof(KeyDownTriggerInfo)] = Entry<KeyDownTriggerInfo, KeyDownTrigger, KeyDownTriggerData>(
+					(i, ctx) => new KeyDownTriggerData(i.Id,
+						i.Key.Resolve(ctx.Resolution))),
+				[typeof(KeyUpTriggerInfo)] = Entry<KeyUpTriggerInfo, KeyUpTrigger, KeyUpTriggerData>(
+					(i, ctx) => new KeyUpTriggerData(i.Id,
+						i.Key.Resolve(ctx.Resolution))),
+				[typeof(MouseButtonTriggerInfo)] = Entry<MouseButtonTriggerInfo, MouseButtonTrigger, MouseButtonTriggerData>(
+					(i, ctx) => new MouseButtonTriggerData(i.Id,
 						i.Button.Resolve(ctx.Resolution),
-						i.Phase.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(MousePositionTriggerInfo)] = new(typeof(MousePositionTrigger), (go, info, ctx) =>
-				{
-					var i = (MousePositionTriggerInfo)info;
-					var b = go.AddComponent<MousePositionTrigger>();
-					return (b, lr => b.Initialise(new MousePositionTriggerData(i.Id),
-						i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ScrollWheelTriggerInfo)] = new(typeof(ScrollWheelTrigger), (go, info, ctx) =>
-				{
-					var i = (ScrollWheelTriggerInfo)info;
-					var b = go.AddComponent<ScrollWheelTrigger>();
-					return (b, lr => b.Initialise(new ScrollWheelTriggerData(i.Id),
-						i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AxisTriggerInfo)] = new(typeof(AxisTrigger), (go, info, ctx) =>
-				{
-					var i = (AxisTriggerInfo)info;
-					var b = go.AddComponent<AxisTrigger>();
-					return (b, lr => b.Initialise(new AxisTriggerData(i.Id,
+						i.Phase.Resolve(ctx.Resolution))),
+				[typeof(MousePositionTriggerInfo)] = Entry<MousePositionTriggerInfo, MousePositionTrigger, MousePositionTriggerData>(
+					(i, ctx) => new MousePositionTriggerData(i.Id)),
+				[typeof(ScrollWheelTriggerInfo)] = Entry<ScrollWheelTriggerInfo, ScrollWheelTrigger, ScrollWheelTriggerData>(
+					(i, ctx) => new ScrollWheelTriggerData(i.Id)),
+				[typeof(AxisTriggerInfo)] = Entry<AxisTriggerInfo, AxisTrigger, AxisTriggerData>(
+					(i, ctx) => new AxisTriggerData(i.Id,
 						i.XAxis.Resolve(ctx.Resolution),
-						i.YAxis.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
+						i.YAxis.Resolve(ctx.Resolution))),
 				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx) =>
 				{
 					var i = (InputActionTriggerInfo)info;
@@ -349,157 +227,76 @@ namespace Assembler.Building
 						actionInfo.Phase,
 						liveAction), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(GamepadButtonTriggerInfo)] = new(typeof(GamepadButtonTrigger), (go, info, ctx) =>
-				{
-					var i = (GamepadButtonTriggerInfo)info;
-					var b = go.AddComponent<GamepadButtonTrigger>();
-					return (b, lr => b.Initialise(new GamepadButtonTriggerData(i.Id,
+				[typeof(GamepadButtonTriggerInfo)] = Entry<GamepadButtonTriggerInfo, GamepadButtonTrigger, GamepadButtonTriggerData>(
+					(i, ctx) => new GamepadButtonTriggerData(i.Id,
 						i.Button.Resolve(ctx.Resolution),
-						i.Mode.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(TapTriggerInfo)] = new(typeof(Tap), (go, info, ctx) =>
-				{
-					var i = (TapTriggerInfo)info;
-					var b = go.AddComponent<Tap>();
-					return (b, lr => b.Initialise(new TapTriggerData(i.Id,
+						i.Mode.Resolve(ctx.Resolution))),
+				[typeof(TapTriggerInfo)] = Entry<TapTriggerInfo, Tap, TapTriggerData>(
+					(i, ctx) => new TapTriggerData(i.Id,
 						i.MaxDuration.Resolve(ctx.Resolution),
-						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DoubleTapTriggerInfo)] = new(typeof(DoubleTap), (go, info, ctx) =>
-				{
-					var i = (DoubleTapTriggerInfo)info;
-					var b = go.AddComponent<DoubleTap>();
-					return (b, lr => b.Initialise(new DoubleTapTriggerData(i.Id,
+						i.MaxMovement.Resolve(ctx.Resolution))),
+				[typeof(DoubleTapTriggerInfo)] = Entry<DoubleTapTriggerInfo, DoubleTap, DoubleTapTriggerData>(
+					(i, ctx) => new DoubleTapTriggerData(i.Id,
 						i.MaxInterval.Resolve(ctx.Resolution),
-						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(LongPressTriggerInfo)] = new(typeof(LongPress), (go, info, ctx) =>
-				{
-					var i = (LongPressTriggerInfo)info;
-					var b = go.AddComponent<LongPress>();
-					return (b, lr => b.Initialise(new LongPressTriggerData(i.Id,
+						i.MaxMovement.Resolve(ctx.Resolution))),
+				[typeof(LongPressTriggerInfo)] = Entry<LongPressTriggerInfo, LongPress, LongPressTriggerData>(
+					(i, ctx) => new LongPressTriggerData(i.Id,
 						i.Duration.Resolve(ctx.Resolution),
-						i.MaxMovement.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SwipeTriggerInfo)] = new(typeof(Swipe), (go, info, ctx) =>
-				{
-					var i = (SwipeTriggerInfo)info;
-					var b = go.AddComponent<Swipe>();
-					return (b, lr => b.Initialise(new SwipeTriggerData(i.Id,
+						i.MaxMovement.Resolve(ctx.Resolution))),
+				[typeof(SwipeTriggerInfo)] = Entry<SwipeTriggerInfo, Swipe, SwipeTriggerData>(
+					(i, ctx) => new SwipeTriggerData(i.Id,
 						i.MinDistance.Resolve(ctx.Resolution),
-						i.MaxDuration.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DragTriggerInfo)] = new(typeof(Drag), (go, info, ctx) =>
-				{
-					var i = (DragTriggerInfo)info;
-					var b = go.AddComponent<Drag>();
-					return (b, lr => b.Initialise(new DragTriggerData(i.Id,
-						i.Threshold.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(PinchAndRotateTriggerInfo)] = new(typeof(PinchAndRotate), (go, info, ctx) =>
-				{
-					var i = (PinchAndRotateTriggerInfo)info;
-					var b = go.AddComponent<PinchAndRotate>();
-					return (b, lr => b.Initialise(new PinchAndRotateTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(OnStartTriggerInfo)] = new(typeof(OnStartTrigger), (go, info, ctx) =>
-				{
-					var i = (OnStartTriggerInfo)info;
-					var b = go.AddComponent<OnStartTrigger>();
-					return (b, lr => b.Initialise(new OnStartTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(TimerTriggerInfo)] = new(typeof(TimerTrigger), (go, info, ctx) =>
-				{
-					var i = (TimerTriggerInfo)info;
-					var b = go.AddComponent<TimerTrigger>();
-					return (b, lr => b.Initialise(new TimerTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DeferredTriggerInfo)] = new(typeof(DeferredTrigger), (go, info, ctx) =>
-				{
-					var i = (DeferredTriggerInfo)info;
-					var b = go.AddComponent<DeferredTrigger>();
-					return (b, lr => b.Initialise(new DeferredTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DebouncedTriggerInfo)] = new(typeof(DebouncedTrigger), (go, info, ctx) =>
-				{
-					var i = (DebouncedTriggerInfo)info;
-					var b = go.AddComponent<DebouncedTrigger>();
-					return (b, lr => b.Initialise(new DebouncedTriggerData(i.Id,
-						i.Interval.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ThrottledTriggerInfo)] = new(typeof(ThrottledTrigger), (go, info, ctx) =>
-				{
-					var i = (ThrottledTriggerInfo)info;
-					var b = go.AddComponent<ThrottledTrigger>();
-					return (b, lr => b.Initialise(new ThrottledTriggerData(i.Id,
-						i.Rate.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(IntervalTriggerInfo)] = new(typeof(IntervalTrigger), (go, info, ctx) =>
-				{
-					var i = (IntervalTriggerInfo)info;
-					var b = go.AddComponent<IntervalTrigger>();
-					return (b, lr => b.Initialise(new IntervalTriggerData(i.Id,
+						i.MaxDuration.Resolve(ctx.Resolution))),
+				[typeof(DragTriggerInfo)] = Entry<DragTriggerInfo, Drag, DragTriggerData>(
+					(i, ctx) => new DragTriggerData(i.Id,
+						i.Threshold.Resolve(ctx.Resolution))),
+				[typeof(PinchAndRotateTriggerInfo)] = Entry<PinchAndRotateTriggerInfo, PinchAndRotate, PinchAndRotateTriggerData>(
+					(i, ctx) => new PinchAndRotateTriggerData(i.Id)),
+				[typeof(OnStartTriggerInfo)] = Entry<OnStartTriggerInfo, OnStartTrigger, OnStartTriggerData>(
+					(i, ctx) => new OnStartTriggerData(i.Id)),
+				[typeof(TimerTriggerInfo)] = Entry<TimerTriggerInfo, TimerTrigger, TimerTriggerData>(
+					(i, ctx) => new TimerTriggerData(i.Id,
+						i.Delay.Resolve(ctx.Resolution))),
+				[typeof(DeferredTriggerInfo)] = Entry<DeferredTriggerInfo, DeferredTrigger, DeferredTriggerData>(
+					(i, ctx) => new DeferredTriggerData(i.Id,
+						i.Delay.Resolve(ctx.Resolution))),
+				[typeof(DebouncedTriggerInfo)] = Entry<DebouncedTriggerInfo, DebouncedTrigger, DebouncedTriggerData>(
+					(i, ctx) => new DebouncedTriggerData(i.Id,
+						i.Interval.Resolve(ctx.Resolution))),
+				[typeof(ThrottledTriggerInfo)] = Entry<ThrottledTriggerInfo, ThrottledTrigger, ThrottledTriggerData>(
+					(i, ctx) => new ThrottledTriggerData(i.Id,
+						i.Rate.Resolve(ctx.Resolution))),
+				[typeof(IntervalTriggerInfo)] = Entry<IntervalTriggerInfo, IntervalTrigger, IntervalTriggerData>(
+					(i, ctx) => new IntervalTriggerData(i.Id,
 						i.Interval.Resolve(ctx.Resolution),
 						i.Count.Resolve(ctx.Resolution),
-						i.AutoStart.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(EveryFrameTriggerInfo)] = new(typeof(EveryFrameTrigger), (go, info, ctx) =>
-				{
-					var i = (EveryFrameTriggerInfo)info;
-					var b = go.AddComponent<EveryFrameTrigger>();
-					return (b, lr => b.Initialise(new EveryFrameTriggerData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CollisionEnterTriggerInfo)] = new(typeof(CollisionEnter), (go, info, ctx) =>
-				{
-					var i = (CollisionEnterTriggerInfo)info;
-					var b = go.AddComponent<CollisionEnter>();
-					return (b, lr => b.Initialise(new CollisionEnterTriggerData(i.Id,
-						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CollisionExitTriggerInfo)] = new(typeof(CollisionExit), (go, info, ctx) =>
-				{
-					var i = (CollisionExitTriggerInfo)info;
-					var b = go.AddComponent<CollisionExit>();
-					return (b, lr => b.Initialise(new CollisionExitTriggerData(i.Id,
-						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CollisionStayTriggerInfo)] = new(typeof(CollisionStay), (go, info, ctx) =>
-				{
-					var i = (CollisionStayTriggerInfo)info;
-					var b = go.AddComponent<CollisionStay>();
-					return (b, lr => b.Initialise(new CollisionStayTriggerData(i.Id,
-						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(TriggerEnterTriggerInfo)] = new(typeof(TriggerEnter), (go, info, ctx) =>
-				{
-					var i = (TriggerEnterTriggerInfo)info;
-					var b = go.AddComponent<TriggerEnter>();
-					return (b, lr => b.Initialise(new TriggerEnterTriggerData(i.Id,
-						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(TriggerExitTriggerInfo)] = new(typeof(TriggerExit), (go, info, ctx) =>
-				{
-					var i = (TriggerExitTriggerInfo)info;
-					var b = go.AddComponent<TriggerExit>();
-					return (b, lr => b.Initialise(new TriggerExitTriggerData(i.Id,
-						i.TagsToDetect), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ConditionGateInfo)] = new(typeof(ConditionGate), (go, info, ctx) =>
-				{
-					var i = (ConditionGateInfo)info;
-					var b = go.AddComponent<ConditionGate>();
-					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
-						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(InverseConditionGateInfo)] = new(typeof(InverseConditionGate), (go, info, ctx) =>
-				{
-					var i = (InverseConditionGateInfo)info;
-					var b = go.AddComponent<InverseConditionGate>();
-					return (b, lr => b.Initialise(new ConditionGateData(i.Id,
-						i.Condition.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
+						i.AutoStart.Resolve(ctx.Resolution))),
+				[typeof(EveryFrameTriggerInfo)] = Entry<EveryFrameTriggerInfo, EveryFrameTrigger, EveryFrameTriggerData>(
+					(i, ctx) => new EveryFrameTriggerData(i.Id)),
+				// The physical collision/trigger behaviours derive from GameBehaviour<PhysicalTriggerData>
+				// (via PhysicalTrigger), so TData is the PhysicalTriggerData base — the concrete *TriggerData
+				// the lambda builds upcasts to it.
+				[typeof(CollisionEnterTriggerInfo)] = Entry<CollisionEnterTriggerInfo, CollisionEnter, PhysicalTriggerData>(
+					(i, ctx) => new CollisionEnterTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(CollisionExitTriggerInfo)] = Entry<CollisionExitTriggerInfo, CollisionExit, PhysicalTriggerData>(
+					(i, ctx) => new CollisionExitTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(CollisionStayTriggerInfo)] = Entry<CollisionStayTriggerInfo, CollisionStay, PhysicalTriggerData>(
+					(i, ctx) => new CollisionStayTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(TriggerEnterTriggerInfo)] = Entry<TriggerEnterTriggerInfo, TriggerEnter, PhysicalTriggerData>(
+					(i, ctx) => new TriggerEnterTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(TriggerExitTriggerInfo)] = Entry<TriggerExitTriggerInfo, TriggerExit, PhysicalTriggerData>(
+					(i, ctx) => new TriggerExitTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(ConditionGateInfo)] = Entry<ConditionGateInfo, ConditionGate, ConditionGateData>(
+					(i, ctx) => new ConditionGateData(i.Id,
+						i.Condition.Resolve(ctx.Resolution))),
+				[typeof(InverseConditionGateInfo)] = Entry<InverseConditionGateInfo, InverseConditionGate, ConditionGateData>(
+					(i, ctx) => new ConditionGateData(i.Id,
+						i.Condition.Resolve(ctx.Resolution))),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
 				{
 					var i = (ExclusiveTriggerInfo)info;
@@ -508,15 +305,11 @@ namespace Assembler.Building
 					return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
 						i.Group.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(CameraInfo)] = new(typeof(CameraBehaviour), (go, info, ctx) =>
-				{
-					var i = (CameraInfo)info;
-					var b = go.AddComponent<CameraBehaviour>();
-					return (b, lr => b.Initialise(new CameraData(i.Id,
+				[typeof(CameraInfo)] = Entry<CameraInfo, CameraBehaviour, CameraData>(
+					(i, ctx) => new CameraData(i.Id,
 						i.View.Resolve(ctx.Resolution),
 						i.Size.Resolve(ctx.Resolution),
-						i.DefaultBlend.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
+						i.DefaultBlend.Resolve(ctx.Resolution))),
 				[typeof(CameraFollowInfo)] = new(typeof(CameraFollow), (go, info, ctx) =>
 				{
 					var i = (CameraFollowInfo)info;
@@ -541,141 +334,77 @@ namespace Assembler.Building
 							i.CameraDistance.Resolve(res),
 							i.ScreenOffset.Resolve(res),
 							i.FollowOffset.Resolve(res)), i.Listeners.ToListeners(lr, res));
-					});
+					}
+					);
 				}),
-				[typeof(SpawnerInfo)] = new(typeof(SpawnerBehaviour), (go, info, ctx) =>
-				{
-					var i = (SpawnerInfo)info;
-					var b = go.AddComponent<SpawnerBehaviour>();
-					return (b, lr => b.Initialise(new SpawnerData(i.Id,
+				[typeof(SpawnerInfo)] = Entry<SpawnerInfo, SpawnerBehaviour, SpawnerData>(
+					(i, ctx) => new SpawnerData(i.Id,
 						i.TemplateId.Resolve(ctx.Resolution),
 						i.Templates.Select(t => new SpawnTemplate(t.TemplateId, t.Weight.Resolve(ctx.Resolution))).ToArray(),
 						i.Selection.Resolve(ctx.Resolution),
 						i.Position.Resolve(ctx.Resolution),
 						i.Rotation.Resolve(ctx.Resolution),
 						i.Parameters.ToDictionary(kv => kv.Key,
-							kv => (IValueProvider)kv.Value.Resolve(ctx.Resolution))), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(DestroyInfo)] = new(typeof(DestroyBehaviour), (go, info, ctx) =>
-				{
-					var i = (DestroyInfo)info;
-					var b = go.AddComponent<DestroyBehaviour>();
-					return (b, lr => b.Initialise(new DestroyData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(EndGameInfo)] = new(typeof(EndGame), (go, info, ctx) =>
-				{
-					var i = (EndGameInfo)info;
-					var b = go.AddComponent<EndGame>();
-					return (b, lr => b.Initialise(new EndGameData(i.Id), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SpriteInfo)] = new(typeof(SpriteBehaviour), (go, info, ctx) =>
-				{
-					var i = (SpriteInfo)info;
-					var b = go.AddComponent<SpriteBehaviour>();
-					return (b, lr => b.Initialise(new SpriteData(i.Id,
+							kv => (IValueProvider)kv.Value.Resolve(ctx.Resolution)))),
+				[typeof(DestroyInfo)] = Entry<DestroyInfo, DestroyBehaviour, DestroyData>(
+					(i, ctx) => new DestroyData(i.Id)),
+				[typeof(EndGameInfo)] = Entry<EndGameInfo, EndGame, EndGameData>(
+					(i, ctx) => new EndGameData(i.Id)),
+				[typeof(SpriteInfo)] = Entry<SpriteInfo, SpriteBehaviour, SpriteData>(
+					(i, ctx) => new SpriteData(i.Id,
 						i.Sprite.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(VoxelMeshInfo)] = new(typeof(VoxelMesh), (go, info, ctx) =>
-				{
-					var i = (VoxelMeshInfo)info;
-					var b = go.AddComponent<VoxelMesh>();
-					return (b, lr => b.Initialise(new VoxelMeshData(i.Id,
+						i.Size.Resolve(ctx.Resolution))),
+				[typeof(VoxelMeshInfo)] = Entry<VoxelMeshInfo, VoxelMesh, VoxelMeshData>(
+					(i, ctx) => new VoxelMeshData(i.Id,
 						i.Mesh.Resolve(ctx.Resolution),
-						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(PrimitiveInfo)] = new(typeof(Primitive), (go, info, ctx) =>
-				{
-					var i = (PrimitiveInfo)info;
-					var b = go.AddComponent<Primitive>();
-					return (b, lr => b.Initialise(new PrimitiveData(i.Id,
+						i.Scale.Resolve(ctx.Resolution))),
+				[typeof(PrimitiveInfo)] = Entry<PrimitiveInfo, Primitive, PrimitiveData>(
+					(i, ctx) => new PrimitiveData(i.Id,
 						i.Shape.Resolve(ctx.Resolution),
 						i.Colour.Resolve(ctx.Resolution),
-						i.Size.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ActivePollInfo)] = new(typeof(ActivePoll), (go, info, ctx) =>
-				{
-					var i = (ActivePollInfo)info;
-					var b = go.AddComponent<ActivePoll>();
-					return (b, lr => b.Initialise(new ActivePollData(i.Id,
-						i.Active.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SetActiveInfo)] = new(typeof(SetActive), (go, info, ctx) =>
-				{
-					var i = (SetActiveInfo)info;
-					var b = go.AddComponent<SetActive>();
-					return (b, lr => b.Initialise(new SetActiveData(i.Id,
-						i.Active.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SetTimeScaleInfo)] = new(typeof(SetTimeScale), (go, info, ctx) =>
-				{
-					var i = (SetTimeScaleInfo)info;
-					var b = go.AddComponent<SetTimeScale>();
-					return (b, lr => b.Initialise(new SetTimeScaleData(i.Id,
-						i.Scale.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(ToggleActiveInfo)] = new(typeof(ToggleActive), (go, info, ctx) =>
-				{
-					var i = (ToggleActiveInfo)info;
-					var b = go.AddComponent<ToggleActive>();
-					return (b, lr => b.Initialise(new ToggleActiveData(i.Id),
-						i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(AudioSourceInfo)] = new(typeof(AudioSourceBehaviour), (go, info, ctx) =>
-				{
-					var i = (AudioSourceInfo)info;
-					var b = go.AddComponent<AudioSourceBehaviour>();
-					return (b, lr => b.Initialise(new AudioSourceData(i.Id,
+						i.Size.Resolve(ctx.Resolution))),
+				[typeof(ActivePollInfo)] = Entry<ActivePollInfo, ActivePoll, ActivePollData>(
+					(i, ctx) => new ActivePollData(i.Id,
+						i.Active.Resolve(ctx.Resolution))),
+				[typeof(SetActiveInfo)] = Entry<SetActiveInfo, SetActive, SetActiveData>(
+					(i, ctx) => new SetActiveData(i.Id,
+						i.Active.Resolve(ctx.Resolution))),
+				[typeof(SetTimeScaleInfo)] = Entry<SetTimeScaleInfo, SetTimeScale, SetTimeScaleData>(
+					(i, ctx) => new SetTimeScaleData(i.Id,
+						i.Scale.Resolve(ctx.Resolution))),
+				[typeof(ToggleActiveInfo)] = Entry<ToggleActiveInfo, ToggleActive, ToggleActiveData>(
+					(i, ctx) => new ToggleActiveData(i.Id)),
+				[typeof(AudioSourceInfo)] = Entry<AudioSourceInfo, AudioSourceBehaviour, AudioSourceData>(
+					(i, ctx) => new AudioSourceData(i.Id,
 						i.Clip.Resolve(ctx.Resolution),
 						i.PlayOnStart.Resolve(ctx.Resolution),
-						i.Loop.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(SphereGizmoInfo)] = new(typeof(SphereGizmoBehaviour), (go, info, ctx) =>
-				{
-					var i = (SphereGizmoInfo)info;
-					var b = go.AddComponent<SphereGizmoBehaviour>();
-					return (b, lr => b.Initialise(new SphereGizmoData(i.Id,
+						i.Loop.Resolve(ctx.Resolution))),
+				[typeof(SphereGizmoInfo)] = Entry<SphereGizmoInfo, SphereGizmoBehaviour, SphereGizmoData>(
+					(i, ctx) => new SphereGizmoData(i.Id,
 						i.Radius.Resolve(ctx.Resolution),
 						i.IsWire.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(CubeGizmoInfo)] = new(typeof(CubeGizmoBehaviour), (go, info, ctx) =>
-				{
-					var i = (CubeGizmoInfo)info;
-					var b = go.AddComponent<CubeGizmoBehaviour>();
-					return (b, lr => b.Initialise(new CubeGizmoData(i.Id,
+						i.Colour.Resolve(ctx.Resolution))),
+				[typeof(CubeGizmoInfo)] = Entry<CubeGizmoInfo, CubeGizmoBehaviour, CubeGizmoData>(
+					(i, ctx) => new CubeGizmoData(i.Id,
 						i.Size.Resolve(ctx.Resolution),
 						i.IsWire.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(LineGizmoInfo)] = new(typeof(LineGizmoBehaviour), (go, info, ctx) =>
-				{
-					var i = (LineGizmoInfo)info;
-					var b = go.AddComponent<LineGizmoBehaviour>();
-					return (b, lr => b.Initialise(new LineGizmoData(i.Id,
+						i.Colour.Resolve(ctx.Resolution))),
+				[typeof(LineGizmoInfo)] = Entry<LineGizmoInfo, LineGizmoBehaviour, LineGizmoData>(
+					(i, ctx) => new LineGizmoData(i.Id,
 						i.Start.Resolve(ctx.Resolution),
 						i.End.Resolve(ctx.Resolution),
-						i.Colour.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UICanvasInfo)] = new(typeof(UICanvas), (go, info, ctx) =>
-				{
-					var i = (UICanvasInfo)info;
-					var b = go.AddComponent<UICanvas>();
-					return (b, lr => b.Initialise(new UICanvasData(i.Id,
+						i.Colour.Resolve(ctx.Resolution))),
+				[typeof(UICanvasInfo)] = Entry<UICanvasInfo, UICanvas, UICanvasData>(
+					(i, ctx) => new UICanvasData(i.Id,
 						i.MatchWidthOrHeight.Resolve(ctx.Resolution),
-						i.ReferenceResolution.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				[typeof(UIContainerInfo)] = new(typeof(UIContainer), (go, info, ctx) =>
-				{
-					var i = (UIContainerInfo)info;
-					var b = go.AddComponent<UIContainer>();
-					return (b, lr => b.Initialise(new UIContainerData(i.Id,
+						i.ReferenceResolution.Resolve(ctx.Resolution))),
+				[typeof(UIContainerInfo)] = Entry<UIContainerInfo, UIContainer, UIContainerData>(
+					(i, ctx) => new UIContainerData(i.Id,
 						i.Direction.Resolve(ctx.Resolution),
 						i.Spacing.Resolve(ctx.Resolution),
 						i.Padding.Resolve(ctx.Resolution),
 						i.ChildAlignment.Resolve(ctx.Resolution),
-						i.FitContent.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
+						i.FitContent.Resolve(ctx.Resolution))),
 				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx) =>
 				{
 					var i = (TextLabelInfo)info;
@@ -768,6 +497,22 @@ namespace Assembler.Building
 			return map;
 		}
 
+		// Generic builder for the common "cast info -> add component -> initialise with resolved data" entry.
+		// Tying TInfo, TBehaviour and TData together at the type level makes the cast/AddComponent/data
+		// triple compiler-checked, so a mismatched pairing fails to compile rather than at runtime.
+		private static BuilderEntry Entry<TInfo, TBehaviour, TData>(
+			Func<TInfo, BehaviourBuildContext, TData> makeData)
+			where TInfo : BehaviourInfo
+			where TBehaviour : GameBehaviour<TData>
+			where TData : BehaviourData
+			=> new(typeof(TBehaviour), (go, info, ctx) =>
+			{
+				var i = (TInfo)info;
+				var b = go.AddComponent<TBehaviour>();
+				return (b, lr => b.Initialise(makeData(i, ctx),
+					i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+
 		private static (GameBehaviour, InitialiseBehaviourEvent) BuildTransformAnimation<TInfo, TBehaviour>(
 			GameObject go,
 			TInfo info,
@@ -831,7 +576,8 @@ namespace Assembler.Building
 
 					b.Initialise(new VariableChangedTriggerData<T>(i.Id, provider),
 						i.Listeners.ToListeners(lr, ctx.Resolution));
-				});
+				}
+				);
 			});
 		}
 

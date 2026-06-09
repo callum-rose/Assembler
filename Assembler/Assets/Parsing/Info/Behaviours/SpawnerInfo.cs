@@ -27,11 +27,11 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("TemplateId")),
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("TemplateId")),
 				ParseTemplates(ctx, props, id),
-				Transformer.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Selection")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Position")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Rotation")),
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Selection")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Position")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Rotation")),
 				ParseParameters(ctx, props));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -69,7 +69,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				StringValue s => new SpawnTemplateInfo(s.Value, new ConstantSource<float>(1f)),
 				DictValue d => new SpawnTemplateInfo(
 					RequireTemplateId(d.Value.GetValueOrDefault("Template"), id),
-					Transformer.CreateValueSource<float>(ctx, d.Value.GetValueOrDefault("Weight"), fallback: 1f)),
+					ValueSourceFactory.CreateValueSource<float>(ctx, d.Value.GetValueOrDefault("Weight"), fallback: 1f)),
 				_ => throw new ParsingException(
 					$"Spawner '{id}': each Templates entry must be a template id or a {{ Template, Weight }} map.")
 			}).ToArray();
@@ -91,7 +91,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 			return dictValue.Value.ToDictionary(
 				kvp => kvp.Key,
-				kvp => Transformer.CreateValueSource<object>(ctx, kvp.Value));
+				kvp => ValueSourceFactory.CreateValueSource<object>(ctx, kvp.Value));
 		}
 	}
 }

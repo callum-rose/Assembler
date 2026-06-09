@@ -17,10 +17,10 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Duration")),
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("Easing")));
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Duration")),
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Easing")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

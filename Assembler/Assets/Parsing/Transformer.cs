@@ -9,18 +9,12 @@ using UnityEngine;
 
 namespace Assembler.Parsing
 {
+	// Orchestrates the DTO -> Info transform: walks the GameDto, builds the constant/variable, expression,
+	// template and entity Info, and constructs entities/children. The reusable conversion machinery lives
+	// in focused helpers: AssemblerValueConverter (object -> AssemblerValue IR), ValueSourceFactory
+	// (AssemblerValue -> ValueSource), ExpressionSynthesis (!expr call sites) and ListenerParsing.
 	public static class Transformer
 	{
-		// `CreateValueSourceForArg` is invoked via reflection (one MakeGenericMethod per arg type
-		// the parser actually encounters). This is a method handle constant, not mutable state —
-		// the per-call cache of closed-generic MethodInfos lives on TransformContext.
-		private readonly static MethodInfo CreateValueSourceForArgOpenGeneric =
-			typeof(Transformer).GetMethod(nameof(CreateValueSourceForArg),
-				BindingFlags.NonPublic | BindingFlags.Static)!;
-
-		private static ValueSource<T> CreateValueSourceForArg<T>(TransformContext ctx, AssemblerValue raw) =>
-			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
-
 		public static GameInfo Transform(GameDto gameDto)
 		{
 			var info = new AboutInfo(gameDto.Game?.Title ?? string.Empty, gameDto.Game?.Description ?? string.Empty);
@@ -50,7 +44,7 @@ namespace Assembler.Parsing
 
 			foreach (var kvp in allValues)
 			{
-				values.Add(new ValueInfo(kvp.Key, Convert(values, kvp.Value, kvp.Key)));
+				values.Add(new ValueInfo(kvp.Key, AssemblerValueConverter.Convert(values, kvp.Value, kvp.Key)));
 			}
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
@@ -67,8 +61,8 @@ namespace Assembler.Parsing
 				.Select(kvp => new ConcreteEntityInfo(
 					kvp.Key,
 					kvp.Value.Tags ?? new List<string>(),
-					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Position)),
-					CreateValueSource<Vector3>(ctx, ToAssemblerValue(kvp.Value.Rotation)),
+					ValueSourceFactory.CreateValueSource<Vector3>(ctx, AssemblerValueConverter.ToAssemblerValue(kvp.Value.Position)),
+					ValueSourceFactory.CreateValueSource<Vector3>(ctx, AssemblerValueConverter.ToAssemblerValue(kvp.Value.Rotation)),
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
 					.ToArray(),
@@ -120,7 +114,7 @@ namespace Assembler.Parsing
 				else
 				{
 					template = templates.First(t => t.Id == entityDto.Template.Id);
-					parameters = ConvertProps(entityDto.Template.Parameters);
+					parameters = AssemblerValueConverter.ConvertProps(entityDto.Template.Parameters);
 				}
 
 				var entityCtx = ctx.WithParameters(parameters);
@@ -133,8 +127,8 @@ namespace Assembler.Parsing
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					ctx,
-					CreateValueSource<Vector3>(entityCtx, ToAssemblerValue(entityDto.Position)),
-					CreateValueSource<Vector3>(entityCtx, ToAssemblerValue(entityDto.Rotation)),
+					ValueSourceFactory.CreateValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Position)),
+					ValueSourceFactory.CreateValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Rotation)),
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
@@ -160,15 +154,15 @@ namespace Assembler.Parsing
 		{
 			var templateRefId = dto.Template?.Id;
 
-			var ownParams = ConvertProps(dto.Template?.Parameters);
+			var ownParams = AssemblerValueConverter.ConvertProps(dto.Template?.Parameters);
 			var childCtx = ctx.WithParameters(ownParams);
 
 			var ownBehaviours = (dto.Behaviours ?? new Dictionary<string, BehaviourDto>())
 				.Select(b => CreateBehaviour(childCtx, b.Key, b.Value))
 				.ToArray();
 
-			var position = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Position));
-			var rotation = CreateValueSource<Vector3>(childCtx, ToAssemblerValue(dto.Rotation));
+			var position = ValueSourceFactory.CreateValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Position));
+			var rotation = ValueSourceFactory.CreateValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Rotation));
 
 			var nestedChildren = BuildChildren(childCtx, dto.Children);
 
@@ -196,7 +190,7 @@ namespace Assembler.Parsing
 
 			foreach (var kvp in variables)
 			{
-				result[i++] = new ValueInfo(kvp.Key, ToAssemblerValue(kvp.Value));
+				result[i++] = new ValueInfo(kvp.Key, AssemblerValueConverter.ToAssemblerValue(kvp.Value));
 			}
 
 			return result;
@@ -240,689 +234,16 @@ namespace Assembler.Parsing
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
-			var props = ConvertProps(behaviourDto.Properties);
+			var props = AssemblerValueConverter.ConvertProps(behaviourDto.Properties);
 
 			var info = factory(id,
-				GetListeners(ctx, behaviourDto),
+				ListenerParsing.GetListeners(ctx, behaviourDto),
 				props,
 				ctx);
 
 			return behaviourDto.Tags is { Count: > 0 }
 				? info with { Tags = behaviourDto.Tags.ToArray() }
 				: info;
-		}
-
-		private static IReadOnlyList<ListenerInfo> GetListeners(TransformContext ctx,
-			BehaviourDto behaviourDto) =>
-			behaviourDto.Listeners
-				.EmptyIfNull()
-				.Select(l =>
-				{
-					var outputs = l.Outputs ?? new Dictionary<string, string>();
-
-					if (l is GameOverListenerDto)
-					{
-						return new GameOverListenerInfo { OutputMapping = outputs };
-					}
-
-					if (l is { EntityTag: not null, BehaviourTag: not null })
-					{
-						throw new ParsingException(
-							"A listener cannot declare both EntityTag and BehaviourTag. " +
-							"Pick one: EntityTag (+ BehaviourId) targets behaviours on entities with that tag; " +
-							"BehaviourTag targets all behaviours carrying that tag.");
-					}
-
-					if (l.EntityTag != null)
-					{
-						var entityTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.EntityTag));
-
-						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId ?? string.Empty) { OutputMapping = outputs };
-					}
-
-					if (l.BehaviourTag != null)
-					{
-						var behaviourTag = CreateValueSource<string>(ctx, ToAssemblerValue(l.BehaviourTag));
-
-						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs };
-					}
-
-					var entityId = l.EntityId switch
-					{
-						ParamRefDto paramRefDto => ctx.Parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
-												   && pv is StringValue sv
-							? sv.Value
-							: ParameterEntityIdSentinel + (paramRefDto.Id ?? string.Empty),
-						VarRefDto varRefDto => varRefDto.ResolveValue<string>(ctx.Values),
-						string behaviourId => behaviourId,
-						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
-					};
-
-					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
-
-					return new DirectListenerInfo(behaviourDescriptor) { OutputMapping = outputs };
-				})
-				.ToArray();
-
-		/// <summary>
-		/// Builds listeners authored *inside* a behaviour's properties (e.g. a state machine's per-state
-		/// <c>OnEnter</c>/<c>OnExit</c> hooks). Unlike the top-level <c>Listeners:</c> field, these arrive
-		/// as already-converted <see cref="AssemblerValue"/>s (<see cref="DictValue"/> entries, or a
-		/// <see cref="GameOverMarker"/> for a nested <c>!gameover</c>), so this mirrors <see cref="GetListeners"/>
-		/// reading from that shape to produce identical <see cref="ListenerInfo"/> semantics.
-		/// </summary>
-		internal static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue? raw) =>
-			raw is ListValue list
-				? list.Value.Select(item => ParseNestedListener(ctx, item)).ToArray()
-				: Array.Empty<ListenerInfo>();
-
-		private static ListenerInfo ParseNestedListener(TransformContext ctx, AssemblerValue item)
-		{
-			if (item is GameOverMarker)
-			{
-				return new GameOverListenerInfo();
-			}
-
-			if (item is not DictValue dict)
-			{
-				throw new ParsingException(
-					"OnEnter/OnExit entries must be listener maps (EntityId + BehaviourId, EntityTag, or BehaviourTag) or !gameover.");
-			}
-
-			var fields = dict.Value;
-			var outputs = ParseNestedOutputMapping(fields.GetValueOrDefault("Outputs"));
-
-			var hasEntityTag = fields.TryGetValue("EntityTag", out var entityTagValue);
-			var hasBehaviourTag = fields.TryGetValue("BehaviourTag", out var behaviourTagValue);
-
-			if (hasEntityTag && hasBehaviourTag)
-			{
-				throw new ParsingException(
-					"A listener cannot declare both EntityTag and BehaviourTag. " +
-					"Pick one: EntityTag (+ BehaviourId) targets behaviours on entities with that tag; " +
-					"BehaviourTag targets all behaviours carrying that tag.");
-			}
-
-			var behaviourId = (fields.GetValueOrDefault("BehaviourId") as StringValue)?.Value ?? string.Empty;
-
-			if (hasEntityTag)
-			{
-				return new EntityTaggedListenerInfo(CreateValueSource<string>(ctx, entityTagValue!), behaviourId)
-				{
-					OutputMapping = outputs
-				};
-			}
-
-			if (hasBehaviourTag)
-			{
-				return new BehaviourTaggedListenerInfo(CreateValueSource<string>(ctx, behaviourTagValue!))
-				{
-					OutputMapping = outputs
-				};
-			}
-
-			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId"));
-
-			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId)) { OutputMapping = outputs };
-		}
-
-		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue? value) =>
-			value is DictValue dict
-				? dict.Value.ToDictionary(kvp => kvp.Key, kvp => (kvp.Value as StringValue)?.Value ?? string.Empty)
-				: new Dictionary<string, string>();
-
-		private static string ResolveNestedEntityId(TransformContext ctx, AssemblerValue? value) =>
-			value switch
-			{
-				StringValue s => s.Value,
-				ParamRef p => ctx.Parameters.TryGetValue(p.Id, out var pv) && pv is StringValue sv
-					? sv.Value
-					: ParameterEntityIdSentinel + p.Id,
-				VarRef v => ctx.Values.ResolveValue(v.Id) is StringValue sv
-					? sv.Value
-					: throw new ParsingException($"Listener EntityId variable '{v.Id}' must resolve to a string."),
-				null => throw new ParsingException(
-					"Listener entry requires an EntityId (with BehaviourId), or an EntityTag / BehaviourTag."),
-				_ => throw new ParsingException($"Cannot interpret listener EntityId '{value}'.")
-			};
-
-		internal const string ParameterEntityIdSentinel = "@param:";
-
-		internal static IReadOnlyList<string> ConvertStringList(AssemblerValue? value) =>
-			value is ListValue list
-				? list.Value
-					.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
-					.ToArray()
-				: Array.Empty<string>();
-
-		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(TransformContext ctx,
-			AssemblerValue? value) =>
-			value is ListValue list
-				? list.Value.Select(item => (IValueSourceArg)
-					CreateValueSource<object>(ctx, item)).ToArray()
-				: Array.Empty<IValueSourceArg>();
-
-		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
-		{
-			if (textRef.Arguments.Count == 0)
-			{
-				return Array.Empty<IValueSourceArg>();
-			}
-
-			var args = new IValueSourceArg[textRef.Arguments.Count];
-
-			for (int i = 0; i < textRef.Arguments.Count; i++)
-			{
-				// !text placeholders have no declared types — each argument is boxed to object and
-				// stringified by string.Format at runtime, so every argument resolves as object.
-				args[i] = CreateValueSource<object>(ctx, textRef.Arguments[i]);
-			}
-
-			return args;
-		}
-
-		/// <summary>
-		/// Routes a <c>!expr { Do, With }</c> call site to an <see cref="ExpressionSource{T}"/>.
-		/// If <c>Do</c> names a declared expression (by id or <c>CallableAs</c> alias) it's a named
-		/// call against that expression's id; otherwise <c>Do</c> is compiled as an anonymous inline
-		/// C# body whose params <c>arg0</c>, <c>arg1</c>, … bind positionally to <c>With</c>.
-		/// </summary>
-		private static ValueSource<T> CreateExpressionSource<T>(TransformContext ctx, ExprRef exprRef)
-		{
-			if (TryResolveNamedExpression(ctx, exprRef.Do, out var named))
-			{
-				WarnIfInlineHintsIgnored(exprRef, named.Id);
-				return new ExpressionSource<T>(named.Id, BuildNamedExpressionArguments(ctx, exprRef, named));
-			}
-
-			return CreateInlineExpressionSource<T>(ctx, exprRef);
-		}
-
-		// Resolves a `Do` value to a declared expression by its id first, then by CallableAs alias.
-		private static bool TryResolveNamedExpression(TransformContext ctx, string @do, out ExpressionInfo info)
-		{
-			if (ctx.ExpressionsById.TryGetValue(@do, out info!))
-			{
-				return true;
-			}
-
-			foreach (var candidate in ctx.ExpressionsById.Values)
-			{
-				if (candidate.CallableAlias == @do)
-				{
-					info = candidate;
-					return true;
-				}
-			}
-
-			info = null!;
-			return false;
-		}
-
-		private static IReadOnlyList<IValueSourceArg> BuildNamedExpressionArguments(TransformContext ctx,
-			ExprRef exprRef,
-			ExpressionInfo info)
-		{
-			if (info.Arguments.Count != exprRef.With.Count)
-			{
-				throw new ParsingException(
-					$"Expression '{exprRef.Do}' expects {info.Arguments.Count} arguments " +
-					$"but {exprRef.With.Count} were supplied.");
-			}
-
-			if (exprRef.With.Count == 0)
-			{
-				return Array.Empty<IValueSourceArg>();
-			}
-
-			var args = new IValueSourceArg[exprRef.With.Count];
-
-			for (int i = 0; i < exprRef.With.Count; i++)
-			{
-				var typeName = info.Arguments[i].type;
-
-				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
-				{
-					throw new ParsingException(
-						$"Expression '{exprRef.Do}' argument {i} has unknown type '{typeName}'.");
-				}
-
-				args[i] = BuildArg(ctx, argType, exprRef.With[i]);
-			}
-
-			return args;
-		}
-
-		// The inline-only hints (ReturnType / ArgumentTypes / RegisterTypes / RegisterTypeStatics) belong
-		// on the declared expression, not the call site, so warn and ignore them when Do names one.
-		private static void WarnIfInlineHintsIgnored(ExprRef exprRef, string id)
-		{
-			if (exprRef.ReturnType != null || exprRef.ArgumentTypes != null
-				|| exprRef.RegisterTypes != null || exprRef.RegisterTypeStatics != null)
-			{
-				UnityEngine.Debug.LogWarning(
-					$"!expr 'Do: {exprRef.Do}' names the declared expression '{id}', so ReturnType / " +
-					"ArgumentTypes / RegisterTypes / RegisterTypeStatics on the call site are ignored " +
-					"(they are declared on the expression itself).");
-			}
-		}
-
-		// Synthesises an anonymous ExpressionInfo for an inline `Do: '<C# body>'` and accumulates it on
-		// the context. Operand (arg0, arg1, …) types are taken from an explicit ArgumentTypes hint when
-		// given, otherwise inferred from `With`; the return type is an explicit ReturnType hint when
-		// given, otherwise the use-site T (falling back to the first operand). Any RegisterTypes /
-		// RegisterTypeStatics hints flow onto the synthesised expression so the body can use them. The
-		// body itself is handed verbatim to the compiler, which binds argN to the synthesised params and
-		// resolves any other identifier (method, `new`, registered expression) as in any declared body.
-		private static ValueSource<T> CreateInlineExpressionSource<T>(TransformContext ctx, ExprRef exprRef)
-		{
-			var explicitArgTypes = exprRef.ArgumentTypes;
-
-			if (explicitArgTypes != null && explicitArgTypes.Count != exprRef.With.Count)
-			{
-				throw new ParsingException(
-					$"Inline expression '{exprRef.Do}' declares {explicitArgTypes.Count} ArgumentTypes " +
-					$"but supplies {exprRef.With.Count} operand(s) in With.");
-			}
-
-			var argInfos = new (string type, string name)[exprRef.With.Count];
-			var argTypes = new Type[exprRef.With.Count];
-
-			for (int i = 0; i < exprRef.With.Count; i++)
-			{
-				var typeName = explicitArgTypes != null ? explicitArgTypes[i] : InferTypeName(ctx, exprRef.With[i]);
-
-				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
-				{
-					throw new ParsingException(
-						$"Inline expression '{exprRef.Do}' could not resolve a type for argument {i} " +
-						$"('{typeName}').");
-				}
-
-				argInfos[i] = (typeName, $"arg{i}");
-				argTypes[i] = argType;
-			}
-
-			var returnTypeName = exprRef.ReturnType ?? InferReturnTypeName<T>(ctx, argInfos);
-
-			if (!ctx.TypeRegistry.ContainsKey(returnTypeName))
-			{
-				throw new ParsingException(
-					$"Inline expression '{exprRef.Do}' has unknown ReturnType '{returnTypeName}'.");
-			}
-
-			var id = ctx.InlineExpressions.Add(generatedId => new ExpressionInfo(
-				generatedId,
-				argInfos,
-				returnTypeName,
-				exprRef.RegisterTypes?.ToArray() ?? Array.Empty<string>(),
-				exprRef.RegisterTypeStatics?.ToArray() ?? Array.Empty<string>(),
-				WrapInlineBody(exprRef.Do)));
-
-			var args = new IValueSourceArg[exprRef.With.Count];
-
-			for (int i = 0; i < exprRef.With.Count; i++)
-			{
-				args[i] = BuildArg(ctx, argTypes[i], exprRef.With[i]);
-			}
-
-			return new ExpressionSource<T>(id, args);
-		}
-
-		// Wraps one `With` operand as a strongly-typed ValueSource<argType>, via the cached
-		// closed-generic CreateValueSourceForArg factory.
-		private static IValueSourceArg BuildArg(TransformContext ctx, Type argType, AssemblerValue raw)
-		{
-			if (!ctx.ExprArgFactoryCache.TryGetValue(argType, out var typed))
-			{
-				typed = CreateValueSourceForArgOpenGeneric.MakeGenericMethod(argType);
-				ctx.ExprArgFactoryCache[argType] = typed;
-			}
-
-			return (IValueSourceArg)typed.Invoke(null, new object?[] { ctx, raw })!;
-		}
-
-		// Best-effort static type-name for an inline operand: literals by kind, `!var` by its
-		// resolved value, nested named `!expr` by its declared return type. Anything else (including
-		// nested inline `!expr`) falls back to the use-site type, supplied by the caller via the
-		// generic CreateValueSource<T> through InferReturnTypeName — here we default to "float".
-		private static string InferTypeName(TransformContext ctx, AssemblerValue value) =>
-			value switch
-			{
-				IntValue => "int",
-				FloatValue => "float",
-				BoolValue => "bool",
-				StringValue => "string",
-				Vector3Value or VecValue => "vector",
-				ColorValue or ColourValue => "colour",
-				TypedListValue typed when TryGetTypeName(ctx,
-					typeof(List<>).MakeGenericType(typed.ElementType), out var listName) => listName,
-				VarRef varRef => TryResolveValue(ctx, varRef.Id, out var resolved)
-					? InferTypeName(ctx, resolved)
-					: "float",
-				ExprRef nested when TryResolveNamedExpression(ctx, nested.Do, out var info) => info.ReturnType,
-				_ => "float"
-			};
-
-		// Return type for a synthesised inline expression: the use-site T mapped to a registry name
-		// where possible (the common case — Position wants vector, a float property wants float). When
-		// T isn't a registered type (e.g. object), fall back to the first operand's inferred type.
-		private static string InferReturnTypeName<T>(TransformContext ctx, (string type, string name)[] argInfos)
-		{
-			if (typeof(T) != typeof(object) && TryGetTypeName(ctx, typeof(T), out var name))
-			{
-				return name;
-			}
-
-			if (argInfos.Length > 0)
-			{
-				return argInfos[0].type;
-			}
-
-			throw new ParsingException(
-				$"Cannot infer the return type of an inline !expr used as '{typeof(T).Name}'. " +
-				"Use a named expression with a declared ReturnType instead.");
-		}
-
-		// Inline bodies are written as terse expressions (`-arg0`, `arg0 * 2`). The compiler parses a
-		// method body of statements, so a bare expression needs an explicit `return … ;`. A body that
-		// already contains a statement separator (`;`) is treated as hand-written statements and passed
-		// through unchanged (it may use `return`, locals, etc., exactly like a declared expression body).
-		private static string WrapInlineBody(string body) =>
-			body.Contains(';') ? body : $"return {body};";
-
-		private static bool TryGetTypeName(TransformContext ctx, Type type, out string name)
-		{
-			foreach (var kvp in ctx.TypeRegistry)
-			{
-				if (kvp.Value == type)
-				{
-					name = kvp.Key;
-					return true;
-				}
-			}
-
-			name = string.Empty;
-			return false;
-		}
-
-		private static bool TryResolveValue(TransformContext ctx, string id, out AssemblerValue value)
-		{
-			foreach (var info in ctx.Values)
-			{
-				if (info.Id == id)
-				{
-					value = info.Value;
-					return true;
-				}
-			}
-
-			value = NoValue.Instance;
-			return false;
-		}
-
-		/// <summary>
-		/// Wraps a parsed <see cref="AssemblerValue"/> into a <see cref="ValueSource{T}"/>.
-		/// Constants are dereferenced to their values.
-		/// Variable references become <see cref="ValueReferenceSource{T}"/>.
-		/// Expression references become <see cref="ExpressionSource{T}"/> with their arguments
-		/// recursively wrapped as <see cref="ValueSource{T}"/>.
-		/// </summary>
-		private static ClockProperty ParseClockProperty(string property) =>
-			property.Trim().ToLowerInvariant() switch
-			{
-				"deltatime" => ClockProperty.DeltaTime,
-				"time" => ClockProperty.Time,
-				"framecount" => ClockProperty.FrameCount,
-				"unscaleddeltatime" => ClockProperty.UnscaledDeltaTime,
-				_ => throw new ParsingException(
-					$"Unknown !clock property '{property}'. Expected one of: deltaTime, time, frameCount, unscaledDeltaTime")
-			};
-
-		private static EntityProperty ParseEntityProperty(string? property) =>
-			(property ?? string.Empty).Trim().ToLowerInvariant() switch
-			{
-				"position" => EntityProperty.Position,
-				"rotation" => EntityProperty.Rotation,
-				"scale" => EntityProperty.Scale,
-				_ => throw new ParsingException(
-					$"Unknown !entity property '{property}'. Expected one of: Position, Rotation, Scale")
-			};
-
-		/// <summary>
-		/// Like <see cref="CreateValueSource{T}"/> but with no implicit fallback: an absent value (null or
-		/// <see cref="NoValue"/>) resolves to <see cref="None{T}"/> — i.e. a <c>NullValueProvider</c> at
-		/// runtime — for value types as well as reference types. Use this for optional properties whose
-		/// default is supplied at the point of use via <c>ValueOr</c>; the base <see cref="CreateValueSource{T}"/>
-		/// would instead produce a <c>ConstantSource(default(T))</c> for value types (e.g. 0 / (0,0,0)).
-		/// </summary>
-		public static ValueSource<T> CreateOptionalValueSource<T>(TransformContext ctx, AssemblerValue? raw) =>
-			raw is null or NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
-
-		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
-			AssemblerValue raw,
-			T? fallback = default) =>
-			raw switch
-			{
-				ParamRef paramRef => ctx.Parameters.TryGetValue(paramRef.Id, out var paramValue)
-					? CreateValueSource(ctx, paramValue, fallback)
-					: new ParameterSource<T>(paramRef.Id),
-				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
-				EntityPropertyRef entityPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
-					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
-				EntityPropertyRef entityPropertyRef => throw new ParsingException(
-					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
-				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
-					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
-					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),
-				ClockRef clockRef => throw new ParsingException(
-					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
-				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
-				TextRef textRef when typeof(T) == typeof(string) =>
-					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
-				TextRef textRef => throw new ParsingException(
-					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
-				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
-				ExprRef exprRef => CreateExpressionSource<T>(ctx, exprRef),
-				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
-					(T)(object)vec.ToVector3(ctx.Values)),
-				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(ctx.Values)),
-				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
-					(T)(object)col.ToColor(ctx.Values)),
-				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
-				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
-				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
-					new ConstantSource<T>((T)BuildTypedList(typed)),
-				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
-					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!)),
-				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
-				NoValue or null => None<T>.Instance,
-				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
-			};
-
-		private static bool IsAssignableList(Type t, Type elementType)
-		{
-			if (!t.IsGenericType)
-			{
-				return false;
-			}
-
-			var genericDef = t.GetGenericTypeDefinition();
-
-			if (genericDef != typeof(IReadOnlyList<>) &&
-				genericDef != typeof(IEnumerable<>) &&
-				genericDef != typeof(List<>))
-			{
-				return false;
-			}
-
-			return t.GetGenericArguments()[0] == elementType;
-		}
-
-		private static bool TryGetListElementType(Type t, out Type? elementType)
-		{
-			elementType = null;
-
-			if (!t.IsGenericType)
-			{
-				return false;
-			}
-
-			var genericDef = t.GetGenericTypeDefinition();
-
-			if (genericDef != typeof(IReadOnlyList<>) &&
-				genericDef != typeof(IEnumerable<>) &&
-				genericDef != typeof(List<>))
-			{
-				return false;
-			}
-
-			elementType = t.GetGenericArguments()[0];
-			return true;
-		}
-
-		private static object BuildTypedList(TypedListValue typed)
-		{
-			var listType = typeof(List<>).MakeGenericType(typed.ElementType);
-			var list = (System.Collections.IList)Activator.CreateInstance(listType, typed.Items.Count);
-
-			foreach (var item in typed.Items)
-			{
-				list.Add(UnwrapPrimitive(item, typed.ElementType));
-			}
-
-			return list;
-		}
-
-		private static object BuildListFromUntyped(ListValue list, Type elementType)
-		{
-			var listType = typeof(List<>).MakeGenericType(elementType);
-			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
-
-			foreach (var item in list.Value)
-			{
-				result.Add(UnwrapPrimitive(item, elementType));
-			}
-
-			return result;
-		}
-
-		private static object UnwrapPrimitive(AssemblerValue value, Type expectedType)
-		{
-			return value switch
-			{
-				IntValue i when expectedType == typeof(int) => i.Value,
-				IntValue i when expectedType == typeof(float) => (float)i.Value,
-				FloatValue f when expectedType == typeof(float) => f.Value,
-				BoolValue b when expectedType == typeof(bool) => b.Value,
-				StringValue s when expectedType == typeof(string) => s.Value,
-				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
-				ColorValue c when expectedType == typeof(Color) => c.Value,
-				_ => throw new ParsingException(
-					$"List element {value.GetType().Name} cannot be coerced to {expectedType.Name}")
-			};
-		}
-
-		private static T CoerceConstant<T>(AssemblerValue value)
-		{
-			if (RefDtoExtensions.TryUnwrap<T>(value, out var unwrapped))
-			{
-				return unwrapped;
-			}
-
-			if (typeof(T) == typeof(object))
-			{
-				return (T)Unwrap(value);
-			}
-
-			throw new ParsingException(
-				$"Cannot convert value '{value}' of type '{value.GetType()}' to a {typeof(T)}");
-		}
-
-		private static object Unwrap(AssemblerValue value) =>
-			value switch
-			{
-				IntValue i => i.Value,
-				FloatValue f => f.Value,
-				BoolValue b => b.Value,
-				StringValue s => s.Value,
-				Vector3Value v => v.Value,
-				ColorValue c => c.Value,
-				_ => throw new ParsingException($"Cannot unwrap {value.GetType().Name} to object")
-			};
-
-		private static AssemblerValue Convert(IReadOnlyList<ValueInfo> resolvedValues, object? obj, string? name = null) =>
-			obj switch
-			{
-				VecDto vecDto => new Vector3Value(vecDto.ToVector3(resolvedValues)),
-				ColourDto colourDto => new ColorValue(colourDto.ToColor(resolvedValues)),
-				RefDto refDto => ResolveRef(refDto, resolvedValues),
-				int i => new IntValue(i),
-				float f => new FloatValue(f),
-				double d => new FloatValue((float)d),
-				bool b => new BoolValue(b),
-				string s => new StringValue(s),
-				List<VecDto> vecList => new TypedListValue(typeof(Vector3),
-					vecList.ConvertAll<AssemblerValue>(v => new Vector3Value(v.ToVector3(resolvedValues)))),
-				List<ColourDto> colourList => new TypedListValue(typeof(Color),
-					colourList.ConvertAll<AssemblerValue>(c => new ColorValue(c.ToColor(resolvedValues)))),
-				List<int> intList => new TypedListValue(typeof(int),
-					intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
-				List<float> floatList => new TypedListValue(typeof(float),
-					floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
-				List<bool> boolList => new TypedListValue(typeof(bool),
-					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
-				List<string> stringList => new TypedListValue(typeof(string),
-					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
-				not null => throw new ParsingException(DescribeConvertFailure(obj, name)),
-				_ => throw new ParsingException(
-					$"Cannot convert null to a value{(name is null ? string.Empty : $" (for '{name}')")}")
-			};
-
-		// Builds the failure message for a value Convert can't handle, naming the offending
-		// field and — for an untyped collection (e.g. a mixed YAML sequence that deserialises to
-		// List<object>) — listing the element types so the mismatch is visible.
-		private static string DescribeConvertFailure(object obj, string? name)
-		{
-			var forField = name is null ? string.Empty : $" for '{name}'";
-
-			if (obj is System.Collections.IEnumerable enumerable and not string)
-			{
-				var elementTypes = enumerable.Cast<object?>()
-					.Select(item => item?.GetType().Name ?? "null")
-					.Distinct()
-					.ToArray();
-
-				return $"Cannot convert value of type {obj.GetType()} to a value{forField} " +
-					   $"(element types: {string.Join(", ", elementTypes)})";
-			}
-
-			return $"Cannot convert value of type {obj.GetType()} to a value{forField}";
-		}
-
-		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues) =>
-			resolvedValues.ResolveValue(refDto.Id);
-
-		private static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)
-		{
-			if (raw is null)
-			{
-				return new Dictionary<string, AssemblerValue>();
-			}
-
-			var result = new Dictionary<string, AssemblerValue>(raw.Count);
-
-			foreach (var kvp in raw)
-			{
-				var converted = ToAssemblerValue(kvp.Value);
-
-				if (converted is not NoValue)
-				{
-					result[kvp.Key] = converted;
-				}
-			}
-
-			return result;
 		}
 
 		private static LocalisationInfo CreateLocalisationInfo(LocalisationDto? dto)
@@ -941,73 +262,5 @@ namespace Assembler.Parsing
 
 			return new LocalisationInfo(dto.DefaultLocale ?? string.Empty, locales);
 		}
-
-		private static AssemblerValue ToAssemblerValue(object? raw) =>
-			raw switch
-			{
-				null => NoValue.Instance,
-				AssemblerValue av => av,
-				int i => new IntValue(i),
-				float f => new FloatValue(f),
-				double d => new FloatValue((float)d),
-				bool b => new BoolValue(b),
-				string s => new StringValue(s),
-				VarRefDto v => new VarRef(v.Id ?? string.Empty),
-				AssetRefDto v => new AssetRef(v.Id ?? string.Empty),
-				EntityRefDto v => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
-				ClockRefDto v => new ClockRef(v.Property ?? string.Empty),
-				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
-				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),
-				// A nested `!gameover` (e.g. inside a state machine OnEnter/OnExit list) deserialises to a
-				// GameOverListenerDto via the global tag mapping; carry it through as a marker so the
-				// nested-listener parser can rebuild a GameOverListenerInfo.
-				GameOverListenerDto => new GameOverMarker(),
-				ExprRefDto v => new ExprRef(v.Do ?? string.Empty,
-					v.With.EmptyIfNull().Select(ToAssemblerValue).ToArray(),
-					v.ReturnType,
-					v.ArgumentTypes,
-					v.RegisterTypes,
-					v.RegisterTypeStatics),
-				TextRefDto v => new TextRef(v.Key ?? string.Empty,
-					v.Arguments.EmptyIfNull().Select(ToAssemblerValue).ToArray()),
-				VecDto v => new VecValue(ToAssemblerValue(v.X), ToAssemblerValue(v.Y), ToAssemblerValue(v.Z)),
-				ColourDto v => new ColourValue(ToAssemblerValue(v.R),
-					ToAssemblerValue(v.G),
-					ToAssemblerValue(v.B),
-					ToAssemblerValue(v.A),
-					v.Raw is null ? NoValue.Instance : new StringValue(v.Raw)),
-				List<VecDto> vecList => new TypedListValue(typeof(Vector3), vecList.ConvertAll(ToAssemblerValue)),
-				List<ColourDto> colourList => new TypedListValue(typeof(Color), colourList.ConvertAll(ToAssemblerValue)),
-				List<int> intList => new TypedListValue(typeof(int), intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
-				List<float> floatList => new TypedListValue(typeof(float),
-					floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
-				List<bool> boolList => new TypedListValue(typeof(bool),
-					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
-				List<string> stringList => new TypedListValue(typeof(string),
-					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
-				IDictionary<string, object> dict => new DictValue(ToAssemblerDict(dict)),
-				IEnumerable<object> list => new ListValue(ToAssemblerList(list)),
-				_ => throw new ParsingException($"Cannot convert raw value '{raw}' (type {raw.GetType()}) to an AssemblerValue")
-			};
-
-		private static IReadOnlyDictionary<string, AssemblerValue> ToAssemblerDict(IDictionary<string, object> dict)
-		{
-			var result = new Dictionary<string, AssemblerValue>(dict.Count);
-
-			foreach (var kvp in dict)
-			{
-				var converted = ToAssemblerValue(kvp.Value);
-
-				if (converted is not NoValue)
-				{
-					result[kvp.Key] = converted;
-				}
-			}
-
-			return result;
-		}
-
-		private static IReadOnlyList<AssemblerValue> ToAssemblerList(IEnumerable<object> list) =>
-			list.Select(ToAssemblerValue).Where(converted => converted is not NoValue).ToList();
 	}
 }
