@@ -1,0 +1,252 @@
+Game:
+  Title: Perception Demo
+  Description: |
+    Demonstrates the AI substrate: perception → blackboard → FSM → grid navigation.
+
+    A green player (WASD) shares a walled arena with a red guard. The guard runs a
+    `perceive` sensor that looks for the `player` tag within range, gated on line of
+    sight (walls block it), and writes the result into ordinary entity variables:
+    `has_target`, `target_position`, and — only while the player is visible —
+    `last_known_position`.
+
+    A `state machine` reads that blackboard:
+      patrol  - idle until it spots the player (`has_target`).
+      chase   - `navigate`s to the player's live position via an A* path that routes
+                around the walls. Catch the player and the game ends.
+      search  - lost sight: `navigate`s to `last_known_position` (the memory of the
+                last sighting), then gives up and returns to patrol.
+
+    Movement is grid navigation: a single `navigate` behaviour steers the guard along
+    an A* path through the walkability grid (built by rasterizing the `wall` colliders).
+    The goal it heads for is chosen each frame from the blackboard by `guard_mode`,
+    which the FSM's OnEnter hooks set per state.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -8, Y: -6 }, Max: !vec { X: 8, Y: 6 } }
+  ObstacleTag: wall
+
+Constants:
+  guard size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  wall size: !vec { X: 0.5, Y: 4, Z: 1 }
+  player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+  guard colour: !colour { R: 0.90, G: 0.30, B: 0.30, A: 1 }
+  wall colour: !colour { R: 0.45, G: 0.45, B: 0.55, A: 1 }
+
+  detect range: 7.0
+  catch range: 0.7
+  arrive eps: 0.5
+  guard speed: 2.2
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 7
+
+Expressions:
+  # Pick the navigation goal from the current mode: 1 = chase the player, 2 = search the
+  # last-known spot, else hold position (head to self, so Arrive yields ~zero velocity).
+  pick goal:
+    ArgumentTypes: [ int, vector, vector, vector ]
+    ArgumentNames: [ mode, target_pos, last_known, self_pos ]
+    ReturnType: vector
+    Expression: "return mode == 1 ? target_pos : mode == 2 ? last_known : self_pos;"
+
+  within:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ a, b, threshold ]
+    ReturnType: bool
+    Expression: "return Distance(a, b) < threshold;"
+
+  negate:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ flag ]
+    ReturnType: bool
+    Expression: "return !flag;"
+
+Entities:
+  wall left:
+    Position: !vec { X: -2.5, Y: 1, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  wall right:
+    Position: !vec { X: 2.5, Y: -1, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  guard:
+    Position: !vec { X: -6, Y: 0, Z: 0 }
+    Tags: [ guard ]
+    Variables:
+      guard_mode: 0
+      has_target: false
+      target_id: ""
+      target_position: !vec { X: -6, Y: 0, Z: 0 }
+      last_known_position: !vec { X: -6, Y: 0, Z: 0 }
+      ai_goal: !vec { X: -6, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var guard size, IsWire: false, Colour: !var guard colour }
+
+      # Sensor: find the player within range and line of sight; maintain the blackboard.
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: player
+          Radius: !var detect range
+          RequireLineOfSight: true
+          Obstacles: wall
+          Interval: 0.1
+          TargetId: !var target_id
+          TargetPosition: !var target_position
+          HasTarget: !var has_target
+          LastKnownPosition: !var last_known_position
+
+      # Choose the nav goal from the blackboard every frame, driven by the FSM's mode.
+      goal clock:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: guard, BehaviourId: update goal }
+      update goal:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ai_goal
+          Value: !expr
+            Do: pick goal
+            With:
+              - !var guard_mode
+              - !var target_position
+              - !var last_known_position
+              - !entity { Id: guard, Property: Position }
+
+      # Grid navigation toward the chosen goal (A* around the walls).
+      move:
+        Type: navigate
+        Properties:
+          Target: !var ai_goal
+          Speed: !var guard speed
+          SlowingRadius: 0.6
+          Recompute: 0.25
+          Mode: astar
+
+      ai:
+        Type: state machine
+        Properties:
+          StateVariable: guard_state
+          Initial: patrol
+          States:
+            patrol:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode patrol }
+            chase:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode chase }
+            search:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode search }
+            caught:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode patrol }
+                - !gameover
+          Transitions:
+            - from: patrol
+              to: chase
+              when: !var has_target
+            - from: chase
+              to: caught
+              when: !expr
+                Do: within
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
+            - from: chase
+              to: search
+              when: !expr { Do: negate, With: [ !var has_target ] }
+            - from: search
+              to: chase
+              when: !var has_target
+            - from: search
+              to: patrol
+              when: !expr
+                Do: within
+                With: [ !entity { Id: guard, Property: Position }, !var last_known_position, !var arrive eps ]
+
+      set mode patrol:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 0 }
+      set mode chase:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 1 }
+      set mode search:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 2 }
+
+  player:
+    Position: !vec { X: 6, Y: 0, Z: 0 }
+    Tags: [ player ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
+
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+      move left:
+        Type: translate
+        Properties: { Displacement: !vec { X: -0.04, Y: 0, Z: 0 } }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+      move right:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0.04, Y: 0, Z: 0 } }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+      move up:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0.04, Z: 0 } }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+      move down:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: -0.04, Z: 0 } }
+
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners: [ !gameover ]
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }
