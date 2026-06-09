@@ -19,7 +19,7 @@ namespace Assembler.Behaviours.Visual
 
 		protected override void OnInitialise(PrimitiveData data)
 		{
-			var shape = data.Shape.Get();
+			var shape = data.Shape.ValueOr(PrimitiveType.Cube);
 			var primitive = GameObject.CreatePrimitive(shape);
 			primitive.name = shape.ToString();
 			primitive.transform.SetParent(transform, false);

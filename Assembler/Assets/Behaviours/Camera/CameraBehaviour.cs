@@ -20,7 +20,7 @@ namespace Assembler.Behaviours.Camera
 		protected override void OnInitialise(CameraData data)
 		{
 			var camera = gameObject.AddComponent<UnityEngine.Camera>();
-			camera.orthographic = data.View.Get() == CameraProjection.Orthographic;
+			camera.orthographic = data.View.ValueOr(CameraProjection.Perspective) == CameraProjection.Orthographic;
 			data.Size.UseIfValueExists(v => camera.orthographicSize = v);
 
 			var brain = gameObject.AddComponent<CinemachineBrain>();

@@ -21,7 +21,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			var fired = Data.Mode.Get() switch
+			var fired = Data.Mode.ValueOr(ButtonPhase.Down) switch
 			{
 				ButtonPhase.Up => UnityEngine.Input.GetKeyUp(button),
 				ButtonPhase.Hold => UnityEngine.Input.GetKey(button),

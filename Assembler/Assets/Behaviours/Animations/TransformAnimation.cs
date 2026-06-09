@@ -33,7 +33,7 @@ namespace Assembler.Behaviours.Animations
 			var start = Data.Start.ValueOr(ctx, Current);
 			var end = Data.End.Get(ctx);
 			var duration = Mathf.Max(0f, Data.Duration.Get(ctx));
-			var ease = ToEase(Data.Easing.Get(ctx));
+			var ease = ToEase(Data.Easing.ValueOr(ctx, Easing.InOutSine));
 
 			Current = start;
 

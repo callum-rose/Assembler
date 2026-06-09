@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Triggers.Input
 		private void Update()
 		{
 			var button = Data.Button.Get();
-			var fired = Data.Phase.Get() switch
+			var fired = Data.Phase.ValueOr(ButtonPhase.Down) switch
 			{
 				ButtonPhase.Up => UnityEngine.Input.GetMouseButtonUp(button),
 				ButtonPhase.Hold => UnityEngine.Input.GetMouseButton(button),

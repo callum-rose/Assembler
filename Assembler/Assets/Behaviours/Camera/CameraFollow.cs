@@ -35,7 +35,7 @@ namespace Assembler.Behaviours.Camera
 			data.Priority.UseIfValueExists(p => _cam.Priority = p);
 			data.Lens.UseIfValueExists(SetLens);
 
-			if (data.Mode.Get() == CameraFollowMode.ThreeD)
+			if (data.Mode.ValueOr(CameraFollowMode.TwoD) == CameraFollowMode.ThreeD)
 			{
 				AddFollowBody(data);
 			}
