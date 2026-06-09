@@ -576,7 +576,8 @@ namespace Assembler.Building
 
 					b.Initialise(new VariableChangedTriggerData<T>(i.Id, provider),
 						i.Listeners.ToListeners(lr, ctx.Resolution));
-				});
+				}
+				);
 			});
 		}
 
