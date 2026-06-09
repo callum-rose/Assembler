@@ -410,6 +410,35 @@ string result = sb.ToString();
 sb.Append("Hello").Append(" ").Append("World");
 ```
 
+### Index / Element Access
+Square-bracket indexing works on arrays and on any type with an indexer
+(`this[...]`) — e.g. `List<T>`, `Dictionary<K, V>`, `string`.
+```csharp
+// Reading elements (the index can be any expression)
+int first = list[0];
+int last = list[list.Count - 1];
+int value = map["key"];
+char c = text[2];
+
+// Writing elements
+list[0] = 99;
+map["key"] = 42;
+array[i] = array[i - 1] + 1;
+
+// Compound assignment and increment on an element
+list[i] += 10;
+list[i]++;
+
+// Multi-dimensional arrays use a comma-separated index list
+int cell = grid[row, col];
+
+// Chains with member access and method calls
+int n = matrix[0].Count;
+```
+The index expression is widened to `int` for array access, or converted to the
+indexer's parameter type for an indexer property. An index access on a type with
+no matching indexer is a compile error.
+
 ---
 
 ## Lambda Expressions
@@ -517,7 +546,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ❌ Indexers
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -541,7 +569,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ✅ `^` (XOR) IS supported — see [Operators](#xor-operator)
 - ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
@@ -554,7 +581,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Array initializers (`new int[] { 1, 2, 3 }`)
 - ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
 - ❌ Dictionary initializers
-- ❌ Index access (`array[0]`) - despite token existing, parsing not implemented
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
@@ -692,6 +718,7 @@ This compiler supports:
 ✅ Object construction with `new`
 ✅ Property and field access
 ✅ Method calls (static and instance)
+✅ Index / element access (arrays, `List<T>`, `Dictionary<K,V>`, `string`) — see [Member Access](#index--element-access)
 ✅ Single-parameter lambda expressions
 ✅ LINQ extension methods
 ✅ Ternary conditional operator

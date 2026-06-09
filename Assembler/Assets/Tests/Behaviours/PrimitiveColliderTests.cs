@@ -23,7 +23,7 @@ namespace Tests.Behaviours
 				var primitive = go.AddComponent<Primitive>();
 				primitive.Initialise(
 					new PrimitiveData("p",
-						new ValueProvider<string>("cube"),
+						new ValueProvider<PrimitiveType>(PrimitiveType.Cube),
 						NullValueProvider<Color>.Instance,
 						NullValueProvider<Vector3>.Instance),
 					Array.Empty<Listener>());

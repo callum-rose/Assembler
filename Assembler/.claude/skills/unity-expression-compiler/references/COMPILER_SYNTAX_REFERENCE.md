@@ -439,6 +439,25 @@ string result = sb.ToString();
 sb.Append("Hello").Append(" ").Append("World");
 ```
 
+### Index / Element Access
+Square-bracket indexing works on arrays and on any type with an indexer
+(`this[...]`) — e.g. `List<T>`, `Dictionary<K, V>`, `string`. The index can be
+any expression; the element can be read, assigned, compound-assigned, or
+incremented.
+```csharp
+int first = list[0];
+int last = list[list.Count - 1];
+int value = map["key"];
+char c = text[2];
+
+list[0] = 99;
+map["key"] += 10;
+list[i]++;
+
+int cell = grid[row, col];   // multi-dimensional arrays
+```
+Indexing a type with no matching indexer is a compile error.
+
 ---
 
 ## Lambda Expressions
@@ -546,7 +565,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ❌ Indexers
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -570,7 +588,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ✅ `^` (XOR) IS supported — see the Operators section
 - ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
@@ -583,7 +600,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Array initializers (`new int[] { 1, 2, 3 }`)
 - ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
 - ❌ Dictionary initializers
-- ❌ Index access (`array[0]`) - despite token existing, parsing not implemented
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
@@ -740,6 +756,7 @@ This compiler supports:
 ✅ Object construction with `new`
 ✅ Property and field access
 ✅ Method calls (static and instance)
+✅ Index / element access (arrays, `List<T>`, `Dictionary<K,V>`, `string`)
 ✅ Single-parameter lambda expressions
 ✅ LINQ extension methods
 ✅ Ternary conditional operator

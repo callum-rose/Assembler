@@ -162,6 +162,26 @@ string s = sb.ToString();
 
 ---
 
+## Indexing
+
+Square-bracket indexing works on arrays and on any type with an indexer
+(`List<T>`, `Dictionary<K, V>`, `string`, …). The index can be any expression;
+the element can be read, assigned, compound-assigned, or incremented.
+
+```csharp
+int first = list[0];
+int last = list[list.Count - 1];
+int value = map["key"];
+list[i] = 99;
+map["key"] += 10;
+list[i]++;
+int cell = grid[row, col];   // multi-dimensional arrays
+```
+
+Indexing a type with no matching indexer is a compile error.
+
+---
+
 ## Single-Parameter Lambdas
 
 Only single-parameter, expression-body lambdas are supported:
@@ -253,7 +273,7 @@ vs vector `LerpVector` vs colour `LerpColor`.
 | **Loops** | `foreach`, `do-while` |
 | **Statements** | `switch`, `try/catch`, `throw`, `using`, `lock` |
 | **Lambdas** | Multi-param `(x, y) => ...`, zero-param `() => ...`, statement bodies `x => { ... }`, typed params `(int x) => ...` |
-| **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }`, index access `arr[0]` |
+| **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }` |
 | **Operators** | Bitwise `&` `\|` `~` `<<` `>>` (but `^` XOR **is** supported — see Operators), range `..`, `typeof`, `is`, `as`, `default` |
 | **OOP** | Classes, structs, interfaces, events, generics (definition) |
 | **Misc** | `async/await`, `ref/out/in` params, `params`, named args, `this`, `base`, `static`, LINQ query syntax |
