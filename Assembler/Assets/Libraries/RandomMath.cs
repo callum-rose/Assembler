@@ -71,5 +71,34 @@ namespace Assembler.Libraries
 		/// <param name="items">The list to pick from (must be non-empty).</param>
 		/// <returns>A uniformly random element.</returns>
 		public static int PickInt(List<int> items) => items[Random.Range(0, items.Count)];
+
+		/// <summary>An index in [0, weights.Count) chosen with probability proportional to each weight.</summary>
+		/// <param name="weights">Per-item weights; negatives are clamped to 0. An all-zero list falls back to a uniform pick.</param>
+		/// <returns>A weighted-random index into the list (must be non-empty).</returns>
+		public static int WeightedPickIndex(List<float> weights)
+		{
+			float total = 0f;
+			foreach (var weight in weights)
+			{
+				total += Mathf.Max(0f, weight);
+			}
+
+			if (total <= 0f)
+			{
+				return Random.Range(0, weights.Count);
+			}
+
+			float roll = Random.value * total;
+			for (int i = 0; i < weights.Count; i++)
+			{
+				roll -= Mathf.Max(0f, weights[i]);
+				if (roll < 0f)
+				{
+					return i;
+				}
+			}
+
+			return weights.Count - 1;
+		}
 	}
 }

@@ -549,6 +549,8 @@ namespace Assembler.Building
 					var b = go.AddComponent<SpawnerBehaviour>();
 					return (b, lr => b.Initialise(new SpawnerData(i.Id,
 						i.TemplateId.Resolve(ctx.Resolution),
+						i.Templates.Select(t => new SpawnTemplate(t.TemplateId, t.Weight.Resolve(ctx.Resolution))).ToArray(),
+						i.Selection.Resolve(ctx.Resolution),
 						i.Position.Resolve(ctx.Resolution),
 						i.Rotation.Resolve(ctx.Resolution),
 						i.Parameters.ToDictionary(kv => kv.Key,

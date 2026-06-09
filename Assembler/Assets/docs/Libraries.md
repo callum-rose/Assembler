@@ -520,6 +520,15 @@ A random point on the circumference of a circle of the given radius (z = 0).
 
 **Returns** (Vector3): A random Vector3 on the circle, in the XY plane.
 
+### `int WeightedPickIndex(List<float> weights)`
+An index in [0, weights.Count) chosen with probability proportional to each weight.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| weights | List<float> | Per-item weights; negatives are clamped to 0. An all-zero list falls back to a uniform pick. |
+
+**Returns** (int): A weighted-random index into the list (must be non-empty).
+
 ## `VectorMath`
 First-class 2D/3D vector helpers for descriptor expressions. Registered globally
             in CompiledExpressionsRegistry so every expression can call these by bare name
