@@ -1,4 +1,5 @@
 using System;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Unity.Cinemachine;
@@ -34,7 +35,7 @@ namespace Assembler.Behaviours.Camera
 			data.Priority.UseIfValueExists(p => _cam.Priority = p);
 			data.Lens.UseIfValueExists(SetLens);
 
-			if (data.Mode.ValueOr("2d") == "3d")
+			if (data.Mode.Get() == CameraFollowMode.ThreeD)
 			{
 				AddFollowBody(data);
 			}

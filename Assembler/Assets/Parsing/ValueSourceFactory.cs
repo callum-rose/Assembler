@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
 
 namespace Assembler.Parsing
@@ -88,6 +89,35 @@ namespace Assembler.Parsing
 		/// </summary>
 		public static ValueSource<T> CreateOptionalValueSource<T>(TransformContext ctx, AssemblerValue? raw) =>
 			raw is null or NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
+
+		/// <summary>
+		/// Builds an enum-typed <see cref="ValueSource{TEnum}"/> for a fixed-set behaviour property. A string
+		/// literal is parsed (case/space/dash-insensitively, throwing on an unrecognised value) at transform
+		/// time; an absent value falls back to <paramref name="fallback"/>; everything else (<c>!var</c>/
+		/// <c>!expr</c>/…) delegates to <see cref="CreateValueSource{T}"/> so bindings still work.
+		/// </summary>
+		public static ValueSource<TEnum> CreateEnumSource<TEnum>(TransformContext ctx, AssemblerValue? raw, TEnum fallback)
+			where TEnum : struct, Enum =>
+			raw switch
+			{
+				null or NoValue => new ConstantSource<TEnum>(fallback),
+				StringValue s => new ConstantSource<TEnum>(BehaviourEnums.Parse<TEnum>(s.Value)),
+				_ => CreateValueSource<TEnum>(ctx, raw, fallback)
+			};
+
+		/// <summary>
+		/// Like <see cref="CreateEnumSource{TEnum}"/> but with no implicit fallback: an absent value resolves
+		/// to <see cref="None{TEnum}"/> (a <c>NullValueProvider</c> at runtime), so the default is supplied at
+		/// the point of use via <c>ValueOr</c>.
+		/// </summary>
+		public static ValueSource<TEnum> CreateOptionalEnumSource<TEnum>(TransformContext ctx, AssemblerValue? raw)
+			where TEnum : struct, Enum =>
+			raw switch
+			{
+				null or NoValue => None<TEnum>.Instance,
+				StringValue s => new ConstantSource<TEnum>(BehaviourEnums.Parse<TEnum>(s.Value)),
+				_ => CreateValueSource<TEnum>(ctx, raw)
+			};
 
 		public static ValueSource<T> CreateValueSource<T>(TransformContext ctx,
 			AssemblerValue raw,

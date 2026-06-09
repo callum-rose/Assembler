@@ -1,15 +1,15 @@
 using System.Collections.Generic;
-
+using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
 	public record UIContainerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
-		ValueSource<string> Direction,
+		ValueSource<LayoutDirection> Direction,
 		ValueSource<float> Spacing,
 		ValueSource<float> Padding,
-		ValueSource<string> ChildAlignment,
+		ValueSource<TextAnchor> ChildAlignment,
 		ValueSource<bool> FitContent) : BehaviourInfo(Id, Listeners)
 	{
 		public static UIContainerInfo Create(string id,
@@ -18,10 +18,10 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Direction")),
+				ValueSourceFactory.CreateOptionalEnumSource<LayoutDirection>(ctx, props.GetValueOrDefault("Direction")),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Spacing")),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Padding")),
-				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("ChildAlignment")),
+				ValueSourceFactory.CreateOptionalEnumSource<TextAnchor>(ctx, props.GetValueOrDefault("ChildAlignment")),
 				ValueSourceFactory.CreateOptionalValueSource<bool>(ctx, props.GetValueOrDefault("FitContent")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,

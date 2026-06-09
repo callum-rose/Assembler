@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Unity.Cinemachine;
@@ -10,7 +11,7 @@ namespace Assembler.Behaviours.Camera
 	/// Cinemachine blends and damping run on the brain using real frame time, outside the deterministic game clock.
 	/// This is acceptable because cameras are presentation-only and must never feed values back into game logic.
 	/// Properties:
-	///   View: "orthographic" for a 2D-style camera; any other value uses a perspective projection.
+	///   View: "orthographic" for a 2D-style camera, or "perspective" (default) for a 3D projection.
 	///   Size: Orthographic size in world units (only used when View = "orthographic").
 	///   DefaultBlend: Default blend time in seconds when the brain cuts between virtual cameras (0 = instant cut).
 	/// </remarks>
@@ -19,7 +20,7 @@ namespace Assembler.Behaviours.Camera
 		protected override void OnInitialise(CameraData data)
 		{
 			var camera = gameObject.AddComponent<UnityEngine.Camera>();
-			data.Perspective.UseIfValueExists(v => camera.orthographic = v == "orthographic");
+			camera.orthographic = data.View.Get() == CameraProjection.Orthographic;
 			data.Size.UseIfValueExists(v => camera.orthographicSize = v);
 
 			var brain = gameObject.AddComponent<CinemachineBrain>();

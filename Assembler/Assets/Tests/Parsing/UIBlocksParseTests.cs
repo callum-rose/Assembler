@@ -80,7 +80,7 @@ Entities:
 		{
 			var container = (UIContainerInfo)Parse(Yaml).Entities[0].Behaviours[1];
 
-			Assert.AreEqual("horizontal", ((ConstantSource<string>)container.Direction).Value);
+			Assert.AreEqual(LayoutDirection.Horizontal, ((ConstantSource<LayoutDirection>)container.Direction).Value);
 			Assert.AreEqual(8f, ((ConstantSource<float>)container.Spacing).Value);
 			Assert.AreEqual(4f, ((ConstantSource<float>)container.Padding).Value);
 			Assert.IsTrue(((ConstantSource<bool>)container.FitContent).Value);

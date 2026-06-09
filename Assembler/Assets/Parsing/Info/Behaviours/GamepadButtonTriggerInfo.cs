@@ -6,7 +6,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<string> Button,
-		ValueSource<string> Mode)
+		ValueSource<ButtonPhase> Mode)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static GamepadButtonTriggerInfo Create(string id,
@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Button")),
-				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Mode")));
+				ValueSourceFactory.CreateEnumSource(ctx, props.GetValueOrDefault("Mode"), ButtonPhase.Down));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

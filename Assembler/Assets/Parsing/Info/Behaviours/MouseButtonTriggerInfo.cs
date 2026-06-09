@@ -6,7 +6,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<int> Button,
-		ValueSource<string> Phase)
+		ValueSource<ButtonPhase> Phase)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static MouseButtonTriggerInfo Create(string id,
@@ -16,7 +16,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				ValueSourceFactory.CreateValueSource<int>(ctx, props.GetValueOrDefault("Button")),
-				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Phase")));
+				ValueSourceFactory.CreateEnumSource(ctx, props.GetValueOrDefault("Phase"), ButtonPhase.Down));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

@@ -9,7 +9,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<Vector3> Start,
 		ValueSource<Vector3> End,
 		ValueSource<float> Duration,
-		ValueSource<string> Easing) : BehaviourInfo(Id, Listeners)
+		ValueSource<Easing> Easing) : BehaviourInfo(Id, Listeners)
 	{
 		public static ScaleAnimationInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -20,7 +20,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Start")),
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("End")),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Duration")),
-				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Easing")));
+				ValueSourceFactory.CreateEnumSource(ctx, props.GetValueOrDefault("Easing"), Behaviours.Easing.InOutSine));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

@@ -229,7 +229,7 @@ Tweens the entity's world position from Start to End over Duration. See Transfor
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `scale animation`
 Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
@@ -241,7 +241,7 @@ Tweens the entity's local scale from Start to End over Duration. See TransformAn
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `rotate animation`
 Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
@@ -253,7 +253,7 @@ Tweens the entity's euler angles from Start to End over Duration. See TransformA
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `key hold trigger`
 Fires every frame while the named key is held down.
@@ -290,7 +290,7 @@ Fires on a mouse button event during the selected phase (press, release, or hold
 | Name | Type | Description |
 |------|------|-------------|
 | Button | int | Mouse button index — 0 (left), 1 (right), 2 (middle). |
-| Phase | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+| Phase | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ### Outputs
 
@@ -367,7 +367,7 @@ Fires on a gamepad / joystick button event (press, release, or hold).
 | Name | Type | Description |
 |------|------|-------------|
 | Button | string | Unity key string for the gamepad button (e.g. "joystick button 0", "joystick 1 button 1"). |
-| Mode | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+| Mode | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ## `tap trigger`
 Fires once when the pointer is pressed and released quickly without moving (a tap).
@@ -653,7 +653,7 @@ Adds the output Unity Camera plus a Cinemachine brain, so virtual cameras (e.g. 
 
 | Name | Type | Description |
 |------|------|-------------|
-| View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
+| View | CameraProjection | "orthographic" for a 2D-style camera, or "perspective" (default) for a 3D projection. |
 | Size | float | Orthographic size in world units (only used when View = "orthographic"). |
 | DefaultBlend | float | Default blend time in seconds when the brain cuts between virtual cameras (0 = instant cut). |
 
@@ -668,7 +668,7 @@ Adds a Cinemachine virtual camera that follows and/or looks at a target entity, 
 |------|------|-------------|
 | Target | Tag/Id | Entity to follow, as { Tag: <entity-tag> } or { Id: <entity-id> }. Omit for look-at only. |
 | LookAt | Tag/Id | Entity to aim at, as { Tag: … } or { Id: … }. Adds an aim composer. |
-| Mode | string | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
+| Mode | CameraFollowMode | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
 | Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
 | Lens | float | Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection. |
 | Damping | float | How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim. |
@@ -1517,7 +1517,7 @@ Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Shape | string | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
+| Shape | PrimitiveType | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
 | Colour | Color | Optional tint applied to the primitive's material. |
 | Size | Vector3 | Optional local scale of the primitive child. |
 
@@ -1585,10 +1585,10 @@ Groups child UI entities. By default it arranges them in a vertical or horizonta
 
 | Name | Type | Description |
 |------|------|-------------|
-| Direction | string | "vertical" (default), "horizontal", or "none" (no layout group — manual placement). |
+| Direction | LayoutDirection | "vertical" (default), "horizontal", or "none"/"manual"/"free" (no layout group — manual placement). |
 | Spacing | float | Gap between children, in reference pixels (layout directions only). |
 | Padding | float | Inner padding on all sides, in reference pixels (layout directions only). |
-| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
+| ChildAlignment | TextAnchor | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
 | FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
 
 ## `text label`
