@@ -44,45 +44,33 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 			var messages = new List<AnthropicMessage> { new("user", ctx.UserPrompt!) };
 
-			var executor = ctx.ScriptExecutor;
-			IReadOnlyList<AnthropicTool>? tools = executor != null ? new[] { executor.Tool } : null;
-			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse =
-				executor != null ? executor.HandleToolUseAsync : null;
+			var sent = await GoxelGenerationCore.SendAndExtractAsync(ctx, messages, ct).ConfigureAwait(false);
+			var withRaw = ctx with { RawAssistantText = sent.RawAssistantText };
 
-			var raw = await ctx.AnthropicClient
-				.SendAsync(ctx.SystemPrompt!, messages, ct, ctx.Observer.OnStreamDelta, tools, onToolUse, ctx.Limits.MaxToolIterations)
-				.ConfigureAwait(false);
-
-			var withRaw = ctx with { RawAssistantText = raw };
-
-			// Script path: a model was built in code. Use it directly (Z-up).
-			if (executor != null && executor.LastGoxelTextZUp is { Length: > 0 } scriptText)
+			// Generate is a fresh start: reset chat history and seed it with this
+			// one turn.
+			if (sent.ScriptUsed)
 			{
-				var assistantTurn = "I built this model with a procedural script:\n\n```csharp\n" + executor.LastScript + "\n```";
+				var assistantTurn = "I built this model with a procedural script:\n\n```csharp\n" + sent.LastScript + "\n```";
 				var scriptHistory = System.Collections.Immutable.ImmutableList.Create(
 					new AnthropicMessage("user", ctx.UserPrompt!),
 					new AnthropicMessage("assistant", assistantTurn));
 
 				return withRaw with
 				{
-					GoxelTextZUp = scriptText,
-					LastScript = executor.LastScript,
+					GoxelTextZUp = sent.GoxelTextZUp,
+					LastScript = sent.LastScript,
 					ChatHistory = scriptHistory,
 				};
 			}
 
-			// Mentalised path: Claude wrote a direct goxel block (Y-up).
-			var extracted = await new ExtractGoxelBlockStage().ExecuteAsync(withRaw, ct).ConfigureAwait(false);
-			var swapped = await new SwapYZAxesStage().ExecuteAsync(extracted, ct).ConfigureAwait(false);
-
-			// Generate is a fresh start: reset chat history and seed it with this
-			// one turn. Store the raw reply (Y-up, fenced) — that's what Claude
-			// actually said and what a follow-up chat-refine should replay verbatim.
+			// Store the raw reply (Y-up, fenced) — that's what Claude actually said
+			// and what a follow-up chat-refine should replay verbatim.
 			var newHistory = System.Collections.Immutable.ImmutableList.Create(
 				new AnthropicMessage("user", ctx.UserPrompt!),
-				new AnthropicMessage("assistant", raw));
+				new AnthropicMessage("assistant", sent.RawAssistantText));
 
-			return swapped with { ChatHistory = newHistory, LastScript = null };
+			return withRaw with { GoxelTextZUp = sent.GoxelTextZUp, ChatHistory = newHistory, LastScript = null };
 		}
 	}
 }

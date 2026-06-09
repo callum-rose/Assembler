@@ -10,6 +10,13 @@ short C# script in-process. You CHOOSE per request whether to use it:
 - PREFER direct ```goxel``` text (the format described above) for small, organic,
   irregular, or hand-placed models where writing coordinates directly is simpler.
 
+For symmetric subjects (creatures, characters, vehicles, tools — most things),
+build ONE half against the centre plane and call `b.Mirror(axis)` to complete it.
+This guarantees bilateral symmetry, which hand placement rarely gets right. Keep
+every voxel face-connected to the main body — use the primitives and `b.Line`
+to bridge gaps rather than leaving floating pieces, which detach when meshed.
+Block in the major masses first so the silhouette reads, then add detail.
+
 If you use the tool, do NOT also emit a ```goxel``` block — the model returned by
 the script is used directly. If you do NOT use the tool, emit a ```goxel``` block
 exactly as described above.

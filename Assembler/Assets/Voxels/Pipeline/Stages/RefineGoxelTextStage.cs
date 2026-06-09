@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
@@ -44,27 +43,19 @@ namespace Assembler.Voxels.Pipeline.Stages
 			}
 
 			var currentYUp = GoxelCoordinateConverter.SwapYAndZ(ctx.GoxelTextZUp!);
-			var userMessage = BuildRefinementMessage(currentYUp, ctx.RefinementInstruction!);
+			var userMessage = GoxelGenerationCore.BuildRefinementMessage(currentYUp, ctx.RefinementInstruction!);
 
 			List<AnthropicMessage> messages = ctx.UseChatHistory
 				? new List<AnthropicMessage>(ctx.ChatHistory) { new("user", userMessage) }
 				: new List<AnthropicMessage> { new("user", userMessage) };
 
-			var executor = ctx.ScriptExecutor;
-			IReadOnlyList<AnthropicTool>? tools = executor != null ? new[] { executor.Tool } : null;
-			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse =
-				executor != null ? executor.HandleToolUseAsync : null;
-
-			var raw = await ctx.AnthropicClient
-				.SendAsync(ctx.SystemPrompt!, messages, ct, ctx.Observer.OnStreamDelta, tools, onToolUse, ctx.Limits.MaxToolIterations)
-				.ConfigureAwait(false);
-
-			var withRaw = ctx with { RawAssistantText = raw };
+			var sent = await GoxelGenerationCore.SendAndExtractAsync(ctx, messages, ct).ConfigureAwait(false);
+			var withRaw = ctx with { RawAssistantText = sent.RawAssistantText };
 
 			// Script path: Claude rebuilt the model in code. Use it directly (Z-up).
-			if (executor != null && executor.LastGoxelTextZUp is { Length: > 0 } scriptText)
+			if (sent.ScriptUsed)
 			{
-				var assistantTurn = "I rebuilt the model with a procedural script:\n\n```csharp\n" + executor.LastScript + "\n```";
+				var assistantTurn = "I rebuilt the model with a procedural script:\n\n```csharp\n" + sent.LastScript + "\n```";
 				var scriptHistory = ctx.UseChatHistory
 					? ctx.ChatHistory
 						.Add(new AnthropicMessage("user", userMessage))
@@ -73,41 +64,20 @@ namespace Assembler.Voxels.Pipeline.Stages
 
 				return withRaw with
 				{
-					GoxelTextZUp = scriptText,
-					LastScript = executor.LastScript,
+					GoxelTextZUp = sent.GoxelTextZUp,
+					LastScript = sent.LastScript,
 					ChatHistory = scriptHistory,
 				};
 			}
 
-			// Mentalised path: Claude returned a direct goxel block (Y-up).
-			var extracted = await new ExtractGoxelBlockStage().ExecuteAsync(withRaw, ct).ConfigureAwait(false);
-			var swapped = await new SwapYZAxesStage().ExecuteAsync(extracted, ct).ConfigureAwait(false);
-
+			// Mentalised path: Claude returned a direct goxel block (Y-up, swapped).
 			var nextHistory = ctx.UseChatHistory
-				? swapped.ChatHistory
+				? ctx.ChatHistory
 					.Add(new AnthropicMessage("user", userMessage))
-					.Add(new AnthropicMessage("assistant", raw))
-				: swapped.ChatHistory;
+					.Add(new AnthropicMessage("assistant", sent.RawAssistantText))
+				: ctx.ChatHistory;
 
-			return swapped with { ChatHistory = nextHistory, LastScript = null };
-		}
-
-		private static string BuildRefinementMessage(string currentGoxelTextYUp, string refinementInstruction)
-		{
-			var sb = new StringBuilder();
-			sb.AppendLine("Here is the current model:");
-			sb.AppendLine();
-			sb.AppendLine("<current_model>");
-			sb.Append(currentGoxelTextYUp);
-			if (!currentGoxelTextYUp.EndsWith("\n", StringComparison.Ordinal))
-			{
-				sb.AppendLine();
-			}
-
-			sb.AppendLine("</current_model>");
-			sb.AppendLine();
-			sb.Append("Change: ").Append(refinementInstruction);
-			return sb.ToString();
+			return withRaw with { GoxelTextZUp = sent.GoxelTextZUp, ChatHistory = nextHistory, LastScript = null };
 		}
 	}
 }

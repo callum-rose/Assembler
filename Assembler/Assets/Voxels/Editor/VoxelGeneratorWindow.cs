@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Assembler.Anthropic;
 using Assembler.Voxels.Editor.Pipeline;
+using Assembler.Voxels.Generation;
 using Assembler.Voxels.Pipeline;
 using Assembler.Voxels.Scripting;
 using UnityEditor;
@@ -22,6 +23,8 @@ namespace Assembler.Voxels.Editor
 		private const string VoxelCapPref = "Assembler.Voxels.ScriptVoxelCap";
 		private const string TimeoutPref = "Assembler.Voxels.ScriptTimeoutSeconds";
 		private const string MaxIterationsPref = "Assembler.Voxels.ScriptMaxIterations";
+		private const string VisionIterationsPref = "Assembler.Voxels.VisionIterations";
+		private const string ReferenceVariationsPref = "Assembler.Voxels.ReferenceVariations";
 		private const string DefaultOutputFolder = "Assets/Resources/Voxels/";
 		private const string ScratchFolder = "Assets/Resources/Voxels/_Preview/";
 		private const string ScratchName = "preview";
@@ -39,6 +42,16 @@ namespace Assembler.Voxels.Editor
 		private int _voxelCap = VoxelScriptLimits.Default.MaxVoxels;
 		private float _timeoutSeconds = (float)VoxelScriptLimits.Default.WallClock.TotalSeconds;
 		private int _maxIterations = VoxelScriptLimits.Default.MaxToolIterations;
+
+		// Reference-image / vision-feedback settings. The image generator is the
+		// only external piece; until a host is wired it's the null provider, so the
+		// "with reference image" flow degrades to a plain generate + geometry
+		// validate, and vision-refine still works off the model's own renders.
+		private int _visionIterations = 2;
+		private int _referenceVariations = 1;
+		private readonly IImageGenerator _imageGenerator = NullImageGenerator.Instance;
+		private List<Texture2D> _referenceThumbs = new();
+		private List<Texture2D> _renderedThumbs = new();
 		private string? _lastScript;
 		private bool _scriptFoldout = true;
 		private Vector2 _scriptScroll;
@@ -88,6 +101,8 @@ namespace Assembler.Voxels.Editor
 			_voxelCap = EditorPrefs.GetInt(VoxelCapPref, VoxelScriptLimits.Default.MaxVoxels);
 			_timeoutSeconds = EditorPrefs.GetFloat(TimeoutPref, (float)VoxelScriptLimits.Default.WallClock.TotalSeconds);
 			_maxIterations = EditorPrefs.GetInt(MaxIterationsPref, VoxelScriptLimits.Default.MaxToolIterations);
+			_visionIterations = EditorPrefs.GetInt(VisionIterationsPref, 2);
+			_referenceVariations = EditorPrefs.GetInt(ReferenceVariationsPref, 1);
 		}
 
 		private VoxelScriptLimits CurrentLimits() => new()
@@ -101,6 +116,8 @@ namespace Assembler.Voxels.Editor
 		{
 			_cts?.Cancel();
 			DestroyPreviewEditor();
+			ClearThumbs(_referenceThumbs);
+			ClearThumbs(_renderedThumbs);
 		}
 
 		private void OnGUI()
@@ -229,6 +246,44 @@ namespace Assembler.Voxels.Editor
 			}
 
 			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Reference image & vision feedback", EditorStyles.boldLabel);
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_referenceVariations = Mathf.Clamp(EditorGUILayout.IntField("Reference variations", _referenceVariations), 1, 8);
+				_visionIterations = Mathf.Clamp(EditorGUILayout.IntField("Vision refine iterations", _visionIterations), 1, 8);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(ReferenceVariationsPref, _referenceVariations);
+					EditorPrefs.SetInt(VisionIterationsPref, _visionIterations);
+				}
+			}
+
+			if (_imageGenerator is NullImageGenerator)
+			{
+				EditorGUILayout.HelpBox(
+					"No image provider configured: 'Generate with reference image' runs a plain generate + " +
+					"geometry validation, and 'Auto-refine with vision' critiques the model's own renders. " +
+					"Wire an IImageGenerator to add a visual anchor.",
+					MessageType.Info);
+			}
+
+			using (new EditorGUI.DisabledScope(_isRunning))
+			{
+				if (GUILayout.Button("Generate with reference image"))
+				{
+					StartReferenceGenerate();
+				}
+			}
+
+			using (new EditorGUI.DisabledScope(_isRunning || string.IsNullOrWhiteSpace(_goxelText)))
+			{
+				if (GUILayout.Button("Auto-refine with vision"))
+				{
+					StartVisionRefine();
+				}
+			}
+
+			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Refine prompt (sent with current model)", EditorStyles.boldLabel);
 			_refineScroll = EditorGUILayout.BeginScrollView(_refineScroll, GUILayout.MinHeight(50), GUILayout.MaxHeight(120));
 			_refinePrompt = EditorGUILayout.TextArea(_refinePrompt, GUILayout.ExpandHeight(true));
@@ -306,6 +361,33 @@ namespace Assembler.Voxels.Editor
 			{
 				GUI.Box(rect, "No mesh yet", EditorStyles.helpBox);
 			}
+
+			DrawThumbnailRow("Reference (what Claude saw)", _referenceThumbs);
+			DrawThumbnailRow("Last vision renders", _renderedThumbs);
+		}
+
+		private void DrawThumbnailRow(string label, List<Texture2D> thumbs)
+		{
+			if (thumbs.Count == 0)
+			{
+				return;
+			}
+
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField(label, EditorStyles.miniBoldLabel);
+			EditorGUILayout.BeginHorizontal();
+			const float thumbSize = 72f;
+			foreach (var tex in thumbs)
+			{
+				if (tex == null)
+				{
+					continue;
+				}
+
+				var r = GUILayoutUtility.GetRect(thumbSize, thumbSize, GUILayout.Width(thumbSize), GUILayout.Height(thumbSize));
+				GUI.DrawTexture(r, tex, ScaleMode.ScaleToFit);
+			}
+			EditorGUILayout.EndHorizontal();
 		}
 
 		private void StartGenerate()
@@ -445,6 +527,149 @@ namespace Assembler.Voxels.Editor
 			catch (Exception ex)
 			{
 				Log("Refine failed: " + ex);
+			}
+			finally
+			{
+				_isRunning = false;
+				_cts?.Dispose();
+				_cts = null;
+				Repaint();
+			}
+		}
+
+		private void StartReferenceGenerate()
+		{
+			if (string.IsNullOrWhiteSpace(_apiKey))
+			{
+				Log("ERROR: API key is required.");
+				return;
+			}
+			if (string.IsNullOrWhiteSpace(_prompt))
+			{
+				Log("ERROR: prompt is required.");
+				return;
+			}
+
+			_log.Clear();
+			_isRunning = true;
+			_cts = new CancellationTokenSource();
+			RunReferenceGenerateAsync(_cts.Token);
+		}
+
+		private async void RunReferenceGenerateAsync(CancellationToken ct)
+		{
+			try
+			{
+				SnapshotUndo();
+				Log("Generating reference image + reference-guided model...");
+				using var client = new AnthropicClient(_apiKey);
+
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+				var limits = CurrentLimits();
+				var result = await VoxelGenerationPipeline
+					.CreateNew(EditorVoxelServices.Default)
+					.WithAnthropic(client)
+					.WithScriptExecutor(new VoxelScriptExecutor(limits))
+					.WithScriptLimits(limits)
+					.WithImageGenerator(_imageGenerator)
+					.WithReferenceVariations(_referenceVariations)
+					.WithPersistentInstructions(_persistentInstructions)
+					.WithReferencePrompt(_prompt)
+					.WithObserver(new EditorWindowObserver(this))
+					.GenerateReferenceImage()
+					.ReferenceGuidedGenerate()
+					.DedupeVoxels()
+					.RecordHistory("generate")
+					.ParseModel()
+					.ValidateGeometry()
+					.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.LoadPreviewMesh(scratchPath)
+					.ExecuteAsync(ct);
+
+				ApplyResult(result, scratchPath);
+				Log("Done.");
+			}
+			catch (OperationCanceledException)
+			{
+				Log("Cancelled.");
+			}
+			catch (Exception ex)
+			{
+				Log("Failed: " + ex);
+			}
+			finally
+			{
+				_isRunning = false;
+				_cts?.Dispose();
+				_cts = null;
+				Repaint();
+			}
+		}
+
+		private void StartVisionRefine()
+		{
+			if (string.IsNullOrWhiteSpace(_apiKey))
+			{
+				Log("ERROR: API key is required.");
+				return;
+			}
+			if (string.IsNullOrWhiteSpace(_goxelText))
+			{
+				Log("ERROR: no current model to refine.");
+				return;
+			}
+
+			_isRunning = true;
+			_cts = new CancellationTokenSource();
+			RunVisionRefineAsync(_cts.Token);
+		}
+
+		private async void RunVisionRefineAsync(CancellationToken ct)
+		{
+			try
+			{
+				SnapshotUndo();
+				Log($"\nAuto-refining with vision ({_visionIterations} iteration(s))...");
+				using var client = new AnthropicClient(_apiKey);
+
+				var scratchPath = Path.Combine(ScratchFolder, ScratchName + ".vox");
+
+				// Start from the prior result if we have one (carries ReferenceImages
+				// so the critique has its original target), else seed from current text.
+				var pipeline = _lastResult != null
+					? VoxelGenerationPipeline.FromExisting(_lastResult, EditorVoxelServices.Default)
+					: SeedFromCurrentText(EditorVoxelServices.Default);
+
+				var limits = CurrentLimits();
+				var options = new VisionRefinementOptions { Iterations = Mathf.Max(1, _visionIterations) };
+				var result = await pipeline
+					.WithAnthropic(client)
+					.WithScriptExecutor(new VoxelScriptExecutor(limits))
+					.WithScriptLimits(limits)
+					.WithPersistentInstructions(_persistentInstructions)
+					.WithObserver(new EditorWindowObserver(this))
+					.ParseModel()
+					.ValidateGeometry()
+					.RefineWithVision(options, scratchPath)
+					.RecordHistory("refine-chat")
+					.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.LoadPreviewMesh(scratchPath)
+					.ExecuteAsync(ct);
+
+				ApplyResult(result, scratchPath);
+				Log("Done.");
+			}
+			catch (OperationCanceledException)
+			{
+				Log("Cancelled.");
+			}
+			catch (Exception ex)
+			{
+				Log("Vision refine failed: " + ex);
 			}
 			finally
 			{
@@ -664,7 +889,58 @@ namespace Assembler.Voxels.Editor
 			{
 				Log("Model was built procedurally (see Generated script panel).");
 			}
+			RebuildThumbnails(result);
 			DestroyPreviewEditor();
+		}
+
+		private void RebuildThumbnails(VoxelPipelineResult result)
+		{
+			ClearThumbs(_referenceThumbs);
+			ClearThumbs(_renderedThumbs);
+			_referenceThumbs = DecodeThumbs(result.ReferenceImages);
+			_renderedThumbs = DecodeThumbs(result.RenderedImages);
+		}
+
+		private static List<Texture2D> DecodeThumbs(IReadOnlyList<byte[]>? images)
+		{
+			var list = new List<Texture2D>();
+			if (images == null)
+			{
+				return list;
+			}
+
+			foreach (var png in images)
+			{
+				if (png == null || png.Length == 0)
+				{
+					continue;
+				}
+
+				var tex = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false) { hideFlags = HideFlags.HideAndDontSave };
+				if (tex.LoadImage(png))
+				{
+					list.Add(tex);
+				}
+				else
+				{
+					DestroyImmediate(tex);
+				}
+			}
+
+			return list;
+		}
+
+		private static void ClearThumbs(List<Texture2D> thumbs)
+		{
+			foreach (var tex in thumbs)
+			{
+				if (tex != null)
+				{
+					DestroyImmediate(tex);
+				}
+			}
+
+			thumbs.Clear();
 		}
 
 		private VoxelGenerationPipeline SeedFromCurrentText(VoxelPipelineServices services)

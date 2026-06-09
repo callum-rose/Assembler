@@ -52,16 +52,10 @@ namespace Assembler.Anthropic
 			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse = null,
 			int maxToolIterations = DefaultMaxToolIterations)
 		{
-			// Seed the SDK message list from our simple (role, text) messages.
-			// Intermediate tool_use / tool_result turns are appended here as the
-			// loop runs; they never escape into the caller's history.
-			var sdkMessages = messages
-				.Select(m => new MessageParam
-				{
-					Role = RoleFromString(m.Role),
-					Content = m.Content,
-				})
-				.ToList();
+			// Seed the SDK message list from our simple (role, text[, images])
+			// messages. Intermediate tool_use / tool_result turns are appended here
+			// as the loop runs; they never escape into the caller's history.
+			var sdkMessages = messages.Select(ToMessageParam).ToList();
 
 			IReadOnlyList<ToolUnion>? sdkTools = tools is { Count: > 0 }
 				? tools.Select(BuildTool).ToArray()
@@ -195,6 +189,34 @@ namespace Assembler.Anthropic
 			}
 
 			return fullText.ToString();
+		}
+
+		/// <summary>
+		/// Projects one domain message into an SDK <see cref="MessageParam"/>.
+		/// Without images this is the legacy bare-string content; with images the
+		/// content becomes a block list of [ text, image… ] so vision turns ride
+		/// the same path as text. Tool loop / streaming are unaffected.
+		/// </summary>
+		private static MessageParam ToMessageParam(AnthropicMessage m)
+		{
+			var role = RoleFromString(m.Role);
+			if (m.Images is not { Count: > 0 })
+			{
+				return new MessageParam { Role = role, Content = m.Content };
+			}
+
+			var blocks = new List<ContentBlockParam>();
+			if (!string.IsNullOrEmpty(m.Content))
+			{
+				blocks.Add(new TextBlockParam(m.Content));
+			}
+
+			foreach (var image in m.Images)
+			{
+				blocks.Add(ImageBlockParam.FromRawUnchecked(image.ToWireDictionary()));
+			}
+
+			return new MessageParam { Role = role, Content = blocks };
 		}
 
 		private static ToolUnion BuildTool(AnthropicTool tool)

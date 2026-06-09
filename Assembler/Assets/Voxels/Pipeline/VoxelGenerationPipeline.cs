@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using Assembler.Voxels.Generation;
 using Assembler.Voxels.Pipeline.Stages;
 
 namespace Assembler.Voxels.Pipeline
@@ -112,6 +113,30 @@ namespace Assembler.Voxels.Pipeline
 			return this;
 		}
 
+		/// <summary>
+		/// Sets the user prompt WITHOUT queuing the default text-generate stage —
+		/// used by the reference-image flow, which queues its own
+		/// <see cref="GenerateReferenceImageStage"/> + <see cref="ReferenceGuidedGenerateStage"/>.
+		/// </summary>
+		public VoxelGenerationPipeline WithReferencePrompt(string prompt)
+		{
+			_ctx = _ctx with { UserPrompt = prompt, RefinementInstruction = null, UseChatHistory = false };
+			EnsureLoadSystemPrompt();
+			return this;
+		}
+
+		public VoxelGenerationPipeline WithImageGenerator(IImageGenerator generator)
+		{
+			_ctx = _ctx with { ImageGenerator = generator };
+			return this;
+		}
+
+		public VoxelGenerationPipeline WithReferenceVariations(int variations)
+		{
+			_ctx = _ctx with { ReferenceVariations = System.Math.Max(1, variations) };
+			return this;
+		}
+
 		public VoxelGenerationPipeline WithPersistentInstructions(string instructions)
 		{
 			// Clear cached SystemPrompt so EnsureLoadSystemPrompt picks up the
@@ -135,6 +160,47 @@ namespace Assembler.Voxels.Pipeline
 				_stages.Add(new GenerateGoxelTextStage());
 			}
 
+			return this;
+		}
+
+		/// <summary>Asks the image provider for reference images (Phase 1).</summary>
+		public VoxelGenerationPipeline GenerateReferenceImage()
+		{
+			_stages.Add(new GenerateReferenceImageStage());
+			return this;
+		}
+
+		/// <summary>
+		/// Generates a model anchored to the chosen reference image (Phase 2).
+		/// Falls back to plain text generation when no reference is present.
+		/// </summary>
+		public VoxelGenerationPipeline ReferenceGuidedGenerate()
+		{
+			EnsureLoadSystemPrompt();
+			_stages.Add(new ReferenceGuidedGenerateStage());
+			return this;
+		}
+
+		/// <summary>
+		/// Deterministic connectivity + symmetry check/repair over the parsed model
+		/// (Phase 4). Auto-inserts ParseModel if needed.
+		/// </summary>
+		public VoxelGenerationPipeline ValidateGeometry(bool pruneOrphans = true, int orphanMaxSize = 4)
+		{
+			EnsureParseModel();
+			_stages.Add(new ValidateGeometryStage(pruneOrphans, orphanMaxSize));
+			return this;
+		}
+
+		/// <summary>
+		/// One vision-feedback pass: sends the current renders + reference image and
+		/// asks Claude to correct the model (Phase 3). Renders must already be on
+		/// the context (see the editor's RenderModelImages stage).
+		/// </summary>
+		public VoxelGenerationPipeline VisionCritiqueRefine()
+		{
+			EnsureLoadSystemPrompt();
+			_stages.Add(new VisionCritiqueRefineStage());
 			return this;
 		}
 

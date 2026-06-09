@@ -18,13 +18,27 @@ outside it. The block contents must be lines in the form:
 
 # Authoring guidance
 
-- Keep models small: usually under 32 voxels on any axis. Anything past 100 is
-  almost certainly wrong.
+- Right-size the model to the subject. Simple icons read well under ~16 voxels
+  per axis; a recognisable character or vehicle usually needs ~16–32 so the
+  silhouette is legible. Going too crude (a featureless blob) is as wrong as
+  going too large — spend voxels on the features that make the subject
+  identifiable. Anything past ~48 per axis is almost certainly wrong.
+- **Readable silhouette first.** The shape should be recognisable from its
+  outline alone, from a 3/4 view. Block in the major masses (head, body, limbs;
+  hull, wings, cockpit) before any surface detail.
+- **Symmetry.** If the subject is bilaterally symmetric (most creatures,
+  characters, vehicles, tools), make the model symmetric about its centre plane
+  — build one half and mirror it. Asymmetry reads as a mistake unless the
+  subject genuinely is asymmetric.
+- **Connectivity.** Every voxel must be face-connected (sharing a face, not just
+  a corner) to the main body. No floating or diagonally-attached bits — they
+  look like errors and detach when meshed.
 - Centre the model around the origin where practical (the importer translates
   to the bounding-box minimum anyway, but origin-centred models are easier for
   humans to review).
 - Use the +Y axis as "up". X is right, Z is forward.
-- Re-use colours where possible — the .vox palette has only 255 slots.
+- Use a small, deliberate palette of solid colours; re-use them across the model
+  (the .vox palette has only 255 slots). Pick distinct hues for distinct parts.
 - Use only the voxels you need. Solid blocks should be hollow on the inside if
   reasonable; the mesher does not cull interior voxels.
 - Do not output any prose, explanation, or extra blocks. ONLY the ```goxel```

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Assembler.Anthropic;
+using Assembler.Voxels.Generation;
 using Assembler.Voxels.Scripting;
 using UnityEngine;
 
@@ -41,6 +42,20 @@ namespace Assembler.Voxels.Pipeline
 		public string? SavedProjectPath { get; init; }
 		public Mesh? PreviewMesh { get; init; }
 
+		// Reference-image hybrid (Phases 1–4). All transient like PreviewMesh —
+		// they describe the current run, not durable model state.
+		public IImageGenerator? ImageGenerator { get; init; }
+		public int ReferenceVariations { get; init; } = 1;
+
+		/// <summary>PNG variations from the text-to-image provider (Phase 1).</summary>
+		public IReadOnlyList<byte[]>? ReferenceImages { get; init; }
+
+		/// <summary>PNG renders of the current meshed model from several angles (Phase 3).</summary>
+		public IReadOnlyList<byte[]>? RenderedImages { get; init; }
+
+		/// <summary>Latest deterministic geometry validation result (Phase 4).</summary>
+		public GeometryReport? Geometry { get; init; }
+
 		public VoxelProject Project { get; init; } = new();
 	}
 
@@ -56,6 +71,9 @@ namespace Assembler.Voxels.Pipeline
 		public string? SavedPath => Context.SavedVoxPath;
 		public string? SavedProjectPath => Context.SavedProjectPath;
 		public Mesh? PreviewMesh => Context.PreviewMesh;
+		public IReadOnlyList<byte[]>? ReferenceImages => Context.ReferenceImages;
+		public IReadOnlyList<byte[]>? RenderedImages => Context.RenderedImages;
+		public GeometryReport? Geometry => Context.Geometry;
 		public IReadOnlyList<AnthropicMessage> ChatHistory => Context.ChatHistory;
 		public VoxelProject Project => Context.Project;
 	}

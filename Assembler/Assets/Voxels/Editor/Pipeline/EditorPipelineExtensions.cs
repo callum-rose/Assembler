@@ -26,6 +26,40 @@ namespace Assembler.Voxels.Editor.Pipeline
 
 		public static VoxelGenerationPipeline LoadPreviewMesh(this VoxelGenerationPipeline p, string path)
 			=> p.AddStage(new LoadPreviewMeshStage(path));
+
+		/// <summary>
+		/// Renders the imported model at <paramref name="path"/> from the option's
+		/// angles into <c>RenderedImages</c> (Phase 3).
+		/// </summary>
+		public static VoxelGenerationPipeline RenderModelImages(
+			this VoxelGenerationPipeline p, string path, VisionRefinementOptions options)
+			=> p.AddStage(new RenderModelImagesStage(path, options));
+
+		/// <summary>
+		/// Vision-feedback loop controller (Phase 3): runs
+		/// <paramref name="options"/>.Iterations passes of
+		/// EncodeVox → WriteScratchPreview → RefreshAssetDatabase → RenderModelImages
+		/// → VisionCritiqueRefine → DedupeVoxels → ParseModel → ValidateGeometry.
+		/// Last-iteration-wins. The model + geometry from the final ValidateGeometry
+		/// flow on for the caller to encode/preview.
+		/// </summary>
+		public static VoxelGenerationPipeline RefineWithVision(
+			this VoxelGenerationPipeline p, VisionRefinementOptions options, string scratchPath)
+		{
+			for (var i = 0; i < options.Iterations; i++)
+			{
+				p = p.EncodeVox()
+					.WriteScratchPreview(scratchPath)
+					.RefreshAssetDatabase()
+					.RenderModelImages(scratchPath, options)
+					.VisionCritiqueRefine()
+					.DedupeVoxels()
+					.ParseModel()
+					.ValidateGeometry();
+			}
+
+			return p;
+		}
 	}
 
 	/// <summary>
