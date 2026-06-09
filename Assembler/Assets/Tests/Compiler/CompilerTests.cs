@@ -704,6 +704,57 @@ namespace Tests.Compiler
 			Assert.That(func(), Is.EqualTo(10.0));
 		}
 
+		// A registered type name may be used in declaration position, just like `var` or a primitive keyword.
+		[Test]
+		public void RegisteredTypeVariableDeclaration()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(TestVector3));
+
+			var func = compiler.CompileFunc<double>(
+				$"""
+				 TestVector3 v = new TestVector3(1.0, 2.0, 3.0);
+				 return v.x + v.y;
+				 """);
+
+			Assert.That(func(), Is.EqualTo(3.0));
+		}
+
+		// A fully-qualified type name works in declaration position too.
+		[Test]
+		public void FullyQualifiedTypeVariableDeclaration()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(Vector3));
+
+			var func = compiler.Compile(
+				$"""
+				 UnityEngine.Vector3 dir = new UnityEngine.Vector3(1f, 2f, 3f);
+				 return dir;
+				 """,
+				typeof(Vector3),
+				out _);
+
+			Assert.That(func.DynamicInvoke(), Is.EqualTo(new Vector3(1f, 2f, 3f)));
+		}
+
+		// Assignment to a member must still parse as an expression statement, not a declaration.
+		[Test]
+		public void MemberAssignmentNotMisreadAsDeclaration()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(TestVector3));
+
+			var func = compiler.CompileFunc<double>(
+				$"""
+				 var v = new TestVector3(1.0, 2.0, 3.0);
+				 v.x = 5.0;
+				 return v.x;
+				 """);
+
+			Assert.That(func(), Is.EqualTo(5.0));
+		}
+
 		// LINQ extension method tests
 		[Test]
 		public void LinqWhereOnList()

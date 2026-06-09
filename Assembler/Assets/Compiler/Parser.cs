@@ -728,6 +728,14 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseStatement()
 		{
+			// A registered/resolvable type name used in declaration position (e.g. `Vector3 dir = ...;`)
+			// looks like a bare identifier to the lexer, so disambiguate it from an expression statement
+			// with lookahead before falling through to the keyword cases below.
+			if (Current.Type == TokenType.Identifier && IsTypedDeclaration())
+			{
+				return ParseVariableDeclaration();
+			}
+
 			return Current.Type switch
 			{
 				TokenType.If => ParseIf(),
@@ -745,6 +753,53 @@ namespace Assembler.Compiler.Compiler
 				TokenType.LeftBrace => ParseBlock(),
 				_ => ParseExpressionStatement()
 			};
+		}
+
+		// Looks ahead (without consuming tokens) to decide whether the current identifier begins a typed
+		// local declaration: a resolvable type name (possibly dotted, e.g. `UnityEngine.Vector3`) followed
+		// by a variable name and then `=` or `;`. Requiring the type to resolve keeps expression statements
+		// like `foo.bar = x;` from being misread as declarations.
+		private bool IsTypedDeclaration()
+		{
+			var savedPosition = _position;
+			try
+			{
+				if (Current.Type != TokenType.Identifier)
+				{
+					return false;
+				}
+
+				var typeName = Current.Value;
+				Advance();
+
+				while (Current.Type == TokenType.Dot)
+				{
+					Advance();
+					if (Current.Type != TokenType.Identifier)
+					{
+						return false;
+					}
+					typeName += "." + Current.Value;
+					Advance();
+				}
+
+				if (Current.Type != TokenType.Identifier)
+				{
+					return false;
+				}
+				Advance();
+
+				if (Current.Type != TokenType.Assign && Current.Type != TokenType.Semicolon)
+				{
+					return false;
+				}
+
+				return TryResolveType(typeName) != null;
+			}
+			finally
+			{
+				_position = savedPosition;
+			}
 		}
 
 		private Expression ParseBlock()
@@ -959,12 +1014,40 @@ namespace Assembler.Compiler.Compiler
 			return Expression.Continue(_continueLabels.Peek());
 		}
 
+		// Parses the declared type of a local: a built-in keyword (`var`/`int`/`float`/…) or a resolvable
+		// type name (possibly dotted, e.g. `UnityEngine.Vector3`). `var` resolves to object here and is
+		// inferred from the initializer by the caller.
+		private Type ParseDeclarationType()
+		{
+			if (Current.Type is TokenType.Var
+				or TokenType.Int
+				or TokenType.String_
+				or TokenType.Bool
+				or TokenType.Float
+				or TokenType.Double)
+			{
+				var typeToken = Current;
+				Advance();
+				return GetTypeFromToken(typeToken.Type);
+			}
+
+			var typeNameToken = Expect(TokenType.Identifier);
+			var typeName = typeNameToken.Value;
+
+			while (Current.Type == TokenType.Dot)
+			{
+				Match(TokenType.Dot);
+				typeName += "." + Expect(TokenType.Identifier).Value;
+			}
+
+			return TryResolveType(typeName)
+				?? throw Error($"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					typeNameToken);
+		}
+
 		private Expression ParseVariableDeclaration()
 		{
-			var typeToken = Current;
-			Advance();
-
-			var type = GetTypeFromToken(typeToken.Type);
+			var type = ParseDeclarationType();
 
 			var name = Expect(TokenType.Identifier).Value;
 
