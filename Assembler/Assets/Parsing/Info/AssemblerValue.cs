@@ -55,12 +55,14 @@ namespace Assembler.Parsing.Info
 	{
 		Velocity,
 		AngularVelocity,
-		Position
+		Position,
+		Rotation
 	}
 
 	/// <summary>A <c>!rigidbody { Id, Property }</c> reference — reads a physics property (velocity,
-	/// angular velocity, position) off an entity's <c>Rigidbody</c> by id at runtime. Resolves to a
-	/// live <c>Vector3</c> (zero when the entity has no rigidbody).</summary>
+	/// angular velocity, position, rotation) off an entity's <c>Rigidbody</c> by id at runtime. Resolves
+	/// to a live <c>Vector3</c> (zero when the entity has no rigidbody); rotation is exposed as Euler
+	/// angles in degrees.</summary>
 	public sealed record RigidbodyPropertyRef(string Id, RigidbodyProperty Property) : AssemblerRef(Id);
 
 	/// <summary>A <c>!clock &lt;property&gt;</c> reference (e.g. <c>!clock deltaTime</c>), resolved at

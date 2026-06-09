@@ -31,7 +31,7 @@ Entities:
 		}
 
 		[Test]
-		public void AngularVelocityAndPositionPropertiesParse()
+		public void AngularVelocityPositionAndRotationPropertiesParse()
 		{
 			var info = Parse(@"
 Entities:
@@ -39,11 +39,14 @@ Entities:
     Position: !rigidbody { Id: leader, Property: AngularVelocity }
   reads position:
     Position: !rigidbody { Id: leader, Property: Position }
+  reads rotation:
+    Position: !rigidbody { Id: leader, Property: Rotation }
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ");
 			Assert.AreEqual(RigidbodyProperty.AngularVelocity, VelocitySourceOf(info, "reads angular").Property);
 			Assert.AreEqual(RigidbodyProperty.Position, VelocitySourceOf(info, "reads position").Property);
+			Assert.AreEqual(RigidbodyProperty.Rotation, VelocitySourceOf(info, "reads rotation").Property);
 		}
 
 		[Test]
