@@ -217,6 +217,22 @@ v.x = v.x * scale;
 return v;
 ```
 
+**Inline generics & initializers.** Generic arguments in a `new` are parsed, and collection /
+dictionary initializers are supported. The common `System.Collections.Generic` collections resolve
+without any registration:
+
+```csharp
+var nums   = new List<int> { 1, 2, 3 };               // construct + .Add(...) per element
+var more   = new List<int>() { 1, 2, 3 };             // empty parens are fine
+var empty  = new List<int> { };                       // just the construction
+var scores = new Dictionary<string, int> { { "a", 1 }, { "b", 2 } };  // each { key, value } → .Add(key, value)
+var top    = new List<int> { 5, 1, 9 }.Where(x => x > 4).Sum();       // initializers are values → chain LINQ/indexing
+```
+
+The target type needs a matching public `Add` (one arg for collection elements, two for dictionary
+pairs); a trailing comma before `}` is allowed. **Array** creation/initializers (`new int[] { … }`)
+are still **not** supported.
+
 > **Local declarations accept `var`, a primitive keyword, or any registered/resolvable type.**
 > `Vector3 dir = ...;` and `UnityEngine.Vector3 dir = ...;` both work, as long as the type is
 > registered (e.g. via a descriptor's `RegisterTypes`) — same names you'd use in a `new` expression.
@@ -273,7 +289,7 @@ vs vector `LerpVector` vs colour `LerpColor`.
 | **Loops** | `foreach`, `do-while` |
 | **Statements** | `switch`, `try/catch`, `throw`, `using`, `lock` |
 | **Lambdas** | Multi-param `(x, y) => ...`, zero-param `() => ...`, statement bodies `x => { ... }`, typed params `(int x) => ...` |
-| **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }` |
+| **Collections** | Array creation / array initializers (`new int[3]`, `new int[] { 1, 2, 3 }`, `new[] { … }`). *Collection & dictionary initializers (`new List<int> { 1, 2, 3 }`) ARE supported — see Object Construction.* |
 | **Operators** | Bitwise `&` `\|` `~` `<<` `>>` (but `^` XOR **is** supported — see Operators), range `..`, `typeof`, `is`, `as`, `default` |
 | **OOP** | Classes, structs, interfaces, events, generics (definition) |
 | **Misc** | `async/await`, `ref/out/in` params, `params`, named args, `this`, `base`, `static`, LINQ query syntax |
