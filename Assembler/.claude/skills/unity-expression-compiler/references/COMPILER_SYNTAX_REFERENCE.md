@@ -88,7 +88,13 @@ bool f = false;
 int x;              // declare without initialization
 int y = 10;         // declare with initialization
 var z = 20;         // type inferred from initializer
+Vector3 dir = new Vector3(0, 1, 0);          // registered type name as the declared type
+UnityEngine.Vector3 v = new Vector3(1, 2, 3); // fully-qualified type name also works
 ```
+
+The declared type can be `var`, a built-in keyword (`int`, `float`, `double`, `bool`, `string`), or
+any **registered/resolvable type** (e.g. a type listed in a descriptor's `RegisterTypes`) — used either
+by simple name or fully qualified, exactly as in `new` expressions.
 
 ### Assignment
 ```csharp
