@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Assembler is a Unity 6 (6000.4.5f1) framework for defining and running games declaratively via YAML configuration files. Games are described as entities with composable behaviours, and a multi-stage pipeline transforms YAML into executable Unity GameObjects.
 
+## Communication Style
+
+- **No sycophancy.** Don't open responses with praise like "Great question!", "Excellent idea!", or "You're absolutely right!". Skip the flattery and answer directly.
+- **Be direct and honest.** If an idea is flawed, a request is a bad approach, or there's a better option, say so plainly with the reasoning — don't soften it into agreement or hedge to avoid disagreement. Critical feedback is more useful than reassurance.
+- **Don't reflexively agree.** Evaluate claims and proposals on their merits; push back when warranted rather than validating by default. Changing your assessment should follow from evidence or argument, not from the user pushing back.
+- **No filler validation.** Drop empty affirmations ("Good point", "That makes sense") that add nothing — get straight to the substance.
+
 ## Code Conventions
 
 - **Be concise** in all responses — favour short, direct answers and avoid unnecessary preamble or repetition.
