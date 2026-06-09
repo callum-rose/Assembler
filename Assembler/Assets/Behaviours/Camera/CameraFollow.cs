@@ -21,7 +21,7 @@ namespace Assembler.Behaviours.Camera
 	///   Damping: How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim.
 	///   DeadZone: 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting.
 	///   CameraDistance: 2D only — distance the camera keeps in front of the target along its view axis (default 10). Must be &gt; 0 or an orthographic camera sits on the target's plane and sees nothing.
-	///   ScreenOffset [Vector2]: 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5).
+	///   ScreenOffset [Vector3]: 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5); z is ignored.
 	///   FollowOffset [Vector3]: 3D only — world-space offset the camera maintains from the target.
 	/// </remarks>
 	public class CameraFollow : GameBehaviour<CameraFollowData>
@@ -74,7 +74,7 @@ namespace Assembler.Behaviours.Camera
 			data.Damping.UseIfValueExists(d => composer.Damping = new Vector3(d, d, d));
 
 			var composition = composer.Composition;
-			data.ScreenOffset.UseIfValueExists(o => composition.ScreenPosition = o);
+			data.ScreenOffset.UseIfValueExists(o => composition.ScreenPosition = (Vector2)o);
 			data.DeadZone.UseIfValueExists(dz =>
 			{
 				composition.DeadZone.Enabled = dz > 0f;

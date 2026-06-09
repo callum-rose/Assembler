@@ -96,7 +96,7 @@ namespace Tests.Parsing
 		{
 			var registry = NewRegistry();
 
-			var ex = Assert.Throws<Exception>(() => registry.CompileAndRegisterAll(new[]
+			var ex = Assert.Throws<ResolveException>(() => registry.CompileAndRegisterAll(new[]
 			{
 				Expr("base offset", "int", "return 1;"),
 				Expr("base_offset", "int", "return 2;"),
@@ -110,7 +110,7 @@ namespace Tests.Parsing
 		{
 			var registry = NewRegistry();
 
-			var ex = Assert.Throws<Exception>(() => registry.CompileAndRegisterAll(new[]
+			var ex = Assert.Throws<ResolveException>(() => registry.CompileAndRegisterAll(new[]
 			{
 				Expr("ping", "int", "return pong(n);", new[] { ("int", "n") }),
 				Expr("pong", "int", "return ping(n);", new[] { ("int", "n") }),
