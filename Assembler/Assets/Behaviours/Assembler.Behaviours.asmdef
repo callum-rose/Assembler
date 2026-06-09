@@ -8,6 +8,7 @@
         "Assembler.Extensions",
         "Assembler.Resolving",
         "Assembler.Parsing",
+        "Assembler.Libraries",
         "Unity.InputSystem",
         "Unity.Cinemachine",
         "UnityEngine.UI",

@@ -90,6 +90,13 @@ namespace Assembler.Parsing
 				["string variable setter"] = VariableSetterInfo<string>.Create,
 				["colour variable setter"] = VariableSetterInfo<Color>.Create,
 
+				["int variable changed trigger"] = VariableChangedTriggerInfo<int>.Create,
+				["float variable changed trigger"] = VariableChangedTriggerInfo<float>.Create,
+				["bool variable changed trigger"] = VariableChangedTriggerInfo<bool>.Create,
+				["string variable changed trigger"] = VariableChangedTriggerInfo<string>.Create,
+				["vector variable changed trigger"] = VariableChangedTriggerInfo<Vector3>.Create,
+				["colour variable changed trigger"] = VariableChangedTriggerInfo<Color>.Create,
+
 				["vector list add"] = ListAddInfo<Vector3>.Create,
 				["vector list insert"] = ListInsertInfo<Vector3>.Create,
 				["vector list remove at"] = ListRemoveAtInfo<Vector3>.Create,

@@ -92,6 +92,37 @@ namespace Tests.Resolving
 			}
 		}
 
+		[Test]
+		public void WeightedPickIndexStaysInRange()
+		{
+			var weights = new List<float> { 1f, 2f, 3f };
+			for (int i = 0; i < 100; i++)
+			{
+				Assert.That(RandomMath.WeightedPickIndex(weights), Is.InRange(0, weights.Count - 1));
+			}
+		}
+
+		[Test]
+		public void WeightedPickIndexOnlyReturnsPositivelyWeightedEntries()
+		{
+			// Only index 1 has positive weight, so it must always be chosen.
+			var weights = new List<float> { 0f, 1f, 0f };
+			for (int i = 0; i < 100; i++)
+			{
+				Assert.That(RandomMath.WeightedPickIndex(weights), Is.EqualTo(1));
+			}
+		}
+
+		[Test]
+		public void WeightedPickIndexFallsBackToUniformWhenAllZero()
+		{
+			var weights = new List<float> { 0f, 0f, 0f };
+			for (int i = 0; i < 100; i++)
+			{
+				Assert.That(RandomMath.WeightedPickIndex(weights), Is.InRange(0, weights.Count - 1));
+			}
+		}
+
 		// ---- compiler integration -------------------------------------------------
 
 		private static CompiledExpressionsRegistry NewRegistry() =>

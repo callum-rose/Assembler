@@ -20,6 +20,7 @@ using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Input.Touch;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
+using Assembler.Behaviours.Triggers.Variables;
 using Assembler.Behaviours.UI;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Behaviours.Visual;
@@ -339,6 +340,8 @@ namespace Assembler.Building
 				[typeof(SpawnerInfo)] = Entry<SpawnerInfo, SpawnerBehaviour, SpawnerData>(
 					(i, ctx) => new SpawnerData(i.Id,
 						i.TemplateId.Resolve(ctx.Resolution),
+						i.Templates.Select(t => new SpawnTemplate(t.TemplateId, t.Weight.Resolve(ctx.Resolution))).ToArray(),
+						i.Selection.Resolve(ctx.Resolution),
 						i.Position.Resolve(ctx.Resolution),
 						i.Rotation.Resolve(ctx.Resolution),
 						i.Parameters.ToDictionary(kv => kv.Key,
@@ -477,6 +480,13 @@ namespace Assembler.Building
 			RegisterVariableSetter<string, StringSetter>(map);
 			RegisterVariableSetter<Color, ColourSetter>(map);
 
+			RegisterVariableChangedTrigger<int, IntVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<float, FloatVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<bool, BoolVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<string, StringVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<Vector3, Vector3VariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<Color, ColourVariableChangedTrigger>(map);
+
 			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListSet, Vector3ListAddRange, Vector3ListClear, Vector3ListLoopTrigger>(map);
 			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListSet, IntListAddRange, IntListClear, IntListLoopTrigger>(map);
 			RegisterListOps<float, FloatListAdd, FloatListInsert, FloatListRemoveAt, FloatListRemove, FloatListSetAt, FloatListSet, FloatListAddRange, FloatListClear, FloatListLoopTrigger>(map);
@@ -532,6 +542,41 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
 					i.ValueToSet.Resolve(ctx.Resolution),
 					i.ValueToGet.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+		}
+
+		private static void RegisterVariableChangedTrigger<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
+			where TBehaviour : GameBehaviour<VariableChangedTriggerData<T>>
+		{
+			map[typeof(VariableChangedTriggerInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx) =>
+			{
+				var i = (VariableChangedTriggerInfo<T>)info;
+
+				// A change trigger can only observe a writable variable, so VariableId must be a !var reference —
+				// a constant/expression/clock value has nothing to subscribe to. Hard-fail rather than silently
+				// wiring a trigger that can never fire.
+				if (i.VariableId is not ValueReferenceSource<T>)
+				{
+					throw new ResolveException(
+						$"'{i.Id}': a variable changed trigger's VariableId must be a !var reference to a writable variable.");
+				}
+
+				var b = go.AddComponent<TBehaviour>();
+				return (b, lr =>
+				{
+					var provider = i.VariableId.Resolve(ctx.Resolution);
+
+					// Guards against a !var of the wrong declared type (resolves to a non-observable adapter, e.g. an
+					// int variable referenced as float). The game would not work as declared, so hard-fail.
+					if (provider is not IObservableValueProvider<T>)
+					{
+						throw new ResolveException(
+							$"'{i.Id}': VariableId must reference a writable variable of type {typeof(T).Name}.");
+					}
+
+					b.Initialise(new VariableChangedTriggerData<T>(i.Id, provider),
+						i.Listeners.ToListeners(lr, ctx.Resolution));
+				});
 			});
 		}
 

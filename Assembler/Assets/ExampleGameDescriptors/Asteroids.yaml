@@ -152,6 +152,59 @@ Templates:
       self destruct:
         Type: destroy
 
+  # A larger, darker asteroid variant. The spawner mixes it in with the
+  # default asteroid for visual variety (see "spawn asteroid").
+  large_asteroid_template:
+    Tags: [ asteroid ]
+    Variables:
+      asteroid velocity: !parameter initial_velocity
+    Behaviours:
+      gizmo:
+        Type: sphere gizmo
+        Properties:
+          Radius: 0.8
+          Colour: !colour { R: 0.35, G: 0.3, B: 0.28 }
+      collider:
+        Type: sphere collider
+        Properties:
+          Radius: 0.8
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var asteroid velocity
+      bullet hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ bullet ]
+        Listeners:
+          - EntityId: score tracker
+            BehaviourId: increment score
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      ship hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ ship ]
+        Listeners:
+          - EntityId: life tracker
+            BehaviourId: decrement lives
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var asteroid lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
 Entities:
   # Game-over poll: every frame the gate checks the end condition; when it
   # holds, the gate fires !gameover, which ends and unloads the game.
@@ -365,7 +418,13 @@ Entities:
       spawn asteroid:
         Type: spawner
         Properties:
-          TemplateId: asteroid_template
+          # One spawner now mixes asteroid variants for variety. 'random' (the
+          # default) picks weighted by Weight; the large variant is rarer.
+          Selection: random
+          Templates:
+            - asteroid_template                 # bare id ⇒ weight 1
+            - Template: large_asteroid_template
+              Weight: 0.4
           Position: !expr { Do: 'RandomOnCircle(6.8f)' }
           Parameters:
             initial_velocity: !expr
