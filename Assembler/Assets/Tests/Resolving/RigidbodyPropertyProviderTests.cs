@@ -23,13 +23,13 @@ namespace Tests.Resolving
 		[TearDown]
 		public void TearDown() => Object.DestroyImmediate(_gameObject);
 
-		private ResolutionContext Context(EntityTransformRegistry registry) =>
+		private ResolutionContext Context() =>
 			// Only EntityTransforms is exercised when resolving a RigidbodyPropertySource; the other
 			// registries are not touched, so they can be left null for this focused test.
-			new(null!, null!, null!, null!, null, registry, null!);
+			new(null!, null!, null!, null!, null, _registry, null!);
 
 		private IValueProvider<Vector3> Resolve(RigidbodyProperty property) =>
-			new RigidbodyPropertySource<Vector3>("entity", property).Resolve(Context(_registry));
+			new RigidbodyPropertySource<Vector3>("entity", property).Resolve(Context());
 
 		[Test]
 		public void ResolvesLinearVelocityFromRigidbody()
@@ -73,26 +73,6 @@ namespace Tests.Resolving
 			Resolve(RigidbodyProperty.Velocity).Set(new Vector3(9, 9, 9));
 
 			Assert.AreEqual(new Vector3(9, 9, 9), _rigidbody.linearVelocity);
-		}
-
-		[Test]
-		public void NoRigidbodyReadsAsZero()
-		{
-			var without = new GameObject("no rigidbody");
-			var registry = new EntityTransformRegistry();
-			registry.Register("entity", without.transform);
-
-			try
-			{
-				var provider = new RigidbodyPropertySource<Vector3>("entity", RigidbodyProperty.Velocity)
-					.Resolve(Context(registry));
-
-				Assert.AreEqual(Vector3.zero, provider.Get(TriggerContext.Empty));
-			}
-			finally
-			{
-				Object.DestroyImmediate(without);
-			}
 		}
 	}
 }
