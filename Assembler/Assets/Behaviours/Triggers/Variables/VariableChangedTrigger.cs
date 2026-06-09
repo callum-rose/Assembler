@@ -1,0 +1,71 @@
+using System;
+using Assembler.Resolving;
+using Assembler.Resolving.Behaviours;
+using UnityEngine;
+
+namespace Assembler.Behaviours.Triggers.Variables
+{
+	/// <summary>Fires whenever the referenced variable's value changes, pushing the new value to listeners.</summary>
+	/// <remarks>
+	/// Properties:
+	///   VariableId: The variable to watch. Must be a writable `!var` reference of the matching type.
+	/// Outputs:
+	///   value [T]: The variable's new value.
+	///   previous [T]: The variable's value immediately before the change.
+	/// </remarks>
+	public abstract class VariableChangedTrigger<T> : Trigger<VariableChangedTriggerData<T>>
+	{
+		private IObservableValueProvider? _observable;
+
+		protected override void OnInitialise(VariableChangedTriggerData<T> data)
+		{
+			if (data.Variable is IObservableValueProvider observable)
+			{
+				_observable = observable;
+				_observable.Changed += OnVariableChanged;
+			}
+			else
+			{
+				UnityEngine.Debug.LogWarning(
+					$"'{Id}': VariableId does not reference a writable variable of type {typeof(T).Name}; " +
+					"variable changed trigger will never fire.");
+			}
+		}
+
+		private void OnVariableChanged(object previous, object current) =>
+			NotifyListeners(TriggerContext.New(b =>
+			{
+				b["value"] = current;
+				b["previous"] = previous;
+			}));
+
+		private void OnDestroy()
+		{
+			if (_observable != null)
+			{
+				_observable.Changed -= OnVariableChanged;
+			}
+		}
+
+		public override void Execute(TriggerContext ctx) =>
+			throw new Exception($"{nameof(VariableChangedTrigger<T>)} cannot be executed directly.");
+	}
+
+	/// <summary>Fires when an int variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class IntVariableChangedTrigger : VariableChangedTrigger<int> { }
+
+	/// <summary>Fires when a float variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class FloatVariableChangedTrigger : VariableChangedTrigger<float> { }
+
+	/// <summary>Fires when a bool variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class BoolVariableChangedTrigger : VariableChangedTrigger<bool> { }
+
+	/// <summary>Fires when a string variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class StringVariableChangedTrigger : VariableChangedTrigger<string> { }
+
+	/// <summary>Fires when a vector variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class Vector3VariableChangedTrigger : VariableChangedTrigger<Vector3> { }
+
+	/// <summary>Fires when a colour variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>
+	public class ColourVariableChangedTrigger : VariableChangedTrigger<Color> { }
+}

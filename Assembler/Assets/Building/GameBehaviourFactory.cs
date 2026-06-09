@@ -20,6 +20,7 @@ using Assembler.Behaviours.Triggers.Input;
 using Assembler.Behaviours.Triggers.Input.Touch;
 using Assembler.Behaviours.Triggers.Physical;
 using Assembler.Behaviours.Triggers.Timing;
+using Assembler.Behaviours.Triggers.Variables;
 using Assembler.Behaviours.UI;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Behaviours.Visual;
@@ -748,6 +749,13 @@ namespace Assembler.Building
 			RegisterVariableSetter<string, StringSetter>(map);
 			RegisterVariableSetter<Color, ColourSetter>(map);
 
+			RegisterVariableChangedTrigger<int, IntVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<float, FloatVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<bool, BoolVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<string, StringVariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<Vector3, Vector3VariableChangedTrigger>(map);
+			RegisterVariableChangedTrigger<Color, ColourVariableChangedTrigger>(map);
+
 			RegisterListOps<Vector3, Vector3ListAdd, Vector3ListInsert, Vector3ListRemoveAt, Vector3ListRemove, Vector3ListSetAt, Vector3ListSet, Vector3ListAddRange, Vector3ListClear, Vector3ListLoopTrigger>(map);
 			RegisterListOps<int, IntListAdd, IntListInsert, IntListRemoveAt, IntListRemove, IntListSetAt, IntListSet, IntListAddRange, IntListClear, IntListLoopTrigger>(map);
 			RegisterListOps<float, FloatListAdd, FloatListInsert, FloatListRemoveAt, FloatListRemove, FloatListSetAt, FloatListSet, FloatListAddRange, FloatListClear, FloatListLoopTrigger>(map);
@@ -787,6 +795,18 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
 					i.ValueToSet.Resolve(ctx.Resolution),
 					i.ValueToGet.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
+			});
+		}
+
+		private static void RegisterVariableChangedTrigger<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
+			where TBehaviour : GameBehaviour<VariableChangedTriggerData<T>>
+		{
+			map[typeof(VariableChangedTriggerInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx) =>
+			{
+				var i = (VariableChangedTriggerInfo<T>)info;
+				var b = go.AddComponent<TBehaviour>();
+				return (b, lr => b.Initialise(new VariableChangedTriggerData<T>(i.Id,
+					i.Variable.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 		}
 
