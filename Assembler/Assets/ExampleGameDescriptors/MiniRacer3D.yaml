@@ -1,15 +1,17 @@
 Game:
   Title: Mini Racer 3D
   Description: >
-    A small 3D racing game driven by real physics. The car is a non-kinematic
-    rigidbody: W/S apply a forward/reverse force along the car's heading (with
-    linear drag, so it builds speed and coasts), and A/D steer. Steering works
-    whenever the car is moving — including while coasting off the throttle —
-    and turns at a controlled rate, so the car can't pivot on the spot like a
-    top. Momentum and wall collisions behave physically. The car is constrained to the ground plane (Y position and
-    pitch/roll are frozen). Drive around the solid central infield, between it
-    and the outer walls. You must pass the far checkpoint and then cross the
-    start/finish line for a lap to count — three laps wins.
+    A small 3D arcade racer. The car is a non-kinematic rigidbody with grippy,
+    carving handling: W/S ease its forward speed up to a cruise (and let it coast
+    back down), while A/D steer. Crucially the car's velocity always follows its
+    nose — it travels where it points instead of sliding on ice — so turns carve
+    cleanly and the car can swing all the way round to any heading. Steering
+    authority builds with speed, so the car steers gently at a crawl and can't
+    pivot on the spot at a standstill. The car is constrained to the ground plane
+    (Y position and pitch/roll are frozen) and is stopped by the outer walls. Drive around
+    the solid central infield, between it and the outer walls. You must pass the
+    far checkpoint and then cross the start/finish line for a lap to count —
+    three laps wins.
 
 World:
   Dimensionality: 3
@@ -45,10 +47,12 @@ Controls:
 
 Constants:
   # --- Handling (tune these for feel) ---
-  # Cruise speed ~= drive force / linear damping; bigger damping = more drag.
-  drive force: 2.6      # forward thrust magnitude (W / up)
-  reverse force: 1.3    # reverse thrust magnitude (S / down)
-  turn rate: 1.6        # steering yaw rate in radians/sec (~92 deg/sec) while driving
+  max speed: 9          # top forward cruise speed (units/sec) the throttle eases toward
+  reverse max: 4        # top reverse speed (units/sec)
+  accel: 2.5            # how fast speed eases toward the throttle target (per sec); also the coast-down rate
+  brake: 5              # stronger easing when the throttle opposes current motion (braking / reversing)
+  turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
+  grip speed: 3         # speed (units/sec) at which steering reaches full authority
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
@@ -60,36 +64,47 @@ Variables:
   lap armed: false   # set when the checkpoint is crossed; cleared when a lap is scored
 
 Expressions:
-  # World-space force along the car's heading. The heading is the car's Y euler
-  # angle; Rotate2D turns the unit +Y vector into a (sin, cos) heading which we
-  # map onto the XZ ground plane. The throttle (move action's y, in [-1, 1])
-  # scales it: forward uses the drive magnitude, reverse the (weaker) reverse
-  # magnitude. No dt scaling: ForceMode.Force is already frame-rate independent.
-  drive force vector:
-    ArgumentTypes: [ vector, float, float, float ]
-    ArgumentNames: [ rotation, throttle, drive, reverse ]
+  # The car's new world-space velocity, set fresh every frame. This is what makes
+  # the handling grippy instead of icy: the velocity is forced to lie along the
+  # car's heading, so the car always travels where its nose points (turning the
+  # nose carves the path) rather than drifting off on old momentum.
+  #
+  # The heading is the car's Y euler angle: Rotate2D turns the unit +Y vector into
+  # a (sin, cos) pair we map onto the XZ ground plane to get the forward unit
+  # vector. The current forward speed is the projection of the live velocity onto
+  # that heading (signed: negative when reversing). It eases toward a throttle-
+  # driven target — `top` forward, the weaker `reverse` backward — using `accel`,
+  # or the stronger `brake` rate when the throttle opposes the current motion
+  # (braking / changing direction). dt makes the easing frame-rate independent.
+  drive velocity:
+    ArgumentTypes: [ vector, vector, float, float, float, float, float, float ]
+    ArgumentNames: [ rotation, velocity, throttle, top, reverse, accel, brake, dt ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
-      var dir = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
-      var force = throttle >= 0f ? throttle * drive : throttle * reverse;
-      return new Vector3(dir.x * force, 0f, dir.y * force);
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var current = Dot(velocity, forward);
+      var target = throttle >= 0f ? throttle * top : throttle * reverse;
+      var ease = target * current < 0f ? brake : accel;
+      var next = Lerp(current, target, Clamp01(ease * dt));
+      return ScaleVector(forward, next);
 
-  # Desired yaw angular velocity (rad/s about +Y) from the move action's x
-  # (steer, in [-1, 1]). Gated on the car's actual speed (the rigidbody's
-  # linear velocity magnitude), not the throttle: the car steers whenever it is
-  # moving — including while coasting off-throttle — but cannot pivot on the
-  # spot at a standstill. Set as a steady state every frame so steering is
-  # smooth rather than torque-accumulated.
-  steer angular velocity:
-    ArgumentTypes: [ float, vector, float ]
-    ArgumentNames: [ steer, velocity, rate ]
+  # Desired yaw angular velocity (rad/s about +Y) from the move action's x (steer,
+  # in [-1, 1]). Authority ramps in with the car's actual speed (the rigidbody's
+  # linear velocity magnitude) up to `gripSpeed`: at a standstill it's zero — the
+  # car cannot pivot on the spot — and it grows to the full `rate` once rolling.
+  # Set as a steady state every frame so steering is smooth, and because velocity
+  # is grippy the body turning drags the whole car round with it.
+  steer yaw:
+    ArgumentTypes: [ float, vector, float, float ]
+    ArgumentNames: [ steer, velocity, rate, gripSpeed ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
-      var speed = velocity.magnitude;
-      var moving = speed > 0.2f ? 1f : 0f;
-      return new Vector3(0f, steer * rate * moving, 0f);
+      var speed = Magnitude(velocity);
+      var authority = Clamp01(speed / gripSpeed);
+      return new Vector3(0f, steer * rate * authority, 0f);
 
   next lap:
     ArgumentTypes: [ int ]
@@ -129,41 +144,47 @@ Entities:
           UseGravity: false
           IsKinematic: false
           Mass: 1
-          LinearDamping: 0.5      # drag: builds speed gradually and coasts to a stop
-          AngularDamping: 0.05    # low: yaw is driven directly, not by torque
+          LinearDamping: 0        # speed is managed directly each frame, not via drag
+          AngularDamping: 0       # yaw is set directly, not accumulated via torque
           FreezePosition: !vec { X: 0, Y: 1, Z: 0 }   # pin to the ground plane
           FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }   # upright; only yaw is free
 
       # --- Input: one value action drives both throttle (y) and steering (x).
-      # It fires every frame with the current stick/key values, so throttle and
-      # steering are both applied here each frame.
+      # It fires every frame with the current stick/key values (zero included), so
+      # both the velocity and the steering are recomputed each frame — which is why
+      # the car coasts to a stop when the throttle is released.
       drive input:
         Type: input action
         Properties: { Action: move }
         Listeners:
           - EntityId: car
-            BehaviourId: apply throttle
+            BehaviourId: apply drive
           - EntityId: car
             BehaviourId: apply steer
-      apply throttle:
-        Type: add force
+      apply drive:
+        Type: set velocity
         Properties:
-          Force: !expr
-            Do: drive force vector
+          Velocity: !expr
+            Do: drive velocity
             With:
               - !entity { Id: car, Property: Rotation }
+              - !rigidbody { Id: car, Property: Velocity }
               - !output y
-              - !var drive force
-              - !var reverse force
+              - !var max speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !clock deltaTime
       apply steer:
         Type: set angular velocity
         Properties:
           AngularVelocity: !expr
-            Do: steer angular velocity
+            Do: steer yaw
             With:
               - !output x
               - !rigidbody { Id: car, Property: Velocity }
               - !var turn rate
+              - !var grip speed
     Children:
       roof:
         Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
