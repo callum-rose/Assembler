@@ -91,20 +91,25 @@ Expressions:
       return ScaleVector(forward, next);
 
   # Desired yaw angular velocity (rad/s about +Y) from the move action's x (steer,
-  # in [-1, 1]). Authority ramps in with the car's actual speed (the rigidbody's
-  # linear velocity magnitude) up to `gripSpeed`: at a standstill it's zero — the
+  # in [-1, 1]). Authority ramps in with the car's forward speed (the live velocity
+  # projected onto the heading) up to `gripSpeed`: at a standstill it's zero — the
   # car cannot pivot on the spot — and it grows to the full `rate` once rolling.
-  # Set as a steady state every frame so steering is smooth, and because velocity
-  # is grippy the body turning drags the whole car round with it.
+  # The yaw is flipped by the sign of that forward speed so the car steers the
+  # intuitive way in reverse (it backs into the turn) rather than swinging the
+  # wrong way. Set as a steady state every frame so steering is smooth, and because
+  # velocity is grippy the body turning drags the whole car round with it.
   steer yaw:
-    ArgumentTypes: [ float, vector, float, float ]
-    ArgumentNames: [ steer, velocity, rate, gripSpeed ]
+    ArgumentTypes: [ float, vector, vector, float, float ]
+    ArgumentNames: [ steer, rotation, velocity, rate, gripSpeed ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
-      var speed = Magnitude(velocity);
-      var authority = Clamp01(speed / gripSpeed);
-      return new Vector3(0f, steer * rate * authority, 0f);
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var forwardSpeed = Dot(velocity, forward);
+      var authority = Clamp01(Abs(forwardSpeed) / gripSpeed);
+      var direction = forwardSpeed < 0f ? -1f : 1f;
+      return new Vector3(0f, steer * rate * authority * direction, 0f);
 
   next lap:
     ArgumentTypes: [ int ]
@@ -182,6 +187,7 @@ Entities:
             Do: steer yaw
             With:
               - !output x
+              - !entity { Id: car, Property: Rotation }
               - !rigidbody { Id: car, Property: Velocity }
               - !var turn rate
               - !var grip speed
