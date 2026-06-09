@@ -69,6 +69,41 @@ namespace Assembler.Parsing
 			return (IValueSourceArg)typed.Invoke(null, new object?[] { ctx, raw })!;
 		}
 
+		// Builds a !query value source, validating that the use-site type T matches the query verb's result
+		// type (a position query yields Vector3, an id query yields string). From is required; MaxRange defaults
+		// to no limit when omitted.
+		private static ValueSource<T> BuildQuerySource<T>(TransformContext ctx, QueryRef queryRef)
+		{
+			var kind = ParseQueryKind(queryRef.Kind);
+
+			var expected = kind switch
+			{
+				QueryKind.NearestId => typeof(string),
+				QueryKind.NearestPosition => typeof(Vector3),
+				_ => typeof(object)
+			};
+
+			if (typeof(T) != expected && typeof(T) != typeof(object))
+			{
+				throw new ParsingException(
+					$"!query Kind '{kind}' resolves to {expected.Name} but was used where a {typeof(T).Name} was expected.");
+			}
+
+			var from = CreateValueSource<Vector3>(ctx, queryRef.From);
+			var maxRange = CreateValueSource<float>(ctx, queryRef.MaxRange, float.PositiveInfinity);
+
+			return new QuerySource<T>(kind, queryRef.Tag, from, maxRange);
+		}
+
+		private static QueryKind ParseQueryKind(string kind) =>
+			kind.Trim().ToLowerInvariant() switch
+			{
+				"nearestid" => QueryKind.NearestId,
+				"nearestposition" => QueryKind.NearestPosition,
+				_ => throw new ParsingException(
+					$"Unknown !query Kind '{kind}'. Expected one of: NearestId, NearestPosition.")
+			};
+
 		private static ClockProperty ParseClockProperty(string property) =>
 			property.Trim().ToLowerInvariant() switch
 			{
@@ -141,6 +176,7 @@ namespace Assembler.Parsing
 					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),
 				ClockRef clockRef => throw new ParsingException(
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
+				QueryRef queryRef => BuildQuerySource<T>(ctx, queryRef),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				TextRef textRef when typeof(T) == typeof(string) =>
 					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),

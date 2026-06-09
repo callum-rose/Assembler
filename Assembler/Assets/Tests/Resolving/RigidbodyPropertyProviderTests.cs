@@ -26,7 +26,7 @@ namespace Tests.Resolving
 		private ResolutionContext Context() =>
 			// Only EntityTransforms is exercised when resolving a RigidbodyPropertySource; the other
 			// registries are not touched, so they can be left null for this focused test.
-			new(null!, null!, null!, null!, null, _registry, null!);
+			new(null!, null!, null!, null!, null, _registry, null!, null!);
 
 		private IValueProvider<Vector3> Resolve(RigidbodyProperty property) =>
 			new RigidbodyPropertySource<Vector3>("entity", property).Resolve(Context());

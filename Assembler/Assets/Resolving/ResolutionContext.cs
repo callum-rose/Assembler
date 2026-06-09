@@ -9,5 +9,6 @@ namespace Assembler.Resolving
 		StringTableRegistry Strings,
 		EntityVariableScope Scope,
 		EntityTransformRegistry EntityTransforms,
+		EntityQueryService EntityQuery,
 		IGameClock Clock);
 }

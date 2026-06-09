@@ -79,6 +79,11 @@ namespace Assembler.Parsing
 				(EntityRefDto v, { ResolvedValues: null }) => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
 				(RigidbodyRefDto v, { ResolvedValues: null }) => new RigidbodyPropertyRef(v.Id ?? string.Empty, ParseRigidbodyProperty(v.Property)),
 				(ClockRefDto v, { ResolvedValues: null }) => new ClockRef(v.Property ?? string.Empty),
+				(QueryRefDto v, { ResolvedValues: null }) => new QueryRef(
+					v.Kind ?? string.Empty,
+					v.Tag ?? string.Empty,
+					ToAssemblerValue(v.From),
+					ToAssemblerValue(v.MaxRange)),
 				(OutputRefDto v, { ResolvedValues: null }) => new OutputRef(v.Id ?? string.Empty),
 				(ParamRefDto v, { ResolvedValues: null }) => new ParamRef(v.Id ?? string.Empty),
 				// A nested `!gameover` (e.g. inside a state machine OnEnter/OnExit list) deserialises to a

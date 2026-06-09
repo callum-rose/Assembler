@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.UI;
 using Assembler.Extensions;
@@ -25,6 +26,8 @@ namespace Assembler.Building
 		private readonly AssetRegistry _assets;
 		private readonly StringTableRegistry _strings;
 		private readonly EntityTransformRegistry _entityTransforms;
+		private readonly EntityQueryService _entityQuery;
+		private readonly LineOfSightService _sight;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IGameClock _clock;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
@@ -42,6 +45,8 @@ namespace Assembler.Building
 			AssetRegistry assets,
 			StringTableRegistry strings,
 			EntityTransformRegistry entityTransforms,
+			EntityQueryService entityQuery,
+			LineOfSightService sight,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IGameClock clock,
 			IReadOnlyDictionary<string, EntityInfo> templates,
@@ -57,6 +62,8 @@ namespace Assembler.Building
 			_assets = assets;
 			_strings = strings;
 			_entityTransforms = entityTransforms;
+			_entityQuery = entityQuery;
+			_sight = sight;
 			_exclusiveGroups = exclusiveGroups;
 			_clock = clock;
 			_templates = templates;
@@ -73,7 +80,7 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
-			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _clock);
+			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _entityQuery, _clock);
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
@@ -97,6 +104,7 @@ namespace Assembler.Building
 			}
 
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
+			_entityQuery.Register(entityInfo.Id, gameObject.transform, entityInfo.Tags);
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
@@ -106,13 +114,15 @@ namespace Assembler.Building
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
-				new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _clock),
+				new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _entityQuery, _clock),
 				this,
 				_exclusiveGroups,
 				_controls,
 				_controlsAsset,
 				_clock,
-				_uiPrefabs);
+				_uiPrefabs,
+				_entityQuery,
+				_sight);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

@@ -720,6 +720,25 @@ Finite state machine for entity AI. Holds the current state in an entity string-
 | States | IReadOnlyList<StateInfo> | Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover). |
 | Transitions | IReadOnlyList<TransitionInfo> | Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken. |
 
+## `perceive`
+Sensor that scans for the nearest tagged entity and writes the result into blackboard variables.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| TargetIdVar | string | Name of the string variable that receives the detected entity id. |
+| TargetPositionVar | string | Name of the vector variable that receives the detected entity position. |
+| HasTargetVar | string | Name of the bool variable set true while a target is visible, false otherwise. |
+| LastKnownPositionVar | string | Name of the vector variable updated ONLY while visible (the memory of last sighting). |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 

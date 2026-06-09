@@ -115,6 +115,11 @@ namespace Assembler.Building
 			var behaviourRegistry = new BehaviourRegistry();
 			var entityTransformRegistry = new EntityTransformRegistry();
 
+			// Perception services, created once per game and threaded into the factory (same lifetime as the
+			// clock). The query index is populated as entities instantiate; line-of-sight reads physics live.
+			var entityQueryService = new EntityQueryService();
+			var lineOfSightService = new Assembler.Behaviours.AI.LineOfSightService();
+
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
 			// (ahead of every behaviour Update via DefaultExecutionOrder).
@@ -159,6 +164,8 @@ namespace Assembler.Building
 				assetRegistry,
 				stringTableRegistry,
 				entityTransformRegistry,
+				entityQueryService,
+				lineOfSightService,
 				exclusiveGroupRegistry,
 				gameClock,
 				templatesById,

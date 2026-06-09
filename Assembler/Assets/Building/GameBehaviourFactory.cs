@@ -74,6 +74,16 @@ namespace Assembler.Building
 				needsClock.Clock = ctx.Clock;
 			}
 
+			if (behaviour is INeedsEntityQuery needsQuery)
+			{
+				needsQuery.Query = ctx.EntityQuery;
+			}
+
+			if (behaviour is Behaviours.AI.INeedsLineOfSight needsSight)
+			{
+				needsSight.Sight = ctx.Sight;
+			}
+
 			return (behaviour, initialise);
 		}
 
@@ -470,7 +480,20 @@ namespace Assembler.Building
 							i.Listeners.ToListeners(lr, res));
 					}
 					);
-				})
+				}),
+				[typeof(PerceiveInfo)] = Entry<PerceiveInfo, Assembler.Behaviours.AI.Perceive, PerceiveData>(
+					(i, ctx) => new PerceiveData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle is None<float> ? null : i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward is None<Vector3> ? null : i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						ResolveWritableVariable<string>(ctx, i.TargetIdVar),
+						ResolveWritableVariable<Vector3>(ctx, i.TargetPositionVar),
+						ResolveWritableVariable<bool>(ctx, i.HasTargetVar),
+						ResolveWritableVariable<Vector3>(ctx, i.LastKnownPositionVar)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
@@ -512,6 +535,14 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(makeData(i, ctx),
 					i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
+
+		// Resolves a blackboard output variable named by a behaviour property to the entity's live, writable
+		// provider, so a sensor can Set() into it. An empty name means the output is not wired (null), and the
+		// variable must already be declared (on the entity or globally) — Get throws otherwise.
+		private static IValueProvider<T>? ResolveWritableVariable<T>(BehaviourBuildContext ctx, string name) =>
+			string.IsNullOrEmpty(name)
+				? null
+				: ctx.Resolution.Variables.Get<T>(name, ctx.Resolution.Scope);
 
 		private static (GameBehaviour, InitialiseBehaviourEvent) BuildTransformAnimation<TInfo, TBehaviour>(
 			GameObject go,
