@@ -1,0 +1,408 @@
+Game:
+  Title: Mini Racer 3D
+  Description: >
+    A small 3D racing game driven by real physics. The car is a non-kinematic
+    rigidbody: W/S apply a forward/reverse force along the car's heading and
+    A/D apply a steering torque, so momentum, coasting and wall collisions all
+    behave physically. The car is constrained to the ground plane (Y position
+    and pitch/roll are frozen). Drive around the solid central infield, between
+    it and the outer walls. You must pass the far checkpoint and then cross the
+    start/finish line for a lap to count — three laps wins.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#10141c"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+Constants:
+  # --- Handling (tune these for feel) ---
+  drive force: 26       # forward thrust (W)
+  reverse force: -13    # reverse thrust (S); negative = backwards along heading
+  steer torque: 4.5     # right steering torque about +Y (D)
+  steer torque left: -4.5  # left steering torque about +Y (A)
+
+  lap target: 3
+  car start: !vec { X: 5, Y: 0.35, Z: -17 }
+  follow offset: !vec { X: 0, Y: 9, Z: -14 }
+  camera start: !vec { X: 0, Y: 9, Z: -14 }
+
+Variables:
+  laps: 0
+  lap armed: false   # set when the checkpoint is crossed; cleared when a lap is scored
+
+Expressions:
+  # World-space force along the car's heading. The heading is the car's Y euler
+  # angle; Rotate2D turns the unit +Y vector into a (sin, cos) heading which we
+  # map onto the XZ ground plane, then scale by the (signed) force magnitude.
+  # No dt scaling: ForceMode.Force is already frame-rate independent.
+  drive force vector:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ rotation, force ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var dir = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      return new Vector3(dir.x * force, 0f, dir.y * force);
+
+  next lap:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ current ]
+    ReturnType: int
+    Expression: |
+      return current + 1;
+
+  is finished:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ laps, target ]
+    ReturnType: bool
+    Expression: |
+      return laps >= target;
+
+Entities:
+  # ---- The drivable car ----------------------------------------------------
+  car:
+    Tags: [ car ]
+    Position: !var car start
+    Rotation: !vec { X: 0, Y: 90, Z: 0 }   # facing +X along the south straight
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 0.5, Z: 2 }
+          Colour: !colour "#e8413c"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 0.5, Z: 2 }
+          IsTrigger: false
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 1.5      # coast-down / rolling resistance
+          AngularDamping: 5       # steering settles instead of spinning forever
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }   # pin to the ground plane
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }   # upright; only yaw is free
+
+      # Throttle: apply force along the car's heading every frame the key is held
+      hold forward:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: drive forward
+      drive forward:
+        Type: add force
+        Properties:
+          Force: !expr
+            Do: drive force vector
+            With:
+              - !entity { Id: car, Property: Rotation }
+              - !var drive force
+      hold back:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: drive back
+      drive back:
+        Type: add force
+        Properties:
+          Force: !expr
+            Do: drive force vector
+            With:
+              - !entity { Id: car, Property: Rotation }
+              - !var reverse force
+
+      # Steering: apply a yaw torque about world +Y while the key is held
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: steer left
+      steer left:
+        Type: add torque
+        Properties:
+          Torque: !vec { X: 0, Y: !var steer torque left, Z: 0 }
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: car
+            BehaviourId: steer right
+      steer right:
+        Type: add torque
+        Properties:
+          Torque: !vec { X: 0, Y: !var steer torque, Z: 0 }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties:
+              Shape: cube
+              Size: !vec { X: 0.8, Y: 0.45, Z: 1 }
+              Colour: !colour "#f7d046"
+
+  # ---- Track surface and (solid) infield ----------------------------------
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 0.2, Z: 42 }
+          Colour: !colour "#2b2f38"
+
+  infield:
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 24, Y: 1, Z: 28 }
+          Colour: !colour "#2f7d46"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 24, Y: 1, Z: 28 }
+          IsTrigger: false
+
+  # ---- Outer barrier walls (solid) ----------------------------------------
+  wall north:
+    Position: !vec { X: 0, Y: 0.6, Z: 20 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          IsTrigger: false
+  wall south:
+    Position: !vec { X: 0, Y: 0.6, Z: -20 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          IsTrigger: false
+  wall east:
+    Position: !vec { X: 20, Y: 0.6, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          IsTrigger: false
+  wall west:
+    Position: !vec { X: -20, Y: 0.6, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          IsTrigger: false
+
+  # ---- Start / finish: painted stripe + trigger volume --------------------
+  finish stripe:
+    Position: !vec { X: 0, Y: 0.12, Z: -17 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.6, Y: 0.06, Z: 6 }
+          Colour: !colour white
+
+  finish:
+    Tags: [ finish ]
+    Position: !vec { X: 0, Y: 1, Z: -17 }
+    Behaviours:
+      gate:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1.5, Y: 2, Z: 6 }
+          IsTrigger: true
+      crossed:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ car ]
+        Listeners:
+          - EntityId: race
+            BehaviourId: lap gate
+
+  # ---- Checkpoint on the far (north) straight: arms the next lap -----------
+  checkpoint stripe:
+    Position: !vec { X: 0, Y: 0.12, Z: 17 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.6, Y: 0.06, Z: 6 }
+          Colour: !colour "#39c6e8"
+
+  checkpoint:
+    Tags: [ checkpoint ]
+    Position: !vec { X: 0, Y: 1, Z: 17 }
+    Behaviours:
+      gate:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1.5, Y: 2, Z: 6 }
+          IsTrigger: true
+      crossed:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ car ]
+        Listeners:
+          - EntityId: race
+            BehaviourId: arm lap
+
+  # ---- Race state: lap counter, checkpoint arming, win check --------------
+  race:
+    Behaviours:
+      arm lap:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var lap armed
+          Value: true
+      # A finish crossing only counts when the checkpoint armed the lap.
+      lap gate:
+        Type: condition gate
+        Properties:
+          Condition: !var lap armed
+        Listeners:
+          - EntityId: race
+            BehaviourId: add lap
+          - EntityId: race
+            BehaviourId: disarm lap
+      add lap:
+        Type: int variable setter
+        Properties:
+          VariableId: !var laps
+          Value: !expr
+            Do: next lap
+            With:
+              - !var laps
+      disarm lap:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var lap armed
+          Value: false
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: race
+            BehaviourId: win gate
+      win gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: is finished
+            With:
+              - !var laps
+              - !var lap target
+        Listeners:
+          - !gameover
+
+  # ---- Chase camera --------------------------------------------------------
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.4
+  camera rig:
+    Position: !var camera start
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: car }
+          LookAt: { Tag: car }
+          Mode: "3d"
+          Priority: 10
+          Lens: 60
+          Damping: 0.6
+          FollowOffset: !var follow offset
+
+  # ---- HUD -----------------------------------------------------------------
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+          ReferenceResolution: !vec { X: 1920, Y: 1080 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 8
+              Padding: 24
+              ChildAlignment: upper-left
+        Children:
+          lap count:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.lap, Arguments: [ !var laps, !var lap target ] }
+                  FontSize: 40
+                  PreferredWidth: 500
+                  PreferredHeight: 52
+          hint:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.hint
+                  FontSize: 24
+                  PreferredWidth: 640
+                  PreferredHeight: 34
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.lap: "Lap {0} / {1}"
+      hud.hint: "WASD to drive — pass the blue checkpoint, then the line, 3 times"
