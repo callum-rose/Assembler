@@ -89,8 +89,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			return dict.Value.Select(kvp =>
 			{
 				var body = kvp.Value as DictValue;
-				var onEnter = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnEnter"));
-				var onExit = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnExit"));
+				var onEnter = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnEnter") ?? NoValue.Instance);
+				var onExit = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnExit") ?? NoValue.Instance);
 				return new StateInfo(kvp.Key, onEnter, onExit);
 			}).ToArray();
 		}

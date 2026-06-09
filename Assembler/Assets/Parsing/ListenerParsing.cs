@@ -75,7 +75,7 @@ namespace Assembler.Parsing
 		/// <see cref="GameOverMarker"/> for a nested <c>!gameover</c>), so this mirrors <see cref="GetListeners"/>
 		/// reading from that shape to produce identical <see cref="ListenerInfo"/> semantics.
 		/// </summary>
-		public static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue? raw) =>
+		public static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue raw) =>
 			raw is ListValue list
 				? list.Value.Select(item => ParseNestedListener(ctx, item)).ToArray()
 				: Array.Empty<ListenerInfo>();
@@ -94,7 +94,7 @@ namespace Assembler.Parsing
 			}
 
 			var fields = dict.Value;
-			var outputs = ParseNestedOutputMapping(fields.GetValueOrDefault("Outputs"));
+			var outputs = ParseNestedOutputMapping(fields.GetValueOrDefault("Outputs") ?? NoValue.Instance);
 
 			var hasEntityTag = fields.TryGetValue("EntityTag", out var entityTagValue);
 			var hasBehaviourTag = fields.TryGetValue("BehaviourTag", out var behaviourTagValue);
@@ -125,17 +125,17 @@ namespace Assembler.Parsing
 				};
 			}
 
-			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId"));
+			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId") ?? NoValue.Instance);
 
 			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId)) { OutputMapping = outputs };
 		}
 
-		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue? value) =>
+		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue value) =>
 			value is DictValue dict
 				? dict.Value.ToDictionary(kvp => kvp.Key, kvp => (kvp.Value as StringValue)?.Value ?? string.Empty)
 				: new Dictionary<string, string>();
 
-		private static string ResolveNestedEntityId(TransformContext ctx, AssemblerValue? value) =>
+		private static string ResolveNestedEntityId(TransformContext ctx, AssemblerValue value) =>
 			value switch
 			{
 				StringValue s => s.Value,
@@ -145,7 +145,7 @@ namespace Assembler.Parsing
 				VarRef v => ctx.Values.ResolveValue(v.Id) is StringValue sv
 					? sv.Value
 					: throw new ParsingException($"Listener EntityId variable '{v.Id}' must resolve to a string."),
-				null => throw new ParsingException(
+				NoValue => throw new ParsingException(
 					"Listener entry requires an EntityId (with BehaviourId), or an EntityTag / BehaviourTag."),
 				_ => throw new ParsingException($"Cannot interpret listener EntityId '{value}'.")
 			};
