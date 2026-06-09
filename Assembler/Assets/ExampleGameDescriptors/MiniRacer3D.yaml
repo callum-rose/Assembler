@@ -59,12 +59,13 @@ Constants:
   turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
   grip speed: 3         # speed (units/sec) at which steering reaches full authority
   lateral grip: 1     # how fast sideways slide bleeds off (per sec); lower = longer, looser drifts
-  # The car's centre of mass, pushed back along its local -Z (the rear). Unity spins
-  # the body about its centre of mass, so offsetting it to the rear axle makes the car
-  # turn about the rear wheels' arc — nose sweeps wide, tail tracks — like a real car
-  # instead of pivoting on the spot. Car is 2 long, so z=-0.9 ≈ the rear axle; push it
-  # further back (more negative) to plant the rear harder and sweep the nose wider.
-  com offset: !vec { X: 0, Y: 0, Z: -0.9 }
+  # The car's centre of mass, offset to the rear axle. Unity spins a body about its
+  # centre of mass, so moving it off-centre makes the car turn about that point (the
+  # rear wheels' arc) — nose sweeps wide, tail tracks — like a real car instead of
+  # pivoting on the spot. Car is 2 long, so 0.9 sits the pivot ~at the rear axle.
+  # (Sign found empirically: +Z lands the pivot at the rear here; flip it / grow the
+  # magnitude to move the pivot further back and sweep the nose wider.)
+  com offset: !vec { X: 0, Y: 0, Z: 0.9 }
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
