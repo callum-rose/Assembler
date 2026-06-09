@@ -1,0 +1,413 @@
+Game:
+  Title: Inventory Demo
+  Description: |
+    A small inventory system. Steer the green cube (WASD) around the field and
+    walk over collectables to pick them up; each type drops into its own slot in
+    the HUD inventory:
+
+      - gold COINS  (sphere)
+      - purple POTIONS (sphere)
+      - cyan KEYS   (cube)
+
+    The inventory itself is three int variables (coins / potions / keys), shown
+    live in a composable uGUI HUD. Each collectable is a template whose
+    `trigger enter` fires two listeners: one increments the matching count on the
+    `inventory` entity, the other destroys the picked-up item.
+
+    Two ways to *spend* the inventory demonstrate consuming items, not just
+    hoarding them:
+      - "Use Potion" button — gated on `potions > 0`; it decrements potions and
+        adds 1 health, so clicking with an empty potion slot does nothing.
+      - collecting all the keys WINS the game (a per-frame condition gate polls
+        `keys >= keys to win` and fires `!gameover`).
+
+    A "Quit" button also ends the game, satisfying the build-time requirement
+    that every game have a reachable way to end.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  coin colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
+  potion colour: !colour { R: 0.7, G: 0.3, B: 0.9, A: 1 }
+  key colour: !colour cyan
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  pickup radius: 0.32
+  key size: !vec { X: 0.5, Y: 0.5, Z: 0.5 }
+  pickup collider: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+
+  # The move action fires every frame, so this is the player's top speed in
+  # units/frame. Kept low so the cube glides rather than darts.
+  move step: 0.06
+
+  # Keep the player inside the visible play area.
+  play min: !vec { X: -7, Y: -4, Z: 0 }
+  play max: !vec { X: 7, Y: 4, Z: 0 }
+
+  keys to win: 3
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  # Plain int literals so these are int-typed (written by int setters).
+  coins: 0
+  potions: 0
+  keys: 0
+  health: 0
+
+# Abstract actions + the physical inputs that feed them. Author once; rebind per
+# platform without touching the entities.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # emits axis/x/y every frame
+    quit: { Type: button, Phase: down }          # fires once on press
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      quit:
+        - "<Keyboard>/escape"
+        - "<Keyboard>/q"
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "Inventory Demo"
+      hud.instructions: "WASD to move - walk over items to collect them"
+      hud.coins: "Coins: {0}"
+      hud.potions: "Potions: {0}"
+      hud.keys: "Keys: {0} / {1}"
+      hud.health: "Health: {0}"
+      btn.use potion: "Use Potion (+1 Health)"
+      btn.quit: "Quit"
+
+Templates:
+  # Each collectable detects the player overlapping it, bumps its slot's count,
+  # and destroys itself. The player carries the rigidbody that fires the trigger.
+  coin_template:
+    Tags: [ coin, collectable ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var pickup radius
+          IsWire: false
+          Colour: !var coin colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pickup collider
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: add coin
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+  potion_template:
+    Tags: [ potion, collectable ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var pickup radius
+          IsWire: false
+          Colour: !var potion colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pickup collider
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: add potion
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+  key_template:
+    Tags: [ key, collectable ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var key size
+          IsWire: false
+          Colour: !var key colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pickup collider
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: add key
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- VALUE action: analogue movement, identical wiring on every platform. ---
+      move action:
+        Type: input action
+        Properties:
+          Action: move
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            With:
+              - !output x
+              - !output y
+              - !var move step
+
+      # Keep the player on screen.
+      keep in bounds:
+        Type: clamp position
+        Properties:
+          Min: !var play min
+          Max: !var play max
+
+      # --- BUTTON action (down phase): give up. ---
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+  # Holds the inventory counts and the behaviours that mutate them. Targeted by
+  # the collectables (pickups) and by the UI buttons (spending).
+  inventory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      add coin:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coins
+          Value: !expr { Do: 'arg0 + 1', With: [ !var coins ] }
+      add potion:
+        Type: int variable setter
+        Properties:
+          VariableId: !var potions
+          Value: !expr { Do: 'arg0 + 1', With: [ !var potions ] }
+      add key:
+        Type: int variable setter
+        Properties:
+          VariableId: !var keys
+          Value: !expr { Do: 'arg0 + 1', With: [ !var keys ] }
+
+      # "Use Potion": the button fires this gate, which forwards only while a
+      # potion is in stock; the two listeners then consume one and add health.
+      use potion gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: 'arg0 > 0', With: [ !var potions ] }
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: spend potion
+          - EntityId: inventory
+            BehaviourId: gain health
+      spend potion:
+        Type: int variable setter
+        Properties:
+          VariableId: !var potions
+          Value: !expr { Do: 'arg0 - 1', With: [ !var potions ] }
+      gain health:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr { Do: 'arg0 + 1', With: [ !var health ] }
+
+  # Polls the win condition every frame: collecting all the keys ends the game.
+  win check:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: win check
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 >= arg1'
+            With:
+              - !var keys
+              - !var keys to win
+        Listeners:
+          - !gameover
+
+  # ---- Collectables placed around the field (each uses a template) ----
+  coin a: { Template: { Id: coin_template }, Position: !vec { X: -5, Y: 3 } }
+  coin b: { Template: { Id: coin_template }, Position: !vec { X: 5, Y: 3 } }
+  coin c: { Template: { Id: coin_template }, Position: !vec { X: -5, Y: -3 } }
+  coin d: { Template: { Id: coin_template }, Position: !vec { X: 5, Y: -3 } }
+
+  potion a: { Template: { Id: potion_template }, Position: !vec { X: -3, Y: 0 } }
+  potion b: { Template: { Id: potion_template }, Position: !vec { X: 3, Y: 0 } }
+  potion c: { Template: { Id: potion_template }, Position: !vec { X: 0, Y: 3 } }
+
+  key a: { Template: { Id: key_template }, Position: !vec { X: -6, Y: 1 } }
+  key b: { Template: { Id: key_template }, Position: !vec { X: 6, Y: -1 } }
+  key c: { Template: { Id: key_template }, Position: !vec { X: 0, Y: -3.5 } }
+
+  # ---- The HUD: canvas -> vertical container -> live labels + buttons ----
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 10
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 36
+                  PreferredWidth: 600
+                  PreferredHeight: 52
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 20
+                  PreferredWidth: 600
+                  PreferredHeight: 30
+          coins:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.coins, Arguments: [ !var coins ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          potions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.potions, Arguments: [ !var potions ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          keys:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.keys, Arguments: [ !var keys, !var keys to win ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          health:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.health, Arguments: [ !var health ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          use potion button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.use potion
+                  PreferredWidth: 300
+                  PreferredHeight: 52
+                Listeners:
+                  - EntityId: inventory
+                    BehaviourId: use potion gate
+          quit button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 300
+                  PreferredHeight: 52
+                Listeners:
+                  - !gameover
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
