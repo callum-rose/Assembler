@@ -15,7 +15,7 @@ description: >
 This skill walks you through adding a new custom YAML tag to the Assembler deserialisation layer.
 
 Existing tags include `!vec`, `!colour`, `!var`, `!expr`, `!parameter`, `!asset`, `!output`,
-`!entity_position`, `!clock`. All follow the same three-part pattern: **DTO record + IYamlTypeConverter +
+`!entity`, `!clock`. All follow the same three-part pattern: **DTO record + IYamlTypeConverter +
 registration in GameFileParser**. (`!clock` is a good end-to-end reference for a scalar value-source
 tag wired all the way through to a runtime provider: `ClockRefDto` → `ClockRef` → `ClockValueSource<T>`
 → `ClockValueProvider<T>`.)
@@ -55,7 +55,7 @@ they're tiny and consistent, mimic them rather than inventing structure.
 Before writing any code, pin down two things and confirm with the user if unclear:
 
 1. **Tag name.** Lowercase, snake_case if multi-word, leading `!`. Examples: `!rect`,
-   `!entity_position`. Match the casing convention of existing tags.
+   `!entity`. Match the casing convention of existing tags.
 2. **YAML form.** Is the tag attached to a **scalar**, a **mapping**, a **sequence**, or *multiple*
    of those? This determines which converter shape to copy.
 

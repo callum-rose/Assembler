@@ -6,7 +6,7 @@ namespace Assembler.Resolving
 {
 	// Live wrapper over the injected game clock: every read returns the current value of the requested
 	// property, so consumers see the frozen-while-paused / scaled-by-timescale value each frame rather
-	// than a stale snapshot. Mirrors TransformPositionProvider. T is one of float, int or double.
+	// than a stale snapshot. Mirrors TransformPropertyProvider. T is one of float, int or double.
 	public sealed class ClockValueProvider<T> : IValueProvider<T>
 	{
 		private readonly IGameClock _clock;
