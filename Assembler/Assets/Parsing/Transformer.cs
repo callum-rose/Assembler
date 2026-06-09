@@ -689,6 +689,16 @@ namespace Assembler.Parsing
 					$"Unknown !entity property '{property}'. Expected one of: Position, Rotation, Scale")
 			};
 
+		private static RigidbodyProperty ParseRigidbodyProperty(string? property) =>
+			(property ?? string.Empty).Trim().ToLowerInvariant() switch
+			{
+				"velocity" => RigidbodyProperty.Velocity,
+				"angularvelocity" => RigidbodyProperty.AngularVelocity,
+				"position" => RigidbodyProperty.Position,
+				_ => throw new ParsingException(
+					$"Unknown !rigidbody property '{property}'. Expected one of: Velocity, AngularVelocity, Position")
+			};
+
 		/// <summary>
 		/// Like <see cref="CreateValueSource{T}"/> but with no implicit fallback: an absent value (null or
 		/// <see cref="NoValue"/>) resolves to <see cref="None{T}"/> — i.e. a <c>NullValueProvider</c> at
@@ -712,6 +722,10 @@ namespace Assembler.Parsing
 					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
 				EntityPropertyRef entityPropertyRef => throw new ParsingException(
 					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
+				RigidbodyPropertyRef rigidbodyPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
+					new RigidbodyPropertySource<T>(rigidbodyPropertyRef.Id, rigidbodyPropertyRef.Property),
+				RigidbodyPropertyRef rigidbodyPropertyRef => throw new ParsingException(
+					$"!rigidbody '{rigidbodyPropertyRef.Id}' property '{rigidbodyPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				ClockRef clockRef when typeof(T) == typeof(float) || typeof(T) == typeof(int)
 					|| typeof(T) == typeof(double) || typeof(T) == typeof(object) =>
 					new ClockValueSource<T>(ParseClockProperty(clockRef.Property)),
@@ -955,6 +969,7 @@ namespace Assembler.Parsing
 				VarRefDto v => new VarRef(v.Id ?? string.Empty),
 				AssetRefDto v => new AssetRef(v.Id ?? string.Empty),
 				EntityRefDto v => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
+				RigidbodyRefDto v => new RigidbodyPropertyRef(v.Id ?? string.Empty, ParseRigidbodyProperty(v.Property)),
 				ClockRefDto v => new ClockRef(v.Property ?? string.Empty),
 				OutputRefDto v => new OutputRef(v.Id ?? string.Empty),
 				ParamRefDto v => new ParamRef(v.Id ?? string.Empty),

@@ -3,10 +3,10 @@ Game:
   Description: >
     A small 3D racing game driven by real physics. The car is a non-kinematic
     rigidbody: W/S apply a forward/reverse force along the car's heading (with
-    linear drag, so it builds speed and coasts), and A/D steer. Steering only
-    works while on the throttle and turns at a controlled rate, so the car
-    can't pivot on the spot like a top. Momentum and wall collisions behave
-    physically. The car is constrained to the ground plane (Y position and
+    linear drag, so it builds speed and coasts), and A/D steer. Steering works
+    whenever the car is moving — including while coasting off the throttle —
+    and turns at a controlled rate, so the car can't pivot on the spot like a
+    top. Momentum and wall collisions behave physically. The car is constrained to the ground plane (Y position and
     pitch/roll are frozen). Drive around the solid central infield, between it
     and the outer walls. You must pass the far checkpoint and then cross the
     start/finish line for a lap to count — three laps wins.
@@ -76,16 +76,19 @@ Expressions:
       return new Vector3(dir.x * force, 0f, dir.y * force);
 
   # Desired yaw angular velocity (rad/s about +Y) from the move action's x
-  # (steer, in [-1, 1]). Zero unless the throttle is being applied, so the car
-  # cannot rotate on the spot; set as a steady state every frame so steering is
+  # (steer, in [-1, 1]). Gated on the car's actual speed (the rigidbody's
+  # linear velocity magnitude), not the throttle: the car steers whenever it is
+  # moving — including while coasting off-throttle — but cannot pivot on the
+  # spot at a standstill. Set as a steady state every frame so steering is
   # smooth rather than torque-accumulated.
   steer angular velocity:
-    ArgumentTypes: [ float, float, float ]
-    ArgumentNames: [ steer, throttle, rate ]
+    ArgumentTypes: [ float, vector, float ]
+    ArgumentNames: [ steer, velocity, rate ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
-      var moving = (throttle > 0.05f) || (throttle < -0.05f) ? 1f : 0f;
+      var speed = velocity.magnitude;
+      var moving = speed > 0.2f ? 1f : 0f;
       return new Vector3(0f, steer * rate * moving, 0f);
 
   next lap:
@@ -159,7 +162,7 @@ Entities:
             Do: steer angular velocity
             With:
               - !output x
-              - !output y
+              - !rigidbody { Id: car, Property: Velocity }
               - !var turn rate
     Children:
       roof:

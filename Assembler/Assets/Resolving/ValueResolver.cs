@@ -17,6 +17,8 @@ namespace Assembler.Resolving
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
 				EntityPropertySource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPropertyProvider(ctx.EntityTransforms.Get(ep.EntityId), ep.Property),
+				RigidbodyPropertySource<T> rb when typeof(T) == typeof(Vector3) =>
+					(IValueProvider<T>)(object)new RigidbodyPropertyProvider(ctx.EntityTransforms.Get(rb.EntityId), rb.Property),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
