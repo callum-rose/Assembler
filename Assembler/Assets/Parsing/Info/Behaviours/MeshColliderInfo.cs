@@ -14,8 +14,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("Convex")),
-				Transformer.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsTrigger")));
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("Convex")),
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("IsTrigger")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

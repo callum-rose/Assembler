@@ -14,8 +14,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("VariableId")),
-				Transformer.CreateValueSource<T>(ctx, props.GetValueOrDefault("Value")));
+				ValueSourceFactory.CreateValueSource<T>(ctx, props.GetValueOrDefault("VariableId")),
+				ValueSourceFactory.CreateValueSource<T>(ctx, props.GetValueOrDefault("Value")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

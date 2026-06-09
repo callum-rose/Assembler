@@ -15,9 +15,9 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("View")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")),
-				Transformer.CreateValueSource<float>(ctx, props.GetValueOrDefault("DefaultBlend")));
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("View")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Size")),
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("DefaultBlend")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

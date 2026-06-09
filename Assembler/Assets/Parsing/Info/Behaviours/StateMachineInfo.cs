@@ -89,8 +89,8 @@ namespace Assembler.Parsing.Info.Behaviours
 			return dict.Value.Select(kvp =>
 			{
 				var body = kvp.Value as DictValue;
-				var onEnter = Transformer.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnEnter"));
-				var onExit = Transformer.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnExit"));
+				var onEnter = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnEnter"));
+				var onExit = ListenerParsing.ParseNestedListeners(ctx, body?.Value.GetValueOrDefault("OnExit"));
 				return new StateInfo(kvp.Key, onEnter, onExit);
 			}).ToArray();
 		}
@@ -126,7 +126,7 @@ namespace Assembler.Parsing.Info.Behaviours
 						$"State machine '{id}': transition '{from}' -> '{to}' is missing 'when'. Use `when: true` for an unconditional transition.");
 				}
 
-				return new TransitionInfo(from, to, Transformer.CreateValueSource<bool>(ctx, rawWhen));
+				return new TransitionInfo(from, to, ValueSourceFactory.CreateValueSource<bool>(ctx, rawWhen));
 			}).ToArray();
 		}
 

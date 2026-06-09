@@ -18,9 +18,9 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				Transformer.CreateValueSource<string>(ctx, props.GetValueOrDefault("TemplateId")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Position")),
-				Transformer.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Rotation")),
+				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("TemplateId")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Position")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Rotation")),
 				ParseParameters(ctx, props));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -45,7 +45,7 @@ namespace Assembler.Parsing.Info.Behaviours
 
 			return dictValue.Value.ToDictionary(
 				kvp => kvp.Key,
-				kvp => Transformer.CreateValueSource<object>(ctx, kvp.Value));
+				kvp => ValueSourceFactory.CreateValueSource<object>(ctx, kvp.Value));
 		}
 	}
 }

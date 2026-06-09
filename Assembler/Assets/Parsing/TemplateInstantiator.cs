@@ -135,27 +135,10 @@ namespace Assembler.Parsing
 
 		// Adapts a value resolved at runtime (e.g. by an expression in a spawner's Parameters)
 		// into the already-flattened AssemblerValue subtype the rest of the instantiation
-		// machinery expects. The DTO-stage Transformer.ToAssemblerValue intentionally rejects
-		// these runtime types — this adapter is the building-stage entry point for them.
+		// machinery expects. Runtime types (Vector3/Vector2/Color) are accepted here; the IR and
+		// resolved stages reject them. Thin wrapper over the unified converter.
 		private static AssemblerValue AdaptRuntimeParameter(string key, object? value) =>
-			value switch
-			{
-				null => NoValue.Instance,
-				AssemblerValue av => av,
-				int i => new IntValue(i),
-				float f => new FloatValue(f),
-				double d => new FloatValue((float)d),
-				bool b => new BoolValue(b),
-				string s => new StringValue(s),
-				Vector3 v => new Vector3Value(v),
-				// A runtime expression can still evaluate to a Vector2 (the compiler resolves any
-				// loaded type, e.g. Random.insideUnitCircle); widen it to a Vector3 (z = 0), since
-				// Vector2 is no longer a domain value type.
-				Vector2 v => new Vector3Value(v),
-				Color c => new ColorValue(c),
-				_ => throw new ParsingException(
-					$"Cannot adapt runtime parameter '{key}' (type {value.GetType()}) for template instantiation")
-			};
+			AssemblerValueConverter.ToAssemblerValue(value, new ValueConversion { AllowRuntimeTypes = true, Name = key });
 
 		private static BehaviourInfo SubstituteBehaviour(BehaviourInfo info, TransformContext ctx)
 		{
@@ -189,13 +172,13 @@ namespace Assembler.Parsing
 					continue;
 				}
 
-				if (!direct.BehaviourDescriptor.EntityId.StartsWith(Transformer.ParameterEntityIdSentinel))
+				if (!direct.BehaviourDescriptor.EntityId.StartsWith(ListenerParsing.ParameterEntityIdSentinel))
 				{
 					result[i] = direct;
 					continue;
 				}
 
-				var paramId = direct.BehaviourDescriptor.EntityId[Transformer.ParameterEntityIdSentinel.Length..];
+				var paramId = direct.BehaviourDescriptor.EntityId[ListenerParsing.ParameterEntityIdSentinel.Length..];
 
 				if (parameters.TryGetValue(paramId, out var raw) && raw is StringValue sv)
 				{
