@@ -273,7 +273,7 @@ vs vector `LerpVector` vs colour `LerpColor`.
 | **Loops** | `foreach`, `do-while` |
 | **Statements** | `switch`, `try/catch`, `throw`, `using`, `lock` |
 | **Lambdas** | Multi-param `(x, y) => ...`, zero-param `() => ...`, statement bodies `x => { ... }`, typed params `(int x) => ...` |
-| **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }` (but index access `arr[0]` / `list[i]` / `dict[key]` **is** supported — see Indexing) |
+| **Collections** | Array/collection/dictionary initializers `{ 1, 2, 3 }` |
 | **Operators** | Bitwise `&` `\|` `~` `<<` `>>` (but `^` XOR **is** supported — see Operators), range `..`, `typeof`, `is`, `as`, `default` |
 | **OOP** | Classes, structs, interfaces, events, generics (definition) |
 | **Misc** | `async/await`, `ref/out/in` params, `params`, named args, `this`, `base`, `static`, LINQ query syntax |

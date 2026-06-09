@@ -546,7 +546,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ✅ Indexers / element access (`list[i]`, `dict[key]`) IS supported — see [Member Access](#index--element-access)
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -570,7 +569,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ✅ `^` (XOR) IS supported — see [Operators](#xor-operator)
 - ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
@@ -583,7 +581,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Array initializers (`new int[] { 1, 2, 3 }`)
 - ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
 - ❌ Dictionary initializers
-- ✅ Index access (`array[0]`, `list[i]`, `dict[key]`) IS supported — see [Member Access](#index--element-access)
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
@@ -721,6 +718,7 @@ This compiler supports:
 ✅ Object construction with `new`
 ✅ Property and field access
 ✅ Method calls (static and instance)
+✅ Index / element access (arrays, `List<T>`, `Dictionary<K,V>`, `string`) — see [Member Access](#index--element-access)
 ✅ Single-parameter lambda expressions
 ✅ LINQ extension methods
 ✅ Ternary conditional operator
