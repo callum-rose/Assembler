@@ -1214,6 +1214,10 @@ namespace Assembler.Compiler.Compiler
 				{
 					expr = ParseMemberAccess(expr);
 				}
+				else if (Match(TokenType.LeftBracket))
+				{
+					expr = ParseIndexAccess(expr);
+				}
 				else
 				{
 					break;
@@ -1221,6 +1225,132 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			return expr;
+		}
+
+		// Parses an element/indexer access `instance[i]` (caller has already consumed '['). Supports
+		// arrays (including multi-dimensional `a[i, j]`) and indexer properties (`this[...]` such as
+		// List<T>, Dictionary<K,V>, string). The built access is an assignable IndexExpression, so the
+		// assignment / compound-assignment / increment cases mirror the variable-target handling in
+		// ParsePrimary, letting `a[i] = x`, `a[i] += x`, and `a[i]++` work as statements.
+		private Expression ParseIndexAccess(Expression instance)
+		{
+			var indices = new List<Expression> { ParseExpression() };
+
+			while (Match(TokenType.Comma))
+			{
+				indices.Add(ParseExpression());
+			}
+
+			Expect(TokenType.RightBracket);
+
+			var indexAccess = BuildIndexAccess(instance, indices);
+
+			if (Match(TokenType.Assign))
+			{
+				var value = ParseExpression();
+				if (value.Type != indexAccess.Type)
+				{
+					value = Expression.Convert(value, indexAccess.Type);
+				}
+
+				return Expression.Assign(indexAccess, value);
+			}
+
+			if (Match(TokenType.PlusAssign))
+			{
+				return BuildCompoundAssign(Expression.Add, indexAccess, ParseExpression());
+			}
+
+			if (Match(TokenType.MinusAssign))
+			{
+				return BuildCompoundAssign(Expression.Subtract, indexAccess, ParseExpression());
+			}
+
+			if (Match(TokenType.MultiplyAssign))
+			{
+				return BuildCompoundAssign(Expression.Multiply, indexAccess, ParseExpression());
+			}
+
+			if (Match(TokenType.DivideAssign))
+			{
+				return BuildCompoundAssign(Expression.Divide, indexAccess, ParseExpression());
+			}
+
+			if (Match(TokenType.Increment))
+			{
+				return Expression.PreIncrementAssign(indexAccess);
+			}
+
+			if (Match(TokenType.Decrement))
+			{
+				return Expression.PreDecrementAssign(indexAccess);
+			}
+
+			return indexAccess;
+		}
+
+		// Builds the element/indexer access for `instance[indices...]`: an array access for array types,
+		// otherwise a matching indexer property. The result is an assignable IndexExpression so callers
+		// can use it both as a value and as an assignment target.
+		private Expression BuildIndexAccess(Expression instance, List<Expression> indices)
+		{
+			if (instance.Type.IsArray)
+			{
+				// Array indices must be int; widen narrower integral index expressions to match.
+				var arrayIndices = indices
+					.Select(i => i.Type == typeof(int) ? i : Expression.Convert(i, typeof(int)))
+					.ToArray();
+
+				return Expression.ArrayAccess(instance, arrayIndices);
+			}
+
+			var argTypes = indices.Select(a => a.Type).ToArray();
+			var indexer = FindIndexer(instance.Type, argTypes)
+				?? throw Error(
+					$"No indexer on type '{instance.Type.Name}' accepting argument types: " +
+					$"{string.Join(", ", argTypes.Select(t => t.Name))}");
+
+			var indexParams = indexer.GetIndexParameters();
+			var convertedArgs = new Expression[indices.Count];
+			for (int i = 0; i < indices.Count; i++)
+			{
+				convertedArgs[i] = indices[i].Type != indexParams[i].ParameterType
+					? Expression.Convert(indices[i], indexParams[i].ParameterType)
+					: indices[i];
+			}
+
+			return Expression.Property(instance, indexer, convertedArgs);
+		}
+
+		// Finds an indexer property (`this[...]`) on the type whose index parameters match the given
+		// argument types — exact match preferred, then a conversion-compatible one. Matches on the
+		// index-parameter shape rather than the property name because an indexer can be declared with a
+		// non-default name via IndexerNameAttribute; GetProperties already surfaces inherited indexers.
+		private PropertyInfo? FindIndexer(Type type, Type[] argTypes)
+		{
+			var indexers = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+				.Where(p => p.GetIndexParameters().Length == argTypes.Length)
+				.ToList();
+
+			foreach (var indexer in indexers)
+			{
+				var indexParams = indexer.GetIndexParameters();
+				if (!argTypes.Where((t, i) => indexParams[i].ParameterType != t).Any())
+				{
+					return indexer;
+				}
+			}
+
+			foreach (var indexer in indexers)
+			{
+				var indexParams = indexer.GetIndexParameters();
+				if (Enumerable.Range(0, argTypes.Length).All(i => IsCompatibleType(argTypes[i], indexParams[i].ParameterType)))
+				{
+					return indexer;
+				}
+			}
+
+			return null;
 		}
 
 		private Expression ParseMemberAccess(Expression instance)

@@ -546,7 +546,7 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ❌ Indexers
+- ✅ Indexers / element access (`list[i]`, `dict[key]`, `array[0]`) IS supported
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -583,7 +583,7 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Array initializers (`new int[] { 1, 2, 3 }`)
 - ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
 - ❌ Dictionary initializers
-- ❌ Index access (`array[0]`) - despite token existing, parsing not implemented
+- ✅ Index access (`array[0]`, `list[i]`, `dict[key]`) IS supported — arrays and any type with an indexer (`List<T>`, `Dictionary<K,V>`, `string`); reads, assignment, compound assignment and `++`/`--` on the element all work
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
