@@ -48,6 +48,7 @@ namespace Assembler.Resolving
 			// this list in step with the folder for docs to match what's callable.
 			_compiler.RegisterStaticMethods(typeof(GridMath));
 			_compiler.RegisterStaticMethods(typeof(VectorMath));
+			_compiler.RegisterStaticMethods(typeof(SteeringMath));
 			_compiler.RegisterStaticMethods(typeof(NumberMath));
 			_compiler.RegisterStaticMethods(typeof(RandomMath));
 			_compiler.RegisterStaticMethods(typeof(ColorMath));
