@@ -11,8 +11,7 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<ValueInfo> Variables,
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,
-		IReadOnlyList<ConcreteEntityInfo> Entities,
-		ValueSource<bool> GameOverCondition)
+		IReadOnlyList<ConcreteEntityInfo> Entities)
 	{
 		/// <summary>
 		/// The context built during <see cref="Transformer.Transform"/>. Cached so runtime

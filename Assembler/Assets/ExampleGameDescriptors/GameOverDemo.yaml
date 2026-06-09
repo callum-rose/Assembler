@@ -13,10 +13,11 @@ Game:
     single `- !gameover` listener. That tag targets the framework's implicit
     end-game behaviour, which logs "Game Over" and destroys the whole game.
 
-    Note there is NO top-level `GameOverCondition` in this descriptor — the
-    `!gameover` listeners alone satisfy the build-time requirement that every
-    game have a way to end. This is the purely event-driven path: no flag
-    variable, no per-frame polling.
+    The `!gameover` listeners are the only thing ending this game, satisfying
+    the build-time requirement that every game have a way to end. This is the
+    purely event-driven path: no flag variable, no per-frame polling. To end on
+    a continuous condition instead, poll it with an every-frame trigger feeding
+    a condition gate that fires `!gameover` (see Tetris, Pong, FlappyBird).
 
 World:
   Dimensionality: 2

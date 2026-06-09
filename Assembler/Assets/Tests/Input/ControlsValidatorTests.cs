@@ -36,8 +36,7 @@ namespace Tests.Input
 				Array.Empty<ValueInfo>(),
 				Array.Empty<ExpressionInfo>(),
 				Array.Empty<EntityInfo>(),
-				new[] { entity },
-				None<bool>.Instance);
+				new[] { entity });
 		}
 
 		private static ControlsInfo Controls(bool declareAction, bool bindOnDesktop)

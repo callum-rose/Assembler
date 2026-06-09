@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Assembler.Deserialisation.Dtos;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
@@ -38,12 +39,12 @@ namespace Assembler.Deserialisation
 
 				case Scalar scalar when scalar.Tag == "!int":
 					reader.MoveNext();
-					value = int.Parse(scalar.Value);
+					value = int.Parse(scalar.Value, CultureInfo.InvariantCulture);
 					return true;
 
 				case Scalar scalar when scalar.Tag == "!float":
 					reader.MoveNext();
-					value = float.Parse(scalar.Value, System.Globalization.CultureInfo.InvariantCulture);
+					value = float.Parse(scalar.Value, CultureInfo.InvariantCulture);
 					return true;
 
 				case Scalar scalar when scalar.Tag == "!bool":
@@ -215,12 +216,16 @@ namespace Assembler.Deserialisation
 				return scalar.Value;
 			}
 
-			if (int.TryParse(scalar.Value, out var intValue))
+			// Parse with InvariantCulture so a bare `1.5` infers the same type/value on every
+			// machine — matching the explicit `!int`/`!float` tag paths above. Without this, a
+			// comma-decimal locale would parse the same descriptor differently (correctness bug).
+			if (int.TryParse(scalar.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var intValue))
 			{
 				return intValue;
 			}
 
-			if (float.TryParse(scalar.Value, out var floatValue))
+			if (float.TryParse(scalar.Value, NumberStyles.Float | NumberStyles.AllowThousands,
+					CultureInfo.InvariantCulture, out var floatValue))
 			{
 				return floatValue;
 			}

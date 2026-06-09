@@ -153,6 +153,28 @@ Templates:
         Type: destroy
 
 Entities:
+  # Game-over poll: every frame the gate checks the end condition; when it
+  # holds, the gate fires !gameover, which ends and unloads the game.
+  game over:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: game over
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 >= arg1 || arg2'
+            With:
+              - !var score
+              - !var score to win
+              - !var is dead
+        Listeners:
+          - !gameover
+
   # --- Ship ---
   ship:
     Tags: [ ship ]
@@ -400,10 +422,3 @@ Entities:
             Y: 20
             Width: 180
             Height: 50
-
-GameOverCondition: !expr
-  Do: 'arg0 >= arg1 || arg2'
-  With:
-    - !var score
-    - !var score to win
-    - !var is dead

@@ -61,7 +61,6 @@ Expressions:         # named code snippets, called from !expr
 Templates:           # reusable entity blueprints
 Entities:            # the actual entities in the scene
 Localisation:        # per-locale string table; referenced via !text
-GameOverCondition:   # boolean !expr; game ends when true
 ```
 
 ### `Game`
@@ -151,18 +150,40 @@ below.
 A map of `entity id → entity definition`. The entity id is the YAML key. See **Entity structure**
 below.
 
-### `GameOverCondition`
-A boolean `!expr`. When it evaluates to true, the game ends. (A game may instead end purely
-event-driven via `- !gameover` listeners — see **Listeners** — and then needs no `GameOverCondition`.
-Provide one or the other; the build requires at least one way to end.)
+### Ending the game
+Every descriptor must declare at least one `!gameover` listener, or the build fails — this guarantees
+a game can never get stuck unfinishable. The `!gameover` tag targets the framework's implicit end-game
+behaviour, which unloads the whole game. Wire it onto the `Listeners` of any trigger that detects the
+ending event (a collision, a key press, a UI button):
 
 ```yaml
-GameOverCondition: !expr
-  Do: 'arg0 >= arg2 || arg1 >= arg2'
-  With:
-    - !var left score
-    - !var right score
-    - !var score to win
+Listeners:
+  - !gameover
+```
+
+To end on a continuously-evaluated condition rather than a discrete event, poll it: an
+`every frame trigger` feeds a `condition gate` whose `!gameover` listener fires only while the
+condition holds.
+
+```yaml
+game over:
+  Behaviours:
+    tick:
+      Type: every frame trigger
+      Listeners:
+        - EntityId: game over
+          BehaviourId: gate
+    gate:
+      Type: condition gate
+      Properties:
+        Condition: !expr
+          Do: is game over
+          With:
+            - !var left score
+            - !var right score
+            - !var score to win
+      Listeners:
+        - !gameover
 ```
 
 ---
@@ -497,8 +518,9 @@ Listeners:
   - !gameover
 ```
 
-Ends and unloads the game. A trigger with a `- !gameover` listener satisfies the build requirement
-that every game have a way to end, so a descriptor wired this way needs no `GameOverCondition`.
+Ends and unloads the game. At least one reachable `- !gameover` listener is required — it's the only
+way to end a game, and the build fails without one. See **Ending the game** for the per-frame-condition
+pattern.
 
 ### Trigger outputs
 
@@ -765,10 +787,9 @@ Run through this before handing a descriptor back:
 - [ ] Math-heavy expressions reuse the bare-name library helpers from
       [`Libraries.md`](../../../Assets/docs/Libraries.md) instead of hand-rolling them, and no
       `RegisterTypeStatics`/`RegisterTypes` entry remains that the helpers made unnecessary.
+- [ ] At least one `!gameover` listener exists and is reachable (a discrete event, or a
+      `condition gate` polled by an `every frame trigger`), so the game can actually end.
 - [ ] User-facing strings go through `!text` + `Localisation:`, not inline literals.
-- [ ] `GameOverCondition` evaluates to `false` initially and there is at least one path to make it
-      `true`, OR the game ends via `- !gameover` listeners, OR it is omitted intentionally for an
-      endless game.
 - [ ] `Tools/validate-game.sh <file>` and `Tools/check-expression.sh <file>` both pass.
 
 ---

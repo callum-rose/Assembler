@@ -22,7 +22,13 @@ namespace Assembler.Resolving
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
-				_ => throw new Exception($"Unsupported ValueWrapper type: {valueSource.GetType()}")
+				// SubstituteParameters is meant to eliminate every ParameterSource during template
+				// instantiation. If one survives to resolve time, a template parameter went unsubstituted —
+				// name it rather than letting it hit the opaque "Unsupported" catch-all below.
+				ParameterSource<T> parameter => throw new ResolveException(
+					$"Unsubstituted template parameter '{parameter.ParameterId}' reached resolve time — " +
+					"it should have been substituted during template instantiation."),
+				_ => throw new ResolveException($"Unsupported ValueSource type: {valueSource.GetType()}")
 			};
 		}
 
@@ -71,7 +77,7 @@ namespace Assembler.Resolving
 				}
 				catch (Exception e)
 				{
-					throw new Exception(
+					throw new ResolveException(
 						$"Failed to evaluate expression '{expressionSource.ExpressionId}' to '{typeof(TReturn)}' with arguments: {string.Join(", ", expressionSource.Arguments)}",
 						e);
 				}

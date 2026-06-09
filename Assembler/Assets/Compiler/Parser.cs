@@ -169,13 +169,19 @@ namespace Assembler.Compiler.Compiler
 		{
 			if (Current.Type != type)
 			{
-				throw new Exception($"Expected {type} but got {Current.Type} at line {Current.Line}");
+				throw Error($"Expected {type} but got {Current.Type}");
 			}
 
 			var token = Current;
 			Advance();
 			return token;
 		}
+
+		// Builds a compile error positioned at the current token. Compile errors signal invalid user
+		// source (as opposed to an internal compiler bug, which stays a plain Exception).
+		private CompileException Error(string message) => Error(message, Current);
+
+		private static CompileException Error(string message, Token at) => new(message, at.Line, at.Column);
 
 		public Expression ParseMethodBody(Dictionary<string, Type> parameters)
 		{
@@ -235,158 +241,6 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			return Expression.Block(returnType, statements);
-		}
-
-		/// <summary>
-		/// Preprocesses early returns by wrapping the subsequent code in an else block.
-		/// I couldn't get the compiler to support early returns without this.
-		/// </summary>
-		private void PreprocessEarlyReturns()
-		{
-			// Transform: if (cond) { return x; } <more code>
-			// Into: if (cond) { return x; } else { <more code> }
-
-			int i = 0;
-
-			while (i < _tokens.Count)
-			{
-				// Look for: if (...) { ... return ...; }
-				if (_tokens[i].Type == TokenType.If)
-				{
-					int ifStart = i;
-
-					// Skip to the condition
-					i++;// Skip 'if'
-
-					if (i >= _tokens.Count || _tokens[i].Type != TokenType.LeftParen)
-					{
-						i++;
-						continue;
-					}
-
-					// Skip the condition (find matching right paren)
-					int parenDepth = 0;
-
-					while (i < _tokens.Count)
-					{
-						if (_tokens[i].Type == TokenType.LeftParen)
-						{
-							parenDepth++;
-						}
-
-						if (_tokens[i].Type == TokenType.RightParen)
-						{
-							parenDepth--;
-
-							if (parenDepth == 0)
-							{
-								i++;
-								break;
-							}
-						}
-
-						i++;
-					}
-
-					if (i >= _tokens.Count || _tokens[i].Type != TokenType.LeftBrace)
-					{
-						continue;
-					}
-
-					// Found the if block, check if it contains a return
-					int braceDepth = 0;
-					bool hasReturn = false;
-
-					while (i < _tokens.Count)
-					{
-						if (_tokens[i].Type == TokenType.LeftBrace)
-						{
-							braceDepth++;
-						}
-
-						if (_tokens[i].Type == TokenType.RightBrace)
-						{
-							braceDepth--;
-
-							if (braceDepth == 0)
-							{
-								i++;
-								break;
-							}
-						}
-
-						if (_tokens[i].Type == TokenType.Return && braceDepth == 1)
-						{
-							hasReturn = true;
-						}
-
-						i++;
-					}
-
-					// Check if there's an else
-					if (i < _tokens.Count && _tokens[i].Type == TokenType.Else)
-					{
-						continue;// Already has else, skip
-					}
-
-					// Check if there's more code after this if block
-					bool hasMoreCode = false;
-					int codeStart = i;
-
-					while (i < _tokens.Count)
-					{
-						if (_tokens[i].Type != TokenType.EndOfFile)
-						{
-							hasMoreCode = true;
-							break;
-						}
-
-						i++;
-					}
-
-					// If it has a return and more code, wrap the remaining code in an else block
-					if (hasReturn && hasMoreCode)
-					{
-						// Collect all remaining tokens (except EOF)
-						var remainingTokens = new List<Token>();
-
-						for (int j = codeStart; j < _tokens.Count; j++)
-						{
-							if (_tokens[j].Type != TokenType.EndOfFile)
-							{
-								remainingTokens.Add(_tokens[j]);
-							}
-						}
-
-						// Remove them from the token list
-						_tokens.RemoveRange(codeStart, _tokens.Count - codeStart);
-
-						// Get line/column from previous token for synthetic tokens
-						int line = _tokens[codeStart - 1].Line;
-						int column = _tokens[codeStart - 1].Column;
-
-						// Insert: else {
-						_tokens.Insert(codeStart, new Token(TokenType.Else, "else", line, column));
-						_tokens.Insert(codeStart + 1, new Token(TokenType.LeftBrace, "{", line, column));
-
-						// Add remaining tokens
-						_tokens.InsertRange(codeStart + 2, remainingTokens);
-
-						// Add closing brace and EOF
-						_tokens.Add(new Token(TokenType.RightBrace, "}", line, column));
-						_tokens.Add(new Token(TokenType.EndOfFile, "", line, column));
-
-						// Don't continue processing this if, move to next
-						break;
-					}
-
-					i = ifStart + 1;// Continue from after the if
-				}
-				else
-				{
-					i++;
-				}
-			}
 		}
 
 		private bool IsMethodDefinition()
@@ -1061,11 +915,11 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseReturn()
 		{
-			Expect(TokenType.Return);
+			var returnToken = Expect(TokenType.Return);
 
 			if (_returnLabel == null)
 			{
-				throw new Exception("'return' is only valid inside a method body.");
+				throw Error("'return' is only valid inside a method body.", returnToken);
 			}
 
 			if (Match(TokenType.Semicolon))
@@ -1081,12 +935,12 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseBreak()
 		{
-			Expect(TokenType.Break);
+			var breakToken = Expect(TokenType.Break);
 			Expect(TokenType.Semicolon);
 
 			if (_breakLabels.Count == 0)
 			{
-				throw new Exception("Break statement outside of loop");
+				throw Error("'break' is only valid inside a loop", breakToken);
 			}
 
 			return Expression.Break(_breakLabels.Peek());
@@ -1094,12 +948,12 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseContinue()
 		{
-			Expect(TokenType.Continue);
+			var continueToken = Expect(TokenType.Continue);
 			Expect(TokenType.Semicolon);
 
 			if (_continueLabels.Count == 0)
 			{
-				throw new Exception("Continue statement outside of loop");
+				throw Error("'continue' is only valid inside a loop", continueToken);
 			}
 
 			return Expression.Continue(_continueLabels.Peek());
@@ -1391,7 +1245,8 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseMemberAccess(Expression instance)
 		{
-			var memberName = Expect(TokenType.Identifier).Value;
+			var memberToken = Expect(TokenType.Identifier);
+			var memberName = memberToken.Value;
 
 			// Detect "type sentinel" used for static member access (e.g. UnityEngine.Random.Range(...)).
 			// ParsePrimary returns Expression.Constant(type, typeof(Type)) when an identifier resolves to a Type.
@@ -1569,7 +1424,7 @@ namespace Assembler.Compiler.Compiler
 					}
 					else
 					{
-						throw new Exception($"Method '{memberName}' not found on type '{instance.Type.Name}'");
+						throw Error($"Method '{memberName}' not found on type '{instance.Type.Name}'", memberToken);
 					}
 				}
 
@@ -1938,7 +1793,7 @@ namespace Assembler.Compiler.Compiler
 			if (function is not ParameterExpression paramExpr ||
 				!_availableMethods.TryGetValue(paramExpr.Name ?? "", out var methodInfos))
 			{
-				throw new Exception($"Function call not supported for expression type: {function.GetType().Name}");
+				throw Error($"Function call not supported for expression type: {function.GetType().Name}");
 			}
 
 			// Find the best matching overload
@@ -1947,7 +1802,7 @@ namespace Assembler.Compiler.Compiler
 
 			if (matchingMethod == null)
 			{
-				throw new Exception(
+				throw Error(
 					$"No matching overload found for method '{paramExpr.Name}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
 			}
 
@@ -2039,7 +1894,21 @@ namespace Assembler.Compiler.Compiler
 
 			if (Match(TokenType.Identifier))
 			{
-				var name = _tokens[_position - 1].Value;
+				var nameToken = _tokens[_position - 1];
+				var name = nameToken.Value;
+
+				// Resolves the target of an assignment / increment. Guards the variable lookup so
+				// assigning to an undeclared name reports the same friendly "Unknown identifier"
+				// message used for reads, rather than throwing a raw KeyNotFoundException.
+				Expression AssignTarget()
+				{
+					if (_variables.TryGetValue(name, out var target))
+					{
+						return target;
+					}
+
+					throw Error($"Unknown identifier '{name}'", nameToken);
+				}
 
 				// Check for lambda expression: identifier => expression
 				if (Current.Type == TokenType.Arrow)
@@ -2111,8 +1980,9 @@ namespace Assembler.Compiler.Compiler
 
 						if (matchingMethod == null)
 						{
-							throw new Exception(
-								$"No matching overload found for method '{name}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
+							throw Error(
+								$"No matching overload found for method '{name}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}",
+								nameToken);
 						}
 
 						// Convert arguments if needed
@@ -2138,37 +2008,37 @@ namespace Assembler.Compiler.Compiler
 				if (Match(TokenType.Assign))
 				{
 					var value = ParseExpression();
-					return Expression.Assign(_variables[name], value);
+					return Expression.Assign(AssignTarget(), value);
 				}
 
 				if (Match(TokenType.PlusAssign))
 				{
-					return BuildCompoundAssign(Expression.Add, _variables[name], ParseExpression());
+					return BuildCompoundAssign(Expression.Add, AssignTarget(), ParseExpression());
 				}
 
 				if (Match(TokenType.MinusAssign))
 				{
-					return BuildCompoundAssign(Expression.Subtract, _variables[name], ParseExpression());
+					return BuildCompoundAssign(Expression.Subtract, AssignTarget(), ParseExpression());
 				}
 
 				if (Match(TokenType.MultiplyAssign))
 				{
-					return BuildCompoundAssign(Expression.Multiply, _variables[name], ParseExpression());
+					return BuildCompoundAssign(Expression.Multiply, AssignTarget(), ParseExpression());
 				}
 
 				if (Match(TokenType.DivideAssign))
 				{
-					return BuildCompoundAssign(Expression.Divide, _variables[name], ParseExpression());
+					return BuildCompoundAssign(Expression.Divide, AssignTarget(), ParseExpression());
 				}
 
 				if (Match(TokenType.Increment))
 				{
-					return Expression.PreIncrementAssign(_variables[name]);
+					return Expression.PreIncrementAssign(AssignTarget());
 				}
 
 				if (Match(TokenType.Decrement))
 				{
-					return Expression.PreDecrementAssign(_variables[name]);
+					return Expression.PreDecrementAssign(AssignTarget());
 				}
 
 				if (_variables.TryGetValue(name, out var variable))
@@ -2197,7 +2067,7 @@ namespace Assembler.Compiler.Compiler
 					return Expression.Constant(bareType, typeof(Type));
 				}
 
-				throw new Exception($"Unknown identifier '{name}' at line {Current.Line}");
+				throw Error($"Unknown identifier '{name}'", nameToken);
 			}
 
 			if (Match(TokenType.LeftParen))
@@ -2207,13 +2077,14 @@ namespace Assembler.Compiler.Compiler
 				return expr;
 			}
 
-			throw new Exception($"Unexpected token: {Current.Type} at line {Current.Line}");
+			throw Error($"Unexpected token: {Current.Type}");
 		}
 
 		private Expression ParseNewExpression()
 		{
 			// Parse type name (could be simple name, alias, or fully qualified)
-			var typeName = Expect(TokenType.Identifier).Value;
+			var typeNameToken = Expect(TokenType.Identifier);
+			var typeName = typeNameToken.Value;
 
 			// Handle generic types or nested types with dots
 			while (Current.Type == TokenType.Dot)
@@ -2227,7 +2098,8 @@ namespace Assembler.Compiler.Compiler
 
 			if (type == null)
 			{
-				throw new Exception($"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.");
+				throw Error($"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					typeNameToken);
 			}
 
 			// Expect constructor call
@@ -2279,7 +2151,8 @@ namespace Assembler.Compiler.Compiler
 
 				if (constructor == null)
 				{
-					throw new Exception($"No matching constructor found for type '{typeName}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
+					throw Error($"No matching constructor found for type '{typeName}' with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}",
+						typeNameToken);
 				}
 			}
 
@@ -2361,7 +2234,7 @@ namespace Assembler.Compiler.Compiler
 
 				if (method == null)
 				{
-					throw new Exception(
+					throw Error(
 						$"No matching static method '{memberName}' on type '{targetType.FullName}' " +
 						$"with argument types: {string.Join(", ", argTypes.Select(t => t.Name))}");
 				}
@@ -2413,7 +2286,7 @@ namespace Assembler.Compiler.Compiler
 				return Expression.Constant(nested, typeof(Type));
 			}
 
-			throw new Exception($"Static member '{memberName}' not found on type '{targetType.FullName}'");
+			throw Error($"Static member '{memberName}' not found on type '{targetType.FullName}'");
 		}
 
 		private Expression ParseLambdaWithType(Type? parameterType)

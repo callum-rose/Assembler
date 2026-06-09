@@ -3,7 +3,7 @@ namespace Assembler.Compiler.Compiler
 	public enum TokenType
 	{
 		Identifier, Number, String, BooleanLiteral, Void,
-		If, Else, For, While, Foreach, Switch, Case, Default, Return, Break, Continue,
+		If, Else, For, While, Return, Break, Continue,
 		Var, Int, String_, Bool, Float, Double, New,
 		Plus, Minus, Multiply, Divide, Modulo, Xor,
 		Equal, NotEqual, LessThan, GreaterThan, LessThanOrEqual, GreaterThanOrEqual,
