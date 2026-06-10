@@ -91,6 +91,10 @@ namespace Assembler.Building
 				}
 			};
 
+			// Configure GameEntity while inactive so its Awake (which self-registers into the query index) runs
+			// only once Tags/Query are set, when we activate below.
+			gameObject.SetActive(false);
+
 			if (parent != null)
 			{
 				gameObject.transform.SetParent(parent, worldPositionStays: false);
@@ -104,12 +108,14 @@ namespace Assembler.Building
 			}
 
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
-			_entityQuery.Register(entityInfo.Id, gameObject.transform, entityInfo.Tags);
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;
+
+			// Activate now that GameEntity is configured: its Awake self-registers into the query index.
+			gameObject.SetActive(true);
 
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
