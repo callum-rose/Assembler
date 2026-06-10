@@ -180,8 +180,9 @@ namespace Assembler.Parsing
 				"velocity" => RigidbodyProperty.Velocity,
 				"angularvelocity" => RigidbodyProperty.AngularVelocity,
 				"position" => RigidbodyProperty.Position,
+				"rotation" => RigidbodyProperty.Rotation,
 				_ => throw new ParsingException(
-					$"Unknown !rigidbody property '{property}'. Expected one of: Velocity, AngularVelocity, Position")
+					$"Unknown !rigidbody property '{property}'. Expected one of: Velocity, AngularVelocity, Position, Rotation")
 			};
 
 		public static Dictionary<string, AssemblerValue> ConvertProps(IReadOnlyDictionary<string, object>? raw)

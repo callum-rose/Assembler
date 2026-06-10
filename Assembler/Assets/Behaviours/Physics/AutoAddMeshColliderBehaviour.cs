@@ -9,18 +9,18 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Convex: When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes).
 	///   IsTrigger: When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true).
+	///   Bounciness: Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned.
+	///   DynamicFriction: Physics-material friction 0–1 applied while the surfaces are sliding.
+	///   StaticFriction: Physics-material friction 0–1 applied while the surfaces are at rest.
 	/// </remarks>
-	public sealed class AutoAddMeshColliderBehaviour : GameBehaviour<MeshColliderData>
+	public sealed class AutoAddMeshColliderBehaviour : AddColliderBehaviour<MeshColliderData>
 	{
-		private MeshCollider _meshCollider;
-
-		protected override void OnInitialise(MeshColliderData data)
+		protected override Collider CreateCollider(MeshColliderData data)
 		{
-			_meshCollider = gameObject.AddComponent<MeshCollider>();
-			data.Convex.UseIfValueExists(v => _meshCollider.convex = v);
-			data.IsTrigger.UseIfValueExists(v => _meshCollider.isTrigger = v);
+			var collider = gameObject.AddComponent<MeshCollider>();
+			// Convex must be set before the base applies IsTrigger — a mesh trigger requires a convex hull.
+			data.Convex.UseIfValueExists(v => collider.convex = v);
+			return collider;
 		}
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }
