@@ -16,5 +16,9 @@ namespace Assembler.Deserialisation.Dtos
 
 		/// <summary>Which world plane the grid spans: <c>"xy"</c> (default) or <c>"xz"</c> (ground plane).</summary>
 		public string? Plane { get; init; }
+
+		/// <summary>How far (world units) to inflate obstacles so paths keep clearance. Omitted/0 means no
+		/// inflation.</summary>
+		public float? AgentRadius { get; init; }
 	}
 }

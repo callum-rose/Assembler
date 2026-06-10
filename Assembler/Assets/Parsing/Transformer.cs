@@ -360,7 +360,8 @@ namespace Assembler.Parsing
 				maxX,
 				maxY,
 				dto.ObstacleTag ?? defaults.ObstacleTag,
-				plane);
+				plane,
+				dto.AgentRadius ?? defaults.AgentRadius);
 		}
 
 		private static NavPlane ParseNavPlane(string? plane) =>

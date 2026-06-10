@@ -91,16 +91,22 @@ namespace Assembler.Navigation
 			}
 		}
 
+		/// <summary>Whether the world-space rectangle <c>[minX,maxX] × [minY,maxY]</c> overlaps the grid at all.
+		/// The off-grid guard <see cref="BlockWorldRect"/> uses (and the per-cell obstacle rasterizer reuses) so
+		/// an obstacle entirely outside the grid is skipped rather than smeared into a boundary row/column —
+		/// <see cref="WorldToCell"/> clamps, so without this an off-grid rect would block the nearest edge.</summary>
+		public bool OverlapsWorldRect(float minX, float minY, float maxX, float maxY) =>
+			maxX >= OriginX && minX <= OriginX + Width * CellSize &&
+			maxY >= OriginY && minY <= OriginY + Height * CellSize;
+
 		/// <summary>
 		/// Marks every cell overlapping the world-space rectangle <c>[minX,maxX] × [minY,maxY]</c> unwalkable.
-		/// A rectangle that doesn't overlap the grid at all is ignored, rather than being smeared into a
-		/// phantom wall along the nearest edge — <see cref="WorldToCell"/> clamps, so without this guard an
-		/// entirely off-grid obstacle would block a boundary row/column.
+		/// A rectangle that doesn't overlap the grid at all is ignored (see <see cref="OverlapsWorldRect"/>),
+		/// rather than being smeared into a phantom wall along the nearest edge.
 		/// </summary>
 		public void BlockWorldRect(float minX, float minY, float maxX, float maxY)
 		{
-			if (maxX < OriginX || minX > OriginX + Width * CellSize ||
-				maxY < OriginY || minY > OriginY + Height * CellSize)
+			if (!OverlapsWorldRect(minX, minY, maxX, maxY))
 			{
 				return;
 			}
@@ -113,6 +119,49 @@ namespace Assembler.Navigation
 				for (var x = min.X; x <= max.X; x++)
 				{
 					_walkable[Index(new GridCoord(x, y))] = false;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Grows every blocked region outward by <paramref name="radius"/> world units so paths keep that much
+		/// clearance from obstacles — modelling an agent of that radius as a point on the inflated grid. Each
+		/// originally-blocked cell stamps a Euclidean disk of cells unwalkable; the radius is rounded up to whole
+		/// cells, erring toward more clearance. A non-positive radius is a no-op. Intended to run once at build,
+		/// after rasterization.
+		/// </summary>
+		public void Inflate(float radius)
+		{
+			var cellRadius = (int)Math.Ceiling(radius / CellSize);
+
+			if (cellRadius <= 0)
+			{
+				return;
+			}
+
+			// Snapshot the pre-inflation walls so the stamp grows from the original obstacles only, not from
+			// cells it has itself just filled in (which would let clearance bleed outward without bound).
+			var original = (bool[])_walkable.Clone();
+
+			for (var cy = 0; cy < Height; cy++)
+			{
+				for (var cx = 0; cx < Width; cx++)
+				{
+					if (original[Index(new GridCoord(cx, cy))])
+					{
+						continue;
+					}
+
+					for (var dy = -cellRadius; dy <= cellRadius; dy++)
+					{
+						for (var dx = -cellRadius; dx <= cellRadius; dx++)
+						{
+							if (dx * dx + dy * dy <= cellRadius * cellRadius)
+							{
+								SetWalkable(new GridCoord(cx + dx, cy + dy), false);
+							}
+						}
+					}
 				}
 			}
 		}
