@@ -12,12 +12,30 @@ World:
   BackgroundColor: "#141821"
 
 Constants:
-  step forward: !vec { X: 0, Y: 0, Z: 0.12 }
-  step back: !vec { X: 0, Y: 0, Z: -0.12 }
-  step left: !vec { X: -0.12, Y: 0, Z: 0 }
-  step right: !vec { X: 0.12, Y: 0, Z: 0 }
+  # Per-frame ground-plane step applied to the analogue move vector. The value
+  # action fires every frame, so this is the player's top speed in units/frame.
+  move step: 0.12
   follow offset: !vec { X: 0, Y: 5, Z: -10 }
   camera start: !vec { X: 0, Y: 5, Z: -10 }
+
+# Abstract actions + the physical inputs that feed them. Gameplay is wired to the
+# named actions; only this block knows about physical keys, so input is bound
+# per platform here rather than hard-coded into the entities.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # emits axis/x/y every frame
+    quit: { Type: button, Phase: down }          # fires once on press
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      quit:
+        - "<Keyboard>/escape"
 
 Entities:
   sun:
@@ -53,54 +71,29 @@ Entities:
           Shape: cube
           Colour: !colour green
           Size: !vec { X: 1, Y: 1, Z: 1 }
-      hold forward:
-        Type: key hold trigger
+      # Analogue movement on the ground plane: the move value action emits x/y
+      # every frame, mapped to world X (left/right) and Z (forward/back).
+      move action:
+        Type: input action
         Properties:
-          Key: "w"
+          Action: move
         Listeners:
           - EntityId: player
-            BehaviourId: move forward
-      move forward:
+            BehaviourId: apply move
+      apply move:
         Type: translate
         Properties:
-          Displacement: !var step forward
-      hold back:
-        Type: key hold trigger
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg2, 0f, arg1 * arg2)'
+            With:
+              - !output x
+              - !output y
+              - !var move step
+      # Press Escape (the quit action's bound key) to give up.
+      quit action:
+        Type: input action
         Properties:
-          Key: "s"
-        Listeners:
-          - EntityId: player
-            BehaviourId: move back
-      move back:
-        Type: translate
-        Properties:
-          Displacement: !var step back
-      hold left:
-        Type: key hold trigger
-        Properties:
-          Key: "a"
-        Listeners:
-          - EntityId: player
-            BehaviourId: move left
-      move left:
-        Type: translate
-        Properties:
-          Displacement: !var step left
-      hold right:
-        Type: key hold trigger
-        Properties:
-          Key: "d"
-        Listeners:
-          - EntityId: player
-            BehaviourId: move right
-      move right:
-        Type: translate
-        Properties:
-          Displacement: !var step right
-      quit:
-        Type: key down trigger
-        Properties:
-          Key: "Escape"
+          Action: quit
         Listeners:
           - !gameover
 
