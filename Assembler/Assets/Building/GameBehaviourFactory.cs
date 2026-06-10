@@ -397,6 +397,13 @@ namespace Assembler.Building
 						i.Shape.Resolve(ctx.Resolution),
 						i.Colour.Resolve(ctx.Resolution),
 						i.Size.Resolve(ctx.Resolution))),
+				[typeof(LightInfo)] = Entry<LightInfo, LightBehaviour, LightData>(
+					(i, ctx) => new LightData(i.Id,
+						i.Type.Resolve(ctx.Resolution),
+						i.Colour.Resolve(ctx.Resolution),
+						i.Intensity.Resolve(ctx.Resolution),
+						i.Range.Resolve(ctx.Resolution),
+						i.SpotAngle.Resolve(ctx.Resolution))),
 				[typeof(ActivePollInfo)] = Entry<ActivePollInfo, ActivePoll, ActivePollData>(
 					(i, ctx) => new ActivePollData(i.Id,
 						i.Active.Resolve(ctx.Resolution))),

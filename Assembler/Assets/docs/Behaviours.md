@@ -1704,6 +1704,20 @@ Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
 | Colour | Color | Optional tint applied to the primitive's material. |
 | Size | Vector3 | Optional local scale of the primitive child. |
 
+## `light`
+Adds a realtime UnityEngine.Light to the entity so a 3D scene is lit
+            (without one, primitive meshes render near-black under URP's Lit shader).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Type | LightKind | One of "directional", "point", "spot" (defaults to "directional"). |
+| Colour | Color | Optional light colour (defaults to white). |
+| Intensity | float | Optional brightness multiplier (defaults to 1). |
+| Range | float | Optional reach in world units for point/spot lights (defaults to 10). |
+| SpotAngle | float | Optional cone angle in degrees for spot lights (defaults to 30). |
+
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
 

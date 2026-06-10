@@ -47,6 +47,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		ThreeD
 	}
 
+	/// <summary>The kind of scene <c>light</c> to create. Maps onto the realtime subset of
+	/// <c>UnityEngine.LightType</c> (the non-realtime Area/Disc types are intentionally excluded).</summary>
+	public enum LightKind
+	{
+		Directional,
+		Point,
+		Spot
+	}
+
 	/// <summary>
 	/// Parses the fixed-set "string enum" behaviour properties into concrete enums. Parsing is
 	/// case-, space- and dash-insensitive and throws a <see cref="ParsingException"/> on an
@@ -65,6 +74,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(TextAnchor) ? ParseTextAnchor(normalised, raw) :
 				typeof(TEnum) == typeof(CameraProjection) ? ParseCameraProjection(normalised, raw) :
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
+				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
 
@@ -178,6 +188,16 @@ namespace Assembler.Parsing.Info.Behaviours
 				"3d" => CameraFollowMode.ThreeD,
 				_ => throw new ParsingException(
 					$"Unknown camera follow mode '{raw}'. Valid values: 2d, 3d")
+			};
+
+		private static LightKind ParseLightKind(string s, string raw) =>
+			s switch
+			{
+				"directional" or "sun" => LightKind.Directional,
+				"point" => LightKind.Point,
+				"spot" => LightKind.Spot,
+				_ => throw new ParsingException(
+					$"Unknown light type '{raw}'. Valid values: directional, point, spot")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>
