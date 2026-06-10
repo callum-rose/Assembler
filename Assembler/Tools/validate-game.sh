@@ -72,10 +72,39 @@ for arg in "$@"; do
 	PATH_ARGS+=(-yamlPath "$arg")
 done
 
+LOG="$(mktemp -t assembler-validate-game.XXXXXX.log)"
+
 echo "Sandbox-building descriptor YAML with Unity $VERSION (project: $PROJECT)..."
+
+# Capture the (very noisy) Unity log to a temp file rather than streaming it — only the report block
+# the batch method emits between its delimiter lines is printed, so the OK/FAIL summary isn't buried
+# under licensing-handshake errors, "assembly not valid" notices, curl timeouts, etc. Don't let a
+# non-zero Unity exit abort the script before we extract the report.
+set +e
 "$UNITY" \
 	-batchmode -quit -nographics \
 	-projectPath "$PROJECT" \
 	-executeMethod Editor.GameSandboxValidatorBatch.Validate \
 	${PATH_ARGS[@]+"${PATH_ARGS[@]}"} \
-	-logFile -
+	-logFile - > "$LOG" 2>&1
+RC=$?
+set -e
+
+# Extract the report between the batch method's header line and its trailing all-equals footer. The
+# header carries text so it never matches the footer pattern; the footer guard keys off `f` so a
+# stray all-equals line in the boot noise (before the header) can't trip an early exit.
+REPORT="$(awk '/============== Game sandbox validation ==============/{f=1} f{print} f && /^=+$/{exit}' "$LOG")"
+
+echo
+if [[ -n "$REPORT" ]]; then
+	printf '%s\n' "$REPORT"
+else
+	echo "error: no validation report found in the Unity log — the editor likely failed to start." >&2
+	echo "       (A fresh worktree's first run does a one-time cold import; re-running usually fixes a" >&2
+	echo "        spurious cold-import failure.)" >&2
+fi
+echo
+echo "Full Unity log: $LOG"
+
+# Verdict comes from the batch method's exit code (0 = all boot cleanly, 1 = a failure), which Unity returns.
+exit "$RC"

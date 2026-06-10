@@ -44,6 +44,7 @@ namespace Editor
 		// Command-line entry point.
 		public static void Check()
 		{
+			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();
@@ -60,15 +61,7 @@ namespace Editor
 				}
 
 				bool ok = Run(rawExprs, returnType, argSpecs, descriptorPaths, out string report);
-				if (ok)
-				{
-					Debug.Log(report);
-				}
-				else
-				{
-					Debug.LogError(report);
-				}
-
+				EditorBatchCli.LogReport(report, ok);
 				EditorApplication.Exit(ok ? 0 : 1);
 			}
 			catch (Exception e)
@@ -84,14 +77,7 @@ namespace Editor
 		{
 			bool ok = Run(new List<string>(), DefaultReturnType, new List<string>(),
 				new List<string> { DefaultDescriptorDir }, out string report);
-			if (ok)
-			{
-				Debug.Log(report);
-			}
-			else
-			{
-				Debug.LogError(report);
-			}
+			EditorBatchCli.LogReport(report, ok);
 		}
 
 		// Builds the combined report across both input modes. Returns true when every expression compiled.

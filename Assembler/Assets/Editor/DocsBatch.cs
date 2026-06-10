@@ -20,6 +20,7 @@ namespace Editor
 	{
 		public static void GenerateAll()
 		{
+			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();

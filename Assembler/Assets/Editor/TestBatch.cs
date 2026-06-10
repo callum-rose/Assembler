@@ -33,6 +33,7 @@ namespace Editor
 
 		public static void RunEditModeTests()
 		{
+			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();
@@ -150,15 +151,7 @@ namespace Editor
 					TryWriteXml(result);
 
 					bool ok = failed == 0 && inconclusive == 0;
-					if (ok)
-					{
-						Debug.Log(sb.ToString());
-					}
-					else
-					{
-						Debug.LogError(sb.ToString());
-					}
-
+					EditorBatchCli.LogReport(sb.ToString(), ok);
 					EditorApplication.Exit(ok ? 0 : 1);
 				}
 				catch (Exception e)

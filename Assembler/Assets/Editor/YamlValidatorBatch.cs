@@ -26,6 +26,7 @@ namespace Editor
 		// Command-line entry point.
 		public static void Validate()
 		{
+			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();
@@ -36,15 +37,7 @@ namespace Editor
 				}
 
 				bool ok = Run(targets, out string report);
-				if (ok)
-				{
-					Debug.Log(report);
-				}
-				else
-				{
-					Debug.LogError(report);
-				}
-
+				EditorBatchCli.LogReport(report, ok);
 				EditorApplication.Exit(ok ? 0 : 1);
 			}
 			catch (Exception e)
@@ -59,14 +52,7 @@ namespace Editor
 		private static void ValidateDescriptorsMenu()
 		{
 			bool ok = Run(new List<string> { DefaultDescriptorDir }, out string report);
-			if (ok)
-			{
-				Debug.Log(report);
-			}
-			else
-			{
-				Debug.LogError(report);
-			}
+			EditorBatchCli.LogReport(report, ok);
 		}
 
 		// Validates every YAML file under the given files/directories, building a combined report.
