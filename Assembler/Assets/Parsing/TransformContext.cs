@@ -47,6 +47,7 @@ namespace Assembler.Parsing
 		public IReadOnlyDictionary<string, Type> TypeRegistry { get; }
 		public Dictionary<Type, MethodInfo> ExprArgFactoryCache { get; }
 		public InlineExpressionAccumulator InlineExpressions { get; }
+		public RecordSchemaRegistry RecordSchemas { get; }
 
 		public TransformContext(
 			IReadOnlyList<ValueInfo> values,
@@ -54,7 +55,8 @@ namespace Assembler.Parsing
 			IReadOnlyDictionary<string, ExpressionInfo> expressionsById,
 			IReadOnlyDictionary<string, Type> typeRegistry,
 			Dictionary<Type, MethodInfo> exprArgFactoryCache,
-			InlineExpressionAccumulator inlineExpressions)
+			InlineExpressionAccumulator inlineExpressions,
+			RecordSchemaRegistry recordSchemas)
 		{
 			Values = values;
 			Parameters = parameters;
@@ -62,13 +64,14 @@ namespace Assembler.Parsing
 			TypeRegistry = typeRegistry;
 			ExprArgFactoryCache = exprArgFactoryCache;
 			InlineExpressions = inlineExpressions;
+			RecordSchemas = recordSchemas;
 		}
 
 		/// <summary>
 		/// Returns a sibling context with a new parameter scope, sharing the stable
-		/// values/expressions/type-registry/factory-cache/inline-accumulator with this one.
+		/// values/expressions/type-registry/factory-cache/inline-accumulator/record-schemas with this one.
 		/// </summary>
 		public TransformContext WithParameters(IReadOnlyDictionary<string, AssemblerValue> parameters) =>
-			new(Values, parameters, ExpressionsById, TypeRegistry, ExprArgFactoryCache, InlineExpressions);
+			new(Values, parameters, ExpressionsById, TypeRegistry, ExprArgFactoryCache, InlineExpressions, RecordSchemas);
 	}
 }

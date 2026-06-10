@@ -52,6 +52,11 @@ namespace Assembler.Resolving
 			_compiler.RegisterStaticMethods(typeof(RandomMath));
 			_compiler.RegisterStaticMethods(typeof(ColorMath));
 			_compiler.RegisterStaticMethods(typeof(HexMath));
+
+			// Records: register the shared Record type so its this[string] indexer is available for
+			// item["count"] reads/writes, and the cast-free RecordMath getters/setters by bare name.
+			_compiler.RegisterType(typeof(Record));
+			_compiler.RegisterStaticMethods(typeof(RecordMath));
 		}
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)

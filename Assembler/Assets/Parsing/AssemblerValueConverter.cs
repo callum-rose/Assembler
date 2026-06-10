@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Extensions;
+using Assembler.Libraries;
 using Assembler.Parsing.Info;
 using UnityEngine;
 
@@ -115,6 +116,13 @@ namespace Assembler.Parsing
 					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
 				(List<string> stringList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(string),
 					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
+				// A `!record` literal becomes a RecordValue at every non-runtime stage (its field values
+				// recurse with the same context, so nested refs deref at the resolved stage); the transform
+				// later completes it against its schema. A `!record []` list becomes a Record-typed list.
+				(RecordLiteralDto rec, { AllowRuntimeTypes: false }) =>
+					new RecordValue(rec.Type ?? string.Empty, ToAssemblerFields(rec.Fields, conversion)),
+				(List<RecordLiteralDto> recList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(Record),
+					recList.ConvertAll<AssemblerValue>(r => ToAssemblerValue(r, conversion))),
 				// IR stage only: untyped collections become Dict/List IR (used by nested listener maps). The
 				// resolved and runtime stages reject them — an untyped/mixed sequence is a conversion error.
 				(IDictionary<string, object> dict, { ResolvedValues: null, AllowRuntimeTypes: false }) =>
@@ -192,6 +200,26 @@ namespace Assembler.Parsing
 			foreach (var kvp in raw)
 			{
 				var converted = ToAssemblerValue(kvp.Value);
+
+				if (converted is not NoValue)
+				{
+					result[kvp.Key] = converted;
+				}
+			}
+
+			return result;
+		}
+
+		// Converts a record literal's explicitly-set fields into AssemblerValue IR, recursing with the same
+		// conversion context so a nested ref/vec/etc. is handled exactly as a top-level value would be.
+		private static IReadOnlyDictionary<string, AssemblerValue> ToAssemblerFields(
+			IReadOnlyDictionary<string, object> fields, ValueConversion conversion)
+		{
+			var result = new Dictionary<string, AssemblerValue>(fields.Count);
+
+			foreach (var kvp in fields)
+			{
+				var converted = ToAssemblerValue(kvp.Value, conversion);
 
 				if (converted is not NoValue)
 				{

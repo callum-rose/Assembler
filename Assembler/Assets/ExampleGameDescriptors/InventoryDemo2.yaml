@@ -1,0 +1,412 @@
+Game:
+  Title: Inventory Demo 2 (Records)
+  Description: |
+    The same field as Inventory Demo, rebuilt on the new `record` primitive instead of a handful
+    of plain int counters. Steer the green cube (WASD) and walk over collectables to pick them up:
+
+      - gold COINS  (sphere)
+      - cyan  KEYS  (cube)
+
+    Every item is a `record` instance — a typed field bag declared up front under `Records:` (here
+    an `Item` with a `templateId`, a stack `count`, and a per-instance `durability`). The whole
+    inventory is a single `record list` variable; picking something up appends a one-count stack to
+    it, and the HUD reads live counts straight off the list with a `count of kind` expression
+    (`inv.Where(... templateId ...).Sum(... count ...)`).
+
+    POTIONS are seeded directly into the inventory as a single stack of 3 (a `!record` list literal,
+    defaults filled by the schema), to show per-instance mutable state:
+      - "Use Potion" — gated on there being a potion in stock; it consumes one *in place*
+        (decrementing that record's `count` and nicking its `durability`) and adds 1 health. The
+        consumed record is also written into a `last potion` single-`record` variable.
+
+    Collecting all the keys WINS (a per-frame gate polls the key count vs `keys to win`); a "Quit"
+    button also ends the game, satisfying the build-time reachable-game-over requirement. The
+    original int-counter InventoryDemo.yaml is kept alongside this for contrast.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+# The item "kinds" are named record constants — a !record literal referenced by !var. Instances
+# carry the kind's id in their `templateId` field; there is no separate item-definition section.
+Records:
+  Item:
+    templateId: { Type: string }
+    count:      { Type: int,   Default: 1 }
+    durability: { Type: float, Default: 1.0 }
+
+Constants:
+  coin item: !record { Type: Item, templateId: coin }
+  key item:  !record { Type: Item, templateId: key }
+
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  coin colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
+  key colour: !colour cyan
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  pickup radius: 0.32
+  key size: !vec { X: 0.5, Y: 0.5, Z: 0.5 }
+  pickup collider: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+
+  # The move action fires every frame, so this is the player's top speed in units/frame.
+  move step: 0.06
+
+  play min: !vec { X: -7, Y: -4, Z: 0 }
+  play max: !vec { X: 7, Y: 4, Z: 0 }
+
+  keys to win: 3
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  # The whole inventory is one record list. Seeded with a single potion stack (count 3) so the
+  # "Use Potion" mechanic has something to consume from the start; the schema fills `durability`.
+  inventory: !record [ { Type: Item, templateId: potion, count: 3 } ]
+
+  # The most-recently consumed potion, as a single record variable (written by the consume setter).
+  last potion: !record { Type: Item, templateId: none, count: 0 }
+
+  health: 0
+
+# Reusable record expressions. `count of kind` sums the stack counts of one templateId; `has potion`
+# gates the spend; `consume first potion` mutates a record in place and returns it.
+Expressions:
+  count of kind:
+    ArgumentTypes: [ record list, string ]
+    ArgumentNames: [ inv, kind ]
+    ReturnType: int
+    Expression: 'return inv.Where(r => GetString(r, "templateId") == kind).Sum(r => GetInt(r, "count"));'
+
+  has potion:
+    ArgumentTypes: [ record list ]
+    ArgumentNames: [ inv ]
+    ReturnType: bool
+    Expression: 'return inv.Where(r => GetString(r, "templateId") == "potion").Sum(r => GetInt(r, "count")) >= 1;'
+
+  consume first potion:
+    ArgumentTypes: [ record list ]
+    ArgumentNames: [ inv ]
+    ReturnType: record
+    Expression: |
+      var item = inv.First(r => GetString(r, "templateId") == "potion" && GetInt(r, "count") > 0);
+      SetFloat(item, "durability", GetFloat(item, "durability") - 0.1f);
+      return SetInt(item, "count", GetInt(item, "count") - 1);
+
+# Abstract actions + the physical inputs that feed them.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      quit:
+        - "<Keyboard>/escape"
+        - "<Keyboard>/q"
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "Inventory Demo 2 - Records"
+      hud.instructions: "WASD to move - walk over items to collect them"
+      hud.coins: "Coins: {0}"
+      hud.potions: "Potions: {0}"
+      hud.keys: "Keys: {0} / {1}"
+      hud.health: "Health: {0}"
+      btn.use potion: "Use Potion (+1 Health)"
+      btn.quit: "Quit"
+
+Templates:
+  # Each collectable detects the player overlapping it, appends a fresh one-count stack of its kind
+  # to the inventory record list, and destroys itself.
+  coin_template:
+    Tags: [ coin, collectable ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var pickup radius
+          IsWire: false
+          Colour: !var coin colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pickup collider
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: add coin
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+  key_template:
+    Tags: [ key, collectable ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var key size
+          IsWire: false
+          Colour: !var key colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var pickup collider
+          IsTrigger: true
+      collect:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: add key
+          - EntityId: !parameter self_id
+            BehaviourId: remove self
+      remove self:
+        Type: destroy
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      move action:
+        Type: input action
+        Properties:
+          Action: move
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            With:
+              - !output x
+              - !output y
+              - !var move step
+
+      keep in bounds:
+        Type: clamp position
+        Properties:
+          Min: !var play min
+          Max: !var play max
+
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+  # Holds the inventory record list and the behaviours that mutate it. The collectables append to
+  # it (pickups); the "Use Potion" button consumes from it (spending).
+  inventory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      add coin:
+        Type: record list add
+        Properties:
+          List: !var inventory
+          Value: !var coin item
+      add key:
+        Type: record list add
+        Properties:
+          List: !var inventory
+          Value: !var key item
+
+      # "Use Potion": forwards only while a potion is in stock; the listeners then consume one in
+      # place and add health.
+      use potion gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: has potion, With: [ !var inventory ] }
+        Listeners:
+          - EntityId: inventory
+            BehaviourId: consume potion
+          - EntityId: inventory
+            BehaviourId: gain health
+      # The consume expression mutates the first in-stock potion in the list in place (count - 1,
+      # durability - 0.1) and returns it; the setter parks that record in `last potion`. Because a
+      # record is a reference type, the mutation is visible in the inventory list too.
+      consume potion:
+        Type: record variable setter
+        Properties:
+          VariableId: !var last potion
+          Value: !expr { Do: consume first potion, With: [ !var inventory ] }
+      gain health:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr { Do: 'arg0 + 1', With: [ !var health ] }
+
+  # Polls the win condition every frame: collecting all the keys ends the game.
+  win check:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: win check
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 >= arg1'
+            ArgumentTypes: [ int, int ]
+            With:
+              - !expr { Do: count of kind, With: [ !var inventory, "key" ] }
+              - !var keys to win
+        Listeners:
+          - !gameover
+
+  # ---- Collectables placed around the field (each uses a template) ----
+  coin a: { Template: { Id: coin_template }, Position: !vec { X: -5, Y: 3 } }
+  coin b: { Template: { Id: coin_template }, Position: !vec { X: 5, Y: 3 } }
+  coin c: { Template: { Id: coin_template }, Position: !vec { X: -5, Y: -3 } }
+  coin d: { Template: { Id: coin_template }, Position: !vec { X: 5, Y: -3 } }
+
+  key a: { Template: { Id: key_template }, Position: !vec { X: -6, Y: 1 } }
+  key b: { Template: { Id: key_template }, Position: !vec { X: 6, Y: -1 } }
+  key c: { Template: { Id: key_template }, Position: !vec { X: 0, Y: -3.5 } }
+
+  # ---- The HUD: canvas -> vertical container -> live labels + buttons ----
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 10
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 36
+                  PreferredWidth: 600
+                  PreferredHeight: 52
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 20
+                  PreferredWidth: 600
+                  PreferredHeight: 30
+          coins:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.coins, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "coin" ] } ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          potions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.potions, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "potion" ] } ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          keys:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.keys, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "key" ] }, !var keys to win ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          health:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.health, Arguments: [ !var health ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 40
+          use potion button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.use potion
+                  PreferredWidth: 300
+                  PreferredHeight: 52
+                Listeners:
+                  - EntityId: inventory
+                    BehaviourId: use potion gate
+          quit button:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 300
+                  PreferredHeight: 52
+                Listeners:
+                  - !gameover
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

@@ -24,6 +24,7 @@ using Assembler.Behaviours.Triggers.Variables;
 using Assembler.Behaviours.UI;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Behaviours.Visual;
+using Assembler.Libraries;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
@@ -479,6 +480,7 @@ namespace Assembler.Building
 			RegisterVariableSetter<bool, BoolSetter>(map);
 			RegisterVariableSetter<string, StringSetter>(map);
 			RegisterVariableSetter<Color, ColourSetter>(map);
+			RegisterVariableSetter<Record, RecordSetter>(map);
 
 			RegisterVariableChangedTrigger<int, IntVariableChangedTrigger>(map);
 			RegisterVariableChangedTrigger<float, FloatVariableChangedTrigger>(map);
@@ -493,6 +495,7 @@ namespace Assembler.Building
 			RegisterListOps<bool, BoolListAdd, BoolListInsert, BoolListRemoveAt, BoolListRemove, BoolListSetAt, BoolListSet, BoolListAddRange, BoolListClear, BoolListLoopTrigger>(map);
 			RegisterListOps<string, StringListAdd, StringListInsert, StringListRemoveAt, StringListRemove, StringListSetAt, StringListSet, StringListAddRange, StringListClear, StringListLoopTrigger>(map);
 			RegisterListOps<Color, ColourListAdd, ColourListInsert, ColourListRemoveAt, ColourListRemove, ColourListSetAt, ColourListSet, ColourListAddRange, ColourListClear, ColourListLoopTrigger>(map);
+			RegisterListOps<Record, RecordListAdd, RecordListInsert, RecordListRemoveAt, RecordListRemove, RecordListSetAt, RecordListSet, RecordListAddRange, RecordListClear, RecordListLoopTrigger>(map);
 
 			return map;
 		}

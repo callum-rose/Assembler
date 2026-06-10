@@ -9,7 +9,8 @@
         "UnityEditor.TestRunner",
         "Assembler.Deserialisation",
         "Assembler.Parsing",
-        "Assembler.Resolving"
+        "Assembler.Resolving",
+        "Assembler.Libraries"
     ],
     "includePlatforms": [
         "Editor"

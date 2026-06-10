@@ -21,6 +21,7 @@ namespace Assembler.Deserialisation
 			.WithTagMapping("!clock", typeof(ClockRefDto))
 			.WithTagMapping("!gameover", typeof(GameOverListenerDto))
 			.WithTagMapping("!text", typeof(TextRefDto))
+			.WithTagMapping("!record", typeof(RecordLiteralDto))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new ColourTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
@@ -33,6 +34,7 @@ namespace Assembler.Deserialisation
 			.WithTypeConverter(new ClockTypeConverter())
 			.WithTypeConverter(new GameOverListenerTypeConverter())
 			.WithTypeConverter(new TextTypeConverter())
+			.WithTypeConverter(new RecordTypeConverter())
 			.WithTypeConverter(new BindingTypeConverter())
 			.WithNodeDeserializer(
 				new ObjectNodeDeserializer(),

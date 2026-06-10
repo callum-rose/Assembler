@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Assembler.Libraries;
 using UnityEngine;
 
 namespace Assembler.Parsing
@@ -19,7 +20,9 @@ namespace Assembler.Parsing
 			["float list"] = typeof(List<float>),
 			["bool list"] = typeof(List<bool>),
 			["string list"] = typeof(List<string>),
-			["colour list"] = typeof(List<Color>)
+			["colour list"] = typeof(List<Color>),
+			["record"] = typeof(Record),
+			["record list"] = typeof(List<Record>)
 		};
 	}
 }

@@ -4,7 +4,8 @@
     "references": [
         "Assembler.Parsing.Phase1",
         "Assembler.Deserialisation",
-        "Assembler.Extensions"
+        "Assembler.Extensions",
+        "Assembler.Libraries"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
