@@ -11,8 +11,8 @@ Game:
 
     Notes on the moving parts:
       - First person: the output `camera` lives ON the player entity, so it renders
-        from the player's eyes and yaws as you turn. (Visuals are gizmos, so view this
-        with Gizmos enabled in the Game view — the project convention for its 3D demos.)
+        from the player's eyes and yaws as you turn. (Visuals are cube `primitive`s;
+        until a scene light exists they render dark — see issue #211.)
       - Movement is facing-relative: a `facing velocity` expression rotates the WASD
         input by the player's current yaw and feeds the player rigidbody via
         `set velocity`, so the solid maze walls physically block you.
@@ -50,6 +50,7 @@ Constants:
   bullet speed: 18.0
   bullet life: 2.0
   bullet radius: 0.22
+  bullet size: !vec { X: 0.44, Y: 0.44, Z: 0.44 }
   bullet colour: !colour { R: 1.0, G: 0.92, B: 0.35, A: 1 }
 
   # --- NPCs ---
@@ -147,8 +148,8 @@ Templates:
       health: !parameter initial_health
     Behaviours:
       body:
-        Type: cube gizmo
-        Properties: { Size: !var npc size, IsWire: false, Colour: !var npc colour }
+        Type: primitive
+        Properties: { Shape: cube, Size: !var npc size, Colour: !var npc colour }
       collider:
         Type: box collider
         Properties: { Size: !var npc size, IsTrigger: true }
@@ -215,8 +216,8 @@ Templates:
     Tags: [ bullet ]
     Behaviours:
       body:
-        Type: sphere gizmo
-        Properties: { Radius: !var bullet radius, IsWire: false, Colour: !var bullet colour }
+        Type: primitive
+        Properties: { Shape: cube, Size: !var bullet size, Colour: !var bullet colour }
       collider:
         Type: sphere collider
         Properties: { Radius: !var bullet radius, IsTrigger: true }
@@ -248,8 +249,8 @@ Templates:
     Tags: [ wall ]
     Behaviours:
       body:
-        Type: cube gizmo
-        Properties: { Size: !parameter size, IsWire: false, Colour: !var wall colour }
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !var wall colour }
       collider:
         Type: box collider
         Properties: { Size: !parameter size, IsTrigger: false }
@@ -367,8 +368,8 @@ Entities:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
-        Type: cube gizmo
-        Properties: { Size: !var floor size, IsWire: true, Colour: !var floor colour }
+        Type: primitive
+        Properties: { Shape: cube, Size: !var floor size, Colour: !var floor colour }
 
   # --- Maze: outer boundary + three staggered inner slabs forming serpentine corridors. ---
   wall north:
