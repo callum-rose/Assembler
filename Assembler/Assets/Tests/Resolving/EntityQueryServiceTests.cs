@@ -36,7 +36,7 @@ namespace Tests.Resolving
 			service.Register("near", At("near", new Vector3(2, 0, 0)), new[] { "enemy" });
 			service.Register("other", At("other", new Vector3(1, 0, 0)), new[] { "ally" });
 
-			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out var id));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, string.Empty, out var id));
 			Assert.AreEqual("near", id);
 		}
 
@@ -46,8 +46,8 @@ namespace Tests.Resolving
 			var service = new EntityQueryService();
 			service.Register("e", At("e", new Vector3(5, 0, 0)), new[] { "enemy" });
 
-			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 4f, out _));
-			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 6f, out var id));
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 4f, string.Empty, out _));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 6f, string.Empty, out var id));
 			Assert.AreEqual("e", id);
 		}
 
@@ -59,8 +59,29 @@ namespace Tests.Resolving
 			service.Register("b", At("b", new Vector3(3, 0, 0)), new[] { "enemy" });
 			service.Register("a", At("a", new Vector3(3, 0, 0)), new[] { "enemy" });
 
-			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out var id));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, string.Empty, out var id));
 			Assert.AreEqual("a", id);
+		}
+
+		[Test]
+		public void NearestExcludesSelf()
+		{
+			var service = new EntityQueryService();
+			// Self shares the tag and sits exactly at the query origin, so it would always win at distance 0.
+			service.Register("self", At("self", Vector3.zero), new[] { "racer" });
+			service.Register("other", At("other", new Vector3(5, 0, 0)), new[] { "racer" });
+
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "racer", 100f, "self", out var id));
+			Assert.AreEqual("other", id);
+		}
+
+		[Test]
+		public void NearestExcludingSelfReturnsFalseWhenOnlySelfMatches()
+		{
+			var service = new EntityQueryService();
+			service.Register("self", At("self", Vector3.zero), new[] { "racer" });
+
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "racer", 100f, "self", out _));
 		}
 
 		[Test]
@@ -71,7 +92,19 @@ namespace Tests.Resolving
 			service.Register("a", At("a", new Vector3(2, 0, 0)), new[] { "enemy" });
 			service.Register("b", At("b", new Vector3(50, 0, 0)), new[] { "enemy" });
 
-			CollectionAssert.AreEqual(new[] { "a", "c" }, service.WithinRadius(Vector3.zero, "enemy", 5f).ToArray());
+			CollectionAssert.AreEqual(new[] { "a", "c" },
+				service.WithinRadius(Vector3.zero, "enemy", 5f, string.Empty).ToArray());
+		}
+
+		[Test]
+		public void WithinRadiusExcludesSelf()
+		{
+			var service = new EntityQueryService();
+			service.Register("self", At("self", Vector3.zero), new[] { "enemy" });
+			service.Register("a", At("a", new Vector3(2, 0, 0)), new[] { "enemy" });
+
+			CollectionAssert.AreEqual(new[] { "a" },
+				service.WithinRadius(Vector3.zero, "enemy", 5f, "self").ToArray());
 		}
 
 		[Test]
@@ -81,7 +114,20 @@ namespace Tests.Resolving
 			service.Register("ahead", At("ahead", new Vector3(3, 0, 0)), new[] { "enemy" });
 			service.Register("behind", At("behind", new Vector3(-3, 0, 0)), new[] { "enemy" });
 
-			var inCone = service.WithinCone(Vector3.zero, Vector3.right, "enemy", 10f, 45f);
+			var inCone = service.WithinCone(Vector3.zero, Vector3.right, "enemy", 10f, 45f, string.Empty);
+
+			CollectionAssert.AreEqual(new[] { "ahead" }, inCone.ToArray());
+		}
+
+		[Test]
+		public void WithinConeExcludesSelf()
+		{
+			var service = new EntityQueryService();
+			// Self at the cone origin has no direction and would otherwise be treated as in-cone.
+			service.Register("self", At("self", Vector3.zero), new[] { "enemy" });
+			service.Register("ahead", At("ahead", new Vector3(3, 0, 0)), new[] { "enemy" });
+
+			var inCone = service.WithinCone(Vector3.zero, Vector3.right, "enemy", 10f, 45f, "self");
 
 			CollectionAssert.AreEqual(new[] { "ahead" }, inCone.ToArray());
 		}
@@ -96,7 +142,7 @@ namespace Tests.Resolving
 			Object.DestroyImmediate(transform.gameObject);
 			_objects.Clear();
 
-			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, string.Empty, out _));
 		}
 
 		[Test]
@@ -105,11 +151,11 @@ namespace Tests.Resolving
 			var service = new EntityQueryService();
 			service.Register("e", At("e", new Vector3(1, 0, 0)), new[] { "enemy" });
 
-			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, string.Empty, out _));
 
 			service.Unregister("e");
 
-			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, string.Empty, out _));
 			Assert.IsFalse(service.TryGetPosition("e", out _));
 		}
 	}
