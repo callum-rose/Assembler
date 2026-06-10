@@ -1,0 +1,80 @@
+Game:
+  Title: Pill Grid Demo
+  Description: |
+    Demonstrates the top-level `Placements` section: stamping a reusable `Template`
+    out at many absolute world positions without declaring each entity by hand.
+
+    Two placements share the single `pill` template:
+      - `border pills` uses a literal `At:` list of `!vec` positions (a hand-picked
+        row along the bottom).
+      - `field pills` uses `At: !expr` with `GridPositions(cols, rows, cellSize, origin)`
+        from the `LayoutMath` library, returning a `vector list` resolved at build time.
+
+    Each stamped instance is an independent entity named `<placementKey>_<i>`
+    (`border pills_0`, `field pills_0`, …), parented to the game root like any
+    top-level entity. Press Q to end the game.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  pill colour: !colour white
+  pill size: !vec { X: 0.2, Y: 0.2, Z: 0.2 }
+
+  grid origin: !vec { X: -2, Y: -1, Z: 0 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Templates:
+  pill:
+    Behaviours:
+      dot:
+        Type: primitive
+        Properties:
+          Shape: sphere
+          Size: !var pill size
+          Colour: !var pill colour
+
+Placements:
+  # Literal list: a hand-picked row of three pills along the bottom.
+  border pills:
+    Template: pill
+    At:
+      - !vec { X: -1, Y: -3, Z: 0 }
+      - !vec { X: 0, Y: -3, Z: 0 }
+      - !vec { X: 1, Y: -3, Z: 0 }
+
+  # Expression: a regular grid via the LayoutMath.GridPositions helper, resolved
+  # at build time against the `grid origin` constant.
+  field pills:
+    Template: pill
+    At: !expr
+      ReturnType: vector list
+      Do: 'GridPositions(5, 4, 0.5f, arg0)'
+      With: [ !var grid origin ]
+      ArgumentTypes: [ vector ]
+
+Entities:
+  # The only thing ending this game: press Q to fire the framework's !gameover path.
+  controller:
+    Behaviours:
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

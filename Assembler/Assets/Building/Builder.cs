@@ -189,6 +189,18 @@ namespace Assembler.Building
 				initialisations.Enqueue(result);
 			}
 
+			// 4b. Expand each Placements entry into its stamped instances and drive them through the same
+			// Create + register + enqueue flow, so placed entities initialise alongside hand-authored ones.
+			foreach (var placement in gameInfo.Placements)
+			{
+				foreach (var instance in gameEntityFactory.ExpandPlacement(placement))
+				{
+					var result = gameEntityFactory.Create(instance);
+					behaviourRegistry.Register(result);
+					initialisations.Enqueue(result);
+				}
+			}
+
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
 

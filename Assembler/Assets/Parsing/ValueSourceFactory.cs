@@ -189,9 +189,9 @@ namespace Assembler.Parsing
 				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
 				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
 				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
-					new ConstantSource<T>((T)BuildTypedList(typed)),
+					new ConstantSource<T>((T)BuildTypedList(typed, ctx.Values)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
-					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!)),
+					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!, ctx.Values)),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
@@ -238,33 +238,36 @@ namespace Assembler.Parsing
 			return true;
 		}
 
-		private static object BuildTypedList(TypedListValue typed)
+		private static object BuildTypedList(TypedListValue typed, IReadOnlyList<ValueInfo> values)
 		{
 			var listType = typeof(List<>).MakeGenericType(typed.ElementType);
 			var list = (System.Collections.IList)Activator.CreateInstance(listType, typed.Items.Count);
 
 			foreach (var item in typed.Items)
 			{
-				list.Add(UnwrapPrimitive(item, typed.ElementType));
+				list.Add(UnwrapPrimitive(item, typed.ElementType, values));
 			}
 
 			return list;
 		}
 
-		private static object BuildListFromUntyped(ListValue list, Type elementType)
+		private static object BuildListFromUntyped(ListValue list, Type elementType, IReadOnlyList<ValueInfo> values)
 		{
 			var listType = typeof(List<>).MakeGenericType(elementType);
 			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
 
 			foreach (var item in list.Value)
 			{
-				result.Add(UnwrapPrimitive(item, elementType));
+				result.Add(UnwrapPrimitive(item, elementType, values));
 			}
 
 			return result;
 		}
 
-		private static object UnwrapPrimitive(AssemblerValue value, Type expectedType)
+		// Unwraps one list element to its CLR value. VecValue/ColourValue elements (an unevaluated `!vec`/
+		// `!colour` from the IR stage — e.g. a literal `At:` list of `!vec`) materialise against `values`,
+		// mirroring how a scalar VecValue/ColourValue is handled in CreateValueSource above.
+		private static object UnwrapPrimitive(AssemblerValue value, Type expectedType, IReadOnlyList<ValueInfo> values)
 		{
 			return value switch
 			{
@@ -274,7 +277,9 @@ namespace Assembler.Parsing
 				BoolValue b when expectedType == typeof(bool) => b.Value,
 				StringValue s when expectedType == typeof(string) => s.Value,
 				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
+				VecValue v when expectedType == typeof(Vector3) => v.ToVector3(values),
 				ColorValue c when expectedType == typeof(Color) => c.Value,
+				ColourValue c when expectedType == typeof(Color) => c.ToColor(values),
 				_ => throw new ParsingException(
 					$"List element {value.GetType().Name} cannot be coerced to {expectedType.Name}")
 			};

@@ -73,6 +73,12 @@ namespace Assembler.Parsing
 			var entities = (gameDto.Entities ?? new Dictionary<string, EntityDto>())
 				.Select(kvp => CreateEntityInfo(kvp.Key, kvp.Value)).ToArray();
 
+			// Placements are built after entities so any inline `!expr` in their `At` accumulates onto the
+			// context before allExpressions is finalised below. Positions resolve at build time (they need
+			// the runtime registries), so here they're only wrapped as a ValueSource — see ExpandPlacement.
+			var placements = (gameDto.Placements ?? new Dictionary<string, PlacementDto>())
+				.Select(kvp => CreatePlacementInfo(kvp.Key, kvp.Value)).ToArray();
+
 			// Inline `!expr { Do: '<C# body>' }` call sites synthesised anonymous expressions onto the
 			// context as they were transformed above. Append them so the builder compiles and registers
 			// them alongside the declared ones.
@@ -88,8 +94,31 @@ namespace Assembler.Parsing
 				values,
 				allExpressions,
 				templates,
-				entities)
+				entities,
+				placements)
 			{ ParseContext = ctx };
+
+			PlacementInfo CreatePlacementInfo(string placementId, PlacementDto dto)
+			{
+				if (string.IsNullOrEmpty(dto.Template))
+				{
+					throw new ParsingException($"Placement '{placementId}' must name a Template.");
+				}
+
+				if (templates.All(t => t.Id != dto.Template))
+				{
+					throw new ParsingException(
+						$"Placement '{placementId}' references unknown template '{dto.Template}'.");
+				}
+
+				return new PlacementInfo(
+					placementId,
+					dto.Template,
+					ValueSourceFactory.CreateValueSource<List<Vector3>>(ctx, AssemblerValueConverter.ToAssemblerValue(dto.At)),
+					ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, AssemblerValueConverter.ToAssemblerValue(dto.Rotation)),
+					AssemblerValueConverter.ConvertProps(dto.Parameters),
+					dto.Tags?.ToArray() ?? Array.Empty<string>());
+			}
 
 			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
 				new(kvp.Key,

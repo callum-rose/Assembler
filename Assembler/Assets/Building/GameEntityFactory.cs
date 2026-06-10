@@ -183,6 +183,52 @@ namespace Assembler.Building
 			return new EntityBuildResult(behaviours, initialisations);
 		}
 
+		/// <summary>
+		/// Expands a <see cref="PlacementInfo"/> into one independent <see cref="ConcreteEntityInfo"/> per
+		/// position its <c>At</c> source resolves to. Positions resolve here (build time) because an
+		/// expression-sourced list needs the live variable/expression registries. Each instance is stamped
+		/// at its absolute position via the same template-instantiation path as <see cref="Spawn"/>, sharing
+		/// the placement's rotation, parameters and tags; ids are <c>&lt;placementId&gt;_&lt;i&gt;</c>. An
+		/// empty/absent position list creates nothing. Returns the infos so the caller drives Create +
+		/// initialisation uniformly with hand-authored entities.
+		/// </summary>
+		public IReadOnlyList<ConcreteEntityInfo> ExpandPlacement(PlacementInfo placement)
+		{
+			using var scope = EntityVariableScope.Create(Array.Empty<ValueInfo>());
+
+			var resolutionContext = new ResolutionContext(_variables, _expressions, _assets, _strings, scope,
+				_entityTransforms, _entityQuery, _clock);
+
+			var positions = placement.Positions.Resolve(resolutionContext).Get();
+
+			if (positions is null || positions.Count == 0)
+			{
+				return Array.Empty<ConcreteEntityInfo>();
+			}
+
+			if (!_templates.TryGetValue(placement.TemplateId, out var template))
+			{
+				throw new InvalidOperationException(
+					$"Placement '{placement.Id}' references unknown template id '{placement.TemplateId}'");
+			}
+
+			var instances = new ConcreteEntityInfo[positions.Count];
+
+			for (var i = 0; i < positions.Count; i++)
+			{
+				instances[i] = TemplateInstantiator.Instantiate(
+					template,
+					$"{placement.Id}_{i}",
+					_parseContext,
+					new ConstantSource<Vector3>(positions[i]),
+					placement.Rotation,
+					placement.Parameters,
+					placement.Tags);
+			}
+
+			return instances;
+		}
+
 		public void Spawn(string templateId, Vector3 position, Vector3 rotation, IReadOnlyDictionary<string, object> parameters)
 		{
 			if (!_templates.TryGetValue(templateId, out var template))

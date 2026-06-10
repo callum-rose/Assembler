@@ -288,6 +288,48 @@ World position of a pointy-top hex cell (flat sides left/right).
 
 **Returns** (Vector3): The hex centre's world position (z = 0).
 
+## `LayoutMath`
+Regular-layout helpers that each return a List<Vector3> of world positions, for use as a
+            Placements At source (e.g. !expr { Do: 'GridPositions(19, 21, 0.5f, origin)', ReturnType:
+            vector list }). Registered globally in CompiledExpressionsRegistry so every descriptor expression
+            can call these by bare name (GridPositions, LinePositions, RingPositions). For irregular layouts
+            (a grid with holes) build the list imperatively with PositionList instead. All numeric
+            parameters are float so int arguments coerce automatically during overload resolution.
+
+### `List<Vector3> GridPositions(float cols, float rows, float cellSize, Vector3 origin)`
+A row-major grid of cell-centre world positions, starting at origin.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| cols | float | Number of columns (cast to int; clamped at 0). |
+| rows | float | Number of rows (cast to int; clamped at 0). |
+| cellSize | float | Spacing between adjacent cells in world units. |
+| origin | Vector3 | World position of cell (0, 0). |
+
+**Returns** (List<Vector3>): cols × rows positions, ordered row by row (all of row 0, then row 1, …).
+
+### `List<Vector3> LinePositions(Vector3 start, Vector3 end, int count)`
+Evenly spaced positions along the segment from start to end.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| start | Vector3 | First position (always included). |
+| end | Vector3 | Last position (included when count > 1). |
+| count | int | Number of positions (clamped at 0; a count of 1 yields just start). |
+
+**Returns** (List<Vector3>): The count positions, endpoints inclusive.
+
+### `List<Vector3> RingPositions(Vector3 center, float radius, int count)`
+Positions evenly spaced around a circle, the first at angle 0 (along +x).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| center | Vector3 | Centre of the ring. |
+| radius | float | Ring radius in world units. |
+| count | int | Number of positions, spaced 360/count degrees apart (clamped at 0). |
+
+**Returns** (List<Vector3>): The count positions, counter-clockwise from +x, on the z = center.z plane.
+
 ## `NumberMath`
 First-class scalar math helpers for descriptor expressions. Registered globally in
             CompiledExpressionsRegistry so every expression can call these by bare name (Clamp,
@@ -432,6 +474,17 @@ Sign of a value: -1, 0, or 1.
 | x | float | The value. |
 
 **Returns** (float): -1 if negative, 1 if positive, 0 if zero.
+
+## `PositionList`
+A constructible builder for an irregular list of world positions — the imperative counterpart to
+            LayoutMath's regular-layout helpers. Use it from a Placements At expression when the
+            positions don't follow a closed-form pattern (e.g. a Pacman maze where pills skip wall cells):
+            new PositionList(); … b.Add(p); return b.ToList();. The expression compiler supports
+            new PositionList(...) and instance calls but not collection initializers, which is why a
+            .Add-in-a-loop builder is needed. Registered globally in CompiledExpressionsRegistry so every
+            descriptor expression can construct it by bare name.
+
+_No public static methods._
 
 ## `RandomMath`
 First-class randomness helpers for descriptor expressions, wrapping
