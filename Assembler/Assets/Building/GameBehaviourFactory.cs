@@ -511,7 +511,22 @@ namespace Assembler.Building
 						i.TargetId.ResolveWritable(ctx.Resolution),
 						i.TargetPosition.ResolveWritable(ctx.Resolution),
 						i.HasTarget.ResolveWritable(ctx.Resolution),
-						i.LastKnownPosition.ResolveWritable(ctx.Resolution)))
+						i.LastKnownPosition.ResolveWritable(ctx.Resolution))),
+				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
+					(i, ctx) => new SteeringData(i.Id,
+						i.Forces.Select(f => new SteeringForce(
+							f.Force.Resolve(ctx.Resolution),
+							f.Weight.Resolve(ctx.Resolution))).ToArray(),
+						i.MaxSpeed.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution))),
+				[typeof(NavigateInfo)] = Entry<NavigateInfo, Navigate, NavigateData>(
+					(i, ctx) => new NavigateData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution),
+						i.SlowingRadius.Resolve(ctx.Resolution),
+						i.Recompute.Resolve(ctx.Resolution),
+						i.Mode.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);

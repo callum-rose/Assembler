@@ -752,6 +752,31 @@ Sensor that scans for the nearest tagged entity and writes the result into black
 | HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
 | LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
 
+## `steering`
+Blends a weighted list of steering forces into one velocity each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Forces | IReadOnlyList<SteeringForceInfo> | List of { Force, Weight } entries; Force is a Vector3 (e.g. !expr Seek(...)), Weight a float. |
+| MaxSpeed | float | Upper bound on the blended velocity's magnitude. |
+| Output | Vector3 | Name of the vector variable to write the blended velocity into (omit to move the entity directly). |
+
+## `navigate`
+Moves an entity toward a target, easing to a stop on arrival.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World point to navigate to. |
+| Speed | float | Movement speed in units per second. |
+| SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
+| Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
+| Mode | string | "astar" or "flowfield" — selects the grid path source once a nav grid is present. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 
