@@ -1,0 +1,130 @@
+Game:
+  Title: Maze Pathfinding
+  Description: |
+    An autonomous agent solves a maze with grid pathfinding — no input required.
+
+    Three staggered walls form a serpentine maze (gaps alternate top/bottom). At game
+    start the `navigate` behaviour rasterizes the `wall` colliders into the walkability
+    grid, runs A* from the agent to the goal, and steers the orange agent along the
+    resulting path — up the left channel, over the first wall, down the middle, under
+    the second wall, up again, over the third, and into the green goal.
+
+    The route is recomputed periodically (so it would re-plan if the maze changed), and
+    the moment the agent reaches the goal a condition gate fires `!gameover`, ending the
+    run as a win.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0c0c14"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+# The walkability grid: spans the arena, half-unit cells for smooth paths, and treats
+# any entity tagged `wall` as an obstacle (its collider bounds are rasterized as blocked).
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -9, Y: -7 }, Max: !vec { X: 9, Y: 7 } }
+  ObstacleTag: wall
+
+Constants:
+  agent size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  goal size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+  # Tall, thin vertical walls. Each spans 9 units; the 3-unit gap is left open at one end.
+  wall size: !vec { X: 0.4, Y: 9, Z: 1 }
+  agent colour: !colour { R: 0.95, G: 0.55, B: 0.20, A: 1 }
+  goal colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+  wall colour: !colour { R: 0.45, G: 0.45, B: 0.55, A: 1 }
+
+  goal position: !vec { X: 7, Y: 4.5, Z: 0 }
+  reach radius: 0.5
+  agent speed: 3.0
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 8
+
+Entities:
+  # --- Maze walls. Gaps alternate (top / bottom / top) to force a serpentine route. ---
+  wall left:                      # spans y[-7, 2], gap at the TOP (y > 2)
+    Position: !vec { X: -3.5, Y: -2.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  wall middle:                    # spans y[-2, 7], gap at the BOTTOM (y < -2)
+    Position: !vec { X: 0, Y: 2.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  wall right:                     # spans y[-7, 2], gap at the TOP (y > 2)
+    Position: !vec { X: 3.5, Y: -2.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  # --- The goal the agent navigates to (not tagged `wall`, so it is not an obstacle). ---
+  goal:
+    Position: !var goal position
+    Tags: [ goal ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var goal size, IsWire: true, Colour: !var goal colour }
+
+  # --- The agent: pure pathfinding, no input. ---
+  agent:
+    Position: !vec { X: -7, Y: -4.5, Z: 0 }
+    Tags: [ agent ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var agent size, IsWire: false, Colour: !var agent colour }
+
+      # Grid navigation: A* path to the goal, recomputed periodically, steering the agent.
+      solve:
+        Type: navigate
+        Properties:
+          Target: !var goal position
+          Speed: !var agent speed
+          SlowingRadius: 0.6
+          Recompute: 0.5
+          Mode: astar
+
+      # Win when the agent reaches the goal: each frame, test the distance and end the game.
+      arrival clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: agent, BehaviourId: arrival check } ]
+      arrival check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: agent, Property: Position }
+              - !var goal position
+              - !var reach radius
+        Listeners: [ !gameover ]
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }
