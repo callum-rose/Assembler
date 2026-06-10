@@ -43,6 +43,15 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 You do not need to understand or reference the C# implementation, the build pipeline, the parsing
 layer, or the runtime. Treat the descriptor as a self-contained authoring format.
 
+> **Structural reference.** The authoritative description of the descriptor's *shape* — every
+> top-level section, how entities/behaviours/listeners/templates nest, the value types, the scalar
+> inference rules, and every custom YAML tag with its exact form — lives in
+> [`Assets/docs/GameDescriptorSchema.md`](../../../Assets/docs/GameDescriptorSchema.md). It is
+> generated from the deserialisation DTOs (the parser's source of truth), so consult it when you are
+> unsure what keys a section takes or what form a tag accepts. The prose below is the authoring guide;
+> the schema is the structural contract. (`Behaviours.md` still owns the behaviour `Type:`/`Properties:`
+> catalogue, and `Libraries.md` the expression helpers.)
+
 ---
 
 ## Top-level structure
