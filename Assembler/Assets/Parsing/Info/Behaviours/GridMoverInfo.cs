@@ -15,7 +15,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
 		ValueSource<Vector3> Direction,
-		ValueSource<float> Speed)
+		ValueSource<float> Speed,
+		ValueSource<float> AgentRadius)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static GridMoverInfo Create(string id,
@@ -25,13 +26,17 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Direction")),
-				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Speed"), 4f));
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Speed"), 4f),
+				// Negative => inherit the game-wide Navigation AgentRadius. Tile-locked movers usually want 0 (a
+				// one-cell agent); a larger value treats narrow gaps as blocked, like the navigate behaviour.
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius"), -1f));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
 			new GridMoverInfo(Id,
 				substitutedListeners,
 				Direction.SubstituteParameters(ctx),
-				Speed.SubstituteParameters(ctx));
+				Speed.SubstituteParameters(ctx),
+				AgentRadius.SubstituteParameters(ctx));
 	}
 }

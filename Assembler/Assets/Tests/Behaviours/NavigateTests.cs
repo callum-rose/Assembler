@@ -49,6 +49,7 @@ namespace Tests.Behaviours
 				new ValueProvider<float>(0.5f),
 				new ValueProvider<float>(0f),
 				new ValueProvider<string>("astar"),
+				new ValueProvider<float>(0f),
 				output: NullValueProvider<Vector3>.Instance), Array.Empty<Listener>());
 
 			// Drive the steering loop directly (Execute integrates onto the transform when no output is set).

@@ -6,7 +6,9 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.AI
 {
-	/// <summary>Static configuration for the walkability grid, sourced from the descriptor's <c>Navigation:</c> section.</summary>
+	/// <summary>Static configuration for the walkability grid, sourced from the descriptor's <c>Navigation:</c>
+	/// section. <see cref="AgentRadius"/> is the game-wide <em>default</em> clearance, used by a navigating agent
+	/// that doesn't set its own radius.</summary>
 	public sealed record NavGridSettings(
 		float CellSize,
 		float MinX,
@@ -28,36 +30,39 @@ namespace Assembler.Behaviours.AI
 	}
 
 	/// <summary>
-	/// Builds and maintains the <see cref="NavGrid"/> for a game and bridges it to the pure pathfinder. The grid
-	/// is built lazily on first use by rasterizing every collider on an entity tagged with the obstacle tag onto
-	/// the configured <see cref="NavPlane"/> (XY or XZ) — by its actual shape, not its fat bounding box — then
-	/// inflating obstacles by the agent radius and caching the result (obstacles are static by default). World
-	/// points are projected onto the plane's two axes on the way in and lifted back out on the way out, so the
-	/// grid and pathfinder never see the third axis. Exposes world-space A* paths and a small LRU of flow fields
-	/// keyed by goal cell for the shared-goal case.
+	/// Builds and maintains the <see cref="NavGrid"/> for a game and bridges it to the pure pathfinder. A single
+	/// <em>base</em> grid is built lazily on first use by rasterizing every collider on an entity tagged with the
+	/// obstacle tag onto the configured <see cref="NavPlane"/> (XY or XZ) — by its actual shape, not its fat
+	/// bounding box. Each distinct <em>agent radius</em> then gets its own grid, the base grid inflated by that
+	/// radius and cached, so a large enemy and a small player route around obstacles with their own clearance and
+	/// can legitimately take different paths. World points are projected onto the plane's two axes on the way in
+	/// and lifted back out on the way out, so the grid and pathfinder never see the third axis. Exposes world-space
+	/// A* paths and a small LRU of flow fields keyed by (goal cell, agent radius).
 	/// </summary>
 	public sealed class NavGridService
 	{
-		// How many distinct-goal flow fields to keep. The single-goal swarm is the common case (one entry);
-		// a few rival goals coexist without the field thrashing, while the bound caps build cost and memory.
+		// How many distinct (goal, radius) flow fields to keep. The single-goal swarm is the common case (one
+		// entry); a few rival goals/radii coexist without the field thrashing, while the bound caps cost/memory.
 		private const int MaxCachedFields = 4;
 
 		private readonly NavGridSettings _settings;
-		private readonly Dictionary<GridCoord, FlowField> _fields = new();
-		private readonly List<GridCoord> _fieldOrder = new();
+		private readonly Dictionary<(GridCoord Goal, int CellRadius), FlowField> _fields = new();
+		private readonly List<(GridCoord Goal, int CellRadius)> _fieldOrder = new();
 
-		private NavGrid? _grid;
+		// The uninflated grid (obstacles rasterized once), plus one inflated copy per distinct cell radius.
+		private NavGrid? _baseGrid;
+		private readonly Dictionary<int, NavGrid> _gridsByCellRadius = new();
 
 		public NavGridService(NavGridSettings settings) => _settings = settings;
 
 		public float CellSize => _settings.CellSize;
 
-		/// <summary>Whether the cell containing <paramref name="world"/> is on the grid and walkable, after
-		/// obstacle rasterization and agent-radius inflation. Used by grid-locked movers to decide whether the
-		/// next cell in a direction is enterable.</summary>
-		public bool IsWalkable(Vector3 world)
+		/// <summary>Whether the cell containing <paramref name="world"/> is on the grid and walkable for an agent
+		/// of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default). Used by
+		/// grid-locked movers to decide whether the next cell in a direction is enterable.</summary>
+		public bool IsWalkable(Vector3 world, float agentRadius)
 		{
-			var grid = Grid();
+			var grid = GridFor(agentRadius);
 			var (u, v) = _settings.Plane.Project(world);
 			return grid.IsWalkable(grid.WorldToCell(u, v));
 		}
@@ -66,7 +71,8 @@ namespace Assembler.Behaviours.AI
 		/// off-plane coordinate. Snaps a position onto the grid lattice.</summary>
 		public Vector3 CellCentre(Vector3 world)
 		{
-			var grid = Grid();
+			// Cell geometry is radius-independent — the lattice is the same on every inflated variant.
+			var grid = BaseGrid();
 			var (u, v) = _settings.Plane.Project(world);
 			var (cu, cv) = grid.CellToWorld(grid.WorldToCell(u, v));
 			return _settings.Plane.ToWorld(cu, cv, world);
@@ -89,12 +95,13 @@ namespace Assembler.Behaviours.AI
 				: _settings.Plane.ToWorldDirection(0f, Mathf.Sign(v));
 		}
 
-		/// <summary>World-space waypoints from <paramref name="from"/> to <paramref name="to"/> (goal last), or
+		/// <summary>World-space waypoints from <paramref name="from"/> to <paramref name="to"/> (goal last) for an
+		/// agent of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default), or
 		/// just the goal if no grid path exists.</summary>
-		public IReadOnlyList<Vector3> Path(Vector3 from, Vector3 to)
+		public IReadOnlyList<Vector3> Path(Vector3 from, Vector3 to, float agentRadius)
 		{
 			var plane = _settings.Plane;
-			var grid = Grid();
+			var grid = GridFor(agentRadius);
 			var (fromU, fromV) = plane.Project(from);
 			var (toU, toV) = plane.Project(to);
 			var cells = AStar.FindPath(grid, grid.WorldToCell(fromU, fromV), grid.WorldToCell(toU, toV),
@@ -119,35 +126,38 @@ namespace Assembler.Behaviours.AI
 			return waypoints;
 		}
 
-		/// <summary>Unit flow direction from <paramref name="position"/> toward <paramref name="goal"/>, using a
-		/// flow field cached per goal cell (rebuilt only when a goal cell is first seen or evicted).</summary>
-		public Vector3 FlowDirection(Vector3 position, Vector3 goal)
+		/// <summary>Unit flow direction from <paramref name="position"/> toward <paramref name="goal"/> for an agent
+		/// of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default), using a
+		/// flow field cached per (goal cell, radius) and rebuilt only when first seen or evicted.</summary>
+		public Vector3 FlowDirection(Vector3 position, Vector3 goal, float agentRadius)
 		{
 			var plane = _settings.Plane;
-			var grid = Grid();
+			var grid = GridFor(agentRadius);
 			var (goalU, goalV) = plane.Project(goal);
-			var field = FieldFor(grid, grid.WorldToCell(goalU, goalV));
+			var field = FieldFor(grid, grid.WorldToCell(goalU, goalV), CellRadiusOf(agentRadius));
 
 			var (posU, posV) = plane.Project(position);
 			var (dx, dy) = field.Direction(grid.WorldToCell(posU, posV));
 			return plane.ToWorldDirection(dx, dy);
 		}
 
-		// A small LRU of flow fields keyed by goal cell. A single shared goal stays a straight cache hit;
-		// a handful of distinct goals coexist without rebuilding the field on every alternating call — the
-		// failure mode of a single cached field.
-		private FlowField FieldFor(NavGrid grid, GridCoord goalCell)
+		// A small LRU of flow fields keyed by (goal cell, agent radius). A single shared goal+radius stays a
+		// straight cache hit; a handful of distinct goals/radii coexist without rebuilding the field on every
+		// alternating call — the failure mode of a single cached field.
+		private FlowField FieldFor(NavGrid grid, GridCoord goalCell, int cellRadius)
 		{
-			if (_fields.TryGetValue(goalCell, out var cached))
+			var key = (goalCell, cellRadius);
+
+			if (_fields.TryGetValue(key, out var cached))
 			{
-				_fieldOrder.Remove(goalCell);
-				_fieldOrder.Add(goalCell);
+				_fieldOrder.Remove(key);
+				_fieldOrder.Add(key);
 				return cached;
 			}
 
 			var field = FlowField.Build(grid, goalCell, _settings.AllowDiagonal);
-			_fields[goalCell] = field;
-			_fieldOrder.Add(goalCell);
+			_fields[key] = field;
+			_fieldOrder.Add(key);
 
 			if (_fieldOrder.Count > MaxCachedFields)
 			{
@@ -158,11 +168,41 @@ namespace Assembler.Behaviours.AI
 			return field;
 		}
 
-		// Memoised: the grid is built once on first use and reused. CreateGrid is a pure factory (no field
-		// side effects), so this stays a plain null-coalescing assignment.
-		private NavGrid Grid() => _grid ??= CreateGrid();
+		// The grid an agent of this radius navigates: the base grid for zero clearance, otherwise the base grid
+		// inflated by the radius and cached. Radii that round to the same whole-cell inflation share one grid.
+		private NavGrid GridFor(float agentRadius)
+		{
+			var cellRadius = CellRadiusOf(agentRadius);
 
-		private NavGrid CreateGrid()
+			if (cellRadius == 0)
+			{
+				return BaseGrid();
+			}
+
+			if (_gridsByCellRadius.TryGetValue(cellRadius, out var cached))
+			{
+				return cached;
+			}
+
+			var inflated = BaseGrid().Clone();
+			inflated.Inflate(cellRadius * _settings.CellSize);
+			_gridsByCellRadius[cellRadius] = inflated;
+			return inflated;
+		}
+
+		// The clearance in whole cells: a negative radius inherits the game-wide default, then round up so a
+		// fractional radius never under-clears (matching NavGrid.Inflate's own rounding).
+		private int CellRadiusOf(float agentRadius)
+		{
+			var radius = agentRadius < 0f ? _settings.AgentRadius : agentRadius;
+			return radius <= 0f ? 0 : Mathf.CeilToInt(radius / _settings.CellSize);
+		}
+
+		// Memoised: the uninflated grid is built once on first use and reused as the source for every inflated
+		// variant. CreateBaseGrid is a pure factory (no field side effects), so this stays a null-coalescing get.
+		private NavGrid BaseGrid() => _baseGrid ??= CreateBaseGrid();
+
+		private NavGrid CreateBaseGrid()
 		{
 			var grid = NavGrid.Create(_settings.MinX, _settings.MinY, _settings.MaxX, _settings.MaxY, _settings.CellSize);
 
@@ -171,8 +211,6 @@ namespace Assembler.Behaviours.AI
 				RasterizeObstacles(grid);
 			}
 
-			// Grow obstacles by the agent radius so paths keep clearance (no-op at the default radius of 0).
-			grid.Inflate(_settings.AgentRadius);
 			return grid;
 		}
 

@@ -76,6 +76,10 @@ namespace Assembler.Navigation
 			return new NavGrid(minX, minY, cellSize, width, height, walkable);
 		}
 
+		/// <summary>A deep copy of this grid (its walkability snapshot included), so callers can derive a variant
+		/// — e.g. an <see cref="Inflate"/>d copy for a given agent radius — without mutating the original.</summary>
+		public NavGrid Clone() => new(OriginX, OriginY, CellSize, Width, Height, (bool[])_walkable.Clone());
+
 		public int Index(GridCoord cell) => cell.Y * Width + cell.X;
 
 		public bool InBounds(GridCoord cell) =>

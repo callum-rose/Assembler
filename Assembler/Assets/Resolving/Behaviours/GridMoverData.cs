@@ -10,10 +10,15 @@ namespace Assembler.Resolving.Behaviours
 		/// <summary>Movement speed in units per second.</summary>
 		public IValueProvider<float> Speed { get; }
 
-		public GridMoverData(string id, IValueProvider<Vector3> direction, IValueProvider<float> speed) : base(id)
+		/// <summary>Clearance used for walkability checks; negative inherits the game-wide Navigation default.</summary>
+		public IValueProvider<float> AgentRadius { get; }
+
+		public GridMoverData(string id, IValueProvider<Vector3> direction, IValueProvider<float> speed,
+			IValueProvider<float> agentRadius) : base(id)
 		{
 			Direction = direction;
 			Speed = speed;
+			AgentRadius = agentRadius;
 		}
 	}
 }

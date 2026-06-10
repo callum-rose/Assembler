@@ -38,7 +38,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void FlowDirectionXyIsInXyPlane()
 		{
-			var dir = Service(NavPlane.XY).FlowDirection(new Vector3(0, 0, 0), new Vector3(0, 5, 0));
+			var dir = Service(NavPlane.XY).FlowDirection(new Vector3(0, 0, 0), new Vector3(0, 5, 0), 0f);
 
 			Assert.AreEqual(0f, dir.z, 1e-4f, "off-plane (Z) component is zero in XY");
 			Assert.Greater(dir.y, 0f, "should step toward the +Y goal");
@@ -47,7 +47,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void FlowDirectionXzIsInXzPlane()
 		{
-			var dir = Service(NavPlane.XZ).FlowDirection(new Vector3(0, 0, 0), new Vector3(0, 0, 5));
+			var dir = Service(NavPlane.XZ).FlowDirection(new Vector3(0, 0, 0), new Vector3(0, 0, 5), 0f);
 
 			Assert.AreEqual(0f, dir.y, 1e-4f, "off-plane (Y) component is zero in XZ");
 			Assert.Greater(dir.z, 0f, "should step toward the +Z goal");
@@ -57,7 +57,7 @@ namespace Tests.Behaviours
 		public void PathXzKeepsGoalHeightAndArrivesExactly()
 		{
 			var to = new Vector3(5, 2, 3);
-			var path = Service(NavPlane.XZ).Path(new Vector3(0, 2, 0), to);
+			var path = Service(NavPlane.XZ).Path(new Vector3(0, 2, 0), to, 0f);
 
 			Assert.IsTrue(path.All(p => Mathf.Abs(p.y - to.y) < 1e-4f), "every waypoint keeps the goal's Y (off-plane)");
 			Assert.AreEqual(to, path[^1], "final waypoint is the exact goal");
@@ -67,7 +67,7 @@ namespace Tests.Behaviours
 		public void PathXyKeepsGoalDepthAndArrivesExactly()
 		{
 			var to = new Vector3(5, 3, 9);
-			var path = Service(NavPlane.XY).Path(new Vector3(0, 0, 9), to);
+			var path = Service(NavPlane.XY).Path(new Vector3(0, 0, 9), to, 0f);
 
 			Assert.IsTrue(path.All(p => Mathf.Abs(p.z - to.z) < 1e-4f), "every waypoint keeps the goal's Z (off-plane)");
 			Assert.AreEqual(to, path[^1], "final waypoint is the exact goal");
@@ -79,8 +79,8 @@ namespace Tests.Behaviours
 			AddObstacle<SphereCollider>(Vector3.zero).radius = 2f;
 			var service = ObstacleService(NavPlane.XY);
 
-			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f)), "the sphere centre is blocked");
-			Assert.IsTrue(service.IsWalkable(new Vector3(2.5f, 2.5f, 0f)),
+			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f), 0f), "the sphere centre is blocked");
+			Assert.IsTrue(service.IsWalkable(new Vector3(2.5f, 2.5f, 0f), 0f),
 				"an AABB corner the sphere does not reach stays open (the cell the old bounds rasterizer wrongly blocked)");
 		}
 
@@ -90,8 +90,8 @@ namespace Tests.Behaviours
 			AddObstacle<SphereCollider>(Vector3.zero).radius = 2f;
 			var service = ObstacleService(NavPlane.XZ);
 
-			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f)), "the sphere centre is blocked");
-			Assert.IsTrue(service.IsWalkable(new Vector3(2.5f, 0f, 2.5f)),
+			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f), 0f), "the sphere centre is blocked");
+			Assert.IsTrue(service.IsWalkable(new Vector3(2.5f, 0f, 2.5f), 0f),
 				"the open AABB corner is honoured on the XZ plane too");
 		}
 
@@ -103,8 +103,8 @@ namespace Tests.Behaviours
 			capsule.height = 4f;
 			var service = ObstacleService(NavPlane.XY);
 
-			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f)), "the capsule body is blocked");
-			Assert.IsTrue(service.IsWalkable(new Vector3(1.5f, 2.5f, 0f)),
+			Assert.IsFalse(service.IsWalkable(new Vector3(0f, 0f, 0f), 0f), "the capsule body is blocked");
+			Assert.IsTrue(service.IsWalkable(new Vector3(1.5f, 2.5f, 0f), 0f),
 				"the AABB corner past the rounded cap stays open");
 		}
 
@@ -115,9 +115,9 @@ namespace Tests.Behaviours
 			AddObstacle<BoxCollider>(new Vector3(0.5f, 0.5f, 0f)).size = new Vector3(0.8f, 0.8f, 1f);
 			var service = ObstacleService(NavPlane.XY);
 
-			Assert.IsFalse(service.IsWalkable(new Vector3(0.5f, 0.5f, 0f)), "the covered cell is blocked");
-			Assert.IsTrue(service.IsWalkable(new Vector3(1.5f, 0.5f, 0f)), "the right neighbour stays open");
-			Assert.IsTrue(service.IsWalkable(new Vector3(0.5f, 1.5f, 0f)), "the upper neighbour stays open");
+			Assert.IsFalse(service.IsWalkable(new Vector3(0.5f, 0.5f, 0f), 0f), "the covered cell is blocked");
+			Assert.IsTrue(service.IsWalkable(new Vector3(1.5f, 0.5f, 0f), 0f), "the right neighbour stays open");
+			Assert.IsTrue(service.IsWalkable(new Vector3(0.5f, 1.5f, 0f), 0f), "the upper neighbour stays open");
 		}
 
 		[Test]
@@ -127,23 +127,42 @@ namespace Tests.Behaviours
 			AddObstacle<SphereCollider>(new Vector3(100f, 100f, 0f)).radius = 2f;
 			var service = ObstacleService(NavPlane.XY);
 
-			Assert.IsTrue(service.IsWalkable(new Vector3(49.5f, 49.5f, 0f)), "the near boundary cell stays walkable");
+			Assert.IsTrue(service.IsWalkable(new Vector3(49.5f, 49.5f, 0f), 0f), "the near boundary cell stays walkable");
 		}
 
 		[Test]
-		public void AgentRadiusInflatesClearanceAroundObstacle()
+		public void DifferentAgentRadiiClearDifferentlyOnOneService()
 		{
 			AddObstacle<SphereCollider>(Vector3.zero).radius = 0.4f;
+			var service = ObstacleService(NavPlane.XY);
+			var nearObstacle = new Vector3(2.5f, 0.5f, 0f);
 
-			Assert.IsTrue(ObstacleService(NavPlane.XY).IsWalkable(new Vector3(2.5f, 0.5f, 0f)),
-				"without inflation a cell two over is open");
+			// One shared service, queried with two radii: a point clear for a small agent is blocked for a large
+			// one, so the two take different paths — and a cell beyond even the large radius stays open.
+			Assert.IsTrue(service.IsWalkable(nearObstacle, 0f), "a small agent (radius 0) may pass close by");
+			Assert.IsFalse(service.IsWalkable(nearObstacle, 2f), "a large agent (radius 2) is kept clear");
+			Assert.IsTrue(service.IsWalkable(new Vector3(5.5f, 0.5f, 0f), 2f), "a cell beyond the radius stays open");
 
-			var inflated = ObstacleService(NavPlane.XY, agentRadius: 2f);
-			Assert.IsFalse(inflated.IsWalkable(new Vector3(2.5f, 0.5f, 0f)), "clearance reaches two cells out");
-			Assert.IsTrue(inflated.IsWalkable(new Vector3(5.5f, 0.5f, 0f)), "a cell beyond the radius stays open");
+			// Querying the large radius must not mutate the base grid the small radius reads.
+			Assert.IsTrue(service.IsWalkable(nearObstacle, 0f),
+				"the radius-0 grid is unchanged after a larger radius is queried");
 		}
 
-		// A grid service whose obstacles are exactly the test-created entities tagged ObstacleTag.
+		[Test]
+		public void NegativeAgentRadiusInheritsTheNavigationDefault()
+		{
+			AddObstacle<SphereCollider>(Vector3.zero).radius = 0.4f;
+			// A game-wide default of 2 with no per-call radius (negative => inherit) clears the same cell as an
+			// explicit radius of 2 does.
+			var service = ObstacleService(NavPlane.XY, agentRadius: 2f);
+
+			Assert.IsFalse(service.IsWalkable(new Vector3(2.5f, 0.5f, 0f), -1f),
+				"a negative radius inherits the Navigation default (2) and clears the cell");
+		}
+
+		// A grid service whose obstacles are exactly the test-created entities tagged ObstacleTag. AgentRadius here
+		// is the game-wide DEFAULT (used when a query passes a negative radius); query methods take the per-agent
+		// radius explicitly.
 		private static NavGridService ObstacleService(NavPlane plane, float agentRadius = 0f) =>
 			new(NavGridSettings.Default with { Plane = plane, ObstacleTag = ObstacleTag, AgentRadius = agentRadius });
 
