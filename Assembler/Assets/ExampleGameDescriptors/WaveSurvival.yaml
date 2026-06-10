@@ -1,0 +1,622 @@
+Game:
+  Title: Wave Survival
+  Description: |
+    A wave-based arena shooter built to demonstrate that "waves" — multiple
+    rounds of progressively harder gameplay — are expressible in the engine.
+
+    Move the green defender left/right (A / D) along the bottom line and fire
+    upward (Space). Red invaders descend from the top in numbered WAVES. Each
+    wave is cleared by destroying every enemy in it; clearing a wave immediately
+    starts the next, HARDER one:
+      - more enemies per wave   (3, 5, 7, 9, 11 ...)
+      - faster descent          (speed grows each wave)
+      - tougher enemies         (more hits to kill on later waves)
+    Let an enemy reach your line and you lose a life (3 to start). Survive all 5
+    waves to win; lose all your lives and it's game over.
+
+    HOW THE WAVE LOOP WORKS (the interesting part):
+      * `wave`, `enemies to spawn`, `enemies alive` are global counters.
+      * The "wave manager" polls every frame: when the current wave is fully
+        spawned (`enemies to spawn <= 0`) AND fully cleared (`enemies alive <= 0`)
+        it increments `wave` and refills `enemies to spawn` from an expression of
+        the new wave number — so each round is authored once and scales itself.
+      * The "spawner" drips enemies out one per interval while `enemies to spawn`
+        remains, seeding each enemy's health and descent speed from `wave`.
+      * Enemies decrement `enemies alive` when they die, closing the loop.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0a0a18"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  # --- Wave progression / difficulty curve ---
+  max wave: 5                     # survive past this wave to win
+  base enemies per wave: 3        # wave 1 spawns this many ...
+  enemies per wave growth: 2      # ... +2 every subsequent wave (3,5,7,9,11)
+  base enemy health: 1            # hits to kill on wave 1 ...
+  health step: 2                  # ... +1 hit every 2 waves (1,1,2,2,3)
+  base enemy speed: 1.2           # downward units/sec on wave 1 ...
+  enemy speed growth: 0.35        # ... +0.35 units/sec per wave
+
+  # --- Scoring / lives ---
+  start score: 0
+  start lives: 3
+  points per kill: 10
+  damage per hit: 1
+  zero counter: 0
+
+  # --- Player ---
+  player size: !vec { X: 0.7, Y: 0.5 }
+  player start: !vec { X: 0, Y: -4.3 }
+  player speed: 6
+  stopped: !vec { X: 0, Y: 0 }
+  move left velocity: !vec { X: -6, Y: 0 }
+  move right velocity: !vec { X: 6, Y: 0 }
+  player min bound: !vec { X: -7, Y: -4.3 }
+  player max bound: !vec { X: 7, Y: -4.3 }
+
+  # --- Bullet ---
+  bullet size: !vec { X: 0.12, Y: 0.4 }
+  bullet velocity: !vec { X: 0, Y: 11 }
+  bullet lifetime: 1.4
+
+  # --- Enemy ---
+  enemy size: !vec { X: 0.7, Y: 0.7 }
+  enemy radius: 0.42
+  spawn top y: 6.5
+  spawn x half: 7.0
+
+  # --- The threat line: enemies crossing it cost a life ---
+  floor position: !vec { X: 0, Y: -4.7, Z: 0.5 }
+  floor size: !vec { X: 18, Y: 0.8, Z: 1 }
+
+  # --- Spawn cadence ---
+  spawn interval: 0.7
+
+  # --- Camera ---
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 6
+
+Variables:
+  # Global wave-loop state.
+  wave: 0                         # 0 so the manager rolls us into wave 1 on frame 1
+  enemies to spawn: 0             # remaining to spawn in the current wave
+  enemies alive: 0                # currently alive in the current wave
+  score: !var start score
+  lives: !var start lives
+  # Single-player movement state, mutated by the A/D key edges.
+  player velocity: !var stopped
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "WAVE SURVIVAL"
+      hud.instructions: "A / D move  -  Space fire"
+      hud.wave: "Wave: {0} / {1}"
+      hud.score: "Score: {0}"
+      hud.lives: "Lives: {0}"
+      hud.remaining: "Enemies left: {0}"
+
+Templates:
+  # --- Player bullet: flies straight up, dies on contact with an enemy or
+  #     after a short lifetime. The enemy side handles taking the damage. ---
+  bullet_template:
+    Tags: [ bullet ]
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var bullet size
+          IsWire: false
+          Colour: !colour { R: 1, G: 0.95, B: 0.4 }
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var bullet size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var bullet velocity
+      enemy hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ enemy ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lifetime:
+        Type: timer trigger
+        Properties:
+          Delay: !var bullet lifetime
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+  # --- Enemy invader. Each instance owns its own `health` and `dead` flag,
+  #     seeded / scaled by the wave it spawned in. Descends at `enemy velocity`.
+  #     Two death paths, both guarded by `dead` so the wave counter can never be
+  #     double-decremented when two events land on the same frame:
+  #       1. shot down  -> award score, then die
+  #       2. reached the line -> cost a life, then die ---
+  enemy_template:
+    Tags: [ enemy ]
+    Variables:
+      health: !parameter initial_health
+      enemy velocity: !parameter initial_velocity
+      dead: false
+    Behaviours:
+      gizmo:
+        Type: sphere gizmo
+        Properties:
+          Radius: !var enemy radius
+          IsWire: false
+          Colour: !colour { R: 0.9, G: 0.25, B: 0.3 }
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var enemy size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var enemy velocity
+
+      # ---- Death path 1: hit by a bullet ----
+      bullet detector:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ bullet ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: take damage
+          - EntityId: !parameter self_id
+            BehaviourId: shot death check
+      take damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health          # per-entity health (shadows global)
+          Value: !expr
+            Do: 'arg0 - arg1'
+            ArgumentTypes: [ int, int ]    # health is a per-entity !parameter; type can't be inferred
+            With:
+              - !var health
+              - !var damage per hit
+      shot death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 <= 0 && !arg1'        # dead-once guard
+            ArgumentTypes: [ int, bool ]    # per-entity health + dead; not statically inferable
+            With:
+              - !var health
+              - !var dead
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: award score
+          - EntityId: !parameter self_id
+            BehaviourId: mark dead
+          - EntityId: !parameter self_id
+            BehaviourId: decrement alive
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      award score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: 'arg0 + arg1'
+            With:
+              - !var score
+              - !var points per kill
+
+      # ---- Death path 2: reached the defender's line ----
+      floor detector:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ floor ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: floor death check
+      floor death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!arg0'                      # dead-once guard
+            ArgumentTypes: [ bool ]          # per-entity dead flag; not statically inferable
+            With:
+              - !var dead
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: lose life
+          - EntityId: !parameter self_id
+            BehaviourId: mark dead
+          - EntityId: !parameter self_id
+            BehaviourId: decrement alive
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      lose life:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lives
+          Value: !expr
+            Do: 'arg0 - arg1'
+            With:
+              - !var lives
+              - !var damage per hit
+
+      # ---- Shared death effects ----
+      mark dead:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var dead
+          Value: true
+      decrement alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies alive    # global wave counter
+          Value: !expr
+            Do: 'arg0 - 1'
+            With:
+              - !var enemies alive
+      self destruct:
+        Type: destroy
+
+Entities:
+  # =========================================================================
+  # WAVE MANAGER — the heart of the demo. Every frame, if the current wave is
+  # both fully spawned and fully cleared (and we haven't passed the last wave),
+  # roll into the next wave and refill the spawn budget from the new wave
+  # number. Starting from wave 0 means this fires on frame 1 to begin wave 1.
+  # =========================================================================
+  wave manager:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: wave manager
+            BehaviourId: advance gate
+      advance gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 <= 0 && arg1 <= 0 && arg2 <= arg3'
+            With:
+              - !var enemies to spawn
+              - !var enemies alive
+              - !var wave
+              - !var max wave
+        Listeners:
+          - EntityId: wave manager
+            BehaviourId: next wave
+          - EntityId: wave manager
+            BehaviourId: refill spawn budget
+      next wave:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wave
+          Value: !expr
+            Do: 'arg0 + 1'
+            With:
+              - !var wave
+      refill spawn budget:
+        # Reads the already-incremented `wave`. Past the last wave the budget is
+        # 0 so nothing more spawns; the game-over poll then declares a win.
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies to spawn
+          Value: !expr
+            Do: 'arg0 <= arg1 ? arg2 + (arg0 - 1) * arg3 : 0'
+            With:
+              - !var wave
+              - !var max wave
+              - !var base enemies per wave
+              - !var enemies per wave growth
+
+  # =========================================================================
+  # SPAWNER — drips one enemy per interval while the wave's spawn budget lasts,
+  # seeding each enemy's health and descent speed from the current wave number.
+  # =========================================================================
+  spawner:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: interval trigger
+        Properties:
+          Interval: !var spawn interval
+        Listeners:
+          - EntityId: spawner
+            BehaviourId: spawn gate
+      spawn gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 > 0'
+            With:
+              - !var enemies to spawn
+        Listeners:
+          - EntityId: spawner
+            BehaviourId: spawn enemy
+          - EntityId: spawner
+            BehaviourId: decrement budget
+          - EntityId: spawner
+            BehaviourId: increment alive
+      spawn enemy:
+        Type: spawner
+        Properties:
+          TemplateId: enemy_template
+          Position: !expr
+            Do: 'new Vector3(RandomFloat(0f - arg0, arg0), arg1, 0f)'
+            ReturnType: vector
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With:
+              - !var spawn x half
+              - !var spawn top y
+          Parameters:
+            # Tougher every couple of waves: 1,1,2,2,3 hits.
+            initial_health: !expr
+              Do: 'arg0 + (arg1 - 1) / arg2'
+              ReturnType: int
+              With:
+                - !var base enemy health
+                - !var wave
+                - !var health step
+            # Faster every wave; descends straight down.
+            initial_velocity: !expr
+              Do: 'new Vector3(0f, 0f - (arg0 + (arg1 - 1) * arg2), 0f)'
+              ReturnType: vector
+              RegisterTypes: [ UnityEngine.Vector3 ]
+              With:
+                - !var base enemy speed
+                - !var wave
+                - !var enemy speed growth
+      decrement budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies to spawn
+          Value: !expr
+            Do: 'arg0 - 1'
+            With:
+              - !var enemies to spawn
+      increment alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies alive
+          Value: !expr
+            Do: 'arg0 + 1'
+            With:
+              - !var enemies alive
+
+  # =========================================================================
+  # PLAYER — green defender. A/D edges set/clear a velocity variable (a single
+  # always-on `velocity` integrator moves it); clamp pins it to the bottom line.
+  # Space fires a bullet spawned at the player's live position.
+  # =========================================================================
+  player:
+    Tags: [ player ]
+    Position: !var player start
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !colour { R: 0.3, G: 0.9, B: 0.45 }
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var player velocity
+      keep on line:
+        Type: clamp position
+        Properties:
+          Min: !var player min bound
+          Max: !var player max bound
+
+      # --- A / D as press/release edges so holding moves and releasing stops ---
+      left down:
+        Type: key down trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: go left
+      left up:
+        Type: key up trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: stop
+      go left:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !var move left velocity
+
+      right down:
+        Type: key down trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: go right
+      right up:
+        Type: key up trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: stop
+      go right:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !var move right velocity
+
+      stop:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var player velocity
+          Value: !var stopped
+
+      # --- Fire (Space) ---
+      fire key:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: fire bullet
+      fire bullet:
+        Type: spawner
+        Properties:
+          TemplateId: bullet_template
+          Position: !entity { Id: player, Property: Position }
+
+  # The defender's line: a wide trigger volume. Enemies that reach it are
+  # detected (by the enemy) as crossing the line, costing a life.
+  floor:
+    Tags: [ floor ]
+    Position: !var floor position
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var floor size
+          IsWire: true
+          Colour: !colour { R: 0.3, G: 0.3, B: 0.5 }
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var floor size
+          IsTrigger: true
+
+  # =========================================================================
+  # GAME OVER — single poll for both endings. Lose all lives, or clear the last
+  # wave (wave is rolled to max+1 by the manager), and the game ends.
+  # =========================================================================
+  game over:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: game over
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 <= 0 || arg1 > arg2'
+            With:
+              - !var lives
+              - !var wave
+              - !var max wave
+        Listeners:
+          - !gameover
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  # =========================================================================
+  # HUD — composable uGUI. Live wave number, score, lives, and enemies left.
+  # =========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 8
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 34
+                  PreferredWidth: 520
+                  PreferredHeight: 50
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 20
+                  PreferredWidth: 520
+                  PreferredHeight: 30
+          wave:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.wave, Arguments: [ !var wave, !var max wave ] }
+                  FontSize: 30
+                  PreferredWidth: 420
+                  PreferredHeight: 44
+          score:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.score, Arguments: [ !var score ] }
+                  FontSize: 26
+                  PreferredWidth: 420
+                  PreferredHeight: 38
+          lives:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.lives, Arguments: [ !var lives ] }
+                  FontSize: 26
+                  PreferredWidth: 420
+                  PreferredHeight: 38
+          remaining:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.remaining
+                    Arguments:
+                      - !expr
+                          Do: 'arg0 + arg1'
+                          ReturnType: int
+                          With:
+                            - !var enemies alive
+                            - !var enemies to spawn
+                  FontSize: 26
+                  PreferredWidth: 420
+                  PreferredHeight: 38
