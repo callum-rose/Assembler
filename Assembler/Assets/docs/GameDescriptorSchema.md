@@ -388,12 +388,18 @@ the type from the YAML. Inference rules (`ObjectNodeDeserializer` / `ParseScalar
 
 A YAML sequence can carry an element tag to type its items: `!int [ … ]`, `!float [ … ]`,
 `!bool [ … ]`, `!string [ … ]`, `!vec [ … ]`, `!colour [ … ]`, `!record [ … ]`. An untagged sequence
-is an untyped `list<object>`. Use the tagged form for a homogeneous list (e.g. a `!record [...]`
-record-list variable, or `!vec []` for an empty vector list).
+is an untyped `list<object>`. Use the tagged form for a homogeneous list.
+
+A list-typed `Constants`/`Variables` entry can be **empty or seeded with initial elements** — the
+`[]` form is just the empty case. Seed a list to give static data (waypoint routes, spawn tables,
+level layouts) a home without runtime `* list add` wiring; the elements use the same literal syntax
+as a scalar of that kind.
 
 ```yaml
-TagsToDetect: [ left paddle, right paddle ]    # plain sequence of strings
-inventory: !record [ { Type: Item, kind: potion, count: 3 } ]   # typed record list
+TagsToDetect: [ left paddle, right paddle ]    # plain sequence of strings (untyped)
+occupied: !vec []                              # an empty vector list, filled at runtime
+route: !vec [ { X: -4, Y: 4 }, { X: 4, Y: 4 } ]   # a seeded vector list (initial waypoints)
+inventory: !record [ { Type: Item, kind: potion, count: 3 } ]   # a seeded record list
 ```
 
 ---

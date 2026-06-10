@@ -23,6 +23,14 @@ namespace Assembler.Deserialisation
 			.WithTagMapping("!gameover", typeof(GameOverListenerDto))
 			.WithTagMapping("!text", typeof(TextRefDto))
 			.WithTagMapping("!record", typeof(RecordLiteralDto))
+			// The scalar-element tags have no DTO/converter — ObjectNodeDeserializer parses them inline
+			// (both the `!int 5` scalar and `!int [ … ]` typed-list forms). They still need a tag mapping
+			// or YamlDotNet rejects the tag as unresolved before that deserializer runs; mapping to object
+			// keeps the node object-typed so it reaches ObjectNodeDeserializer rather than a type converter.
+			.WithTagMapping("!int", typeof(object))
+			.WithTagMapping("!float", typeof(object))
+			.WithTagMapping("!bool", typeof(object))
+			.WithTagMapping("!string", typeof(object))
 			.WithTypeConverter(new VecTypeConverter())
 			.WithTypeConverter(new ColourTypeConverter())
 			.WithTypeConverter(new VarTypeConverter())
