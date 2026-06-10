@@ -1,0 +1,20 @@
+{
+    "name": "Assembler.Behaviours.Editor",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.Behaviours",
+        "Assembler.Resolving",
+        "Assembler.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
