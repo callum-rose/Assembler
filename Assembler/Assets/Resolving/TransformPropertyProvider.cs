@@ -6,7 +6,7 @@ namespace Assembler.Resolving
 {
 	// Live wrapper: every read returns the current transform property, so consumers never see a stale
 	// value cached from an earlier frame. Backs the !entity { Id, Property } tag (Vector3-valued).
-	public sealed class TransformPropertyProvider : IValueProvider<Vector3>
+	public sealed class TransformPropertyProvider : IWriteValueProvider<Vector3>
 	{
 		private readonly Transform _transform;
 		private readonly EntityProperty _property;

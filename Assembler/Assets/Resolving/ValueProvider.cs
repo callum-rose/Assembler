@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Resolving
 {
-	public sealed class ValueProvider<T> : IValueProvider<T>, IObservableValueProvider<T>
+	public sealed class ValueProvider<T> : IWriteValueProvider<T>, IObservableValueProvider<T>
 	{
 		private T _value;
 

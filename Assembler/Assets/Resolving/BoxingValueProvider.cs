@@ -1,5 +1,3 @@
-using System;
-
 namespace Assembler.Resolving
 {
 	/// <summary>
@@ -16,8 +14,5 @@ namespace Assembler.Resolving
 		}
 
 		public object Get(TriggerContext ctx) => _innerProvider.Get(ctx);
-
-		public void Set(object value) =>
-			throw new InvalidOperationException("BoxingValueProvider cannot have its value set");
 	}
 }

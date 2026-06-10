@@ -34,6 +34,14 @@ namespace Assembler.Resolving
 			};
 		}
 
+		/// <summary>
+		/// Resolve a value source that a behaviour needs to write to, narrowing the result to
+		/// <see cref="IWriteValueProvider{T}"/>. Throws a <see cref="ResolveException"/> at build time if the
+		/// source resolves to a read-only provider (e.g. a constant or expression wired into a writable slot).
+		/// </summary>
+		public static IWriteValueProvider<T> ResolveWritable<T>(this ValueSource<T> valueSource, ResolutionContext ctx) =>
+			valueSource.Resolve(ctx).AsWritable();
+
 		private static LocalisedTextProvider BuildLocalisedTextProvider<T>(
 			LocalisedTextSource<T> source,
 			ResolutionContext ctx)

@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.Linq;
 
@@ -28,9 +27,6 @@ namespace Assembler.Resolving
 		public string Get(TriggerContext ctx) => Format(ctx);
 
 		object IValueProvider.Get(TriggerContext ctx) => Format(ctx);
-
-		public void Set(string value) =>
-			throw new InvalidOperationException("LocalisedTextProvider cannot have its value set");
 
 		private string Format(TriggerContext ctx)
 		{

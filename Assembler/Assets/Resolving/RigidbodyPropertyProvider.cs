@@ -6,7 +6,7 @@ namespace Assembler.Resolving
 {
 	// Live wrapper: every read returns the current rigidbody property, so consumers never see a stale
 	// value cached from an earlier frame. Backs the !rigidbody { Id, Property } tag (Vector3-valued).
-	public sealed class RigidbodyPropertyProvider : IValueProvider<Vector3>
+	public sealed class RigidbodyPropertyProvider : IWriteValueProvider<Vector3>
 	{
 		private readonly Rigidbody _rigidbody;
 		private readonly RigidbodyProperty _property;
