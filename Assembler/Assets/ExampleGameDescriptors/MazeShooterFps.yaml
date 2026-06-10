@@ -164,7 +164,10 @@ Templates:
           Recompute: 0.4
           Mode: astar
 
-      # Take a point of damage per bullet that enters.
+      # Take a point of damage per bullet, then re-check death. Listeners fire
+      # synchronously in order: `take damage` writes health, then `death check`
+      # reads the updated value. (A variable setter does NOT notify its own
+      # listeners, so the gate must be driven directly from this trigger.)
       bullet detector:
         Type: trigger enter trigger
         Properties:
@@ -172,6 +175,8 @@ Templates:
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: take damage
+          - EntityId: !parameter self_id
+            BehaviourId: death check
       take damage:
         Type: int variable setter
         Properties:
