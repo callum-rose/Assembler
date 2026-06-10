@@ -11,6 +11,7 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> AngularDamping { get; init; } = NullValueProvider<float>.Instance;
 		public IValueProvider<Vector3> FreezePosition { get; init; } = NullValueProvider<Vector3>.Instance;
 		public IValueProvider<Vector3> FreezeRotation { get; init; } = NullValueProvider<Vector3>.Instance;
+		public IValueProvider<Vector3> CentreOfMass { get; init; } = NullValueProvider<Vector3>.Instance;
 
 		public RigidbodyData(string id) : base(id) { }
 	}

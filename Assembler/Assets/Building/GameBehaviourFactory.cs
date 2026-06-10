@@ -126,7 +126,8 @@ namespace Assembler.Building
 						LinearDamping = i.LinearDamping.Resolve(ctx.Resolution),
 						AngularDamping = i.AngularDamping.Resolve(ctx.Resolution),
 						FreezePosition = i.FreezePosition.Resolve(ctx.Resolution),
-						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution)
+						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution),
+						CentreOfMass = i.CentreOfMass.Resolve(ctx.Resolution)
 					}),
 				[typeof(VelocityInfo)] = Entry<VelocityInfo, Velocity, VelocityData>(
 					(i, ctx) => new VelocityData(i.Id,

@@ -2,16 +2,18 @@ Game:
   Title: Mini Racer 3D
   Description: >
     A small 3D arcade racer. The car is a non-kinematic rigidbody with grippy,
-    carving handling: W/S ease its forward speed up to a cruise (and let it coast
-    back down), while A/D steer. Crucially the car's velocity always follows its
-    nose — it travels where it points instead of sliding on ice — so turns carve
-    cleanly and the car can swing all the way round to any heading. Steering
-    authority builds with speed, so the car steers gently at a crawl and can't
-    pivot on the spot at a standstill. The car is constrained to the ground plane
-    (Y position and pitch/roll are frozen) and is stopped by the outer walls. Drive around
-    the solid central infield, between it and the outer walls. You must pass the
-    far checkpoint and then cross the start/finish line for a lap to count —
-    three laps wins.
+    carving handling that breaks into a drift when pushed: W/S ease its forward speed
+    up to a cruise (and let it coast back down), while A/D steer. The car turns about
+    its rear axle (the arc its wheels trace) rather than spinning about its centre —
+    the rear rolls along its own line while the nose sweeps wide, like a real car. The
+    rear tyres have a grip limit, so flicking the wheel hard at speed breaks the back
+    loose into a slide that recovers once you straighten up, while gentle cornering
+    stays planted. Steering authority builds with speed, so the car steers gently at a
+    crawl and can't pivot on the spot at a standstill. The car is constrained to the
+    ground plane (Y position and pitch/roll are frozen) and is stopped by the outer
+    walls. Drive around the solid central infield, between it and the outer walls. You
+    must pass the far checkpoint and then cross the start/finish line for a lap to
+    count — three laps wins.
 
 World:
   Dimensionality: 3
@@ -53,6 +55,14 @@ Constants:
   brake: 5              # stronger easing when the throttle opposes current motion (braking / reversing)
   turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
   grip speed: 3         # speed (units/sec) at which steering reaches full authority
+  rear axle offset: 1.0 # distance (units) the turn pivot sits behind the car's centre. The car carves
+                        # about this point (the rear wheels' arc) so the nose sweeps wide and the tail
+                        # tracks, like a real car. Car is 2 long, so ~1.0 puts it at the rear axle;
+                        # larger plants the rear harder and sweeps the nose wider.
+  rear grip: 14         # max sideways acceleration (units/sec^2) the rear tyres can hold before they
+                        # break loose into a drift. Cornering demand is roughly speed * yaw-rate; below
+                        # `rear grip` the rear tracks (clean rear-axle carve), above it the tail slides
+                        # out and recovers at this rate. Lower = breaks loose sooner / drifts more easily.
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
@@ -64,40 +74,57 @@ Variables:
   lap armed: false   # set when the checkpoint is crossed; cleared when a lap is scored
 
 Expressions:
-  # The car's new world-space velocity, set fresh every frame. This is what makes
-  # the handling grippy instead of icy: the velocity is forced to lie along the
-  # car's heading, so the car always travels where its nose points (turning the
-  # nose carves the path) rather than drifting off on old momentum.
+  # The car's new world-space velocity, set fresh every frame. The car turns about its
+  # REAR AXLE (the arc its wheels trace) and breaks into a drift when pushed hard.
   #
-  # The heading is the car's Y euler angle: Rotate2D turns the unit +Y vector into
-  # a (sin, cos) pair we map onto the XZ ground plane to get the forward unit
-  # vector. The current forward speed is the projection of the live velocity onto
-  # that heading (signed: negative when reversing). It eases toward a throttle-
-  # driven target — `top` forward, the weaker `reverse` backward — using `accel`,
-  # or the stronger `brake` rate when the throttle opposes the current motion
-  # (braking / changing direction). dt makes the easing frame-rate independent.
+  # Forward: the live velocity projected onto the heading (signed: negative in reverse)
+  # eases toward a throttle-driven target — `top` forward, the weaker `reverse` back —
+  # at `accel`, or the stronger `brake` rate when the throttle opposes the motion.
+  #
+  # Sideways (the rear-axle carve + drift):
+  #  - Rear-axle carve: a body yawing at rate `omega` about a pivot `b` behind its
+  #    centre needs its centre to move sideways at exactly `omega * b`, so the rear
+  #    axle ends up with zero sideways motion and rolls along its own line — nose
+  #    sweeps wide, tail tracks. `kin` is that target. `omega` is the body's *actual*
+  #    yaw rate, read off the rigidbody after `apply steer` sets it (keep that order).
+  #  - Break-loose drift: the rear tyres can only hold so much grip. `rearSlip` is how
+  #    far the rear is currently sliding sideways beyond the carve; the tyres pull it
+  #    back toward zero by at most `rearGrip * dt` per frame (a force limit, not a
+  #    decay). Gentle cornering (slip injected per frame < that limit) is fully
+  #    cancelled → the rear grips and carves. Crank the wheel at speed and the demand
+  #    exceeds the limit → the slip survives and grows → the tail steps out into a
+  #    drift, recovering at `rearGrip` once you straighten up.
+  # `omega`'s heading: Rotate2D turns +Y into a (sin,cos) pair mapped onto the XZ
+  # plane for the forward unit vector; `right` is its in-plane perpendicular.
   drive velocity:
-    ArgumentTypes: [ vector, vector, float, float, float, float, float, float ]
-    ArgumentNames: [ rotation, velocity, throttle, top, reverse, accel, brake, dt ]
+    ArgumentTypes: [ vector, vector, vector, float, float, float, float, float, float, float, float ]
+    ArgumentNames: [ rotation, velocity, angVel, throttle, top, reverse, accel, brake, b, rearGrip, dt ]
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
       var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
       var forward = new Vector3(heading.x, 0f, heading.y);
+      var right = new Vector3(forward.z, 0f, -forward.x);
       var current = Dot(velocity, forward);
       var target = throttle >= 0f ? throttle * top : throttle * reverse;
       var ease = target * current < 0f ? brake : accel;
       var next = Lerp(current, target, Clamp01(ease * dt));
-      return ScaleVector(forward, next);
+      var kin = angVel.y * b;
+      var rearSlip = Dot(velocity, right) - kin;
+      var maxDelta = rearGrip * dt;
+      var newSlip = rearSlip - Clamp(rearSlip, -maxDelta, maxDelta);
+      var lateral = newSlip + kin;
+      return AddVector(ScaleVector(forward, next), ScaleVector(right, lateral));
 
   # Desired yaw angular velocity (rad/s about +Y) from the move action's x (steer,
-  # in [-1, 1]). Authority ramps in with the car's forward speed (the live velocity
-  # projected onto the heading) up to `gripSpeed`: at a standstill it's zero — the
-  # car cannot pivot on the spot — and it grows to the full `rate` once rolling.
-  # The yaw is flipped by the sign of that forward speed so the car steers the
-  # intuitive way in reverse (it backs into the turn) rather than swinging the
-  # wrong way. Set as a steady state every frame so steering is smooth, and because
-  # velocity is grippy the body turning drags the whole car round with it.
+  # in [-1, 1]). Authority ramps in with the car's total speed (the live velocity's
+  # magnitude) up to `gripSpeed`: at a standstill it's zero — the car cannot pivot
+  # on the spot — and it grows to the full `rate` once rolling. Using total speed
+  # (not just the forward projection) keeps steering responsive whatever direction
+  # the car is moving. The yaw is flipped by the sign of the forward speed so the car
+  # steers the intuitive way in reverse (it backs into the turn) rather than swinging
+  # the wrong way. Set as a steady state every frame so steering is smooth; `drive
+  # velocity` reads this same yaw rate to keep the turn pivot at the rear axle.
   steer yaw:
     ArgumentTypes: [ float, vector, vector, float, float ]
     ArgumentNames: [ steer, rotation, velocity, rate, gripSpeed ]
@@ -107,7 +134,7 @@ Expressions:
       var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
       var forward = new Vector3(heading.x, 0f, heading.y);
       var forwardSpeed = Dot(velocity, forward);
-      var authority = Clamp01(Abs(forwardSpeed) / gripSpeed);
+      var authority = Clamp01(Magnitude(velocity) / gripSpeed);
       var direction = forwardSpeed < 0f ? -1f : 1f;
       return new Vector3(0f, steer * rate * authority * direction, 0f);
 
@@ -158,14 +185,17 @@ Entities:
       # It fires every frame with the current stick/key values (zero included), so
       # both the velocity and the steering are recomputed each frame — which is why
       # the car coasts to a stop when the throttle is released.
+      # `apply steer` runs FIRST so it sets the body's yaw rate, then `apply drive`
+      # reads that fresh yaw rate to place the turn pivot at the rear axle (see
+      # `drive velocity`). Keep this order.
       drive input:
         Type: input action
         Properties: { Action: move }
         Listeners:
           - EntityId: car
-            BehaviourId: apply drive
-          - EntityId: car
             BehaviourId: apply steer
+          - EntityId: car
+            BehaviourId: apply drive
       apply drive:
         Type: set velocity
         Properties:
@@ -174,11 +204,14 @@ Entities:
             With:
               - !entity { Id: car, Property: Rotation }
               - !rigidbody { Id: car, Property: Velocity }
+              - !rigidbody { Id: car, Property: AngularVelocity }
               - !output y
               - !var max speed
               - !var reverse max
               - !var accel
               - !var brake
+              - !var rear axle offset
+              - !var rear grip
               - !clock deltaTime
       apply steer:
         Type: set angular velocity
