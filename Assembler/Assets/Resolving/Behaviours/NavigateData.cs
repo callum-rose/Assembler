@@ -11,7 +11,7 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<string> Mode { get; }
 
 		/// <summary>Velocity variable to write; a <see cref="NullValueProvider{T}"/> drives the transform directly.</summary>
-		public IValueProvider<Vector3> Output { get; }
+		public IWriteValueProvider<Vector3> Output { get; }
 
 		public NavigateData(
 			string id,
@@ -20,7 +20,7 @@ namespace Assembler.Resolving.Behaviours
 			IValueProvider<float> slowingRadius,
 			IValueProvider<float> recompute,
 			IValueProvider<string> mode,
-			IValueProvider<Vector3> output) : base(id)
+			IWriteValueProvider<Vector3> output) : base(id)
 		{
 			Target = target;
 			Speed = speed;

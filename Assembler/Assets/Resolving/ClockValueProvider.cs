@@ -33,7 +33,5 @@ namespace Assembler.Resolving
 		}
 
 		object IValueProvider.Get(TriggerContext ctx) => Get(ctx)!;
-
-		public void Set(T value) => throw new NotSupportedException("Clock values are read-only.");
 	}
 }

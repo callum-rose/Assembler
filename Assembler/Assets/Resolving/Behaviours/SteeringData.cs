@@ -22,13 +22,13 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> MaxSpeed { get; }
 
 		/// <summary>Velocity variable to write; a <see cref="NullValueProvider{T}"/> drives the transform directly.</summary>
-		public IValueProvider<Vector3> Output { get; }
+		public IWriteValueProvider<Vector3> Output { get; }
 
 		public SteeringData(
 			string id,
 			IReadOnlyList<SteeringForce> forces,
 			IValueProvider<float> maxSpeed,
-			IValueProvider<Vector3> output) : base(id)
+			IWriteValueProvider<Vector3> output) : base(id)
 		{
 			Forces = forces;
 			MaxSpeed = maxSpeed;

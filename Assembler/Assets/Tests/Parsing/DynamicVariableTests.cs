@@ -46,7 +46,7 @@ namespace Tests.Parsing
 			var b = new EntityVariableScope();
 			b.Create(new ValueInfo("health", new IntValue(2)));
 
-			var aHealth = registry.Get<int>("health", a);
+			var aHealth = registry.Get<int>("health", a).AsWritable();
 			var bHealth = registry.Get<int>("health", b);
 
 			aHealth.Set(99);
