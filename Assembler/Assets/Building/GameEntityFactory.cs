@@ -121,6 +121,7 @@ namespace Assembler.Building
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
+			gameEntity.Id = entityInfo.Id;
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;

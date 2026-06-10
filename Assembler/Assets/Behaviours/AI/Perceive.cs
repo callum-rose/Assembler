@@ -34,12 +34,18 @@ namespace Assembler.Behaviours.AI
 		public LineOfSightService Sight { get; set; } = null!;
 		public IGameClock Clock { get; set; } = null!;
 
+		// The owning entity, read so the scan can exclude this entity's own id (see TryFindTarget). Resolved
+		// from the sibling component rather than gameObject.name so it tracks the descriptor id explicitly.
+		private GameEntity _entity = null!;
+
 		private bool ConeConfigured =>
 			Data.ConeAngle is not NullValueProvider<float> && Data.Forward is not NullValueProvider<Vector3>;
 
 		private void Start() => StartCoroutine(ScanLoop());
 
 		public override void Execute(TriggerContext ctx) => Scan();
+
+		protected override void OnInitialise(PerceiveData data) => _entity = GetComponent<GameEntity>();
 
 		private IEnumerator ScanLoop()
 		{
@@ -78,7 +84,7 @@ namespace Assembler.Behaviours.AI
 		{
 			// Exclude this entity from its own scan: a same-tag perceive would otherwise always detect itself at
 			// distance 0, making separation/nearest-ally relationships impossible.
-			var selfId = gameObject.name;
+			var selfId = _entity.Id;
 
 			if (!ConeConfigured)
 			{

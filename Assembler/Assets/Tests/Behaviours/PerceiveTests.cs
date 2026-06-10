@@ -45,6 +45,9 @@ namespace Tests.Behaviours
 			ValueProvider<bool> has, ValueProvider<Vector3> lastKnown) Build(EntityQueryService query)
 		{
 			_seer = new GameObject("seer");
+			// Every behaviour lives on a GameEntity in production (the factory adds it first); Perceive reads its
+			// own entity id from that sibling component to exclude itself from scans.
+			_seer.AddComponent<GameEntity>().Id = "seer";
 			var perceive = _seer.AddComponent<Perceive>();
 			perceive.Query = query;
 			perceive.Sight = new LineOfSightService();
@@ -82,6 +85,25 @@ namespace Tests.Behaviours
 			Assert.IsTrue(has.Get(TriggerContext.Empty));
 			Assert.AreEqual(new Vector3(3, 0, 0), pos.Get(TriggerContext.Empty));
 			Assert.AreEqual(new Vector3(3, 0, 0), lastKnown.Get(TriggerContext.Empty));
+		}
+
+		[Test]
+		public void ExcludesSelfWhenSharingPerceivedTag()
+		{
+			var query = new EntityQueryService();
+			_enemy = new GameObject("enemy") { transform = { position = new Vector3(3, 0, 0) } };
+			query.Register("enemy", _enemy.transform, new[] { "enemy" });
+
+			var (perceive, id, pos, has, _) = Build(query);
+
+			// The seer also carries the tag it perceives and sits at the origin (distance 0); without
+			// self-exclusion it would always detect itself instead of the real enemy.
+			query.Register("seer", _seer.transform, new[] { "enemy" });
+			perceive.Execute(TriggerContext.Empty);
+
+			Assert.IsTrue(has.Get(TriggerContext.Empty));
+			Assert.AreEqual("enemy", id.Get(TriggerContext.Empty));
+			Assert.AreEqual(new Vector3(3, 0, 0), pos.Get(TriggerContext.Empty));
 		}
 
 		[Test]
