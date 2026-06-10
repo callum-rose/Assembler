@@ -3,10 +3,11 @@ Game:
   Description: |
     A maze-chase built around grid navigation. Showcases:
 
-    - `grid mover` — Pacman moves tile-to-tile on the nav grid (never free-roaming,
-      never diagonal), turning only at cell centres onto the last direction pressed.
+    - `grid mover` — Pacman and the ghosts both move tile-to-tile on the nav grid
+      (never free-roaming, never diagonal), turning only at cell centres. Pacman reads
+      WASD; each ghost reads the direction its `navigate` pathfinder writes out.
     - `Navigation: Diagonal: false` — the ghosts' `navigate` A* is four-connected, so
-      they path along the corridors orthogonally rather than cutting diagonally.
+      the path it feeds the grid mover is orthogonal.
     - The dot field is one `Placements` entry whose `At` is an `!expr` building a
       hole-punched grid with a `PositionList`; four power pills and three ghosts are
       two more `Placements` entries.
@@ -167,6 +168,11 @@ Templates:
   # ending the game.
   ghost:
     Tags: [ ghost ]
+    # Per-ghost heading: `navigate` writes the direction toward its goal here each frame, and the
+    # `grid mover` consumes it — so the ghost steps cell-to-cell (cardinal only) instead of `navigate`
+    # steering it smoothly and clipping corners diagonally.
+    Variables:
+      ghost dir: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
         Type: sphere gizmo
@@ -181,6 +187,8 @@ Templates:
       collider:
         Type: sphere collider
         Properties: { Radius: 0.4, IsTrigger: true }
+      # Pathfinder: A* to Pacman (or the far corner when frightened). With Output set it writes the
+      # desired direction into `ghost dir` instead of moving the ghost itself.
       chase:
         Type: navigate
         Properties:
@@ -193,6 +201,13 @@ Templates:
           SlowingRadius: 0.1
           Recompute: 0.25
           Mode: astar
+          Output: !var ghost dir
+      # Grid-locked movement (same behaviour as Pacman), driven by the pathfinder's direction.
+      move:
+        Type: grid mover
+        Properties:
+          Direction: !var ghost dir
+          Speed: !var ghost speed
       catch:
         Type: trigger enter trigger
         Properties: { TagsToDetect: [ pacman ] }
