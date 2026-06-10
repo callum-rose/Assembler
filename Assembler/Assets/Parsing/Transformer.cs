@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Assembler.Core;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Extensions;
 using Assembler.Parsing.Info;
@@ -291,7 +292,7 @@ namespace Assembler.Parsing
 			value switch
 			{
 				RecordValue rec => CompleteRecord(rec, schemas),
-				TypedListValue list when list.ElementType == typeof(Libraries.Record) =>
+				TypedListValue list when list.ElementType == typeof(Record) =>
 					new TypedListValue(list.ElementType, list.Items.Select(i => CompleteRecords(i, schemas)).ToArray()),
 				_ => value
 			};
@@ -299,8 +300,8 @@ namespace Assembler.Parsing
 		private static RecordValue CompleteRecord(RecordValue rec, RecordSchemaRegistry schemas)
 		{
 			var schema = schemas.Get(rec.TypeName);
-			var record = schema.CreateInstance(RecordValues.Unwrap(rec.Fields));
-			var fields = schema.Fields.ToDictionary(f => f.Name, f => RecordValues.Wrap(record[f.Name]));
+			var record = schema.CreateInstance(rec.Fields.Unwrap());
+			var fields = schema.Fields.ToDictionary(f => f.Name, f => record[f.Name].Wrap());
 			return new RecordValue(rec.TypeName, fields);
 		}
 

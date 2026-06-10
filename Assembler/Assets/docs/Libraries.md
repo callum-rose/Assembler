@@ -529,14 +529,7 @@ An index in [0, weights.Count) chosen with probability proportional to each weig
 
 **Returns** (int): A weighted-random index into the list (must be non-empty).
 
-## `Record`
-A runtime item instance: a named bag of typed fields backing per-instance state (stack count,
-            durability, rolled affixes, …). One shared CLR class for every declared pseudo-type — the schema
-            lives in the descriptor, not in an emitted type — so it stays AOT/IL2CPP-safe in a player build.
-
-_No public static methods._
-
-## `RecordMath`
+## `RecordHelper`
 Cast-free helpers for reading and writing Record fields from descriptor expressions.
             Registered globally in CompiledExpressionsRegistry so every expression can call these by bare name
             (GetInt, SetInt, HasField, …). They are sugar over the Record indexer: the getters

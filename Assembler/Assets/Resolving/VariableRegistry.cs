@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Assembler.Libraries;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
@@ -69,7 +69,7 @@ namespace Assembler.Resolving
 				ColorValue c => new ValueProvider<Color>(c.Value),
 				// A record constant referenced by !var. The transform already completed it (defaults filled),
 				// so build the Record straight from the field dict — no schema needed here.
-				RecordValue rec => new ValueProvider<Record>(RecordValues.ToRecord(rec)),
+				RecordValue rec => new ValueProvider<Record>(rec.ToRecord()),
 				TypedListValue typed => BuildListProvider(typed),
 				_ => throw new ResolveException(
 					$"Unsupported value type of '{valueInfo.Value.GetType()}' for variable '{valueInfo.Id}'")
@@ -141,7 +141,7 @@ namespace Assembler.Resolving
 				ColorValue c when typeof(T) == typeof(Color) => (T)(object)c.Value,
 				// Element of a record list. The transform completed each RecordValue, so build the Record
 				// straight from its fields (no schema). Reference type, so list identity/mutation work.
-				RecordValue rec when typeof(T) == typeof(Record) => (T)(object)RecordValues.ToRecord(rec),
+				RecordValue rec when typeof(T) == typeof(Record) => (T)(object)rec.ToRecord(),
 				_ => throw new ResolveException($"Cannot unwrap {value.GetType().Name} to {typeof(T).Name}")
 			};
 		}

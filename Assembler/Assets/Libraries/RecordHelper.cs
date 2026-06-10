@@ -1,3 +1,5 @@
+using Assembler.Core;
+
 namespace Assembler.Libraries
 {
 	/// <summary>
@@ -8,7 +10,7 @@ namespace Assembler.Libraries
 	/// record in place and return it so they chain and can carry a side effect through a value-setter's
 	/// <c>Value</c> slot. Both styles interoperate — they read and write the same underlying field bag.
 	/// </summary>
-	public static class RecordMath
+	public static class RecordHelper
 	{
 		/// <summary>Reads an int field.</summary>
 		/// <param name="record">The record to read from.</param>

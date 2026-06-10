@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Assembler.Compiler.Compiler;
 using Assembler.Libraries;
 using Assembler.Parsing;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using NUnit.Framework;
@@ -11,10 +12,10 @@ namespace Tests.Resolving
 {
 	public class RecordResolvingTests
 	{
-		private static RecordValue Item(string templateId, int count, float durability = 1f) =>
+		private static RecordValue Item(string kind, int count, float durability = 1f) =>
 			new("Item", new Dictionary<string, AssemblerValue>
 			{
-				["templateId"] = new StringValue(templateId),
+				["kind"] = new StringValue(kind),
 				["count"] = new IntValue(count),
 				["durability"] = new FloatValue(durability)
 			});
@@ -33,10 +34,10 @@ namespace Tests.Resolving
 			var records = registry.Get<List<Record>>("inv").Get();
 
 			Assert.AreEqual(2, records.Count);
-			Assert.AreEqual("coin", RecordMath.GetString(records[0], "templateId"));
-			Assert.AreEqual(3, RecordMath.GetInt(records[0], "count"));
-			Assert.AreEqual(1f, RecordMath.GetFloat(records[0], "durability"));
-			Assert.AreEqual("key", RecordMath.GetString(records[1], "templateId"));
+			Assert.AreEqual("coin", RecordHelper.GetString(records[0], "kind"));
+			Assert.AreEqual(3, RecordHelper.GetInt(records[0], "count"));
+			Assert.AreEqual(1f, RecordHelper.GetFloat(records[0], "durability"));
+			Assert.AreEqual("key", RecordHelper.GetString(records[1], "kind"));
 		}
 
 		[Test]
@@ -48,9 +49,9 @@ namespace Tests.Resolving
 			var records = registry.Get<List<Record>>("inv").Get();
 
 			// Fetch an instance, mutate it in place, and confirm the list still holds the same instance.
-			RecordMath.SetInt(records[0], "count", RecordMath.GetInt(records[0], "count") - 1);
+			RecordHelper.SetInt(records[0], "count", RecordHelper.GetInt(records[0], "count") - 1);
 
-			Assert.AreEqual(1, RecordMath.GetInt(registry.Get<List<Record>>("inv").Get()[0], "count"));
+			Assert.AreEqual(1, RecordHelper.GetInt(registry.Get<List<Record>>("inv").Get()[0], "count"));
 		}
 
 		[Test]
@@ -61,7 +62,7 @@ namespace Tests.Resolving
 
 			var record = registry.Get<Record>("coin kind").Get();
 
-			Assert.AreEqual("coin", RecordMath.GetString(record, "templateId"));
+			Assert.AreEqual("coin", RecordHelper.GetString(record, "kind"));
 		}
 
 		// ---- compiler integration (Step-6 expressions) ---------------------------
@@ -76,9 +77,9 @@ namespace Tests.Resolving
 
 		private static List<Record> SampleInventory() => new()
 		{
-			RecordValues.ToRecord(Item("potion", 2)),
-			RecordValues.ToRecord(Item("potion", 3)),
-			RecordValues.ToRecord(Item("key", 1))
+			Item("potion", 2).ToRecord(),
+			Item("potion", 3).ToRecord(),
+			Item("key", 1).ToRecord()
 		};
 
 		[Test]
@@ -88,7 +89,7 @@ namespace Tests.Resolving
 			registry.CompileAndRegisterAll(new[]
 			{
 				Expr("potion count", "int",
-					"return inv.Where(r => GetString(r,\"templateId\")==\"potion\").Sum(r => GetInt(r,\"count\"));",
+					"return inv.Where(r => GetString(r,\"kind\")==\"potion\").Sum(r => GetInt(r,\"count\"));",
 					new[] { ("record list", "inv") })
 			});
 
@@ -104,7 +105,7 @@ namespace Tests.Resolving
 			registry.CompileAndRegisterAll(new[]
 			{
 				Expr("potion count", "int",
-					"return inv.Where(r => (string)r[\"templateId\"]==\"potion\").Sum(r => (int)r[\"count\"]);",
+					"return inv.Where(r => (string)r[\"kind\"]==\"potion\").Sum(r => (int)r[\"count\"]);",
 					new[] { ("record list", "inv") })
 			});
 
@@ -120,7 +121,7 @@ namespace Tests.Resolving
 			registry.CompileAndRegisterAll(new[]
 			{
 				Expr("has keys", "bool",
-					"return inv.Where(r => GetString(r,\"templateId\")==\"key\").Sum(r => GetInt(r,\"count\")) >= n;",
+					"return inv.Where(r => GetString(r,\"kind\")==\"key\").Sum(r => GetInt(r,\"count\")) >= n;",
 					new[] { ("record list", "inv"), ("int", "n") })
 			});
 
@@ -137,7 +138,7 @@ namespace Tests.Resolving
 			registry.CompileAndRegisterAll(new[]
 			{
 				Expr("consume potion", "record list",
-					"var item = inv.First(r => GetString(r,\"templateId\")==\"potion\");" +
+					"var item = inv.First(r => GetString(r,\"kind\")==\"potion\");" +
 					"item[\"count\"] = (int)item[\"count\"] - 1;" +
 					"return inv;",
 					new[] { ("record list", "inv") })
@@ -149,7 +150,7 @@ namespace Tests.Resolving
 			var result = func(inventory);
 
 			Assert.AreSame(inventory, result);
-			Assert.AreEqual(1, RecordMath.GetInt(inventory[0], "count"));
+			Assert.AreEqual(1, RecordHelper.GetInt(inventory[0], "count"));
 		}
 	}
 }

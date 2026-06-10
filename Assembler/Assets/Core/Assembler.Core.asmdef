@@ -1,13 +1,7 @@
 {
-    "name": "Assembler.Parsing",
+    "name": "Assembler.Core",
     "rootNamespace": "Assembler",
-    "references": [
-        "Assembler.Parsing.Phase1",
-        "Assembler.Deserialisation",
-        "Assembler.Extensions",
-        "Assembler.Libraries",
-        "Assembler.Core"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

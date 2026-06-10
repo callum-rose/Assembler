@@ -10,7 +10,8 @@
         "Assembler.Deserialisation",
         "Assembler.Parsing",
         "Assembler.Resolving",
-        "Assembler.Libraries"
+        "Assembler.Libraries",
+        "Assembler.Core"
     ],
     "includePlatforms": [
         "Editor"

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Libraries;
+using Assembler.Core;
 
 namespace Assembler.Parsing.Info
 {
@@ -10,17 +10,17 @@ namespace Assembler.Parsing.Info
 	/// <see cref="RecordValue"/>'s fields into a plain object dict, <see cref="Wrap"/> boxes a field value
 	/// back into a primitive <see cref="AssemblerValue"/>, and <see cref="ToRecord"/> builds a fresh
 	/// <see cref="Record"/> from a completed <see cref="RecordValue"/>. Schema validation and default-filling
-	/// happen earlier (transform time) via <see cref="RecordSchemaInfo.CreateInstance"/>; these helpers only
-	/// move already-typed values across the boundary.
+	/// happen earlier (transform time) via <c>RecordSchemaInfoExtensions.CreateInstance</c>; these helpers
+	/// only move already-typed values across the boundary.
 	/// </summary>
-	public static class RecordValues
+	public static class RecordValueExtensions
 	{
-		public static Record ToRecord(RecordValue record) => new(record.TypeName, Unwrap(record.Fields));
+		public static Record ToRecord(this RecordValue record) => new(record.TypeName, record.Fields.Unwrap());
 
-		public static Dictionary<string, object> Unwrap(IReadOnlyDictionary<string, AssemblerValue> fields) =>
+		public static Dictionary<string, object> Unwrap(this IReadOnlyDictionary<string, AssemblerValue> fields) =>
 			fields.ToDictionary(kvp => kvp.Key, kvp => UnwrapField(kvp.Value));
 
-		public static AssemblerValue Wrap(object value) =>
+		public static AssemblerValue Wrap(this object value) =>
 			value switch
 			{
 				int i => new IntValue(i),

@@ -2,6 +2,7 @@ using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Libraries;
 using Assembler.Parsing;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using NUnit.Framework;
 
@@ -12,7 +13,7 @@ namespace Tests.Parsing
 		private const string ItemSchema = @"
 Records:
   Item:
-    templateId: { Type: string }
+    kind: { Type: string }
     count:      { Type: int,   Default: 1 }
     durability: { Type: float, Default: 1.0 }
 ";
@@ -31,8 +32,8 @@ Constants:
 
 			Assert.AreEqual(3, schema.Fields.Count);
 
-			var templateId = schema.Fields.Single(f => f.Name == "templateId");
-			Assert.AreEqual(typeof(string), templateId.ClrType);
+			var kind = schema.Fields.Single(f => f.Name == "kind");
+			Assert.AreEqual(typeof(string), kind.ClrType);
 
 			var count = schema.Fields.Single(f => f.Name == "count");
 			Assert.AreEqual(typeof(int), count.ClrType);
@@ -47,16 +48,16 @@ Constants:
 		{
 			var info = Transform(ItemSchema + @"
 Constants:
-  potion: !record { Type: Item, templateId: potion }
+  potion: !record { Type: Item, kind: potion }
 ");
 
 			var value = info.Variables.Single(v => v.Id == "potion").Value;
 			Assert.IsInstanceOf<RecordValue>(value);
 
-			var record = RecordValues.ToRecord((RecordValue)value);
-			Assert.AreEqual("potion", RecordMath.GetString(record, "templateId"));
-			Assert.AreEqual(1, RecordMath.GetInt(record, "count"));
-			Assert.AreEqual(1f, RecordMath.GetFloat(record, "durability"));
+			var record = ((RecordValue)value).ToRecord();
+			Assert.AreEqual("potion", RecordHelper.GetString(record, "kind"));
+			Assert.AreEqual(1, RecordHelper.GetInt(record, "count"));
+			Assert.AreEqual(1f, RecordHelper.GetFloat(record, "durability"));
 		}
 
 		[Test]
@@ -64,11 +65,11 @@ Constants:
 		{
 			var info = Transform(ItemSchema + @"
 Constants:
-  potion: !record { Type: Item, templateId: potion, count: 5 }
+  potion: !record { Type: Item, kind: potion, count: 5 }
 ");
 
-			var record = RecordValues.ToRecord((RecordValue)info.Variables.Single(v => v.Id == "potion").Value);
-			Assert.AreEqual(5, RecordMath.GetInt(record, "count"));
+			var record = ((RecordValue)info.Variables.Single(v => v.Id == "potion").Value).ToRecord();
+			Assert.AreEqual(5, RecordHelper.GetInt(record, "count"));
 		}
 
 		[Test]
@@ -112,18 +113,18 @@ Variables:
 		{
 			var info = Transform(ItemSchema + @"
 Variables:
-  inventory: !record [ { Type: Item, templateId: coin, count: 3 }, { Type: Item, templateId: key } ]
+  inventory: !record [ { Type: Item, kind: coin, count: 3 }, { Type: Item, kind: key } ]
 ");
 
 			var typed = (TypedListValue)info.Variables.Single(v => v.Id == "inventory").Value;
 			Assert.AreEqual(2, typed.Items.Count);
 
-			var coin = RecordValues.ToRecord((RecordValue)typed.Items[0]);
-			Assert.AreEqual(3, RecordMath.GetInt(coin, "count"));
+			var coin = ((RecordValue)typed.Items[0]).ToRecord();
+			Assert.AreEqual(3, RecordHelper.GetInt(coin, "count"));
 
-			var key = RecordValues.ToRecord((RecordValue)typed.Items[1]);
-			Assert.AreEqual("key", RecordMath.GetString(key, "templateId"));
-			Assert.AreEqual(1, RecordMath.GetInt(key, "count"));
+			var key = ((RecordValue)typed.Items[1]).ToRecord();
+			Assert.AreEqual("key", RecordHelper.GetString(key, "kind"));
+			Assert.AreEqual(1, RecordHelper.GetInt(key, "count"));
 		}
 	}
 }

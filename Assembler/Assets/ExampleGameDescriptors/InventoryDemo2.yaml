@@ -8,10 +8,10 @@ Game:
       - cyan  KEYS  (cube)
 
     Every item is a `record` instance — a typed field bag declared up front under `Records:` (here
-    an `Item` with a `templateId`, a stack `count`, and a per-instance `durability`). The whole
+    an `Item` with a `kind`, a stack `count`, and a per-instance `durability`). The whole
     inventory is a single `record list` variable; picking something up appends a one-count stack to
     it, and the HUD reads live counts straight off the list with a `count of kind` expression
-    (`inv.Where(... templateId ...).Sum(... count ...)`).
+    (`inv.Where(... kind ...).Sum(... count ...)`).
 
     POTIONS are seeded directly into the inventory as a single stack of 3 (a `!record` list literal,
     defaults filled by the schema), to show per-instance mutable state:
@@ -30,17 +30,18 @@ World:
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
-# The item "kinds" are named record constants — a !record literal referenced by !var. Instances
-# carry the kind's id in their `templateId` field; there is no separate item-definition section.
+# An `Item` record carries per-instance state. The item "kinds" themselves are named record constants
+# (a !record literal referenced by !var) — there is no separate item-definition section, so an instance
+# identifies its kind by storing that kind's name (e.g. "coin"/"potion"/"key") in its `kind` field.
 Records:
   Item:
-    templateId: { Type: string }
-    count:      { Type: int,   Default: 1 }
-    durability: { Type: float, Default: 1.0 }
+    kind:       { Type: string }              # which kind of item: "coin", "potion" or "key"
+    count:      { Type: int,   Default: 1 }   # how many are in this stack
+    durability: { Type: float, Default: 1.0 } # per-instance wear, nicked each time a potion is used
 
 Constants:
-  coin item: !record { Type: Item, templateId: coin }
-  key item:  !record { Type: Item, templateId: key }
+  coin item: !record { Type: Item, kind: coin }
+  key item:  !record { Type: Item, kind: key }
 
   player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
   coin colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
@@ -66,34 +67,34 @@ Constants:
 Variables:
   # The whole inventory is one record list. Seeded with a single potion stack (count 3) so the
   # "Use Potion" mechanic has something to consume from the start; the schema fills `durability`.
-  inventory: !record [ { Type: Item, templateId: potion, count: 3 } ]
+  inventory: !record [ { Type: Item, kind: potion, count: 3 } ]
 
   # The most-recently consumed potion, as a single record variable (written by the consume setter).
-  last potion: !record { Type: Item, templateId: none, count: 0 }
+  last potion: !record { Type: Item, kind: none, count: 0 }
 
   health: 0
 
-# Reusable record expressions. `count of kind` sums the stack counts of one templateId; `has potion`
+# Reusable record expressions. `count of kind` sums the stack counts of one kind; `has potion`
 # gates the spend; `consume first potion` mutates a record in place and returns it.
 Expressions:
   count of kind:
     ArgumentTypes: [ record list, string ]
     ArgumentNames: [ inv, kind ]
     ReturnType: int
-    Expression: 'return inv.Where(r => GetString(r, "templateId") == kind).Sum(r => GetInt(r, "count"));'
+    Expression: 'return inv.Where(r => GetString(r, "kind") == kind).Sum(r => GetInt(r, "count"));'
 
   has potion:
     ArgumentTypes: [ record list ]
     ArgumentNames: [ inv ]
     ReturnType: bool
-    Expression: 'return inv.Where(r => GetString(r, "templateId") == "potion").Sum(r => GetInt(r, "count")) >= 1;'
+    Expression: 'return inv.Where(r => GetString(r, "kind") == "potion").Sum(r => GetInt(r, "count")) >= 1;'
 
   consume first potion:
     ArgumentTypes: [ record list ]
     ArgumentNames: [ inv ]
     ReturnType: record
     Expression: |
-      var item = inv.First(r => GetString(r, "templateId") == "potion" && GetInt(r, "count") > 0);
+      var item = inv.First(r => GetString(r, "kind") == "potion" && GetInt(r, "count") > 0);
       SetFloat(item, "durability", GetFloat(item, "durability") - 0.1f);
       return SetInt(item, "count", GetInt(item, "count") - 1);
 

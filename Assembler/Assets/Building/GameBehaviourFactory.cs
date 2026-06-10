@@ -24,7 +24,7 @@ using Assembler.Behaviours.Triggers.Variables;
 using Assembler.Behaviours.UI;
 using Assembler.Behaviours.VariableUpdaters;
 using Assembler.Behaviours.Visual;
-using Assembler.Libraries;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;

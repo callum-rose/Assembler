@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Assembler.Libraries
+namespace Assembler.Core
 {
 	/// <summary>
 	/// A runtime item instance: a named bag of typed fields backing per-instance state (stack count,
@@ -13,7 +13,7 @@ namespace Assembler.Libraries
 	/// <c>this[string]</c> indexer delegates to that dictionary, which is what the expression compiler's
 	/// indexer support targets — giving native <c>item["count"]</c> reads/writes in descriptor
 	/// expressions (reads return <see cref="object"/>, so a cast is needed; the cast-free
-	/// <see cref="RecordMath"/> helpers exist to avoid it). A <see cref="Record"/> is a reference type with
+	/// <c>RecordHelper</c> helpers exist to avoid it). A <see cref="Record"/> is a reference type with
 	/// default reference equality (no <c>Equals</c> override): an instance fetched from a
 	/// <c>List&lt;Record&gt;</c> and mutated in place stays the same instance, and list
 	/// <c>Remove</c>/<c>IndexOf</c> work by identity.

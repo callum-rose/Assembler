@@ -7,7 +7,7 @@ namespace Assembler.Parsing
 	/// The record schemas declared under the top-level <c>Records:</c> section, keyed by schema name.
 	/// Built once per transform and threaded onto <see cref="TransformContext"/>; consulted only at
 	/// transform time (when a <c>!record</c> literal is materialised into a schema-complete
-	/// <see cref="Assembler.Libraries.Record"/>), never at resolve time.
+	/// <see cref="Assembler.Core.Record"/>), never at resolve time.
 	/// </summary>
 	public sealed class RecordSchemaRegistry
 	{
@@ -16,8 +16,6 @@ namespace Assembler.Parsing
 		private readonly IReadOnlyDictionary<string, RecordSchemaInfo> _schemas;
 
 		public RecordSchemaRegistry(IReadOnlyDictionary<string, RecordSchemaInfo> schemas) => _schemas = schemas;
-
-		public bool TryGet(string name, out RecordSchemaInfo? schema) => _schemas.TryGetValue(name, out schema);
 
 		public RecordSchemaInfo Get(string name) =>
 			_schemas.TryGetValue(name, out var schema)
