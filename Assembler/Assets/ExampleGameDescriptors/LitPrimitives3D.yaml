@@ -1,15 +1,18 @@
 Game:
-  Title: Lit Primitives (3D)
+  Title: Lit Primitives — Lights Showcase (3D)
   Description: >
     A WASD-driven cube on a ground plane amid coloured pillars, all rendered with
-    real `primitive` meshes (not editor gizmos) lit by a single directional `light`.
-    Demonstrates that a 3D scene built from primitives is visible in the Game view
-    without any manual editor lighting setup — the directional light is oriented by
-    its entity's Rotation (Euler), and a dim point light adds local fill.
+    real `primitive` meshes (not editor gizmos) and drenched in `light`s. Shows off
+    every light Type: a dim directional "moon" key light, a warm `spot` pointing
+    straight down, static coloured `point` accents on each pillar, and two
+    counter-rotating rigs of orbiting coloured point + spot lights that sweep moving
+    pools of colour across the scene. Directional/spot direction comes from the
+    entity's Rotation; orbit motion comes from a `rotate` driven by an `every frame
+    trigger` on a pivot whose child lights ride around with it.
 
 World:
   Dimensionality: 3
-  BackgroundColor: "#141821"
+  BackgroundColor: "#0a0c12"
 
 Constants:
   # Per-frame ground-plane step applied to the analogue move vector. The value
@@ -17,6 +20,9 @@ Constants:
   move step: 0.12
   follow offset: !vec { X: 0, Y: 5, Z: -10 }
   camera start: !vec { X: 0, Y: 5, Z: -10 }
+  # Per-frame Euler spin applied to each orbit pivot (degrees/frame).
+  spin cw: !vec { X: 0, Y: 0.7, Z: 0 }
+  spin ccw: !vec { X: 0, Y: -1.0, Z: 0 }
 
 # Abstract actions + the physical inputs that feed them. Gameplay is wired to the
 # named actions; only this block knows about physical keys, so input is bound
@@ -38,28 +44,131 @@ Controls:
         - "<Keyboard>/escape"
 
 Entities:
-  sun:
+  # ---- Key + fill lights -------------------------------------------------
+  moon:
     # A directional light shines along its forward axis; tilt it via Rotation so the
-    # scene is lit from above-front rather than straight down +Z.
-    Rotation: !vec { X: 50, Y: -30, Z: 0 }
+    # scene is lit from above-front. Kept dim and cool so the coloured lights pop.
+    Rotation: !vec { X: 55, Y: -25, Z: 0 }
     Behaviours:
       light:
         Type: light
         Properties:
           Type: directional
-          Colour: !colour white
-          Intensity: 1.1
+          Colour: !colour "#9fb4ff"
+          Intensity: 0.35
 
-  fill:
-    Position: !vec { X: 0, Y: 4, Z: 8 }
+  spotlight:
+    # A spot light shines along forward (+Z); Rotation X=90 aims it straight down,
+    # so it pools a warm cone of light over the centre of the arena from on high.
+    Position: !vec { X: 0, Y: 12, Z: 7 }
+    Rotation: !vec { X: 90, Y: 0, Z: 0 }
     Behaviours:
       light:
         Type: light
         Properties:
-          Type: point
-          Colour: !colour "#88aaff"
-          Intensity: 0.6
-          Range: 25
+          Type: spot
+          Colour: !colour "#fff2d6"
+          Intensity: 3
+          Range: 40
+          SpotAngle: 55
+
+  # ---- Orbiting rig 1: warm point lights, clockwise ----------------------
+  warm orbit:
+    Position: !vec { X: 0, Y: 2.5, Z: 8 }
+    Behaviours:
+      spin:
+        Type: rotate
+        Properties:
+          Displacement: !var spin cw
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: warm orbit
+            BehaviourId: spin
+    Children:
+      lamp red:
+        Position: !vec { X: 10, Y: 0, Z: 0 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: point
+              Colour: !colour "#ff2b2b"
+              Intensity: 3
+              Range: 13
+      lamp orange:
+        Position: !vec { X: -5, Y: 0, Z: 8.7 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: point
+              Colour: !colour "#ff9a1f"
+              Intensity: 3
+              Range: 13
+      lamp yellow:
+        Position: !vec { X: -5, Y: 0, Z: -8.7 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: point
+              Colour: !colour "#ffe14d"
+              Intensity: 3
+              Range: 13
+
+  # ---- Orbiting rig 2: cool spot lights, counter-clockwise ---------------
+  cool orbit:
+    Position: !vec { X: 0, Y: 8, Z: 8 }
+    Behaviours:
+      spin:
+        Type: rotate
+        Properties:
+          Displacement: !var spin ccw
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: cool orbit
+            BehaviourId: spin
+    Children:
+      # Each cool lamp is angled down-and-out (Rotation X≈55) so its spot cone
+      # rakes across the floor as the rig turns.
+      beam cyan:
+        Position: !vec { X: 9, Y: 0, Z: 0 }
+        Rotation: !vec { X: 55, Y: 90, Z: 0 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: spot
+              Colour: !colour "#39e6ff"
+              Intensity: 4
+              Range: 22
+              SpotAngle: 40
+      beam blue:
+        Position: !vec { X: -9, Y: 0, Z: 0 }
+        Rotation: !vec { X: 55, Y: -90, Z: 0 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: spot
+              Colour: !colour "#5566ff"
+              Intensity: 4
+              Range: 22
+              SpotAngle: 40
+      beam magenta:
+        Position: !vec { X: 0, Y: 0, Z: 9 }
+        Rotation: !vec { X: 55, Y: 180, Z: 0 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: spot
+              Colour: !colour "#ff4df0"
+              Intensity: 4
+              Range: 22
+              SpotAngle: 40
 
   player:
     Tags: [ player ]
@@ -69,7 +178,7 @@ Entities:
         Type: primitive
         Properties:
           Shape: cube
-          Colour: !colour green
+          Colour: !colour white
           Size: !vec { X: 1, Y: 1, Z: 1 }
       # Analogue movement on the ground plane: the move value action emits x/y
       # every frame, mapped to world X (left/right) and Z (forward/back).
@@ -104,9 +213,11 @@ Entities:
         Type: primitive
         Properties:
           Shape: cube
-          Colour: !colour grey
+          Colour: !colour "#cfd4dc"
           Size: !vec { X: 40, Y: 0.1, Z: 40 }
 
+  # Each pillar is a white-ish primitive so the coloured lights read cleanly,
+  # with a static point light tucked at its base for a steady accent glow.
   pillar a:
     Position: !vec { X: -6, Y: 1.5, Z: 6 }
     Behaviours:
@@ -114,8 +225,15 @@ Entities:
         Type: primitive
         Properties:
           Shape: cylinder
-          Colour: !colour red
+          Colour: !colour "#e8e8e8"
           Size: !vec { X: 1, Y: 1.5, Z: 1 }
+      accent:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !colour "#ff5252"
+          Intensity: 1.5
+          Range: 6
 
   pillar b:
     Position: !vec { X: 6, Y: 1.5, Z: 10 }
@@ -124,8 +242,15 @@ Entities:
         Type: primitive
         Properties:
           Shape: capsule
-          Colour: !colour blue
+          Colour: !colour "#e8e8e8"
           Size: !vec { X: 1, Y: 1.5, Z: 1 }
+      accent:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !colour "#52a3ff"
+          Intensity: 1.5
+          Range: 6
 
   pillar c:
     Position: !vec { X: 0, Y: 1.5, Z: 14 }
@@ -134,8 +259,15 @@ Entities:
         Type: primitive
         Properties:
           Shape: sphere
-          Colour: !colour yellow
+          Colour: !colour "#e8e8e8"
           Size: !vec { X: 2, Y: 2, Z: 2 }
+      accent:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !colour "#7CFC00"
+          Intensity: 1.5
+          Range: 6
 
   camera:
     Tags: [ camera ]
