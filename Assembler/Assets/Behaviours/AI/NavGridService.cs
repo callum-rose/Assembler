@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Assembler.Navigation;
+using Assembler.Parsing.Info;
 using UnityEngine;
 
 namespace Assembler.Behaviours.AI
@@ -13,23 +14,31 @@ namespace Assembler.Behaviours.AI
 		float MaxY,
 		string ObstacleTag)
 	{
-		public static NavGridSettings Default => new(1f, -50f, -50f, 50f, 50f, "obstacle");
+		/// <summary>The build-pipeline mapping from the parsed <see cref="NavigationInfo"/> — the single source
+		/// of the grid's configuration and defaults.</summary>
+		public static NavGridSettings From(NavigationInfo info) =>
+			new(info.CellSize, info.MinX, info.MinY, info.MaxX, info.MaxY, info.ObstacleTag);
+
+		public static NavGridSettings Default => From(NavigationInfo.Default);
 	}
 
 	/// <summary>
 	/// Builds and maintains the <see cref="NavGrid"/> for a game and bridges it to the pure pathfinder. The grid
 	/// is built lazily on first use by rasterizing the world-space bounds of every collider on an entity tagged
 	/// with the obstacle tag onto the ground (XY) plane, then cached — obstacles are static by default. Exposes
-	/// world-space A* paths and a cached flow field for the shared-goal case.
+	/// world-space A* paths and a small LRU of flow fields keyed by goal cell for the shared-goal case.
 	/// </summary>
 	public sealed class NavGridService
 	{
+		// How many distinct-goal flow fields to keep. The single-goal swarm is the common case (one entry);
+		// a few rival goals coexist without the field thrashing, while the bound caps build cost and memory.
+		private const int MaxCachedFields = 4;
+
 		private readonly NavGridSettings _settings;
+		private readonly Dictionary<GridCoord, FlowField> _fields = new();
+		private readonly List<GridCoord> _fieldOrder = new();
 
 		private NavGrid? _grid;
-		private FlowField? _field;
-		private GridCoord _fieldGoal;
-		private bool _hasField;
 
 		public NavGridService(NavGridSettings settings) => _settings = settings;
 
@@ -63,21 +72,40 @@ namespace Assembler.Behaviours.AI
 		}
 
 		/// <summary>Unit flow direction from <paramref name="position"/> toward <paramref name="goal"/>, using a
-		/// flow field cached per goal cell (rebuilt only when the goal moves to a new cell).</summary>
+		/// flow field cached per goal cell (rebuilt only when a goal cell is first seen or evicted).</summary>
 		public Vector3 FlowDirection(Vector3 position, Vector3 goal)
 		{
 			var grid = Grid();
 			var goalCell = grid.WorldToCell(goal.x, goal.y);
+			var field = FieldFor(grid, goalCell);
 
-			if (!_hasField || !_fieldGoal.Equals(goalCell))
+			var (dx, dy) = field.Direction(grid.WorldToCell(position.x, position.y));
+			return new Vector3(dx, dy, 0f);
+		}
+
+		// A small LRU of flow fields keyed by goal cell. A single shared goal stays a straight cache hit;
+		// a handful of distinct goals coexist without rebuilding the field on every alternating call — the
+		// failure mode of a single cached field.
+		private FlowField FieldFor(NavGrid grid, GridCoord goalCell)
+		{
+			if (_fields.TryGetValue(goalCell, out var cached))
 			{
-				_field = FlowField.Build(grid, goalCell);
-				_fieldGoal = goalCell;
-				_hasField = true;
+				_fieldOrder.Remove(goalCell);
+				_fieldOrder.Add(goalCell);
+				return cached;
 			}
 
-			var (dx, dy) = _field!.Direction(grid.WorldToCell(position.x, position.y));
-			return new Vector3(dx, dy, 0f);
+			var field = FlowField.Build(grid, goalCell);
+			_fields[goalCell] = field;
+			_fieldOrder.Add(goalCell);
+
+			if (_fieldOrder.Count > MaxCachedFields)
+			{
+				_fields.Remove(_fieldOrder[0]);
+				_fieldOrder.RemoveAt(0);
+			}
+
+			return field;
 		}
 
 		private NavGrid Grid()
@@ -108,21 +136,8 @@ namespace Assembler.Behaviours.AI
 
 				foreach (var collider in entity.GetComponentsInChildren<Collider>())
 				{
-					Rasterize(grid, collider.bounds);
-				}
-			}
-		}
-
-		private static void Rasterize(NavGrid grid, Bounds bounds)
-		{
-			var min = grid.WorldToCell(bounds.min.x, bounds.min.y);
-			var max = grid.WorldToCell(bounds.max.x, bounds.max.y);
-
-			for (var y = min.Y; y <= max.Y; y++)
-			{
-				for (var x = min.X; x <= max.X; x++)
-				{
-					grid.SetWalkable(new GridCoord(x, y), false);
+					var bounds = collider.bounds;
+					grid.BlockWorldRect(bounds.min.x, bounds.min.y, bounds.max.x, bounds.max.y);
 				}
 			}
 		}

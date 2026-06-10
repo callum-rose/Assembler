@@ -67,7 +67,14 @@ namespace Assembler.Behaviours.AI
 				return SteeringMath.Arrive(self, target, speed, slowingRadius);
 			}
 
-			return Nav.FlowDirection(self, target) * speed;
+			var flow = Nav.FlowDirection(self, target);
+
+			// A zero direction means this cell has no field entry (unreachable, or off the grid). Fall back to
+			// heading straight at the target — matching the astar path's raw-target fallback — rather than
+			// freezing in place.
+			return flow == Vector3.zero
+				? SteeringMath.Seek(self, target, speed)
+				: flow * speed;
 		}
 
 		private Vector3 FollowPath(Vector3 self, Vector3 target, float speed, float slowingRadius, float recompute)
@@ -82,11 +89,7 @@ namespace Assembler.Behaviours.AI
 				_sinceRecompute = 0f;
 			}
 
-			if (_path.Count == 0)
-			{
-				return Vector3.zero;
-			}
-
+			// Nav.Path always yields at least the goal, so _path is non-empty and _pathIndex is in range here.
 			var reach = Mathf.Max(0.05f, Nav.CellSize * 0.5f);
 
 			while (_pathIndex < _path.Count - 1 && Vector3.Distance(self, _path[_pathIndex]) <= reach)

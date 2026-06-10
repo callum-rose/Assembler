@@ -91,6 +91,32 @@ namespace Assembler.Navigation
 			}
 		}
 
+		/// <summary>
+		/// Marks every cell overlapping the world-space rectangle <c>[minX,maxX] × [minY,maxY]</c> unwalkable.
+		/// A rectangle that doesn't overlap the grid at all is ignored, rather than being smeared into a
+		/// phantom wall along the nearest edge — <see cref="WorldToCell"/> clamps, so without this guard an
+		/// entirely off-grid obstacle would block a boundary row/column.
+		/// </summary>
+		public void BlockWorldRect(float minX, float minY, float maxX, float maxY)
+		{
+			if (maxX < OriginX || minX > OriginX + Width * CellSize ||
+				maxY < OriginY || minY > OriginY + Height * CellSize)
+			{
+				return;
+			}
+
+			var min = WorldToCell(minX, minY);
+			var max = WorldToCell(maxX, maxY);
+
+			for (var y = min.Y; y <= max.Y; y++)
+			{
+				for (var x = min.X; x <= max.X; x++)
+				{
+					_walkable[Index(new GridCoord(x, y))] = false;
+				}
+			}
+		}
+
 		/// <summary>Nearest cell containing a world point, clamped into bounds.</summary>
 		public GridCoord WorldToCell(float worldX, float worldY)
 		{

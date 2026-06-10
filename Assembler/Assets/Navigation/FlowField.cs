@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Assembler.Navigation
 {
@@ -11,15 +10,7 @@ namespace Assembler.Navigation
 	/// </summary>
 	public sealed class FlowField
 	{
-		private const int OrthogonalCost = 10;
-		private const int DiagonalCost = 14;
 		private const int Unreachable = int.MaxValue;
-
-		private static readonly (int Dx, int Dy)[] Neighbours =
-		{
-			(1, 0), (-1, 0), (0, 1), (0, -1),
-			(1, 1), (1, -1), (-1, 1), (-1, -1)
-		};
 
 		private readonly NavGrid _grid;
 		private readonly int[] _cost;
@@ -74,41 +65,39 @@ namespace Assembler.Navigation
 		{
 			cost[grid.Index(goal)] = 0;
 
-			// O(n^2) min-extraction is ample for the modest grids ground AI uses; the result is order-independent.
-			var frontier = new List<GridCoord> { goal };
+			// Lowest cost wins; ties break by cell index for a stable order. (The cost field is
+			// order-independent regardless, but a total order keeps the search itself deterministic.)
+			var frontier = new BinaryHeap<(int Cost, int Index, GridCoord Cell)>((a, b) =>
+				a.Cost != b.Cost ? a.Cost.CompareTo(b.Cost) : a.Index.CompareTo(b.Index));
+
+			frontier.Push((0, grid.Index(goal), goal));
 
 			while (frontier.Count > 0)
 			{
-				var bestIndex = 0;
-				for (var i = 1; i < frontier.Count; i++)
+				var (currentCost, currentIndex, current) = frontier.Pop();
+
+				// Lazy deletion: skip a stale heap entry whose cost has since been beaten.
+				if (currentCost > cost[currentIndex])
 				{
-					if (cost[grid.Index(frontier[i])] < cost[grid.Index(frontier[bestIndex])])
-					{
-						bestIndex = i;
-					}
+					continue;
 				}
 
-				var current = frontier[bestIndex];
-				frontier.RemoveAt(bestIndex);
-				var currentCost = cost[grid.Index(current)];
-
-				foreach (var (dx, dy) in Neighbours)
+				foreach (var (dx, dy) in GridConnectivity.Neighbours)
 				{
 					var neighbour = new GridCoord(current.X + dx, current.Y + dy);
 
-					if (!grid.IsWalkable(neighbour) || !StepAllowed(grid, current, dx, dy))
+					if (!grid.IsWalkable(neighbour) || !GridConnectivity.StepAllowed(grid, current, dx, dy))
 					{
 						continue;
 					}
 
-					var step = dx != 0 && dy != 0 ? DiagonalCost : OrthogonalCost;
-					var next = currentCost + step;
+					var next = currentCost + GridConnectivity.StepCost(dx, dy);
 					var neighbourIndex = grid.Index(neighbour);
 
 					if (next < cost[neighbourIndex])
 					{
 						cost[neighbourIndex] = next;
-						frontier.Add(neighbour);
+						frontier.Push((next, neighbourIndex, neighbour));
 					}
 				}
 			}
@@ -132,11 +121,11 @@ namespace Assembler.Navigation
 					var bestDx = 0;
 					var bestDy = 0;
 
-					foreach (var (dx, dy) in Neighbours)
+					foreach (var (dx, dy) in GridConnectivity.Neighbours)
 					{
 						var neighbour = new GridCoord(cell.X + dx, cell.Y + dy);
 
-						if (!grid.IsWalkable(neighbour) || !StepAllowed(grid, cell, dx, dy))
+						if (!grid.IsWalkable(neighbour) || !GridConnectivity.StepAllowed(grid, cell, dx, dy))
 						{
 							continue;
 						}
@@ -162,10 +151,5 @@ namespace Assembler.Navigation
 				}
 			}
 		}
-
-		private static bool StepAllowed(NavGrid grid, GridCoord from, int dx, int dy) =>
-			dx == 0 || dy == 0 ||
-			(grid.IsWalkable(new GridCoord(from.X + dx, from.Y)) &&
-			 grid.IsWalkable(new GridCoord(from.X, from.Y + dy)));
 	}
 }
