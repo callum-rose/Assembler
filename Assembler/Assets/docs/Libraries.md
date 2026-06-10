@@ -529,6 +529,108 @@ An index in [0, weights.Count) chosen with probability proportional to each weig
 
 **Returns** (int): A weighted-random index into the list (must be non-empty).
 
+## `RecordHelper`
+Cast-free helpers for reading and writing Record fields from descriptor expressions.
+            Registered globally in CompiledExpressionsRegistry so every expression can call these by bare name
+            (GetInt, SetInt, HasField, …). They are sugar over the Record indexer: the getters
+            avoid the (int)item["count"] cast the indexer otherwise forces, and the setters mutate the
+            record in place and return it so they chain and can carry a side effect through a value-setter's
+            Value slot. Both styles interoperate — they read and write the same underlying field bag.
+
+### `bool GetBool(Record record, string field)`
+Reads a bool field.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to read from. |
+| field | string | The field name. |
+
+**Returns** (bool): The field's value as a bool.
+
+### `float GetFloat(Record record, string field)`
+Reads a float field, widening a boxed int.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to read from. |
+| field | string | The field name. |
+
+**Returns** (float): The field's value as a float.
+
+### `int GetInt(Record record, string field)`
+Reads an int field.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to read from. |
+| field | string | The field name. |
+
+**Returns** (int): The field's value as an int.
+
+### `string GetString(Record record, string field)`
+Reads a string field.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to read from. |
+| field | string | The field name. |
+
+**Returns** (string): The field's value as a string (never null).
+
+### `bool HasField(Record record, string field)`
+True when the named field is present on the record.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to test. |
+| field | string | The field name. |
+
+**Returns** (bool): Whether the field exists.
+
+### `Record SetBool(Record record, string field, bool value)`
+Writes a bool field in place and returns the record so calls can chain.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to mutate. |
+| field | string | The field name. |
+| value | bool | The value to store. |
+
+**Returns** (Record): The same record instance.
+
+### `Record SetFloat(Record record, string field, float value)`
+Writes a float field in place and returns the record so calls can chain.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to mutate. |
+| field | string | The field name. |
+| value | float | The value to store. |
+
+**Returns** (Record): The same record instance.
+
+### `Record SetInt(Record record, string field, int value)`
+Writes an int field in place and returns the record so calls can chain.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to mutate. |
+| field | string | The field name. |
+| value | int | The value to store. |
+
+**Returns** (Record): The same record instance.
+
+### `Record SetString(Record record, string field, string value)`
+Writes a string field in place and returns the record so calls can chain.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| record | Record | The record to mutate. |
+| field | string | The field name. |
+| value | string | The value to store. |
+
+**Returns** (Record): The same record instance.
+
 ## `SteeringMath`
 First-class steering helpers for descriptor expressions, registered globally in
             CompiledExpressionsRegistry so every expression can call them by bare name (Seek, Flee, Arrive, …). Each

@@ -119,4 +119,13 @@ namespace Assembler.Parsing.Info
 	/// without having to infer element types.
 	/// </summary>
 	public sealed record TypedListValue(Type ElementType, IReadOnlyList<AssemblerValue> Items) : AssemblerValue;
+
+	/// <summary>
+	/// A <c>!record { Type, … }</c> literal: the schema name plus the field values explicitly set in the
+	/// literal (each a primitive <see cref="AssemblerValue"/>). The transform completes this against the
+	/// named schema — validating and filling defaults — before it is stored or unwrapped, so a completed
+	/// <see cref="RecordValue"/> carries every declared field. Record <em>lists</em> reuse
+	/// <see cref="TypedListValue"/> with element type <c>Record</c> and <see cref="RecordValue"/> items.
+	/// </summary>
+	public sealed record RecordValue(string TypeName, IReadOnlyDictionary<string, AssemblerValue> Fields) : AssemblerValue;
 }

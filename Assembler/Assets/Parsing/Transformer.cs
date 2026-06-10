@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Assembler.Core;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Extensions;
 using Assembler.Parsing.Info;
@@ -39,12 +40,18 @@ namespace Assembler.Parsing
 
 			var values = new List<ValueInfo>((gameDto.Constants?.Count ?? 0) + (gameDto.Variables?.Count ?? 0));
 
+			// Schemas only need gameDto.Records, so build them up front: the constant/variable values below
+			// are completed against them so a record stored in a ValueInfo is schema-complete before it ever
+			// reaches the (schema-free) VariableRegistry.
+			var recordSchemas = BuildRecordSchemas(gameDto.Records);
+
 			var allValues = (gameDto.Constants ?? new Dictionary<string, object>())
 				.Concat(gameDto.Variables ?? new Dictionary<string, object>());
 
 			foreach (var kvp in allValues)
 			{
-				values.Add(new ValueInfo(kvp.Key, AssemblerValueConverter.Convert(values, kvp.Value, kvp.Key)));
+				var converted = AssemblerValueConverter.Convert(values, kvp.Value, kvp.Key);
+				values.Add(new ValueInfo(kvp.Key, CompleteRecords(converted, recordSchemas)));
 			}
 
 			var expressions = gameDto.Expressions.EmptyIfNull().Select(CreateExpressionInfo).ToArray();
@@ -55,7 +62,8 @@ namespace Assembler.Parsing
 				expressions.ToDictionary(e => e.Id),
 				BuiltInTypeRegistry.Default,
 				new Dictionary<Type, MethodInfo>(),
-				new InlineExpressionAccumulator());
+				new InlineExpressionAccumulator(),
+				recordSchemas);
 
 			var templates = gameDto.Templates?
 				.Select(kvp => new ConcreteEntityInfo(
@@ -66,7 +74,7 @@ namespace Assembler.Parsing
 					(kvp.Value.Behaviours ?? new Dictionary<string, BehaviourDto>())
 					.Select(b => CreateBehaviour(ctx, b.Key, b.Value))
 					.ToArray(),
-					CreateEntityVariables(kvp.Value.Variables),
+					CreateEntityVariables(ctx, kvp.Value.Variables),
 					BuildChildren(ctx, kvp.Value.Children)))
 				.ToArray() ?? Array.Empty<ConcreteEntityInfo>();
 
@@ -132,7 +140,7 @@ namespace Assembler.Parsing
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
-					CreateEntityVariables(entityDto.Variables),
+					CreateEntityVariables(entityCtx, entityDto.Variables),
 					additionalChildren: children);
 			}
 		}
@@ -174,11 +182,12 @@ namespace Assembler.Parsing
 				position,
 				rotation,
 				ownBehaviours,
-				CreateEntityVariables(dto.Variables),
+				CreateEntityVariables(childCtx, dto.Variables),
 				nestedChildren);
 		}
 
-		private static IReadOnlyList<ValueInfo> CreateEntityVariables(IReadOnlyDictionary<string, object>? variables)
+		private static IReadOnlyList<ValueInfo> CreateEntityVariables(TransformContext ctx,
+			IReadOnlyDictionary<string, object>? variables)
 		{
 			if (variables == null || variables.Count == 0)
 			{
@@ -190,7 +199,8 @@ namespace Assembler.Parsing
 
 			foreach (var kvp in variables)
 			{
-				result[i++] = new ValueInfo(kvp.Key, AssemblerValueConverter.ToAssemblerValue(kvp.Value));
+				var converted = AssemblerValueConverter.ToAssemblerValue(kvp.Value);
+				result[i++] = new ValueInfo(kvp.Key, CompleteRecords(converted, ctx.RecordSchemas));
 			}
 
 			return result;
@@ -245,6 +255,66 @@ namespace Assembler.Parsing
 				? info with { Tags = behaviourDto.Tags.ToArray() }
 				: info;
 		}
+
+		// Builds the record-schema registry from the top-level `Records:` section. Each schema is a field
+		// map; each field declares a CLR type (int/float/bool/string) and an optional default. The raw
+		// default is carried through verbatim — RecordSchemaInfo.CreateInstance coerces/widens it against
+		// the field type when an instance is materialised.
+		private static RecordSchemaRegistry BuildRecordSchemas(
+			IReadOnlyDictionary<string, Dictionary<string, RecordFieldDto>>? records)
+		{
+			if (records is null || records.Count == 0)
+			{
+				return RecordSchemaRegistry.Empty;
+			}
+
+			var schemas = new Dictionary<string, RecordSchemaInfo>(records.Count);
+
+			foreach (var (schemaName, fieldMap) in records)
+			{
+				var fields = fieldMap
+					.Select(kvp => new RecordFieldInfo(kvp.Key,
+						ParseFieldType(schemaName, kvp.Key, kvp.Value.Type),
+						kvp.Value.Default))
+					.ToArray();
+
+				schemas[schemaName] = new RecordSchemaInfo(schemaName, fields);
+			}
+
+			return new RecordSchemaRegistry(schemas);
+		}
+
+		// Completes any record(s) reachable from a constant/variable value against their schema — validating
+		// and filling defaults — so the stored RecordValue carries every declared field. This is the seam
+		// that lets the schema-free VariableRegistry build a Record without a schema lookup at resolve time.
+		// Non-record values pass through untouched.
+		private static AssemblerValue CompleteRecords(AssemblerValue value, RecordSchemaRegistry schemas) =>
+			value switch
+			{
+				RecordValue rec => CompleteRecord(rec, schemas),
+				TypedListValue list when list.ElementType == typeof(Record) =>
+					new TypedListValue(list.ElementType, list.Items.Select(i => CompleteRecords(i, schemas)).ToArray()),
+				_ => value
+			};
+
+		private static RecordValue CompleteRecord(RecordValue rec, RecordSchemaRegistry schemas)
+		{
+			var schema = schemas.Get(rec.TypeName);
+			var record = schema.CreateInstance(RecordValueExtensions.Unwrap(rec.Fields));
+			var fields = schema.Fields.ToDictionary(f => f.Name, f => RecordValueExtensions.Wrap(record[f.Name]));
+			return new RecordValue(rec.TypeName, fields);
+		}
+
+		private static Type ParseFieldType(string schema, string field, string? type) =>
+			(type ?? string.Empty).Trim().ToLowerInvariant() switch
+			{
+				"int" => typeof(int),
+				"float" => typeof(float),
+				"bool" => typeof(bool),
+				"string" => typeof(string),
+				_ => throw new ParsingException(
+					$"Record '{schema}' field '{field}': unsupported field type '{type}'. Use int, float, bool, or string.")
+			};
 
 		private static LocalisationInfo CreateLocalisationInfo(LocalisationDto? dto)
 		{

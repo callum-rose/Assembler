@@ -6,6 +6,7 @@
         "Assembler.Parsing",
         "Assembler.Extensions",
         "Assembler.Libraries",
+        "Assembler.Core",
         "Unity.InputSystem",
         "Assembler.Time"
     ],

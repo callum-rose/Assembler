@@ -10,6 +10,7 @@ namespace Assembler.Deserialisation.Dtos
 		public List<AssetDto>? Assets { get; init; }
 		public Dictionary<string, object>? Constants { get; init; }
 		public Dictionary<string, object>? Variables { get; init; }
+		public Dictionary<string, Dictionary<string, RecordFieldDto>>? Records { get; init; }
 		public Dictionary<string, ExpressionDto>? Expressions { get; init; }
 		public Dictionary<string, EntityDto>? Templates { get; init; }
 		public Dictionary<string, EntityDto>? Entities { get; init; }

@@ -837,6 +837,16 @@ Writes a Color value into the referenced variable when Executed. See VariableSet
 | VariableId | Color | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
 | Value | Color | Source value to assign. Can be a constant, expression, or another variable reference. |
 
+## `record variable setter`
+Writes a record value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Record | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | Record | Source value to assign. Can be a constant, expression, or another variable reference. |
+
 ## `int variable changed trigger`
 Fires when an int variable changes. See VariableChangedTrigger.
 
@@ -1507,6 +1517,103 @@ Iterates a Color list when Executed, firing listeners once per element. See List
 | Name | Type | Description |
 |------|------|-------------|
 | List | List<Color> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
+
+## `record list add`
+Appends a record value to the end of the target list when Executed. See ListAddBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Value | Record | Item to append. |
+
+## `record list insert`
+Inserts a record value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Record | Item to insert. |
+
+## `record list remove at`
+Removes the record item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
+
+## `record list remove`
+Removes the first occurrence (by reference identity) of a record from the target list when Executed. See ListRemoveBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Value | Record | Item to remove. |
+
+## `record list set at`
+Overwrites the record item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | Record | New item. |
+
+## `record list set`
+Replaces the entire contents of the target record list with another list when Executed. See ListSetBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Value | List<Record> | List whose items replace List's contents (typically an expression returning a list). |
+
+## `record list add range`
+Appends every item from another record list to the target list when Executed. See ListAddRangeBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Other | List<Record> | List whose items will be appended to List. |
+
+## `record list clear`
+Removes all items from the target record list when Executed. See ListClearBehaviour.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+
+## `record list loop trigger`
+Iterates a record list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the list to iterate over. |
 
 ### Outputs
 
