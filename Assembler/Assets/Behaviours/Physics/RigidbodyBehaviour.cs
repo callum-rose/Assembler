@@ -14,6 +14,7 @@ namespace Assembler.Behaviours.Physics
 	///   AngularDamping: Damping applied to angular velocity (Unity's Rigidbody.angularDamping).
 	///   FreezePosition: Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z).
 	///   FreezeRotation: Per-axis rotation freeze (any non-zero component locks that axis).
+	///   CentreOfMass: Local-space centre of mass offset. Overrides Unity's auto-computed centre so the body rotates and balances about this point (e.g. push it back to spin a vehicle about its rear axle). Omit to keep the automatic centre.
 	/// </remarks>
 	public sealed class RigidbodyBehaviour : GameBehaviour<RigidbodyData>
 	{
@@ -29,6 +30,7 @@ namespace Assembler.Behaviours.Physics
 			data.AngularDamping.UseIfValueExists(v => _rigidbody.angularDamping = v);
 			data.FreezePosition.UseIfValueExists(v => _rigidbody.constraints = ApplyPositionFreeze(_rigidbody.constraints, v));
 			data.FreezeRotation.UseIfValueExists(v => _rigidbody.constraints = ApplyRotationFreeze(_rigidbody.constraints, v));
+			data.CentreOfMass.UseIfValueExists(v => _rigidbody.centerOfMass = v);
 		}
 
 		public override void Execute(TriggerContext ctx) { }

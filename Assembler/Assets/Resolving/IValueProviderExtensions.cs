@@ -11,6 +11,17 @@ namespace Assembler.Resolving
 		/// </summary>
 		public static T Get<T>(this IValueProvider<T> provider) => provider.Get(TriggerContext.Empty);
 
+		/// <summary>
+		/// Narrow a provider to <see cref="IWriteValueProvider{T}"/>, throwing a <see cref="ResolveException"/>
+		/// when the source is read-only. Used at build time so wiring a read-only value (a constant, expression,
+		/// clock, …) into a writable slot fails with a named error instead of throwing on the first <c>Set</c>.
+		/// An unwired slot resolves to <see cref="NullValueProvider{T}"/>, which is writable (no-op), so it passes.
+		/// </summary>
+		public static IWriteValueProvider<T> AsWritable<T>(this IValueProvider<T> provider) =>
+			provider as IWriteValueProvider<T>
+			?? throw new ResolveException(
+				$"Expected a writable value provider but '{provider.GetType().Name}' is read-only.");
+
 		public static void UseIfValueExists<T>(this IValueProvider<T> provider, TriggerContext ctx, Action<T> action)
 		{
 			if (provider is not NullValueProvider<T>)
