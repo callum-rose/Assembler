@@ -32,7 +32,9 @@ Physics:
 # Min/Max are the two in-plane axes (here X and Z), not literally X and Y.
 Navigation:
   CellSize: 0.5                 # fine enough that 1-unit walls span 2 cells (no thin-wall leaks)
-  Bounds: { Min: !vec { X: -11, Y: -11 }, Max: !vec { X: 11, Y: 11 } }
+  # Plane is xz, so the grid's two axes are world X and world Z — the bounds must put the
+  # second extent in the vector's Z component (Y is the off-plane/height axis, ignored here).
+  Bounds: { Min: !vec { X: -11, Y: 0, Z: -11 }, Max: !vec { X: 11, Y: 0, Z: 11 } }
   ObstacleTag: wall
   Plane: xz
   Diagonal: false               # 4-connected, grid-aligned movement (no diagonal squeeze past corners)
