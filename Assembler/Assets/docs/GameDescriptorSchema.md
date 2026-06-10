@@ -412,7 +412,7 @@ Tags carry a leading `!` and tell the loader how to interpret a value. The full 
 | `!expr` | `ExprRefDto` | `!expr { Do, With, … }` (mapping) | Evaluates code. See [`!expr`](#expr-detail). |
 | `!asset` | `AssetRefDto` | `!asset asset_id` (scalar **only** — mapping form fails) | References a top-level `Assets:` entry by id, for asset-typed properties. |
 | `!output` | `OutputRefDto` | `!output local_name` (scalar) | Reads a trigger output previously bound by a listener's `Outputs:` map. |
-| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of another entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. |
+| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of another entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. Inside a template, `Id` may be `!parameter <slot>` (e.g. `!entity { Id: !parameter self_id, Property: Position }`) to read the **instantiated** entity's own transform. |
 | `!rigidbody` | `RigidbodyRefDto` | `!rigidbody { Id: car, Property: Velocity }` (mapping) | A live read of an entity's `Rigidbody` `Property` (`Velocity` \| `AngularVelocity` \| `Position`). |
 | `!query` | `EntityQueryRefDto` | `!query { Kind, EntityTag, Origin, MaxRange }` (mapping) | A one-off spatial perception query against the live entity index. `Kind` selects the verb (e.g. `NearestId`, `NearestPosition`). |
 | `!clock` | `ClockRefDto` | `!clock deltaTime` (scalar) | Reads a game-clock property (`deltaTime` \| `time` \| `frameCount` \| `unscaledDeltaTime`) as a number. Respects pause/slow-mo. |

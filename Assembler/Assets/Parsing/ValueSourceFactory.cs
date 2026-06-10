@@ -162,7 +162,7 @@ namespace Assembler.Parsing
 					: new ParameterSource<T>(paramRef.Id),
 				AssetRef assetRef => new AssetSource<T>(assetRef.Id),
 				EntityPropertyRef entityPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
-					new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property),
+					CreateEntityPropertySource<T>(ctx, entityPropertyRef),
 				EntityPropertyRef entityPropertyRef => throw new ParsingException(
 					$"!entity '{entityPropertyRef.Id}' property '{entityPropertyRef.Property}' resolves to Vector3 but was used where a {typeof(T).Name} was expected"),
 				RigidbodyPropertyRef rigidbodyPropertyRef when typeof(T) == typeof(Vector3) || typeof(T) == typeof(object) =>
@@ -202,6 +202,21 @@ namespace Assembler.Parsing
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
 			};
+
+		// Builds an EntityPropertySource. A literal id is wired straight through; a !parameter id resolves
+		// immediately if the parameter is already in scope (e.g. self_id during instantiation), otherwise
+		// it is carried on the source so SubstituteParameters can fill it in later.
+		private static ValueSource<T> CreateEntityPropertySource<T>(TransformContext ctx, EntityPropertyRef entityPropertyRef)
+		{
+			if (entityPropertyRef.IdParameter is not { } param)
+			{
+				return new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property);
+			}
+
+			return ctx.Parameters.TryGetValue(param, out var raw) && raw is StringValue sv
+				? new EntityPropertySource<T>(sv.Value, entityPropertyRef.Property)
+				: new EntityPropertySource<T>(string.Empty, entityPropertyRef.Property, param);
+		}
 
 		private static bool IsAssignableList(Type t, Type elementType)
 		{
