@@ -20,6 +20,8 @@ namespace Assembler.Resolving
 				RigidbodyPropertySource<T> rb when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new RigidbodyPropertyProvider(ctx.EntityTransforms.Get(rb.EntityId), rb.Property),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
+				QuerySource<T> query => new QueryValueProvider<T>(ctx.EntityQuery, query.Kind, query.EntityTag,
+					query.Origin.Resolve(ctx), query.MaxRange.Resolve(ctx)),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),

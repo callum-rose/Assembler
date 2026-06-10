@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace Assembler.Parsing.Info
 {
@@ -75,6 +76,31 @@ namespace Assembler.Parsing.Info
 
 	/// <summary>A value sourced from the injected game clock (resolved each frame). See <c>!clock</c>.</summary>
 	public sealed record ClockValueSource<T>(ClockProperty Property) : ValueSource<T>;
+
+	/// <summary>The spatial query verbs exposed to descriptors via the <c>!query</c> tag. Extend by adding a
+	/// case here plus an arm in <c>QueryValueProvider</c> — no new YAML tag is needed.</summary>
+	public enum QueryKind
+	{
+		/// <summary>Id of the nearest entity with the tag within range (string; empty when none).</summary>
+		NearestId,
+
+		/// <summary>Position of the nearest entity with the tag within range (Vector3; the origin point when none).</summary>
+		NearestPosition
+	}
+
+	/// <summary>A <c>!query</c> spatial lookup resolved live each read against the entity query service.
+	/// <typeparamref name="T"/> is constrained at parse time to match <see cref="Kind"/> (string for an id
+	/// query, Vector3 for a position query). <see cref="EntityTag"/> is the entity tag to search for;
+	/// <see cref="Origin"/> is the point distances are measured from.</summary>
+	public sealed record QuerySource<T>(
+		QueryKind Kind,
+		string EntityTag,
+		ValueSource<Vector3> Origin,
+		ValueSource<float> MaxRange) : ValueSource<T>
+	{
+		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
+			new QuerySource<T>(Kind, EntityTag, Origin.SubstituteParameters(ctx), MaxRange.SubstituteParameters(ctx));
+	}
 
 	/// <summary>
 	/// A localised string sourced from the string table via a <c>!text</c> key. <see cref="Arguments"/>

@@ -74,6 +74,16 @@ namespace Assembler.Building
 				needsClock.Clock = ctx.Clock;
 			}
 
+			if (behaviour is INeedsEntityQuery needsQuery)
+			{
+				needsQuery.Query = ctx.EntityQuery;
+			}
+
+			if (behaviour is INeedsLineOfSight needsSight)
+			{
+				needsSight.Sight = ctx.Sight;
+			}
+
 			return (behaviour, initialise);
 		}
 
@@ -488,7 +498,20 @@ namespace Assembler.Building
 							i.Listeners.ToListeners(lr, res));
 					}
 					);
-				})
+				}),
+				[typeof(PerceiveInfo)] = Entry<PerceiveInfo, Perceive, PerceiveData>(
+					(i, ctx) => new PerceiveData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						i.TargetId.ResolveWritable(ctx.Resolution),
+						i.TargetPosition.ResolveWritable(ctx.Resolution),
+						i.HasTarget.ResolveWritable(ctx.Resolution),
+						i.LastKnownPosition.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
