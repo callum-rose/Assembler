@@ -36,7 +36,8 @@ namespace Tests.Resolving
 			service.Register("near", At("near", new Vector3(2, 0, 0)), new[] { "enemy" });
 			service.Register("other", At("other", new Vector3(1, 0, 0)), new[] { "ally" });
 
-			Assert.AreEqual("near", service.Nearest(Vector3.zero, "enemy", 100f));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out var id));
+			Assert.AreEqual("near", id);
 		}
 
 		[Test]
@@ -45,8 +46,9 @@ namespace Tests.Resolving
 			var service = new EntityQueryService();
 			service.Register("e", At("e", new Vector3(5, 0, 0)), new[] { "enemy" });
 
-			Assert.IsNull(service.Nearest(Vector3.zero, "enemy", 4f));
-			Assert.AreEqual("e", service.Nearest(Vector3.zero, "enemy", 6f));
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 4f, out _));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 6f, out var id));
+			Assert.AreEqual("e", id);
 		}
 
 		[Test]
@@ -57,7 +59,8 @@ namespace Tests.Resolving
 			service.Register("b", At("b", new Vector3(3, 0, 0)), new[] { "enemy" });
 			service.Register("a", At("a", new Vector3(3, 0, 0)), new[] { "enemy" });
 
-			Assert.AreEqual("a", service.Nearest(Vector3.zero, "enemy", 100f));
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out var id));
+			Assert.AreEqual("a", id);
 		}
 
 		[Test]
@@ -93,7 +96,21 @@ namespace Tests.Resolving
 			Object.DestroyImmediate(transform.gameObject);
 			_objects.Clear();
 
-			Assert.IsNull(service.Nearest(Vector3.zero, "enemy", 100f));
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+		}
+
+		[Test]
+		public void UnregisterRemovesEntity()
+		{
+			var service = new EntityQueryService();
+			service.Register("e", At("e", new Vector3(1, 0, 0)), new[] { "enemy" });
+
+			Assert.IsTrue(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+
+			service.Unregister("e");
+
+			Assert.IsFalse(service.TryNearest(Vector3.zero, "enemy", 100f, out _));
+			Assert.IsFalse(service.TryGetPosition("e", out _));
 		}
 	}
 }

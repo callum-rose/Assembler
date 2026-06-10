@@ -734,10 +734,10 @@ Sensor that scans for the nearest tagged entity and writes the result into black
 | RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
 | Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
 | Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
-| TargetIdVar | string | Name of the string variable that receives the detected entity id. |
-| TargetPositionVar | string | Name of the vector variable that receives the detected entity position. |
-| HasTargetVar | string | Name of the bool variable set true while a target is visible, false otherwise. |
-| LastKnownPositionVar | string | Name of the vector variable updated ONLY while visible (the memory of last sighting). |
+| TargetId | string | !var reference to the string variable that receives the detected entity id. |
+| TargetPosition | Vector3 | !var reference to the vector variable that receives the detected entity position. |
+| HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
+| LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.

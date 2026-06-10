@@ -70,11 +70,17 @@ namespace Assembler.Parsing
 		}
 
 		// Builds a !query value source, validating that the use-site type T matches the query verb's result
-		// type (a position query yields Vector3, an id query yields string). From is required; MaxRange defaults
-		// to no limit when omitted.
+		// type (a position query yields Vector3, an id query yields string). Origin is required; MaxRange
+		// defaults to no limit when omitted.
 		private static ValueSource<T> BuildQuerySource<T>(TransformContext ctx, QueryRef queryRef)
 		{
-			var kind = ParseQueryKind(queryRef.Kind);
+			var kind = queryRef.Kind.Trim().ToLowerInvariant() switch
+			{
+				"nearestid" => QueryKind.NearestId,
+				"nearestposition" => QueryKind.NearestPosition,
+				_ => throw new ParsingException(
+					$"Unknown !query Kind '{queryRef.Kind}'. Expected one of: NearestId, NearestPosition.")
+			};
 
 			var expected = kind switch
 			{
@@ -89,20 +95,11 @@ namespace Assembler.Parsing
 					$"!query Kind '{kind}' resolves to {expected.Name} but was used where a {typeof(T).Name} was expected.");
 			}
 
-			var from = CreateValueSource<Vector3>(ctx, queryRef.From);
+			var origin = CreateValueSource<Vector3>(ctx, queryRef.Origin);
 			var maxRange = CreateValueSource<float>(ctx, queryRef.MaxRange, float.PositiveInfinity);
 
-			return new QuerySource<T>(kind, queryRef.Tag, from, maxRange);
+			return new QuerySource<T>(kind, queryRef.EntityTag, origin, maxRange);
 		}
-
-		private static QueryKind ParseQueryKind(string kind) =>
-			kind.Trim().ToLowerInvariant() switch
-			{
-				"nearestid" => QueryKind.NearestId,
-				"nearestposition" => QueryKind.NearestPosition,
-				_ => throw new ParsingException(
-					$"Unknown !query Kind '{kind}'. Expected one of: NearestId, NearestPosition.")
-			};
 
 		private static ClockProperty ParseClockProperty(string property) =>
 			property.Trim().ToLowerInvariant() switch

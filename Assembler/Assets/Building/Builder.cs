@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.AI;
 using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
@@ -118,7 +119,7 @@ namespace Assembler.Building
 			// Perception services, created once per game and threaded into the factory (same lifetime as the
 			// clock). The query index is populated as entities instantiate; line-of-sight reads physics live.
 			var entityQueryService = new EntityQueryService();
-			var lineOfSightService = new Assembler.Behaviours.AI.LineOfSightService();
+			var lineOfSightService = new LineOfSightService();
 
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame

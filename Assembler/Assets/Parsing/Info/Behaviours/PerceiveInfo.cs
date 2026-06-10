@@ -6,8 +6,8 @@ namespace Assembler.Parsing.Info.Behaviours
 	/// <summary>
 	/// The perception sensor's parsed configuration. <see cref="Tag"/>/<see cref="Radius"/> are required; the
 	/// cone (<see cref="Forward"/> + <see cref="ConeAngle"/>) and line-of-sight gating are optional. The four
-	/// output properties name the blackboard variables this sensor maintains (plain variable names, resolved to
-	/// the entity's writable variables at build time); an empty name means "don't write that output".
+	/// output properties are <c>!var</c> references to the blackboard variables this sensor maintains, resolved
+	/// like any other property; an omitted output resolves to a null-object provider and is simply not written.
 	/// </summary>
 	public record PerceiveInfo(
 		string Id,
@@ -19,10 +19,10 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<bool> RequireLineOfSight,
 		ValueSource<string> Obstacles,
 		ValueSource<float> Interval,
-		string TargetIdVar,
-		string TargetPositionVar,
-		string HasTargetVar,
-		string LastKnownPositionVar) : BehaviourInfo(Id, Listeners)
+		ValueSource<string> TargetId,
+		ValueSource<Vector3> TargetPosition,
+		ValueSource<bool> HasTarget,
+		ValueSource<Vector3> LastKnownPosition) : BehaviourInfo(Id, Listeners)
 	{
 		public static PerceiveInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
@@ -48,10 +48,10 @@ namespace Assembler.Parsing.Info.Behaviours
 				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("RequireLineOfSight"), false),
 				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Obstacles"), string.Empty),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Interval"), 0f),
-				OptionalName(props.GetValueOrDefault("TargetIdVar")),
-				OptionalName(props.GetValueOrDefault("TargetPositionVar")),
-				OptionalName(props.GetValueOrDefault("HasTargetVar")),
-				OptionalName(props.GetValueOrDefault("LastKnownPositionVar")));
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("TargetId")),
+				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("TargetPosition")),
+				ValueSourceFactory.CreateOptionalValueSource<bool>(ctx, props.GetValueOrDefault("HasTarget")),
+				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("LastKnownPosition")));
 		}
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
@@ -65,12 +65,9 @@ namespace Assembler.Parsing.Info.Behaviours
 				RequireLineOfSight.SubstituteParameters(ctx),
 				Obstacles.SubstituteParameters(ctx),
 				Interval.SubstituteParameters(ctx),
-				TargetIdVar,
-				TargetPositionVar,
-				HasTargetVar,
-				LastKnownPositionVar);
-
-		private static string OptionalName(AssemblerValue? value) =>
-			value is StringValue s ? s.Value : string.Empty;
+				TargetId.SubstituteParameters(ctx),
+				TargetPosition.SubstituteParameters(ctx),
+				HasTarget.SubstituteParameters(ctx),
+				LastKnownPosition.SubstituteParameters(ctx));
 	}
 }

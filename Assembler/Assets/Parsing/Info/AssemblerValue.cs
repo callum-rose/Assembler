@@ -67,13 +67,13 @@ namespace Assembler.Parsing.Info
 	/// runtime against the injected game clock. Carries the requested property name verbatim.</summary>
 	public sealed record ClockRef(string Property) : AssemblerValue;
 
-	/// <summary>A <c>!query { Kind, Tag, From, MaxRange }</c> spatial lookup against the live entity index.
-	/// <see cref="Kind"/> selects the query verb (parsed later to a <c>QueryKind</c>); <see cref="From"/> and
-	/// <see cref="MaxRange"/> are nested values resolved live each read.</summary>
+	/// <summary>A <c>!query { Kind, EntityTag, Origin, MaxRange }</c> spatial lookup against the live entity
+	/// index. <see cref="Kind"/> selects the query verb (parsed later to a <c>QueryKind</c>);
+	/// <see cref="Origin"/> and <see cref="MaxRange"/> are nested values resolved live each read.</summary>
 	public sealed record QueryRef(
 		string Kind,
-		string Tag,
-		AssemblerValue From,
+		string EntityTag,
+		AssemblerValue Origin,
 		AssemblerValue MaxRange) : AssemblerValue;
 
 	public sealed record OutputRef(string Id) : AssemblerRef(Id);

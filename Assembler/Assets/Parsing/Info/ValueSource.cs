@@ -84,21 +84,22 @@ namespace Assembler.Parsing.Info
 		/// <summary>Id of the nearest entity with the tag within range (string; empty when none).</summary>
 		NearestId,
 
-		/// <summary>Position of the nearest entity with the tag within range (Vector3; the From point when none).</summary>
+		/// <summary>Position of the nearest entity with the tag within range (Vector3; the origin point when none).</summary>
 		NearestPosition
 	}
 
 	/// <summary>A <c>!query</c> spatial lookup resolved live each read against the entity query service.
 	/// <typeparamref name="T"/> is constrained at parse time to match <see cref="Kind"/> (string for an id
-	/// query, Vector3 for a position query).</summary>
+	/// query, Vector3 for a position query). <see cref="EntityTag"/> is the entity tag to search for;
+	/// <see cref="Origin"/> is the point distances are measured from.</summary>
 	public sealed record QuerySource<T>(
 		QueryKind Kind,
-		string Tag,
-		ValueSource<Vector3> From,
+		string EntityTag,
+		ValueSource<Vector3> Origin,
 		ValueSource<float> MaxRange) : ValueSource<T>
 	{
 		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
-			new QuerySource<T>(Kind, Tag, From.SubstituteParameters(ctx), MaxRange.SubstituteParameters(ctx));
+			new QuerySource<T>(Kind, EntityTag, Origin.SubstituteParameters(ctx), MaxRange.SubstituteParameters(ctx));
 	}
 
 	/// <summary>

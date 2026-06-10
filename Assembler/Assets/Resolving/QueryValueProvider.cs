@@ -10,21 +10,21 @@ namespace Assembler.Resolving
 	{
 		private readonly EntityQueryService _query;
 		private readonly QueryKind _kind;
-		private readonly string _tag;
-		private readonly IValueProvider<Vector3> _from;
+		private readonly string _entityTag;
+		private readonly IValueProvider<Vector3> _origin;
 		private readonly IValueProvider<float> _maxRange;
 
 		public QueryValueProvider(
 			EntityQueryService query,
 			QueryKind kind,
-			string tag,
-			IValueProvider<Vector3> from,
+			string entityTag,
+			IValueProvider<Vector3> origin,
 			IValueProvider<float> maxRange)
 		{
 			_query = query;
 			_kind = kind;
-			_tag = tag;
-			_from = from;
+			_entityTag = entityTag;
+			_origin = origin;
 			_maxRange = maxRange;
 		}
 
@@ -37,14 +37,14 @@ namespace Assembler.Resolving
 
 		private object Read(TriggerContext ctx)
 		{
-			var from = _from.Get(ctx);
-			var id = _query.Nearest(from, _tag, _maxRange.Get(ctx));
+			var origin = _origin.Get(ctx);
+			var found = _query.TryNearest(origin, _entityTag, _maxRange.Get(ctx), out var id);
 
 			return _kind switch
 			{
-				QueryKind.NearestId => id ?? string.Empty,
-				// No target: fall back to the From point so a Direction(self, target) reads as zero motion.
-				QueryKind.NearestPosition => id != null ? _query.PositionOf(id) : from,
+				QueryKind.NearestId => found ? id : string.Empty,
+				// No target: fall back to the origin so a Direction(self, target) reads as zero motion.
+				QueryKind.NearestPosition => found && _query.TryGetPosition(id, out var position) ? position : origin,
 				_ => throw new InvalidOperationException($"Unsupported query kind: {_kind}")
 			};
 		}

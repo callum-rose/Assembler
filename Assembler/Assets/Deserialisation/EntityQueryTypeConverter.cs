@@ -6,17 +6,17 @@ using YamlDotNet.Serialization;
 
 namespace Assembler.Deserialisation
 {
-	internal class QueryTypeConverter : IYamlTypeConverter
+	internal class EntityQueryTypeConverter : IYamlTypeConverter
 	{
-		public bool Accepts(Type type) => type == typeof(QueryRefDto);
+		public bool Accepts(Type type) => type == typeof(EntityQueryRefDto);
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
 			parser.Consume<MappingStart>();
 
 			string? kind = null;
-			string? tag = null;
-			object? from = null;
+			string? entityTag = null;
+			object? origin = null;
 			object? maxRange = null;
 
 			while (!parser.TryConsume<MappingEnd>(out _))
@@ -27,13 +27,13 @@ namespace Assembler.Deserialisation
 					case "Kind":
 						kind = parser.Consume<Scalar>().Value;
 						break;
-					case "Tag":
-						tag = parser.Consume<Scalar>().Value;
+					case "EntityTag":
+						entityTag = parser.Consume<Scalar>().Value;
 						break;
-					// From/MaxRange may themselves be tagged values (e.g. !entity, !var), so defer to the root
+					// Origin/MaxRange may themselves be tagged values (e.g. !entity, !var), so defer to the root
 					// deserializer rather than consuming a bare scalar.
-					case "From":
-						from = rootDeserializer(typeof(object));
+					case "Origin":
+						origin = rootDeserializer(typeof(object));
 						break;
 					case "MaxRange":
 						maxRange = rootDeserializer(typeof(object));
@@ -49,16 +49,16 @@ namespace Assembler.Deserialisation
 				throw new YamlException("!query requires a non-empty 'Kind' key (e.g. NearestId, NearestPosition).");
 			}
 
-			if (string.IsNullOrWhiteSpace(tag))
+			if (string.IsNullOrWhiteSpace(entityTag))
 			{
-				throw new YamlException("!query requires a non-empty 'Tag' key (the entity tag to search for).");
+				throw new YamlException("!query requires a non-empty 'EntityTag' key (the entity tag to search for).");
 			}
 
-			return new QueryRefDto
+			return new EntityQueryRefDto
 			{
 				Kind = kind,
-				Tag = tag,
-				From = from,
+				EntityTag = entityTag,
+				Origin = origin,
 				MaxRange = maxRange
 			};
 		}

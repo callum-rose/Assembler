@@ -11,21 +11,23 @@ namespace Assembler.Resolving
 	///
 	/// Queries iterate each tag bucket in id-sorted (ordinal) order and break ties toward the lowest id, so the
 	/// result is deterministic given the same world (mirroring <c>BehaviourRegistry</c>'s stable ordering).
-	/// Destroyed entities are skipped lazily: their <see cref="Transform"/> compares equal to null once Unity
-	/// has torn them down, so they drop out of results without an explicit deregister step.
+	///
+	/// Entities deregister on destruction via <see cref="Unregister"/> (called from <c>GameEntity.OnDestroy</c>),
+	/// so the index does not leak as entities churn. The destroyed-transform null check is a defensive backstop
+	/// for the window between Unity tearing a transform down and that callback running.
 	///
 	/// The implementation is a linear scan over the tag bucket; a spatial hash can replace it later behind this
 	/// same interface without touching callers.
 	/// </summary>
 	public sealed class EntityQueryService
 	{
-		private readonly Dictionary<string, Transform> _byId = new();
+		private readonly Dictionary<string, Entry> _byId = new();
 		private readonly Dictionary<string, List<string>> _idsByTag = new();
 
 		/// <summary>Adds an entity to the index under each of its tags. Call once per entity at instantiation.</summary>
 		public void Register(string id, Transform transform, IReadOnlyList<string> tags)
 		{
-			_byId[id] = transform;
+			_byId[id] = new Entry(transform, tags);
 
 			foreach (var tag in tags)
 			{
@@ -44,27 +46,48 @@ namespace Assembler.Resolving
 			}
 		}
 
-		/// <summary>Current world position of an entity, or <see cref="Vector3.zero"/> if unknown/destroyed.</summary>
-		public Vector3 PositionOf(string id) =>
-			_byId.TryGetValue(id, out var transform) && transform != null ? transform.position : Vector3.zero;
-
-		/// <summary>
-		/// Id of the nearest live entity carrying <paramref name="tag"/> within <paramref name="maxRange"/> of
-		/// <paramref name="from"/>, or <c>null</c> if none. Pass <see cref="float.PositiveInfinity"/> for no limit.
-		/// </summary>
-		public string? Nearest(Vector3 from, string tag, float maxRange)
+		/// <summary>Removes an entity from the index. Safe to call for an unknown id (no-op).</summary>
+		public void Unregister(string id)
 		{
-			if (!_idsByTag.TryGetValue(tag, out var bucket))
+			if (!_byId.TryGetValue(id, out var entry))
 			{
-				return null;
+				return;
 			}
 
-			string? best = null;
+			foreach (var tag in entry.Tags)
+			{
+				if (_idsByTag.TryGetValue(tag, out var bucket))
+				{
+					bucket.Remove(id);
+				}
+			}
+
+			_byId.Remove(id);
+		}
+
+		/// <summary>Current world position of a live entity. Returns false if unknown or destroyed.</summary>
+		public bool TryGetPosition(string id, out Vector3 position) => TryLivePosition(id, out position);
+
+		/// <summary>
+		/// Finds the nearest live entity carrying <paramref name="tag"/> within <paramref name="maxRange"/> of
+		/// <paramref name="from"/>. Returns false (and an empty <paramref name="id"/>) if none. Pass
+		/// <see cref="float.PositiveInfinity"/> for no range limit.
+		/// </summary>
+		public bool TryNearest(Vector3 from, string tag, float maxRange, out string id)
+		{
+			id = string.Empty;
+
+			if (!_idsByTag.TryGetValue(tag, out var bucket))
+			{
+				return false;
+			}
+
+			var found = false;
 			var bestSqr = maxRange * maxRange;
 
-			foreach (var id in bucket)
+			foreach (var candidate in bucket)
 			{
-				if (!TryLivePosition(id, out var position))
+				if (!TryLivePosition(candidate, out var position))
 				{
 					continue;
 				}
@@ -75,11 +98,12 @@ namespace Assembler.Resolving
 				if (sqr < bestSqr)
 				{
 					bestSqr = sqr;
-					best = id;
+					id = candidate;
+					found = true;
 				}
 			}
 
-			return best;
+			return found;
 		}
 
 		/// <summary>All live entities carrying <paramref name="tag"/> within <paramref name="radius"/>, id-sorted.</summary>
@@ -150,14 +174,26 @@ namespace Assembler.Resolving
 
 		private bool TryLivePosition(string id, out Vector3 position)
 		{
-			if (_byId.TryGetValue(id, out var transform) && transform != null)
+			if (_byId.TryGetValue(id, out var entry) && entry.Transform != null)
 			{
-				position = transform.position;
+				position = entry.Transform.position;
 				return true;
 			}
 
 			position = Vector3.zero;
 			return false;
+		}
+
+		private readonly struct Entry
+		{
+			public Transform Transform { get; }
+			public IReadOnlyList<string> Tags { get; }
+
+			public Entry(Transform transform, IReadOnlyList<string> tags)
+			{
+				Transform = transform;
+				Tags = tags;
+			}
 		}
 	}
 }

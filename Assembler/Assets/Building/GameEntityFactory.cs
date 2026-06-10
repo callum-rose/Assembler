@@ -109,6 +109,7 @@ namespace Assembler.Building
 			var gameEntity = gameObject.AddComponent<GameEntity>();
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
+			gameEntity.Query = _entityQuery;
 
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
