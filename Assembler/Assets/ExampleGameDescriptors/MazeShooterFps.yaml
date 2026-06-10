@@ -1,0 +1,600 @@
+Game:
+  Title: Maze Shooter (FPS)
+  Description: |
+    A first-person shooter on a walled maze floor. You stand in the maze, turn to
+    look (mouse, or the Left/Right arrow keys), strafe and advance with WASD, and
+    shoot with the left mouse button or Space. Hostile NPCs spawn in three escalating
+    WAVES from the far corners of the maze and pathfind (A* around the walls) straight
+    toward you. Each hit takes a chunk of an NPC's health; drop it to zero and the NPC
+    dies. Survive long enough to clear every wave and you win; let one reach you and the
+    game ends.
+
+    Notes on the moving parts:
+      - First person: the output `camera` lives ON the player entity, so it renders
+        from the player's eyes and yaws as you turn. (Visuals are gizmos, so view this
+        with Gizmos enabled in the Game view — the project convention for its 3D demos.)
+      - Movement is facing-relative: a `facing velocity` expression rotates the WASD
+        input by the player's current yaw and feeds the player rigidbody via
+        `set velocity`, so the solid maze walls physically block you.
+      - NPCs use grid `navigate` on the XZ ground plane (`Navigation.Plane: xz`),
+        rasterizing the `wall` colliders into the walkability grid.
+      - Waves: each wave is a `timer trigger` (start time) that starts an
+        `interval trigger` (AutoStart off) firing a fixed `Count` of spawns.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0a0a12"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# Walkability grid on the ground (XZ) plane: any entity tagged `wall` is an obstacle.
+# Min/Max are the two in-plane axes (here X and Z), not literally X and Y.
+Navigation:
+  CellSize: 1
+  Bounds: { Min: !vec { X: -11, Y: -11 }, Max: !vec { X: 11, Y: 11 } }
+  ObstacleTag: wall
+  Plane: xz
+
+Constants:
+  # --- Player / view ---
+  eye height: 1
+  move speed: 5.0
+  mouse sensitivity: 0.12
+  arrow turn: !vec { X: 0, Y: 2.2, Z: 0 }
+  arrow turn back: !vec { X: 0, Y: -2.2, Z: 0 }
+  player collider radius: 0.4
+  player collider height: 1.8
+
+  # --- Weapon / bullets ---
+  bullet speed: 18.0
+  bullet life: 2.0
+  bullet radius: 0.22
+  bullet colour: !colour { R: 1.0, G: 0.92, B: 0.35, A: 1 }
+
+  # --- NPCs ---
+  npc size: !vec { X: 1, Y: 2, Z: 1 }
+  npc speed: 2.2
+  npc colour: !colour { R: 0.92, G: 0.28, B: 0.28, A: 1 }
+
+  # --- Maze ---
+  wall colour: !colour { R: 0.42, G: 0.44, B: 0.55, A: 1 }
+  floor colour: !colour { R: 0.20, G: 0.22, B: 0.30, A: 1 }
+  floor size: !vec { X: 20, Y: 0.1, Z: 20 }
+
+  # --- Wave corners (open cells in the maze's far corridors). Y = NPC centre height. ---
+  corner ne: !vec { X: 9, Y: 1, Z: 9 }
+  corner se: !vec { X: 9, Y: 1, Z: -9 }
+  corner nw: !vec { X: -9, Y: 1, Z: 9 }
+
+  # Total NPCs across all waves (3 + 4 + 5). Clearing them all wins.
+  total to kill: 12
+
+Variables:
+  kills: 0
+  enemies in maze: 0
+
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # WASD -> axis x (strafe) / y (forward)
+    shoot: { Type: button, Phase: down }          # fire one bullet on press
+    quit: { Type: button, Phase: down }
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      shoot:
+        - "<Mouse>/leftButton"
+        - "<Keyboard>/space"
+      quit:
+        - "<Keyboard>/escape"
+
+Expressions:
+  # WASD input (axis) rotated by the player's yaw, scaled to a rigidbody velocity.
+  facing velocity:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ input, euler, speed ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3, UnityEngine.Mathf ]
+    Expression: |
+      float yaw = euler.y;
+      Vector3 fwd = new Vector3(Mathf.Sin(DegToRad(yaw)), 0f, Mathf.Cos(DegToRad(yaw)));
+      Vector3 strafe = new Vector3(Mathf.Cos(DegToRad(yaw)), 0f, -Mathf.Sin(DegToRad(yaw)));
+      Vector3 dir = AddVector(ScaleVector(fwd, input.y), ScaleVector(strafe, input.x));
+      return ScaleVector(Normalize(dir), speed);
+
+  # Forward direction (from yaw) scaled to the bullet's muzzle velocity.
+  forward velocity:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ euler, speed ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3, UnityEngine.Mathf ]
+    Expression: |
+      float yaw = euler.y;
+      Vector3 fwd = new Vector3(Mathf.Sin(DegToRad(yaw)), 0f, Mathf.Cos(DegToRad(yaw)));
+      return ScaleVector(fwd, speed);
+
+  # Muzzle position: a little in front of the player's eyes, along facing.
+  muzzle position:
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ pos, euler ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3, UnityEngine.Mathf ]
+    Expression: |
+      float yaw = euler.y;
+      Vector3 fwd = new Vector3(Mathf.Sin(DegToRad(yaw)), 0f, Mathf.Cos(DegToRad(yaw)));
+      return AddVector(pos, ScaleVector(fwd, 1.2f));
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "MAZE SHOOTER"
+      hud.instructions: "Mouse / Arrows: look    WASD: move    Click / Space: shoot    Esc: quit"
+      hud.kills: "Kills: {0} / {1}"
+      hud.alive: "Enemies in the maze: {0}"
+
+Templates:
+  # A hostile NPC. Owns its own `health` (seeded by a !parameter at spawn). Pathfinds
+  # to the player, dies when shot enough times, ends the game if it reaches the player.
+  npc_template:
+    Tags: [ enemy ]
+    Variables:
+      health: !parameter initial_health
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var npc size, IsWire: false, Colour: !var npc colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var npc size, IsTrigger: true }
+
+      # Grid navigation toward the player's live position (A* around the walls).
+      chase:
+        Type: navigate
+        Properties:
+          Target: !entity { Id: player, Property: Position }
+          Speed: !var npc speed
+          SlowingRadius: 0.8
+          Recompute: 0.4
+          Mode: astar
+
+      # Take a point of damage per bullet that enters.
+      bullet detector:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ bullet ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: take damage
+      take damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'arg0 - 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With:
+              - !var health
+
+      # When this NPC's own health hits zero: tally the kill and self-destruct.
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 <= 0'
+            ArgumentTypes: [ int ]
+            ReturnType: bool
+            With:
+              - !var health
+        Listeners:
+          - EntityId: scoreboard
+            BehaviourId: add kill
+          - EntityId: scoreboard
+            BehaviourId: dec alive
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+      # Reaching the player ends the game (loss).
+      reached player:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ player ]
+        Listeners:
+          - !gameover
+
+  # A bullet: flies forward, dies on contact with an NPC or a wall, expires on a timer.
+  bullet_template:
+    Tags: [ bullet ]
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties: { Radius: !var bullet radius, IsWire: false, Colour: !var bullet colour }
+      collider:
+        Type: sphere collider
+        Properties: { Radius: !var bullet radius, IsTrigger: true }
+      # Kinematic rigidbody so the moving bullet's trigger fires against NPC/wall colliders.
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      move:
+        Type: velocity
+        Properties: { Velocity: !parameter initial_velocity }
+      hit:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ enemy, wall ]
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: expire
+      life:
+        Type: timer trigger
+        Properties: { Delay: !var bullet life }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: expire
+      expire:
+        Type: destroy
+
+  # A maze wall slab: solid box collider (blocks the player, rasterized as a nav obstacle).
+  wall_template:
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !parameter size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !parameter size, IsTrigger: false }
+
+Entities:
+  # --- The player: first-person camera, facing-relative movement, shooting. ---
+  player:
+    Tags: [ player ]
+    Position: !vec { X: -9, Y: 1, Z: -9 }
+    Behaviours:
+      # The output camera sits on the player, so it renders from the eyes and yaws with us.
+      camera:
+        Type: camera
+        Properties: { View: "perspective", DefaultBlend: 0 }
+
+      # Solid body so the maze walls block movement; Y frozen to stay on the floor.
+      collider:
+        Type: capsule collider
+        Properties:
+          Radius: !var player collider radius
+          Height: !var player collider height
+          Direction: 1
+          IsTrigger: false
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+
+      # --- Movement: WASD value action -> facing-relative rigidbody velocity each frame. ---
+      move action:
+        Type: input action
+        Properties: { Action: move }
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: facing velocity
+            With:
+              - !output axis
+              - !entity { Id: player, Property: Rotation }
+              - !var move speed
+
+      # --- Look: mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
+      mouse look:
+        Type: mouse position trigger
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply yaw
+      apply yaw:
+        Type: rotate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(0f, arg0.x * arg1, 0f)'
+            ArgumentTypes: [ vector, float ]
+            ReturnType: vector
+            With:
+              - !output mouse_delta
+              - !var mouse sensitivity
+      turn left key:
+        Type: key hold trigger
+        Properties: { Key: "left" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: turn left
+      turn left:
+        Type: rotate
+        Properties: { Displacement: !var arrow turn back }
+      turn right key:
+        Type: key hold trigger
+        Properties: { Key: "right" }
+        Listeners:
+          - EntityId: player
+            BehaviourId: turn right
+      turn right:
+        Type: rotate
+        Properties: { Displacement: !var arrow turn }
+
+      # --- Shooting: button action -> spawn a bullet travelling along facing. ---
+      shoot action:
+        Type: input action
+        Properties: { Action: shoot }
+        Listeners:
+          - EntityId: player
+            BehaviourId: fire
+      fire:
+        Type: spawner
+        Properties:
+          TemplateId: bullet_template
+          Position: !expr
+            Do: muzzle position
+            With:
+              - !entity { Id: player, Property: Position }
+              - !entity { Id: player, Property: Rotation }
+          Parameters:
+            initial_velocity: !expr
+              Do: forward velocity
+              With:
+                - !entity { Id: player, Property: Rotation }
+                - !var bullet speed
+
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # --- The floor (visual only; not a nav obstacle). ---
+  floor:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var floor size, IsWire: true, Colour: !var floor colour }
+
+  # --- Maze: outer boundary + three staggered inner slabs forming serpentine corridors. ---
+  wall north:
+    Position: !vec { X: 0, Y: 1.5, Z: 10 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 20, Y: 3, Z: 1 } } }
+  wall south:
+    Position: !vec { X: 0, Y: 1.5, Z: -10 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 20, Y: 3, Z: 1 } } }
+  wall east:
+    Position: !vec { X: 10, Y: 1.5, Z: 0 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 20 } } }
+  wall west:
+    Position: !vec { X: -10, Y: 1.5, Z: 0 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 20 } } }
+  # Inner slab A: spans Z[-9, 4], gap at the north end.
+  wall inner a:
+    Position: !vec { X: -3.5, Y: 1.5, Z: -2.5 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
+  # Inner slab B: spans Z[-4, 9], gap at the south end.
+  wall inner b:
+    Position: !vec { X: 0, Y: 1.5, Z: 2.5 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
+  # Inner slab C: spans Z[-9, 4], gap at the north end.
+  wall inner c:
+    Position: !vec { X: 3.5, Y: 1.5, Z: -2.5 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
+
+  # --- Scoreboard: the kill/alive counters, targeted by dying NPCs. ---
+  scoreboard:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      add kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'arg0 + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With:
+              - !var kills
+      dec alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies in maze
+          Value: !expr
+            Do: 'arg0 - 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With:
+              - !var enemies in maze
+      inc alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies in maze
+          Value: !expr
+            Do: 'arg0 + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With:
+              - !var enemies in maze
+
+  # --- Wave 1: 3 NPCs from the south-east corner, starting at t = 1s. ---
+  wave 1:
+    Position: !var corner se
+    Behaviours:
+      start:
+        Type: timer trigger
+        Properties: { Delay: 1.0 }
+        Listeners:
+          - EntityId: wave 1
+            BehaviourId: burst
+      burst:
+        Type: interval trigger
+        Properties: { Interval: 1.5, Count: 3, AutoStart: false }
+        Listeners:
+          - EntityId: scoreboard
+            BehaviourId: inc alive
+          - EntityId: wave 1
+            BehaviourId: spawn
+      spawn:
+        Type: spawner
+        Properties:
+          TemplateId: npc_template
+          Position: !expr
+            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            ReturnType: vector
+            With:
+              - !var corner se
+          Parameters:
+            initial_health: 2
+
+  # --- Wave 2: 4 tougher NPCs from the north-east corner, starting at t = 14s. ---
+  wave 2:
+    Position: !var corner ne
+    Behaviours:
+      start:
+        Type: timer trigger
+        Properties: { Delay: 14.0 }
+        Listeners:
+          - EntityId: wave 2
+            BehaviourId: burst
+      burst:
+        Type: interval trigger
+        Properties: { Interval: 1.3, Count: 4, AutoStart: false }
+        Listeners:
+          - EntityId: scoreboard
+            BehaviourId: inc alive
+          - EntityId: wave 2
+            BehaviourId: spawn
+      spawn:
+        Type: spawner
+        Properties:
+          TemplateId: npc_template
+          Position: !expr
+            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            ReturnType: vector
+            With:
+              - !var corner ne
+          Parameters:
+            initial_health: 3
+
+  # --- Wave 3: 5 tough NPCs from the north-west corner, starting at t = 30s. ---
+  wave 3:
+    Position: !var corner nw
+    Behaviours:
+      start:
+        Type: timer trigger
+        Properties: { Delay: 30.0 }
+        Listeners:
+          - EntityId: wave 3
+            BehaviourId: burst
+      burst:
+        Type: interval trigger
+        Properties: { Interval: 1.2, Count: 5, AutoStart: false }
+        Listeners:
+          - EntityId: scoreboard
+            BehaviourId: inc alive
+          - EntityId: wave 3
+            BehaviourId: spawn
+      spawn:
+        Type: spawner
+        Properties:
+          TemplateId: npc_template
+          Position: !expr
+            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            ReturnType: vector
+            With:
+              - !var corner nw
+          Parameters:
+            initial_health: 3
+
+  # --- Win poll: when every wave is cleared (kills reach the total), end the game. ---
+  victory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: victory
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 >= arg1'
+            ArgumentTypes: [ int, int ]
+            ReturnType: bool
+            With:
+              - !var kills
+              - !var total to kill
+        Listeners:
+          - !gameover
+
+  # --- HUD: composable uGUI canvas with live kill / enemy counters. ---
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 10
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 34
+                  PreferredWidth: 720
+                  PreferredHeight: 52
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 18
+                  PreferredWidth: 720
+                  PreferredHeight: 30
+          kills:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.kills, Arguments: [ !var kills, !var total to kill ] }
+                  FontSize: 28
+                  PreferredWidth: 420
+                  PreferredHeight: 42
+          alive:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.alive, Arguments: [ !var enemies in maze ] }
+                  FontSize: 22
+                  PreferredWidth: 420
+                  PreferredHeight: 36
