@@ -8,6 +8,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<Vector3> Size { get; }
 		public IValueProvider<bool> IsTrigger { get; }
+		public PhysicsMaterialProviders Material { get; init; } = PhysicsMaterialProviders.None;
 
 		public BoxColliderData(string id,
 						IValueProvider<Vector3> size,

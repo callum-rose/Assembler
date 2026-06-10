@@ -9,6 +9,9 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Radius: Local-space radius of the sphere.
 	///   IsTrigger: When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider.
+	///   Bounciness: Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned.
+	///   DynamicFriction: Physics-material friction 0–1 applied while the surfaces are sliding.
+	///   StaticFriction: Physics-material friction 0–1 applied while the surfaces are at rest.
 	/// </remarks>
 	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
 	{
@@ -19,6 +22,7 @@ namespace Assembler.Behaviours.Physics
 			_sphereCollider = gameObject.AddComponent<SphereCollider>();
 			data.Radius.UseIfValueExists(v => _sphereCollider.radius = v);
 			data.IsTrigger.UseIfValueExists(v => _sphereCollider.isTrigger = v);
+			data.Material.ApplyTo(_sphereCollider);
 		}
 
 		public override void Execute(TriggerContext ctx)

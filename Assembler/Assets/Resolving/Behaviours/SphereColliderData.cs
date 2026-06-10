@@ -7,6 +7,7 @@ namespace Assembler.Resolving.Behaviours
 	{
 		public IValueProvider<float> Radius { get; }
 		public IValueProvider<bool> IsTrigger { get; init; } = NullValueProvider<bool>.Instance;
+		public PhysicsMaterialProviders Material { get; init; } = PhysicsMaterialProviders.None;
 
 		public SphereColliderData(string id, IValueProvider<float> radius) : base(id) => Radius = radius;
 	}
