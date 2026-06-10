@@ -300,8 +300,8 @@ namespace Assembler.Parsing
 		private static RecordValue CompleteRecord(RecordValue rec, RecordSchemaRegistry schemas)
 		{
 			var schema = schemas.Get(rec.TypeName);
-			var record = schema.CreateInstance(rec.Fields.Unwrap());
-			var fields = schema.Fields.ToDictionary(f => f.Name, f => record[f.Name].Wrap());
+			var record = schema.CreateInstance(RecordValueExtensions.Unwrap(rec.Fields));
+			var fields = schema.Fields.ToDictionary(f => f.Name, f => RecordValueExtensions.Wrap(record[f.Name]));
 			return new RecordValue(rec.TypeName, fields);
 		}
 

@@ -193,7 +193,7 @@ namespace Assembler.Parsing
 				// producing a schema-complete Record. This is the transform-time seam where ctx — and thus
 				// the schema registry — is in hand.
 				RecordValue rec when typeof(T) == typeof(Record) => new ConstantSource<T>(
-					(T)(object)ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(rec.Fields.Unwrap())),
+					(T)(object)ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(RecordValueExtensions.Unwrap(rec.Fields))),
 				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
 					new ConstantSource<T>((T)BuildTypedList(ctx, typed)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
@@ -284,7 +284,7 @@ namespace Assembler.Parsing
 				// A record-list element: apply its schema here (defaults + validation), yielding a
 				// schema-complete Record — the same transform-time seam as the single-record arm.
 				RecordValue rec when expectedType == typeof(Record) =>
-					ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(rec.Fields.Unwrap()),
+					ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(RecordValueExtensions.Unwrap(rec.Fields)),
 				_ => throw new ParsingException(
 					$"List element {value.GetType().Name} cannot be coerced to {expectedType.Name}")
 			};

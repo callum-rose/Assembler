@@ -5,22 +5,22 @@ using Assembler.Core;
 namespace Assembler.Parsing.Info
 {
 	/// <summary>
-	/// Bridges the <see cref="RecordValue"/> IR and the runtime <see cref="Record"/>. Unwrapping/wrapping a
-	/// field is a plain primitive conversion (no schema): <see cref="Unwrap"/> reads a completed
-	/// <see cref="RecordValue"/>'s fields into a plain object dict, <see cref="Wrap"/> boxes a field value
-	/// back into a primitive <see cref="AssemblerValue"/>, and <see cref="ToRecord"/> builds a fresh
-	/// <see cref="Record"/> from a completed <see cref="RecordValue"/>. Schema validation and default-filling
-	/// happen earlier (transform time) via <c>RecordSchemaInfoExtensions.CreateInstance</c>; these helpers
-	/// only move already-typed values across the boundary.
+	/// Bridges the <see cref="RecordValue"/> IR and the runtime <see cref="Record"/>. <see cref="ToRecord"/>
+	/// builds a fresh <see cref="Record"/> from a completed <see cref="RecordValue"/>; the <c>Unwrap</c>/
+	/// <c>Wrap</c> helpers move a single already-typed field value across the boundary (no schema). Only
+	/// <see cref="ToRecord"/> is an extension — it is keyed on the domain-specific <see cref="RecordValue"/>;
+	/// <c>Unwrap</c>/<c>Wrap</c> stay plain statics rather than extending broad types like
+	/// <see cref="object"/>. Schema validation and default-filling happen earlier (transform time) via
+	/// <c>RecordSchemaInfoExtensions.CreateInstance</c>.
 	/// </summary>
 	public static class RecordValueExtensions
 	{
-		public static Record ToRecord(this RecordValue record) => new(record.TypeName, record.Fields.Unwrap());
+		public static Record ToRecord(this RecordValue record) => new(record.TypeName, Unwrap(record.Fields));
 
-		public static Dictionary<string, object> Unwrap(this IReadOnlyDictionary<string, AssemblerValue> fields) =>
+		public static Dictionary<string, object> Unwrap(IReadOnlyDictionary<string, AssemblerValue> fields) =>
 			fields.ToDictionary(kvp => kvp.Key, kvp => UnwrapField(kvp.Value));
 
-		public static AssemblerValue Wrap(this object value) =>
+		public static AssemblerValue Wrap(object value) =>
 			value switch
 			{
 				int i => new IntValue(i),
