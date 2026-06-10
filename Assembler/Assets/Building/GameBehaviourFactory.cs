@@ -135,14 +135,14 @@ namespace Assembler.Building
 				[typeof(AccelerationInfo)] = Entry<AccelerationInfo, Acceleration, AccelerationData>(
 					(i, ctx) => new AccelerationData(i.Id,
 						i.Acceleration.Resolve(ctx.Resolution),
-						i.Velocity.Resolve(ctx.Resolution))),
+						i.Velocity.ResolveWritable(ctx.Resolution))),
 				[typeof(DragInfo)] = Entry<DragInfo, DragBehaviour, DragData>(
 					(i, ctx) => new DragData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution),
+						i.Velocity.ResolveWritable(ctx.Resolution),
 						i.Coefficient.Resolve(ctx.Resolution))),
 				[typeof(SpeedLimitInfo)] = Entry<SpeedLimitInfo, SpeedLimit, SpeedLimitData>(
 					(i, ctx) => new SpeedLimitData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution),
+						i.Velocity.ResolveWritable(ctx.Resolution),
 						i.Max.Resolve(ctx.Resolution))),
 				[typeof(MoveTowardsInfo)] = Entry<MoveTowardsInfo, MoveTowards, MoveTowardsData>(
 					(i, ctx) => new MoveTowardsData(i.Id,
@@ -459,7 +459,7 @@ namespace Assembler.Building
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
-						var current = res.Variables.Get<string>(i.StateVariable, scope);
+						var current = res.Variables.Get<string>(i.StateVariable, scope).AsWritable();
 						var transitions = i.Transitions
 							.Select(t => new StateTransition(t.From, t.To, t.When.Resolve(res)))
 							.ToArray();
@@ -541,7 +541,7 @@ namespace Assembler.Building
 				var i = (VariableSetterInfo<T>)info;
 				var b = go.AddComponent<TBehaviour>();
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
-					i.ValueToSet.Resolve(ctx.Resolution),
+					i.ValueToSet.ResolveWritable(ctx.Resolution),
 					i.ValueToGet.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 		}

@@ -505,20 +505,20 @@ namespace Assembler.Building.Debug
 
 		private static void TrySetVariable(IValueProvider provider, string raw)
 		{
-			var typed = provider.GetType().GetInterfaces().FirstOrDefault(i =>
-				i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValueProvider<>));
-			if (typed == null)
+			var writable = provider.GetType().GetInterfaces().FirstOrDefault(i =>
+				i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IWriteValueProvider<>));
+			if (writable == null)
 			{
 				return;
 			}
 
-			var element = typed.GetGenericArguments()[0];
+			var element = writable.GetGenericArguments()[0];
 			if (!TryParse(raw, element, out var value))
 			{
 				return;
 			}
 
-			typed.GetMethod(nameof(IValueProvider<object>.Set))!.Invoke(provider, new[] { value });
+			writable.GetMethod(nameof(IWriteValueProvider<object>.Set))!.Invoke(provider, new[] { value });
 		}
 
 		private static bool TryParse(string raw, System.Type type, out object? value)

@@ -26,8 +26,8 @@ namespace Tests.Resolving
 			// registries are not touched, so they can be left null for this focused test.
 			new(null!, null!, null!, null!, null, _registry, null!);
 
-		private IValueProvider<Vector3> Resolve(EntityProperty property) =>
-			new EntityPropertySource<Vector3>("entity", property).Resolve(Context());
+		private IWriteValueProvider<Vector3> Resolve(EntityProperty property) =>
+			new EntityPropertySource<Vector3>("entity", property).Resolve(Context()).AsWritable();
 
 		[Test]
 		public void ResolvesPositionFromTransform()
