@@ -508,10 +508,10 @@ namespace Assembler.Building
 						i.RequireLineOfSight.Resolve(ctx.Resolution),
 						i.Obstacles.Resolve(ctx.Resolution),
 						i.Interval.Resolve(ctx.Resolution),
-						i.TargetId.Resolve(ctx.Resolution),
-						i.TargetPosition.Resolve(ctx.Resolution),
-						i.HasTarget.Resolve(ctx.Resolution),
-						i.LastKnownPosition.Resolve(ctx.Resolution)))
+						i.TargetId.ResolveWritable(ctx.Resolution),
+						i.TargetPosition.ResolveWritable(ctx.Resolution),
+						i.HasTarget.ResolveWritable(ctx.Resolution),
+						i.LastKnownPosition.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
