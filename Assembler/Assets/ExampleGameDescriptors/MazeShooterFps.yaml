@@ -31,10 +31,11 @@ Physics:
 # Walkability grid on the ground (XZ) plane: any entity tagged `wall` is an obstacle.
 # Min/Max are the two in-plane axes (here X and Z), not literally X and Y.
 Navigation:
-  CellSize: 1
+  CellSize: 0.5                 # fine enough that 1-unit walls span 2 cells (no thin-wall leaks)
   Bounds: { Min: !vec { X: -11, Y: -11 }, Max: !vec { X: 11, Y: 11 } }
   ObstacleTag: wall
   Plane: xz
+  Diagonal: false               # 4-connected, grid-aligned movement (no diagonal squeeze past corners)
 
 Constants:
   # --- Player / view ---
@@ -389,18 +390,18 @@ Entities:
   wall west:
     Position: !vec { X: -10, Y: 1.5, Z: 0 }
     Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 20 } } }
-  # Inner slab A: spans Z[-9, 4], gap at the north end.
+  # Inner slab A: spans Z[-10, 4] — joins the south wall (no slit), open 5.5u at the north end.
   wall inner a:
-    Position: !vec { X: -3.5, Y: 1.5, Z: -2.5 }
-    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
-  # Inner slab B: spans Z[-4, 9], gap at the south end.
+    Position: !vec { X: -3.5, Y: 1.5, Z: -3 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 14 } } }
+  # Inner slab B: spans Z[-4, 10] — joins the north wall (no slit), open 5.5u at the south end.
   wall inner b:
-    Position: !vec { X: 0, Y: 1.5, Z: 2.5 }
-    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
-  # Inner slab C: spans Z[-9, 4], gap at the north end.
+    Position: !vec { X: 0, Y: 1.5, Z: 3 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 14 } } }
+  # Inner slab C: spans Z[-10, 4] — joins the south wall (no slit), open 5.5u at the north end.
   wall inner c:
-    Position: !vec { X: 3.5, Y: 1.5, Z: -2.5 }
-    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 13 } } }
+    Position: !vec { X: 3.5, Y: 1.5, Z: -3 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1, Y: 3, Z: 14 } } }
 
   # --- Scoreboard: the kill/alive counters, targeted by dying NPCs. ---
   scoreboard:
