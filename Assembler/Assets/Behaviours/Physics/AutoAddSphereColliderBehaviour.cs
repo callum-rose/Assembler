@@ -13,23 +13,13 @@ namespace Assembler.Behaviours.Physics
 	///   DynamicFriction: Physics-material friction 0–1 applied while the surfaces are sliding.
 	///   StaticFriction: Physics-material friction 0–1 applied while the surfaces are at rest.
 	/// </remarks>
-	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
+	public sealed class AutoAddSphereColliderBehaviour : AddColliderBehaviour<SphereColliderData>
 	{
-		private SphereCollider _sphereCollider;
-		private PhysicsMaterial? _physicsMaterial;
-
-		protected override void OnInitialise(SphereColliderData data)
+		protected override Collider CreateCollider(SphereColliderData data)
 		{
-			_sphereCollider = gameObject.AddComponent<SphereCollider>();
-			data.Radius.UseIfValueExists(v => _sphereCollider.radius = v);
-			data.IsTrigger.UseIfValueExists(v => _sphereCollider.isTrigger = v);
-			_physicsMaterial = data.Material.ApplyTo(_sphereCollider);
-		}
-
-		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
-
-		public override void Execute(TriggerContext ctx)
-		{
+			var collider = gameObject.AddComponent<SphereCollider>();
+			data.Radius.UseIfValueExists(v => collider.radius = v);
+			return collider;
 		}
 	}
 }

@@ -15,23 +15,15 @@ namespace Assembler.Behaviours.Physics
 	///   DynamicFriction: Physics-material friction 0–1 applied while the surfaces are sliding.
 	///   StaticFriction: Physics-material friction 0–1 applied while the surfaces are at rest.
 	/// </remarks>
-	public sealed class AutoAddCapsuleColliderBehaviour : GameBehaviour<CapsuleColliderData>
+	public sealed class AutoAddCapsuleColliderBehaviour : AddColliderBehaviour<CapsuleColliderData>
 	{
-		private CapsuleCollider _capsuleCollider;
-		private PhysicsMaterial? _physicsMaterial;
-
-		protected override void OnInitialise(CapsuleColliderData data)
+		protected override Collider CreateCollider(CapsuleColliderData data)
 		{
-			_capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
-			data.Radius.UseIfValueExists(v => _capsuleCollider.radius = v);
-			data.Height.UseIfValueExists(v => _capsuleCollider.height = v);
-			data.Direction.UseIfValueExists(v => _capsuleCollider.direction = v);
-			data.IsTrigger.UseIfValueExists(v => _capsuleCollider.isTrigger = v);
-			_physicsMaterial = data.Material.ApplyTo(_capsuleCollider);
+			var collider = gameObject.AddComponent<CapsuleCollider>();
+			data.Radius.UseIfValueExists(v => collider.radius = v);
+			data.Height.UseIfValueExists(v => collider.height = v);
+			data.Direction.UseIfValueExists(v => collider.direction = v);
+			return collider;
 		}
-
-		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }

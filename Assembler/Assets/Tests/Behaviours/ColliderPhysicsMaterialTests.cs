@@ -18,16 +18,11 @@ namespace Tests.Behaviours
 			{
 				var behaviour = go.AddComponent<AutoAddBoxColliderBehaviour>();
 				behaviour.Initialise(
-					new BoxColliderData("c",
-						NullValueProvider<Vector3>.Instance,
-						NullValueProvider<bool>.Instance)
+					new BoxColliderData("c")
 					{
-						Material = new PhysicsMaterialProviders
-						{
-							Bounciness = new ValueProvider<float>(0.8f),
-							DynamicFriction = new ValueProvider<float>(0.3f),
-							StaticFriction = new ValueProvider<float>(0.4f)
-						}
+						Bounciness = new ValueProvider<float>(0.8f),
+						DynamicFriction = new ValueProvider<float>(0.3f),
+						StaticFriction = new ValueProvider<float>(0.4f)
 					},
 					Array.Empty<Listener>());
 
@@ -50,45 +45,10 @@ namespace Tests.Behaviours
 			try
 			{
 				var behaviour = go.AddComponent<AutoAddBoxColliderBehaviour>();
-				behaviour.Initialise(
-					new BoxColliderData("c",
-						NullValueProvider<Vector3>.Instance,
-						NullValueProvider<bool>.Instance),
-					Array.Empty<Listener>());
+				behaviour.Initialise(new BoxColliderData("c"), Array.Empty<Listener>());
 
 				Assert.IsNull(go.GetComponent<BoxCollider>().sharedMaterial,
 					"No PhysicsMaterial should be allocated when no material property is set.");
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
-		}
-
-		// The OnDestroy → Cleanup wiring on each collider behaviour is a one-liner that only fires in play mode
-		// (EditMode never calls OnDestroy on a never-awoken runtime component), so the leak-prevention logic
-		// itself is verified here directly. Cleanup is what each behaviour hands its stored material to.
-		[Test]
-		public void Cleanup_DestroysTheRuntimeMaterial()
-		{
-			var material = ApplyToFreshCollider(new PhysicsMaterialProviders { Bounciness = new ValueProvider<float>(0.5f) });
-			Assert.IsTrue(material != null, "Precondition: a material should have been created.");
-
-			PhysicsMaterialProviders.Cleanup(material);
-
-			// Unity's overloaded == reports a destroyed Object as null.
-			Assert.IsTrue(material == null, "Cleanup should destroy the runtime PhysicsMaterial so it cannot leak.");
-		}
-
-		[Test]
-		public void Cleanup_WithNull_IsSafe() => Assert.DoesNotThrow(() => PhysicsMaterialProviders.Cleanup(null));
-
-		private static PhysicsMaterial? ApplyToFreshCollider(PhysicsMaterialProviders providers)
-		{
-			var go = new GameObject("collider host");
-			try
-			{
-				return providers.ApplyTo(go.AddComponent<BoxCollider>());
 			}
 			finally
 			{
@@ -104,10 +64,7 @@ namespace Tests.Behaviours
 			{
 				var behaviour = go.AddComponent<AutoAddSphereColliderBehaviour>();
 				behaviour.Initialise(
-					new SphereColliderData("c", NullValueProvider<float>.Instance)
-					{
-						Material = new PhysicsMaterialProviders { Bounciness = new ValueProvider<float>(1f) }
-					},
+					new SphereColliderData("c") { Bounciness = new ValueProvider<float>(1f) },
 					Array.Empty<Listener>());
 
 				var collider = go.GetComponent<SphereCollider>();

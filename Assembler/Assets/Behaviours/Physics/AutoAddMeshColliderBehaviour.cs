@@ -13,21 +13,14 @@ namespace Assembler.Behaviours.Physics
 	///   DynamicFriction: Physics-material friction 0–1 applied while the surfaces are sliding.
 	///   StaticFriction: Physics-material friction 0–1 applied while the surfaces are at rest.
 	/// </remarks>
-	public sealed class AutoAddMeshColliderBehaviour : GameBehaviour<MeshColliderData>
+	public sealed class AutoAddMeshColliderBehaviour : AddColliderBehaviour<MeshColliderData>
 	{
-		private MeshCollider _meshCollider;
-		private PhysicsMaterial? _physicsMaterial;
-
-		protected override void OnInitialise(MeshColliderData data)
+		protected override Collider CreateCollider(MeshColliderData data)
 		{
-			_meshCollider = gameObject.AddComponent<MeshCollider>();
-			data.Convex.UseIfValueExists(v => _meshCollider.convex = v);
-			data.IsTrigger.UseIfValueExists(v => _meshCollider.isTrigger = v);
-			_physicsMaterial = data.Material.ApplyTo(_meshCollider);
+			var collider = gameObject.AddComponent<MeshCollider>();
+			// Convex must be set before the base applies IsTrigger — a mesh trigger requires a convex hull.
+			data.Convex.UseIfValueExists(v => collider.convex = v);
+			return collider;
 		}
-
-		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }

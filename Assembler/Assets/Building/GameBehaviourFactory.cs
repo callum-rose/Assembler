@@ -82,18 +82,22 @@ namespace Assembler.Building
 			var map = new Dictionary<Type, BuilderEntry>
 			{
 				[typeof(BoxColliderInfo)] = Entry<BoxColliderInfo, AutoAddBoxColliderBehaviour, BoxColliderData>(
-					(i, ctx) => new BoxColliderData(i.Id,
-						i.Size.Resolve(ctx.Resolution),
-						i.IsTrigger.Resolve(ctx.Resolution))
+					(i, ctx) => new BoxColliderData(i.Id)
 					{
-						Material = ResolveMaterial(i.Bounciness, i.DynamicFriction, i.StaticFriction, ctx)
+						Size = i.Size.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(SphereColliderInfo)] = Entry<SphereColliderInfo, AutoAddSphereColliderBehaviour, SphereColliderData>(
-					(i, ctx) => new SphereColliderData(i.Id,
-						i.Radius.Resolve(ctx.Resolution))
+					(i, ctx) => new SphereColliderData(i.Id)
 					{
+						Radius = i.Radius.Resolve(ctx.Resolution),
 						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
-						Material = ResolveMaterial(i.Bounciness, i.DynamicFriction, i.StaticFriction, ctx)
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(CapsuleColliderInfo)] = Entry<CapsuleColliderInfo, AutoAddCapsuleColliderBehaviour, CapsuleColliderData>(
 					(i, ctx) => new CapsuleColliderData(i.Id)
@@ -102,14 +106,18 @@ namespace Assembler.Building
 						Height = i.Height.Resolve(ctx.Resolution),
 						Direction = i.Direction.Resolve(ctx.Resolution),
 						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
-						Material = ResolveMaterial(i.Bounciness, i.DynamicFriction, i.StaticFriction, ctx)
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(MeshColliderInfo)] = Entry<MeshColliderInfo, AutoAddMeshColliderBehaviour, MeshColliderData>(
 					(i, ctx) => new MeshColliderData(i.Id)
 					{
 						Convex = i.Convex.Resolve(ctx.Resolution),
 						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
-						Material = ResolveMaterial(i.Bounciness, i.DynamicFriction, i.StaticFriction, ctx)
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(AddForceInfo)] = Entry<AddForceInfo, AddForceBehaviour, AddForceData>(
 					(i, ctx) => new AddForceData(i.Id,
@@ -509,21 +517,6 @@ namespace Assembler.Building
 		// Generic builder for the common "cast info -> add component -> initialise with resolved data" entry.
 		// Tying TInfo, TBehaviour and TData together at the type level makes the cast/AddComponent/data
 		// triple compiler-checked, so a mismatched pairing fails to compile rather than at runtime.
-		// Shared by every collider builder: resolves the optional physics-material sources into the bundle
-		// each collider's MonoBehaviour applies to its Collider. Absent sources stay NullValueProvider and
-		// leave the collider on Unity's default material.
-		private static PhysicsMaterialProviders ResolveMaterial(
-			ValueSource<float> bounciness,
-			ValueSource<float> dynamicFriction,
-			ValueSource<float> staticFriction,
-			BehaviourBuildContext ctx) =>
-			new()
-			{
-				Bounciness = bounciness.Resolve(ctx.Resolution),
-				DynamicFriction = dynamicFriction.Resolve(ctx.Resolution),
-				StaticFriction = staticFriction.Resolve(ctx.Resolution)
-			};
-
 		private static BuilderEntry Entry<TInfo, TBehaviour, TData>(
 			Func<TInfo, BehaviourBuildContext, TData> makeData)
 			where TInfo : BehaviourInfo

@@ -1,19 +1,11 @@
-using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
 {
-	public sealed class BoxColliderData : BehaviourData
+	public sealed class BoxColliderData : ColliderData
 	{
-		public IValueProvider<Vector3> Size { get; }
-		public IValueProvider<bool> IsTrigger { get; }
-		public PhysicsMaterialProviders Material { get; init; } = PhysicsMaterialProviders.None;
+		public IValueProvider<Vector3> Size { get; init; } = NullValueProvider<Vector3>.Instance;
 
-		public BoxColliderData(string id,
-						IValueProvider<Vector3> size,
-			IValueProvider<bool> isTrigger) :
-			base(id) =>
-			(Size, IsTrigger) = (size, isTrigger);
+		public BoxColliderData(string id) : base(id) { }
 	}
 }
