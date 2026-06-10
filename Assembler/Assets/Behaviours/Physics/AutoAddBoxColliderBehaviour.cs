@@ -16,14 +16,17 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddBoxColliderBehaviour : GameBehaviour<BoxColliderData>
 	{
 		private BoxCollider _boxCollider;
+		private PhysicsMaterial? _physicsMaterial;
 
 		protected override void OnInitialise(BoxColliderData data)
 		{
 			_boxCollider = gameObject.AddComponent<BoxCollider>();
 			data.Size.UseIfValueExists(v => _boxCollider.size = v);
 			data.IsTrigger.UseIfValueExists(v => _boxCollider.isTrigger = v);
-			data.Material.ApplyTo(_boxCollider);
+			_physicsMaterial = data.Material.ApplyTo(_boxCollider);
 		}
+
+		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
 
 		public override void Execute(TriggerContext ctx)
 		{

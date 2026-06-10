@@ -18,6 +18,7 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddCapsuleColliderBehaviour : GameBehaviour<CapsuleColliderData>
 	{
 		private CapsuleCollider _capsuleCollider;
+		private PhysicsMaterial? _physicsMaterial;
 
 		protected override void OnInitialise(CapsuleColliderData data)
 		{
@@ -26,8 +27,10 @@ namespace Assembler.Behaviours.Physics
 			data.Height.UseIfValueExists(v => _capsuleCollider.height = v);
 			data.Direction.UseIfValueExists(v => _capsuleCollider.direction = v);
 			data.IsTrigger.UseIfValueExists(v => _capsuleCollider.isTrigger = v);
-			data.Material.ApplyTo(_capsuleCollider);
+			_physicsMaterial = data.Material.ApplyTo(_capsuleCollider);
 		}
+
+		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
 
 		public override void Execute(TriggerContext ctx) { }
 	}

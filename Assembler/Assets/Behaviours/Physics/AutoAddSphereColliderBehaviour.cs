@@ -16,14 +16,17 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddSphereColliderBehaviour : GameBehaviour<SphereColliderData>
 	{
 		private SphereCollider _sphereCollider;
+		private PhysicsMaterial? _physicsMaterial;
 
 		protected override void OnInitialise(SphereColliderData data)
 		{
 			_sphereCollider = gameObject.AddComponent<SphereCollider>();
 			data.Radius.UseIfValueExists(v => _sphereCollider.radius = v);
 			data.IsTrigger.UseIfValueExists(v => _sphereCollider.isTrigger = v);
-			data.Material.ApplyTo(_sphereCollider);
+			_physicsMaterial = data.Material.ApplyTo(_sphereCollider);
 		}
+
+		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
 
 		public override void Execute(TriggerContext ctx)
 		{

@@ -65,6 +65,37 @@ namespace Tests.Behaviours
 			}
 		}
 
+		// The OnDestroy → Cleanup wiring on each collider behaviour is a one-liner that only fires in play mode
+		// (EditMode never calls OnDestroy on a never-awoken runtime component), so the leak-prevention logic
+		// itself is verified here directly. Cleanup is what each behaviour hands its stored material to.
+		[Test]
+		public void Cleanup_DestroysTheRuntimeMaterial()
+		{
+			var material = ApplyToFreshCollider(new PhysicsMaterialProviders { Bounciness = new ValueProvider<float>(0.5f) });
+			Assert.IsTrue(material != null, "Precondition: a material should have been created.");
+
+			PhysicsMaterialProviders.Cleanup(material);
+
+			// Unity's overloaded == reports a destroyed Object as null.
+			Assert.IsTrue(material == null, "Cleanup should destroy the runtime PhysicsMaterial so it cannot leak.");
+		}
+
+		[Test]
+		public void Cleanup_WithNull_IsSafe() => Assert.DoesNotThrow(() => PhysicsMaterialProviders.Cleanup(null));
+
+		private static PhysicsMaterial? ApplyToFreshCollider(PhysicsMaterialProviders providers)
+		{
+			var go = new GameObject("collider host");
+			try
+			{
+				return providers.ApplyTo(go.AddComponent<BoxCollider>());
+			}
+			finally
+			{
+				UnityEngine.Object.DestroyImmediate(go);
+			}
+		}
+
 		[Test]
 		public void SphereCollider_WithOnlyBounciness_AssignsMaterialAndKeepsFrictionDefaults()
 		{

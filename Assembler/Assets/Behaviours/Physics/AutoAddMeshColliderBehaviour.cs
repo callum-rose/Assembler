@@ -16,14 +16,17 @@ namespace Assembler.Behaviours.Physics
 	public sealed class AutoAddMeshColliderBehaviour : GameBehaviour<MeshColliderData>
 	{
 		private MeshCollider _meshCollider;
+		private PhysicsMaterial? _physicsMaterial;
 
 		protected override void OnInitialise(MeshColliderData data)
 		{
 			_meshCollider = gameObject.AddComponent<MeshCollider>();
 			data.Convex.UseIfValueExists(v => _meshCollider.convex = v);
 			data.IsTrigger.UseIfValueExists(v => _meshCollider.isTrigger = v);
-			data.Material.ApplyTo(_meshCollider);
+			_physicsMaterial = data.Material.ApplyTo(_meshCollider);
 		}
+
+		private void OnDestroy() => PhysicsMaterialProviders.Cleanup(_physicsMaterial);
 
 		public override void Execute(TriggerContext ctx) { }
 	}
