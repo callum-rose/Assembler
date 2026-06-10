@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
@@ -92,6 +93,7 @@ namespace Assembler.Parsing
 				["bool variable setter"] = VariableSetterInfo<bool>.Create,
 				["string variable setter"] = VariableSetterInfo<string>.Create,
 				["colour variable setter"] = VariableSetterInfo<Color>.Create,
+				["record variable setter"] = VariableSetterInfo<Record>.Create,
 
 				["int variable changed trigger"] = VariableChangedTriggerInfo<int>.Create,
 				["float variable changed trigger"] = VariableChangedTriggerInfo<float>.Create,
@@ -159,6 +161,16 @@ namespace Assembler.Parsing
 				["colour list add range"] = ListAddRangeInfo<Color>.Create,
 				["colour list clear"] = ListClearInfo<Color>.Create,
 				["colour list loop trigger"] = ListLoopTriggerInfo<Color>.Create,
+
+				["record list add"] = ListAddInfo<Record>.Create,
+				["record list insert"] = ListInsertInfo<Record>.Create,
+				["record list remove at"] = ListRemoveAtInfo<Record>.Create,
+				["record list remove"] = ListRemoveInfo<Record>.Create,
+				["record list set at"] = ListSetAtInfo<Record>.Create,
+				["record list set"] = ListSetInfo<Record>.Create,
+				["record list add range"] = ListAddRangeInfo<Record>.Create,
+				["record list clear"] = ListClearInfo<Record>.Create,
+				["record list loop trigger"] = ListLoopTriggerInfo<Record>.Create,
 
 				["active poll"] = ActivePollInfo.Create,
 				["set active"] = SetActiveInfo.Create,

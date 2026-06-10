@@ -21,5 +21,12 @@ namespace Assembler.Parsing.Info
 		/// Populated by <see cref="Transformer.Transform"/>; not part of the positional ctor.
 		/// </summary>
 		public TransformContext ParseContext { get; init; } = null!;
+
+		/// <summary>
+		/// The grid-navigation configuration from the descriptor's <c>Navigation:</c> section, or
+		/// <see cref="NavigationInfo.Default"/> when absent. Not part of the positional ctor; populated by
+		/// <see cref="Transformer.Transform"/>.
+		/// </summary>
+		public NavigationInfo Navigation { get; init; } = NavigationInfo.Default;
 	}
 }

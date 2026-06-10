@@ -13,6 +13,7 @@
         "Assembler.Parsing",
         "Assembler.Deserialisation",
         "Assembler.Resolving",
+        "Assembler.Libraries",
         "Unity.InputSystem",
         "UnityEngine.UI",
         "Assembler.Input",

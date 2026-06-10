@@ -16,7 +16,8 @@ namespace Tests.Parsing
 				new Dictionary<string, ExpressionInfo>(),
 				new Dictionary<string, Type>(),
 				new Dictionary<Type, System.Reflection.MethodInfo>(),
-				new InlineExpressionAccumulator());
+				new InlineExpressionAccumulator(),
+				RecordSchemaRegistry.Empty);
 
 		private static AssemblerValue States(params string[] names) =>
 			new DictValue(names.ToDictionary(

@@ -28,6 +28,7 @@ namespace Assembler.Building
 		private readonly EntityTransformRegistry _entityTransforms;
 		private readonly EntityQueryService _entityQuery;
 		private readonly LineOfSightService _sight;
+		private readonly NavGridService _nav;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IGameClock _clock;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
@@ -36,6 +37,11 @@ namespace Assembler.Building
 		private readonly ControlsInfo _controls;
 		private readonly InputActionAsset _controlsAsset;
 		private readonly UiPrefabLibrary _uiPrefabs;
+
+		// Registries/clock/query service are fixed for the factory's lifetime, so build a base context once
+		// and derive the per-entity context with `with { Scope = scope }`. The base Scope is a placeholder
+		// that every derived context overrides.
+		private readonly ResolutionContext _baseContext;
 
 		private int _spawnCounter;
 
@@ -47,6 +53,7 @@ namespace Assembler.Building
 			EntityTransformRegistry entityTransforms,
 			EntityQueryService entityQuery,
 			LineOfSightService sight,
+			NavGridService nav,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IGameClock clock,
 			IReadOnlyDictionary<string, EntityInfo> templates,
@@ -64,6 +71,7 @@ namespace Assembler.Building
 			_entityTransforms = entityTransforms;
 			_entityQuery = entityQuery;
 			_sight = sight;
+			_nav = nav;
 			_exclusiveGroups = exclusiveGroups;
 			_clock = clock;
 			_templates = templates;
@@ -72,6 +80,9 @@ namespace Assembler.Building
 			_controls = controls;
 			_controlsAsset = controlsAsset;
 			_uiPrefabs = uiPrefabs;
+
+			_baseContext = new ResolutionContext(_variables, _expressions, _assets, _strings,
+				EntityVariableScope.Create(Enumerable.Empty<ValueInfo>()), _entityTransforms, _entityQuery, _clock);
 		}
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
@@ -80,14 +91,14 @@ namespace Assembler.Building
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
-			var initialPositionContext = new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _entityQuery, _clock);
+			var context = _baseContext with { Scope = scope };
 
 			var gameObject = new GameObject(entityInfo.Id)
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(initialPositionContext).Get(),
-					rotation = entityInfo.InitialRotation.Resolve(initialPositionContext).Get().FromEuler()
+					position = entityInfo.InitialPosition.Resolve(context).Get(),
+					rotation = entityInfo.InitialRotation.Resolve(context).Get().FromEuler()
 				}
 			};
 
@@ -121,7 +132,7 @@ namespace Assembler.Building
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
-				new ResolutionContext(_variables, _expressions, _assets, _strings, scope, _entityTransforms, _entityQuery, _clock),
+				context,
 				this,
 				_exclusiveGroups,
 				_controls,
@@ -129,7 +140,8 @@ namespace Assembler.Building
 				_clock,
 				_uiPrefabs,
 				_entityQuery,
-				_sight);
+				_sight,
+				_nav);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{

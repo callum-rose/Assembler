@@ -9,6 +9,7 @@
         "Assembler.Resolving",
         "Assembler.Parsing",
         "Assembler.Libraries",
+        "Assembler.Navigation",
         "Unity.InputSystem",
         "Unity.Cinemachine",
         "UnityEngine.UI",

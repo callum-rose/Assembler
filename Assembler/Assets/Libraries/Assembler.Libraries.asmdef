@@ -1,7 +1,9 @@
 {
     "name": "Assembler.Libraries",
     "rootNamespace": "Assembler",
-    "references": [],
+    "references": [
+        "Assembler.Core"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

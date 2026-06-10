@@ -1,0 +1,279 @@
+Game:
+  Title: AI Concurrency Showcase
+  Description: |
+    Proves the plan's concurrency model: multiple `state machine` behaviours on one
+    entity, cooperating through the shared blackboard — no new engine code required.
+
+    A green player (WASD) is hunted by a "driver" tank that runs TWO independent state
+    machines simultaneously, both reading the same `perceive`-maintained blackboard:
+
+      movement_state (idle / pursue) - drives a `navigate` that A*-paths to the player
+        around the walls while a target is visible.
+      combat_state   (hold / engage) - while a target is visible, an interval-driven
+        `spawner` fires `bullet`s toward the player's last seen position.
+
+    Perception writes `has_target` / `target_position` / `last_known_position`; both
+    machines transition off `has_target`, so driving and shooting stay in lock-step
+    without referencing one another. Bullets are a reusable `Templates:` archetype
+    (travel + self-destruct). Press Q to quit.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0c0c14"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -9, Y: -6 }, Max: !vec { X: 9, Y: 6 } }
+  ObstacleTag: wall
+
+Constants:
+  driver size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  wall size: !vec { X: 0.5, Y: 5, Z: 1 }
+  bullet size: !vec { X: 0.2, Y: 0.2, Z: 0.2 }
+  player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+  driver colour: !colour { R: 0.95, G: 0.55, B: 0.20, A: 1 }
+  wall colour: !colour { R: 0.45, G: 0.45, B: 0.55, A: 1 }
+  bullet colour: !colour { R: 1.0, G: 0.9, B: 0.3, A: 1 }
+
+  detect range: 9.0
+  driver speed: 2.0
+  bullet speed: 6.0
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 7
+
+Expressions:
+  pick goal:
+    ArgumentTypes: [ int, vector, vector ]
+    ArgumentNames: [ mode, target_pos, self_pos ]
+    ReturnType: vector
+    Expression: "return mode == 1 ? target_pos : self_pos;"
+
+  negate:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ flag ]
+    ReturnType: bool
+    Expression: "return !flag;"
+
+  is engaged:
+    ArgumentTypes: [ string ]
+    ArgumentNames: [ state ]
+    ReturnType: bool
+    Expression: "return state == \"engage\";"
+
+  bullet velocity:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ from, to, speed ]
+    ReturnType: vector
+    Expression: "return ScaleVector(Direction(from, to), speed);"
+
+Templates:
+  bullet:
+    Tags: [ bullet ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var bullet size, IsWire: false, Colour: !var bullet colour }
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !parameter initial_velocity
+      life:
+        Type: timer trigger
+        Properties: { Delay: 2.0 }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: expire
+      expire:
+        Type: destroy
+
+Entities:
+  wall a:
+    Position: !vec { X: -1.5, Y: 1.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  wall b:
+    Position: !vec { X: 3, Y: -1.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall size, IsTrigger: false }
+
+  driver:
+    Position: !vec { X: -7, Y: 0, Z: 0 }
+    Tags: [ driver ]
+    Variables:
+      drive_mode: 0
+      has_target: false
+      target_id: ""
+      target_position: !vec { X: -7, Y: 0, Z: 0 }
+      last_known_position: !vec { X: -7, Y: 0, Z: 0 }
+      ai_goal: !vec { X: -7, Y: 0, Z: 0 }
+      combat_state: hold
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var driver size, IsWire: false, Colour: !var driver colour }
+
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: player
+          Radius: !var detect range
+          RequireLineOfSight: true
+          Obstacles: wall
+          Interval: 0.1
+          TargetId: !var target_id
+          TargetPosition: !var target_position
+          HasTarget: !var has_target
+          LastKnownPosition: !var last_known_position
+
+      # --- Shared blackboard plumbing: pick the nav goal from drive_mode each frame. ---
+      goal clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: driver, BehaviourId: update goal } ]
+      update goal:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ai_goal
+          Value: !expr
+            Do: pick goal
+            With:
+              - !var drive_mode
+              - !var target_position
+              - !entity { Id: driver, Property: Position }
+
+      # --- Machine 1: movement. Drives the grid navigation. ---
+      movement:
+        Type: state machine
+        Properties:
+          StateVariable: movement_state
+          Initial: idle
+          States:
+            idle:
+              OnEnter: [ { EntityId: driver, BehaviourId: set idle } ]
+            pursue:
+              OnEnter: [ { EntityId: driver, BehaviourId: set pursue } ]
+          Transitions:
+            - { from: idle, to: pursue, when: !var has_target }
+            - from: pursue
+              to: idle
+              when: !expr { Do: negate, With: [ !var has_target ] }
+      set idle:
+        Type: int variable setter
+        Properties: { VariableId: !var drive_mode, Value: 0 }
+      set pursue:
+        Type: int variable setter
+        Properties: { VariableId: !var drive_mode, Value: 1 }
+      move:
+        Type: navigate
+        Properties:
+          Target: !var ai_goal
+          Speed: !var driver speed
+          SlowingRadius: 0.6
+          Recompute: 0.25
+          Mode: astar
+
+      # --- Machine 2: combat. Runs concurrently with movement on the same entity. ---
+      combat:
+        Type: state machine
+        Properties:
+          StateVariable: combat_state
+          Initial: hold
+          States:
+            hold: { }
+            engage: { }
+          Transitions:
+            - { from: hold, to: engage, when: !var has_target }
+            - from: engage
+              to: hold
+              when: !expr { Do: negate, With: [ !var has_target ] }
+      fire clock:
+        Type: interval trigger
+        Properties: { Interval: 0.4, AutoStart: true }
+        Listeners: [ { EntityId: driver, BehaviourId: fire gate } ]
+      fire gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: is engaged, With: [ !var combat_state ] }
+        Listeners: [ { EntityId: driver, BehaviourId: fire } ]
+      fire:
+        Type: spawner
+        Properties:
+          TemplateId: bullet
+          Position: !entity { Id: driver, Property: Position }
+          Parameters:
+            initial_velocity: !expr
+              Do: bullet velocity
+              ReturnType: vector
+              With:
+                - !entity { Id: driver, Property: Position }
+                - !var target_position
+                - !var bullet speed
+
+  player:
+    Position: !vec { X: 7, Y: 0, Z: 0 }
+    Tags: [ player ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
+
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+      move left:
+        Type: translate
+        Properties: { Displacement: !vec { X: -0.04, Y: 0, Z: 0 } }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+      move right:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0.04, Y: 0, Z: 0 } }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+      move up:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0.04, Z: 0 } }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+      move down:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: -0.04, Z: 0 } }
+
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners: [ !gameover ]
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }

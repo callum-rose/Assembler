@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Assembler.Compiler.Compiler;
+using Assembler.Core;
 using Assembler.Extensions;
 using Assembler.Libraries;
 using Assembler.Parsing.Info;
@@ -59,6 +60,11 @@ namespace Assembler.Resolving
 			// expressions can `new PositionList()` and call .Add/.ToList to build an irregular Placements
 			// `At` list. Mirrors the RegisterType(Color) line above.
 			_compiler.RegisterType(typeof(PositionList));
+
+			// Records: register the shared Record type so its this[string] indexer is available for
+			// item["count"] reads/writes, and the cast-free RecordHelper getters/setters by bare name.
+			_compiler.RegisterType(typeof(Record));
+			_compiler.RegisterStaticMethods(typeof(RecordHelper));
 		}
 
 		public void CompileAndRegister(ExpressionInfo expressionInfo)

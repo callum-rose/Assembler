@@ -39,7 +39,8 @@ namespace Tests.Behaviours
 				new Dictionary<string, ExpressionInfo>(),
 				typeRegistry,
 				new Dictionary<Type, MethodInfo>(),
-				new InlineExpressionAccumulator());
+				new InlineExpressionAccumulator(),
+				RecordSchemaRegistry.Empty);
 
 			// A trivial template: one entity with no behaviours, so Create produces a bare GameObject. Its
 			// position/rotation are ConstantSource(zero) exactly as the Transformer builds a template with no
@@ -62,6 +63,7 @@ namespace Tests.Behaviours
 				_entityTransforms,
 				new EntityQueryService(),
 				new LineOfSightService(),
+				new NavGridService(NavGridSettings.Default),
 				new ExclusiveGroupRegistry(clock),
 				clock,
 				new Dictionary<string, EntityInfo> { ["pill"] = template },

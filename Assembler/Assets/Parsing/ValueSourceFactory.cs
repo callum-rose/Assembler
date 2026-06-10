@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
@@ -188,10 +189,15 @@ namespace Assembler.Parsing
 					(T)(object)col.ToColor(ctx.Values)),
 				Vector3Value v3 when typeof(T) == typeof(Vector3) => new ConstantSource<T>((T)(object)v3.Value),
 				ColorValue cv when typeof(T) == typeof(Color) => new ConstantSource<T>((T)(object)cv.Value),
+				// A `!record` literal in a behaviour property: apply the schema here (defaults + validation),
+				// producing a schema-complete Record. This is the transform-time seam where ctx — and thus
+				// the schema registry — is in hand.
+				RecordValue rec when typeof(T) == typeof(Record) => new ConstantSource<T>(
+					(T)(object)ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(RecordValueExtensions.Unwrap(rec.Fields))),
 				TypedListValue typed when IsAssignableList(typeof(T), typed.ElementType) =>
-					new ConstantSource<T>((T)BuildTypedList(typed, ctx.Values)),
+					new ConstantSource<T>((T)BuildTypedList(ctx, typed)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
-					new ConstantSource<T>((T)BuildListFromUntyped(list, elementType!, ctx.Values)),
+					new ConstantSource<T>((T)BuildListFromUntyped(ctx, list, elementType!)),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
@@ -238,36 +244,36 @@ namespace Assembler.Parsing
 			return true;
 		}
 
-		private static object BuildTypedList(TypedListValue typed, IReadOnlyList<ValueInfo> values)
+		private static object BuildTypedList(TransformContext ctx, TypedListValue typed)
 		{
 			var listType = typeof(List<>).MakeGenericType(typed.ElementType);
 			var list = (System.Collections.IList)Activator.CreateInstance(listType, typed.Items.Count);
 
 			foreach (var item in typed.Items)
 			{
-				list.Add(UnwrapPrimitive(item, typed.ElementType, values));
+				list.Add(UnwrapPrimitive(ctx, item, typed.ElementType));
 			}
 
 			return list;
 		}
 
-		private static object BuildListFromUntyped(ListValue list, Type elementType, IReadOnlyList<ValueInfo> values)
+		private static object BuildListFromUntyped(TransformContext ctx, ListValue list, Type elementType)
 		{
 			var listType = typeof(List<>).MakeGenericType(elementType);
 			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
 
 			foreach (var item in list.Value)
 			{
-				result.Add(UnwrapPrimitive(item, elementType, values));
+				result.Add(UnwrapPrimitive(ctx, item, elementType));
 			}
 
 			return result;
 		}
 
 		// Unwraps one list element to its CLR value. VecValue/ColourValue elements (an unevaluated `!vec`/
-		// `!colour` from the IR stage — e.g. a literal `At:` list of `!vec`) materialise against `values`,
+		// `!colour` from the IR stage — e.g. a literal `At:` list of `!vec`) materialise against ctx.Values,
 		// mirroring how a scalar VecValue/ColourValue is handled in CreateValueSource above.
-		private static object UnwrapPrimitive(AssemblerValue value, Type expectedType, IReadOnlyList<ValueInfo> values)
+		private static object UnwrapPrimitive(TransformContext ctx, AssemblerValue value, Type expectedType)
 		{
 			return value switch
 			{
@@ -277,9 +283,13 @@ namespace Assembler.Parsing
 				BoolValue b when expectedType == typeof(bool) => b.Value,
 				StringValue s when expectedType == typeof(string) => s.Value,
 				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
-				VecValue v when expectedType == typeof(Vector3) => v.ToVector3(values),
+				VecValue v when expectedType == typeof(Vector3) => v.ToVector3(ctx.Values),
 				ColorValue c when expectedType == typeof(Color) => c.Value,
-				ColourValue c when expectedType == typeof(Color) => c.ToColor(values),
+				ColourValue c when expectedType == typeof(Color) => c.ToColor(ctx.Values),
+				// A record-list element: apply its schema here (defaults + validation), yielding a
+				// schema-complete Record — the same transform-time seam as the single-record arm.
+				RecordValue rec when expectedType == typeof(Record) =>
+					ctx.RecordSchemas.Get(rec.TypeName).CreateInstance(RecordValueExtensions.Unwrap(rec.Fields)),
 				_ => throw new ParsingException(
 					$"List element {value.GetType().Name} cannot be coerced to {expectedType.Name}")
 			};
