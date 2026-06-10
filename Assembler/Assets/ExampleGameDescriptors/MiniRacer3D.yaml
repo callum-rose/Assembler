@@ -15,12 +15,33 @@ Game:
     must pass the far checkpoint and then cross the start/finish line for a lap to
     count — three laps wins.
 
+    Three computer-controlled rival cars share the track. They are driven by the
+    `navigate` behaviour over the new grid-navigation layer: at the first step each
+    rival rasterizes the infield and outer walls (tagged `obstacle`) into a walkability
+    grid on the ground (XZ) plane, then runs A* to the next corner of the circuit and
+    steers along the path. Each rival loops a four-corner racing line — when it nears its
+    current corner it advances to the next — so they continuously lap the infield,
+    routing around it the same way the player must. The rivals are visual pace cars (no
+    collider), so they never knock the player about; only the player's three laps end the
+    game.
+
 World:
   Dimensionality: 3
   BackgroundColor: "#10141c"
 
 Physics:
   Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# Grid navigation for the AI rivals. The arena is 40 wide; cars drive the ring between
+# the solid central infield and the outer walls. The grid lies on the ground (XZ) plane
+# (Y is up) and treats any entity tagged `obstacle` — the infield and the four walls —
+# as blocked, rasterizing each collider's bounds. A 1-unit cell leaves ~7 cells across
+# the ring channel, plenty of clearance for the A* routes.
+Navigation:
+  CellSize: 1.0
+  Bounds: { Min: !vec { X: -20, Y: 0, Z: -20 }, Max: !vec { X: 20, Y: 0, Z: 20 } }
+  Plane: xz
+  ObstacleTag: obstacle
 
 # Driving is wired to one abstract `move` (vector2) action, not to physical
 # keys. The action emits x (steer, A/D or left/right) and y (throttle, W/S or
@@ -68,6 +89,15 @@ Constants:
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
   follow offset: !vec { X: 0, Y: 9, Z: -14 }
   camera start: !vec { X: 0, Y: 9, Z: -14 }
+
+  # --- AI rivals ---
+  rival size: !vec { X: 1, Y: 0.5, Z: 2 }
+  rival roof size: !vec { X: 0.8, Y: 0.45, Z: 1 }
+  rival speed: 7          # a touch under the player's 9 cruise, so the player can overtake
+  rival slowing: 1.0      # navigate's ease-to-stop radius at a corner (kept small...)
+  rival reach: 4.0        # ...because a rival switches to the NEXT corner once this close,
+                          # so it flows through the corner rather than stopping on it
+  rival recompute: 0.3    # seconds between A* re-plans (cheap; obstacles are static)
 
 Variables:
   laps: 0
@@ -152,6 +182,43 @@ Expressions:
     Expression: |
       return laps >= target;
 
+  # The four corners of the rivals' racing line, in counter-clockwise order matching the
+  # player's direction (south straight heading +X, then up the east side, etc.). Each
+  # corner sits in the middle of the ring channel — between the infield (|X|<=12, |Z|<=14)
+  # and the outer walls (~|axis|=19.5) — at the cars' ride height (Y=0.35). Returned by
+  # index so a rival just tracks an int `wp` that cycles 0->1->2->3->0.
+  corner at:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ i ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      return i == 0 ? new Vector3(16f, 0.35f, -16.5f)
+           : i == 1 ? new Vector3(16f, 0.35f, 16.5f)
+           : i == 2 ? new Vector3(-16f, 0.35f, 16.5f)
+           : new Vector3(-16f, 0.35f, -16.5f);
+
+  # Advance to the next corner, wrapping after the fourth — the rivals lap forever.
+  advance corner:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ i ]
+    ReturnType: int
+    Expression: |
+      return (i + 1) % 4;
+
+  # Yaw (Euler degrees about Y) that points the car from its position toward its current
+  # corner, so the body faces its direction of travel rather than sliding sideways. The
+  # car's heading convention is forward = (sin(yaw), cos(yaw)) on XZ, so yaw=90 faces +X;
+  # Angle2D measures CCW from +x, hence the `90 - angle` conversion (fed (dir.x, dir.z)).
+  face corner:
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ self, target ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var dir = Direction(self, target);
+      return new Vector3(0f, 90f - Angle2D(new Vector3(dir.x, dir.z, 0f)), 0f);
+
 Entities:
   # ---- The drivable car ----------------------------------------------------
   car:
@@ -235,6 +302,193 @@ Entities:
               Size: !vec { X: 0.8, Y: 0.45, Z: 1 }
               Colour: !colour "#f7d046"
 
+  # ---- Computer-controlled rivals -----------------------------------------
+  # Each rival is a kinematic pace car steered by `navigate` (A* on the XZ nav grid).
+  # `wp` is the index of the corner it is currently driving toward; `corner gate` advances
+  # it once the car is within `rival reach`, and `face` turns the body to face its target.
+  # They are NOT tagged `car`, so they don't trip the player's finish/checkpoint gates, and
+  # they carry no collider, so they pass through the player rather than fighting its physics.
+  #
+  # rival 1 — starts on the south straight, heading +X toward the SE corner (wp 0).
+  rival 1:
+    Tags: [ rival ]
+    Position: !vec { X: -2, Y: 0.35, Z: -16.5 }
+    Rotation: !vec { X: 0, Y: 90, Z: 0 }
+    Variables:
+      wp: 0
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !var rival size
+          Colour: !colour "#3aa0e8"
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: !var rival speed
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+      face clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 1, BehaviourId: face } ]
+      face:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: face corner
+            With:
+              - !entity { Id: rival 1, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 1, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 1, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 1, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#bfe3ff" }
+
+  # rival 2 — starts on the west straight, heading -Z toward the SW corner (wp 3).
+  rival 2:
+    Tags: [ rival ]
+    Position: !vec { X: -16, Y: 0.35, Z: 0 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Variables:
+      wp: 3
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !var rival size
+          Colour: !colour "#e8923a"
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: !var rival speed
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+      face clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 2, BehaviourId: face } ]
+      face:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: face corner
+            With:
+              - !entity { Id: rival 2, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 2, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 2, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 2, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#ffd9b0" }
+
+  # rival 3 — starts on the north straight, heading -X toward the NW corner (wp 2).
+  rival 3:
+    Tags: [ rival ]
+    Position: !vec { X: 4, Y: 0.35, Z: 16.5 }
+    Rotation: !vec { X: 0, Y: 270, Z: 0 }
+    Variables:
+      wp: 2
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !var rival size
+          Colour: !colour "#c84fd0"
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: !var rival speed
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+      face clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 3, BehaviourId: face } ]
+      face:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: face corner
+            With:
+              - !entity { Id: rival 3, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 3, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 3, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 3, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#f0c8f4" }
+
   # ---- Track surface and (solid) infield ----------------------------------
   ground:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -248,6 +502,7 @@ Entities:
 
   infield:
     Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Tags: [ obstacle ]
     Behaviours:
       body:
         Type: primitive
@@ -264,6 +519,7 @@ Entities:
   # ---- Outer barrier walls (solid) ----------------------------------------
   wall north:
     Position: !vec { X: 0, Y: 0.6, Z: 20 }
+    Tags: [ obstacle ]
     Behaviours:
       body:
         Type: primitive
@@ -278,6 +534,7 @@ Entities:
           IsTrigger: false
   wall south:
     Position: !vec { X: 0, Y: 0.6, Z: -20 }
+    Tags: [ obstacle ]
     Behaviours:
       body:
         Type: primitive
@@ -292,6 +549,7 @@ Entities:
           IsTrigger: false
   wall east:
     Position: !vec { X: 20, Y: 0.6, Z: 0 }
+    Tags: [ obstacle ]
     Behaviours:
       body:
         Type: primitive
@@ -306,6 +564,7 @@ Entities:
           IsTrigger: false
   wall west:
     Position: !vec { X: -20, Y: 0.6, Z: 0 }
+    Tags: [ obstacle ]
     Behaviours:
       body:
         Type: primitive
