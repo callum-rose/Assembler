@@ -82,25 +82,42 @@ namespace Assembler.Building
 			var map = new Dictionary<Type, BuilderEntry>
 			{
 				[typeof(BoxColliderInfo)] = Entry<BoxColliderInfo, AutoAddBoxColliderBehaviour, BoxColliderData>(
-					(i, ctx) => new BoxColliderData(i.Id,
-						i.Size.Resolve(ctx.Resolution),
-						i.IsTrigger.Resolve(ctx.Resolution))),
+					(i, ctx) => new BoxColliderData(i.Id)
+					{
+						Size = i.Size.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
+					}),
 				[typeof(SphereColliderInfo)] = Entry<SphereColliderInfo, AutoAddSphereColliderBehaviour, SphereColliderData>(
-					(i, ctx) => new SphereColliderData(i.Id,
-						i.Radius.Resolve(ctx.Resolution))),
+					(i, ctx) => new SphereColliderData(i.Id)
+					{
+						Radius = i.Radius.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
+					}),
 				[typeof(CapsuleColliderInfo)] = Entry<CapsuleColliderInfo, AutoAddCapsuleColliderBehaviour, CapsuleColliderData>(
 					(i, ctx) => new CapsuleColliderData(i.Id)
 					{
 						Radius = i.Radius.Resolve(ctx.Resolution),
 						Height = i.Height.Resolve(ctx.Resolution),
 						Direction = i.Direction.Resolve(ctx.Resolution),
-						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(MeshColliderInfo)] = Entry<MeshColliderInfo, AutoAddMeshColliderBehaviour, MeshColliderData>(
 					(i, ctx) => new MeshColliderData(i.Id)
 					{
 						Convex = i.Convex.Resolve(ctx.Resolution),
-						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(AddForceInfo)] = Entry<AddForceInfo, AddForceBehaviour, AddForceData>(
 					(i, ctx) => new AddForceData(i.Id,

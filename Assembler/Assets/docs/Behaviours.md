@@ -11,6 +11,9 @@ Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/tr
 |------|------|-------------|
 | Size | Vector3 | Local-space dimensions of the box (x, y, z). |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `sphere collider`
 Adds a Unity SphereCollider to the entity. Required for collision/trigger physics events.
@@ -21,6 +24,9 @@ Adds a Unity SphereCollider to the entity. Required for collision/trigger physic
 |------|------|-------------|
 | Radius | float | Local-space radius of the sphere. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `capsule collider`
 Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physics events.
@@ -33,6 +39,9 @@ Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physi
 | Height | float | Local-space total height of the capsule along its Direction axis. |
 | Direction | int | Axis the capsule is aligned to — 0 = X, 1 = Y, 2 = Z. |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `mesh collider`
 Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFilter. Required for collision/trigger physics events on arbitrary meshes (e.g. voxel meshes).
@@ -43,6 +52,9 @@ Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFil
 |------|------|-------------|
 | Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `rigidbody`
 Adds a Unity Rigidbody to the entity so it participates in physics simulation.
