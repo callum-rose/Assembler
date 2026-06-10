@@ -15,15 +15,17 @@ Game:
     must pass the far checkpoint and then cross the start/finish line for a lap to
     count — three laps wins.
 
-    Three computer-controlled rival cars share the track. They are driven by the
-    `navigate` behaviour over the new grid-navigation layer: at the first step each
-    rival rasterizes the infield and outer walls (tagged `obstacle`) into a walkability
-    grid on the ground (XZ) plane, then runs A* to the next corner of the circuit and
-    steers along the path. Each rival loops a four-corner racing line — when it nears its
-    current corner it advances to the next — so they continuously lap the infield,
-    routing around it the same way the player must. The rivals are visual pace cars (no
-    collider), so they never knock the player about; only the player's three laps end the
-    game.
+    Three computer-controlled rival cars share the track. They run the SAME physics car
+    model as the player (rigidbody, grippy carving, drift) so they turn smoothly and shove
+    each other and the player on contact. The new grid-navigation layer only steers them:
+    at the first step each rival rasterizes the infield and outer walls (tagged `obstacle`)
+    into a walkability grid on the ground (XZ) plane, runs A* to the next corner of the
+    circuit, and writes the heading it wants into the car. An `ai steer` expression turns
+    that heading (plus a repulsion that pushes the car around nearby traffic) into a
+    steering input, feeding the player's own steering so the rival corners at a rate-limited
+    yaw instead of snapping. Each rival loops a four-corner racing line, continuously lapping
+    the infield. The rivals are tagged `rival` (not `car`), so they don't trip the player's
+    finish/checkpoint; only the player's three laps end the game.
 
 World:
   Dimensionality: 3
@@ -91,13 +93,23 @@ Constants:
   camera start: !vec { X: 0, Y: 9, Z: -14 }
 
   # --- AI rivals ---
+  # The rivals run the SAME physics car model as the player (rigidbody + `drive velocity` +
+  # `steer yaw`); the only difference is that an `ai steer` expression supplies the steering
+  # input instead of the keyboard. So they turn smoothly, drift on grippy limits, and collide
+  # physically with the player and each other — `navigate` only suggests a heading, it no
+  # longer teleports them.
   rival size: !vec { X: 1, Y: 0.5, Z: 2 }
   rival roof size: !vec { X: 0.8, Y: 0.45, Z: 1 }
-  rival speed: 7          # a touch under the player's 9 cruise, so the player can overtake
-  rival slowing: 1.0      # navigate's ease-to-stop radius at a corner (kept small...)
-  rival reach: 4.0        # ...because a rival switches to the NEXT corner once this close,
-                          # so it flows through the corner rather than stopping on it
-  rival recompute: 0.3    # seconds between A* re-plans (cheap; obstacles are static)
+  rival top speed: 5      # rival forward cruise (units/sec). Under the player's 9 so the
+                          # player can overtake, and below speed*turn-rate = rear grip so the
+                          # AI corners stay planted (no constant spin-outs) while looking smooth.
+  rival throttle: 1       # AI holds full throttle; `drive velocity` eases speed toward the cruise
+  rival slowing: 1.0      # navigate's ease radius (small; the car never parks on a corner)
+  rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
+                          # the route flows through corners rather than aiming into the wall
+  rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
+  avoid radius: 4.0       # other cars within this distance push a rival's heading aside
+  avoid strength: 1.5     # how hard that avoidance pull bends the heading vs the nav heading
 
 Variables:
   laps: 0
@@ -206,18 +218,35 @@ Expressions:
     Expression: |
       return (i + 1) % 4;
 
-  # Yaw (Euler degrees about Y) that points the car from its position toward its current
-  # corner, so the body faces its direction of travel rather than sliding sideways. The
-  # car's heading convention is forward = (sin(yaw), cos(yaw)) on XZ, so yaw=90 faces +X;
-  # Angle2D measures CCW from +x, hence the `90 - angle` conversion (fed (dir.x, dir.z)).
-  face corner:
-    ArgumentTypes: [ vector, vector ]
-    ArgumentNames: [ self, target ]
-    ReturnType: vector
+  # AI steering input (the rivals' "hands on the wheel"). Returns a steer value in [-1, 1]
+  # that feeds the SAME `steer yaw` the player uses — so a rival turns at the same rate-
+  # limited, speed-gated authority and never snaps. It points the car at a DESIRED heading
+  # that blends two pulls on the XZ plane:
+  #   nav   — the unit direction `navigate` wants (its A* route velocity, written to the
+  #           car's `nav dir` variable each frame);
+  #   avoid — a `Separate` repulsion away from the other three cars (player + two rivals,
+  #           passed in as live positions a/b/c) so a rival steers around traffic instead
+  #           of ploughing through it. Only cars within `avoidRadius` push.
+  # Steering sign uses the car's own right axis (forward's in-plane perpendicular, same as
+  # `drive velocity`): a desired heading off to the right wants positive steer. When the
+  # desired heading is behind the car (forward dot < 0) it commits to a full-lock turn in
+  # the nearer direction rather than dithering near zero.
+  ai steer:
+    ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float ]
+    ArgumentNames: [ rotation, self, navDir, a, b, c, avoidRadius, avoidStrength ]
+    ReturnType: float
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
-      var dir = Direction(self, target);
-      return new Vector3(0f, 90f - Angle2D(new Vector3(dir.x, dir.z, 0f)), 0f);
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var right = new Vector3(forward.z, 0f, -forward.x);
+      var others = new List<Vector3> { a, b, c };
+      var avoid = Separate(self, others, avoidRadius, 1f);
+      var nav = Normalize(new Vector3(navDir.x, 0f, navDir.z));
+      var desired = Normalize(AddVector(nav, ScaleVector(avoid, avoidStrength)));
+      var fwdDot = Dot(forward, desired);
+      var rightDot = Dot(right, desired);
+      return fwdDot < 0f ? (rightDot >= 0f ? 1f : -1f) : Clamp(rightDot * 2f, -1f, 1f);
 
 Entities:
   # ---- The drivable car ----------------------------------------------------
@@ -303,11 +332,17 @@ Entities:
               Colour: !colour "#f7d046"
 
   # ---- Computer-controlled rivals -----------------------------------------
-  # Each rival is a kinematic pace car steered by `navigate` (A* on the XZ nav grid).
-  # `wp` is the index of the corner it is currently driving toward; `corner gate` advances
-  # it once the car is within `rival reach`, and `face` turns the body to face its target.
-  # They are NOT tagged `car`, so they don't trip the player's finish/checkpoint gates, and
-  # they carry no collider, so they pass through the player rather than fighting its physics.
+  # Each rival is a FULL physics car — same rigidbody + `drive velocity` + `steer yaw` as the
+  # player — so it turns smoothly (rate-limited, speed-gated yaw) and collides physically with
+  # the player and the other rivals. The only thing that differs from the player is the steering
+  # input: an `ai steer` expression replaces the keyboard, aiming the car along the heading
+  # `navigate` suggests (written to `nav dir`) while a `Separate` term steers it around nearby
+  # cars. `navigate` runs with `Output: nav dir`, so it only advises a direction and no longer
+  # moves the car. `wp` cycles the four corners (advanced by `corner gate` near each corner);
+  # rivals are tagged `rival` (not `car`), so they don't trip the player's finish/checkpoint.
+  #
+  # The per-rival wiring is identical apart from start pose, colour, and which three OTHER cars
+  # it avoids (passed to `ai steer` as a/b/c — every car except itself).
   #
   # rival 1 — starts on the south straight, heading +X toward the SE corner (wp 0).
   rival 1:
@@ -316,32 +351,78 @@ Entities:
     Rotation: !vec { X: 0, Y: 90, Z: 0 }
     Variables:
       wp: 0
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }   # heading navigate wants this frame (written below)
     Behaviours:
       body:
         Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#3aa0e8" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
         Properties:
-          Shape: cube
-          Size: !var rival size
-          Colour: !colour "#3aa0e8"
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
       drive:
         Type: navigate
         Properties:
           Target: !expr { Do: corner at, With: [ !var wp ] }
-          Speed: !var rival speed
+          Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
           Mode: astar
-      face clock:
+          Output: !var nav dir
+      # apply steer FIRST (sets yaw rate), then apply drive (reads that fresh yaw rate). Same
+      # order the player relies on for the rear-axle carve.
+      control:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 1, BehaviourId: face } ]
-      face:
-        Type: rotation setter
+        Listeners:
+          - { EntityId: rival 1, BehaviourId: apply steer }
+          - { EntityId: rival 1, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
         Properties:
-          Rotation: !expr
-            Do: face corner
+          AngularVelocity: !expr
+            Do: steer yaw
             With:
-              - !entity { Id: rival 1, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 1, Property: Rotation }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 1, Property: Rotation }
+              - !rigidbody { Id: rival 1, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 1, Property: Rotation }
+              - !rigidbody { Id: rival 1, Property: Velocity }
+              - !rigidbody { Id: rival 1, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
       corner clock:
         Type: every frame trigger
         Listeners: [ { EntityId: rival 1, BehaviourId: corner gate } ]
@@ -376,32 +457,76 @@ Entities:
     Rotation: !vec { X: 0, Y: 180, Z: 0 }
     Variables:
       wp: 3
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
         Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#e8923a" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
         Properties:
-          Shape: cube
-          Size: !var rival size
-          Colour: !colour "#e8923a"
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
       drive:
         Type: navigate
         Properties:
           Target: !expr { Do: corner at, With: [ !var wp ] }
-          Speed: !var rival speed
+          Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
           Mode: astar
-      face clock:
+          Output: !var nav dir
+      control:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 2, BehaviourId: face } ]
-      face:
-        Type: rotation setter
+        Listeners:
+          - { EntityId: rival 2, BehaviourId: apply steer }
+          - { EntityId: rival 2, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
         Properties:
-          Rotation: !expr
-            Do: face corner
+          AngularVelocity: !expr
+            Do: steer yaw
             With:
-              - !entity { Id: rival 2, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 2, Property: Rotation }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 2, Property: Rotation }
+              - !rigidbody { Id: rival 2, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 2, Property: Rotation }
+              - !rigidbody { Id: rival 2, Property: Velocity }
+              - !rigidbody { Id: rival 2, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
       corner clock:
         Type: every frame trigger
         Listeners: [ { EntityId: rival 2, BehaviourId: corner gate } ]
@@ -436,32 +561,76 @@ Entities:
     Rotation: !vec { X: 0, Y: 270, Z: 0 }
     Variables:
       wp: 2
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
         Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#c84fd0" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
         Properties:
-          Shape: cube
-          Size: !var rival size
-          Colour: !colour "#c84fd0"
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
       drive:
         Type: navigate
         Properties:
           Target: !expr { Do: corner at, With: [ !var wp ] }
-          Speed: !var rival speed
+          Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
           Mode: astar
-      face clock:
+          Output: !var nav dir
+      control:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 3, BehaviourId: face } ]
-      face:
-        Type: rotation setter
+        Listeners:
+          - { EntityId: rival 3, BehaviourId: apply steer }
+          - { EntityId: rival 3, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
         Properties:
-          Rotation: !expr
-            Do: face corner
+          AngularVelocity: !expr
+            Do: steer yaw
             With:
-              - !entity { Id: rival 3, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 3, Property: Rotation }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 3, Property: Rotation }
+              - !rigidbody { Id: rival 3, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 3, Property: Rotation }
+              - !rigidbody { Id: rival 3, Property: Velocity }
+              - !rigidbody { Id: rival 3, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
       corner clock:
         Type: every frame trigger
         Listeners: [ { EntityId: rival 3, BehaviourId: corner gate } ]
