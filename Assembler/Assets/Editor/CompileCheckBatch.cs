@@ -35,6 +35,7 @@ namespace Editor
 
 		public static void RecompileAll()
 		{
+			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				_startTime = EditorApplication.timeSinceStartup;
