@@ -38,8 +38,10 @@ namespace Assembler.Core
 			set => _fields[field] = value;
 		}
 
+#if UNITY_EDITOR
 		/// <summary>The field names present on this instance, in no guaranteed order — for debug tooling that enumerates state.</summary>
 		public IReadOnlyCollection<string> FieldNames => _fields.Keys;
+#endif
 
 		/// <summary>True when the named field is present on this instance.</summary>
 		public bool ContainsField(string field) => _fields.ContainsKey(field);
