@@ -271,16 +271,34 @@ namespace Assembler.Parsing
 			}
 
 			var defaults = NavigationInfo.Default;
-			var min = dto.Bounds?.Min?.ToVector3(values) ?? new Vector3(defaults.MinX, defaults.MinY, 0f);
-			var max = dto.Bounds?.Max?.ToVector3(values) ?? new Vector3(defaults.MaxX, defaults.MaxY, 0f);
+			var plane = ParseNavPlane(dto.Plane);
+
+			// Bounds are given as a world-space !vec; project onto the chosen plane's two in-grid axes. Absent
+			// corners fall back to the plane-agnostic defaults directly (not via projection, which would drop
+			// the second default component).
+			var (minX, minY) = dto.Bounds?.Min is { } min
+				? plane.Project(min.ToVector3(values))
+				: (defaults.MinX, defaults.MinY);
+			var (maxX, maxY) = dto.Bounds?.Max is { } max
+				? plane.Project(max.ToVector3(values))
+				: (defaults.MaxX, defaults.MaxY);
 
 			return new NavigationInfo(
 				dto.CellSize ?? defaults.CellSize,
-				min.x,
-				min.y,
-				max.x,
-				max.y,
-				dto.ObstacleTag ?? defaults.ObstacleTag);
+				minX,
+				minY,
+				maxX,
+				maxY,
+				dto.ObstacleTag ?? defaults.ObstacleTag,
+				plane);
 		}
+
+		private static NavPlane ParseNavPlane(string? plane) =>
+			plane?.ToLowerInvariant() switch
+			{
+				null or "xy" => NavPlane.XY,
+				"xz" => NavPlane.XZ,
+				_ => throw new ParsingException($"Navigation 'Plane' must be 'xy' or 'xz' (got '{plane}').")
+			};
 	}
 }

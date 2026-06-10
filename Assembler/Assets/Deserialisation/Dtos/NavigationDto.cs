@@ -13,5 +13,8 @@ namespace Assembler.Deserialisation.Dtos
 		public float? CellSize { get; init; }
 		public BoundsDto? Bounds { get; init; }
 		public string? ObstacleTag { get; init; }
+
+		/// <summary>Which world plane the grid spans: <c>"xy"</c> (default) or <c>"xz"</c> (ground plane).</summary>
+		public string? Plane { get; init; }
 	}
 }
