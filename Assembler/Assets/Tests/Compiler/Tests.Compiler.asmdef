@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "Assembler.Compiler",
+        "Assembler.Libraries",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -777,6 +777,25 @@ Moves an entity to a target along a grid path, recomputed on a cadence.
 | Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
 
+## `grid mover`
+Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
+            only re-decides direction once it arrives there, so motion is always grid-aligned and never diagonal
+            (classic maze movement). At each cell it turns onto the requested Direction if that neighbour is
+            walkable, else continues its current heading, else stops. Walkability and cell geometry come from the
+            NavGridService, so a player driven by this and the AI driven by navigate share one
+            maze. Robust to external teleports (a wrap position tunnel): a large jump re-anchors to the new
+            cell instead of dragging the entity back.
+            Properties:
+              Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
+              Speed: Movement speed in units per second.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Direction | Vector3 |  |
+| Speed | float |  |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 
@@ -1834,4 +1853,6 @@ These behaviours are registered in the parse catalogue and accept the properties
 
 ## Doc-gen warnings
 
+- `grid mover`: property `Direction` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
+- `grid mover`: property `Speed` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.

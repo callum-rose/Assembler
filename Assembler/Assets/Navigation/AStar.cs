@@ -40,7 +40,8 @@ namespace Assembler.Navigation
 		/// Shortest cell path from <paramref name="start"/> to <paramref name="goal"/> inclusive, or an empty
 		/// list if either endpoint is unwalkable/out of bounds or no route exists.
 		/// </summary>
-		public static IReadOnlyList<GridCoord> FindPath(NavGrid grid, GridCoord start, GridCoord goal)
+		public static IReadOnlyList<GridCoord> FindPath(NavGrid grid, GridCoord start, GridCoord goal,
+			bool allowDiagonal = true)
 		{
 			if (!grid.IsWalkable(start) || !grid.IsWalkable(goal))
 			{
@@ -52,12 +53,13 @@ namespace Assembler.Navigation
 				return new[] { goal };
 			}
 
+			var neighbours = GridConnectivity.NeighboursFor(allowDiagonal);
 			var gScore = new Dictionary<GridCoord, int> { [start] = 0 };
 			var cameFrom = new Dictionary<GridCoord, GridCoord>();
 			var open = new BinaryHeap<Node>(ByPriority);
 			var closed = new HashSet<GridCoord>();
 
-			var startH = Heuristic(start, goal);
+			var startH = Heuristic(start, goal, allowDiagonal);
 			open.Push(new Node(start, startH, startH, grid.Index(start)));
 
 			while (open.Count > 0)
@@ -70,14 +72,14 @@ namespace Assembler.Navigation
 				}
 
 				// Lazy deletion: a cell can sit in the heap more than once (re-pushed when its g improved). The
-				// octile heuristic is consistent, so the first pop of a cell is already optimal; later pops are
+				// heuristic is consistent, so the first pop of a cell is already optimal; later pops are
 				// stale and skipped.
 				if (!closed.Add(current))
 				{
 					continue;
 				}
 
-				foreach (var (dx, dy) in GridConnectivity.Neighbours)
+				foreach (var (dx, dy) in neighbours)
 				{
 					var neighbour = new GridCoord(current.X + dx, current.Y + dy);
 
@@ -93,7 +95,7 @@ namespace Assembler.Navigation
 					{
 						cameFrom[neighbour] = current;
 						gScore[neighbour] = tentative;
-						var h = Heuristic(neighbour, goal);
+						var h = Heuristic(neighbour, goal, allowDiagonal);
 						open.Push(new Node(neighbour, tentative + h, h, grid.Index(neighbour)));
 					}
 				}
@@ -102,13 +104,17 @@ namespace Assembler.Navigation
 			return Array.Empty<GridCoord>();
 		}
 
-		private static int Heuristic(GridCoord a, GridCoord b)
+		// Octile distance when diagonals are allowed; Manhattan (the exact four-connected cost) otherwise. Both
+		// are admissible and consistent for their connectivity, so the first pop of any cell stays optimal.
+		private static int Heuristic(GridCoord a, GridCoord b, bool allowDiagonal)
 		{
 			var dx = Math.Abs(a.X - b.X);
 			var dy = Math.Abs(a.Y - b.Y);
-			// Octile distance on the integer cost scale.
-			return GridConnectivity.OrthogonalCost * (dx + dy) +
-				(GridConnectivity.DiagonalCost - 2 * GridConnectivity.OrthogonalCost) * Math.Min(dx, dy);
+
+			return allowDiagonal
+				? GridConnectivity.OrthogonalCost * (dx + dy) +
+				  (GridConnectivity.DiagonalCost - 2 * GridConnectivity.OrthogonalCost) * Math.Min(dx, dy)
+				: GridConnectivity.OrthogonalCost * (dx + dy);
 		}
 
 		private static IReadOnlyList<GridCoord> Reconstruct(Dictionary<GridCoord, GridCoord> cameFrom, GridCoord current)

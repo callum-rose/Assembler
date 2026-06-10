@@ -14,12 +14,14 @@ namespace Assembler.Behaviours.AI
 		float MaxX,
 		float MaxY,
 		string ObstacleTag,
-		NavPlane Plane)
+		NavPlane Plane,
+		bool AllowDiagonal)
 	{
 		/// <summary>The build-pipeline mapping from the parsed <see cref="NavigationInfo"/> — the single source
 		/// of the grid's configuration and defaults.</summary>
 		public static NavGridSettings From(NavigationInfo info) =>
-			new(info.CellSize, info.MinX, info.MinY, info.MaxX, info.MaxY, info.ObstacleTag, info.Plane);
+			new(info.CellSize, info.MinX, info.MinY, info.MaxX, info.MaxY, info.ObstacleTag, info.Plane,
+				info.AllowDiagonal);
 
 		public static NavGridSettings Default => From(NavigationInfo.Default);
 	}
@@ -48,6 +50,42 @@ namespace Assembler.Behaviours.AI
 
 		public float CellSize => _settings.CellSize;
 
+		/// <summary>Whether the cell containing <paramref name="world"/> is on the grid and walkable. Used by
+		/// grid-locked movers to decide whether the next cell in a direction is enterable.</summary>
+		public bool IsWalkable(Vector3 world)
+		{
+			var grid = Grid();
+			var (u, v) = _settings.Plane.Project(world);
+			return grid.IsWalkable(grid.WorldToCell(u, v));
+		}
+
+		/// <summary>The world-space centre of the cell containing <paramref name="world"/>, keeping the point's
+		/// off-plane coordinate. Snaps a position onto the grid lattice.</summary>
+		public Vector3 CellCentre(Vector3 world)
+		{
+			var grid = Grid();
+			var (u, v) = _settings.Plane.Project(world);
+			var (cu, cv) = grid.CellToWorld(grid.WorldToCell(u, v));
+			return _settings.Plane.ToWorld(cu, cv, world);
+		}
+
+		/// <summary>The dominant in-plane axis of <paramref name="dir"/> as a unit world-space step, or zero for
+		/// a zero/ambiguous input. Snaps an arbitrary heading to a single cardinal so a mover never goes
+		/// diagonally (a slight x-bias breaks exact ties deterministically).</summary>
+		public Vector3 CardinalStep(Vector3 dir)
+		{
+			var (u, v) = _settings.Plane.Project(dir);
+
+			if (Mathf.Approximately(u, 0f) && Mathf.Approximately(v, 0f))
+			{
+				return Vector3.zero;
+			}
+
+			return Mathf.Abs(u) >= Mathf.Abs(v)
+				? _settings.Plane.ToWorldDirection(Mathf.Sign(u), 0f)
+				: _settings.Plane.ToWorldDirection(0f, Mathf.Sign(v));
+		}
+
 		/// <summary>World-space waypoints from <paramref name="from"/> to <paramref name="to"/> (goal last), or
 		/// just the goal if no grid path exists.</summary>
 		public IReadOnlyList<Vector3> Path(Vector3 from, Vector3 to)
@@ -56,7 +94,8 @@ namespace Assembler.Behaviours.AI
 			var grid = Grid();
 			var (fromU, fromV) = plane.Project(from);
 			var (toU, toV) = plane.Project(to);
-			var cells = AStar.FindPath(grid, grid.WorldToCell(fromU, fromV), grid.WorldToCell(toU, toV));
+			var cells = AStar.FindPath(grid, grid.WorldToCell(fromU, fromV), grid.WorldToCell(toU, toV),
+				_settings.AllowDiagonal);
 
 			if (cells.Count == 0)
 			{
@@ -103,7 +142,7 @@ namespace Assembler.Behaviours.AI
 				return cached;
 			}
 
-			var field = FlowField.Build(grid, goalCell);
+			var field = FlowField.Build(grid, goalCell, _settings.AllowDiagonal);
 			_fields[goalCell] = field;
 			_fieldOrder.Add(goalCell);
 
