@@ -108,8 +108,12 @@ Constants:
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
                           # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
-  avoid radius: 4.0       # other cars within this distance push a rival's heading aside
-  avoid strength: 1.5     # how hard that avoidance pull bends the heading vs the nav heading
+  avoid radius: 3.0       # other cars within this distance push a rival's heading aside
+  avoid strength: 0.5     # MUST stay < 1: `Separate` returns a full-magnitude unit push the
+                          # instant any car is in range, so the nav heading (magnitude 1) has
+                          # to outweigh it — otherwise a rival passing the parked player swings
+                          # perpendicular and ploughs into the wall. 0.5 = a ~27° dodge at most;
+                          # physical collision handles anything closer.
 
 Variables:
   laps: 0
