@@ -11,6 +11,9 @@ Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/tr
 |------|------|-------------|
 | Size | Vector3 | Local-space dimensions of the box (x, y, z). |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `sphere collider`
 Adds a Unity SphereCollider to the entity. Required for collision/trigger physics events.
@@ -21,6 +24,9 @@ Adds a Unity SphereCollider to the entity. Required for collision/trigger physic
 |------|------|-------------|
 | Radius | float | Local-space radius of the sphere. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `capsule collider`
 Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physics events.
@@ -33,6 +39,9 @@ Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physi
 | Height | float | Local-space total height of the capsule along its Direction axis. |
 | Direction | int | Axis the capsule is aligned to — 0 = X, 1 = Y, 2 = Z. |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `mesh collider`
 Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFilter. Required for collision/trigger physics events on arbitrary meshes (e.g. voxel meshes).
@@ -43,6 +52,9 @@ Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFil
 |------|------|-------------|
 | Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `rigidbody`
 Adds a Unity Rigidbody to the entity so it participates in physics simulation.
@@ -58,6 +70,7 @@ Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 | AngularDamping | float | Damping applied to angular velocity (Unity's Rigidbody.angularDamping). |
 | FreezePosition | Vector3 | Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z). |
 | FreezeRotation | Vector3 | Per-axis rotation freeze (any non-zero component locks that axis). |
+| CentreOfMass | Vector3 | Local-space centre of mass offset. Overrides Unity's auto-computed centre so the body rotates and balances about this point (e.g. push it back to spin a vehicle about its rear axle). Omit to keep the automatic centre. |
 
 ## `add force`
 Adds a continuous world-space force to the entity's Rigidbody when Executed (typically via a trigger).
@@ -719,6 +732,50 @@ Finite state machine for entity AI. Holds the current state in an entity string-
 | Initial | string | The starting state. Must be one of States. |
 | States | IReadOnlyList<StateInfo> | Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover). |
 | Transitions | IReadOnlyList<TransitionInfo> | Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken. |
+
+## `perceive`
+Sensor that scans for the nearest tagged entity and writes the result into blackboard variables.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| TargetId | string | !var reference to the string variable that receives the detected entity id. |
+| TargetPosition | Vector3 | !var reference to the vector variable that receives the detected entity position. |
+| HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
+| LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
+
+## `steering`
+Blends a weighted list of steering forces into one velocity each frame.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Forces | IReadOnlyList<SteeringForceInfo> | List of { Force, Weight } entries; Force is a Vector3 (e.g. !expr Seek(...)), Weight a float. |
+| MaxSpeed | float | Upper bound on the blended velocity's magnitude. |
+| Output | Vector3 | Name of the vector variable to write the blended velocity into (omit to move the entity directly). |
+
+## `navigate`
+Moves an entity toward a target, easing to a stop on arrival.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World point to navigate to. |
+| Speed | float | Movement speed in units per second. |
+| SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
+| Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
+| Mode | string | "astar" or "flowfield" — selects the grid path source once a nav grid is present. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.

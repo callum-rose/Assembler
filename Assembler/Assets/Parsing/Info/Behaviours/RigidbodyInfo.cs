@@ -12,7 +12,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<float> LinearDamping,
 		ValueSource<float> AngularDamping,
 		ValueSource<Vector3> FreezePosition,
-		ValueSource<Vector3> FreezeRotation)
+		ValueSource<Vector3> FreezeRotation,
+		ValueSource<Vector3> CentreOfMass)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static RigidbodyInfo Create(string id,
@@ -27,7 +28,8 @@ namespace Assembler.Parsing.Info.Behaviours
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("LinearDamping")),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("AngularDamping")),
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezePosition")),
-				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezeRotation")));
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("FreezeRotation")),
+				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("CentreOfMass")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
@@ -39,6 +41,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				LinearDamping.SubstituteParameters(ctx),
 				AngularDamping.SubstituteParameters(ctx),
 				FreezePosition.SubstituteParameters(ctx),
-				FreezeRotation.SubstituteParameters(ctx));
+				FreezeRotation.SubstituteParameters(ctx),
+				CentreOfMass.SubstituteParameters(ctx));
 	}
 }

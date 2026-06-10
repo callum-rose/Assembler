@@ -16,8 +16,5 @@ namespace Assembler.Resolving
 		public TOutput Get(TriggerContext ctx) => _func(_innerProvider.Get(ctx));
 
 		object IValueProvider.Get(TriggerContext ctx) => Get(ctx)!;
-
-		public void Set(TOutput value) =>
-			throw new InvalidOperationException("MappedValueProvider cannot have its value set");
 	}
 }

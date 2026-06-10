@@ -1,3 +1,4 @@
+using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.UI;
 using Assembler.Parsing.Controls;
@@ -14,5 +15,7 @@ namespace Assembler.Building
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,
 		IGameClock Clock,
-		UiPrefabLibrary UiPrefabs);
+		UiPrefabLibrary UiPrefabs,
+		EntityQueryService EntityQuery,
+		LineOfSightService Sight);
 }

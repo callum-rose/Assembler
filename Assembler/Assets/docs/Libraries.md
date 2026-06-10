@@ -631,6 +631,115 @@ Writes a string field in place and returns the record so calls can chain.
 
 **Returns** (Record): The same record instance.
 
+## `SteeringMath`
+First-class steering helpers for descriptor expressions, registered globally in
+            CompiledExpressionsRegistry so every expression can call them by bare name (Seek, Flee, Arrive, …). Each
+            movement function returns a desired-velocity Vector3, so they compose inside a velocity: !expr
+            (or feed the steering aggregator behaviour). Positions/velocities are carried as Vector3
+            (z = 0 for 2D), matching VectorMath; all numeric parameters are float so int arguments coerce
+            automatically. Wander draws on the global RNG and is therefore non-deterministic, like RandomMath.
+
+### `Vector3 Arrive(Vector3 position, Vector3 target, float maxSpeed, float slowingRadius)`
+Like Single) but eases to a stop, scaling speed down inside the slowing radius.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| target | Vector3 | Point to arrive at. |
+| maxSpeed | float | Maximum speed (units per second). |
+| slowingRadius | float | Distance from the target at which to begin slowing. |
+
+**Returns** (Vector3): A velocity toward the target, ramped to zero as the target is reached.
+
+### `Vector3 Evade(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
+Flee the target's predicted future position, dodging a moving threat.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| target | Vector3 | Threat's current position. |
+| targetVelocity | Vector3 | Threat's current velocity. |
+| maxSpeed | float | Maximum speed (units per second). |
+
+**Returns** (Vector3): A velocity away from where the threat is heading.
+
+### `Vector3 Flee(Vector3 position, Vector3 target, float maxSpeed)`
+Desired velocity that drives straight away from a target at full speed.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| target | Vector3 | Point to steer away from. |
+| maxSpeed | float | Maximum speed (units per second). |
+
+**Returns** (Vector3): A velocity of length maxSpeed pointing away from the target.
+
+### `float Heading2D(Vector3 from, Vector3 to)`
+Heading angle from one point toward another, in degrees CCW from +x, in [-180, 180].
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | Vector3 | The origin point. |
+| to | Vector3 | The point to face. |
+
+**Returns** (float): The 2D heading angle in degrees.
+
+### `Vector3 LookRotation2D(Vector3 from, Vector3 to)`
+Euler rotation that faces from one point toward another in the XY plane (rotation about z).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | Vector3 | The origin point. |
+| to | Vector3 | The point to aim at. |
+
+**Returns** (Vector3): An euler-angles vector (0, 0, heading) suitable for an entity's Rotation.
+
+### `Vector3 Pursue(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
+Seek the target's predicted future position, leading a moving target.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| target | Vector3 | Target's current position. |
+| targetVelocity | Vector3 | Target's current velocity. |
+| maxSpeed | float | Maximum speed (units per second). |
+
+**Returns** (Vector3): A velocity toward where the target is heading.
+
+### `Vector3 Seek(Vector3 position, Vector3 target, float maxSpeed)`
+Desired velocity that drives straight toward a target at full speed.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| target | Vector3 | Point to steer toward. |
+| maxSpeed | float | Maximum speed (units per second). |
+
+**Returns** (Vector3): A velocity of length maxSpeed pointing at the target (zero if already there).
+
+### `Vector3 Separate(Vector3 position, List<Vector3> neighbours, float separationRadius, float maxSpeed)`
+Repulsion velocity that pushes away from nearby neighbours, for flock/crowd separation.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| neighbours | List<Vector3> | Positions of nearby entities. |
+| separationRadius | float | Only neighbours within this distance contribute. |
+| maxSpeed | float | Speed of the returned velocity (units per second). |
+
+**Returns** (Vector3): A velocity steering away from crowding neighbours, or zero if none are close.
+
+### `Vector3 Wander(Vector3 velocity, float maxSpeed, float jitterDegrees)`
+Nudge the current heading by a random jitter, for aimless roaming. Non-deterministic.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| velocity | Vector3 | Current velocity (its direction is the base heading). |
+| maxSpeed | float | Speed of the returned velocity (units per second). |
+| jitterDegrees | float | Maximum turn this step, in degrees either way. |
+
+**Returns** (Vector3): A velocity of length maxSpeed turned by a random amount.
+
 ## `VectorMath`
 First-class 2D/3D vector helpers for descriptor expressions. Registered globally
             in CompiledExpressionsRegistry so every expression can call these by bare name

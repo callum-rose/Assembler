@@ -23,7 +23,7 @@ namespace Tests.Resolving
 		private static ResolutionContext ContextWith(IGameClock clock) =>
 			// Only the clock is exercised when resolving a ClockValueSource; the other registries are
 			// not touched, so they can be left null for this focused test.
-			new(null!, null!, null!, null!, null, null!, clock);
+			new(null!, null!, null!, null!, null, null!, null!, clock);
 
 		[Test]
 		public void ResolvesDeltaTimeFromInjectedClock()

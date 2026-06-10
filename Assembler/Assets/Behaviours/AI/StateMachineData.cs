@@ -25,7 +25,7 @@ namespace Assembler.Behaviours.AI
 	public sealed class StateMachineData : BehaviourData
 	{
 		/// <summary>Settable provider pointing at the entity variable that holds the current state name.</summary>
-		public IValueProvider<string> CurrentState { get; }
+		public IWriteValueProvider<string> CurrentState { get; }
 
 		public string Initial { get; }
 
@@ -36,7 +36,7 @@ namespace Assembler.Behaviours.AI
 		public IReadOnlyDictionary<string, StateMachineState> States { get; }
 
 		public StateMachineData(string id,
-			IValueProvider<string> currentState,
+			IWriteValueProvider<string> currentState,
 			string initial,
 			IReadOnlyList<StateTransition> transitions,
 			IReadOnlyDictionary<string, StateMachineState> states) : base(id)

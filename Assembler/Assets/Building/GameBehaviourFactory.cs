@@ -75,6 +75,16 @@ namespace Assembler.Building
 				needsClock.Clock = ctx.Clock;
 			}
 
+			if (behaviour is INeedsEntityQuery needsQuery)
+			{
+				needsQuery.Query = ctx.EntityQuery;
+			}
+
+			if (behaviour is INeedsLineOfSight needsSight)
+			{
+				needsSight.Sight = ctx.Sight;
+			}
+
 			return (behaviour, initialise);
 		}
 
@@ -83,25 +93,42 @@ namespace Assembler.Building
 			var map = new Dictionary<Type, BuilderEntry>
 			{
 				[typeof(BoxColliderInfo)] = Entry<BoxColliderInfo, AutoAddBoxColliderBehaviour, BoxColliderData>(
-					(i, ctx) => new BoxColliderData(i.Id,
-						i.Size.Resolve(ctx.Resolution),
-						i.IsTrigger.Resolve(ctx.Resolution))),
+					(i, ctx) => new BoxColliderData(i.Id)
+					{
+						Size = i.Size.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
+					}),
 				[typeof(SphereColliderInfo)] = Entry<SphereColliderInfo, AutoAddSphereColliderBehaviour, SphereColliderData>(
-					(i, ctx) => new SphereColliderData(i.Id,
-						i.Radius.Resolve(ctx.Resolution))),
+					(i, ctx) => new SphereColliderData(i.Id)
+					{
+						Radius = i.Radius.Resolve(ctx.Resolution),
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
+					}),
 				[typeof(CapsuleColliderInfo)] = Entry<CapsuleColliderInfo, AutoAddCapsuleColliderBehaviour, CapsuleColliderData>(
 					(i, ctx) => new CapsuleColliderData(i.Id)
 					{
 						Radius = i.Radius.Resolve(ctx.Resolution),
 						Height = i.Height.Resolve(ctx.Resolution),
 						Direction = i.Direction.Resolve(ctx.Resolution),
-						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(MeshColliderInfo)] = Entry<MeshColliderInfo, AutoAddMeshColliderBehaviour, MeshColliderData>(
 					(i, ctx) => new MeshColliderData(i.Id)
 					{
 						Convex = i.Convex.Resolve(ctx.Resolution),
-						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution)
+						IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+						Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+						DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+						StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 					}),
 				[typeof(AddForceInfo)] = Entry<AddForceInfo, AddForceBehaviour, AddForceData>(
 					(i, ctx) => new AddForceData(i.Id,
@@ -127,7 +154,8 @@ namespace Assembler.Building
 						LinearDamping = i.LinearDamping.Resolve(ctx.Resolution),
 						AngularDamping = i.AngularDamping.Resolve(ctx.Resolution),
 						FreezePosition = i.FreezePosition.Resolve(ctx.Resolution),
-						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution)
+						FreezeRotation = i.FreezeRotation.Resolve(ctx.Resolution),
+						CentreOfMass = i.CentreOfMass.Resolve(ctx.Resolution)
 					}),
 				[typeof(VelocityInfo)] = Entry<VelocityInfo, Velocity, VelocityData>(
 					(i, ctx) => new VelocityData(i.Id,
@@ -135,14 +163,14 @@ namespace Assembler.Building
 				[typeof(AccelerationInfo)] = Entry<AccelerationInfo, Acceleration, AccelerationData>(
 					(i, ctx) => new AccelerationData(i.Id,
 						i.Acceleration.Resolve(ctx.Resolution),
-						i.Velocity.Resolve(ctx.Resolution))),
+						i.Velocity.ResolveWritable(ctx.Resolution))),
 				[typeof(DragInfo)] = Entry<DragInfo, DragBehaviour, DragData>(
 					(i, ctx) => new DragData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution),
+						i.Velocity.ResolveWritable(ctx.Resolution),
 						i.Coefficient.Resolve(ctx.Resolution))),
 				[typeof(SpeedLimitInfo)] = Entry<SpeedLimitInfo, SpeedLimit, SpeedLimitData>(
 					(i, ctx) => new SpeedLimitData(i.Id,
-						i.Velocity.Resolve(ctx.Resolution),
+						i.Velocity.ResolveWritable(ctx.Resolution),
 						i.Max.Resolve(ctx.Resolution))),
 				[typeof(MoveTowardsInfo)] = Entry<MoveTowardsInfo, MoveTowards, MoveTowardsData>(
 					(i, ctx) => new MoveTowardsData(i.Id,
@@ -459,7 +487,7 @@ namespace Assembler.Building
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
-						var current = res.Variables.Get<string>(i.StateVariable, scope);
+						var current = res.Variables.Get<string>(i.StateVariable, scope).AsWritable();
 						var transitions = i.Transitions
 							.Select(t => new StateTransition(t.From, t.To, t.When.Resolve(res)))
 							.ToArray();
@@ -471,7 +499,35 @@ namespace Assembler.Building
 							i.Listeners.ToListeners(lr, res));
 					}
 					);
-				})
+				}),
+				[typeof(PerceiveInfo)] = Entry<PerceiveInfo, Perceive, PerceiveData>(
+					(i, ctx) => new PerceiveData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						i.TargetId.ResolveWritable(ctx.Resolution),
+						i.TargetPosition.ResolveWritable(ctx.Resolution),
+						i.HasTarget.ResolveWritable(ctx.Resolution),
+						i.LastKnownPosition.ResolveWritable(ctx.Resolution))),
+				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
+					(i, ctx) => new SteeringData(i.Id,
+						i.Forces.Select(f => new SteeringForce(
+							f.Force.Resolve(ctx.Resolution),
+							f.Weight.Resolve(ctx.Resolution))).ToArray(),
+						i.MaxSpeed.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution))),
+				[typeof(NavigateInfo)] = Entry<NavigateInfo, Navigate, NavigateData>(
+					(i, ctx) => new NavigateData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution),
+						i.SlowingRadius.Resolve(ctx.Resolution),
+						i.Recompute.Resolve(ctx.Resolution),
+						i.Mode.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
@@ -543,7 +599,7 @@ namespace Assembler.Building
 				var i = (VariableSetterInfo<T>)info;
 				var b = go.AddComponent<TBehaviour>();
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
-					i.ValueToSet.Resolve(ctx.Resolution),
+					i.ValueToSet.ResolveWritable(ctx.Resolution),
 					i.ValueToGet.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
 		}
