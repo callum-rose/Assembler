@@ -85,6 +85,11 @@ namespace Assembler.Building
 				needsSight.Sight = ctx.Sight;
 			}
 
+			if (behaviour is INeedsNavigation needsNav)
+			{
+				needsNav.Nav = ctx.Nav;
+			}
+
 			return (behaviour, initialise);
 		}
 

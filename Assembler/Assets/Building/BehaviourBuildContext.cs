@@ -17,5 +17,6 @@ namespace Assembler.Building
 		IGameClock Clock,
 		UiPrefabLibrary UiPrefabs,
 		EntityQueryService EntityQuery,
-		LineOfSightService Sight);
+		LineOfSightService Sight,
+		NavGridService Nav);
 }

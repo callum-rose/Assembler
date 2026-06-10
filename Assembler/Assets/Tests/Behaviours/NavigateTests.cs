@@ -41,6 +41,7 @@ namespace Tests.Behaviours
 			_go = new GameObject("agent");
 			var navigate = _go.AddComponent<Navigate>();
 			navigate.Clock = new FakeClock();
+			navigate.Nav = new NavGridService(NavGridSettings.Default);
 
 			navigate.Initialise(new NavigateData("n",
 				new ValueProvider<Vector3>(new Vector3(5, 0, 0)),
