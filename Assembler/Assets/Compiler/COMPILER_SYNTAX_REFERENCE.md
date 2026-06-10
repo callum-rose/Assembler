@@ -365,9 +365,30 @@ var sb = new System.Text.StringBuilder("Hello");
 
 // Using type aliases (if registered)
 var v = new Vector3(1.0, 2.0, 3.0);
+
+// Inline generic arguments are parsed, so common generic collections work without a registered alias
+var nums = new List<int>();
+var lookup = new Dictionary<string, int>();
 ```
 
-**Note:** Types must be registered with the compiler before they can be constructed. Use fully qualified names or registered type aliases.
+**Note:** Types must be registered with the compiler before they can be constructed. Use fully qualified names or registered type aliases. Closed generic types (`List<int>`, `Dictionary<int, string>`, including nested ones like `Dictionary<string, List<int>>`) are resolved from their inline type arguments — the common `System.Collections.Generic` collections resolve without any registration; other generics need their open definition registered or fully qualified.
+
+### Collection & Dictionary Initializers
+```csharp
+// Collection initializer — desugars to construct + repeated .Add(...)
+var nums = new List<int> { 1, 2, 3 };
+var withParens = new List<int>() { 1, 2, 3 };   // empty parens are allowed too
+var computed = new List<int> { x, x * 2, x + 1 };
+var empty = new List<int> { };                   // just the construction
+
+// Dictionary initializer — each { key, value } brace pair desugars to .Add(key, value)
+var scores = new Dictionary<string, int> { { "a", 1 }, { "b", 2 } };
+
+// Initializers are values, so they chain into LINQ / indexing directly
+var sum = new List<int> { 1, 2, 3, 4 }.Where(x => x > 2).Sum();
+```
+
+**Note:** A trailing comma before the closing brace is allowed. The target type must expose a matching public instance `Add` method (a single-argument `Add` for collection elements, a two-argument `Add(key, value)` for dictionary pairs) — otherwise the initializer is a compile error.
 
 ---
 
@@ -409,6 +430,35 @@ string result = sb.ToString();
 // Chained method calls
 sb.Append("Hello").Append(" ").Append("World");
 ```
+
+### Index / Element Access
+Square-bracket indexing works on arrays and on any type with an indexer
+(`this[...]`) — e.g. `List<T>`, `Dictionary<K, V>`, `string`.
+```csharp
+// Reading elements (the index can be any expression)
+int first = list[0];
+int last = list[list.Count - 1];
+int value = map["key"];
+char c = text[2];
+
+// Writing elements
+list[0] = 99;
+map["key"] = 42;
+array[i] = array[i - 1] + 1;
+
+// Compound assignment and increment on an element
+list[i] += 10;
+list[i]++;
+
+// Multi-dimensional arrays use a comma-separated index list
+int cell = grid[row, col];
+
+// Chains with member access and method calls
+int n = matrix[0].Count;
+```
+The index expression is widened to `int` for array access, or converted to the
+indexer's parameter type for an indexer property. An index access on a type with
+no matching indexer is a compile error.
 
 ---
 
@@ -517,7 +567,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ❌ Indexers
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -541,7 +590,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ✅ `^` (XOR) IS supported — see [Operators](#xor-operator)
 - ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
@@ -551,10 +599,9 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ default operator
 
 ### Not Supported - Collections
-- ❌ Array initializers (`new int[] { 1, 2, 3 }`)
-- ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
-- ❌ Dictionary initializers
-- ❌ Index access (`array[0]`) - despite token existing, parsing not implemented
+- ❌ Array creation / array initializers (`new int[3]`, `new int[] { 1, 2, 3 }`, `new[] { 1, 2 }`)
+
+(Collection and dictionary initializers — `new List<int> { 1, 2, 3 }`, `new Dictionary<string, int> { { "a", 1 } }` — *are* supported; see [Object Construction](#object-construction).)
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
@@ -689,9 +736,11 @@ This compiler supports:
 ✅ For and while loops
 ✅ Break and continue
 ✅ Local method definitions
-✅ Object construction with `new`
+✅ Object construction with `new` (including inline generics, e.g. `new List<int>()`)
+✅ Collection & dictionary initializers (`new List<int> { 1, 2, 3 }`) — see [Object Construction](#collection--dictionary-initializers)
 ✅ Property and field access
 ✅ Method calls (static and instance)
+✅ Index / element access (arrays, `List<T>`, `Dictionary<K,V>`, `string`) — see [Member Access](#index--element-access)
 ✅ Single-parameter lambda expressions
 ✅ LINQ extension methods
 ✅ Ternary conditional operator

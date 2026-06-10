@@ -6,7 +6,7 @@ namespace Assembler.Resolving
 {
 	// Live wrapper: every read returns the current rigidbody property, so consumers never see a stale
 	// value cached from an earlier frame. Backs the !rigidbody { Id, Property } tag (Vector3-valued).
-	public sealed class RigidbodyPropertyProvider : IValueProvider<Vector3>
+	public sealed class RigidbodyPropertyProvider : IWriteValueProvider<Vector3>
 	{
 		private readonly Rigidbody _rigidbody;
 		private readonly RigidbodyProperty _property;
@@ -34,6 +34,9 @@ namespace Assembler.Resolving
 				case RigidbodyProperty.Position:
 					_rigidbody.position = value;
 					break;
+				case RigidbodyProperty.Rotation:
+					_rigidbody.rotation = Quaternion.Euler(value);
+					break;
 				default:
 					throw new ArgumentOutOfRangeException();
 			}
@@ -45,6 +48,7 @@ namespace Assembler.Resolving
 				RigidbodyProperty.Velocity => _rigidbody.linearVelocity,
 				RigidbodyProperty.AngularVelocity => _rigidbody.angularVelocity,
 				RigidbodyProperty.Position => _rigidbody.position,
+				RigidbodyProperty.Rotation => _rigidbody.rotation.eulerAngles,
 				_ => throw new ArgumentOutOfRangeException()
 			};
 	}

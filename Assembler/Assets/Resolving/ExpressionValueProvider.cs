@@ -14,8 +14,5 @@ namespace Assembler.Resolving
 		public T Get(TriggerContext ctx) => _func(ctx);
 
 		object IValueProvider.Get(TriggerContext ctx) => _func(ctx)!;
-
-		public void Set(T value) =>
-			throw new InvalidOperationException("ExpressionValueProvider cannot have its value set");
 	}
 }

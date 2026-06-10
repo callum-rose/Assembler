@@ -22,9 +22,6 @@ namespace Assembler.Resolving.Behaviours
 		public Transform Get(TriggerContext ctx) => _resolve()!;
 
 		object IValueProvider.Get(TriggerContext ctx) => Get(ctx);
-
-		public void Set(Transform value) =>
-			throw new NotSupportedException("Camera target transforms are resolved, not set.");
 	}
 
 	public static class CameraTargetResolver

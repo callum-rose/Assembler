@@ -28,8 +28,8 @@ namespace Tests.Resolving
 			// registries are not touched, so they can be left null for this focused test.
 			new(null!, null!, null!, null!, null, _registry, null!, null!);
 
-		private IValueProvider<Vector3> Resolve(RigidbodyProperty property) =>
-			new RigidbodyPropertySource<Vector3>("entity", property).Resolve(Context());
+		private IWriteValueProvider<Vector3> Resolve(RigidbodyProperty property) =>
+			new RigidbodyPropertySource<Vector3>("entity", property).Resolve(Context()).AsWritable();
 
 		[Test]
 		public void ResolvesLinearVelocityFromRigidbody()
@@ -53,6 +53,29 @@ namespace Tests.Resolving
 			_rigidbody.position = new Vector3(7, 8, 9);
 
 			Assert.AreEqual(new Vector3(7, 8, 9), Resolve(RigidbodyProperty.Position).Get(TriggerContext.Empty));
+		}
+
+		[Test]
+		public void ResolvesRotationAsEulerAnglesFromRigidbody()
+		{
+			_rigidbody.rotation = Quaternion.Euler(10, 20, 30);
+
+			var euler = Resolve(RigidbodyProperty.Rotation).Get(TriggerContext.Empty);
+
+			Assert.AreEqual(10f, euler.x, 0.01f);
+			Assert.AreEqual(20f, euler.y, 0.01f);
+			Assert.AreEqual(30f, euler.z, 0.01f);
+		}
+
+		[Test]
+		public void SetRotationWritesEulerAnglesBackToRigidbody()
+		{
+			Resolve(RigidbodyProperty.Rotation).Set(new Vector3(10, 20, 30));
+
+			var euler = _rigidbody.rotation.eulerAngles;
+			Assert.AreEqual(10f, euler.x, 0.01f);
+			Assert.AreEqual(20f, euler.y, 0.01f);
+			Assert.AreEqual(30f, euler.z, 0.01f);
 		}
 
 		[Test]

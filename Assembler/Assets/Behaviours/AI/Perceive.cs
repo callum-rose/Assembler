@@ -64,14 +64,14 @@ namespace Assembler.Behaviours.AI
 			{
 				// Lost the target: flip the flag but keep target_id / target_position / last_known_position so
 				// downstream behaviours can steer toward the last sighting.
-				Write(Data.HasTarget, false);
+				Data.HasTarget.Set(false);
 				return;
 			}
 
-			Write(Data.TargetId, targetId);
-			Write(Data.TargetPosition, position);
-			Write(Data.LastKnownPosition, position);
-			Write(Data.HasTarget, true);
+			Data.TargetId.Set(targetId);
+			Data.TargetPosition.Set(position);
+			Data.LastKnownPosition.Set(position);
+			Data.HasTarget.Set(true);
 		}
 
 		private bool TryFindTarget(Vector3 self, string tag, float radius, TriggerContext ctx, out string targetId)
@@ -105,15 +105,6 @@ namespace Assembler.Behaviours.AI
 			}
 
 			return found;
-		}
-
-		// Writes only when the output is bound (an omitted output resolves to a NullValueProvider null-object).
-		private static void Write<T>(IValueProvider<T> output, T value)
-		{
-			if (output is not NullValueProvider<T>)
-			{
-				output.Set(value);
-			}
 		}
 	}
 }
