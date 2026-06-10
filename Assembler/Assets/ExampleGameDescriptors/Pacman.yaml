@@ -1,19 +1,21 @@
 Game:
   Title: Pacman
   Description: |
-    A compact Pacman built around two newer features: the top-level `Placements`
-    section and grid `navigate` pathfinding.
+    A maze-chase built around grid navigation. Showcases:
 
-    - The dot field is one `Placements` entry. Its `At` is a named `!expr` that
-      builds an irregular `vector list` with a `PositionList` — a grid over the
-      arena interior with the maze's wall cells punched out (the canonical
-      "grid with holes" case). One pill template is stamped at every hole-free cell.
-    - Three ghosts are a second `Placements` entry (a literal `At` list of spawn
-      points) sharing a ghost template whose `navigate` behaviour A*-paths through
-      the maze to Pacman's live position, recomputed a few times a second.
+    - `grid mover` — Pacman moves tile-to-tile on the nav grid (never free-roaming,
+      never diagonal), turning only at cell centres onto the last direction pressed.
+    - `Navigation: Diagonal: false` — the ghosts' `navigate` A* is four-connected, so
+      they path along the corridors orthogonally rather than cutting diagonally.
+    - The dot field is one `Placements` entry whose `At` is an `!expr` building a
+      hole-punched grid with a `PositionList`; four power pills and three ghosts are
+      two more `Placements` entries.
+    - Power pills flip every ghost into frightened mode (they flee to the far corner
+      and turn blue, and can be eaten for bonus points) for a few seconds.
+    - Left/right tunnels: walking into a side opening warps Pacman across the screen.
 
-    Move Pacman with WASD; its rigidbody is blocked by the wall colliders. Eat a
-    dot to score; clear every dot to win. Touch a ghost and the run ends.
+    Move with WASD. Eat every dot to win; a ghost catches you (while not frightened)
+    and the run ends.
 
 World:
   Dimensionality: 2
@@ -22,55 +24,71 @@ World:
 Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
-# The walkability grid the ghosts path on: spans the arena, half-unit cells for
-# smooth routes, and treats every `wall`-tagged entity's collider as blocked.
+# The shared walkability grid. Cell size 1 with these bounds puts cell centres on
+# integer coordinates, so the dots, Pacman's tile steps and the ghosts' paths all
+# share one lattice. Diagonal: false makes every search four-connected.
 Navigation:
-  CellSize: 0.5
-  Bounds: { Min: !vec { X: -8, Y: -6 }, Max: !vec { X: 8, Y: 6 } }
+  CellSize: 1
+  Bounds: { Min: !vec { X: -8.5, Y: -6.5 }, Max: !vec { X: 8.5, Y: 6.5 } }
   ObstacleTag: wall
+  Diagonal: false
 
 Constants:
   wall colour: !colour { R: 0.16, G: 0.20, B: 0.70, A: 1 }
   pill colour: !colour { R: 0.98, G: 0.85, B: 0.55, A: 1 }
+  power colour: !colour { R: 1.0, G: 0.55, B: 0.85, A: 1 }
   pacman colour: !colour { R: 0.98, G: 0.85, B: 0.10, A: 1 }
   ghost colour: !colour { R: 0.90, G: 0.25, B: 0.35, A: 1 }
+  fright colour: !colour { R: 0.30, G: 0.45, B: 1.0, A: 1 }
 
-  pacman size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
-  pacman speed: 4.5
-  ghost speed: 2.6
+  pacman speed: 5
+  ghost speed: 3.5
+  fright duration: 6
+
+  ghost house: !vec { X: 0, Y: 4, Z: 0 }
 
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera size: 7.5
 
 Variables:
   score: 0
-  score to win: 0
+  dots eaten: 0
+  dots total: 0
+  pac dir: !vec { X: 0, Y: 0, Z: 0 }
+  frightened: false
+  fright until: 0.0
 
 Localisation:
   DefaultLocale: en
   Locales:
     en:
-      hud.score: "Dots: {0} / {1}   —   WASD to move, clear the board, dodge the ghosts"
+      hud.line: "Score {0}    Dots {1}/{2}    WASD to move — power pills scare the ghosts"
 
-# --- The dot field and the wall map share one source of truth: `is blocked`. A
-#     pill is placed at every interior integer cell that isn't inside a wall. ---
 Expressions:
-  # True when integer cell (x, y) lies inside one of the maze's wall blocks.
-  # Mirrors the wall entities below so dots never spawn inside a wall.
+  # True when integer cell (x, y) sits inside one of the maze's inner wall blocks.
+  # Mirrors the wall entities below so dots are never placed inside a wall.
   is blocked:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ x, y ]
     ReturnType: bool
     Expression: >
-      return (x >= -1 && x <= 1 && y >= -1 && y <= 1)
-          || (x >= -5 && x <= -3 && y >= 2 && y <= 3)
-          || (x >= 3 && x <= 5 && y >= 2 && y <= 3)
-          || (x >= -5 && x <= -3 && y >= -3 && y <= -2)
-          || (x >= 3 && x <= 5 && y >= -3 && y <= -2);
+      return (x >= -1 && x <= 1 && y >= 2 && y <= 3)
+          || (x >= -1 && x <= 1 && y >= -3 && y <= -2)
+          || (x >= -5 && x <= -4 && y >= 2 && y <= 3)
+          || (x >= 4 && x <= 5 && y >= 2 && y <= 3)
+          || (x >= -5 && x <= -4 && y >= -3 && y <= -2)
+          || (x >= 4 && x <= 5 && y >= -3 && y <= -2);
 
-  # Builds the dot positions: a grid over the interior with wall cells removed.
-  # Uses the constructible PositionList builder (collection initializers aren't
-  # supported by the expression compiler, so we Add in a loop).
+  # True at the four corner cells reserved for power pills (so the dot field skips them).
+  is power cell:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ x, y ]
+    ReturnType: bool
+    Expression: "return (x == -7 || x == 7) && (y == -5 || y == 5);"
+
+  # The dot positions: every interior cell that is neither a wall nor a power-pill corner.
+  # Built imperatively with the PositionList builder (the compiler has no collection
+  # initializers, so we Add in a loop).
   pill field:
     ReturnType: vector list
     Expression: >
@@ -79,7 +97,7 @@ Expressions:
       {
           for (int y = -5; y <= 5; y++)
           {
-              if (!isBlocked(x, y))
+              if (!isBlocked(x, y) && !isPowerCell(x, y))
               {
                   b.Add(new UnityEngine.Vector3((float)x, (float)y, 0f));
               }
@@ -87,14 +105,20 @@ Expressions:
       }
       return b.ToList();
 
-  # The number of dots on the board, so the win check knows the target.
+  # Number of dots on the board, so the win check knows the target.
   pill count:
     ReturnType: int
     Expression: "return pillField().Count();"
 
+  # Where a frightened ghost runs to: the maze corner diagonally opposite Pacman.
+  flee target:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ p ]
+    ReturnType: vector
+    Expression: "return new UnityEngine.Vector3(p.x < 0f ? 7f : -7f, p.y < 0f ? 5f : -5f, 0f);"
+
 Templates:
-  # One dot. Stamped many times by the `dots` placement. When Pacman overlaps it,
-  # it bumps the shared score and destroys itself.
+  # One dot. Eating it bumps the score and the dot counter, then it removes itself.
   pill:
     Behaviours:
       body:
@@ -102,190 +126,338 @@ Templates:
         Properties: { Radius: 0.12, IsWire: false, Colour: !var pill colour }
       collider:
         Type: sphere collider
-        Properties: { Radius: 0.22, IsTrigger: true }
+        Properties: { Radius: 0.25, IsTrigger: true }
       eaten:
         Type: trigger enter trigger
         Properties: { TagsToDetect: [ pacman ] }
         Listeners:
-          - EntityId: score tracker
-            BehaviourId: increment
+          - EntityId: trackers
+            BehaviourId: add dot score
+          - EntityId: trackers
+            BehaviourId: add dot count
           - EntityId: !parameter self_id
             BehaviourId: remove
       remove:
         Type: destroy
 
-  # One ghost. Stamped at each spawn point by the `ghosts` placement. A* paths to
-  # Pacman through the maze, recomputed a few times a second; touching Pacman ends
-  # the game.
+  # One power pill. Eating it scores big and arms frightened mode for every ghost.
+  power:
+    Behaviours:
+      body:
+        Type: sphere gizmo
+        Properties: { Radius: 0.3, IsWire: false, Colour: !var power colour }
+      collider:
+        Type: sphere collider
+        Properties: { Radius: 0.35, IsTrigger: true }
+      eaten:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ pacman ] }
+        Listeners:
+          - EntityId: trackers
+            BehaviourId: add power score
+          - EntityId: trackers
+            BehaviourId: arm fright
+          - EntityId: !parameter self_id
+            BehaviourId: remove
+      remove:
+        Type: destroy
+
+  # One ghost. Chases Pacman with four-connected A*; when frightened it flees to the far
+  # corner, turns blue, and can be eaten (sending it home for bonus points) instead of
+  # ending the game.
   ghost:
     Tags: [ ghost ]
     Behaviours:
       body:
         Type: sphere gizmo
-        Properties: { Radius: 0.4, IsWire: false, Colour: !var ghost colour }
+        Properties:
+          Radius: 0.4
+          IsWire: false
+          Colour: !expr
+            Do: 'arg0 ? arg1 : arg2'
+            With: [ !var frightened, !var fright colour, !var ghost colour ]
+            ArgumentTypes: [ bool, colour, colour ]
+            ReturnType: colour
       collider:
         Type: sphere collider
         Properties: { Radius: 0.4, IsTrigger: true }
       chase:
         Type: navigate
         Properties:
-          Target: !entity { Id: pacman, Property: Position }
+          Target: !expr
+            Do: 'arg0 ? fleeTarget(arg1) : arg1'
+            With: [ !var frightened, !entity { Id: pacman, Property: Position } ]
+            ArgumentTypes: [ bool, vector ]
+            ReturnType: vector
           Speed: !var ghost speed
-          SlowingRadius: 0.2
-          Recompute: 0.3
+          SlowingRadius: 0.1
+          Recompute: 0.25
           Mode: astar
       catch:
         Type: trigger enter trigger
         Properties: { TagsToDetect: [ pacman ] }
         Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: lose gate
+          - EntityId: !parameter self_id
+            BehaviourId: eat gate
+      # Not frightened -> the catch ends the game.
+      lose gate:
+        Type: inverse condition gate
+        Properties: { Condition: !var frightened }
+        Listeners:
           - !gameover
+      # Frightened -> the ghost is eaten: home it and award the bonus.
+      eat gate:
+        Type: condition gate
+        Properties: { Condition: !var frightened }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: go home
+          - EntityId: trackers
+            BehaviourId: add ghost score
+      go home:
+        Type: position setter
+        Properties: { Position: !var ghost house }
 
 Placements:
-  # Feature 1: the dot field — an !expr `At` that returns a hole-punched grid.
+  # The dot field — an !expr `At` returning a hole-punched grid.
   dots:
     Template: pill
     At: !expr { Do: pill field }
 
-  # Feature 2: the ghosts — a literal `At` list of spawn points, one ghost each.
+  # Four power pills, one per corner.
+  power pills:
+    Template: power
+    At:
+      - !vec { X: -7, Y: 5, Z: 0 }
+      - !vec { X: 7, Y: 5, Z: 0 }
+      - !vec { X: -7, Y: -5, Z: 0 }
+      - !vec { X: 7, Y: -5, Z: 0 }
+
+  # Three ghosts at open spawn cells.
   ghosts:
     Template: ghost
     At:
       - !vec { X: -6, Y: 4, Z: 0 }
+      - !vec { X: 0, Y: 4, Z: 0 }
       - !vec { X: 6, Y: 4, Z: 0 }
-      - !vec { X: 6, Y: -4, Z: 0 }
 
 Entities:
-  # --- Maze. Outer border + five inner blocks; the inner blocks match the
-  #     `is blocked` rectangles so dots are punched out of exactly these cells. ---
+  # --- Maze. Outer border (with a gap at y=0 on each side for the tunnels) plus six
+  #     inner blocks that match the `is blocked` rectangles. ---
   wall top:
     Position: !vec { X: 0, Y: 6, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 17, Y: 1, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 17, Y: 1, Z: 1 }, IsTrigger: false } }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 18, Y: 1, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 18, Y: 1, Z: 1 }, IsTrigger: false } }
   wall bottom:
     Position: !vec { X: 0, Y: -6, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 17, Y: 1, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 17, Y: 1, Z: 1 }, IsTrigger: false } }
-  wall left:
-    Position: !vec { X: -8, Y: 0, Z: 0 }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 18, Y: 1, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 18, Y: 1, Z: 1 }, IsTrigger: false } }
+  wall left upper:                # cells x=-8, y=1..6
+    Position: !vec { X: -8, Y: 3.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 13, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 13, Z: 1 }, IsTrigger: false } }
-  wall right:
-    Position: !vec { X: 8, Y: 0, Z: 0 }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsTrigger: false } }
+  wall left lower:                # cells x=-8, y=-6..-1  (gap at y=0)
+    Position: !vec { X: -8, Y: -3.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 13, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 13, Z: 1 }, IsTrigger: false } }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsTrigger: false } }
+  wall right upper:               # cells x=8, y=1..6
+    Position: !vec { X: 8, Y: 3.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsTrigger: false } }
+  wall right lower:               # cells x=8, y=-6..-1  (gap at y=0)
+    Position: !vec { X: 8, Y: -3.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 6, Z: 1 }, IsTrigger: false } }
 
-  wall centre:                    # cells x[-1,1] y[-1,1]
-    Position: !vec { X: 0, Y: 0, Z: 0 }
-    Tags: [ wall ]
-    Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 3, Y: 3, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 3, Y: 3, Z: 1 }, IsTrigger: false } }
-  wall top left:                  # cells x[-5,-3] y[2,3]
-    Position: !vec { X: -4, Y: 2.5, Z: 0 }
+  wall top centre:                # cells x[-1,1] y[2,3]
+    Position: !vec { X: 0, Y: 2.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
       body: { Type: cube gizmo, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
       collider: { Type: box collider, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsTrigger: false } }
-  wall top right:                 # cells x[3,5] y[2,3]
-    Position: !vec { X: 4, Y: 2.5, Z: 0 }
+  wall bottom centre:             # cells x[-1,1] y[-3,-2]
+    Position: !vec { X: 0, Y: -2.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
       body: { Type: cube gizmo, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
       collider: { Type: box collider, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsTrigger: false } }
-  wall bottom left:               # cells x[-5,-3] y[-3,-2]
-    Position: !vec { X: -4, Y: -2.5, Z: 0 }
+  wall top left:                  # cells x[-5,-4] y[2,3]
+    Position: !vec { X: -4.5, Y: 2.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsTrigger: false } }
-  wall bottom right:              # cells x[3,5] y[-3,-2]
-    Position: !vec { X: 4, Y: -2.5, Z: 0 }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsTrigger: false } }
+  wall top right:                 # cells x[4,5] y[2,3]
+    Position: !vec { X: 4.5, Y: 2.5, Z: 0 }
     Tags: [ wall ]
     Behaviours:
-      body: { Type: cube gizmo, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
-      collider: { Type: box collider, Properties: { Size: !vec { X: 3, Y: 2, Z: 1 }, IsTrigger: false } }
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsTrigger: false } }
+  wall bottom left:               # cells x[-5,-4] y[-3,-2]
+    Position: !vec { X: -4.5, Y: -2.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsTrigger: false } }
+  wall bottom right:              # cells x[4,5] y[-3,-2]
+    Position: !vec { X: 4.5, Y: -2.5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: cube gizmo, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsWire: false, Colour: !var wall colour } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 2, Y: 2, Z: 1 }, IsTrigger: false } }
 
-  # --- Pacman: WASD-driven, blocked by walls via a dynamic rigidbody. ---
+  # --- Pacman: grid-locked movement; a kinematic rigidbody so its trigger overlaps
+  #     (dots, ghosts, tunnel sensors) still fire while the grid mover drives it. ---
   pacman:
     Position: !vec { X: 0, Y: -5, Z: 0 }
     Tags: [ pacman ]
     Behaviours:
       body:
         Type: sphere gizmo
-        Properties: { Radius: 0.35, IsWire: false, Colour: !var pacman colour }
+        Properties: { Radius: 0.4, IsWire: false, Colour: !var pacman colour }
       collider:
         Type: box collider
-        Properties: { Size: !var pacman size, IsTrigger: false }
+        Properties: { Size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }, IsTrigger: true }
       rigidbody:
         Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      mover:
+        Type: grid mover
         Properties:
-          UseGravity: false
-          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
-          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          Direction: !var pac dir
+          Speed: !var pacman speed
 
-      # Each key sets the rigidbody velocity in one direction; it keeps rolling
-      # (Pacman-style) until a wall stops it or another key turns it.
+      # WASD sets the requested heading; the grid mover applies it at the next cell.
       go up:
         Type: key down trigger
         Properties: { Key: "w" }
-        Listeners: [ { EntityId: pacman, BehaviourId: move up } ]
-      move up:
-        Type: set velocity
-        Properties: { Velocity: !vec { X: 0, Y: 4.5, Z: 0 } }
-
+        Listeners: [ { EntityId: pacman, BehaviourId: face up } ]
+      face up:
+        Type: vector variable setter
+        Properties: { VariableId: !var pac dir, Value: !vec { X: 0, Y: 1, Z: 0 } }
       go down:
         Type: key down trigger
         Properties: { Key: "s" }
-        Listeners: [ { EntityId: pacman, BehaviourId: move down } ]
-      move down:
-        Type: set velocity
-        Properties: { Velocity: !vec { X: 0, Y: -4.5, Z: 0 } }
-
+        Listeners: [ { EntityId: pacman, BehaviourId: face down } ]
+      face down:
+        Type: vector variable setter
+        Properties: { VariableId: !var pac dir, Value: !vec { X: 0, Y: -1, Z: 0 } }
       go left:
         Type: key down trigger
         Properties: { Key: "a" }
-        Listeners: [ { EntityId: pacman, BehaviourId: move left } ]
-      move left:
-        Type: set velocity
-        Properties: { Velocity: !vec { X: -4.5, Y: 0, Z: 0 } }
-
+        Listeners: [ { EntityId: pacman, BehaviourId: face left } ]
+      face left:
+        Type: vector variable setter
+        Properties: { VariableId: !var pac dir, Value: !vec { X: -1, Y: 0, Z: 0 } }
       go right:
         Type: key down trigger
         Properties: { Key: "d" }
-        Listeners: [ { EntityId: pacman, BehaviourId: move right } ]
-      move right:
-        Type: set velocity
-        Properties: { Velocity: !vec { X: 4.5, Y: 0, Z: 0 } }
+        Listeners: [ { EntityId: pacman, BehaviourId: face right } ]
+      face right:
+        Type: vector variable setter
+        Properties: { VariableId: !var pac dir, Value: !vec { X: 1, Y: 0, Z: 0 } }
 
-  # --- Shared score counter that every dot bumps. ---
-  score tracker:
+      # The tunnel sensors warp Pacman across; the grid mover re-anchors after the jump.
+      to right side:
+        Type: position setter
+        Properties: { Position: !vec { X: 7, Y: 0, Z: 0 } }
+      to left side:
+        Type: position setter
+        Properties: { Position: !vec { X: -7, Y: 0, Z: 0 } }
+
+  # --- Tunnel mouths: stepping into a side opening warps Pacman to the other side. ---
+  tunnel left:
+    Position: !vec { X: -8, Y: 0, Z: 0 }
     Behaviours:
-      increment:
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 1, Y: 1, Z: 1 }, IsTrigger: true }
+      sense:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ pacman ] }
+        Listeners: [ { EntityId: pacman, BehaviourId: to right side } ]
+  tunnel right:
+    Position: !vec { X: 8, Y: 0, Z: 0 }
+    Behaviours:
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 1, Y: 1, Z: 1 }, IsTrigger: true }
+      sense:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ pacman ] }
+        Listeners: [ { EntityId: pacman, BehaviourId: to left side } ]
+
+  # --- Shared counters every dot / power pill / eaten ghost writes to. ---
+  trackers:
+    Behaviours:
+      add dot score:
         Type: int variable setter
         Properties:
           VariableId: !var score
-          Value: !expr { Do: 'arg0 + 1', With: [ !var score ], ArgumentTypes: [ int ] }
+          Value: !expr { Do: 'arg0 + 10', With: [ !var score ], ArgumentTypes: [ int ] }
+      add dot count:
+        Type: int variable setter
+        Properties:
+          VariableId: !var dots eaten
+          Value: !expr { Do: 'arg0 + 1', With: [ !var dots eaten ], ArgumentTypes: [ int ] }
+      add power score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr { Do: 'arg0 + 50', With: [ !var score ], ArgumentTypes: [ int ] }
+      arm fright:
+        Type: float variable setter
+        Properties:
+          VariableId: !var fright until
+          Value: !expr
+            Do: 'arg0 + arg1'
+            With: [ !clock time, !var fright duration ]
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+      add ghost score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr { Do: 'arg0 + 200', With: [ !var score ], ArgumentTypes: [ int ] }
 
-  # --- Game logic: capture the dot total on start, then end on a board clear. ---
+  # --- Game logic: capture the dot total, keep `frightened` in sync, end on a clear. ---
   logic:
     Behaviours:
       setup:
         Type: on start trigger
-        Listeners: [ { EntityId: logic, BehaviourId: set target } ]
-      set target:
+        Listeners: [ { EntityId: logic, BehaviourId: set total } ]
+      set total:
         Type: int variable setter
         Properties:
-          VariableId: !var score to win
+          VariableId: !var dots total
           Value: !expr { Do: pill count }
-      tick:
+      fright tick:
+        Type: every frame trigger
+        Listeners: [ { EntityId: logic, BehaviourId: update fright } ]
+      update fright:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var frightened
+          Value: !expr
+            Do: 'arg0 < arg1'
+            With: [ !clock time, !var fright until ]
+            ArgumentTypes: [ float, float ]
+            ReturnType: bool
+      win tick:
         Type: every frame trigger
         Listeners: [ { EntityId: logic, BehaviourId: win gate } ]
       win gate:
@@ -293,11 +465,11 @@ Entities:
         Properties:
           Condition: !expr
             Do: 'arg0 > 0 && arg1 >= arg0'
-            With: [ !var score to win, !var score ]
+            With: [ !var dots total, !var dots eaten ]
             ArgumentTypes: [ int, int ]
         Listeners: [ !gameover ]
 
-  # --- HUD: a single live label over a UI canvas. ---
+  # --- HUD ---
   hud:
     Behaviours:
       canvas:
@@ -310,12 +482,12 @@ Entities:
             Type: ui container
             Properties: { Direction: vertical, Padding: 16, ChildAlignment: upper-center }
         Children:
-          score label:
+          line:
             Behaviours:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.score, Arguments: [ !var score, !var score to win ] }
+                  Text: !text { Key: hud.line, Arguments: [ !var score, !var dots eaten, !var dots total ] }
                   FontSize: 26
                   PreferredWidth: 900
                   PreferredHeight: 44

@@ -389,7 +389,8 @@ namespace Assembler.Parsing
 				maxX,
 				maxY,
 				dto.ObstacleTag ?? defaults.ObstacleTag,
-				plane);
+				plane,
+				dto.Diagonal ?? defaults.AllowDiagonal);
 		}
 
 		private static NavPlane ParseNavPlane(string? plane) =>

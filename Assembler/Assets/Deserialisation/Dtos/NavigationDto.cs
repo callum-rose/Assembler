@@ -16,5 +16,9 @@ namespace Assembler.Deserialisation.Dtos
 
 		/// <summary>Which world plane the grid spans: <c>"xy"</c> (default) or <c>"xz"</c> (ground plane).</summary>
 		public string? Plane { get; init; }
+
+		/// <summary>Whether path/flow searches may step diagonally. Defaults to <c>true</c> (eight-connected);
+		/// set <c>false</c> for four-connected, grid-aligned movement (e.g. a Pacman-style maze).</summary>
+		public bool? Diagonal { get; init; }
 	}
 }

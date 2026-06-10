@@ -28,7 +28,7 @@ namespace Assembler.Navigation
 
 		public GridCoord Goal { get; }
 
-		public static FlowField Build(NavGrid grid, GridCoord goal)
+		public static FlowField Build(NavGrid grid, GridCoord goal, bool allowDiagonal = true)
 		{
 			var count = grid.Width * grid.Height;
 			var cost = new int[count];
@@ -36,12 +36,12 @@ namespace Assembler.Navigation
 
 			if (grid.IsWalkable(goal))
 			{
-				Dijkstra(grid, goal, cost);
+				Dijkstra(grid, goal, cost, allowDiagonal);
 			}
 
 			var dirX = new float[count];
 			var dirY = new float[count];
-			ComputeDirections(grid, cost, dirX, dirY);
+			ComputeDirections(grid, cost, dirX, dirY, allowDiagonal);
 
 			return new FlowField(grid, cost, dirX, dirY, goal);
 		}
@@ -61,8 +61,9 @@ namespace Assembler.Navigation
 			return (_dirX[index], _dirY[index]);
 		}
 
-		private static void Dijkstra(NavGrid grid, GridCoord goal, int[] cost)
+		private static void Dijkstra(NavGrid grid, GridCoord goal, int[] cost, bool allowDiagonal)
 		{
+			var neighbours = GridConnectivity.NeighboursFor(allowDiagonal);
 			cost[grid.Index(goal)] = 0;
 
 			// Lowest cost wins; ties break by cell index for a stable order. (The cost field is
@@ -82,7 +83,7 @@ namespace Assembler.Navigation
 					continue;
 				}
 
-				foreach (var (dx, dy) in GridConnectivity.Neighbours)
+				foreach (var (dx, dy) in neighbours)
 				{
 					var neighbour = new GridCoord(current.X + dx, current.Y + dy);
 
@@ -103,8 +104,10 @@ namespace Assembler.Navigation
 			}
 		}
 
-		private static void ComputeDirections(NavGrid grid, int[] cost, float[] dirX, float[] dirY)
+		private static void ComputeDirections(NavGrid grid, int[] cost, float[] dirX, float[] dirY, bool allowDiagonal)
 		{
+			var neighbours = GridConnectivity.NeighboursFor(allowDiagonal);
+
 			for (var y = 0; y < grid.Height; y++)
 			{
 				for (var x = 0; x < grid.Width; x++)
@@ -121,7 +124,7 @@ namespace Assembler.Navigation
 					var bestDx = 0;
 					var bestDy = 0;
 
-					foreach (var (dx, dy) in GridConnectivity.Neighbours)
+					foreach (var (dx, dy) in neighbours)
 					{
 						var neighbour = new GridCoord(cell.X + dx, cell.Y + dy);
 
