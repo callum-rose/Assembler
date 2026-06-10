@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug
 {
-	/// <summary>Debug-draws a line gizmo between two points in the entity's local transform space.</summary>
+	/// <summary>Debug-draws a line gizmo between two points in the entity's local transform space. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.</summary>
 	/// <remarks>
 	/// Properties:
 	///   Start: Line start point in local transform space.

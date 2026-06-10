@@ -1716,7 +1716,7 @@ Plays an audio clip when Executed (or on start, if configured).
 | Loop | bool | When true the clip loops once started. |
 
 ## `sphere gizmo`
-Debug-draws a sphere gizmo at the entity's position in the Scene view.
+Debug-draws a sphere gizmo at the entity's position. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
 
 ### Properties
 
@@ -1727,7 +1727,7 @@ Debug-draws a sphere gizmo at the entity's position in the Scene view.
 | Colour | Color | Gizmo colour. |
 
 ## `cube gizmo`
-Debug-draws a cube gizmo at the entity's position in the Scene view.
+Debug-draws a cube gizmo at the entity's position. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
 
 ### Properties
 
@@ -1738,7 +1738,7 @@ Debug-draws a cube gizmo at the entity's position in the Scene view.
 | Colour | Color | Gizmo colour. |
 
 ## `line gizmo`
-Debug-draws a line gizmo between two points in the entity's local transform space.
+Debug-draws a line gizmo between two points in the entity's local transform space. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
 
 ### Properties
 

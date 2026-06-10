@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Debug
 {
-	/// <summary>Debug-draws a cube gizmo at the entity's position in the Scene view.</summary>
+	/// <summary>Debug-draws a cube gizmo at the entity's position. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.</summary>
 	/// <remarks>
 	/// Properties:
 	///   Size: Cube dimensions in world units.

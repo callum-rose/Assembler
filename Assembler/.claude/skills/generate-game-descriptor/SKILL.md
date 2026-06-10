@@ -456,6 +456,10 @@ verbatim from `Behaviours.md`** — this list is not exhaustive and omits proper
 - **Visuals (no asset needed):** `cube gizmo`, `sphere gizmo`, `line gizmo` (debug shapes with
   `Size`/`Radius`, `IsWire`, `Colour`); `primitive` (`Shape: cube|sphere|capsule|cylinder|plane|quad`
   + `Colour`/`Size`). These are how the example games draw players, balls, walls, etc.
+  **Caveat:** the gizmo behaviours draw via `OnDrawGizmos`, so they only render in the editor Scene
+  view (or the Game view with Gizmos toggled on) — **never in a built player or the default Game
+  view**. Prefer `primitive` for geometry that must render in-game; reach for gizmos only as
+  editor-time debug overlays.
 - **Visuals (asset-backed):** `sprite` (a `Sprite` asset), `voxel mesh` (a `Mesh`), `audio source`
   (an `AudioClip`).
 - **Physics bodies & colliders:** `rigidbody`, `box collider`, `sphere collider`, `capsule collider`,
