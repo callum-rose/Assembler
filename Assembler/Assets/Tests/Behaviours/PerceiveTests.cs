@@ -45,10 +45,12 @@ namespace Tests.Behaviours
 			ValueProvider<bool> has, ValueProvider<Vector3> lastKnown) Build(EntityQueryService query)
 		{
 			_seer = new GameObject("seer");
-			// Every behaviour lives on a GameEntity in production (the factory adds it first); Perceive reads its
-			// own entity id from that sibling component to exclude itself from scans.
-			_seer.AddComponent<GameEntity>().Id = "seer";
+			// The factory wires every behaviour to its owning entity; mirror that so Perceive can read its own
+			// entity id (to exclude itself from scans) via GameBehaviour.Entity.
+			var entity = _seer.AddComponent<GameEntity>();
+			entity.Id = "seer";
 			var perceive = _seer.AddComponent<Perceive>();
+			perceive.SetEntity(entity);
 			perceive.Query = query;
 			perceive.Sight = new LineOfSightService();
 			perceive.Clock = new FakeClock();

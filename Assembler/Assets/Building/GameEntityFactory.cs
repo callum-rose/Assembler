@@ -148,6 +148,7 @@ namespace Assembler.Building
 			{
 				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject, behaviourInfo, buildContext);
 
+				gameBehaviour.SetEntity(gameEntity);
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
