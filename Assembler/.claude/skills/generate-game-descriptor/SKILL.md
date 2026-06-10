@@ -1,12 +1,17 @@
 ---
 name: generate-game-descriptor
 description: >
-  Use this skill whenever the user asks to author, generate, edit, or review a game descriptor YAML
-  file for the Assembler project. Trigger on requests like "make me a Tetris game", "write a yaml for
-  a top-down shooter", "add a power-up to this descriptor", "review my descriptor", or any task where
-  the deliverable is a `.yaml` game definition under `Assets/ExampleGameDescriptors/`. Also trigger when the user wants feedback on whether existing
-  behaviours are sufficient, well-designed, or missing functionality for a game idea — this skill is
-  expected to push back on the behaviour catalogue when something is awkward, faulty, or missing.
+  ALWAYS use this skill whenever the user asks to create a game OR generate a descriptor of any kind
+  for the Assembler project — these are non-negotiable triggers, not just suggestions. This includes
+  authoring, generating, editing, or reviewing a game descriptor YAML file. Trigger on ANY request to
+  "make a game", "create a game", "build me a game", "generate a descriptor", as well as more specific
+  ones like "make me a Tetris game", "write a yaml for a top-down shooter", "add a power-up to this
+  descriptor", "review my descriptor", or any task where the deliverable is — or could be — a `.yaml`
+  game definition under `Assets/ExampleGameDescriptors/`. When in doubt about whether a request
+  involves creating a game or a descriptor, use this skill. Also trigger when the user wants feedback
+  on whether existing behaviours are sufficient, well-designed, or missing functionality for a game
+  idea — this skill is expected to push back on the behaviour catalogue when something is awkward,
+  faulty, or missing.
 ---
 
 # Generate Game Descriptor
@@ -42,6 +47,15 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 
 You do not need to understand or reference the C# implementation, the build pipeline, the parsing
 layer, or the runtime. Treat the descriptor as a self-contained authoring format.
+
+> **Structural reference.** The authoritative description of the descriptor's *shape* — every
+> top-level section, how entities/behaviours/listeners/templates nest, the value types, the scalar
+> inference rules, and every custom YAML tag with its exact form — lives in
+> [`Assets/docs/GameDescriptorSchema.md`](../../../Assets/docs/GameDescriptorSchema.md). It is
+> generated from the deserialisation DTOs (the parser's source of truth), so consult it when you are
+> unsure what keys a section takes or what form a tag accepts. The prose below is the authoring guide;
+> the schema is the structural contract. (`Behaviours.md` still owns the behaviour `Type:`/`Properties:`
+> catalogue, and `Libraries.md` the expression helpers.)
 
 ---
 

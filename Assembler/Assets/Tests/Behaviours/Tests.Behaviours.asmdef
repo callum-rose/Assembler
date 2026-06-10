@@ -6,6 +6,7 @@
         "Assembler.Building",
         "Assembler.Resolving",
         "Assembler.Parsing",
+        "Assembler.Compiler",
         "Assembler.Time",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

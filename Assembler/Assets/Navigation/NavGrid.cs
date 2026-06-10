@@ -103,6 +103,10 @@ namespace Assembler.Navigation
 		/// Marks every cell overlapping the world-space rectangle <c>[minX,maxX] × [minY,maxY]</c> unwalkable.
 		/// A rectangle that doesn't overlap the grid at all is ignored (see <see cref="OverlapsWorldRect"/>),
 		/// rather than being smeared into a phantom wall along the nearest edge.
+		/// The max edge is treated as half-open: a face flush with a cell boundary blocks the cell it covers,
+		/// not the next cell over. Without this, a wall whose far face lands exactly on a boundary (the common
+		/// case when cell centres are integers and walls are integer-sized) would over-block one extra row/
+		/// column of open cells — silently swallowing dots, turns and spawn cells in a grid maze.
 		/// </summary>
 		public void BlockWorldRect(float minX, float minY, float maxX, float maxY)
 		{
@@ -111,12 +115,19 @@ namespace Assembler.Navigation
 				return;
 			}
 
+			// Nudge the max corner inward by a hair so a face exactly on a cell boundary rounds down into the
+			// wall's own cell. The nudge is far smaller than a cell, so it only changes the flush-boundary case.
+			var nudge = CellSize * 1e-3f;
 			var min = WorldToCell(minX, minY);
-			var max = WorldToCell(maxX, maxY);
+			var max = WorldToCell(maxX - nudge, maxY - nudge);
 
-			for (var y = min.Y; y <= max.Y; y++)
+			// A wall thinner than the nudge could invert the range; never block fewer cells than the min corner.
+			var maxX2 = Math.Max(min.X, max.X);
+			var maxY2 = Math.Max(min.Y, max.Y);
+
+			for (var y = min.Y; y <= maxY2; y++)
 			{
-				for (var x = min.X; x <= max.X; x++)
+				for (var x = min.X; x <= maxX2; x++)
 				{
 					_walkable[Index(new GridCoord(x, y))] = false;
 				}

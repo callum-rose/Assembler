@@ -270,6 +270,9 @@ namespace Assembler.Parsing
 			return result;
 		}
 
+		// Unwraps one list element to its CLR value. VecValue/ColourValue elements (an unevaluated `!vec`/
+		// `!colour` from the IR stage — e.g. a literal `At:` list of `!vec`) materialise against ctx.Values,
+		// mirroring how a scalar VecValue/ColourValue is handled in CreateValueSource above.
 		private static object UnwrapPrimitive(TransformContext ctx, AssemblerValue value, Type expectedType)
 		{
 			return value switch
@@ -280,7 +283,9 @@ namespace Assembler.Parsing
 				BoolValue b when expectedType == typeof(bool) => b.Value,
 				StringValue s when expectedType == typeof(string) => s.Value,
 				Vector3Value v when expectedType == typeof(Vector3) => v.Value,
+				VecValue v when expectedType == typeof(Vector3) => v.ToVector3(ctx.Values),
 				ColorValue c when expectedType == typeof(Color) => c.Value,
+				ColourValue c when expectedType == typeof(Color) => c.ToColor(ctx.Values),
 				// A record-list element: apply its schema here (defaults + validation), yielding a
 				// schema-complete Record — the same transform-time seam as the single-record arm.
 				RecordValue rec when expectedType == typeof(Record) =>

@@ -54,6 +54,12 @@ namespace Assembler.Resolving
 			_compiler.RegisterStaticMethods(typeof(RandomMath));
 			_compiler.RegisterStaticMethods(typeof(ColorMath));
 			_compiler.RegisterStaticMethods(typeof(HexMath));
+			_compiler.RegisterStaticMethods(typeof(LayoutMath));
+
+			// PositionList is a constructible builder (not a static helper), so register it as a type —
+			// expressions can `new PositionList()` and call .Add/.ToList to build an irregular Placements
+			// `At` list. Mirrors the RegisterType(Color) line above.
+			_compiler.RegisterType(typeof(PositionList));
 
 			// Records: register the shared Record type so its this[string] indexer is available for
 			// item["count"] reads/writes, and the cast-free RecordHelper getters/setters by bare name.

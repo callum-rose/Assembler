@@ -21,6 +21,18 @@ namespace Assembler.Navigation
 			(1, 1), (1, -1), (-1, 1), (-1, -1)
 		};
 
+		// The orthogonal subset, for four-connected searches that must never step diagonally (e.g. a maze whose
+		// agents move on the grid, Pacman-style). Same fixed order as the first four of <see cref="Neighbours"/>.
+		public static readonly (int Dx, int Dy)[] OrthogonalNeighbours =
+		{
+			(1, 0), (-1, 0), (0, 1), (0, -1)
+		};
+
+		/// <summary>The neighbour offsets for a search: all eight when diagonals are allowed, the four
+		/// orthogonal ones otherwise.</summary>
+		public static (int Dx, int Dy)[] NeighboursFor(bool allowDiagonal) =>
+			allowDiagonal ? Neighbours : OrthogonalNeighbours;
+
 		public static int StepCost(int dx, int dy) => dx != 0 && dy != 0 ? DiagonalCost : OrthogonalCost;
 
 		/// <summary>A diagonal step is allowed only when both shared orthogonal cells are walkable (no cutting

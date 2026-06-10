@@ -73,6 +73,20 @@ namespace Tests.Navigation
 		}
 
 		[Test]
+		public void BlockWorldRectTreatsMaxFaceAsHalfOpen()
+		{
+			var grid = NavGrid.Create(0f, 0f, 4f, 4f, 1f);
+			// A wall covering exactly cell (1,1): its far faces sit on the 2.0 boundaries. It must block only
+			// (1,1), not bleed into the open cells past the flush faces.
+			grid.BlockWorldRect(1f, 1f, 2f, 2f);
+
+			Assert.IsFalse(grid.IsWalkable(new GridCoord(1, 1)));
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(2, 1)), "the cell past the flush right face must stay open");
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(1, 2)), "the cell past the flush top face must stay open");
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(2, 2)));
+		}
+
+		[Test]
 		public void BlockWorldRectClampsPartiallyOverlappingRect()
 		{
 			var grid = NavGrid.Create(0f, 0f, 4f, 4f, 1f);

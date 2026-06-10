@@ -11,7 +11,8 @@ namespace Assembler.Parsing.Info
 		IReadOnlyList<ValueInfo> Variables,
 		IReadOnlyList<ExpressionInfo> Expressions,
 		IReadOnlyList<EntityInfo> Templates,
-		IReadOnlyList<ConcreteEntityInfo> Entities)
+		IReadOnlyList<ConcreteEntityInfo> Entities,
+		IReadOnlyList<PlacementInfo> Placements)
 	{
 		/// <summary>
 		/// The context built during <see cref="Transformer.Transform"/>. Cached so runtime

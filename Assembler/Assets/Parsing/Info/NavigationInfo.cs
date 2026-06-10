@@ -32,8 +32,9 @@ namespace Assembler.Parsing.Info
 	/// Grid-navigation configuration from the descriptor's <c>Navigation:</c> section: the world bounds the
 	/// walkability grid spans (<c>Min*</c>/<c>Max*</c> are the two in-<see cref="Plane"/> axes, not literally
 	/// X and Y), its cell size, the entity tag whose colliders are rasterized as obstacles, which plane the grid
-	/// lies in, and how far (in world units) to inflate obstacles so paths keep clearance — <see cref="AgentRadius"/>
-	/// defaults to <c>0</c> (no inflation). <see cref="Default"/> is used when no section is present.
+	/// lies in, whether searches may step diagonally, and how far (in world units) to inflate obstacles so paths
+	/// keep clearance — <see cref="AgentRadius"/> defaults to <c>0</c> (no inflation). <see cref="Default"/> is
+	/// used when no section is present.
 	/// </summary>
 	public sealed record NavigationInfo(
 		float CellSize,
@@ -43,8 +44,9 @@ namespace Assembler.Parsing.Info
 		float MaxY,
 		string ObstacleTag,
 		NavPlane Plane,
+		bool AllowDiagonal,
 		float AgentRadius)
 	{
-		public static NavigationInfo Default => new(1f, -50f, -50f, 50f, 50f, "obstacle", NavPlane.XY, 0f);
+		public static NavigationInfo Default => new(1f, -50f, -50f, 50f, 50f, "obstacle", NavPlane.XY, true, 0f);
 	}
 }
