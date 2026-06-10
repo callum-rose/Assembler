@@ -78,6 +78,10 @@ namespace Assembler.Deserialisation
 					value = nestedObjectDeserializer(reader, typeof(TextRefDto));
 					return true;
 
+				case MappingStart mappingStart when mappingStart.Tag == "!record":
+					value = nestedObjectDeserializer(reader, typeof(RecordLiteralDto));
+					return true;
+
 				case MappingStart:
 					{
 						var dict = new Dictionary<string, object>();
@@ -178,6 +182,21 @@ namespace Assembler.Deserialisation
 						{
 							var s = reader.Consume<Scalar>();
 							list.Add(s.Value);
+						}
+
+						value = list;
+						return true;
+					}
+
+				case SequenceStart sequenceStart when sequenceStart.Tag == "!record":
+					{
+						var list = new List<RecordLiteralDto>();
+						reader.MoveNext();
+
+						while (!reader.TryConsume<SequenceEnd>(out _))
+						{
+							var item = nestedObjectDeserializer(reader, typeof(RecordLiteralDto));
+							list.Add((RecordLiteralDto)item!);
 						}
 
 						value = list;

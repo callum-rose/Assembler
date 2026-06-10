@@ -31,7 +31,6 @@ namespace Assembler.Behaviours.AI
 		private float _sinceRecompute;
 		private IReadOnlyList<Vector3> _path = Array.Empty<Vector3>();
 		private int _pathIndex;
-		private bool _hasRoute;
 
 		private void Update() => Execute(TriggerContext.Empty);
 
@@ -59,34 +58,38 @@ namespace Assembler.Behaviours.AI
 			}
 		}
 
-		private Vector3 FollowFlowField(Vector3 self, Vector3 target, float speed, float slowingRadius)
-		{
-			// Ease in once inside the slowing radius; otherwise ride the field toward the goal.
-			if (Vector3.Distance(self, target) <= slowingRadius)
-			{
-				return SteeringMath.Arrive(self, target, speed, slowingRadius);
-			}
+		// Ease in once inside the slowing radius; otherwise ride the field toward the goal.
+		private Vector3 FollowFlowField(Vector3 self, Vector3 target, float speed, float slowingRadius) =>
+			Vector3.Distance(self, target) <= slowingRadius
+				? SteeringMath.Arrive(self, target, speed, slowingRadius)
+				: RideField(self, target, speed);
 
-			return Nav.FlowDirection(self, target) * speed;
+		private Vector3 RideField(Vector3 self, Vector3 target, float speed)
+		{
+			var flow = Nav.FlowDirection(self, target);
+
+			// A zero direction means this cell has no field entry (unreachable, or off the grid). Fall back to
+			// heading straight at the target — matching the astar path's raw-target fallback — rather than
+			// freezing in place.
+			return flow == Vector3.zero
+				? SteeringMath.Seek(self, target, speed)
+				: flow * speed;
 		}
 
 		private Vector3 FollowPath(Vector3 self, Vector3 target, float speed, float slowingRadius, float recompute)
 		{
-			if (!_hasRoute || recompute <= 0f || _sinceRecompute >= recompute)
+			// An empty _path means no route yet (Nav.Path always yields at least the goal, so a computed route
+			// is never empty) — that, the cadence, or a zero interval triggers a recompute.
+			if (_path.Count == 0 || recompute <= 0f || _sinceRecompute >= recompute)
 			{
 				_path = Nav.Path(self, target);
 				// Skip the start cell (path[0] is the agent's own cell) so a fresh route heads to the next
 				// waypoint rather than stalling on the current cell centre — important when recomputing often.
 				_pathIndex = _path.Count > 1 ? 1 : 0;
-				_hasRoute = true;
 				_sinceRecompute = 0f;
 			}
 
-			if (_path.Count == 0)
-			{
-				return Vector3.zero;
-			}
-
+			// _path is non-empty and _pathIndex is in range from here.
 			var reach = Mathf.Max(0.05f, Nav.CellSize * 0.5f);
 
 			while (_pathIndex < _path.Count - 1 && Vector3.Distance(self, _path[_pathIndex]) <= reach)

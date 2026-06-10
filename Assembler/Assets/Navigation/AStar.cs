@@ -5,22 +5,36 @@ namespace Assembler.Navigation
 {
 	/// <summary>
 	/// Deterministic A* over a <see cref="NavGrid"/>. Eight-connected with integer costs (10 orthogonal, 14
-	/// diagonal) and an octile heuristic; diagonal moves through a blocked corner are disallowed. Ties are
-	/// broken by lowest <c>(f, h, cell-index)</c> so the same grid + endpoints always yield the identical path
-	/// — the determinism the project targets for pure algorithms.
+	/// diagonal) and an octile heuristic; diagonal moves through a blocked corner are disallowed. The open set
+	/// is a binary heap (<see cref="BinaryHeap{T}"/>) ordered by lowest <c>(f, h, cell-index)</c>, so the same
+	/// grid + endpoints always yield the identical path — the determinism the project targets for pure
+	/// algorithms — while keeping frontier selection O(log n) rather than a linear scan.
 	/// </summary>
 	public static class AStar
 	{
-		private const int OrthogonalCost = 10;
-		private const int DiagonalCost = 14;
-
-		// Deterministic neighbour order (orthogonal first, then diagonals); the open-set selection breaks ties
-		// independently, so this order only fixes expansion among otherwise-equal options.
-		private static readonly (int Dx, int Dy)[] Neighbours =
+		private readonly struct Node
 		{
-			(1, 0), (-1, 0), (0, 1), (0, -1),
-			(1, 1), (1, -1), (-1, 1), (-1, -1)
-		};
+			public Node(GridCoord cell, int f, int h, int index)
+			{
+				Cell = cell;
+				F = f;
+				H = h;
+				Index = index;
+			}
+
+			public GridCoord Cell { get; }
+			public int F { get; }
+			public int H { get; }
+			public int Index { get; }
+		}
+
+		// Lowest f wins; ties break by lower h (closer to the goal), then by cell index. Cell index is unique
+		// per cell, so this is a strict total order — the heap result is fully deterministic regardless of
+		// insertion order.
+		private static readonly Comparison<Node> ByPriority = (a, b) =>
+			a.F != b.F ? a.F.CompareTo(b.F) :
+			a.H != b.H ? a.H.CompareTo(b.H) :
+			a.Index.CompareTo(b.Index);
 
 		/// <summary>
 		/// Shortest cell path from <paramref name="start"/> to <paramref name="goal"/> inclusive, or an empty
@@ -40,51 +54,47 @@ namespace Assembler.Navigation
 
 			var gScore = new Dictionary<GridCoord, int> { [start] = 0 };
 			var cameFrom = new Dictionary<GridCoord, GridCoord>();
-			var open = new List<GridCoord> { start };
-			var openSet = new HashSet<GridCoord> { start };
+			var open = new BinaryHeap<Node>(ByPriority);
 			var closed = new HashSet<GridCoord>();
+
+			var startH = Heuristic(start, goal);
+			open.Push(new Node(start, startH, startH, grid.Index(start)));
 
 			while (open.Count > 0)
 			{
-				var current = SelectBest(open, gScore, goal, grid);
+				var current = open.Pop().Cell;
 
 				if (current.Equals(goal))
 				{
 					return Reconstruct(cameFrom, current);
 				}
 
-				open.Remove(current);
-				openSet.Remove(current);
-				closed.Add(current);
+				// Lazy deletion: a cell can sit in the heap more than once (re-pushed when its g improved). The
+				// octile heuristic is consistent, so the first pop of a cell is already optimal; later pops are
+				// stale and skipped.
+				if (!closed.Add(current))
+				{
+					continue;
+				}
 
-				foreach (var (dx, dy) in Neighbours)
+				foreach (var (dx, dy) in GridConnectivity.Neighbours)
 				{
 					var neighbour = new GridCoord(current.X + dx, current.Y + dy);
 
-					if (!grid.IsWalkable(neighbour) || closed.Contains(neighbour))
+					if (!grid.IsWalkable(neighbour) || closed.Contains(neighbour) ||
+						!GridConnectivity.StepAllowed(grid, current, dx, dy))
 					{
 						continue;
 					}
 
-					// No corner cutting: a diagonal step requires both shared orthogonal cells to be walkable.
-					if (dx != 0 && dy != 0 &&
-						(!grid.IsWalkable(new GridCoord(current.X + dx, current.Y)) ||
-						 !grid.IsWalkable(new GridCoord(current.X, current.Y + dy))))
-					{
-						continue;
-					}
-
-					var tentative = gScore[current] + (dx != 0 && dy != 0 ? DiagonalCost : OrthogonalCost);
+					var tentative = gScore[current] + GridConnectivity.StepCost(dx, dy);
 
 					if (!gScore.TryGetValue(neighbour, out var existing) || tentative < existing)
 					{
 						cameFrom[neighbour] = current;
 						gScore[neighbour] = tentative;
-
-						if (openSet.Add(neighbour))
-						{
-							open.Add(neighbour);
-						}
+						var h = Heuristic(neighbour, goal);
+						open.Push(new Node(neighbour, tentative + h, h, grid.Index(neighbour)));
 					}
 				}
 			}
@@ -92,38 +102,13 @@ namespace Assembler.Navigation
 			return Array.Empty<GridCoord>();
 		}
 
-		private static GridCoord SelectBest(List<GridCoord> open, Dictionary<GridCoord, int> gScore, GridCoord goal, NavGrid grid)
-		{
-			var best = open[0];
-			var bestF = gScore[best] + Heuristic(best, goal);
-			var bestH = Heuristic(best, goal);
-			var bestIndex = grid.Index(best);
-
-			for (var i = 1; i < open.Count; i++)
-			{
-				var node = open[i];
-				var h = Heuristic(node, goal);
-				var f = gScore[node] + h;
-				var index = grid.Index(node);
-
-				if (f < bestF || (f == bestF && (h < bestH || (h == bestH && index < bestIndex))))
-				{
-					best = node;
-					bestF = f;
-					bestH = h;
-					bestIndex = index;
-				}
-			}
-
-			return best;
-		}
-
 		private static int Heuristic(GridCoord a, GridCoord b)
 		{
 			var dx = Math.Abs(a.X - b.X);
 			var dy = Math.Abs(a.Y - b.Y);
-			// Octile distance with the integer cost scale.
-			return OrthogonalCost * (dx + dy) + (DiagonalCost - 2 * OrthogonalCost) * Math.Min(dx, dy);
+			// Octile distance on the integer cost scale.
+			return GridConnectivity.OrthogonalCost * (dx + dy) +
+				(GridConnectivity.DiagonalCost - 2 * GridConnectivity.OrthogonalCost) * Math.Min(dx, dy);
 		}
 
 		private static IReadOnlyList<GridCoord> Reconstruct(Dictionary<GridCoord, GridCoord> cameFrom, GridCoord current)

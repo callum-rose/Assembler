@@ -8,6 +8,7 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Assembler.Libraries",
+        "Assembler.Core",
         "Assembler.Time"
     ],
     "includePlatforms": [
