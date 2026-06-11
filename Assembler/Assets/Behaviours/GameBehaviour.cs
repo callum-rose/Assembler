@@ -17,6 +17,11 @@ namespace Assembler.Behaviours
 			set => tags = value;
 		}
 
+		/// <summary>The entity this behaviour belongs to. Wired once by the build pipeline (see
+		/// <see cref="SetEntity"/>) so every behaviour can reach its owning entity — its id, tags and scope —
+		/// without a <c>GetComponent</c> lookup.</summary>
+		protected GameEntity Entity { get; private set; } = null!;
+
 		protected string Id { get; private set; }
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
@@ -38,6 +43,10 @@ namespace Assembler.Behaviours
 		/// <summary>Runs when a trigger notifies this behaviour. Passive/state-driven behaviours that don't
 		/// react to triggers can leave this as the default no-op.</summary>
 		public virtual void Execute(TriggerContext ctx) { }
+
+		/// <summary>Wires the owning entity. Called once by the build pipeline before initialisation; the
+		/// private property setter keeps <see cref="Entity"/> read-only to subclasses.</summary>
+		public void SetEntity(GameEntity entity) => Entity = entity;
 
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{

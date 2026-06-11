@@ -38,7 +38,9 @@ namespace Assembler.Resolving
 		private object Read(TriggerContext ctx)
 		{
 			var origin = _origin.Get(ctx);
-			var found = _query.TryNearest(origin, _entityTag, _maxRange.Get(ctx), out var id);
+			// The !query tag carries no owning-entity id, so it can't exclude self; pass no exclusion. (Perceive,
+			// which does know its entity, passes its own id — see EntityQueryService.TryNearest.)
+			var found = _query.TryNearest(origin, _entityTag, _maxRange.Get(ctx), string.Empty, out var id);
 
 			return _kind switch
 			{

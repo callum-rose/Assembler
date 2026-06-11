@@ -76,12 +76,16 @@ namespace Assembler.Behaviours.AI
 
 		private bool TryFindTarget(Vector3 self, string tag, float radius, TriggerContext ctx, out string targetId)
 		{
+			// Exclude this entity from its own scan: a same-tag perceive would otherwise always detect itself at
+			// distance 0, making separation/nearest-ally relationships impossible.
+			var selfId = Entity.Id;
+
 			if (!ConeConfigured)
 			{
-				return Query.TryNearest(self, tag, radius, out targetId);
+				return Query.TryNearest(self, tag, radius, selfId, out targetId);
 			}
 
-			var candidates = Query.WithinCone(self, Data.Forward.Get(ctx), tag, radius, Data.ConeAngle.Get(ctx) * 0.5f);
+			var candidates = Query.WithinCone(self, Data.Forward.Get(ctx), tag, radius, Data.ConeAngle.Get(ctx) * 0.5f, selfId);
 
 			targetId = string.Empty;
 			var found = false;

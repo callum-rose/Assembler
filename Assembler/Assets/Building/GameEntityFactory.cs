@@ -121,6 +121,7 @@ namespace Assembler.Building
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
 
 			var gameEntity = gameObject.AddComponent<GameEntity>();
+			gameEntity.Id = entityInfo.Id;
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;
@@ -147,6 +148,7 @@ namespace Assembler.Building
 			{
 				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject, behaviourInfo, buildContext);
 
+				gameBehaviour.SetEntity(gameEntity);
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));

@@ -71,9 +71,11 @@ namespace Assembler.Resolving
 		/// <summary>
 		/// Finds the nearest live entity carrying <paramref name="tag"/> within <paramref name="maxRange"/> of
 		/// <paramref name="from"/>. Returns false (and an empty <paramref name="id"/>) if none. Pass
-		/// <see cref="float.PositiveInfinity"/> for no range limit.
+		/// <see cref="float.PositiveInfinity"/> for no range limit. Pass the querying entity's id as
+		/// <paramref name="excludeId"/> to skip self (so a same-tag scan doesn't detect itself at distance 0);
+		/// pass <see cref="string.Empty"/> to exclude nothing.
 		/// </summary>
-		public bool TryNearest(Vector3 from, string tag, float maxRange, out string id)
+		public bool TryNearest(Vector3 from, string tag, float maxRange, string excludeId, out string id)
 		{
 			id = string.Empty;
 
@@ -87,7 +89,7 @@ namespace Assembler.Resolving
 
 			foreach (var candidate in bucket)
 			{
-				if (!TryLivePosition(candidate, out var position))
+				if (candidate == excludeId || !TryLivePosition(candidate, out var position))
 				{
 					continue;
 				}
@@ -106,8 +108,12 @@ namespace Assembler.Resolving
 			return found;
 		}
 
-		/// <summary>All live entities carrying <paramref name="tag"/> within <paramref name="radius"/>, id-sorted.</summary>
-		public IReadOnlyList<string> WithinRadius(Vector3 from, string tag, float radius)
+		/// <summary>
+		/// All live entities carrying <paramref name="tag"/> within <paramref name="radius"/>, id-sorted. Pass the
+		/// querying entity's id as <paramref name="excludeId"/> to skip self; pass <see cref="string.Empty"/> to
+		/// exclude nothing.
+		/// </summary>
+		public IReadOnlyList<string> WithinRadius(Vector3 from, string tag, float radius, string excludeId)
 		{
 			if (!_idsByTag.TryGetValue(tag, out var bucket))
 			{
@@ -119,7 +125,7 @@ namespace Assembler.Resolving
 
 			foreach (var id in bucket)
 			{
-				if (TryLivePosition(id, out var position) && (position - from).sqrMagnitude <= radiusSqr)
+				if (id != excludeId && TryLivePosition(id, out var position) && (position - from).sqrMagnitude <= radiusSqr)
 				{
 					result.Add(id);
 				}
@@ -130,14 +136,17 @@ namespace Assembler.Resolving
 
 		/// <summary>
 		/// All live entities carrying <paramref name="tag"/> within <paramref name="radius"/> and inside a cone
-		/// of half-angle <paramref name="halfAngleDeg"/> about <paramref name="forward"/>, id-sorted.
+		/// of half-angle <paramref name="halfAngleDeg"/> about <paramref name="forward"/>, id-sorted. Pass the
+		/// querying entity's id as <paramref name="excludeId"/> to skip self; pass <see cref="string.Empty"/> to
+		/// exclude nothing.
 		/// </summary>
 		public IReadOnlyList<string> WithinCone(
 			Vector3 from,
 			Vector3 forward,
 			string tag,
 			float radius,
-			float halfAngleDeg)
+			float halfAngleDeg,
+			string excludeId)
 		{
 			if (!_idsByTag.TryGetValue(tag, out var bucket))
 			{
@@ -150,7 +159,7 @@ namespace Assembler.Resolving
 
 			foreach (var id in bucket)
 			{
-				if (!TryLivePosition(id, out var position))
+				if (id == excludeId || !TryLivePosition(id, out var position))
 				{
 					continue;
 				}
