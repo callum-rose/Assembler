@@ -21,19 +21,18 @@ namespace Assembler.Behaviours
 
 		public EntityVariableScope? VariableScope { get; set; }
 
-		/// <summary>The spatial-query index this entity registers into, so it can self-deregister on destruction.</summary>
+		/// <summary>The spatial-query index this entity self-registers into on <see cref="Awake"/>.</summary>
 		public EntityQueryService? Query { get; set; }
 
-		/// <summary>The transform index this entity is registered in, so it can self-deregister on destruction.</summary>
-		public EntityTransformRegistry? Transforms { get; set; }
+		/// <summary>Raised from <see cref="OnDestroy"/>. The factory subscribes each runtime index's deregistration
+		/// (query / transform / behaviour) so the entity self-evicts from all of them on destruction without holding a
+		/// reference to each — routing them through one event also crosses the assembly boundary to the higher-level
+		/// <c>BehaviourRegistry</c> that this type can't reference directly. Subscribers capture the entity id they need.</summary>
+		public event Action? Destroying;
 
-		/// <summary>Evicts this entity's behaviours from the runtime <c>BehaviourRegistry</c> on destruction. The registry
-		/// lives in a higher assembly than this type, so the factory wires it as a callback rather than a direct reference.</summary>
-		public Action<string>? DeregisterBehaviours { get; set; }
-
-		// Self-registers into the spatial-query index here (and deregisters in OnDestroy) so the index's lifetime
-		// is owned by the entity rather than the factory. The factory configures Query/Tags/Id while the GameObject
-		// is inactive, then activates it, so all are set by the time Awake runs.
+		// Self-registers into the spatial-query index here so the index's lifetime is owned by the entity rather than
+		// the factory. The factory configures Query/Tags/Id while the GameObject is inactive, then activates it, so all
+		// are set by the time Awake runs.
 		private void Awake()
 		{
 			Query?.Register(Id, transform, tags);
@@ -41,14 +40,9 @@ namespace Assembler.Behaviours
 
 		private void OnDestroy()
 		{
-			Query?.Unregister(Id);
+			Destroying?.Invoke();
+			Destroying = null;
 			Query = null;
-
-			Transforms?.Unregister(Id);
-			Transforms = null;
-
-			DeregisterBehaviours?.Invoke(Id);
-			DeregisterBehaviours = null;
 
 			VariableScope?.Dispose();
 			VariableScope = null;
