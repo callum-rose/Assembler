@@ -19,10 +19,11 @@ namespace Assembler.Behaviours.Rotation
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		private void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var offset = Data.Target.Get(ctx) - transform.position;
 
 			// Nothing to face if the target is directly above/below (no XZ heading); keep the current rotation.
