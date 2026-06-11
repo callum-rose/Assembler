@@ -112,6 +112,51 @@ namespace Assembler.Libraries
 			return push.sqrMagnitude > 1e-6f ? push.normalized * maxSpeed : Vector3.zero;
 		}
 
+		/// <summary>Steer toward the average position (centre of mass) of nearby neighbours, for flock cohesion.</summary>
+		/// <param name="position">Current position.</param>
+		/// <param name="neighbours">Positions of nearby entities.</param>
+		/// <param name="maxSpeed">Speed of the returned velocity (units per second).</param>
+		/// <returns>A velocity steering toward the neighbours' centroid, or zero if there are none.</returns>
+		public static Vector3 Cohesion(Vector3 position, List<Vector3> neighbours, float maxSpeed)
+		{
+			if (neighbours.Count == 0)
+			{
+				return Vector3.zero;
+			}
+
+			var centre = Vector3.zero;
+
+			foreach (var neighbour in neighbours)
+			{
+				centre += neighbour;
+			}
+
+			centre /= neighbours.Count;
+			return Seek(position, centre, maxSpeed);
+		}
+
+		/// <summary>Steer to match the average heading of nearby neighbours, for flock alignment.</summary>
+		/// <param name="velocity">Current velocity (unused, kept for signature symmetry with the other rules).</param>
+		/// <param name="neighbourVelocities">Velocities of nearby entities.</param>
+		/// <param name="maxSpeed">Speed of the returned velocity (units per second).</param>
+		/// <returns>A velocity matching the neighbours' average heading, or zero if there are none (or they cancel out).</returns>
+		public static Vector3 Alignment(Vector3 velocity, List<Vector3> neighbourVelocities, float maxSpeed)
+		{
+			if (neighbourVelocities.Count == 0)
+			{
+				return Vector3.zero;
+			}
+
+			var average = Vector3.zero;
+
+			foreach (var neighbourVelocity in neighbourVelocities)
+			{
+				average += neighbourVelocity;
+			}
+
+			return average.sqrMagnitude > 1e-6f ? average.normalized * maxSpeed : Vector3.zero;
+		}
+
 		/// <summary>Heading angle from one point toward another, in degrees CCW from +x, in [-180, 180].</summary>
 		/// <param name="from">The origin point.</param>
 		/// <param name="to">The point to face.</param>
