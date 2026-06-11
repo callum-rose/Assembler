@@ -1,9 +1,10 @@
 using System.Collections;
+using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 
-namespace Assembler.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Flow
 {
 	/// <summary>Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.</summary>
 	/// <remarks>

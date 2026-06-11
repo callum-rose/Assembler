@@ -279,6 +279,8 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 ## `look at`
 Turns the entity each frame to face Target in the XZ ground plane (a yaw about +Y).
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
