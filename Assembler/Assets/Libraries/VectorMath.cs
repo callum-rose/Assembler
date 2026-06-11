@@ -93,5 +93,64 @@ namespace Assembler.Libraries
 		/// <returns>The new position pos + vel * dt.</returns>
 		public static Vector3 IntegratePosition(Vector3 pos, Vector3 vel, float dt) =>
 			new(pos.x + vel.x * dt, pos.y + vel.y * dt, pos.z + vel.z * dt);
+
+		/// <summary>
+		/// Unit forward direction for a yaw angle (rotation about the +Y axis), in the XZ
+		/// ground plane. Yaw 0 faces +Z, yaw 90 faces +X — matching
+		/// Quaternion.Euler(0, yaw, 0) * Vector3.forward. Replaces hand-rolled sin/cos
+		/// forward vectors when building first-person / 3D directional movement ("move
+		/// forward relative to facing").
+		/// </summary>
+		/// <param name="yawDegrees">Yaw angle in degrees (rotation about +Y).</param>
+		/// <returns>The unit forward vector (sin(yaw), 0, cos(yaw)).</returns>
+		public static Vector3 ForwardFromYaw(float yawDegrees)
+		{
+			float rad = yawDegrees * Mathf.Deg2Rad;
+			return new Vector3(Mathf.Sin(rad), 0f, Mathf.Cos(rad));
+		}
+
+		/// <summary>
+		/// Unit right direction for a yaw angle (rotation about the +Y axis), in the XZ
+		/// ground plane — 90 degrees clockwise of <see cref="ForwardFromYaw"/>, matching
+		/// Quaternion.Euler(0, yaw, 0) * Vector3.right. Use for strafing.
+		/// </summary>
+		/// <param name="yawDegrees">Yaw angle in degrees (rotation about +Y).</param>
+		/// <returns>The unit right vector (cos(yaw), 0, -sin(yaw)).</returns>
+		public static Vector3 RightFromYaw(float yawDegrees)
+		{
+			float rad = yawDegrees * Mathf.Deg2Rad;
+			return new Vector3(Mathf.Cos(rad), 0f, -Mathf.Sin(rad));
+		}
+
+		/// <summary>
+		/// Unit forward direction for a full set of euler angles in degrees, equivalent to
+		/// Quaternion.Euler(eulerAngles) * Vector3.forward. Feed it an entity's Rotation
+		/// (e.g. !entity { Property: Rotation }) to get its facing direction including pitch
+		/// and roll, not just yaw.
+		/// </summary>
+		/// <param name="eulerAngles">Euler angles in degrees (x = pitch, y = yaw, z = roll).</param>
+		/// <returns>The unit forward vector.</returns>
+		public static Vector3 ForwardFromAngles(Vector3 eulerAngles) =>
+			Quaternion.Euler(eulerAngles) * Vector3.forward;
+
+		/// <summary>
+		/// Unit right direction for a full set of euler angles in degrees, equivalent to
+		/// Quaternion.Euler(eulerAngles) * Vector3.right. The strafe companion to
+		/// <see cref="ForwardFromAngles"/>.
+		/// </summary>
+		/// <param name="eulerAngles">Euler angles in degrees (x = pitch, y = yaw, z = roll).</param>
+		/// <returns>The unit right vector.</returns>
+		public static Vector3 RightFromAngles(Vector3 eulerAngles) =>
+			Quaternion.Euler(eulerAngles) * Vector3.right;
+
+		/// <summary>
+		/// Unit up direction for a full set of euler angles in degrees, equivalent to
+		/// Quaternion.Euler(eulerAngles) * Vector3.up. Completes the forward/right/up basis
+		/// alongside <see cref="ForwardFromAngles"/> and <see cref="RightFromAngles"/>.
+		/// </summary>
+		/// <param name="eulerAngles">Euler angles in degrees (x = pitch, y = yaw, z = roll).</param>
+		/// <returns>The unit up vector.</returns>
+		public static Vector3 UpFromAngles(Vector3 eulerAngles) =>
+			Quaternion.Euler(eulerAngles) * Vector3.up;
 	}
 }
