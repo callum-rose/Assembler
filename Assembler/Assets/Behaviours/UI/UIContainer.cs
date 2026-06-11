@@ -24,10 +24,11 @@ namespace Assembler.Behaviours.UI
 		{
 			var rect = UiLayout.EnsureRectTransform(gameObject);
 
-			// When sitting directly under a Canvas, fill the screen so children have room to lay out.
+			// When sitting directly under a Canvas, fill the screen's safe area so children have room to lay
+			// out while staying clear of notches/cutouts on mobile (off mobile the safe area is the full screen).
 			if (transform.parent != null && transform.parent.GetComponent<Canvas>() != null)
 			{
-				UiLayout.StretchToFill(rect);
+				UiLayout.StretchToSafeArea(rect);
 			}
 
 			var direction = data.Direction.ValueOr(LayoutDirection.Vertical);

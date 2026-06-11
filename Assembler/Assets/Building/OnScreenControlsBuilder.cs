@@ -35,9 +35,16 @@ namespace Assembler.Building
 
 			UiCanvasFactory.AddOverlayCanvas(canvasGo, ReferenceResolution, MatchWidthOrHeight);
 
+			// Anchor widgets to a safe-area rect rather than the raw canvas, so corner-pinned controls (e.g. a
+			// lower-left joystick) stay clear of notches/cutouts on mobile. Off mobile the safe area is the
+			// full screen, so this is transparent — though this overlay only builds on mobile anyway.
+			var safeAreaGo = new GameObject("SafeArea", typeof(RectTransform));
+			safeAreaGo.transform.SetParent(canvasGo.transform, worldPositionStays: false);
+			UiLayout.StretchToSafeArea((RectTransform)safeAreaGo.transform);
+
 			foreach (var control in controls.OnScreen)
 			{
-				BuildWidget(control, controls, prefabs, canvasGo.transform);
+				BuildWidget(control, controls, prefabs, safeAreaGo.transform);
 			}
 
 			canvasGo.SetActive(true);
