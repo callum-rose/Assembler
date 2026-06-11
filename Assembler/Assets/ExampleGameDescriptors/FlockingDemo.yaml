@@ -18,6 +18,10 @@ Game:
     on screen. The blended, speed-clamped result is written to the `velocity` variable,
     which a `velocity` integrator applies to move the boid.
 
+    Move the mouse through the flock and the boids scatter away from the cursor: a `cursor`
+    entity publishes the pointer's world position into `mouse world`, and each boid adds a
+    strongly-weighted Flee force that kicks in within `mouse avoid radius`.
+
     Press Q to quit.
 
 World:
@@ -41,10 +45,19 @@ Constants:
   wander weight: 0.4
   containment weight: 0.6
 
+  # Boids flee the mouse: a strongly-weighted Flee force that only kicks in within this radius.
+  mouse avoid radius: 3.0
+  mouse avoid weight: 4.0
+
   flock origin: !vec { X: -3.0, Y: -1.8, Z: 0 }
 
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera size: 6
+
+Variables:
+  # World-space mouse position, refreshed each frame the mouse moves (see the `cursor` entity).
+  # Seeded far off-screen so the flock ignores it until the pointer first moves.
+  mouse world: !vec { X: 1000, Y: 1000, Z: 0 }
 
 Expressions:
   # Each Reynolds rule wrapped as a named expression so the boid's own position/velocity can be
@@ -79,6 +92,29 @@ Expressions:
     ArgumentNames: [ pos, target, max ]
     ReturnType: vector
     Expression: "return Seek(pos, target, max);"
+
+  # Flee the mouse, but only when it is within `radius` — otherwise contribute nothing.
+  avoid mouse:
+    ArgumentTypes: [ vector, vector, float, float ]
+    ArgumentNames: [ pos, mouse, radius, max ]
+    ReturnType: vector
+    Expression: "return Distance(pos, mouse) < radius ? Flee(pos, mouse, max) : new UnityEngine.Vector3(0f, 0f, 0f);"
+
+  # Convert a screen-space pointer position to a world point on the z=0 plane for this orthographic
+  # camera. Self-contained (no Camera.main, which the camera entity isn't tagged for) — derived from
+  # the viewport mapping using the camera's known position and orthographic size.
+  screen to world:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ screen_pos, cam_pos, ortho_size ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Screen ]
+    Expression: |
+      var w = UnityEngine.Screen.width * 1f;
+      var h = UnityEngine.Screen.height * 1f;
+      var aspect = w / h;
+      var x = cam_pos.x + (screen_pos.x / w - 0.5f) * 2f * ortho_size * aspect;
+      var y = cam_pos.y + (screen_pos.y / h - 0.5f) * 2f * ortho_size;
+      return new UnityEngine.Vector3(x, y, 0f);
 
 Templates:
   boid:
@@ -149,6 +185,14 @@ Templates:
                   - !vec { X: 0, Y: 0, Z: 0 }
                   - !var max speed
               Weight: !var containment weight
+            - Force: !expr
+                Do: avoid mouse
+                With:
+                  - !entity { Id: !parameter self_id, Property: Position }
+                  - !var mouse world
+                  - !var mouse avoid radius
+                  - !var max speed
+              Weight: !var mouse avoid weight
 
       # Integrate the blended velocity into motion.
       move:
@@ -172,6 +216,25 @@ Entities:
         Type: key down trigger
         Properties: { Key: "q" }
         Listeners: [ !gameover ]
+
+  # Tracks the mouse and publishes its world position into the global `mouse world` variable each
+  # frame it moves, which every boid's `avoid mouse` steering force reads to flee the cursor.
+  cursor:
+    Behaviours:
+      track mouse:
+        Type: mouse position trigger
+        Listeners:
+          - { EntityId: cursor, BehaviourId: store mouse }
+      store mouse:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var mouse world
+          Value: !expr
+            Do: screen to world
+            With:
+              - !output mouse_position
+              - !var camera position
+              - !var camera size
 
   camera:
     Position: !var camera position
