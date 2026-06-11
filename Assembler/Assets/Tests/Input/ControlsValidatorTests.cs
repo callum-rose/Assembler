@@ -59,7 +59,7 @@ namespace Tests.Input
 				["desktop"] = desktop
 			};
 
-			return new ControlsInfo(actions, bindings);
+			return new ControlsInfo(actions, bindings, new List<OnScreenControlInfo>());
 		}
 
 		[Test]

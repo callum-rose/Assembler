@@ -13,6 +13,28 @@ namespace Assembler.Deserialisation.Dtos
 
 		/// <summary>Platform key → action id → list of bindings (each a path string or a composite mapping).</summary>
 		public Dictionary<string, Dictionary<string, List<BindingDto>>>? Bindings { get; init; }
+
+		/// <summary>
+		/// On-screen touch widgets (joystick/d-pad/button) rendered only when the active platform is Mobile.
+		/// Each names an existing action; the control path is derived from that action's <c>mobile</c> binding.
+		/// Plain mappings, so no custom type converter is needed.
+		/// </summary>
+		public List<OnScreenControlDto>? OnScreen { get; init; }
+	}
+
+	/// <summary>
+	/// One on-screen touch widget declared under <c>Controls.OnScreen</c>. Drives an existing <see cref="Action"/>
+	/// by synthesising input at the path that action is bound to under <c>mobile</c>; the widget kind
+	/// (<see cref="Type"/>) and the action kind must agree (joystick/dpad ⇒ value, button ⇒ button).
+	/// </summary>
+	public sealed record OnScreenControlDto
+	{
+		public string? Type { get; init; }     // joystick | dpad | button
+		public string? Action { get; init; }   // an action declared in Actions
+		public string? Anchor { get; init; }   // TextAnchor name, e.g. lower-left
+		public string? Label { get; init; }    // optional caption (button only)
+		public VecDto? Offset { get; init; }    // px from the anchored corner (z ignored)
+		public VecDto? Size { get; init; }      // widget size in px (z ignored)
 	}
 
 	/// <summary>A single declared action: its kind and (for buttons) which phase fires.</summary>

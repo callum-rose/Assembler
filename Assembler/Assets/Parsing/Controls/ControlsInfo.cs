@@ -11,12 +11,15 @@ namespace Assembler.Parsing.Controls
 	/// <param name="Bindings">
 	/// Platform key (<c>desktop</c>/<c>gamepad</c>/<c>mobile</c>/<c>console</c>) → action id → its bindings.
 	/// </param>
+	/// <param name="OnScreen">On-screen touch widgets, rendered only when the active platform is Mobile.</param>
 	public sealed record ControlsInfo(
 		IReadOnlyDictionary<string, ActionInfo> Actions,
-		IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>> Bindings)
+		IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>> Bindings,
+		IReadOnlyList<OnScreenControlInfo> OnScreen)
 	{
 		public readonly static ControlsInfo Empty = new(
 			new Dictionary<string, ActionInfo>(),
-			new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>>());
+			new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<BindingInfo>>>(),
+			new List<OnScreenControlInfo>());
 	}
 }

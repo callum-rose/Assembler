@@ -1,7 +1,7 @@
+using Assembler.Behaviours.UI.Internal;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Assembler.Behaviours.UI
 {
@@ -16,18 +16,12 @@ namespace Assembler.Behaviours.UI
 	{
 		protected override void OnInitialise(UICanvasData data)
 		{
-			var canvas = gameObject.AddComponent<Canvas>();
-			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
 			var referenceResolution = data.ReferenceResolution.ValueOr(new Vector3(1920f, 1080f, 0f));
 
-			var scaler = gameObject.AddComponent<CanvasScaler>();
-			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-			scaler.referenceResolution = new Vector2(referenceResolution.x, referenceResolution.y);
-			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-			scaler.matchWidthOrHeight = Mathf.Clamp01(data.MatchWidthOrHeight.ValueOr(0.5f));
-
-			gameObject.AddComponent<GraphicRaycaster>();
+			UiCanvasFactory.AddOverlayCanvas(
+				gameObject,
+				new Vector2(referenceResolution.x, referenceResolution.y),
+				data.MatchWidthOrHeight.ValueOr(0.5f));
 		}
 	}
 }

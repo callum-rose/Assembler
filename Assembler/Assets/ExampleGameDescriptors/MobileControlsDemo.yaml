@@ -1,0 +1,181 @@
+Game:
+  Title: Mobile Controls Demo
+  Description: |
+    Demonstrates the on-screen touch controls layer: the same semantic ACTIONS
+    used by every other game, but driven on a touch device by widgets declared
+    in `Controls.OnScreen`. Steer the green cube to the gold goal with the
+    on-screen joystick; tap the Quit button to give up.
+
+    There is no per-game input plumbing here. An on-screen widget is just another
+    physical input source: it names an existing action, and the system derives
+    the control path from that action's `mobile` binding, points a Unity
+    On-Screen component at it, and the existing `input action` triggers read it
+    exactly as they read a keyboard or gamepad.
+
+      - `move` — a VALUE (vector2) action. On desktop it's WASD; on mobile the
+                 on-screen JOYSTICK feeds it via `<Gamepad>/leftStick`.
+      - `quit` — a BUTTON action (down phase). On desktop it's Esc; on mobile the
+                 on-screen BUTTON feeds it via `<Gamepad>/buttonSouth`.
+
+    The `OnScreen` block renders only when the active platform is Mobile, so
+    desktop/gamepad players never see the widgets. To try it without a device,
+    open the Game Launcher, pick this descriptor, set Platform = Mobile, and
+    enter Play mode — the On-Screen stick and button respond to the mouse.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  player colour: !colour { R: 0.3, G: 0.85, B: 0.4, A: 1 }
+  goal colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
+
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  goal size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+
+  # Per-frame step applied to the analogue move vector (top speed in units/frame).
+  move step: 0.06
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # emits axis/x/y every frame
+    quit: { Type: button, Phase: down }          # fires once on press
+
+  Bindings:
+    # Desktop scheme so the game is playable (and validates) without a touch device.
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      quit:
+        - "<Keyboard>/escape"
+    # Mobile scheme: the on-screen widgets derive their control path from here.
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]    # joystick → a stick control
+      quit: [ "<Gamepad>/buttonSouth" ]  # button   → a button control
+
+  # Rendered only when the active platform is Mobile.
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 360, Y: 360 }
+    - Type: button
+      Action: quit
+      Label: Quit
+      Anchor: lower-right
+      Offset: { X: 200, Y: 200 }
+      Size:   { X: 220, Y: 220 }
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: -4, Y: -3, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var player size
+          IsWire: false
+          Colour: !var player colour
+
+      # Trigger collider + rigidbody so the player generates trigger-enter events.
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var player size
+          IsTrigger: true
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+
+      # --- VALUE action: analogue movement, fed by the on-screen joystick on mobile. ---
+      move action:
+        Type: input action
+        Properties:
+          Action: move
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            With:
+              - !output x
+              - !output y
+              - !var move step
+
+      # --- BUTTON action (down phase): fed by the on-screen Quit button on mobile. ---
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+      # --- Objective: reaching the goal ends the game, event-driven. ---
+      reach goal:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ goal ]
+        Listeners:
+          - !gameover
+
+  goal:
+    Tags: [ goal ]
+    Position: !vec { X: 4, Y: 3, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var goal size
+          IsWire: false
+          Colour: !var goal colour
+      collider:
+        Type: box collider
+        Properties:
+          Size: !var goal size
+          IsTrigger: true
+
+  hud:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      instructions:
+        Type: text label
+        Properties:
+          Label: ""
+          Text: "Reach the gold goal. Mobile: drag the joystick to move, tap Quit to give up. (Desktop: WASD, quit Esc.)"
+          FontSize: 18
+          Rect:
+            Anchor: top-left
+            X: 20
+            Y: 20
+            Width: 760
+            Height: 40
+
+  camera:
+    Position: !var camera position
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

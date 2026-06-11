@@ -16,9 +16,21 @@ namespace Assembler.Behaviours.UI
 		[SerializeField] private GameObject buttonPrefab = null!;
 		[SerializeField] private GameObject labelPrefab = null!;
 		[SerializeField] private GameObject sliderPrefab = null!;
+		[SerializeField] private GameObject joystickPrefab = null!;
+		[SerializeField] private GameObject dpadPrefab = null!;
+		[SerializeField] private GameObject mobileButtonPrefab = null!;
 
 		public GameObject ButtonPrefab => buttonPrefab;
 		public GameObject LabelPrefab => labelPrefab;
 		public GameObject SliderPrefab => sliderPrefab;
+
+		/// <summary>On-screen analogue joystick prefab (carries <c>OnScreenJoystickView</c>).</summary>
+		public GameObject JoystickPrefab => joystickPrefab;
+
+		/// <summary>On-screen four-way d-pad prefab (carries <c>OnScreenDPadView</c>).</summary>
+		public GameObject DPadPrefab => dpadPrefab;
+
+		/// <summary>On-screen touch button prefab (carries <c>OnScreenButtonView</c>).</summary>
+		public GameObject MobileButtonPrefab => mobileButtonPrefab;
 	}
 }
