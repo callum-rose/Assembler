@@ -692,6 +692,17 @@ First-class steering helpers for descriptor expressions, registered globally in
             (z = 0 for 2D), matching VectorMath; all numeric parameters are float so int arguments coerce
             automatically. Wander draws on the global RNG and is therefore non-deterministic, like RandomMath.
 
+### `Vector3 Alignment(Vector3 velocity, List<Vector3> neighbourVelocities, float maxSpeed)`
+Steer to match the average heading of nearby neighbours, for flock alignment.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| velocity | Vector3 | Current velocity (unused, kept for signature symmetry with the other rules). |
+| neighbourVelocities | List<Vector3> | Velocities of nearby entities. |
+| maxSpeed | float | Speed of the returned velocity (units per second). |
+
+**Returns** (Vector3): A velocity matching the neighbours' average heading, or zero if there are none (or they cancel out).
+
 ### `Vector3 Arrive(Vector3 position, Vector3 target, float maxSpeed, float slowingRadius)`
 Like Single) but eases to a stop, scaling speed down inside the slowing radius.
 
@@ -717,6 +728,17 @@ Steer away from obstacles that lie ahead within a look-ahead distance, for colli
 | maxSpeed | float | Speed of the returned velocity at full imminence (units per second). |
 
 **Returns** (Vector3): A swerve-and-brake velocity away from the nearest threatening obstacle, or zero if none threaten.
+
+### `Vector3 Cohesion(Vector3 position, List<Vector3> neighbours, float maxSpeed)`
+Steer toward the average position (centre of mass) of nearby neighbours, for flock cohesion.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| neighbours | List<Vector3> | Positions of nearby entities. |
+| maxSpeed | float | Speed of the returned velocity (units per second). |
+
+**Returns** (Vector3): A velocity steering toward the neighbours' centroid, or zero if there are none.
 
 ### `Vector3 Evade(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
 Flee the target's predicted future position, dodging a moving threat.
