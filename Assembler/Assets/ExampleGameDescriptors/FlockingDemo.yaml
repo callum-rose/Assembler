@@ -1,0 +1,244 @@
+Game:
+  Title: Flocking Demo
+  Description: |
+    A classic Reynolds boids flock built entirely from the AI substrate, showcasing
+    `perceive all` → `steering`.
+
+    Every boid shares the `boid` tag and runs one `perceive all` sensor that scans for
+    all nearby boids within `perceive radius` and writes two parallel lists into its
+    blackboard each scan: `neighbours` (their positions) and `neighbour vels` (their
+    velocities, finite-differenced between scans). Nothing else produces those lists —
+    `perceive all` is the input that makes flocking real.
+
+    A `steering` behaviour then blends the three Reynolds rules over those lists:
+      Separation - push away from crowding neighbours (Separate over `neighbours`).
+      Cohesion   - steer toward the neighbours' centre of mass (Cohesion over `neighbours`).
+      Alignment  - match the neighbours' average heading (Alignment over `neighbour vels`).
+    A little Wander keeps the flock roaming and a gentle Seek toward the origin keeps it
+    on screen. The blended, speed-clamped result is written to the `velocity` variable,
+    which a `velocity` integrator applies to move the boid.
+
+    Move the mouse through the flock and the boids scatter away from the cursor: a `cursor`
+    entity publishes the pointer's world position into `mouse world`, and each boid adds a
+    strongly-weighted Flee force that kicks in within `mouse avoid radius`.
+
+    Press Q to quit.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0b1020"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  boid size: !vec { X: 0.22, Y: 0.22, Z: 0.22 }
+  boid colour: !colour { R: 0.45, G: 0.8, B: 1.0, A: 1 }
+
+  max speed: 2.6
+  perceive radius: 2.4
+  separation radius: 0.8
+
+  separation weight: 1.8
+  cohesion weight: 0.85
+  alignment weight: 1.0
+  wander weight: 0.4
+  containment weight: 0.6
+
+  # Boids flee the mouse: a strongly-weighted Flee force that only kicks in within this radius.
+  mouse avoid radius: 3.0
+  mouse avoid weight: 4.0
+
+  flock origin: !vec { X: -3.0, Y: -1.8, Z: 0 }
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 6
+
+Variables:
+  # World-space mouse position, refreshed each frame the mouse moves (see the `cursor` entity).
+  # Seeded far off-screen so the flock ignores it until the pointer first moves.
+  mouse world: !vec { X: 1000, Y: 1000, Z: 0 }
+
+Expressions:
+  # Each Reynolds rule wrapped as a named expression so the boid's own position/velocity can be
+  # passed in explicitly typed (a template's !entity self id has no resolvable type until it is
+  # instantiated, so the inline-expr form can't infer it — named ArgumentTypes pin it down).
+  separation force:
+    ArgumentTypes: [ vector, vector list, float, float ]
+    ArgumentNames: [ pos, neighbours, radius, max ]
+    ReturnType: vector
+    Expression: "return Separate(pos, neighbours, radius, max);"
+
+  cohesion force:
+    ArgumentTypes: [ vector, vector list, float ]
+    ArgumentNames: [ pos, neighbours, max ]
+    ReturnType: vector
+    Expression: "return Cohesion(pos, neighbours, max);"
+
+  alignment force:
+    ArgumentTypes: [ vector, vector list, float ]
+    ArgumentNames: [ vel, neighbour_vels, max ]
+    ReturnType: vector
+    Expression: "return Alignment(vel, neighbour_vels, max);"
+
+  wander force:
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ vel, max, jitter ]
+    ReturnType: vector
+    Expression: "return Wander(vel, max, jitter);"
+
+  seek centre:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ pos, target, max ]
+    ReturnType: vector
+    Expression: "return Seek(pos, target, max);"
+
+  # Flee the mouse, but only when it is within `radius` — otherwise contribute nothing.
+  avoid mouse:
+    ArgumentTypes: [ vector, vector, float, float ]
+    ArgumentNames: [ pos, mouse, radius, max ]
+    ReturnType: vector
+    Expression: "return Distance(pos, mouse) < radius ? Flee(pos, mouse, max) : new UnityEngine.Vector3(0f, 0f, 0f);"
+
+  # Convert a screen-space pointer position to a world point on the z=0 plane for this orthographic
+  # camera. Self-contained (no Camera.main, which the camera entity isn't tagged for) — derived from
+  # the viewport mapping using the camera's known position and orthographic size.
+  screen to world:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ screen_pos, cam_pos, ortho_size ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Screen ]
+    Expression: |
+      var w = UnityEngine.Screen.width * 1f;
+      var h = UnityEngine.Screen.height * 1f;
+      var aspect = w / h;
+      var x = cam_pos.x + (screen_pos.x / w - 0.5f) * 2f * ortho_size * aspect;
+      var y = cam_pos.y + (screen_pos.y / h - 0.5f) * 2f * ortho_size;
+      return new UnityEngine.Vector3(x, y, 0f);
+
+Templates:
+  boid:
+    Tags: [ boid ]
+    Variables:
+      # `perceive all` clears and repopulates these every scan; the steering rules read them.
+      neighbours: !vec []
+      neighbour vels: !vec []
+      # Current velocity: steering writes it, the `velocity` integrator applies it, and the
+      # Alignment/Wander rules read it back. Seeded non-zero so boids start moving immediately.
+      velocity: !vec { X: 1.5, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var boid size, IsWire: false, Colour: !var boid colour }
+
+      # The missing input made real: scan for all boids in range and fan their positions and
+      # velocities into the blackboard lists the steering rules consume.
+      sensor:
+        Type: perceive all
+        Properties:
+          Tag: boid
+          Radius: !var perceive radius
+          Interval: 0.05
+          Positions: !var neighbours
+          Velocities: !var neighbour vels
+
+      # Blend the three Reynolds rules (plus wander + containment) over those lists.
+      flock:
+        Type: steering
+        Properties:
+          MaxSpeed: !var max speed
+          Output: !var velocity
+          Forces:
+            - Force: !expr
+                Do: separation force
+                With:
+                  - !entity { Id: !parameter self_id, Property: Position }
+                  - !var neighbours
+                  - !var separation radius
+                  - !var max speed
+              Weight: !var separation weight
+            - Force: !expr
+                Do: cohesion force
+                With:
+                  - !entity { Id: !parameter self_id, Property: Position }
+                  - !var neighbours
+                  - !var max speed
+              Weight: !var cohesion weight
+            - Force: !expr
+                Do: alignment force
+                With:
+                  - !var velocity
+                  - !var neighbour vels
+                  - !var max speed
+              Weight: !var alignment weight
+            - Force: !expr
+                Do: wander force
+                With:
+                  - !var velocity
+                  - !var max speed
+                  - 25
+              Weight: !var wander weight
+            - Force: !expr
+                Do: seek centre
+                With:
+                  - !entity { Id: !parameter self_id, Property: Position }
+                  - !vec { X: 0, Y: 0, Z: 0 }
+                  - !var max speed
+              Weight: !var containment weight
+            - Force: !expr
+                Do: avoid mouse
+                With:
+                  - !entity { Id: !parameter self_id, Property: Position }
+                  - !var mouse world
+                  - !var mouse avoid radius
+                  - !var max speed
+              Weight: !var mouse avoid weight
+
+      # Integrate the blended velocity into motion.
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var velocity
+
+Placements:
+  flock:
+    Template: boid
+    # A 6x4 grid that immediately coalesces into a flock under the steering rules.
+    At: !expr
+      ReturnType: vector list
+      Do: 'GridPositions(6, 4, 1.1f, arg0)'
+      With: [ !var flock origin ]
+
+Entities:
+  controls:
+    Behaviours:
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners: [ !gameover ]
+
+  # Tracks the mouse and publishes its world position into the global `mouse world` variable each
+  # frame it moves, which every boid's `avoid mouse` steering force reads to flee the cursor.
+  cursor:
+    Behaviours:
+      track mouse:
+        Type: mouse position trigger
+        Listeners:
+          - { EntityId: cursor, BehaviourId: store mouse }
+      store mouse:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var mouse world
+          Value: !expr
+            Do: screen to world
+            With:
+              - !output mouse_position
+              - !var camera position
+              - !var camera size
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }

@@ -326,6 +326,9 @@ namespace Assembler.Building
 				[typeof(TriggerExitTriggerInfo)] = Entry<TriggerExitTriggerInfo, TriggerExit, PhysicalTriggerData>(
 					(i, ctx) => new TriggerExitTriggerData(i.Id,
 						i.TagsToDetect)),
+				[typeof(TriggerStayTriggerInfo)] = Entry<TriggerStayTriggerInfo, TriggerStay, PhysicalTriggerData>(
+					(i, ctx) => new TriggerStayTriggerData(i.Id,
+						i.TagsToDetect)),
 				[typeof(ConditionGateInfo)] = Entry<ConditionGateInfo, ConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution))),
@@ -369,6 +372,84 @@ namespace Assembler.Building
 							i.CameraDistance.Resolve(res),
 							i.ScreenOffset.Resolve(res),
 							i.FollowOffset.Resolve(res)), i.Listeners.ToListeners(lr, res));
+					}
+					);
+				}),
+				[typeof(CameraShakeInfo)] = Entry<CameraShakeInfo, CameraShake, CameraShakeData>(
+					(i, ctx) => new CameraShakeData(i.Id,
+						i.Force.Resolve(ctx.Resolution),
+						i.Duration.Resolve(ctx.Resolution),
+						i.Velocity.Resolve(ctx.Resolution))),
+				[typeof(CameraNoiseInfo)] = Entry<CameraNoiseInfo, CameraNoise, CameraNoiseData>(
+					(i, ctx) => new CameraNoiseData(i.Id,
+						i.Profile.Resolve(ctx.Resolution),
+						i.Amplitude.Resolve(ctx.Resolution),
+						i.Frequency.Resolve(ctx.Resolution))),
+				[typeof(CameraZoomInfo)] = Entry<CameraZoomInfo, CameraZoom, CameraZoomData>(
+					(i, ctx) => new CameraZoomData(i.Id,
+						i.Width.Resolve(ctx.Resolution),
+						i.Damping.Resolve(ctx.Resolution),
+						i.MinFOV.Resolve(ctx.Resolution),
+						i.MaxFOV.Resolve(ctx.Resolution))),
+				[typeof(CameraOrbitInfo)] = new(typeof(CameraOrbit), (go, info, ctx) =>
+				{
+					var i = (CameraOrbitInfo)info;
+					var b = go.AddComponent<CameraOrbit>();
+					return (b, lr =>
+					{
+						var res = ctx.Resolution;
+
+						IReadOnlyList<Transform> ResolveByEntityTag(string tag) =>
+							lr.GetByEntityTag(tag).Select(x => x.transform).Distinct().ToArray();
+
+						b.Initialise(new CameraOrbitData(i.Id,
+							CameraTargetResolver.Resolve(i.Target, res, ResolveByEntityTag),
+							i.Radius.Resolve(res),
+							i.Height.Resolve(res),
+							i.OrbitSpeed.Resolve(res),
+							i.Damping.Resolve(res),
+							i.Priority.Resolve(res),
+							i.Lens.Resolve(res)), i.Listeners.ToListeners(lr, res));
+					}
+					);
+				}),
+				[typeof(CameraConfinerInfo)] = new(typeof(CameraConfiner), (go, info, ctx) =>
+				{
+					var i = (CameraConfinerInfo)info;
+					var b = go.AddComponent<CameraConfiner>();
+					return (b, lr =>
+					{
+						var res = ctx.Resolution;
+
+						IReadOnlyList<Transform> ResolveByEntityTag(string tag) =>
+							lr.GetByEntityTag(tag).Select(x => x.transform).Distinct().ToArray();
+
+						b.Initialise(new CameraConfinerData(i.Id,
+							CameraTargetResolver.Resolve(i.Bounds, res, ResolveByEntityTag),
+							i.Mode.Resolve(res),
+							i.Damping.Resolve(res),
+							i.Padding.Resolve(res)), i.Listeners.ToListeners(lr, res));
+					}
+					);
+				}),
+				[typeof(CameraGroupInfo)] = new(typeof(CameraGroup), (go, info, ctx) =>
+				{
+					var i = (CameraGroupInfo)info;
+					var b = go.AddComponent<CameraGroup>();
+					return (b, lr =>
+					{
+						var res = ctx.Resolution;
+
+						IReadOnlyList<Transform> ResolveByEntityTag(string tag) =>
+							lr.GetByEntityTag(tag).Select(x => x.transform).Distinct().ToArray();
+
+						b.Initialise(new CameraGroupData(i.Id,
+							i.Tag.Resolve(res),
+							i.Priority.Resolve(res),
+							i.Damping.Resolve(res),
+							i.FramingSize.Resolve(res),
+							i.Lens.Resolve(res),
+							ResolveByEntityTag), i.Listeners.ToListeners(lr, res));
 					}
 					);
 				}),
@@ -526,6 +607,19 @@ namespace Assembler.Building
 						i.TargetPosition.ResolveWritable(ctx.Resolution),
 						i.HasTarget.ResolveWritable(ctx.Resolution),
 						i.LastKnownPosition.ResolveWritable(ctx.Resolution))),
+				[typeof(PerceiveAllInfo)] = Entry<PerceiveAllInfo, PerceiveAll, PerceiveAllData>(
+					(i, ctx) => new PerceiveAllData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						i.Positions.Resolve(ctx.Resolution),
+						i.Ids.Resolve(ctx.Resolution),
+						i.Velocities.Resolve(ctx.Resolution),
+						i.Count.ResolveWritable(ctx.Resolution))),
 				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
 					(i, ctx) => new SteeringData(i.Id,
 						i.Forces.Select(f => new SteeringForce(
@@ -780,8 +874,9 @@ namespace Assembler.Building
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
-					entityTagged.BehaviourId,
-					listenerRegistry.GetByEntityTagAndBehaviourId,
+					entityTagged.BehaviourId is { } behaviourId
+						? tag => listenerRegistry.GetByEntityTagAndBehaviourId(tag, behaviourId)
+						: listenerRegistry.GetByEntityTag,
 					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),

@@ -111,7 +111,7 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"State machine '{id}': Transitions must be a list of {{ from, to, when }} entries.");
 			}
 
-			return list.Value.Select(item =>
+			return list.Items.Select(item =>
 			{
 				if (item is not DictValue d)
 				{

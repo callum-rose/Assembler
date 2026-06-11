@@ -8,6 +8,7 @@
         "Assembler.Parsing",
         "Assembler.Compiler",
         "Assembler.Time",
+        "Unity.Cinemachine",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.InputSystem",
