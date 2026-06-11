@@ -159,7 +159,7 @@ namespace Assembler.Parsing
 				? dict.Value.ToDictionary(kvp => kvp.Key, kvp => (kvp.Value as StringValue)?.Value ?? string.Empty)
 				: new Dictionary<string, string>();
 
-		private static ParameterizableEntityId ResolveNestedEntityId(TransformContext ctx, AssemblerValue value) =>
+		private static ParameterisableEntityId ResolveNestedEntityId(TransformContext ctx, AssemblerValue value) =>
 			value switch
 			{
 				StringValue s => new LiteralEntityId(s.Value),

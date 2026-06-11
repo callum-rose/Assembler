@@ -201,7 +201,7 @@ namespace Assembler.Parsing
 
 		// Builds an EntityPropertySource. A literal id is wired straight through; a !parameter id resolves
 		// immediately if the parameter is already in scope (e.g. self_id during instantiation), otherwise it
-		// stays pending so SubstituteParameters can fill it in later. ParameterizableEntityId.Resolve
+		// stays pending so SubstituteParameters can fill it in later. ParameterisableEntityId.Resolve
 		// encapsulates all three cases.
 		private static ValueSource<T> CreateEntityPropertySource<T>(TransformContext ctx, EntityPropertyRef entityPropertyRef) =>
 			new EntityPropertySource<T>(entityPropertyRef.EntityId.Resolve(ctx.Parameters), entityPropertyRef.Property);

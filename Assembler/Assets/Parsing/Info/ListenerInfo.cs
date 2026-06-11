@@ -8,10 +8,10 @@ namespace Assembler.Parsing.Info
 	}
 
 	/// <summary>Targets a specific behaviour by entity id + behaviour id. <see cref="EntityId"/> is a
-	/// <see cref="ParameterizableEntityId"/>, so an id authored as <c>!parameter &lt;name&gt;</c> stays
+	/// <see cref="ParameterisableEntityId"/>, so an id authored as <c>!parameter &lt;name&gt;</c> stays
 	/// pending until template instantiation resolves it (see <c>TemplateInstantiator.SubstituteListeners</c>).
 	/// By wiring time the id is always a literal, so <see cref="BehaviourDescriptor"/> reads it directly.</summary>
-	public sealed record DirectListenerInfo(ParameterizableEntityId EntityId, string BehaviourId) : ListenerInfo
+	public sealed record DirectListenerInfo(ParameterisableEntityId EntityId, string BehaviourId) : ListenerInfo
 	{
 		public BehaviourDescriptor BehaviourDescriptor => new(EntityId.Id, BehaviourId);
 	}
