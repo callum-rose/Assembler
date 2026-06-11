@@ -30,6 +30,14 @@ namespace Assembler.Voxelization
 		public VoxelScriptLimits ScriptLimits { get; init; } = VoxelScriptLimits.Default;
 
 		public static VoxelizationConfig Default { get; } = new();
+
+		/// <summary>The model id a usage-tracker stage name resolves to, for cost estimation.</summary>
+		public string ModelForStage(string stage) => stage switch
+		{
+			ManifestGenerator.Stage => ManifestModel,
+			ModelPlanner.Stage => PlanningModel,
+			_ => AuthoringModel,
+		};
 	}
 
 	public sealed class VoxelizationException : System.Exception

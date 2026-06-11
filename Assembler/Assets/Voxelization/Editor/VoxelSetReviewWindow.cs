@@ -38,9 +38,12 @@ namespace Assembler.Voxelization.Editor
 		private readonly StringBuilder _log = new();
 		private TokenUsageTracker _usage = new();
 
+		private readonly VoxelizationConfig _config = VoxelizationConfig.Default;
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
 		private Vector2 _scroll;
+		private Vector2 _briefScroll;
+		private Vector2 _manifestScroll;
 		private Vector2 _logScroll;
 
 		[MenuItem("Assembler/Voxel Set Review")]
@@ -110,14 +113,17 @@ namespace Assembler.Voxelization.Editor
 		private void DrawManifest()
 		{
 			EditorGUILayout.LabelField("Game brief (Stage 0 input)", EditorStyles.boldLabel);
+			_briefScroll = EditorGUILayout.BeginScrollView(_briefScroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(120));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_gameBrief = EditorGUILayout.TextArea(_gameBrief, GUILayout.MinHeight(40));
+				_gameBrief = EditorGUILayout.TextArea(_gameBrief, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(BriefPref, _gameBrief);
 				}
 			}
+
+			EditorGUILayout.EndScrollView();
 
 			using (new EditorGUI.DisabledScope(_isRunning || string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_gameBrief)))
 			{
@@ -128,14 +134,17 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			EditorGUILayout.LabelField("Manifest yaml (editable — the scale bible)", EditorStyles.boldLabel);
+			_manifestScroll = EditorGUILayout.BeginScrollView(_manifestScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(240));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_manifestYaml = EditorGUILayout.TextArea(_manifestYaml, GUILayout.MinHeight(80));
+				_manifestYaml = EditorGUILayout.TextArea(_manifestYaml, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(ManifestPref, _manifestYaml);
 				}
 			}
+
+			EditorGUILayout.EndScrollView();
 		}
 
 		private void DrawRunControls()
@@ -255,14 +264,23 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			EditorGUILayout.LabelField("Token usage", EditorStyles.boldLabel);
+			var totalUsd = 0.0;
 			foreach (var stage in snapshot)
 			{
+				var rates = TokenPricing.RatesFor(_config.ModelForStage(stage.Stage));
+				var stageUsd = TokenPricing.EstimateUsd(stage.Tokens, rates);
+				totalUsd += stageUsd;
 				EditorGUILayout.LabelField(
 					$"{stage.Stage}: {stage.Requests} request(s), in {stage.Tokens.InputTokens:n0} " +
 					$"(cache r {stage.Tokens.CacheReadInputTokens:n0} / w {stage.Tokens.CacheCreationInputTokens:n0}), " +
-					$"out {stage.Tokens.OutputTokens:n0}",
+					$"out {stage.Tokens.OutputTokens:n0} — ~${stageUsd:0.000}",
 					EditorStyles.miniLabel);
 			}
+
+			EditorGUILayout.LabelField($"Estimated spend this session: ~${totalUsd:0.000}", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(
+				"Estimated from token usage and published per-model rates — the API does not expose your account's remaining balance.",
+				EditorStyles.miniLabel);
 		}
 
 		private void DrawLog()
@@ -316,7 +334,7 @@ namespace Assembler.Voxelization.Editor
 			try
 			{
 				using var gateway = new AnthropicGateway(_apiKey, _usage);
-				var generator = new ManifestGenerator(gateway, VoxelizationConfig.Default);
+				var generator = new ManifestGenerator(gateway, _config);
 				Log("Generating manifest...");
 				var manifest = await generator.GenerateAsync(_gameBrief, _cts.Token);
 				_manifestYaml = ManifestYaml.Write(manifest);
@@ -417,12 +435,11 @@ namespace Assembler.Voxelization.Editor
 
 		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
 		{
-			var config = VoxelizationConfig.Default;
 			var images = string.IsNullOrWhiteSpace(_imageFolder)
 				? (IReferenceImageSource)NullReferenceImageSource.Instance
 				: new FileReferenceImageSource(_imageFolder);
-			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(config.ScriptLimits));
-			return new SetOrchestrator(gateway, config, images, runner, _usage);
+			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(_config.ScriptLimits));
+			return new SetOrchestrator(gateway, _config, images, runner, _usage);
 		}
 
 		private bool TryParseManifest(out SetManifest manifest)
