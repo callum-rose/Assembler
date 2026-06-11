@@ -1,0 +1,179 @@
+Game:
+  Title: Camera Priority Switching Demo
+  Description: >
+    A player cube driven by the arrow keys, framed by two Cinemachine virtual cameras.
+    Press SPACE to flip the `active camera` variable; each `camera follow` rig binds its
+    Priority to an expression of that variable, so the highest-priority vcam changes at
+    runtime and the camera brain blends between a tight close-up and a wide overview.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Constants:
+  move step: !vec { X: 0.12, Y: 0, Z: 0 }
+  move step left: !vec { X: -0.12, Y: 0, Z: 0 }
+  move step up: !vec { X: 0, Y: 0.12, Z: 0 }
+  move step down: !vec { X: 0, Y: -0.12, Z: 0 }
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+
+Variables:
+  # 0 = tight close-up rig is live, 1 = wide overview rig is live.
+  active camera: !int 0
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "right"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var move step
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "left"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var move step left
+      hold up:
+        Type: key hold trigger
+        Properties:
+          Key: "up"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move up
+      move up:
+        Type: translate
+        Properties:
+          Displacement: !var move step up
+      hold down:
+        Type: key hold trigger
+        Properties:
+          Key: "down"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move down
+      move down:
+        Type: translate
+        Properties:
+          Displacement: !var move step down
+      # Tap SPACE to cycle which camera rig is live.
+      switch key:
+        Type: key down trigger
+        Properties:
+          Key: "space"
+        Listeners:
+          - EntityId: player
+            BehaviourId: cycle camera
+      cycle camera:
+        Type: int variable setter
+        Properties:
+          VariableId: !var active camera
+          Value: !expr
+            Do: '(arg0 + 1) % 2'
+            ArgumentTypes: [ int ]
+            With:
+              - !var active camera
+      # Press Q to quit — the simplest game-over path.
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners:
+          - !gameover
+
+  # Visual landmarks so the zoom change between rigs is obvious.
+  marker a:
+    Position: !vec { X: -8, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 3 }
+          IsWire: false
+          Colour: !colour red
+
+  marker b:
+    Position: !vec { X: 8, Y: 2, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 3 }
+          IsWire: false
+          Colour: !colour blue
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "orthographic"
+          Size: 5
+          DefaultBlend: 0.7
+
+  # Tight close-up: live while `active camera` == 0.
+  camera close:
+    Position: !vec { X: 0, Y: 0, Z: -10 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          Mode: "2d"
+          Priority: !expr
+            Do: 'arg0 == 0 ? 20 : 0'
+            ArgumentTypes: [ int ]
+            With:
+              - !var active camera
+          Lens: 4
+          Damping: 0.6
+          DeadZone: 0.1
+          CameraDistance: 10
+          ScreenOffset: !vec { X: 0, Y: 0 }
+
+  # Wide overview: live while `active camera` == 1.
+  camera wide:
+    Position: !vec { X: 0, Y: 0, Z: -10 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          Mode: "2d"
+          Priority: !expr
+            Do: 'arg0 == 1 ? 20 : 0'
+            ArgumentTypes: [ int ]
+            With:
+              - !var active camera
+          Lens: 12
+          Damping: 0.9
+          DeadZone: 0.0
+          CameraDistance: 10
+          ScreenOffset: !vec { X: 0, Y: 0 }
