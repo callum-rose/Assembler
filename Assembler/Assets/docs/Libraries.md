@@ -783,6 +783,16 @@ Euler rotation that faces from one point toward another in the XY plane (rotatio
 
 **Returns** (Vector3): An euler-angles vector (0, 0, heading) suitable for an entity's Rotation.
 
+### `Vector3 LookRotationXZ(Vector3 from, Vector3 to)`
+Euler rotation that faces from one point toward another in the XZ ground plane — a pure yaw about +Y. The 3D-ground-plane counterpart of LookRotation2D (which is an XY z-roll), matching the forward = (sin yaw, cos yaw) heading convention used elsewhere in the codebase.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | Vector3 | The origin point. |
+| to | Vector3 | The point to aim at. |
+
+**Returns** (Vector3): An euler-angles vector (0, yaw, 0) suitable for an entity's Rotation.
+
 ### `Vector3 Pursue(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
 Seek the target's predicted future position, leading a moving target.
 
@@ -828,6 +838,15 @@ Nudge the current heading by a random jitter, for aimless roaming. Non-determini
 | jitterDegrees | float | Maximum turn this step, in degrees either way. |
 
 **Returns** (Vector3): A velocity of length maxSpeed turned by a random amount.
+
+### `float YawFromDirectionXZ(Vector3 direction)`
+Yaw angle (rotation about +Y) that faces a direction in the XZ ground plane, in degrees. Inverts the engine's heading convention forward = (sin yaw, cos yaw) shared by the steering/drive helpers: yaw 0 looks down +z, yaw 90 down +x. The y component of direction is ignored, so a 3D offset can be passed straight in.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| direction | Vector3 | The direction to face (x and z used, y ignored). Need not be normalized. |
+
+**Returns** (float): The yaw angle in degrees, in [-180, 180] (0 if the direction is flat-zero).
 
 ## `VectorMath`
 First-class 2D/3D vector helpers for descriptor expressions. Registered globally
