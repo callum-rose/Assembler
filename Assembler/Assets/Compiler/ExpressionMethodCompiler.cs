@@ -60,13 +60,19 @@ namespace Assembler.Compiler.Compiler
 			{
 				return CompileInternal(code, returnType, out delegateType, parameters);
 			}
-			catch (ArgumentException ex)
+			catch (CompileException)
 			{
-				// The parser positions every error it raises as a CompileException. A raw ArgumentException
-				// escaping from the Expression factory (e.g. a type mismatch at an unguarded site) carries no
-				// position, so re-throw it as a CompileException to keep the contract callers — the LLM
-				// fix-loop and Tools/check-expression.sh — depend on. There is no token here, so position 0,0.
-				throw new CompileException($"Type conversion failed: {ex.Message}", 0, 0, ex);
+				// Already a positioned compile error (the lexer/parser raised it) — propagate unchanged.
+				throw;
+			}
+			catch (Exception ex)
+			{
+				// The parser positions every error it raises as a CompileException. Anything else escaping
+				// here carries no position — a raw ArgumentException from an Expression factory at an
+				// unguarded site, an InvalidOperationException, or a bare Exception from an internal helper.
+				// Re-throw as a CompileException so the contract callers — the LLM fix-loop and
+				// Tools/check-expression.sh — depend on always holds. There is no token here, so position 0,0.
+				throw new CompileException(ex.Message, 0, 0, ex);
 			}
 		}
 

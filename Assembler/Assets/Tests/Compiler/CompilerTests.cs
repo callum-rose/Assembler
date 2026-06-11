@@ -1871,6 +1871,91 @@ namespace Tests.Compiler
 				() => compiler.CompileFunc<bool, object>("return c ? \"text\" : 1;", "c"));
 			Assert.That(ex.Message, Does.Contain("incompatible"));
 		}
+
+		// --- Control-flow conditions must be boolean (positioned, not a raw ArgumentException) ---
+
+		[Test]
+		public void NonBooleanWhileConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileAction("while (1) { break; }"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void NonBooleanIfConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("if (5) { return 1; } return 0;"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void NonBooleanForConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileAction("for (int i = 0; i; i = i + 1) { break; }"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+		}
+
+		// --- Typo'd namespace/type reports "Unknown identifier", not the ConstantExpression fallback ---
+
+		[Test]
+		public void TypoedStaticCallReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<float>("return Mthf.Abs(-3f);"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+			Assert.That(ex.Message, Does.Contain("Mthf"));
+			Assert.That(ex.Message, Does.Not.Contain("ConstantExpression"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void TypoedBareDottedNameReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<float>("return Mthf.Pi;"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+			Assert.That(ex.Message, Does.Contain("Mthf"));
+		}
+
+		// --- Local-method signatures: positioned errors, and registered types now usable as parameters ---
+
+		[Test]
+		public void LocalMethodUnknownParameterTypeIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>("int f(Bogus b) { return 1; }\nreturn f(0);"));
+			Assert.That(ex.Message, Does.Contain("Bogus"));
+			Assert.That(ex.Message, Does.Contain("not found"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void LocalMethodRegisteredParameterTypeResolves()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(Vector3));
+
+			var func = compiler.CompileFunc<float>("float f(Vector3 v) { return v.x; }\nreturn f(new Vector3(7f, 0f, 0f));");
+
+			Assert.That(func(), Is.EqualTo(7f).Within(1e-4f));
+		}
+
+		[Test]
+		public void LocalMethodMissingClosingBraceIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>("int f() { return 1;\nreturn f();"));
+			Assert.That(ex.Message, Does.Contain("Unbalanced braces"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
 	}
 
 	public class CoercionTarget
