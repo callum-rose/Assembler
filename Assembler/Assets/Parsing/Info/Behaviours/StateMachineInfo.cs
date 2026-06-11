@@ -25,6 +25,9 @@ namespace Assembler.Parsing.Info.Behaviours
 		IReadOnlyList<StateInfo> States,
 		IReadOnlyList<TransitionInfo> Transitions) : BehaviourInfo(Id, Listeners)
 	{
+		public override IEnumerable<ListenerInfo> NestedListeners =>
+			States.SelectMany(s => s.OnEnter.Concat(s.OnExit));
+
 		public static StateMachineInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,

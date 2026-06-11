@@ -115,7 +115,7 @@ UI is built from regular behaviours under `Assets/Behaviours/UI/` (`Assembler.Be
 - **`ui button`** — a clickable button that acts as a trigger (`NotifyListeners` on click); `Label` is re-read each frame.
 - **`ui slider`** — a slider that acts as a trigger, emitting a `value` output whenever it changes.
 
-Prefabs come from a `UiPrefabLibrary` ScriptableObject loaded from `Resources/UI/UiPrefabLibrary`, with typed view components (`UiButtonView`/`UiLabelView`/`UiSliderView` in `UI/Views/`). The `Assembler > UI > Generate UI Prefabs` editor menu regenerates baseline prefabs; restyle them without code changes. `Builder` bootstraps a single `EventSystem` with `InputSystemUIInputModule` (the project is Input System-only) and threads the loaded library through `BehaviourBuildContext`. `GameEntityFactory` pins child sibling order to descriptor order for deterministic layout. See `UiDemo.yaml` and `UiShowcase.yaml`.
+Prefabs come from a `UiPrefabLibrary` ScriptableObject loaded from `Resources/UI/UiPrefabLibrary`, with typed view components (`UiButtonView`/`UiLabelView`/`UiSliderView` in `UI/Views/`). The `Assembler > UI > Generate UI Prefabs` editor menu regenerates baseline prefabs; restyle them without code changes. `Builder` bootstraps a single `EventSystem` with `InputSystemUIInputModule` and threads the loaded library through `BehaviourBuildContext`. (The project uses `activeInputHandler: 2` — both legacy and new Input System APIs are active; the raw key triggers use legacy `UnityEngine.Input`, while `input action` uses the new Input System.) `GameEntityFactory` pins child sibling order to descriptor order for deterministic layout. See `UiDemo.yaml` and `UiShowcase.yaml`.
 
 ### Two-Phase Initialization
 

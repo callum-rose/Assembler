@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using UnityEngine;
 
 namespace Assembler.Voxels.Scripting
@@ -23,6 +24,7 @@ namespace Assembler.Voxels.Scripting
 	{
 		private readonly Dictionary<Vector3Int, Color32> _voxels = new();
 		private readonly VoxelScriptLimits _limits;
+		private readonly CancellationToken _ct;
 		private readonly System.Diagnostics.Stopwatch _stopwatch;
 		private int _opsSinceDeadlineCheck;
 
@@ -30,9 +32,10 @@ namespace Assembler.Voxels.Scripting
 		{
 		}
 
-		public VoxelBuilder(VoxelScriptLimits limits)
+		public VoxelBuilder(VoxelScriptLimits limits, CancellationToken ct = default)
 		{
 			_limits = limits ?? VoxelScriptLimits.Default;
+			_ct = ct;
 			_stopwatch = System.Diagnostics.Stopwatch.StartNew();
 		}
 
@@ -514,8 +517,10 @@ namespace Assembler.Voxels.Scripting
 			_voxels[p] = c;
 
 			// Cooperative deadline check, sampled to keep the Stopwatch read off
-			// the hot path of large fills.
-			if ((++_opsSinceDeadlineCheck & 0x3FFF) == 0 && _stopwatch.Elapsed > _limits.WallClock)
+			// the hot path of large fills. Also checks for external cancellation so
+			// the executor can signal the builder to stop without abandoning the thread.
+			if ((++_opsSinceDeadlineCheck & 0x3FFF) == 0 &&
+				(_ct.IsCancellationRequested || _stopwatch.Elapsed > _limits.WallClock))
 			{
 				throw new VoxelScriptException(
 					$"Script exceeded its wall-clock budget of {_limits.WallClock.TotalSeconds:0.##}s.");
