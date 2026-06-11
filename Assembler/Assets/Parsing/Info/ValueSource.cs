@@ -56,19 +56,19 @@ namespace Assembler.Parsing.Info
 
 	/// <summary>A transform property (position/rotation/scale) sourced from an entity by id via the
 	/// <c>!entity</c> tag (resolved live each read). <typeparamref name="T"/> must be <c>Vector3</c>.
-	/// When the id was written as <c>!parameter &lt;name&gt;</c>, <see cref="EntityIdParameter"/> holds
-	/// that parameter name and <see cref="EntityId"/> is empty until <see cref="SubstituteParameters"/>
-	/// fills in the resolved entity id at template instantiation.</summary>
-	public sealed record EntityPropertySource<T>(string EntityId, EntityProperty Property, string? EntityIdParameter = null)
+	/// <see cref="EntityId"/> is a <see cref="ParameterizableEntityId"/>, so an id written as
+	/// <c>!parameter &lt;name&gt;</c> stays pending until <see cref="SubstituteParameters"/> fills in the
+	/// resolved entity id at template instantiation.</summary>
+	public sealed record EntityPropertySource<T>(ParameterizableEntityId EntityId, EntityProperty Property)
 		: ValueSource<T>
 	{
 		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
-			EntityIdParameter is { } param
-				? ctx.Parameters.TryGetValue(param, out var raw) && raw is StringValue sv
-					? this with { EntityId = sv.Value, EntityIdParameter = null }
-					: throw new ParsingException(
-						$"!entity Id parameter '{param}' is missing or not a string during template instantiation")
-				: this;
+			EntityId.Resolve(ctx.Parameters) switch
+			{
+				LiteralEntityId resolved => this with { EntityId = resolved },
+				var pending => throw new ParsingException(
+					$"!entity Id parameter '{pending.PendingParameter}' is missing or not a string during template instantiation")
+			};
 	}
 
 	/// <summary>A physics property (velocity/angular velocity/position) sourced from an entity's

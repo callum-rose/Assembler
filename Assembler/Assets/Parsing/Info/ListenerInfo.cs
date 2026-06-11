@@ -7,7 +7,14 @@ namespace Assembler.Parsing.Info
 		public IReadOnlyDictionary<string, string> OutputMapping { get; init; } = new Dictionary<string, string>();
 	}
 
-	public sealed record DirectListenerInfo(BehaviourDescriptor BehaviourDescriptor) : ListenerInfo;
+	/// <summary>Targets a specific behaviour by entity id + behaviour id. <see cref="EntityId"/> is a
+	/// <see cref="ParameterizableEntityId"/>, so an id authored as <c>!parameter &lt;name&gt;</c> stays
+	/// pending until template instantiation resolves it (see <c>TemplateInstantiator.SubstituteListeners</c>).
+	/// By wiring time the id is always a literal, so <see cref="BehaviourDescriptor"/> reads it directly.</summary>
+	public sealed record DirectListenerInfo(ParameterizableEntityId EntityId, string BehaviourId) : ListenerInfo
+	{
+		public BehaviourDescriptor BehaviourDescriptor => new(EntityId.Id, BehaviourId);
+	}
 
 	public sealed record EntityTaggedListenerInfo(
 		ValueSource<string> EntityTag,

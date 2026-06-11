@@ -27,7 +27,7 @@ namespace Tests.Resolving
 			new(null!, null!, null!, null!, null, _registry, null!, null!);
 
 		private IWriteValueProvider<Vector3> Resolve(EntityProperty property) =>
-			new EntityPropertySource<Vector3>("entity", property).Resolve(Context()).AsWritable();
+			new EntityPropertySource<Vector3>(new LiteralEntityId("entity"), property).Resolve(Context()).AsWritable();
 
 		[Test]
 		public void ResolvesPositionFromTransform()

@@ -26,7 +26,7 @@ Entities:
 ");
 			var source = PositionSourceOf(info, "follower");
 
-			Assert.AreEqual("leader", source.EntityId);
+			Assert.AreEqual("leader", source.EntityId.Id);
 			Assert.AreEqual(EntityProperty.Position, source.Property);
 		}
 

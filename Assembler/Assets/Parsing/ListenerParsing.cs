@@ -12,8 +12,6 @@ namespace Assembler.Parsing
 	// AssemblerValues (ParseNestedListeners, e.g. a state machine's per-state OnEnter/OnExit hooks).
 	internal static class ListenerParsing
 	{
-		internal const string ParameterEntityIdSentinel = "@param:";
-
 		public static IReadOnlyList<ListenerInfo> GetListeners(TransformContext ctx,
 			BehaviourDto behaviourDto) =>
 			behaviourDto.Listeners
@@ -56,18 +54,13 @@ namespace Assembler.Parsing
 
 					var entityId = l.EntityId switch
 					{
-						ParamRefDto paramRefDto => ctx.Parameters.TryGetValue(paramRefDto.Id ?? string.Empty, out var pv)
-												   && pv is StringValue sv
-							? sv.Value
-							: ParameterEntityIdSentinel + (paramRefDto.Id ?? string.Empty),
-						VarRefDto varRefDto => varRefDto.ResolveValue<string>(ctx.Values),
-						string behaviourId => behaviourId,
+						ParamRefDto paramRefDto => new ParameterEntityId(paramRefDto.Id ?? string.Empty).Resolve(ctx.Parameters),
+						VarRefDto varRefDto => new LiteralEntityId(varRefDto.ResolveValue<string>(ctx.Values)),
+						string behaviourId => new LiteralEntityId(behaviourId),
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
 					};
 
-					var behaviourDescriptor = new BehaviourDescriptor(entityId, l.BehaviourId ?? string.Empty);
-
-					return new DirectListenerInfo(behaviourDescriptor) { OutputMapping = outputs };
+					return new DirectListenerInfo(entityId, l.BehaviourId ?? string.Empty) { OutputMapping = outputs };
 				})
 				.ToArray();
 
@@ -158,7 +151,7 @@ namespace Assembler.Parsing
 
 			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId") ?? NoValue.Instance);
 
-			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId ?? string.Empty)) { OutputMapping = outputs };
+			return new DirectListenerInfo(entityId, behaviourId ?? string.Empty) { OutputMapping = outputs };
 		}
 
 		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue value) =>
@@ -166,15 +159,13 @@ namespace Assembler.Parsing
 				? dict.Value.ToDictionary(kvp => kvp.Key, kvp => (kvp.Value as StringValue)?.Value ?? string.Empty)
 				: new Dictionary<string, string>();
 
-		private static string ResolveNestedEntityId(TransformContext ctx, AssemblerValue value) =>
+		private static ParameterizableEntityId ResolveNestedEntityId(TransformContext ctx, AssemblerValue value) =>
 			value switch
 			{
-				StringValue s => s.Value,
-				ParamRef p => ctx.Parameters.TryGetValue(p.Id, out var pv) && pv is StringValue sv
-					? sv.Value
-					: ParameterEntityIdSentinel + p.Id,
+				StringValue s => new LiteralEntityId(s.Value),
+				ParamRef p => new ParameterEntityId(p.Id).Resolve(ctx.Parameters),
 				VarRef v => ctx.Values.ResolveValue(v.Id) is StringValue sv
-					? sv.Value
+					? new LiteralEntityId(sv.Value)
 					: throw new ParsingException($"Listener EntityId variable '{v.Id}' must resolve to a string."),
 				NoValue => throw new ParsingException(
 					"Listener entry requires an EntityId (with BehaviourId), or an EntityTag / BehaviourTag."),

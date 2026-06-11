@@ -69,8 +69,8 @@ Entities:
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
 
 			// self_id substituted in at instantiation, so the source reads the instance's own transform.
-			Assert.AreEqual("mover", source.EntityId);
-			Assert.IsNull(source.EntityIdParameter);
+			Assert.AreEqual("mover", source.EntityId.Id);
+			Assert.IsNull(source.EntityId.PendingParameter);
 			Assert.AreEqual(EntityProperty.Position, source.Property);
 		}
 
@@ -100,8 +100,8 @@ Entities:
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
 
-			Assert.AreEqual("leader", source.EntityId);
-			Assert.IsNull(source.EntityIdParameter);
+			Assert.AreEqual("leader", source.EntityId.Id);
+			Assert.IsNull(source.EntityId.PendingParameter);
 		}
 
 		[Test]
