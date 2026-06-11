@@ -705,7 +705,7 @@ namespace Assembler.Compiler.Compiler
 					or TokenType.Bool
 					or TokenType.Float
 					or TokenType.Double => ParseVariableDeclaration(),
-				TokenType.LeftBrace => ParseBlock(),
+				TokenType.LeftBrace => ParseBraceBlock(),
 				_ => ParseExpressionStatement()
 			};
 		}
@@ -757,9 +757,34 @@ namespace Assembler.Compiler.Compiler
 			}
 		}
 
-		private Expression ParseBlock()
+		// Restores `name` to what it meant before a block/lambda bound it: the outer binding it shadowed,
+		// or nothing if the name was previously unbound. (TryGetValue yields null for an absent key, and a
+		// present ParameterExpression is never null, so null unambiguously means "was unbound".)
+		private void RestoreVariable(string name, ParameterExpression? previous)
+		{
+			if (previous != null)
+			{
+				_variables[name] = previous;
+			}
+			else
+			{
+				_variables.Remove(name);
+			}
+		}
+
+		// Parses a `{ ... }` block with proper lexical scoping, shared by bare statement blocks and the
+		// bodies of if/else/for/while. Variables declared inside are bound on the resulting Expression.Block
+		// and unwound from the enclosing scope on exit, so they neither leak into the surrounding method
+		// scope (where they'd read as an unassigned default) nor clobber an outer variable they shadow.
+		private Expression ParseBraceBlock()
 		{
 			Expect(TokenType.LeftBrace);
+
+			// Snapshot the name table so block-local declarations vanish on exit and shadowed outer
+			// variables are restored. Only declarations mutate _variables, so a full snapshot/restore is
+			// exactly C# block scoping; assignments leave the table untouched and so survive correctly.
+			var savedScope = new Dictionary<string, ParameterExpression>(_variables);
+			var initialVarCount = _declaredVariables.Count;
 
 			var statements = new List<Expression>();
 
@@ -770,7 +795,36 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.RightBrace);
 
-			return Expression.Block(statements);
+			// Detach the variables declared in this block from the enclosing method scope: they belong to
+			// this block's Expression.Block, not _declaredVariables (which binds the whole method body).
+			var blockVariables = _declaredVariables.GetRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+			_declaredVariables.RemoveRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+
+			_variables.Clear();
+			foreach (var entry in savedScope)
+			{
+				_variables[entry.Key] = entry.Value;
+			}
+
+			// A non-void final statement becomes the block's result value (e.g. an if-branch that returns).
+			if (statements.Count > 0 && statements[^1].Type != typeof(void))
+			{
+				var resultType = statements[^1].Type;
+
+				if (blockVariables.Count > 0)
+				{
+					return Expression.Block(resultType, blockVariables, statements);
+				}
+
+				return statements.Count == 1 ? statements[0] : Expression.Block(resultType, statements);
+			}
+
+			if (blockVariables.Count > 0)
+			{
+				return Expression.Block(blockVariables, statements);
+			}
+
+			return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
 		}
 
 		private Expression ParseIf()
@@ -803,54 +857,7 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseStatementOrBlock()
 		{
-			if (Current.Type == TokenType.LeftBrace)
-			{
-				Expect(TokenType.LeftBrace);
-				var statements = new List<Expression>();
-				var blockVariables = new List<ParameterExpression>();
-
-				// Save current variable count to track new ones
-				var initialVarCount = _declaredVariables.Count;
-
-				while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
-				{
-					statements.Add(ParseStatement());
-				}
-
-				Expect(TokenType.RightBrace);
-
-				// Collect variables declared in this block
-				for (int i = initialVarCount; i < _declaredVariables.Count; i++)
-				{
-					blockVariables.Add(_declaredVariables[i]);
-				}
-
-				// Check if last statement is a return (non-void expression)
-				if (statements.Count > 0)
-				{
-					var lastStmt = statements[^1];
-
-					// If it's a non-void expression, use it as the block result
-					if (lastStmt.Type != typeof(void))
-					{
-						if (blockVariables.Count > 0)
-						{
-							return Expression.Block(lastStmt.Type, blockVariables, statements);
-						}
-
-						return statements.Count == 1 ? lastStmt : Expression.Block(lastStmt.Type, statements);
-					}
-				}
-
-				if (blockVariables.Count > 0)
-				{
-					return Expression.Block(blockVariables, statements);
-				}
-
-				return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
-			}
-
-			return ParseStatement();
+			return Current.Type == TokenType.LeftBrace ? ParseBraceBlock() : ParseStatement();
 		}
 
 		private Expression ParseFor()
@@ -1330,14 +1337,15 @@ namespace Assembler.Compiler.Compiler
 				return BuildCompoundAssign(Expression.Divide, indexAccess, ParseExpression());
 			}
 
+			// Postfix `a[i]++` / `a[i]--`: yield the element's value before incrementing (see ParsePrimary).
 			if (Match(TokenType.Increment))
 			{
-				return Expression.PreIncrementAssign(indexAccess);
+				return Expression.PostIncrementAssign(indexAccess);
 			}
 
 			if (Match(TokenType.Decrement))
 			{
-				return Expression.PreDecrementAssign(indexAccess);
+				return Expression.PostDecrementAssign(indexAccess);
 			}
 
 			return indexAccess;
@@ -2111,12 +2119,17 @@ namespace Assembler.Compiler.Compiler
 					// Create lambda parameter with inferred or default type
 					var lambdaParam = Expression.Parameter(typeof(object), name);
 					_lambdaParameters.Push(lambdaParam);
+
+					// Bind the parameter while parsing the body, then restore whatever the name meant
+					// before — if it shadowed an outer variable, a blind Remove would delete that outer
+					// binding permanently and break later uses of it.
+					_variables.TryGetValue(name, out var shadowed);
 					_variables[name] = lambdaParam;
 
 					var lambdaBody = ParseExpression();
 
 					_lambdaParameters.Pop();
-					_variables.Remove(name);
+					RestoreVariable(name, shadowed);
 
 					return Expression.Lambda(lambdaBody, lambdaParam);
 				}
@@ -2226,14 +2239,17 @@ namespace Assembler.Compiler.Compiler
 					return BuildCompoundAssign(Expression.Divide, AssignTarget(), ParseExpression());
 				}
 
+				// Postfix `x++` / `x--`: the operator follows the operand, so it must yield the value
+				// *before* incrementing (Post*, not Pre*). The difference only shows when the result is
+				// used (e.g. `x++ + 1`); as a bare statement either form mutates `x` the same way.
 				if (Match(TokenType.Increment))
 				{
-					return Expression.PreIncrementAssign(AssignTarget());
+					return Expression.PostIncrementAssign(AssignTarget());
 				}
 
 				if (Match(TokenType.Decrement))
 				{
-					return Expression.PreDecrementAssign(AssignTarget());
+					return Expression.PostDecrementAssign(AssignTarget());
 				}
 
 				if (_variables.TryGetValue(name, out var variable))
@@ -2723,12 +2739,15 @@ namespace Assembler.Compiler.Compiler
 			var lambdaParam = Expression.Parameter(actualType, paramName);
 
 			_lambdaParameters.Push(lambdaParam);
+
+			// Restore any outer variable this parameter shadows on exit (see the inline-lambda site).
+			_variables.TryGetValue(paramName, out var shadowed);
 			_variables[paramName] = lambdaParam;
 
 			var lambdaBody = ParseExpression();
 
 			_lambdaParameters.Pop();
-			_variables.Remove(paramName);
+			RestoreVariable(paramName, shadowed);
 
 			return Expression.Lambda(lambdaBody, lambdaParam);
 		}
