@@ -56,6 +56,28 @@ namespace Assembler.Compiler.Compiler
 
 		public Delegate Compile(string code, Type returnType, out Type delegateType, params (Type type, string name)[] parameters)
 		{
+			try
+			{
+				return CompileInternal(code, returnType, out delegateType, parameters);
+			}
+			catch (CompileException)
+			{
+				// Already a positioned compile error (the lexer/parser raised it) — propagate unchanged.
+				throw;
+			}
+			catch (Exception ex)
+			{
+				// The parser positions every error it raises as a CompileException. Anything else escaping
+				// here carries no position — a raw ArgumentException from an Expression factory at an
+				// unguarded site, an InvalidOperationException, or a bare Exception from an internal helper.
+				// Re-throw as a CompileException so the contract callers — the LLM fix-loop and
+				// Tools/check-expression.sh — depend on always holds. There is no token here, so position 0,0.
+				throw new CompileException(ex.Message, 0, 0, ex);
+			}
+		}
+
+		private Delegate CompileInternal(string code, Type returnType, out Type delegateType, params (Type type, string name)[] parameters)
+		{
 			var lexer = new Lexer(code);
 			var tokens = lexer.Tokenize();
 

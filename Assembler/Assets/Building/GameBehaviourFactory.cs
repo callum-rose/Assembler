@@ -290,7 +290,8 @@ namespace Assembler.Building
 					(i, ctx) => new OnStartTriggerData(i.Id)),
 				[typeof(TimerTriggerInfo)] = Entry<TimerTriggerInfo, TimerTrigger, TimerTriggerData>(
 					(i, ctx) => new TimerTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution))),
+						i.Delay.Resolve(ctx.Resolution),
+						i.AutoStart.Resolve(ctx.Resolution))),
 				[typeof(DeferredTriggerInfo)] = Entry<DeferredTriggerInfo, DeferredTrigger, DeferredTriggerData>(
 					(i, ctx) => new DeferredTriggerData(i.Id,
 						i.Delay.Resolve(ctx.Resolution))),
@@ -539,11 +540,22 @@ namespace Assembler.Building
 						i.SlowingRadius.Resolve(ctx.Resolution),
 						i.Recompute.Resolve(ctx.Resolution),
 						i.Mode.Resolve(ctx.Resolution),
+						i.AgentRadius.Resolve(ctx.Resolution),
 						i.Output.ResolveWritable(ctx.Resolution))),
 				[typeof(GridMoverInfo)] = Entry<GridMoverInfo, GridMover, GridMoverData>(
 					(i, ctx) => new GridMoverData(i.Id,
 						i.Direction.Resolve(ctx.Resolution),
-						i.Speed.Resolve(ctx.Resolution)))
+						i.Speed.Resolve(ctx.Resolution),
+						i.AgentRadius.Resolve(ctx.Resolution))),
+				[typeof(PatrolInfo)] = Entry<PatrolInfo, Patrol, PatrolData>(
+					(i, ctx) => new PatrolData(i.Id,
+						i.Waypoints.Resolve(ctx.Resolution),
+						i.Loop.Resolve(ctx.Resolution),
+						i.PingPong.Resolve(ctx.Resolution),
+						i.ArriveRadius.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution),
+						i.CurrentIndex.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);

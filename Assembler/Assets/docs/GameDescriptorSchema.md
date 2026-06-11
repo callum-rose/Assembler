@@ -236,10 +236,14 @@ Navigation:
     Max: !vec { X:  9, Y:  7 }
   ObstacleTag: wall                              # string — entities with this tag block cells
   Plane: xy                                      # string, optional — "xy" (default) or "xz" (ground plane)
+  Diagonal: true                                 # bool, optional — allow diagonal steps (default true)
+  DefaultAgentRadius: 0                          # float, optional — DEFAULT clearance for agents that don't set their own; inflates obstacles by this many world units (default 0)
 ```
 
 `BoundsDto`: `Min` / `Max` as `!vec` corners. `NavigationDto`: `CellSize`, `Bounds`, `ObstacleTag`,
-`Plane`.
+`Plane`, `Diagonal`, `DefaultAgentRadius`. The `navigate` and `grid mover` behaviours each take their own
+optional `AgentRadius` that overrides this default (omit it to inherit), so differently-sized agents can
+take different paths.
 
 ---
 

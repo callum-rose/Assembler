@@ -124,6 +124,67 @@ Entities:
 		}
 
 		[Test]
+		public void EntityInheritsTemplatePosition()
+		{
+			var yaml = @"
+Templates:
+  base:
+    Position: !vec { X: 5, Y: 3 }
+Entities:
+  entity_a:
+    Template: { Id: base }
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var entity = gameInfo.Entities[0];
+			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
+			Assert.IsNotNull(constantSource, "Expected ConstantSource for inherited position");
+			Assert.AreEqual(new Vector3(5, 3, 0), constantSource.Value);
+		}
+
+		[Test]
+		public void EntityInheritsTemplateRotation()
+		{
+			var yaml = @"
+Templates:
+  base:
+    Rotation: !vec { X: 0, Y: 0, Z: 45 }
+Entities:
+  entity_a:
+    Template: { Id: base }
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var entity = gameInfo.Entities[0];
+			var constantSource = entity.InitialRotation as ConstantSource<Vector3>;
+			Assert.IsNotNull(constantSource, "Expected ConstantSource for inherited rotation");
+			Assert.AreEqual(new Vector3(0, 0, 45), constantSource.Value);
+		}
+
+		[Test]
+		public void EntityExplicitPositionOverridesTemplate()
+		{
+			var yaml = @"
+Templates:
+  base:
+    Position: !vec { X: 5, Y: 3 }
+Entities:
+  entity_a:
+    Template: { Id: base }
+    Position: !vec { X: 10, Y: 0 }
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var entity = gameInfo.Entities[0];
+			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
+			Assert.IsNotNull(constantSource);
+			Assert.AreEqual(new Vector3(10, 0, 0), constantSource.Value);
+		}
+
+		[Test]
 		public void TestTemplateOverride()
 		{
 			var yaml = @"

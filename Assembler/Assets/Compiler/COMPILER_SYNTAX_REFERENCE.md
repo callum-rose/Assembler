@@ -54,6 +54,12 @@ double c = 3.14;      // floating point
 double d = -2.5;      // negative floating point
 ```
 
+A numeric value is implicitly widened to the type it flows into — no explicit cast needed — at
+declarations, assignments, `return`, and the branches of a ternary / `if`-`else`. So `float x = 1;`,
+`return 0.5;` from a float-returning expression, and `cond ? 1 : 2.0` (unified to `double`) all
+compile. An impossible conversion (e.g. `return "text";` into an `int`) is a positioned compile error,
+not a runtime crash.
+
 ### String Literals
 ```csharp
 string text = "Hello World";
@@ -84,6 +90,23 @@ The declared type can be `var`, a built-in keyword (`int`, `float`, `double`, `b
 any **registered/resolvable type** (e.g. a type listed in a descriptor's `RegisterTypes`) — used either
 by simple name or fully qualified, exactly as in `new` expressions.
 
+### Scoping
+
+Variables are **block-scoped**, exactly as in C#. A variable declared inside a `{ ... }` block (or a
+`for`/`while` body, or a `for` initializer) is visible only within that block and goes out of scope
+when it closes — reading it afterwards is an error. Re-declaring a name that is already visible in the
+same or an enclosing scope (including a method/expression parameter, or via a lambda parameter) is a
+compile error. Two *sibling* scopes may each declare the same name, since neither is visible to the
+other:
+```csharp
+for (int i = 0; i < 3; i++) { ... }
+for (int i = 0; i < 4; i++) { ... }   // OK — the first i is out of scope here
+
+int y = 1;
+if (cond) { int y = 2; }              // ERROR — y is already declared in the enclosing scope
+list.Where(y => y > 0);               // ERROR — lambda parameter y shadows the enclosing y
+```
+
 ### Assignment
 ```csharp
 x = 5;              // simple assignment
@@ -100,9 +123,12 @@ x /= 4;             // divide and assign
 
 ### Increment/Decrement
 ```csharp
-x++;                // pre-increment
-x--;                // pre-decrement
+x++;                // postfix increment — yields the value before incrementing
+x--;                // postfix decrement — yields the value before decrementing
 ```
+Only the postfix forms (`x++`, `x--`) are supported; there is no prefix `++x`. As in C#, the
+expression evaluates to the operand's value *before* the change, so `x++ + 1` uses the old `x`. Also
+works on indexer targets (`a[i]++`). As a bare statement the distinction doesn't matter.
 
 ---
 

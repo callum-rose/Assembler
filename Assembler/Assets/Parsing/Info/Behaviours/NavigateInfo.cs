@@ -17,6 +17,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		ValueSource<float> SlowingRadius,
 		ValueSource<float> Recompute,
 		ValueSource<string> Mode,
+		ValueSource<float> AgentRadius,
 		ValueSource<Vector3> Output) : BehaviourInfo(Id, Listeners)
 	{
 		public static NavigateInfo Create(string id,
@@ -36,6 +37,10 @@ namespace Assembler.Parsing.Info.Behaviours
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("SlowingRadius"), 0.75f),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Recompute"), 0.25f),
 				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Mode"), "astar"),
+				// Optional: when unset this resolves to a null provider and the agent falls back to the game-wide
+				// Navigation DefaultAgentRadius at the point of use. Set it to give this agent its own clearance,
+				// so a larger agent routes around obstacles more widely than a smaller one.
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius")),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("Output")));
 		}
 
@@ -48,6 +53,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				SlowingRadius.SubstituteParameters(ctx),
 				Recompute.SubstituteParameters(ctx),
 				Mode.SubstituteParameters(ctx),
+				AgentRadius.SubstituteParameters(ctx),
 				Output.SubstituteParameters(ctx));
 	}
 }

@@ -1,0 +1,943 @@
+Game:
+  Title: Mini Racer 3D
+  Description: >
+    A small 3D arcade racer. The car is a non-kinematic rigidbody with grippy,
+    carving handling that breaks into a drift when pushed: W/S ease its forward speed
+    up to a cruise (and let it coast back down), while A/D steer. The car turns about
+    its rear axle (the arc its wheels trace) rather than spinning about its centre —
+    the rear rolls along its own line while the nose sweeps wide, like a real car. The
+    rear tyres have a grip limit, so flicking the wheel hard at speed breaks the back
+    loose into a slide that recovers once you straighten up, while gentle cornering
+    stays planted. Steering authority builds with speed, so the car steers gently at a
+    crawl and can't pivot on the spot at a standstill. The car is constrained to the
+    ground plane (Y position and pitch/roll are frozen) and is stopped by the outer
+    walls. Drive around the solid central infield, between it and the outer walls. You
+    must pass the far checkpoint and then cross the start/finish line for a lap to
+    count — three laps wins.
+
+    Three computer-controlled rival cars share the track. They run the SAME physics car
+    model as the player (rigidbody, grippy carving, drift) so they turn smoothly and shove
+    each other and the player on contact. The new grid-navigation layer only steers them:
+    at the first step each rival rasterizes the infield and outer walls (tagged `obstacle`)
+    into a walkability grid on the ground (XZ) plane, runs A* to the next corner of the
+    circuit, and writes the heading it wants into the car. An `ai steer` expression turns
+    that heading (plus a repulsion that pushes the car around nearby traffic) into a
+    steering input, feeding the player's own steering so the rival corners at a rate-limited
+    yaw instead of snapping. Each rival loops a four-corner racing line, continuously lapping
+    the infield. The rivals are tagged `rival` (not `car`), so they don't trip the player's
+    finish/checkpoint; only the player's three laps end the game.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#10141c"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# Grid navigation for the AI rivals. The arena is 40 wide; cars drive the ring between
+# the solid central infield and the outer walls. The grid lies on the ground (XZ) plane
+# (Y is up) and treats any entity tagged `obstacle` — the infield and the four walls —
+# as blocked, rasterizing each collider's bounds. A 1-unit cell leaves ~7 cells across
+# the ring channel, plenty of clearance for the A* routes.
+Navigation:
+  CellSize: 1.0
+  Bounds: { Min: !vec { X: -20, Y: 0, Z: -20 }, Max: !vec { X: 20, Y: 0, Z: 20 } }
+  Plane: xz
+  ObstacleTag: obstacle
+
+# Driving is wired to one abstract `move` (vector2) action, not to physical
+# keys. The action emits x (steer, A/D or left/right) and y (throttle, W/S or
+# up/down) every frame. Physical bindings live here, per platform, so the car
+# entity never mentions a keycode.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+    gamepad:
+      move:
+        - "<Gamepad>/leftStick"
+
+Constants:
+  # --- Handling (tune these for feel) ---
+  max speed: 9          # top forward cruise speed (units/sec) the throttle eases toward
+  reverse max: 4        # top reverse speed (units/sec)
+  accel: 2.5            # how fast speed eases toward the throttle target (per sec); also the coast-down rate
+  brake: 5              # stronger easing when the throttle opposes current motion (braking / reversing)
+  turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
+  grip speed: 3         # speed (units/sec) at which steering reaches full authority
+  rear axle offset: 1.0 # distance (units) the turn pivot sits behind the car's centre. The car carves
+                        # about this point (the rear wheels' arc) so the nose sweeps wide and the tail
+                        # tracks, like a real car. Car is 2 long, so ~1.0 puts it at the rear axle;
+                        # larger plants the rear harder and sweeps the nose wider.
+  rear grip: 14         # max sideways acceleration (units/sec^2) the rear tyres can hold before they
+                        # break loose into a drift. Cornering demand is roughly speed * yaw-rate; below
+                        # `rear grip` the rear tracks (clean rear-axle carve), above it the tail slides
+                        # out and recovers at this rate. Lower = breaks loose sooner / drifts more easily.
+
+  lap target: 3
+  car start: !vec { X: 5, Y: 0.35, Z: -17 }
+  follow offset: !vec { X: 0, Y: 9, Z: -14 }
+  camera start: !vec { X: 0, Y: 9, Z: -14 }
+
+  # --- AI rivals ---
+  # The rivals run the SAME physics car model as the player (rigidbody + `drive velocity` +
+  # `steer yaw`); the only difference is that an `ai steer` expression supplies the steering
+  # input instead of the keyboard. So they turn smoothly, drift on grippy limits, and collide
+  # physically with the player and each other — `navigate` only suggests a heading, it no
+  # longer teleports them.
+  rival size: !vec { X: 1, Y: 0.5, Z: 2 }
+  rival roof size: !vec { X: 0.8, Y: 0.45, Z: 1 }
+  rival top speed: 5      # rival forward cruise (units/sec). Under the player's 9 so the
+                          # player can overtake, and below speed*turn-rate = rear grip so the
+                          # AI corners stay planted (no constant spin-outs) while looking smooth.
+  rival throttle: 1       # AI holds full throttle; `drive velocity` eases speed toward the cruise
+  rival slowing: 1.0      # navigate's ease radius (small; the car never parks on a corner)
+  rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
+                          # the route flows through corners rather than aiming into the wall
+  rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
+  avoid lookahead: 7.0    # how far ahead (units) a rival scans for traffic in its path; only cars
+                          # inside this forward corridor trigger an avoidance swerve. ~1.4s at the
+                          # rival cruise, so a rival starts moving over while still well back rather
+                          # than reacting at the last moment
+  avoid radius: 2.5       # corridor half-width (units): a car must be within this of the rival's
+                          # heading line to count as "in the way". Cars are ~1 wide, so this leaves a
+                          # generous margin either side of the line
+  avoid strength: 2.5     # GAIN on the avoidance steer (see `ai steer`): the avoid velocity's
+                          # sideways component (at most ~0.9, and smaller the further off the threat)
+                          # is multiplied by this and added straight onto the nav steer. ~2.5 means a
+                          # car squarely ahead saturates the steering toward the dodge well before
+                          # contact, so the rival commits to going around. Safe to run this high
+                          # because the corridor only ever sees cars AHEAD — it can't swing a rival
+                          # sideways at a car beside or behind it. Lower for lazier, later dodges.
+
+Variables:
+  laps: 0
+  lap armed: false   # set when the checkpoint is crossed; cleared when a lap is scored
+
+Expressions:
+  # The car's new world-space velocity, set fresh every frame. The car turns about its
+  # REAR AXLE (the arc its wheels trace) and breaks into a drift when pushed hard.
+  #
+  # Forward: the live velocity projected onto the heading (signed: negative in reverse)
+  # eases toward a throttle-driven target — `top` forward, the weaker `reverse` back —
+  # at `accel`, or the stronger `brake` rate when the throttle opposes the motion.
+  #
+  # Sideways (the rear-axle carve + drift):
+  #  - Rear-axle carve: a body yawing at rate `omega` about a pivot `b` behind its
+  #    centre needs its centre to move sideways at exactly `omega * b`, so the rear
+  #    axle ends up with zero sideways motion and rolls along its own line — nose
+  #    sweeps wide, tail tracks. `kin` is that target. `omega` is the body's *actual*
+  #    yaw rate, read off the rigidbody after `apply steer` sets it (keep that order).
+  #  - Break-loose drift: the rear tyres can only hold so much grip. `rearSlip` is how
+  #    far the rear is currently sliding sideways beyond the carve; the tyres pull it
+  #    back toward zero by at most `rearGrip * dt` per frame (a force limit, not a
+  #    decay). Gentle cornering (slip injected per frame < that limit) is fully
+  #    cancelled → the rear grips and carves. Crank the wheel at speed and the demand
+  #    exceeds the limit → the slip survives and grows → the tail steps out into a
+  #    drift, recovering at `rearGrip` once you straighten up.
+  # `omega`'s heading: Rotate2D turns +Y into a (sin,cos) pair mapped onto the XZ
+  # plane for the forward unit vector; `right` is its in-plane perpendicular.
+  drive velocity:
+    ArgumentTypes: [ vector, vector, vector, float, float, float, float, float, float, float, float ]
+    ArgumentNames: [ rotation, velocity, angVel, throttle, top, reverse, accel, brake, b, rearGrip, dt ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var right = new Vector3(forward.z, 0f, -forward.x);
+      var current = Dot(velocity, forward);
+      var target = throttle >= 0f ? throttle * top : throttle * reverse;
+      var ease = target * current < 0f ? brake : accel;
+      var next = Lerp(current, target, Clamp01(ease * dt));
+      var kin = angVel.y * b;
+      var rearSlip = Dot(velocity, right) - kin;
+      var maxDelta = rearGrip * dt;
+      var newSlip = rearSlip - Clamp(rearSlip, -maxDelta, maxDelta);
+      var lateral = newSlip + kin;
+      return AddVector(ScaleVector(forward, next), ScaleVector(right, lateral));
+
+  # Desired yaw angular velocity (rad/s about +Y) from the move action's x (steer,
+  # in [-1, 1]). Authority ramps in with the car's total speed (the live velocity's
+  # magnitude) up to `gripSpeed`: at a standstill it's zero — the car cannot pivot
+  # on the spot — and it grows to the full `rate` once rolling. Using total speed
+  # (not just the forward projection) keeps steering responsive whatever direction
+  # the car is moving. The yaw is flipped by the sign of the forward speed so the car
+  # steers the intuitive way in reverse (it backs into the turn) rather than swinging
+  # the wrong way. Set as a steady state every frame so steering is smooth; `drive
+  # velocity` reads this same yaw rate to keep the turn pivot at the rear axle.
+  steer yaw:
+    ArgumentTypes: [ float, vector, vector, float, float ]
+    ArgumentNames: [ steer, rotation, velocity, rate, gripSpeed ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var forwardSpeed = Dot(velocity, forward);
+      var authority = Clamp01(Magnitude(velocity) / gripSpeed);
+      var direction = forwardSpeed < 0f ? -1f : 1f;
+      return new Vector3(0f, steer * rate * authority * direction, 0f);
+
+  next lap:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ current ]
+    ReturnType: int
+    Expression: |
+      return current + 1;
+
+  is finished:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ laps, target ]
+    ReturnType: bool
+    Expression: |
+      return laps >= target;
+
+  # The four corners of the rivals' racing line, in counter-clockwise order matching the
+  # player's direction (south straight heading +X, then up the east side, etc.). Each
+  # corner sits in the middle of the ring channel — between the infield (|X|<=12, |Z|<=14)
+  # and the outer walls (~|axis|=19.5) — at the cars' ride height (Y=0.35). Returned by
+  # index so a rival just tracks an int `wp` that cycles 0->1->2->3->0.
+  corner at:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ i ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      return i == 0 ? new Vector3(16f, 0.35f, -16.5f)
+           : i == 1 ? new Vector3(16f, 0.35f, 16.5f)
+           : i == 2 ? new Vector3(-16f, 0.35f, 16.5f)
+           : new Vector3(-16f, 0.35f, -16.5f);
+
+  # Advance to the next corner, wrapping after the fourth — the rivals lap forever.
+  advance corner:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ i ]
+    ReturnType: int
+    Expression: |
+      return (i + 1) % 4;
+
+  # AI steering input (the rivals' "hands on the wheel"). Returns a steer value in [-1, 1]
+  # that feeds the SAME `steer yaw` the player uses — so a rival turns at the same rate-
+  # limited, speed-gated authority and never snaps. It sums TWO steering pulls:
+  #   navSteer   — turn toward the heading `navigate` wants (its A* route velocity, written to
+  #                the car's `nav dir` variable each frame). When that heading is behind the car
+  #                (forward dot < 0) it commits to a full-lock turn in the nearer direction
+  #                rather than dithering near zero.
+  #   avoidSteer — turn away from the other three cars (player + two rivals, passed in as live
+  #                positions a/b/c) when one lies AHEAD in the rival's path. `AvoidObstacles`
+  #                scans `lookAhead` units along the forward heading and only reacts to cars
+  #                inside the forward corridor (within `avoidRadius` of the heading line), with a
+  #                push that grows as the car closes.
+  # Crucially, the avoidance is consumed as a STEERING term, not a heading blend: we project the
+  # avoid velocity onto the car's own right axis (`Dot(right, avoid)`) and add it, scaled by
+  # `avoidStrength`, straight onto the nav steer. Projecting onto `right` keeps only the in-plane
+  # sideways component — it discards the helper's braking term (a rival can't brake, only steer)
+  # and any out-of-plane noise — and giving it its own gain (rather than diluting it inside a
+  # normalised heading) is what lets a rival actually pull out and go around a car ahead instead
+  # of nosing into it. Because the corridor only ever sees cars AHEAD, a big gain is safe: it
+  # can't swing a rival perpendicular at a car beside or behind it the way a raw `Separate` could.
+  ai steer:
+    ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float, float ]
+    ArgumentNames: [ rotation, self, navDir, a, b, c, lookAhead, avoidRadius, avoidStrength ]
+    ReturnType: float
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      var forward = new Vector3(heading.x, 0f, heading.y);
+      var right = new Vector3(forward.z, 0f, -forward.x);
+      var others = new List<Vector3> { a, b, c };
+      var avoid = AvoidObstacles(self, forward, others, lookAhead, avoidRadius, 1f);
+      var nav = Normalize(new Vector3(navDir.x, 0f, navDir.z));
+      var navFwd = Dot(forward, nav);
+      var navRight = Dot(right, nav);
+      var navSteer = navFwd < 0f ? (navRight >= 0f ? 1f : -1f) : Clamp(navRight * 2f, -1f, 1f);
+      var avoidSteer = Dot(right, avoid) * avoidStrength;
+      return Clamp(navSteer + avoidSteer, -1f, 1f);
+
+Entities:
+  # ---- The drivable car ----------------------------------------------------
+  car:
+    Tags: [ car ]
+    Position: !var car start
+    Rotation: !vec { X: 0, Y: 90, Z: 0 }   # facing +X along the south straight
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 0.5, Z: 2 }
+          Colour: !colour "#e8413c"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 0.5, Z: 2 }
+          IsTrigger: false
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0        # speed is managed directly each frame, not via drag
+          AngularDamping: 0       # yaw is set directly, not accumulated via torque
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }   # pin to the ground plane
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }   # upright; only yaw is free
+
+      # --- Input: one value action drives both throttle (y) and steering (x).
+      # It fires every frame with the current stick/key values (zero included), so
+      # both the velocity and the steering are recomputed each frame — which is why
+      # the car coasts to a stop when the throttle is released.
+      # `apply steer` runs FIRST so it sets the body's yaw rate, then `apply drive`
+      # reads that fresh yaw rate to place the turn pivot at the rear axle (see
+      # `drive velocity`). Keep this order.
+      drive input:
+        Type: input action
+        Properties: { Action: move }
+        Listeners:
+          - EntityId: car
+            BehaviourId: apply steer
+          - EntityId: car
+            BehaviourId: apply drive
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: car, Property: Rotation }
+              - !rigidbody { Id: car, Property: Velocity }
+              - !rigidbody { Id: car, Property: AngularVelocity }
+              - !output y
+              - !var max speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
+      apply steer:
+        Type: set angular velocity
+        Properties:
+          AngularVelocity: !expr
+            Do: steer yaw
+            With:
+              - !output x
+              - !entity { Id: car, Property: Rotation }
+              - !rigidbody { Id: car, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties:
+              Shape: cube
+              Size: !vec { X: 0.8, Y: 0.45, Z: 1 }
+              Colour: !colour "#f7d046"
+
+  # ---- Computer-controlled rivals -----------------------------------------
+  # Each rival is a FULL physics car — same rigidbody + `drive velocity` + `steer yaw` as the
+  # player — so it turns smoothly (rate-limited, speed-gated yaw) and collides physically with
+  # the player and the other rivals. The only thing that differs from the player is the steering
+  # input: an `ai steer` expression replaces the keyboard, aiming the car along the heading
+  # `navigate` suggests (written to `nav dir`) while a `Separate` term steers it around nearby
+  # cars. `navigate` runs with `Output: nav dir`, so it only advises a direction and no longer
+  # moves the car. `wp` cycles the four corners (advanced by `corner gate` near each corner);
+  # rivals are tagged `rival` (not `car`), so they don't trip the player's finish/checkpoint.
+  #
+  # The per-rival wiring is identical apart from start pose, colour, and which three OTHER cars
+  # it avoids (passed to `ai steer` as a/b/c — every car except itself).
+  #
+  # rival 1 — starts on the south straight, heading +X toward the SE corner (wp 0).
+  rival 1:
+    Tags: [ rival ]
+    Position: !vec { X: -2, Y: 0.35, Z: -16.5 }
+    Rotation: !vec { X: 0, Y: 90, Z: 0 }
+    Variables:
+      wp: 0
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }   # heading navigate wants this frame (written below)
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#3aa0e8" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: 1
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+          Output: !var nav dir
+      # apply steer FIRST (sets yaw rate), then apply drive (reads that fresh yaw rate). Same
+      # order the player relies on for the rear-axle carve.
+      control:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: rival 1, BehaviourId: apply steer }
+          - { EntityId: rival 1, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
+        Properties:
+          AngularVelocity: !expr
+            Do: steer yaw
+            With:
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 1, Property: Rotation }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var avoid lookahead
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 1, Property: Rotation }
+              - !rigidbody { Id: rival 1, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 1, Property: Rotation }
+              - !rigidbody { Id: rival 1, Property: Velocity }
+              - !rigidbody { Id: rival 1, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 1, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 1, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 1, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#bfe3ff" }
+
+  # rival 2 — starts on the west straight, heading -Z toward the SW corner (wp 3).
+  rival 2:
+    Tags: [ rival ]
+    Position: !vec { X: -16, Y: 0.35, Z: 0 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Variables:
+      wp: 3
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#e8923a" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: 1
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+          Output: !var nav dir
+      control:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: rival 2, BehaviourId: apply steer }
+          - { EntityId: rival 2, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
+        Properties:
+          AngularVelocity: !expr
+            Do: steer yaw
+            With:
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 2, Property: Rotation }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var avoid lookahead
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 2, Property: Rotation }
+              - !rigidbody { Id: rival 2, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 2, Property: Rotation }
+              - !rigidbody { Id: rival 2, Property: Velocity }
+              - !rigidbody { Id: rival 2, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 2, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 2, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 2, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#ffd9b0" }
+
+  # rival 3 — starts on the north straight, heading -X toward the NW corner (wp 2).
+  rival 3:
+    Tags: [ rival ]
+    Position: !vec { X: 4, Y: 0.35, Z: 16.5 }
+    Rotation: !vec { X: 0, Y: 270, Z: 0 }
+    Variables:
+      wp: 2
+      nav dir: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#c84fd0" }
+      collider:
+        Type: box collider
+        Properties: { Size: !var rival size, IsTrigger: false }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          Mass: 1
+          LinearDamping: 0
+          AngularDamping: 0
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 0, Z: 1 }
+      drive:
+        Type: navigate
+        Properties:
+          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Speed: 1
+          SlowingRadius: !var rival slowing
+          Recompute: !var rival recompute
+          Mode: astar
+          Output: !var nav dir
+      control:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: rival 3, BehaviourId: apply steer }
+          - { EntityId: rival 3, BehaviourId: apply drive }
+      apply steer:
+        Type: set angular velocity
+        Properties:
+          AngularVelocity: !expr
+            Do: steer yaw
+            With:
+              - !expr
+                  Do: ai steer
+                  With:
+                    - !entity { Id: rival 3, Property: Rotation }
+                    - !entity { Id: rival 3, Property: Position }
+                    - !var nav dir
+                    - !entity { Id: car, Property: Position }
+                    - !entity { Id: rival 1, Property: Position }
+                    - !entity { Id: rival 2, Property: Position }
+                    - !var avoid lookahead
+                    - !var avoid radius
+                    - !var avoid strength
+              - !entity { Id: rival 3, Property: Rotation }
+              - !rigidbody { Id: rival 3, Property: Velocity }
+              - !var turn rate
+              - !var grip speed
+      apply drive:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: drive velocity
+            With:
+              - !entity { Id: rival 3, Property: Rotation }
+              - !rigidbody { Id: rival 3, Property: Velocity }
+              - !rigidbody { Id: rival 3, Property: AngularVelocity }
+              - !var rival throttle
+              - !var rival top speed
+              - !var reverse max
+              - !var accel
+              - !var brake
+              - !var rear axle offset
+              - !var rear grip
+              - !clock deltaTime
+      corner clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: rival 3, BehaviourId: corner gate } ]
+      corner gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: rival 3, Property: Position }
+              - !expr { Do: corner at, With: [ !var wp ] }
+              - !var rival reach
+        Listeners: [ { EntityId: rival 3, BehaviourId: advance } ]
+      advance:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wp
+          Value: !expr { Do: advance corner, With: [ !var wp ] }
+    Children:
+      roof:
+        Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
+        Behaviours:
+          body:
+            Type: primitive
+            Properties: { Shape: cube, Size: !var rival roof size, Colour: !colour "#f0c8f4" }
+
+  # ---- Track surface and (solid) infield ----------------------------------
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 0.2, Z: 42 }
+          Colour: !colour "#2b2f38"
+
+  infield:
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 24, Y: 1, Z: 28 }
+          Colour: !colour "#2f7d46"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 24, Y: 1, Z: 28 }
+          IsTrigger: false
+
+  # ---- Outer barrier walls (solid) ----------------------------------------
+  wall north:
+    Position: !vec { X: 0, Y: 0.6, Z: 20 }
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          IsTrigger: false
+  wall south:
+    Position: !vec { X: 0, Y: 0.6, Z: -20 }
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 42, Y: 1.2, Z: 1 }
+          IsTrigger: false
+  wall east:
+    Position: !vec { X: 20, Y: 0.6, Z: 0 }
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          IsTrigger: false
+  wall west:
+    Position: !vec { X: -20, Y: 0.6, Z: 0 }
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          Colour: !colour "#cdd3dc"
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 1.2, Z: 42 }
+          IsTrigger: false
+
+  # ---- Start / finish: painted stripe + trigger volume --------------------
+  finish stripe:
+    Position: !vec { X: 0, Y: 0.12, Z: -17 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.6, Y: 0.06, Z: 6 }
+          Colour: !colour white
+
+  finish:
+    Tags: [ finish ]
+    Position: !vec { X: 0, Y: 1, Z: -17 }
+    Behaviours:
+      gate:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1.5, Y: 2, Z: 6 }
+          IsTrigger: true
+      crossed:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ car ]
+        Listeners:
+          - EntityId: race
+            BehaviourId: lap gate
+
+  # ---- Checkpoint on the far (north) straight: arms the next lap -----------
+  checkpoint stripe:
+    Position: !vec { X: 0, Y: 0.12, Z: 17 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.6, Y: 0.06, Z: 6 }
+          Colour: !colour "#39c6e8"
+
+  checkpoint:
+    Tags: [ checkpoint ]
+    Position: !vec { X: 0, Y: 1, Z: 17 }
+    Behaviours:
+      gate:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1.5, Y: 2, Z: 6 }
+          IsTrigger: true
+      crossed:
+        Type: trigger enter trigger
+        Properties:
+          TagsToDetect: [ car ]
+        Listeners:
+          - EntityId: race
+            BehaviourId: arm lap
+
+  # ---- Race state: lap counter, checkpoint arming, win check --------------
+  race:
+    Behaviours:
+      arm lap:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var lap armed
+          Value: true
+      # A finish crossing only counts when the checkpoint armed the lap.
+      lap gate:
+        Type: condition gate
+        Properties:
+          Condition: !var lap armed
+        Listeners:
+          - EntityId: race
+            BehaviourId: add lap
+          - EntityId: race
+            BehaviourId: disarm lap
+      add lap:
+        Type: int variable setter
+        Properties:
+          VariableId: !var laps
+          Value: !expr
+            Do: next lap
+            With:
+              - !var laps
+      disarm lap:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var lap armed
+          Value: false
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: race
+            BehaviourId: win gate
+      win gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: is finished
+            With:
+              - !var laps
+              - !var lap target
+        Listeners:
+          - !gameover
+
+  # ---- Chase camera --------------------------------------------------------
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.4
+  camera rig:
+    Position: !var camera start
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: car }
+          LookAt: { Tag: car }
+          Mode: "3d"
+          Priority: 10
+          Lens: 60
+          Damping: 0.6
+          FollowOffset: !var follow offset
+
+  # ---- HUD -----------------------------------------------------------------
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+          ReferenceResolution: !vec { X: 1920, Y: 1080 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 8
+              Padding: 24
+              ChildAlignment: upper-left
+        Children:
+          lap count:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.lap, Arguments: [ !var laps, !var lap target ] }
+                  FontSize: 40
+                  PreferredWidth: 500
+                  PreferredHeight: 52
+          hint:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.hint
+                  FontSize: 24
+                  PreferredWidth: 640
+                  PreferredHeight: 34
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.lap: "Lap {0} / {1}"
+      hud.hint: "WASD to drive — pass the blue checkpoint, then the line, 3 times"

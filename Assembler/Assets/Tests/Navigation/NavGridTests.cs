@@ -96,5 +96,41 @@ namespace Tests.Navigation
 			Assert.IsFalse(grid.IsWalkable(new GridCoord(0, 0)));
 			Assert.IsTrue(grid.IsWalkable(new GridCoord(1, 0)));
 		}
+
+		[Test]
+		public void OverlapsWorldRectMatchesGuard()
+		{
+			var grid = NavGrid.Create(0f, 0f, 4f, 4f, 1f);
+
+			Assert.IsFalse(grid.OverlapsWorldRect(-10f, 1f, -6f, 3f), "fully off the left edge does not overlap");
+			Assert.IsTrue(grid.OverlapsWorldRect(1f, 1f, 2f, 2f), "an interior rect overlaps");
+			Assert.IsTrue(grid.OverlapsWorldRect(-2f, 0f, 0.5f, 0.5f), "a rect straddling the edge overlaps");
+		}
+
+		[Test]
+		public void InflateGrowsBlockedRegionByRadius()
+		{
+			var grid = NavGrid.Create(0f, 0f, 5f, 5f, 1f);
+			grid.SetWalkable(new GridCoord(2, 2), false);
+			grid.Inflate(1f);
+
+			// A radius of one cell stamps the orthogonal neighbours (Euclidean disk excludes the diagonals).
+			Assert.IsFalse(grid.IsWalkable(new GridCoord(1, 2)), "left neighbour gets clearance");
+			Assert.IsFalse(grid.IsWalkable(new GridCoord(3, 2)), "right neighbour gets clearance");
+			Assert.IsFalse(grid.IsWalkable(new GridCoord(2, 1)), "lower neighbour gets clearance");
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(1, 1)), "diagonal is outside a one-cell disk");
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(0, 0)), "far cell stays walkable");
+		}
+
+		[Test]
+		public void InflateWithZeroRadiusIsNoOp()
+		{
+			var grid = NavGrid.Create(0f, 0f, 5f, 5f, 1f);
+			grid.SetWalkable(new GridCoord(2, 2), false);
+			grid.Inflate(0f);
+
+			Assert.IsFalse(grid.IsWalkable(new GridCoord(2, 2)), "the blocked cell stays blocked");
+			Assert.IsTrue(grid.IsWalkable(new GridCoord(1, 2)), "no clearance is added at radius 0");
+		}
 	}
 }

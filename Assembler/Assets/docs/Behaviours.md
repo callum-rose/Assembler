@@ -275,7 +275,7 @@ Fires every frame while the named key is held down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | One of "w", "a", "s", "d", "up", "down", "left", "right". |
+| Key | string | Legacy input key name (lowercase), e.g. "w", "space", "escape", "up", "mouse0". |
 
 ## `key down trigger`
 Fires on the frame the named key is pressed down.
@@ -284,7 +284,7 @@ Fires on the frame the named key is pressed down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `key up trigger`
 Fires on the frame the named key is released.
@@ -293,7 +293,7 @@ Fires on the frame the named key is released.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `mouse button trigger`
 Fires on a mouse button event during the selected phase (press, release, or hold).
@@ -485,13 +485,14 @@ No properties.
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
-Fires once after a delay (starts the countdown on entity start, or on Execute).
+Fires once after a delay.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
+| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -775,7 +776,23 @@ Moves an entity to a target along a grid path, recomputed on a cadence.
 | SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
 | Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
 | Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
+| AgentRadius | float | Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths. |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+
+## `patrol`
+Walks an entity through an ordered list of waypoints, advancing on arrival.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Waypoints | List<Vector3> | Ordered world points to patrol (a vector-list !var, an inline list, or an !expr PositionList). |
+| Loop | bool | Wrap back to the first waypoint after the last (patrol loop) instead of stopping. |
+| PingPong | bool | Reverse direction at each end instead of wrapping (overrides Loop). |
+| ArriveRadius | float | Distance at which the current waypoint counts as reached and the index advances. |
+| Speed | float | Movement speed in units per second. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+| CurrentIndex | int | Name of an int variable to publish the current waypoint index into (omit to skip; for FSM/debug). |
 
 ## `grid mover`
 Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
@@ -788,6 +805,7 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
             Properties:
               Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
               Speed: Movement speed in units per second.
+              AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
 
 ### Properties
 
@@ -795,6 +813,7 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
 |------|------|-------------|
 | Direction | Vector3 |  |
 | Speed | float |  |
+| AgentRadius | float |  |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
@@ -1869,4 +1888,5 @@ These behaviours are registered in the parse catalogue and accept the properties
 
 - `grid mover`: property `Direction` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `grid mover`: property `Speed` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
+- `grid mover`: property `AgentRadius` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.

@@ -21,6 +21,7 @@ namespace Assembler.Behaviours.AI
 	///   SlowingRadius: Distance from the goal at which to begin easing to a stop.
 	///   Recompute: Seconds between route recomputes (0 recomputes every frame).
 	///   Mode: "astar" (per-agent path) or "flowfield" (shared-goal field).
+	///   AgentRadius: Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths.
 	///   Output: Name of the vector variable to write the desired velocity into (omit to move the entity directly).
 	/// </remarks>
 	public sealed class Navigate : GameBehaviour<NavigateData>, INeedsGameClock, INeedsNavigation
@@ -41,12 +42,14 @@ namespace Assembler.Behaviours.AI
 			var speed = Data.Speed.Get(ctx);
 			var slowingRadius = Data.SlowingRadius.Get(ctx);
 			var recompute = Data.Recompute.Get(ctx);
+			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
+			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
 
 			_sinceRecompute += Clock.DeltaTime;
 
 			var desired = Data.Mode.Get(ctx) == "flowfield"
-				? FollowFlowField(self, target, speed, slowingRadius)
-				: FollowPath(self, target, speed, slowingRadius, recompute);
+				? FollowFlowField(self, target, speed, slowingRadius, agentRadius)
+				: FollowPath(self, target, speed, slowingRadius, recompute, agentRadius);
 
 			if (Data.Output is NullValueProvider<Vector3>)
 			{
@@ -59,14 +62,14 @@ namespace Assembler.Behaviours.AI
 		}
 
 		// Ease in once inside the slowing radius; otherwise ride the field toward the goal.
-		private Vector3 FollowFlowField(Vector3 self, Vector3 target, float speed, float slowingRadius) =>
+		private Vector3 FollowFlowField(Vector3 self, Vector3 target, float speed, float slowingRadius, float agentRadius) =>
 			Vector3.Distance(self, target) <= slowingRadius
 				? SteeringMath.Arrive(self, target, speed, slowingRadius)
-				: RideField(self, target, speed);
+				: RideField(self, target, speed, agentRadius);
 
-		private Vector3 RideField(Vector3 self, Vector3 target, float speed)
+		private Vector3 RideField(Vector3 self, Vector3 target, float speed, float agentRadius)
 		{
-			var flow = Nav.FlowDirection(self, target);
+			var flow = Nav.FlowDirection(self, target, agentRadius);
 
 			// A zero direction means this cell has no field entry (unreachable, or off the grid). Fall back to
 			// heading straight at the target — matching the astar path's raw-target fallback — rather than
@@ -76,13 +79,14 @@ namespace Assembler.Behaviours.AI
 				: flow * speed;
 		}
 
-		private Vector3 FollowPath(Vector3 self, Vector3 target, float speed, float slowingRadius, float recompute)
+		private Vector3 FollowPath(Vector3 self, Vector3 target, float speed, float slowingRadius, float recompute,
+			float agentRadius)
 		{
 			// An empty _path means no route yet (Nav.Path always yields at least the goal, so a computed route
 			// is never empty) — that, the cadence, or a zero interval triggers a recompute.
 			if (_path.Count == 0 || recompute <= 0f || _sinceRecompute >= recompute)
 			{
-				_path = Nav.Path(self, target);
+				_path = Nav.Path(self, target, agentRadius);
 				// Skip the start cell (path[0] is the agent's own cell) so a fresh route heads to the next
 				// waypoint rather than stalling on the current cell centre — important when recomputing often.
 				_pathIndex = _path.Count > 1 ? 1 : 0;

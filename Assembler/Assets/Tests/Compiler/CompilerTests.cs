@@ -1611,7 +1611,7 @@ namespace Tests.Compiler
 		{
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<List<int>, int>(
-				"""
+				$$"""
 				int total = 0;
 				for (int i = 0; i < list.Count; i++)
 				{
@@ -1684,7 +1684,7 @@ namespace Tests.Compiler
 		{
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<int>(
-				"""
+				$$"""
 				var nums = new List<int> { 4, 5, 6 };
 				return nums[0] + nums[nums.Count - 1];
 				""");
@@ -1764,6 +1764,409 @@ namespace Tests.Compiler
 			Assert.Throws<CompileException>(
 				() => compiler.CompileFunc<TestVector3>("return new TestVector3(1, 2, 3) { 4 };"));
 		}
+
+		// --- Numeric coercion at assignment-shaped sites (issue #230) ---
+
+		[Test]
+		public void ReturnCoercesIntLiteralToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return 1;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void ReturnCoercesDoubleLiteralToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return 0.5;");
+			Assert.That(func(), Is.EqualTo(0.5f));
+		}
+
+		[Test]
+		public void ImplicitReturnCoercesToReturnType()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			// No explicit `return` — the trailing expression statement is the implicit return value.
+			var func = compiler.CompileFunc<float>("1;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void PlainAssignCoercesToVariableType()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("float x = 0f; x = 1; return x;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void DeclarationCoercesInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("float x = 1; return x;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void TernaryUnifiesNumericBranches()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool, double>("return c ? 1 : 2.0;", "c");
+			Assert.That(func(true), Is.EqualTo(1.0));
+			Assert.That(func(false), Is.EqualTo(2.0));
+		}
+
+		[Test]
+		public void IfElseUnifiesNumericBranchTails()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			// Each branch tail is a non-void assignment of a different type (int vs double); the if/else is
+			// built as an Expression.Condition, which previously threw because the arm types didn't match.
+			var func = compiler.CompileFunc<bool, int>(
+				$$"""
+				  int a = 0;
+				  double b = 0.0;
+				  if (c) { a = 1; } else { b = 2.0; }
+				  return a;
+				  """,
+				"c");
+			Assert.That(func(true), Is.EqualTo(1));
+			Assert.That(func(false), Is.EqualTo(0));
+		}
+
+		[Test]
+		public void InstanceMemberAssignmentCoerces()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(CoercionTarget), "CoercionTarget");
+			var func = compiler.CompileFunc<CoercionTarget>(
+				"CoercionTarget t = new CoercionTarget(); t.Value = 3; return t;");
+			Assert.That(func().Value, Is.EqualTo(3f));
+		}
+
+		[Test]
+		public void StaticFieldAssignmentCoerces()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(CoercionTarget), "CoercionTarget");
+			var func = compiler.CompileFunc<float>("CoercionTarget.Shared = 7; return CoercionTarget.Shared;");
+			Assert.That(func(), Is.EqualTo(7f));
+		}
+
+		[Test]
+		public void ImpossibleReturnConversionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("return \"hello\";"));
+			Assert.That(ex.Message, Does.Contain("Cannot convert"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void IncompatibleTernaryBranchesIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<bool, object>("return c ? \"text\" : 1;", "c"));
+			Assert.That(ex.Message, Does.Contain("incompatible"));
+		}
+
+		// Regression tests for issue #231: scoping & codegen correctness bugs that silently
+		// returned wrong values rather than erroring.
+
+		// A variable declared inside a block must stay scoped to that block — it must not leak into the
+		// surrounding method scope and read back as an unassigned default after the block closes.
+		[Test]
+		public void BlockScopedVariableDoesNotLeakAsDefault()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int, int>(
+				$$"""
+				  int total = 0;
+				  if (x > 0)
+				  {
+				      int local = 41;
+				      local = local + 1;
+				      total = local;
+				  }
+				  return total;
+				  """,
+				"x");
+
+			Assert.That(func(1), Is.EqualTo(42));
+		}
+
+		// A variable declared inside a block goes out of scope when the block closes; reading it afterwards
+		// is an error (C# CS0103), not a silent default-valued leak.
+		[Test]
+		public void BlockScopedVariableIsOutOfScopeAfterBlock()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>(
+					$$"""
+					  if (true)
+					  {
+					      int inner = 5;
+					  }
+					  return inner;
+					  """));
+
+			Assert.That(ex.Message, Does.Contain("inner"));
+		}
+
+		// Redeclaring a name already visible in an enclosing scope is a compile error, matching C# (CS0136) —
+		// rather than silently shadowing it and reading back the wrong variable.
+		[Test]
+		public void BlockRedeclaringEnclosingVariableIsCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>(
+					$$"""
+					  int y = 7;
+					  if (true)
+					  {
+					      int y = 100;
+					  }
+					  return y;
+					  """));
+
+			Assert.That(ex.Message, Does.Contain("y").And.Contain("enclosing"));
+		}
+
+		// Two sibling blocks may each declare the same name — neither is in scope for the other, so this is
+		// legal in C# and must keep compiling.
+		[Test]
+		public void SiblingBlocksMayReuseVariableName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int, int>(
+				$$"""
+				  int total = 0;
+				  if (x > 0)
+				  {
+				      int y = 10;
+				      total = total + y;
+				  }
+				  if (x > 0)
+				  {
+				      int y = 20;
+				      total = total + y;
+				  }
+				  return total;
+				  """,
+				"x");
+
+			Assert.That(func(1), Is.EqualTo(30));
+		}
+
+		// Two sibling for-loops may each declare `i`: the first loop's variable is out of scope by the
+		// second, so reusing the name is legal (matches C#).
+		[Test]
+		public void SiblingForLoopsMayReuseLoopVariable()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int>(
+				$$"""
+				  int total = 0;
+				  for (int i = 0; i < 3; i++)
+				  {
+				      total = total + i;
+				  }
+				  for (int i = 0; i < 4; i++)
+				  {
+				      total = total + i;
+				  }
+				  return total;
+				  """);
+
+			// (0+1+2) + (0+1+2+3) = 3 + 6 = 9.
+			Assert.That(func(), Is.EqualTo(9));
+		}
+
+		// A lambda parameter shadowing a name already in scope is a compile error (C# CS0136) — not a
+		// silent overwrite that deletes the outer variable.
+		[Test]
+		public void LambdaParameterShadowingEnclosingVariableIsCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Enumerable));
+
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int, int>(
+					$$"""
+					  var list = new List<int> { 1, 2, 3 };
+					  var bigger = list.Where(x => x > 1).Count();
+					  return bigger + x;
+					  """,
+					"x"));
+
+			Assert.That(ex.Message, Does.Contain("x").And.Contain("enclosing"));
+		}
+
+		// Sibling lambdas in a chain may reuse a parameter name — each parameter is out of scope once its
+		// lambda is parsed — so a non-colliding name keeps working end to end.
+		[Test]
+		public void ChainedLambdasMayReuseParameterName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Enumerable));
+
+			var func = compiler.CompileFunc<int>(
+				$$"""
+				  var list = new List<int> { 1, 2, 3, 4 };
+				  return list.Where(n => n > 1).Select(n => n * 2).Sum();
+				  """);
+
+			// {2,3,4} → {4,6,8} → 18.
+			Assert.That(func(), Is.EqualTo(18));
+		}
+
+		// Postfix `x++` yields the value before incrementing, so `x++ + 1` is `old + 1`, not `(x+1) + 1`.
+		[Test]
+		public void PostfixIncrementYieldsValueBeforeIncrement()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int>(
+				$"""
+				 int x = 1;
+				 return x++ + 1;
+				 """);
+
+			Assert.That(func(), Is.EqualTo(2));
+		}
+
+		// Postfix `x--` likewise yields the pre-decrement value.
+		[Test]
+		public void PostfixDecrementYieldsValueBeforeDecrement()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int>(
+				$"""
+				 int x = 5;
+				 return x-- + 1;
+				 """);
+
+			Assert.That(func(), Is.EqualTo(6));
+		}
+
+		// Postfix increment on an indexer target also yields the pre-increment element value.
+		[Test]
+		public void PostfixIncrementOnIndexYieldsValueBeforeIncrement()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int>(
+				$$"""
+				  var list = new List<int> { 10, 20 };
+				  int taken = list[0]++;
+				  return taken * 100 + list[0];
+				  """);
+
+			// taken is the pre-increment 10; list[0] is now 11 → 10*100 + 11.
+			Assert.That(func(), Is.EqualTo(1011));
+		}
+
+		// --- Control-flow conditions must be boolean (positioned, not a raw ArgumentException) ---
+
+		[Test]
+		public void NonBooleanWhileConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileAction("while (1) { break; }"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void NonBooleanIfConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("if (5) { return 1; } return 0;"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void NonBooleanForConditionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileAction("for (int i = 0; i; i = i + 1) { break; }"));
+			Assert.That(ex.Message, Does.Contain("boolean"));
+		}
+
+		// --- Typo'd namespace/type reports "Unknown identifier", not the ConstantExpression fallback ---
+
+		[Test]
+		public void TypoedStaticCallReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<float>("return Mthf.Abs(-3f);"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+			Assert.That(ex.Message, Does.Contain("Mthf"));
+			Assert.That(ex.Message, Does.Not.Contain("ConstantExpression"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void TypoedBareDottedNameReportsUnknownIdentifier()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<float>("return Mthf.Pi;"));
+			Assert.That(ex.Message, Does.Contain("Unknown identifier"));
+			Assert.That(ex.Message, Does.Contain("Mthf"));
+		}
+
+		// --- Local-method signatures: positioned errors, and registered types now usable as parameters ---
+
+		[Test]
+		public void LocalMethodUnknownParameterTypeIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>("int f(Bogus b) { return 1; }\nreturn f(0);"));
+			Assert.That(ex.Message, Does.Contain("Bogus"));
+			Assert.That(ex.Message, Does.Contain("not found"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void LocalMethodRegisteredParameterTypeResolves()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(Vector3));
+
+			var func = compiler.CompileFunc<float>("float f(Vector3 v) { return v.x; }\nreturn f(new Vector3(7f, 0f, 0f));");
+
+			Assert.That(func(), Is.EqualTo(7f).Within(1e-4f));
+		}
+
+		[Test]
+		public void LocalMethodMissingClosingBraceIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>("int f() { return 1;\nreturn f();"));
+			Assert.That(ex.Message, Does.Contain("Unbalanced braces"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+	}
+
+	public class CoercionTarget
+	{
+		public static float Shared;
+
+		public float Value { get; set; }
 	}
 
 	public class TestVector3

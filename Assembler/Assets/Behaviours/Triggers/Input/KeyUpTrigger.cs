@@ -7,7 +7,7 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// <summary>Fires on the frame the named key is released.</summary>
 	/// <remarks>
 	/// Properties:
-	///   Key: KeyCode name to listen for (e.g. "Space", "W", "Mouse0").
+	///   Key: Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape".
 	/// </remarks>
 	public class KeyUpTrigger : InputTrigger<KeyUpTriggerData>
 	{

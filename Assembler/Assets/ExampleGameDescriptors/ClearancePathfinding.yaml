@@ -1,0 +1,170 @@
+Game:
+  Title: Clearance Pathfinding
+  Description: |
+    Two autonomous agents of different sizes navigate to the same goal — and take
+    DIFFERENT routes because of their per-agent clearance (the AgentRadius feature).
+
+    A single wall barrier splits the arena, with two openings: a NARROW 1-unit gap dead
+    centre, and a WIDE 3-unit gap over to the right. Both agents run `navigate` to the
+    green goal below the barrier, but each rasterizes the `wall` colliders into its own
+    copy of the walkability grid, inflated by its own AgentRadius:
+
+      * The small cyan agent (AgentRadius 0 — it inherits the game-wide Navigation
+        default) fits the narrow gap and goes straight down through the middle.
+      * The large orange agent (AgentRadius 1.0) finds the narrow gap inflated shut —
+        a body that wide can't fit — so A* routes it the long way round, out to the
+        wide gap on the right and back in to the goal.
+
+    The walls are rasterized once and each distinct radius gets its own cached grid, so
+    the two agents legitimately disagree about which cells are passable. The run ends
+    (a win) the moment the large agent — on the longer detour — reaches the goal.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0c0c14"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+# The shared walkability grid: half-unit cells, spanning the arena, treating any entity
+# tagged `wall` as an obstacle. DefaultAgentRadius is the game-wide DEFAULT clearance — the
+# small agent leaves its own AgentRadius unset and so inherits this 0.
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -10, Y: -8 }, Max: !vec { X: 10, Y: 8 } }
+  ObstacleTag: wall
+  DefaultAgentRadius: 0
+
+Constants:
+  small size: !vec { X: 0.5, Y: 0.5, Z: 0.5 }
+  large size: !vec { X: 2.0, Y: 2.0, Z: 2.0 }   # ~diameter of its 1.0 clearance radius
+  goal size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+  wall thickness: 0.6
+  wall colour: !colour { R: 0.45, G: 0.45, B: 0.55, A: 1 }
+  small colour: !colour { R: 0.30, G: 0.80, B: 0.95, A: 1 }
+  large colour: !colour { R: 0.95, G: 0.55, B: 0.20, A: 1 }
+  goal colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+
+  # Barrier segments at y = 0. Gaps left open: narrow x[-0.5, 0.5] (1 unit, centre) and
+  # wide x[5.0, 8.0] (3 units, right). A 1.0 clearance closes the 1-unit gap but leaves
+  # a 1-unit channel through the 3-unit gap, so only the large agent must detour.
+  wall left size: !vec { X: 9.5, Y: 0.6, Z: 1 }   # x[-10, -0.5]
+  wall left position: !vec { X: -5.25, Y: 0, Z: 0 }
+  wall mid size: !vec { X: 4.5, Y: 0.6, Z: 1 }     # x[0.5, 5.0]
+  wall mid position: !vec { X: 2.75, Y: 0, Z: 0 }
+  wall right size: !vec { X: 2.0, Y: 0.6, Z: 1 }   # x[8.0, 10.0]
+  wall right position: !vec { X: 9.0, Y: 0, Z: 0 }
+
+  goal position: !vec { X: 0, Y: -6, Z: 0 }
+  small start: !vec { X: -0.5, Y: 6, Z: 0 }
+  large start: !vec { X: 0.5, Y: 6, Z: 0 }
+  agent speed: 3.0
+  large radius: 1.0
+  reach radius: 0.6
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 9
+
+Entities:
+  # --- The barrier: three wall segments leaving a narrow centre gap and a wide right gap. ---
+  barrier left:
+    Position: !var wall left position
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall left size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall left size, IsTrigger: false }
+
+  barrier mid:
+    Position: !var wall mid position
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall mid size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall mid size, IsTrigger: false }
+
+  barrier right:
+    Position: !var wall right position
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var wall right size, IsWire: false, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !var wall right size, IsTrigger: false }
+
+  # --- The shared goal (not tagged `wall`, so it never blocks the grid). ---
+  goal:
+    Position: !var goal position
+    Tags: [ goal ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var goal size, IsWire: true, Colour: !var goal colour }
+
+  # --- Small agent: no AgentRadius set, so it inherits the Navigation default (0) and
+  #     squeezes through the narrow centre gap straight to the goal. ---
+  small agent:
+    Position: !var small start
+    Tags: [ agent ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var small size, IsWire: false, Colour: !var small colour }
+      solve:
+        Type: navigate
+        Properties:
+          Target: !var goal position
+          Speed: !var agent speed
+          SlowingRadius: 0.6
+          Recompute: 0.5
+          Mode: astar
+
+  # --- Large agent: AgentRadius 1.0 inflates the narrow gap shut, so A* detours it out
+  #     to the wide gap on the right and back to the goal. ---
+  large agent:
+    Position: !var large start
+    Tags: [ agent ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var large size, IsWire: false, Colour: !var large colour }
+      solve:
+        Type: navigate
+        Properties:
+          Target: !var goal position
+          Speed: !var agent speed
+          SlowingRadius: 0.6
+          Recompute: 0.5
+          Mode: astar
+          AgentRadius: !var large radius
+
+      # Win when the large agent (longest path) reaches the goal.
+      arrival clock:
+        Type: every frame trigger
+        Listeners: [ { EntityId: large agent, BehaviourId: arrival check } ]
+      arrival check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Distance(arg0, arg1) < arg2'
+            ArgumentTypes: [ vector, vector, float ]
+            With:
+              - !entity { Id: large agent, Property: Position }
+              - !var goal position
+              - !var reach radius
+        Listeners: [ !gameover ]
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }
