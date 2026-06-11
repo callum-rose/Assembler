@@ -34,10 +34,6 @@ namespace Assembler.Parsing
 			.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
 			.ToArray();
 
-		// The elements of a list property, whether authored untyped (`[a, b]` → ListValue) or with a typed
-		// tag (`!string [a, b]` → TypedListValue). Matching only ListValue silently dropped typed lists to
-		// empty, so e.g. `TagsToDetect: !string [wall, paddle]` detected nothing. Returns null for non-lists.
-
 		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
 		{
 			if (textRef.Arguments.Count == 0)
