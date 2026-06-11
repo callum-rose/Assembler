@@ -17,7 +17,7 @@ namespace Assembler.Behaviours.Camera
 	///   Duration: How long the shake lasts in seconds (default Cinemachine's 0.2). Applied at build.
 	///   Velocity [Vector3]: Direction and base magnitude of the kick (default (0,-1,0), i.e. downward). Scaled by Force.
 	/// </remarks>
-	public sealed class CameraShake : GameBehaviour<CameraShakeData>
+	public sealed class CameraShake : GameBehaviour<CameraShakeData>, IAmExecutable
 	{
 		private CinemachineImpulseSource _source = null!;
 
@@ -28,7 +28,7 @@ namespace Assembler.Behaviours.Camera
 			data.Velocity.UseIfValueExists(v => _source.DefaultVelocity = v);
 		}
 
-		public override void Execute(TriggerContext ctx) =>
+		public void Execute(TriggerContext ctx) =>
 			_source.GenerateImpulseWithForce(Data.Force.ValueOr(ctx, 1f));
 	}
 }

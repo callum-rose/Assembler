@@ -783,6 +783,16 @@ Euler rotation that faces from one point toward another in the XY plane (rotatio
 
 **Returns** (Vector3): An euler-angles vector (0, 0, heading) suitable for an entity's Rotation.
 
+### `Vector3 LookRotationXZ(Vector3 from, Vector3 to)`
+Euler rotation that faces from one point toward another in the XZ ground plane — a pure yaw about +Y. The 3D-ground-plane counterpart of LookRotation2D (which is an XY z-roll), matching the forward = (sin yaw, cos yaw) heading convention used elsewhere in the codebase.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| from | Vector3 | The origin point. |
+| to | Vector3 | The point to aim at. |
+
+**Returns** (Vector3): An euler-angles vector (0, yaw, 0) suitable for an entity's Rotation.
+
 ### `Vector3 Pursue(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
 Seek the target's predicted future position, leading a moving target.
 
@@ -828,6 +838,15 @@ Nudge the current heading by a random jitter, for aimless roaming. Non-determini
 | jitterDegrees | float | Maximum turn this step, in degrees either way. |
 
 **Returns** (Vector3): A velocity of length maxSpeed turned by a random amount.
+
+### `float YawFromDirectionXZ(Vector3 direction)`
+Yaw angle (rotation about +Y) that faces a direction in the XZ ground plane, in degrees. Inverts the engine's heading convention forward = (sin yaw, cos yaw) shared by the steering/drive helpers: yaw 0 looks down +z, yaw 90 down +x. The y component of direction is ignored, so a 3D offset can be passed straight in.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| direction | Vector3 | The direction to face (x and z used, y ignored). Need not be normalized. |
+
+**Returns** (float): The yaw angle in degrees, in [-180, 180] (0 if the direction is flat-zero).
 
 ## `VectorMath`
 First-class 2D/3D vector helpers for descriptor expressions. Registered globally
@@ -886,6 +905,24 @@ Dot product of two vectors.
 
 **Returns** (float): The dot product a · b.
 
+### `Vector3 ForwardFromAngles(Vector3 eulerAngles)`
+Unit forward direction for a full set of euler angles in degrees, equivalent to Quaternion.Euler(eulerAngles) * Vector3.forward. Feed it an entity's Rotation (e.g. !entity { Property: Rotation }) to get its facing direction including pitch and roll, not just yaw.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| eulerAngles | Vector3 | Euler angles in degrees (x = pitch, y = yaw, z = roll). |
+
+**Returns** (Vector3): The unit forward vector.
+
+### `Vector3 ForwardFromYaw(float yawDegrees)`
+Unit forward direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane. Yaw 0 faces +Z, yaw 90 faces +X — matching Quaternion.Euler(0, yaw, 0) * Vector3.forward. Replaces hand-rolled sin/cos forward vectors when building first-person / 3D directional movement ("move forward relative to facing").
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| yawDegrees | float | Yaw angle in degrees (rotation about +Y). |
+
+**Returns** (Vector3): The unit forward vector (sin(yaw), 0, cos(yaw)).
+
 ### `Vector3 IntegratePosition(Vector3 pos, Vector3 vel, float dt)`
 Advance a position by a velocity over an explicit time step.
 
@@ -926,6 +963,24 @@ A unit-length vector in the same direction (zero vector returns zero).
 
 **Returns** (Vector3): The normalized vector.
 
+### `Vector3 RightFromAngles(Vector3 eulerAngles)`
+Unit right direction for a full set of euler angles in degrees, equivalent to Quaternion.Euler(eulerAngles) * Vector3.right. The strafe companion to Vector3).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| eulerAngles | Vector3 | Euler angles in degrees (x = pitch, y = yaw, z = roll). |
+
+**Returns** (Vector3): The unit right vector.
+
+### `Vector3 RightFromYaw(float yawDegrees)`
+Unit right direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane — 90 degrees clockwise of Single), matching Quaternion.Euler(0, yaw, 0) * Vector3.right. Use for strafing.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| yawDegrees | float | Yaw angle in degrees (rotation about +Y). |
+
+**Returns** (Vector3): The unit right vector (cos(yaw), 0, -sin(yaw)).
+
 ### `Vector3 Rotate2D(Vector3 v, float degrees)`
 Rotate a 2D vector (x, y) counter-clockwise about the origin by an angle in degrees. The z component is preserved. Replaces hand-rolled cos/sin rotation matrices in descriptor expressions.
 
@@ -955,4 +1010,13 @@ Subtract one vector from another.
 | b | Vector3 | The subtrahend. |
 
 **Returns** (Vector3): The component-wise difference a - b.
+
+### `Vector3 UpFromAngles(Vector3 eulerAngles)`
+Unit up direction for a full set of euler angles in degrees, equivalent to Quaternion.Euler(eulerAngles) * Vector3.up. Completes the forward/right/up basis alongside Vector3) and Vector3).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| eulerAngles | Vector3 | Euler angles in degrees (x = pitch, y = yaw, z = roll). |
+
+**Returns** (Vector3): The unit up vector.
 

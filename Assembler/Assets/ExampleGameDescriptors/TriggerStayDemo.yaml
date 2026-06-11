@@ -1,0 +1,76 @@
+Game:
+  Title: Trigger Stay Demo
+  Description: |
+    Demonstrates `trigger stay trigger`: every physics frame the player overlaps the green
+    zone, `overlap frames` ticks up. SPACE ends the game. (Nothing is drawn for the counter —
+    inspect the variable while it runs.)
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0d1117"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Variables:
+  overlap frames: 0
+
+Expressions:
+  increment:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ n ]
+    ReturnType: int
+    Expression: "return n + 1;"
+
+Entities:
+  player:
+    Position: !vec { X: 0, Y: 0 }
+    Behaviours:
+      look:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour cyan
+          Size: !vec { X: 1, Y: 1 }
+      hitbox:
+        Type: box collider
+        Properties:
+          IsTrigger: true
+      # A kinematic body so the overlap with the zone raises trigger-stay callbacks.
+      body:
+        Type: rigidbody
+        Properties:
+          IsKinematic: true
+          UseGravity: false
+      quit:
+        Type: key down trigger
+        Properties: { Key: "space" }
+        Listeners:
+          - !gameover
+      overlap:
+        Type: trigger stay trigger
+        Properties:
+          TagsToDetect: [ zone ]
+        Listeners:
+          - EntityId: player
+            BehaviourId: count overlap
+      count overlap:
+        Type: int variable setter
+        Properties:
+          VariableId: !var overlap frames
+          Value: !expr { Do: increment, With: [ !var overlap frames ] }
+
+  zone:
+    Tags: [ zone ]
+    Position: !vec { X: 0, Y: 0 }
+    Behaviours:
+      look:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour { R: 0.2, G: 0.5, B: 0.2 }
+          Size: !vec { X: 2, Y: 2 }
+      hitbox:
+        Type: box collider
+        Properties:
+          IsTrigger: true

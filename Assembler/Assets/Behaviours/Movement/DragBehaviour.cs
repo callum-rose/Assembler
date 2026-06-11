@@ -28,15 +28,12 @@ namespace Assembler.Behaviours.Movement
 			}
 		}
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
-			var decay = Mathf.Exp(-Data.Coefficient.Get(ctx) * Clock.DeltaTime);
-			Data.Velocity.Set(Data.Velocity.Get(ctx) * decay);
+			var decay = Mathf.Exp(-Data.Coefficient.Get() * Clock.DeltaTime);
+			Data.Velocity.Set(Data.Velocity.Get() * decay);
 		}
 	}
 }

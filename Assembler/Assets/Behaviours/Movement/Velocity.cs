@@ -16,14 +16,8 @@ namespace Assembler.Behaviours.Movement
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
-		{
-			transform.position += Data.Velocity.Get(ctx) * Clock.DeltaTime;
-		}
+		internal void Step() => transform.position += Data.Velocity.Get() * Clock.DeltaTime;
 	}
 }

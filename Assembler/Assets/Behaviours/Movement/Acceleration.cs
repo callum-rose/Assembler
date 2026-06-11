@@ -24,24 +24,21 @@ namespace Assembler.Behaviours.Movement
 
 		private Vector3 _velocity;
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
 			var dt = Clock.DeltaTime;
 
 			if (Data.Velocity is not NullValueProvider<Vector3>)
 			{
 				// Shared mode: integrate into the shared velocity variable; leave position to the integrator.
-				Data.Velocity.Set(Data.Velocity.Get(ctx) + Data.Acceleration.Get(ctx) * dt);
+				Data.Velocity.Set(Data.Velocity.Get() + Data.Acceleration.Get() * dt);
 				return;
 			}
 
 			// Standalone mode: integrate a private velocity and move the entity directly.
-			_velocity += Data.Acceleration.Get(ctx) * dt;
+			_velocity += Data.Acceleration.Get() * dt;
 			transform.position += _velocity * dt;
 		}
 	}

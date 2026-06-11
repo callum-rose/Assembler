@@ -23,7 +23,7 @@ namespace Tests.Behaviours
 				limit.Initialise(new SpeedLimitData("s", shared, new ValueProvider<float>(20f)),
 					Array.Empty<Listener>());
 
-				limit.Execute(TriggerContext.Empty);
+				limit.Step();
 
 				var v = shared.Get(TriggerContext.Empty);
 				Assert.AreEqual(20f, v.magnitude, 1e-4f);
@@ -46,7 +46,7 @@ namespace Tests.Behaviours
 				limit.Initialise(new SpeedLimitData("s", shared, new ValueProvider<float>(20f)),
 					Array.Empty<Listener>());
 
-				limit.Execute(TriggerContext.Empty);
+				limit.Step();
 
 				Assert.AreEqual(new Vector3(3f, 4f, 0f), shared.Get(TriggerContext.Empty));
 			}
@@ -89,7 +89,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Vector3>(new Vector3(-5f, -5f, -5f)),
 					new ValueProvider<Vector3>(new Vector3(5f, 5f, 5f))), Array.Empty<Listener>());
 
-				clamp.Execute(TriggerContext.Empty);
+				clamp.Step();
 
 				Assert.AreEqual(new Vector3(5f, -5f, 3f), go.transform.position);
 			}
@@ -115,7 +115,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Vector3>(new Vector3(-5f, -5f, -5f)),
 					new ValueProvider<Vector3>(new Vector3(5f, 5f, 5f))), Array.Empty<Listener>());
 
-				wrap.Execute(TriggerContext.Empty);
+				wrap.Step();
 
 				Assert.AreEqual(new Vector3(-5f, 5f, 2f), go.transform.position);
 			}

@@ -8,9 +8,9 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Displacement: World-space offset to add on each execution.
 	/// </remarks>
-	public class Translate : GameBehaviour<TranslateData>
+	public class Translate : GameBehaviour<TranslateData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			transform.position += Data.Displacement.Get(ctx);
 		}

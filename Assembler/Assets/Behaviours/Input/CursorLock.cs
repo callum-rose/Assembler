@@ -13,11 +13,11 @@ namespace Assembler.Behaviours.Input
 	///   Locked: Whether to lock the cursor to the window centre (default true).
 	///   Visible: Whether the cursor stays visible while locked (default false).
 	/// </remarks>
-	public class CursorLock : GameBehaviour<CursorLockData>
+	public class CursorLock : GameBehaviour<CursorLockData>, IAmExecutable
 	{
 		protected override void OnInitialise(CursorLockData data) => Apply(TriggerContext.Empty);
 
-		public override void Execute(TriggerContext ctx) => Apply(ctx);
+		public void Execute(TriggerContext ctx) => Apply(ctx);
 
 		private void OnDestroy()
 		{

@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Impulse: World-space impulse applied with ForceMode.Impulse (mass-dependent, instantaneous velocity change).
 	/// </remarks>
-	public sealed class AddImpulseBehaviour : GameBehaviour<AddImpulseData>
+	public sealed class AddImpulseBehaviour : GameBehaviour<AddImpulseData>, IAmExecutable
 	{
 		private Rigidbody _rigidbody;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Physics
 			_rigidbody = GetComponent<Rigidbody>();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (_rigidbody == null)
 			{

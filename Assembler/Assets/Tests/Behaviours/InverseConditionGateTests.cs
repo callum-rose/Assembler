@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
-using Assembler.Behaviours.Triggers.Conditionals;
+using Assembler.Behaviours.Gating;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using NUnit.Framework;

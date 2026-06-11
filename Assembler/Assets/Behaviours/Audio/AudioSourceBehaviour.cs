@@ -11,7 +11,7 @@ namespace Assembler.Behaviours.Audio
 	///   PlayOnStart: When true the clip plays automatically when the entity is created.
 	///   Loop: When true the clip loops once started.
 	/// </remarks>
-	public class AudioSourceBehaviour : GameBehaviour<AudioSourceData>
+	public class AudioSourceBehaviour : GameBehaviour<AudioSourceData>, IAmExecutable
 	{
 		private AudioSource _audioSource;
 
@@ -27,7 +27,7 @@ namespace Assembler.Behaviours.Audio
 			}
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			_audioSource.Play();
 		}

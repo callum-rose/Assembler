@@ -1,4 +1,3 @@
-using System;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -38,9 +37,6 @@ namespace Assembler.Behaviours.Triggers.Variables
 				_observable.Changed -= OnVariableChanged;
 			}
 		}
-
-		public override void Execute(TriggerContext ctx) =>
-			throw new Exception($"{nameof(VariableChangedTrigger<T>)} cannot be executed directly.");
 	}
 
 	/// <summary>Fires when an int variable changes. See <see cref="VariableChangedTrigger{T}"/>.</summary>

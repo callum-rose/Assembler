@@ -225,10 +225,10 @@ namespace Assembler.Building.Debug
 		private void ForceGameOver()
 		{
 			var descriptor = new BehaviourDescriptor(GameOverController.EntityId, GameOverController.EndBehaviourId);
-			if (_registry.All.TryGetValue(descriptor, out var end) && end)
+			if (_registry.All.TryGetValue(descriptor, out var end) && end && end is IAmExecutable executableEnd)
 			{
 				// Run the real end-game path so any downstream !gameover listeners fire too.
-				end.Execute(TriggerContext.Empty);
+				executableEnd.Execute(TriggerContext.Empty);
 			}
 			else if (_controller)
 			{
@@ -332,9 +332,11 @@ namespace Assembler.Building.Debug
 
 			GUI.backgroundColor = prevColor;
 
-			if (GUILayout.Button("Fire", GUILayout.Width(50f)))
+			// Only executable behaviours respond to a manual fire; triggers and self-driven behaviours
+			// expose no Execute, so the button would be a no-op (see issue #201).
+			if (behaviour is IAmExecutable executable && GUILayout.Button("Fire", GUILayout.Width(50f)))
 			{
-				behaviour.Execute(TriggerContext.Empty);
+				executable.Execute(TriggerContext.Empty);
 			}
 
 			GUILayout.EndHorizontal();

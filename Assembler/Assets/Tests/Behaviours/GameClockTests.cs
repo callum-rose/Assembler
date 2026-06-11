@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
+using Assembler.Behaviours.Gating;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Rotation;
 using Assembler.Behaviours.Time;
-using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
@@ -87,7 +87,7 @@ namespace Tests.Behaviours
 				velocity.Initialise(new VelocityData("v", new ValueProvider<Vector3>(new Vector3(2f, 0f, 0f))),
 					Array.Empty<Listener>());
 
-				velocity.Execute(TriggerContext.Empty);
+				velocity.Step();
 
 				Assert.AreEqual(new Vector3(1f, 0f, 0f), go.transform.position);
 			}
@@ -109,7 +109,7 @@ namespace Tests.Behaviours
 				velocity.Initialise(new VelocityData("v", new ValueProvider<Vector3>(new Vector3(5f, 5f, 5f))),
 					Array.Empty<Listener>());
 
-				velocity.Execute(TriggerContext.Empty);
+				velocity.Step();
 
 				Assert.AreEqual(Vector3.zero, go.transform.position);
 			}
@@ -130,7 +130,7 @@ namespace Tests.Behaviours
 				velocity.Initialise(new VelocityData("v", new ValueProvider<Vector3>(new Vector3(4f, 0f, 0f))),
 					Array.Empty<Listener>());
 
-				velocity.Execute(TriggerContext.Empty);
+				velocity.Step();
 
 				Assert.AreEqual(new Vector3(1f, 0f, 0f), go.transform.position);
 			}
@@ -155,11 +155,11 @@ namespace Tests.Behaviours
 					Array.Empty<Listener>());
 
 				// Frame 1: v = (0,1,0); pos += v*dt = (0,1,0)
-				acceleration.Execute(TriggerContext.Empty);
+				acceleration.Step();
 				Assert.AreEqual(new Vector3(0f, 1f, 0f), go.transform.position);
 
 				// Frame 2: v = (0,2,0); pos += v*dt = (0,3,0)
-				acceleration.Execute(TriggerContext.Empty);
+				acceleration.Step();
 				Assert.AreEqual(new Vector3(0f, 3f, 0f), go.transform.position);
 			}
 			finally
@@ -181,8 +181,8 @@ namespace Tests.Behaviours
 						NullValueProvider<Vector3>.Instance),
 					Array.Empty<Listener>());
 
-				acceleration.Execute(TriggerContext.Empty);
-				acceleration.Execute(TriggerContext.Empty);
+				acceleration.Step();
+				acceleration.Step();
 
 				Assert.AreEqual(Vector3.zero, go.transform.position);
 			}
@@ -210,7 +210,7 @@ namespace Tests.Behaviours
 					new AccelerationData("a", new ValueProvider<Vector3>(new Vector3(0f, 10f, 0f)), shared),
 					Array.Empty<Listener>());
 
-				acceleration.Execute(TriggerContext.Empty);
+				acceleration.Step();
 
 				// Shared mode: it integrates into the shared velocity but does NOT move the entity.
 				Assert.AreEqual(new Vector3(0f, 10f, 0f), shared.Get(TriggerContext.Empty));
@@ -220,7 +220,7 @@ namespace Tests.Behaviours
 				var velocity = NewBehaviour<Velocity>(go, fake);
 				velocity.Initialise(new VelocityData("v", shared), Array.Empty<Listener>());
 
-				velocity.Execute(TriggerContext.Empty);
+				velocity.Step();
 
 				Assert.AreEqual(new Vector3(0f, 10f, 0f), go.transform.position);
 			}
@@ -244,7 +244,7 @@ namespace Tests.Behaviours
 				var drag = NewBehaviour<DragBehaviour>(go, fake);
 				drag.Initialise(new DragData("d", shared, new ValueProvider<float>(2f)), Array.Empty<Listener>());
 
-				drag.Execute(TriggerContext.Empty);
+				drag.Step();
 
 				// magnitude == 10 * exp(-2 * 0.5) == 10 * exp(-1)
 				Assert.AreEqual(10f * Mathf.Exp(-1f), shared.Get(TriggerContext.Empty).magnitude, 1e-4f);
@@ -288,7 +288,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
 					new ValueProvider<float>(2f)), Array.Empty<Listener>());
 
-				move.Execute(TriggerContext.Empty); // 2 units/s * 0.5s = 1 unit toward (10,0,0)
+				move.Step(); // 2 units/s * 0.5s = 1 unit toward (10,0,0)
 
 				Assert.AreEqual(new Vector3(1f, 0f, 0f), go.transform.position);
 			}
@@ -312,7 +312,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
 					new ValueProvider<float>(100f)), Array.Empty<Listener>()); // step far exceeds remaining 0.5
 
-				move.Execute(TriggerContext.Empty);
+				move.Step();
 
 				Assert.AreEqual(new Vector3(10f, 0f, 0f), go.transform.position);
 			}
@@ -336,7 +336,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Vector3>(new Vector3(10f, 0f, 0f)),
 					new ValueProvider<float>(1f)), Array.Empty<Listener>());
 
-				smooth.Execute(TriggerContext.Empty);
+				smooth.Step();
 
 				// Moved toward the target but nowhere near overshooting it.
 				Assert.Greater(go.transform.position.x, 0f);
@@ -362,7 +362,7 @@ namespace Tests.Behaviours
 					new AngularVelocityData("av", new ValueProvider<Vector3>(new Vector3(0f, 0f, 10f))),
 					Array.Empty<Listener>());
 
-				angular.Execute(TriggerContext.Empty);
+				angular.Step();
 
 				// 10 deg/s * 0.1s = 1 deg about z (small angle, no wrap ambiguity).
 				Assert.AreEqual(1f, go.transform.eulerAngles.z, 1e-3f);
@@ -386,7 +386,7 @@ namespace Tests.Behaviours
 					new AngularVelocityData("av", new ValueProvider<Vector3>(new Vector3(0f, 0f, 90f))),
 					Array.Empty<Listener>());
 
-				angular.Execute(TriggerContext.Empty);
+				angular.Step();
 
 				Assert.AreEqual(Quaternion.identity, go.transform.rotation);
 			}

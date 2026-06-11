@@ -33,8 +33,6 @@ namespace Assembler.Behaviours.Physics
 			data.CentreOfMass.UseIfValueExists(v => _rigidbody.centerOfMass = v);
 		}
 
-		public override void Execute(TriggerContext ctx) { }
-
 		private static RigidbodyConstraints ApplyPositionFreeze(RigidbodyConstraints current, Vector3 freeze)
 		{
 			current &= ~(RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezePositionZ);

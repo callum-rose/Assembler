@@ -80,16 +80,16 @@ namespace Tests.Behaviours
 				out var go);
 
 			go.transform.position = wps[0];
-			patrol.Execute(TriggerContext.Empty);
+			patrol.Step();
 			Assert.AreEqual(1, idx.Get(TriggerContext.Empty));
 
 			go.transform.position = wps[1];
-			patrol.Execute(TriggerContext.Empty);
+			patrol.Step();
 			Assert.AreEqual(2, idx.Get(TriggerContext.Empty));
 
 			// At the final waypoint with Loop off, the index stays put (one-shot path).
 			go.transform.position = wps[2];
-			patrol.Execute(TriggerContext.Empty);
+			patrol.Step();
 			Assert.AreEqual(2, idx.Get(TriggerContext.Empty));
 		}
 
@@ -107,7 +107,7 @@ namespace Tests.Behaviours
 			for (var i = 0; i < 4; i++)
 			{
 				go.transform.position = wps[idx.Get(TriggerContext.Empty) < 0 ? 0 : idx.Get(TriggerContext.Empty)];
-				patrol.Execute(TriggerContext.Empty);
+				patrol.Step();
 				seen.Add(idx.Get(TriggerContext.Empty));
 			}
 
@@ -130,7 +130,7 @@ namespace Tests.Behaviours
 			for (var i = 0; i < 5; i++)
 			{
 				go.transform.position = wps[idx.Get(TriggerContext.Empty)];
-				patrol.Execute(TriggerContext.Empty);
+				patrol.Step();
 				seen.Add(idx.Get(TriggerContext.Empty));
 			}
 
@@ -151,7 +151,7 @@ namespace Tests.Behaviours
 			go.transform.position = wps[0];
 			for (var i = 0; i < 3; i++)
 			{
-				patrol.Execute(TriggerContext.Empty);
+				patrol.Step();
 				Assert.AreEqual(0, idx.Get(TriggerContext.Empty));
 			}
 		}
@@ -164,7 +164,7 @@ namespace Tests.Behaviours
 			var patrol = NewPatrol(Data(new List<Vector3>(), currentIndex: idx), out var go);
 
 			go.transform.position = new Vector3(5, 5, 0);
-			Assert.DoesNotThrow(() => patrol.Execute(TriggerContext.Empty));
+			Assert.DoesNotThrow(() => patrol.Step());
 
 			Assert.AreEqual(new Vector3(5, 5, 0), go.transform.position, "empty route must not move the entity");
 			Assert.AreEqual(0, idx.Get(TriggerContext.Empty));
@@ -181,7 +181,7 @@ namespace Tests.Behaviours
 			go.transform.position = Vector3.zero;
 			for (var i = 0; i < 400; i++)
 			{
-				patrol.Execute(TriggerContext.Empty);
+				patrol.Step();
 			}
 
 			// Reached the final waypoint and eased to a stop near it.
@@ -197,7 +197,7 @@ namespace Tests.Behaviours
 			var patrol = NewPatrol(Data(wps, loop: false, speed: 3f, output: velocity), out var go);
 
 			go.transform.position = Vector3.zero;
-			patrol.Execute(TriggerContext.Empty);
+			patrol.Step();
 
 			// Far from the only waypoint, Arrive runs at full speed straight along +x.
 			Assert.AreEqual(new Vector3(3, 0, 0), velocity.Get(TriggerContext.Empty));

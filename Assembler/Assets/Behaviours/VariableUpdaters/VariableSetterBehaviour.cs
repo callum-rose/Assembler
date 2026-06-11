@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.VariableUpdaters
 	///   VariableId: Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game.
 	///   Value: Source value to assign. Can be a constant, expression, or another variable reference.
 	/// </remarks>
-	public abstract class VariableSetterBehaviour<TValue> : GameBehaviour<VariableSetterData<TValue>>
+	public abstract class VariableSetterBehaviour<TValue> : GameBehaviour<VariableSetterData<TValue>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var value = Data.ValueToGet.Get(ctx);
 			Data.ValueToSet.Set(value);

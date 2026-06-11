@@ -73,9 +73,9 @@ namespace Tests.Behaviours
 		// ---- GameBehaviour.Fired hook (only present under DEBUG_CONSOLE) ----
 
 #if DEBUG_CONSOLE
-		private sealed class FiringBehaviour : GameBehaviour
+		private sealed class FiringBehaviour : GameBehaviour, IAmExecutable
 		{
-			public override void Execute(TriggerContext ctx) { }
+			public void Execute(TriggerContext ctx) { }
 
 			public void FireNow(TriggerContext ctx) => NotifyListeners(ctx);
 		}

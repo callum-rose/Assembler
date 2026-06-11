@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   List: Reference to the target list variable.
 	///   Other: List whose items will be appended to List.
 	/// </remarks>
-	public abstract class ListAddRangeBehaviour<T> : GameBehaviour<ListAddRangeData<T>>
+	public abstract class ListAddRangeBehaviour<T> : GameBehaviour<ListAddRangeData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Data.List.Get(ctx).AddRange(Data.Other.Get(ctx));
 		}

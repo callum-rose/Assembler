@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.Rotation
 	/// Properties:
 	///   Displacement: World-space Euler angle offset (degrees) to add on each execution.
 	/// </remarks>
-	public class Rotate : GameBehaviour<RotateData>
+	public class Rotate : GameBehaviour<RotateData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			transform.Rotate(Data.Displacement.Get(ctx), Space.World);
 		}

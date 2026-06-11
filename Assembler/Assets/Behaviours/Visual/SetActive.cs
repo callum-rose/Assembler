@@ -8,9 +8,9 @@ namespace Assembler.Behaviours.Visual
 	/// Properties:
 	///   Active: Boolean applied to the entity's active state on each Execute; true activates, false deactivates.
 	/// </remarks>
-	public class SetActive : GameBehaviour<SetActiveData>
+	public class SetActive : GameBehaviour<SetActiveData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			gameObject.SetActive(Data.Active.Get(ctx));
 		}
