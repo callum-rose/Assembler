@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Assembler.Behaviours;
-using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Visual;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
@@ -11,14 +10,13 @@ namespace Tests.Behaviours
 {
 	/// <summary>
 	/// Covers the runtime side of `set behaviour enabled` / `toggle behaviour enabled`: each Execute resolves
-	/// its target listeners (reusing <see cref="Listener.ResolveTargets"/>) and writes the target component's
-	/// <c>enabled</c> flag. The targets are non-executable <see cref="Velocity"/> components — confirming that,
-	/// unlike a Listeners: wiring, these behaviours can toggle self-driven behaviours.
+	/// its <see cref="BehaviourTargets"/> and writes the target component's <c>enabled</c> flag. Target
+	/// resolution against the live registry (direct + tag) is exercised by the build-coverage and sandbox
+	/// paths; here the targets are supplied directly.
 	/// </summary>
 	public class BehaviourEnabledTests
 	{
-		private static Listener DirectTarget(GameBehaviour target) =>
-			new DirectListener(target, new Dictionary<string, string>());
+		private sealed class DummyBehaviour : MonoBehaviour { }
 
 		[Test]
 		public void SetBehaviourEnabled_WritesEnabledToEveryTarget()
@@ -28,14 +26,16 @@ namespace Tests.Behaviours
 			var b = new GameObject("b");
 			try
 			{
-				var targetA = a.AddComponent<Velocity>();
-				var targetB = b.AddComponent<Velocity>();
+				var targetA = a.AddComponent<DummyBehaviour>();
+				var targetB = b.AddComponent<DummyBehaviour>();
 				targetA.enabled = true;
 				targetB.enabled = true;
 
 				var behaviour = host.AddComponent<SetBehaviourEnabled>();
-				behaviour.Targets = new List<Listener> { DirectTarget(targetA), DirectTarget(targetB) };
-				behaviour.Initialise(new SetBehaviourEnabledData("set", new ValueProvider<bool>(false)),
+				behaviour.Initialise(
+					new SetBehaviourEnabledData("set",
+						new BehaviourTargets(_ => new Behaviour[] { targetA, targetB }),
+						new ValueProvider<bool>(false)),
 					new List<Listener>());
 
 				behaviour.Execute(TriggerContext.Empty);
@@ -59,14 +59,16 @@ namespace Tests.Behaviours
 			var off = new GameObject("off");
 			try
 			{
-				var enabledTarget = on.AddComponent<Velocity>();
-				var disabledTarget = off.AddComponent<Velocity>();
+				var enabledTarget = on.AddComponent<DummyBehaviour>();
+				var disabledTarget = off.AddComponent<DummyBehaviour>();
 				enabledTarget.enabled = true;
 				disabledTarget.enabled = false;
 
 				var behaviour = host.AddComponent<ToggleBehaviourEnabled>();
-				behaviour.Targets = new List<Listener> { DirectTarget(enabledTarget), DirectTarget(disabledTarget) };
-				behaviour.Initialise(new ToggleBehaviourEnabledData("toggle"), new List<Listener>());
+				behaviour.Initialise(
+					new ToggleBehaviourEnabledData("toggle",
+						new BehaviourTargets(_ => new Behaviour[] { enabledTarget, disabledTarget })),
+					new List<Listener>());
 
 				behaviour.Execute(TriggerContext.Empty);
 

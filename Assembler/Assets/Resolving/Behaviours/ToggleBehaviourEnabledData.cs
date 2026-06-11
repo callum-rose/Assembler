@@ -2,6 +2,9 @@ namespace Assembler.Resolving.Behaviours
 {
 	public sealed class ToggleBehaviourEnabledData : BehaviourData
 	{
-		public ToggleBehaviourEnabledData(string id) : base(id) { }
+		public BehaviourTargets Targets { get; }
+
+		public ToggleBehaviourEnabledData(string id, BehaviourTargets targets) :
+			base(id) => Targets = targets;
 	}
 }

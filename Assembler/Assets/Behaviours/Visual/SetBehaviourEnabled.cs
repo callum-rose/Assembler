@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
@@ -13,22 +11,15 @@ namespace Assembler.Behaviours.Visual
 	/// </remarks>
 	public class SetBehaviourEnabled : GameBehaviour<SetBehaviourEnabledData>, IAmExecutable
 	{
-		// The behaviours to enable/disable, resolved from the Targets: references. Wired by the build factory
-		// (it reuses the listener machinery but does not require the targets to be executable).
-		public IReadOnlyList<Listener> Targets { get; set; } = Array.Empty<Listener>();
-
 		public void Execute(TriggerContext ctx)
 		{
 			var enabled = Data.Enabled.Get(ctx);
 
-			foreach (var listener in Targets)
+			foreach (var target in Data.Targets.Resolve(ctx))
 			{
-				foreach (var target in listener.ResolveTargets(ctx))
+				if (target != null)
 				{
-					if (target != null)
-					{
-						target.enabled = enabled;
-					}
+					target.enabled = enabled;
 				}
 			}
 		}
