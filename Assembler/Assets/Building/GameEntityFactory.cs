@@ -97,8 +97,8 @@ namespace Assembler.Building
 			{
 				transform =
 				{
-					position = entityInfo.InitialPosition.Resolve(context).Get(),
-					rotation = entityInfo.InitialRotation.Resolve(context).Get().FromEuler()
+					position = entityInfo.InitialPosition.Resolve(context).ValueOr(Vector3.zero),
+					rotation = entityInfo.InitialRotation.Resolve(context).ValueOr(Vector3.zero).FromEuler()
 				}
 			};
 
