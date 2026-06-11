@@ -69,6 +69,19 @@ Controls:
     gamepad:
       move:
         - "<Gamepad>/leftStick"
+    # Mobile scheme: the on-screen joystick derives its control path from here.
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]   # joystick → a stick control
+
+  # On-screen touch widgets, rendered only when the active platform is Mobile.
+  # The joystick names the existing `move` action and drives it via the `mobile`
+  # binding above, so it feeds the same throttle/steer pipeline as WASD.
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 360, Y: 360 }
 
 Constants:
   # --- Handling (tune these for feel) ---
