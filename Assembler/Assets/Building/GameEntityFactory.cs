@@ -125,6 +125,8 @@ namespace Assembler.Building
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;
+			gameEntity.Transforms = _entityTransforms;
+			gameEntity.DeregisterBehaviours = _behaviourRegistry.DeregisterEntity;
 
 			// Activate now that GameEntity is configured: its Awake self-registers into the query index.
 			gameObject.SetActive(true);

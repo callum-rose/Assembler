@@ -24,6 +24,13 @@ namespace Assembler.Behaviours
 		/// <summary>The spatial-query index this entity registers into, so it can self-deregister on destruction.</summary>
 		public EntityQueryService? Query { get; set; }
 
+		/// <summary>The transform index this entity is registered in, so it can self-deregister on destruction.</summary>
+		public EntityTransformRegistry? Transforms { get; set; }
+
+		/// <summary>Evicts this entity's behaviours from the runtime <c>BehaviourRegistry</c> on destruction. The registry
+		/// lives in a higher assembly than this type, so the factory wires it as a callback rather than a direct reference.</summary>
+		public Action<string>? DeregisterBehaviours { get; set; }
+
 		// Self-registers into the spatial-query index here (and deregisters in OnDestroy) so the index's lifetime
 		// is owned by the entity rather than the factory. The factory configures Query/Tags/Id while the GameObject
 		// is inactive, then activates it, so all are set by the time Awake runs.
@@ -36,6 +43,12 @@ namespace Assembler.Behaviours
 		{
 			Query?.Unregister(Id);
 			Query = null;
+
+			Transforms?.Unregister(Id);
+			Transforms = null;
+
+			DeregisterBehaviours?.Invoke(Id);
+			DeregisterBehaviours = null;
 
 			VariableScope?.Dispose();
 			VariableScope = null;
