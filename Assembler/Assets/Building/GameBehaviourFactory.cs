@@ -526,6 +526,19 @@ namespace Assembler.Building
 						i.TargetPosition.ResolveWritable(ctx.Resolution),
 						i.HasTarget.ResolveWritable(ctx.Resolution),
 						i.LastKnownPosition.ResolveWritable(ctx.Resolution))),
+				[typeof(PerceiveAllInfo)] = Entry<PerceiveAllInfo, PerceiveAll, PerceiveAllData>(
+					(i, ctx) => new PerceiveAllData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						i.Positions.Resolve(ctx.Resolution),
+						i.Ids.Resolve(ctx.Resolution),
+						i.Velocities.Resolve(ctx.Resolution),
+						i.Count.ResolveWritable(ctx.Resolution))),
 				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
 					(i, ctx) => new SteeringData(i.Id,
 						i.Forces.Select(f => new SteeringForce(

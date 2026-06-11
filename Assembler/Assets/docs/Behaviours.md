@@ -485,13 +485,14 @@ No properties.
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
-Fires once after a delay (starts the countdown on entity start, or on Execute).
+Fires once after a delay.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
+| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -751,6 +752,25 @@ Sensor that scans for the nearest tagged entity and writes the result into black
 | TargetPosition | Vector3 | !var reference to the vector variable that receives the detected entity position. |
 | HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
 | LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
+
+## `perceive all`
+Sensor that scans for every tagged entity in range and writes them into blackboard list variables.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| Positions | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's position. |
+| Ids | List<string> | !var reference to the string-list variable cleared and filled with each detected entity's id. |
+| Velocities | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans). |
+| Count | int | !var reference to the int variable set to the number of entities detected this scan. |
 
 ## `steering`
 Blends a weighted list of steering forces into one velocity each frame.

@@ -85,6 +85,7 @@ namespace Assembler.Parsing
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
 				["state machine"] = StateMachineInfo.Create,
 				["perceive"] = PerceiveInfo.Create,
+				["perceive all"] = PerceiveAllInfo.Create,
 				["steering"] = SteeringInfo.Create,
 				["navigate"] = NavigateInfo.Create,
 				["grid mover"] = GridMoverInfo.Create,
