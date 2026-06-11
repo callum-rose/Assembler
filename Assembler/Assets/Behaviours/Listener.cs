@@ -15,13 +15,22 @@ namespace Assembler.Behaviours
 
 		public abstract void Notify(TriggerContext ctx);
 
+		/// <summary>
+		/// The behaviours this listener currently resolves to, without notifying them. A direct listener
+		/// yields its single target; tagged listeners re-query the live registry against <paramref name="ctx"/>,
+		/// so the set reflects entities present at call time (empty when the tag is absent/unmatched). Used by
+		/// behaviours that act on their targets directly — e.g. enabling/disabling them — rather than executing
+		/// them, so resolved targets need not be <see cref="IAmExecutable"/>. The base resolves to nothing; the
+		/// concrete listener kinds override.
+		/// </summary>
+		public virtual IReadOnlyList<GameBehaviour> ResolveTargets(TriggerContext ctx) => Array.Empty<GameBehaviour>();
+
 		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
 
 #if DEBUG_CONSOLE
 		/// <summary>
-		/// The behaviours this listener currently resolves to. Debug-only graph inspection. Tagged
-		/// listeners resolve against an empty context, so tags that depend on trigger output may not
-		/// resolve; callers should tolerate an empty result or an exception.
+		/// The behaviours this listener currently resolves to. Debug-only graph inspection; resolves against
+		/// an empty context, so tags that depend on trigger output may not resolve.
 		/// </summary>
 		public abstract IEnumerable<GameBehaviour> DebugTargets();
 #endif
@@ -29,24 +38,23 @@ namespace Assembler.Behaviours
 
 	public sealed class DirectListener : Listener
 	{
-		private readonly IAmExecutable _target;
+		private readonly GameBehaviour _target;
 
-		public DirectListener(IAmExecutable target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
+		public DirectListener(GameBehaviour target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_target = target;
 		}
 
-		public override void Notify(TriggerContext ctx) => _target.Execute(Prepare(ctx));
+		// The build wires direct Listeners: targets through the executable guard (see ResolveExecutable), so a
+		// non-executable target fails loudly at build; the guard here is a defensive backstop on that contract.
+		public override void Notify(TriggerContext ctx) =>
+			_target.EnsureExecutable($"targeting behaviour on '{_target.name}'").Execute(Prepare(ctx));
+
+		public override IReadOnlyList<GameBehaviour> ResolveTargets(TriggerContext ctx) =>
+			_target != null ? new[] { _target } : Array.Empty<GameBehaviour>();
 
 #if DEBUG_CONSOLE
-		public override IEnumerable<GameBehaviour> DebugTargets()
-		{
-			// Every IAmExecutable is a GameBehaviour MonoBehaviour.
-			if (_target is GameBehaviour behaviour && behaviour != null)
-			{
-				yield return behaviour;
-			}
-		}
+		public override IEnumerable<GameBehaviour> DebugTargets() => ResolveTargets(TriggerContext.Empty);
 #endif
 	}
 
@@ -82,9 +90,11 @@ namespace Assembler.Behaviours
 			}
 		}
 
+		public override IReadOnlyList<GameBehaviour> ResolveTargets(TriggerContext ctx) =>
+			_resolveTargets(_entityTag.Get(Prepare(ctx)));
+
 #if DEBUG_CONSOLE
-		public override IEnumerable<GameBehaviour> DebugTargets() =>
-			_resolveTargets(_entityTag.Get(TriggerContext.Empty));
+		public override IEnumerable<GameBehaviour> DebugTargets() => ResolveTargets(TriggerContext.Empty);
 #endif
 	}
 
@@ -122,12 +132,14 @@ namespace Assembler.Behaviours
 			}
 		}
 
-#if DEBUG_CONSOLE
-		public override IEnumerable<GameBehaviour> DebugTargets()
+		public override IReadOnlyList<GameBehaviour> ResolveTargets(TriggerContext ctx)
 		{
-			var tag = _behaviourTag.Get(TriggerContext.Empty);
+			var tag = _behaviourTag.Get(Prepare(ctx));
 			return string.IsNullOrEmpty(tag) ? Array.Empty<GameBehaviour>() : _resolveTargets(tag);
 		}
+
+#if DEBUG_CONSOLE
+		public override IEnumerable<GameBehaviour> DebugTargets() => ResolveTargets(TriggerContext.Empty);
 #endif
 	}
 }
