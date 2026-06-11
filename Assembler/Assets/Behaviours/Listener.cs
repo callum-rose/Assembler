@@ -52,28 +52,23 @@ namespace Assembler.Behaviours
 	public sealed class EntityTaggedListener : Listener
 	{
 		private readonly IValueProvider<string> _entityTag;
-		private readonly string? _behaviourId;
-		private readonly Func<string, string, IReadOnlyList<GameBehaviour>> _resolveTargets;
+		private readonly Func<string, IReadOnlyList<GameBehaviour>> _resolveTargets;
 
+		// _resolveTargets already bakes in the behaviour-id filter: when a BehaviourId was authored it
+		// closes over GetByEntityTagAndBehaviourId, and when omitted it is GetByEntityTag (fan out to all
+		// behaviours on entities carrying the tag). The decision is made once at wiring time.
 		public EntityTaggedListener(IValueProvider<string> entityTag,
-			string? behaviourId,
-			Func<string, string, IReadOnlyList<GameBehaviour>> resolveTargets,
+			Func<string, IReadOnlyList<GameBehaviour>> resolveTargets,
 			IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_entityTag = entityTag;
-			_behaviourId = behaviourId;
 			_resolveTargets = resolveTargets;
 		}
 
 		public override void Notify(TriggerContext ctx)
 		{
-			if (_behaviourId == null)
-			{
-				return;
-			}
-
 			var preparedCtx = Prepare(ctx);
-			var targets = _resolveTargets(_entityTag.Get(preparedCtx), _behaviourId);
+			var targets = _resolveTargets(_entityTag.Get(preparedCtx));
 
 			foreach (var behaviour in targets)
 			{
@@ -86,9 +81,7 @@ namespace Assembler.Behaviours
 
 #if DEBUG_CONSOLE
 		public override IEnumerable<GameBehaviour> DebugTargets() =>
-			_behaviourId == null
-				? Array.Empty<GameBehaviour>()
-				: _resolveTargets(_entityTag.Get(TriggerContext.Empty), _behaviourId);
+			_resolveTargets(_entityTag.Get(TriggerContext.Empty));
 #endif
 	}
 

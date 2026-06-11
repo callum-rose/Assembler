@@ -25,18 +25,29 @@ namespace Assembler.Parsing
 			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
 
 		internal static IReadOnlyList<string> ConvertStringList(AssemblerValue? value) =>
-			value is ListValue list
-				? list.Value
+			ListItems(value) is { } items
+				? items
 					.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
 					.ToArray()
 				: Array.Empty<string>();
 
 		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(TransformContext ctx,
 			AssemblerValue? value) =>
-			value is ListValue list
-				? list.Value.Select(item => (IValueSourceArg)
+			ListItems(value) is { } items
+				? items.Select(item => (IValueSourceArg)
 					CreateValueSource<object>(ctx, item)).ToArray()
 				: Array.Empty<IValueSourceArg>();
+
+		// The elements of a list property, whether authored untyped (`[a, b]` → ListValue) or with a typed
+		// tag (`!string [a, b]` → TypedListValue). Matching only ListValue silently dropped typed lists to
+		// empty, so e.g. `TagsToDetect: !string [wall, paddle]` detected nothing. Returns null for non-lists.
+		private static IReadOnlyList<AssemblerValue>? ListItems(AssemblerValue? value) =>
+			value switch
+			{
+				ListValue list => list.Value,
+				TypedListValue typed => typed.Items,
+				_ => null
+			};
 
 		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
 		{

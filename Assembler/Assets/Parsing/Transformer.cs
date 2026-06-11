@@ -278,6 +278,12 @@ namespace Assembler.Parsing
 				throw new ParsingException($"Cannot convert behaviour type '{type}'");
 			}
 
+			if (BehaviourRegistry.ParseOnly.Contains(type))
+			{
+				throw new ParsingException(
+					$"Behaviour '{type}' is recognised but not yet runnable, so it cannot be used in a descriptor.");
+			}
+
 			var props = AssemblerValueConverter.ConvertProps(behaviourDto.Properties);
 
 			var info = factory(id,

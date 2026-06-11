@@ -770,8 +770,9 @@ namespace Assembler.Building
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
-					entityTagged.BehaviourId,
-					listenerRegistry.GetByEntityTagAndBehaviourId,
+					entityTagged.BehaviourId is { } behaviourId
+						? tag => listenerRegistry.GetByEntityTagAndBehaviourId(tag, behaviourId)
+						: listenerRegistry.GetByEntityTag,
 					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),

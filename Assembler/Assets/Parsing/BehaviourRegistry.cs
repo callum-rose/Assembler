@@ -16,6 +16,24 @@ namespace Assembler.Parsing
 
 	public static class BehaviourRegistry
 	{
+		/// <summary>
+		/// Behaviours that <see cref="All"/> can parse but that have no runtime builder yet — they are
+		/// recognised vocabulary but not runnable. The transformer rejects them at <em>parse</em> time with
+		/// a descriptor-vocabulary message, instead of letting them die downstream at instantiate with a CLR
+		/// type name (e.g. <c>ArgumentException: Unsupported behaviour info type 'WhenAllInfo'</c>).
+		/// <c>BehaviourRegistryParseOnlyTests</c> asserts this set exactly accounts for the gap between
+		/// <see cref="All"/> and <c>GameBehaviourFactory</c>'s builders, so it can't silently drift.
+		/// Making any of these runnable is tracked separately as a feature; do that, add a builder, then
+		/// remove it from this set.
+		/// </summary>
+		public readonly static HashSet<string> ParseOnly = new()
+		{
+			"condition",
+			"trigger stay trigger",
+			"when all",
+			"when any",
+		};
+
 		public readonly static IReadOnlyDictionary<string, BehaviourFactory> All =
 			new Dictionary<string, BehaviourFactory>
 			{
