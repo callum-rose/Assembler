@@ -17,16 +17,6 @@ namespace Assembler.Behaviours
 
 		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
 
-		/// <summary>Casts a resolved target to <see cref="IAmExecutable"/>, throwing a descriptive error when it
-		/// is not — i.e. when a listener resolves to a trigger or self-driven behaviour that does nothing when
-		/// invoked. Tagged listeners resolve targets dynamically, so this guard runs at notify time.</summary>
-		protected static IAmExecutable RequireExecutable(GameBehaviour behaviour, string targetDescription) =>
-			behaviour as IAmExecutable ?? throw new InvalidOperationException(
-				$"Listener {targetDescription} resolved to behaviour '{behaviour.GetType().Name}', which is not " +
-				"executable — it is a trigger or continuous (self-driven) behaviour that runs itself and does " +
-				"nothing when invoked by a listener. For input-driven motion, mutate a velocity variable that a " +
-				"single `velocity` behaviour integrates, or use `translate`.");
-
 #if DEBUG_CONSOLE
 		/// <summary>
 		/// The behaviours this listener currently resolves to. Debug-only graph inspection. Tagged
@@ -91,7 +81,7 @@ namespace Assembler.Behaviours
 			{
 				if (behaviour != null)
 				{
-					RequireExecutable(behaviour,
+					behaviour.EnsureExecutable(
 						$"targeting behaviour '{_behaviourId}' on entities tagged '{entityTag}'").Execute(preparedCtx);
 				}
 			}
@@ -134,7 +124,7 @@ namespace Assembler.Behaviours
 			{
 				if (behaviour != null)
 				{
-					RequireExecutable(behaviour, $"targeting behaviours tagged '{tag}'").Execute(preparedCtx);
+					behaviour.EnsureExecutable($"targeting behaviours tagged '{tag}'").Execute(preparedCtx);
 				}
 			}
 		}

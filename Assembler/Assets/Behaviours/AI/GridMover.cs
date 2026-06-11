@@ -27,14 +27,11 @@ namespace Assembler.Behaviours.AI
 		private Vector3 _target;
 		private Vector3 _heading = Vector3.zero;
 
-		private void Update() => Step();
-
-		internal void Step()
+		private void Update()
 		{
-			var ctx = TriggerContext.Empty;
 			var cellSize = Nav.CellSize;
 			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
-			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
+			var agentRadius = Data.AgentRadius.ValueOr(Nav.DefaultAgentRadius);
 
 			if (!_initialised)
 			{
@@ -51,7 +48,7 @@ namespace Assembler.Behaviours.AI
 				_target = Nav.CellCentre(transform.position);
 			}
 
-			var desired = Nav.CardinalStep(Data.Direction.Get(ctx));
+			var desired = Nav.CardinalStep(Data.Direction.Get());
 
 			// Instant U-turn: reversing along a corridor shouldn't wait for the next cell. Retarget the cell
 			// behind us straight away so the entity turns around the moment the key is pressed.
@@ -68,7 +65,7 @@ namespace Assembler.Behaviours.AI
 			// Advance toward the target cell, and once reached re-decide the heading and carry the leftover
 			// distance straight through the turn — so a turn taken at a cell centre keeps full speed rather
 			// than stalling for a frame.
-			var remaining = Data.Speed.Get(ctx) * Clock.DeltaTime;
+			var remaining = Data.Speed.Get() * Clock.DeltaTime;
 
 			while (remaining > 0f)
 			{

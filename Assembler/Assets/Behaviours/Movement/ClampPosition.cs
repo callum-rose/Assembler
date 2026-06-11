@@ -14,16 +14,12 @@ namespace Assembler.Behaviours.Movement
 	/// </remarks>
 	public class ClampPosition : GameBehaviour<ClampPositionData>
 	{
-		private void Update()
-		{
-			Step();
-		}
+		private void Update() => Step();
 
 		internal void Step()
 		{
-			var ctx = TriggerContext.Empty;
-			var min = Data.Min.Get(ctx);
-			var max = Data.Max.Get(ctx);
+			var min = Data.Min.Get();
+			var max = Data.Max.Get();
 			var p = transform.position;
 			transform.position = new Vector3(
 				Mathf.Clamp(p.x, min.x, max.x),

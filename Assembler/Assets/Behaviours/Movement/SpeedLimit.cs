@@ -25,15 +25,9 @@ namespace Assembler.Behaviours.Movement
 			}
 		}
 
-		private void Update()
-		{
-			Step();
-		}
+		private void Update() => Step();
 
-		internal void Step()
-		{
-			var ctx = TriggerContext.Empty;
-			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(ctx), Data.Max.Get(ctx)));
-		}
+		internal void Step() =>
+			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(), Data.Max.Get()));
 	}
 }

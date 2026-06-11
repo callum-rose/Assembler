@@ -37,18 +37,17 @@ namespace Assembler.Behaviours.AI
 
 		internal void Step()
 		{
-			var ctx = TriggerContext.Empty;
 			var self = transform.position;
-			var target = Data.Target.Get(ctx);
-			var speed = Data.Speed.Get(ctx);
-			var slowingRadius = Data.SlowingRadius.Get(ctx);
-			var recompute = Data.Recompute.Get(ctx);
+			var target = Data.Target.Get();
+			var speed = Data.Speed.Get();
+			var slowingRadius = Data.SlowingRadius.Get();
+			var recompute = Data.Recompute.Get();
 			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
-			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
+			var agentRadius = Data.AgentRadius.ValueOr(Nav.DefaultAgentRadius);
 
 			_sinceRecompute += Clock.DeltaTime;
 
-			var desired = Data.Mode.Get(ctx) == "flowfield"
+			var desired = Data.Mode.Get() == "flowfield"
 				? FollowFlowField(self, target, speed, slowingRadius, agentRadius)
 				: FollowPath(self, target, speed, slowingRadius, recompute, agentRadius);
 

@@ -14,15 +14,6 @@ namespace Assembler.Behaviours.Visual
 	/// </remarks>
 	public class ActivePoll : GameBehaviour<ActivePollData>
 	{
-		private void Update()
-		{
-			Step();
-		}
-
-		internal void Step()
-		{
-			var ctx = TriggerContext.Empty;
-			gameObject.SetActive(Data.Active.Get(ctx));
-		}
+		private void Update() => gameObject.SetActive(Data.Active.Get());
 	}
 }

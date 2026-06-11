@@ -19,17 +19,13 @@ namespace Assembler.Behaviours.Movement
 
 		private Vector3 _velocity;
 
-		private void Update()
-		{
-			Step();
-		}
+		private void Update() => Step();
 
 		internal void Step()
 		{
-			var ctx = TriggerContext.Empty;
 			transform.position = Vector3.SmoothDamp(
-				transform.position, Data.Target.Get(ctx), ref _velocity,
-				Data.SmoothTime.Get(ctx), Mathf.Infinity, Clock.DeltaTime);
+				transform.position, Data.Target.Get(), ref _velocity,
+				Data.SmoothTime.Get(), Mathf.Infinity, Clock.DeltaTime);
 		}
 	}
 }

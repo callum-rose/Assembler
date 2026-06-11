@@ -39,8 +39,7 @@ namespace Assembler.Behaviours.AI
 
 		internal void Step()
 		{
-			var ctx = TriggerContext.Empty;
-			var waypoints = Data.Waypoints.Get(ctx);
+			var waypoints = Data.Waypoints.Get();
 
 			// Empty (or unset) route: nothing to patrol — hold position and emit zero velocity.
 			if (waypoints is null || waypoints.Count == 0)
@@ -50,7 +49,7 @@ namespace Assembler.Behaviours.AI
 				return;
 			}
 
-			var arriveRadius = Data.ArriveRadius.Get(ctx);
+			var arriveRadius = Data.ArriveRadius.Get();
 			_index = Mathf.Clamp(_index, 0, waypoints.Count - 1);
 
 			var self = transform.position;
@@ -58,18 +57,18 @@ namespace Assembler.Behaviours.AI
 			// Reached the current waypoint -> step the index to the next per the Loop/PingPong policy.
 			if (Vector3.Distance(self, waypoints[_index]) <= arriveRadius)
 			{
-				Advance(waypoints.Count, ctx);
+				Advance(waypoints.Count);
 			}
 
 			PublishIndex();
 
 			// Arrive eases to a stop at a held waypoint (a one-shot path's final point); for looping/intermediate
 			// waypoints the index has already advanced above, so this just heads on toward the new target.
-			var desired = SteeringMath.Arrive(self, waypoints[_index], Data.Speed.Get(ctx), arriveRadius);
+			var desired = SteeringMath.Arrive(self, waypoints[_index], Data.Speed.Get(), arriveRadius);
 			MoveOrEmit(desired);
 		}
 
-		private void Advance(int count, TriggerContext ctx)
+		private void Advance(int count)
 		{
 			// A single waypoint has nowhere to advance to; hold on it.
 			if (count <= 1)
@@ -77,7 +76,7 @@ namespace Assembler.Behaviours.AI
 				return;
 			}
 
-			if (Data.PingPong.Get(ctx))
+			if (Data.PingPong.Get())
 			{
 				// Reflect off either end, then step one in the (possibly flipped) direction.
 				if (_index + _direction < 0 || _index + _direction > count - 1)
@@ -87,7 +86,7 @@ namespace Assembler.Behaviours.AI
 
 				_index += _direction;
 			}
-			else if (Data.Loop.Get(ctx))
+			else if (Data.Loop.Get())
 			{
 				_index = (_index + 1) % count;
 			}

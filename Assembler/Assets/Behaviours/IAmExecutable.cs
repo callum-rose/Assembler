@@ -1,3 +1,4 @@
+using System;
 using Assembler.Resolving;
 
 namespace Assembler.Behaviours
@@ -12,5 +13,21 @@ namespace Assembler.Behaviours
 	public interface IAmExecutable
 	{
 		void Execute(TriggerContext ctx);
+	}
+
+	public static class ExecutableExtensions
+	{
+		/// <summary>Casts a resolved listener target to <see cref="IAmExecutable"/>, throwing a descriptive
+		/// error when it is not — i.e. when a listener resolves to a trigger or self-driven behaviour that does
+		/// nothing when invoked (see issue #201). Build-time-known targets are checked when the listener is
+		/// built; tagged listeners resolve targets dynamically and check at notify time.
+		/// <paramref name="targetDescription"/> names what the listener pointed at, e.g.
+		/// <c>"targeting behaviour 'x' on entity 'y'"</c>.</summary>
+		public static IAmExecutable EnsureExecutable(this GameBehaviour behaviour, string targetDescription) =>
+			behaviour as IAmExecutable ?? throw new InvalidOperationException(
+				$"Listener {targetDescription} resolved to behaviour '{behaviour.GetType().Name}', which is not " +
+				"executable — it is a trigger or continuous (self-driven) behaviour that runs itself and does " +
+				"nothing when invoked by a listener. For input-driven motion, mutate a velocity variable that a " +
+				"single `velocity` behaviour integrates, or use `translate`.");
 	}
 }

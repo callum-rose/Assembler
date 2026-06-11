@@ -776,7 +776,7 @@ namespace Assembler.Building
 			listeners.Select(l => (Listener)(l switch
 			{
 				DirectListenerInfo direct => new DirectListener(
-					RequireExecutable(listenerRegistry[direct.BehaviourDescriptor], direct.BehaviourDescriptor),
+					ResolveExecutable(listenerRegistry, direct.BehaviourDescriptor),
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
@@ -788,23 +788,18 @@ namespace Assembler.Building
 					tag => listenerRegistry.GetByBehaviourTag(tag),
 					behaviourTagged.OutputMapping),
 				GameOverListenerInfo gameOver => new DirectListener(
-					RequireExecutable(
-						listenerRegistry[new BehaviourDescriptor(
-							GameOverController.EntityId, GameOverController.EndBehaviourId)],
+					ResolveExecutable(listenerRegistry,
 						new BehaviourDescriptor(GameOverController.EntityId, GameOverController.EndBehaviourId)),
 					gameOver.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
 
-		// Casts a build-time-known listener target to IAmExecutable, hard-failing when it is not — a
-		// trigger or self-driven behaviour wired as a Listeners: target does nothing, so reject it loudly
-		// rather than silently no-op (see issue #201). Self-driven behaviours expose no public Execute and
-		// so cannot be IAmExecutable; this catches the remaining source-trigger / passive targets.
-		internal static IAmExecutable RequireExecutable(GameBehaviour target, BehaviourDescriptor descriptor) =>
-			target as IAmExecutable ?? throw new InvalidOperationException(
-				$"Listener targets behaviour '{descriptor.BehaviourId}' on entity '{descriptor.EntityId}' " +
-				$"({target.GetType().Name}), which is not executable — it is a trigger or continuous (self-driven) " +
-				"behaviour that runs itself and does nothing when invoked by a listener. For input-driven motion, " +
-				"mutate a velocity variable that a single `velocity` behaviour integrates, or use `translate`.");
+		// Looks up a build-time-known listener target and hard-fails when it is not executable — a trigger or
+		// self-driven behaviour wired as a Listeners: target does nothing, so reject it loudly rather than
+		// silently no-op (see issue #201). The guard itself lives in the shared EnsureExecutable extension.
+		private static IAmExecutable ResolveExecutable(
+			IReadOnlyBehaviourRegistry registry, BehaviourDescriptor descriptor) =>
+			registry[descriptor].EnsureExecutable(
+				$"targeting behaviour '{descriptor.BehaviourId}' on entity '{descriptor.EntityId}'");
 	}
 }
