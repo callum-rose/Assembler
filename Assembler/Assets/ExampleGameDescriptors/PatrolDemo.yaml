@@ -1,0 +1,237 @@
+Game:
+  Title: Patrol Demo
+  Description: |
+    Shows the `patrol` behaviour as the idle state of a patrol↔chase AI.
+
+    A red guard walks a fixed rectangular route via a `patrol` behaviour: it heads for
+    the current waypoint and, on arrival (within ArriveRadius), advances the index —
+    looping back to the first point at the end. `patrol` does not move the guard itself;
+    it writes the desired velocity into `patrol_vel` (and the live waypoint index into
+    `patrol_index`), exactly like `navigate`/`steering`'s Output convention.
+
+    A `perceive` sensor watches for the green player (WASD). When it sees one,
+    `has_target` flips and a `state machine` switches patrol -> chase. In chase, a
+    `navigate` behaviour writes a pursuit velocity into `chase_vel`. A per-frame selector
+    picks `chase_vel` while chasing and `patrol_vel` otherwise into `ai_velocity`, which a
+    single `velocity` integrator applies — so swapping states swaps which velocity drives
+    the guard without two behaviours fighting over the transform. Get caught and the game
+    ends; lose the guard's line on you and it returns to its patrol route.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -8, Y: -6 }, Max: !vec { X: 8, Y: 6 } }
+
+Constants:
+  guard size: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+  player size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+  guard colour: !colour { R: 0.90, G: 0.30, B: 0.30, A: 1 }
+
+  detect range: 5.0
+  catch range: 0.7
+  guard speed: 2.5
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 7
+
+Expressions:
+  # The fixed rectangular patrol route. The compiler has no collection initializers, so the
+  # points are appended to a PositionList builder (see docs/Libraries.md) and returned as a list.
+  route points:
+    ReturnType: vector list
+    Expression: >
+      var route = new PositionList();
+      route.Add(new UnityEngine.Vector3(-5f, 3f, 0f));
+      route.Add(new UnityEngine.Vector3(5f, 3f, 0f));
+      route.Add(new UnityEngine.Vector3(5f, -3f, 0f));
+      route.Add(new UnityEngine.Vector3(-5f, -3f, 0f));
+      return route.ToList();
+
+  # Pick the velocity for this frame: 1 = chasing (pursuit velocity), otherwise patrol velocity.
+  pick velocity:
+    ArgumentTypes: [ int, vector, vector ]
+    ArgumentNames: [ mode, chase_vel, patrol_vel ]
+    ReturnType: vector
+    Expression: "return mode == 1 ? chase_vel : patrol_vel;"
+
+  within:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ a, b, threshold ]
+    ReturnType: bool
+    Expression: "return Distance(a, b) < threshold;"
+
+  negate:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ flag ]
+    ReturnType: bool
+    Expression: "return !flag;"
+
+Entities:
+  guard:
+    Position: !vec { X: -5, Y: 3, Z: 0 }
+    Tags: [ guard ]
+    Variables:
+      guard_mode: 0
+      has_target: false
+      target_id: ""
+      target_position: !vec { X: -5, Y: 3, Z: 0 }
+      last_known_position: !vec { X: -5, Y: 3, Z: 0 }
+      patrol_vel: !vec { X: 0, Y: 0, Z: 0 }
+      chase_vel: !vec { X: 0, Y: 0, Z: 0 }
+      ai_velocity: !vec { X: 0, Y: 0, Z: 0 }
+      patrol_index: 0
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var guard size, IsWire: false, Colour: !var guard colour }
+
+      # Sensor: find the player within range and maintain the blackboard.
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: player
+          Radius: !var detect range
+          RequireLineOfSight: false
+          Interval: 0.1
+          TargetId: !var target_id
+          TargetPosition: !var target_position
+          HasTarget: !var has_target
+          LastKnownPosition: !var last_known_position
+
+      # Idle locomotion: walk the fixed route, emitting velocity into patrol_vel.
+      route:
+        Type: patrol
+        Properties:
+          Waypoints: !expr { Do: route points }
+          Loop: true
+          Speed: !var guard speed
+          ArriveRadius: 0.3
+          Output: !var patrol_vel
+          CurrentIndex: !var patrol_index
+
+      # Chase locomotion: pursue the player's last seen position, emitting velocity into chase_vel.
+      chase:
+        Type: navigate
+        Properties:
+          Target: !var target_position
+          Speed: !var guard speed
+          SlowingRadius: 0.5
+          Recompute: 0.25
+          Mode: astar
+          Output: !var chase_vel
+
+      # Each frame, select which emitted velocity to apply based on the FSM mode.
+      select clock:
+        Type: every frame trigger
+        Listeners:
+          - { EntityId: guard, BehaviourId: select velocity }
+      select velocity:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ai_velocity
+          Value: !expr
+            Do: pick velocity
+            With:
+              - !var guard_mode
+              - !var chase_vel
+              - !var patrol_vel
+
+      # The single integrator that actually moves the guard.
+      apply:
+        Type: velocity
+        Properties: { Velocity: !var ai_velocity }
+
+      ai:
+        Type: state machine
+        Properties:
+          StateVariable: guard_state
+          Initial: patrol
+          States:
+            patrol:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode patrol }
+            chase:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode chase }
+            caught:
+              OnEnter:
+                - { EntityId: guard, BehaviourId: set mode patrol }
+                - !gameover
+          Transitions:
+            - from: patrol
+              to: chase
+              when: !var has_target
+            - from: chase
+              to: caught
+              when: !expr
+                Do: within
+                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
+            - from: chase
+              to: patrol
+              when: !expr { Do: negate, With: [ !var has_target ] }
+
+      set mode patrol:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 0 }
+      set mode chase:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 1 }
+
+  player:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Tags: [ player ]
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
+
+      hold left:
+        Type: key hold trigger
+        Properties: { Key: "a" }
+        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+      move left:
+        Type: translate
+        Properties: { Displacement: !vec { X: -0.05, Y: 0, Z: 0 } }
+
+      hold right:
+        Type: key hold trigger
+        Properties: { Key: "d" }
+        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+      move right:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0.05, Y: 0, Z: 0 } }
+
+      hold up:
+        Type: key hold trigger
+        Properties: { Key: "w" }
+        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+      move up:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0.05, Z: 0 } }
+
+      hold down:
+        Type: key hold trigger
+        Properties: { Key: "s" }
+        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+      move down:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: -0.05, Z: 0 } }
+
+      quit key:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners: [ !gameover ]
+
+  camera:
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size }

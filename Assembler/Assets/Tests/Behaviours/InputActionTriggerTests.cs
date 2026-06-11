@@ -31,7 +31,9 @@ namespace Tests.Behaviours
 				CallCount++;
 			}
 
+#if DEBUG_CONSOLE
 			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
+#endif
 		}
 
 		[Test]

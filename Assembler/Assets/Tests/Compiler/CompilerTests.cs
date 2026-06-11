@@ -1611,7 +1611,7 @@ namespace Tests.Compiler
 		{
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<List<int>, int>(
-				"""
+				$$"""
 				int total = 0;
 				for (int i = 0; i < list.Count; i++)
 				{
@@ -1684,7 +1684,7 @@ namespace Tests.Compiler
 		{
 			var compiler = new ExpressionMethodCompiler();
 			var func = compiler.CompileFunc<int>(
-				"""
+				$$"""
 				var nums = new List<int> { 4, 5, 6 };
 				return nums[0] + nums[nums.Count - 1];
 				""");

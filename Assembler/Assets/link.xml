@@ -1,0 +1,22 @@
+<!--
+  IL2CPP managed-stripping preserve list.
+
+  The runtime expression compiler (Assembler.Compiler) builds System.Linq.Expressions trees that call into
+  the static helper libraries (Assembler.Libraries) and UnityEngine types by reflection. Under IL2CPP those
+  call targets can be stripped because nothing references them statically — only via the compiled string
+  expressions. Preserving these assemblies keeps an iOS AOT build measuring the compiler's behaviour rather
+  than stripping artifacts. Trim this list later once the AOT path is understood.
+-->
+<linker>
+  <assembly fullname="Assembler.Libraries" preserve="all" />
+  <assembly fullname="Assembler.Compiler" preserve="all" />
+  <assembly fullname="Assembler.Resolving" preserve="all" />
+  <assembly fullname="Assembler.Behaviours" preserve="all" />
+  <assembly fullname="Assembler.Building" preserve="all" />
+  <assembly fullname="Assembler.Parsing" preserve="all" />
+  <assembly fullname="Assembler.Core" preserve="all" />
+  <assembly fullname="Assembler.Input" preserve="all" />
+  <assembly fullname="Assembler.Time" preserve="all" />
+  <assembly fullname="Assembler.Extensions" preserve="all" />
+  <assembly fullname="UnityEngine.CoreModule" preserve="all" />
+</linker>

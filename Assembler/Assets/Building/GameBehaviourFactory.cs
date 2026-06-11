@@ -623,7 +623,16 @@ namespace Assembler.Building
 					(i, ctx) => new GridMoverData(i.Id,
 						i.Direction.Resolve(ctx.Resolution),
 						i.Speed.Resolve(ctx.Resolution),
-						i.AgentRadius.Resolve(ctx.Resolution)))
+						i.AgentRadius.Resolve(ctx.Resolution))),
+				[typeof(PatrolInfo)] = Entry<PatrolInfo, Patrol, PatrolData>(
+					(i, ctx) => new PatrolData(i.Id,
+						i.Waypoints.Resolve(ctx.Resolution),
+						i.Loop.Resolve(ctx.Resolution),
+						i.PingPong.Resolve(ctx.Resolution),
+						i.ArriveRadius.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution),
+						i.CurrentIndex.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
