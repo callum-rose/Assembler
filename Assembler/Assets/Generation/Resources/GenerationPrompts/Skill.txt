@@ -25,8 +25,8 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 >    their trigger outputs lives in [`Assets/docs/Behaviours.md`](../../../Assets/docs/Behaviours.md).
 >    Always read it before writing a descriptor. The catalogue is the source of truth — if a behaviour
 >    isn't there, it doesn't exist. Do not invent behaviour types, property names, or output names.
->    (The bottom of that file has a **Parse-only behaviours (not yet runnable)** list and a
->    **Doc-gen warnings** list — treat anything mentioned there as unsupported.)
+>    (If the file has a **Parse-only behaviours (not yet runnable)** list or a **Doc-gen warnings**
+>    list, treat anything mentioned there as unsupported.)
 > 2. **Use the expression compiler skill for any code.** Any value inside an `!expr` `Do:` field (when
 >    it is an inline body) or inside an `Expressions:` block `Expression:` field is code, not YAML. It
 >    must be authored via the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
@@ -853,10 +853,10 @@ Volunteer feedback when you notice any of the following while authoring or revie
   `colour` setters all exist — so don't claim a missing one without checking the catalogue.)
 - **Composition friction.** Patterns that require five chained behaviours to do something a single
   behaviour could express — surface this as a suggestion for a new behaviour.
-- **Parse-only / undocumented behaviours.** The bottom of `Behaviours.md` lists behaviours that parse
-  but have **no runtime implementation** (currently `condition`, `trigger stay trigger`, `when all`,
-  `when any`) plus any **Doc-gen warnings**. If the user needs one, point out that it appears in the
-  catalogue but won't execute, and offer to work around it or ask for it to be implemented first.
+- **Parse-only / undocumented behaviours.** If the bottom of `Behaviours.md` lists any behaviours under
+  **Parse-only behaviours (not yet runnable)** (none at present) or flags **Doc-gen warnings**, treat those
+  as parsing but not executing. If the user needs one, point out that it appears in the catalogue but won't
+  execute, and offer to work around it or ask for it to be implemented first.
 
 When giving feedback, be concrete:
 

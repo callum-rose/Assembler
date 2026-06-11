@@ -72,12 +72,13 @@ Entities:
 			CollectionAssert.AreEqual(new[] { "wall", "paddle" }, trigger.TagsToDetect);
 		}
 
-		// A behaviour that parses but has no runtime builder is now rejected at parse time in descriptor
-		// vocabulary, rather than dying at instantiate with a CLR type name.
+		// `when all` used to be parse-only (rejected at parse time); it is now runnable, so it parses cleanly.
+		// The parse-time rejection mechanism still guards any future not-yet-runnable behaviour (empty today),
+		// covered structurally by BehaviourRegistryParseOnlyTests.
 		[Test]
-		public void ParseOnlyBehaviour_FailsAtParseWithVocabularyMessage()
+		public void FormerlyParseOnlyBehaviour_NowParses()
 		{
-			var ex = Assert.Throws<ParsingException>(() => Transform(@"
+			Assert.DoesNotThrow(() => Transform(@"
 Entities:
   e:
     Behaviours:
@@ -86,9 +87,6 @@ Entities:
         Properties:
           TriggerIds: [ a, b ]
 "));
-
-			Assert.That(ex.Message, Does.Contain("when all"));
-			Assert.That(ex.Message, Does.Contain("not yet runnable"));
 		}
 	}
 }

@@ -484,6 +484,18 @@ No properties.
 | angle | float | Current angle of the line between the two fingers, in degrees. |
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
+## `condition`
+Forwards an upstream trigger to its listeners only when the named boolean expression evaluates to
+            true at that moment. Like condition gate, but the predicate is a declared expression invoked
+            by id with explicit arguments rather than an inline !expr.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| ExpressionId | string | Id (or CallableAs alias) of a declared expression returning bool. |
+| Arguments | list | Operands passed positionally to that expression each time the gate is evaluated. |
+
 ## `timer trigger`
 Fires once after a delay (starts the countdown on entity start, or on Execute).
 
@@ -596,6 +608,21 @@ Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 |------|------|-------------|
 | other_position | Vector3 | Other entity's world position at the moment of exit. |
 
+## `trigger stay trigger`
+Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TagsToDetect | IReadOnlyList<string> | Only fire while the other entity has at least one of these tags. Leave empty to fire on any entity. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position this frame. |
+
 ## `collision exit trigger`
 Fires when a non-trigger collision ends with another entity matching TagsToDetect.
 
@@ -629,6 +656,16 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 | contact_normal | Vector3 | Surface normal at the contact point. |
 | other_velocity | Vector3 | Other body's linear velocity (zero if no Rigidbody). |
 | other_position | Vector3 | Other entity's world position. |
+
+## `when all`
+Fires its listeners once every referenced trigger has fired at least once, then re-arms. An AND-gate
+            across triggers: useful for "do X only after A and B and C have all happened" without chaining gates.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TriggerIds | IReadOnlyList<string> | Ids of the triggers (on this entity) to AND together; fires when all have fired, then resets. |
 
 ## `spawner`
 Spawns an instance of a template at a position when Executed.
@@ -1834,37 +1871,6 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 | Name | Type | Description |
 |------|------|-------------|
 | value | float | The new slider value after the change. |
-
----
-
-## Parse-only behaviours (not yet runnable)
-
-These behaviours are registered in the parse catalogue and accept the properties below, but have no runtime `GameBehaviour` implementation — they parse from YAML yet will not execute. Treat them as unsupported until a MonoBehaviour mapping is added in `GameBehaviourFactory`.
-
-### `condition`
-
-| Name | Type |
-|------|------|
-| ExpressionId | string |
-| Arguments | IReadOnlyList<IValueSourceArg> |
-
-### `trigger stay trigger`
-
-| Name | Type |
-|------|------|
-| TagsToDetect | IReadOnlyList<string> |
-
-### `when all`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
-
-### `when any`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
 
 ---
 
