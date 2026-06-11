@@ -108,16 +108,19 @@ Constants:
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
                           # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
-  avoid lookahead: 7.0    # how far ahead (units) a rival scans for traffic in its path; only cars
-                          # inside this forward corridor trigger an avoidance swerve. ~1.4s at the
-                          # rival cruise, so a rival starts moving over while still well back rather
-                          # than reacting at the last moment
+  avoid lookahead: 7.0    # how far ahead (units) a rival scans for traffic in its path. Both
+                          # `perceive`'s detection range and AvoidObstacles' corridor length use it,
+                          # so a rival starts moving over while still well back (~1.4s at the rival
+                          # cruise) rather than reacting at the last moment.
   avoid radius: 2.5       # corridor half-width (units): a car must be within this of the rival's
                           # heading line to count as "in the way". Cars are ~1 wide, so this leaves a
-                          # generous margin either side of the line
-  avoid strength: 2.5     # GAIN on the avoidance steer (see `ai steer`): the avoid velocity's
-                          # sideways component (at most ~0.9, and smaller the further off the threat)
-                          # is multiplied by this and added straight onto the nav steer. ~2.5 means a
+                          # generous margin either side of the line.
+  avoid cone: 180         # `perceive`'s forward arc (degrees). The sensor only reports cars in front
+                          # of / beside the rival, never a tailgater behind, so the nearest car AHEAD
+                          # is the one fed to the corridor — the case the rival actually has to dodge.
+  avoid strength: 2.5     # GAIN on the avoidance steer (see `ai steer`): AvoidObstacles' sideways
+                          # component (at most ~0.9, and smaller the further off the threat) is
+                          # multiplied by this and added straight onto the nav steer. ~2.5 means a
                           # car squarely ahead saturates the steering toward the dodge well before
                           # contact, so the rival commits to going around. Safe to run this high
                           # because the corridor only ever sees cars AHEAD — it can't swing a rival
@@ -230,6 +233,18 @@ Expressions:
     Expression: |
       return (i + 1) % 4;
 
+  # Unit forward (XZ) heading from a car's Y-euler rotation, using the same convention as
+  # `ai steer` / `drive velocity` (forward = (sin yaw, cos yaw)). Aims each rival's `perceive`
+  # cone down its own heading so the sensor only reports cars ahead of it.
+  forward dir:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ rotation ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var h = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
+      return new Vector3(h.x, 0f, h.y);
+
   # AI steering input (the rivals' "hands on the wheel"). Returns a steer value in [-1, 1]
   # that feeds the SAME `steer yaw` the player uses — so a rival turns at the same rate-
   # limited, speed-gated authority and never snaps. It sums TWO steering pulls:
@@ -237,11 +252,12 @@ Expressions:
   #                the car's `nav dir` variable each frame). When that heading is behind the car
   #                (forward dot < 0) it commits to a full-lock turn in the nearer direction
   #                rather than dithering near zero.
-  #   avoidSteer — turn away from the other three cars (player + two rivals, passed in as live
-  #                positions a/b/c) when one lies AHEAD in the rival's path. `AvoidObstacles`
-  #                scans `lookAhead` units along the forward heading and only reacts to cars
-  #                inside the forward corridor (within `avoidRadius` of the heading line), with a
-  #                push that grows as the car closes.
+  #   avoidSteer — turn away from the nearest other car when it lies AHEAD in the rival's path.
+  #                The candidate comes from a self-excluding `perceive` sensor (`foePos` while
+  #                `foeSeen`) rather than a hand-listed a/b/c, so adding cars needs no per-rival
+  #                edits; `AvoidObstacles` then keeps it only if it falls inside the forward
+  #                corridor — within `lookAhead` along the heading and `avoidRadius` either side
+  #                of the heading line — and returns a sideways push that grows as the car closes.
   # Crucially, the avoidance is consumed as a STEERING term, not a heading blend: we project the
   # avoid velocity onto the car's own right axis (`Dot(right, avoid)`) and add it, scaled by
   # `avoidStrength`, straight onto the nav steer. Projecting onto `right` keeps only the in-plane
@@ -251,15 +267,15 @@ Expressions:
   # of nosing into it. Because the corridor only ever sees cars AHEAD, a big gain is safe: it
   # can't swing a rival perpendicular at a car beside or behind it the way a raw `Separate` could.
   ai steer:
-    ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float, float ]
-    ArgumentNames: [ rotation, self, navDir, a, b, c, lookAhead, avoidRadius, avoidStrength ]
+    ArgumentTypes: [ vector, vector, vector, vector, bool, float, float, float ]
+    ArgumentNames: [ rotation, self, navDir, foePos, foeSeen, lookAhead, avoidRadius, avoidStrength ]
     ReturnType: float
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
       var heading = Rotate2D(new Vector3(0f, 1f, 0f), -rotation.y);
       var forward = new Vector3(heading.x, 0f, heading.y);
       var right = new Vector3(forward.z, 0f, -forward.x);
-      var others = new List<Vector3> { a, b, c };
+      var others = foeSeen ? new List<Vector3> { foePos } : new List<Vector3> { };
       var avoid = AvoidObstacles(self, forward, others, lookAhead, avoidRadius, 1f);
       var nav = Normalize(new Vector3(navDir.x, 0f, navDir.z));
       var navFwd = Dot(forward, nav);
@@ -271,7 +287,7 @@ Expressions:
 Entities:
   # ---- The drivable car ----------------------------------------------------
   car:
-    Tags: [ car ]
+    Tags: [ car, racer ]   # `racer` lets the AI rivals perceive (and avoid) the player
     Position: !var car start
     Rotation: !vec { X: 0, Y: 90, Z: 0 }   # facing +X along the south straight
     Behaviours:
@@ -356,26 +372,40 @@ Entities:
   # player — so it turns smoothly (rate-limited, speed-gated yaw) and collides physically with
   # the player and the other rivals. The only thing that differs from the player is the steering
   # input: an `ai steer` expression replaces the keyboard, aiming the car along the heading
-  # `navigate` suggests (written to `nav dir`) while a `Separate` term steers it around nearby
-  # cars. `navigate` runs with `Output: nav dir`, so it only advises a direction and no longer
-  # moves the car. `wp` cycles the four corners (advanced by `corner gate` near each corner);
-  # rivals are tagged `rival` (not `car`), so they don't trip the player's finish/checkpoint.
+  # `navigate` suggests (written to `nav dir`) while a forward-corridor avoidance term steers it
+  # around cars ahead. `navigate` runs with `Output: nav dir`, so it only advises a direction and
+  # no longer moves the car. `wp` cycles the four corners (advanced by `corner gate` near each
+  # corner); rivals are tagged `rival` (not `car`), so they don't trip the player's finish/checkpoint.
   #
-  # The per-rival wiring is identical apart from start pose, colour, and which three OTHER cars
-  # it avoids (passed to `ai steer` as a/b/c — every car except itself).
+  # The per-rival wiring is identical apart from start pose and colour. Each rival carries a
+  # `perceive` sensor tagged `racer` (every car is a `racer`); thanks to the perception layer's
+  # self-exclusion it reports the nearest OTHER car ahead into `foe pos`/`foe seen`, which `ai
+  # steer` feeds to `AvoidObstacles` — no need to hand-list the other cars per rival any more.
   #
   # rival 1 — starts on the south straight, heading +X toward the SE corner (wp 0).
   rival 1:
-    Tags: [ rival ]
+    Tags: [ rival, racer ]
     Position: !vec { X: -2, Y: 0.35, Z: -16.5 }
     Rotation: !vec { X: 0, Y: 90, Z: 0 }
     Variables:
       wp: 0
       nav dir: !vec { X: 0, Y: 0, Z: 0 }   # heading navigate wants this frame (written below)
+      foe pos: !vec { X: 0, Y: 0, Z: 0 }   # nearest other car (written by `eyes`)
+      foe seen: false                      # true while a car is in the forward look-ahead arc
     Behaviours:
       body:
         Type: primitive
         Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#3aa0e8" }
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: racer
+          Radius: !var avoid lookahead
+          ConeAngle: !var avoid cone
+          Forward: !expr { Do: forward dir, With: [ !entity { Id: rival 1, Property: Rotation } ] }
+          Interval: 0
+          TargetPosition: !var foe pos
+          HasTarget: !var foe seen
       collider:
         Type: box collider
         Properties: { Size: !var rival size, IsTrigger: false }
@@ -417,9 +447,8 @@ Entities:
                     - !entity { Id: rival 1, Property: Rotation }
                     - !entity { Id: rival 1, Property: Position }
                     - !var nav dir
-                    - !entity { Id: car, Property: Position }
-                    - !entity { Id: rival 2, Property: Position }
-                    - !entity { Id: rival 3, Property: Position }
+                    - !var foe pos
+                    - !var foe seen
                     - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
@@ -473,16 +502,28 @@ Entities:
 
   # rival 2 — starts on the west straight, heading -Z toward the SW corner (wp 3).
   rival 2:
-    Tags: [ rival ]
+    Tags: [ rival, racer ]
     Position: !vec { X: -16, Y: 0.35, Z: 0 }
     Rotation: !vec { X: 0, Y: 180, Z: 0 }
     Variables:
       wp: 3
       nav dir: !vec { X: 0, Y: 0, Z: 0 }
+      foe pos: !vec { X: 0, Y: 0, Z: 0 }
+      foe seen: false
     Behaviours:
       body:
         Type: primitive
         Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#e8923a" }
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: racer
+          Radius: !var avoid lookahead
+          ConeAngle: !var avoid cone
+          Forward: !expr { Do: forward dir, With: [ !entity { Id: rival 2, Property: Rotation } ] }
+          Interval: 0
+          TargetPosition: !var foe pos
+          HasTarget: !var foe seen
       collider:
         Type: box collider
         Properties: { Size: !var rival size, IsTrigger: false }
@@ -522,9 +563,8 @@ Entities:
                     - !entity { Id: rival 2, Property: Rotation }
                     - !entity { Id: rival 2, Property: Position }
                     - !var nav dir
-                    - !entity { Id: car, Property: Position }
-                    - !entity { Id: rival 1, Property: Position }
-                    - !entity { Id: rival 3, Property: Position }
+                    - !var foe pos
+                    - !var foe seen
                     - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
@@ -578,16 +618,28 @@ Entities:
 
   # rival 3 — starts on the north straight, heading -X toward the NW corner (wp 2).
   rival 3:
-    Tags: [ rival ]
+    Tags: [ rival, racer ]
     Position: !vec { X: 4, Y: 0.35, Z: 16.5 }
     Rotation: !vec { X: 0, Y: 270, Z: 0 }
     Variables:
       wp: 2
       nav dir: !vec { X: 0, Y: 0, Z: 0 }
+      foe pos: !vec { X: 0, Y: 0, Z: 0 }
+      foe seen: false
     Behaviours:
       body:
         Type: primitive
         Properties: { Shape: cube, Size: !var rival size, Colour: !colour "#c84fd0" }
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: racer
+          Radius: !var avoid lookahead
+          ConeAngle: !var avoid cone
+          Forward: !expr { Do: forward dir, With: [ !entity { Id: rival 3, Property: Rotation } ] }
+          Interval: 0
+          TargetPosition: !var foe pos
+          HasTarget: !var foe seen
       collider:
         Type: box collider
         Properties: { Size: !var rival size, IsTrigger: false }
@@ -627,9 +679,8 @@ Entities:
                     - !entity { Id: rival 3, Property: Rotation }
                     - !entity { Id: rival 3, Property: Position }
                     - !var nav dir
-                    - !entity { Id: car, Property: Position }
-                    - !entity { Id: rival 1, Property: Position }
-                    - !entity { Id: rival 2, Property: Position }
+                    - !var foe pos
+                    - !var foe seen
                     - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
