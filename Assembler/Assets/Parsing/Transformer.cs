@@ -258,9 +258,9 @@ namespace Assembler.Parsing
 				{
 					With = exprRef.With.Select(a => SubstituteAssemblerValue(a, parameters)).ToArray()
 				},
-				EntityPropertyRef { IdParameter: { } idParam } entityRef =>
-					parameters.TryGetValue(idParam, out var resolvedId) && resolvedId is StringValue sv
-						? entityRef with { Id = sv.Value, IdParameter = null }
+				EntityPropertyRef { EntityId: { PendingParameter: { } idParam } } entityRef =>
+					entityRef.EntityId.Resolve(parameters) is LiteralEntityId resolved
+						? entityRef with { EntityId = resolved }
 						: throw new ParsingException(
 							$"!entity Id parameter '{idParam}' is missing or not a string during template instantiation"),
 				_ => value

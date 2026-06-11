@@ -200,19 +200,11 @@ namespace Assembler.Parsing
 			};
 
 		// Builds an EntityPropertySource. A literal id is wired straight through; a !parameter id resolves
-		// immediately if the parameter is already in scope (e.g. self_id during instantiation), otherwise
-		// it is carried on the source so SubstituteParameters can fill it in later.
-		private static ValueSource<T> CreateEntityPropertySource<T>(TransformContext ctx, EntityPropertyRef entityPropertyRef)
-		{
-			if (entityPropertyRef.IdParameter is not { } param)
-			{
-				return new EntityPropertySource<T>(entityPropertyRef.Id, entityPropertyRef.Property);
-			}
-
-			return ctx.Parameters.TryGetValue(param, out var raw) && raw is StringValue sv
-				? new EntityPropertySource<T>(sv.Value, entityPropertyRef.Property)
-				: new EntityPropertySource<T>(string.Empty, entityPropertyRef.Property, param);
-		}
+		// immediately if the parameter is already in scope (e.g. self_id during instantiation), otherwise it
+		// stays pending so SubstituteParameters can fill it in later. ParameterizableEntityId.Resolve
+		// encapsulates all three cases.
+		private static ValueSource<T> CreateEntityPropertySource<T>(TransformContext ctx, EntityPropertyRef entityPropertyRef) =>
+			new EntityPropertySource<T>(entityPropertyRef.EntityId.Resolve(ctx.Parameters), entityPropertyRef.Property);
 
 		private static bool IsAssignableList(Type t, Type elementType)
 		{

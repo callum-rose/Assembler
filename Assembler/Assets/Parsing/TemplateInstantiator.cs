@@ -166,34 +166,15 @@ namespace Assembler.Parsing
 			{
 				var l = listeners[i];
 
-				if (l is not DirectListenerInfo direct)
+				if (l is not DirectListenerInfo direct || direct.EntityId.PendingParameter is not { } paramId)
 				{
 					result[i] = l;
 					continue;
 				}
 
-				if (!direct.BehaviourDescriptor.EntityId.StartsWith(ListenerParsing.ParameterEntityIdSentinel))
-				{
-					result[i] = direct;
-					continue;
-				}
-
-				var paramId = direct.BehaviourDescriptor.EntityId[ListenerParsing.ParameterEntityIdSentinel.Length..];
-
-				if (parameters.TryGetValue(paramId, out var raw) && raw is StringValue sv)
-				{
-					result[i] = new DirectListenerInfo(direct.BehaviourDescriptor with
-					{
-						EntityId = sv.Value
-					})
-					{
-						OutputMapping = direct.OutputMapping
-					};
-				}
-				else
-				{
-					throw new ParsingException($"Listener parameter '{paramId}' is missing or not a string");
-				}
+				result[i] = direct.EntityId.Resolve(parameters) is LiteralEntityId resolved
+					? direct with { EntityId = resolved }
+					: throw new ParsingException($"Listener parameter '{paramId}' is missing or not a string");
 			}
 
 			return result;
