@@ -69,6 +69,18 @@ Controls:
     gamepad:
       move:
         - "<Gamepad>/leftStick"
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]
+
+  # On-screen touch widgets, rendered only when the active platform is Mobile.
+  # The joystick names the existing `move` action and drives it via the `mobile`
+  # binding above, so it feeds the same throttle/steer pipeline as WASD.
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size: { X: 360, Y: 360 }
 
 Constants:
   # --- Handling (tune these for feel) ---
@@ -79,13 +91,13 @@ Constants:
   turn rate: 2.4        # peak steering yaw rate in radians/sec (~137 deg/sec), reached at full grip
   grip speed: 3         # speed (units/sec) at which steering reaches full authority
   rear axle offset: 1.0 # distance (units) the turn pivot sits behind the car's centre. The car carves
-                        # about this point (the rear wheels' arc) so the nose sweeps wide and the tail
-                        # tracks, like a real car. Car is 2 long, so ~1.0 puts it at the rear axle;
-                        # larger plants the rear harder and sweeps the nose wider.
+    # about this point (the rear wheels' arc) so the nose sweeps wide and the tail
+    # tracks, like a real car. Car is 2 long, so ~1.0 puts it at the rear axle;
+  # larger plants the rear harder and sweeps the nose wider.
   rear grip: 14         # max sideways acceleration (units/sec^2) the rear tyres can hold before they
-                        # break loose into a drift. Cornering demand is roughly speed * yaw-rate; below
-                        # `rear grip` the rear tracks (clean rear-axle carve), above it the tail slides
-                        # out and recovers at this rate. Lower = breaks loose sooner / drifts more easily.
+    # break loose into a drift. Cornering demand is roughly speed * yaw-rate; below
+    # `rear grip` the rear tracks (clean rear-axle carve), above it the tail slides
+  # out and recovers at this rate. Lower = breaks loose sooner / drifts more easily.
 
   lap target: 3
   car start: !vec { X: 5, Y: 0.35, Z: -17 }
@@ -101,30 +113,30 @@ Constants:
   rival size: !vec { X: 1, Y: 0.5, Z: 2 }
   rival roof size: !vec { X: 0.8, Y: 0.45, Z: 1 }
   rival top speed: 5      # rival forward cruise (units/sec). Under the player's 9 so the
-                          # player can overtake, and below speed*turn-rate = rear grip so the
-                          # AI corners stay planted (no constant spin-outs) while looking smooth.
+    # player can overtake, and below speed*turn-rate = rear grip so the
+  # AI corners stay planted (no constant spin-outs) while looking smooth.
   rival throttle: 1       # AI holds full throttle; `drive velocity` eases speed toward the cruise
   rival slowing: 1.0      # navigate's ease radius (small; the car never parks on a corner)
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
-                          # the route flows through corners rather than aiming into the wall
+  # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
   avoid lookahead: 7.0    # how far ahead (units) a rival scans for traffic in its path. Both
-                          # `perceive`'s detection range and AvoidObstacles' corridor length use it,
-                          # so a rival starts moving over while still well back (~1.4s at the rival
-                          # cruise) rather than reacting at the last moment.
+    # `perceive`'s detection range and AvoidObstacles' corridor length use it,
+    # so a rival starts moving over while still well back (~1.4s at the rival
+  # cruise) rather than reacting at the last moment.
   avoid radius: 2.5       # corridor half-width (units): a car must be within this of the rival's
-                          # heading line to count as "in the way". Cars are ~1 wide, so this leaves a
-                          # generous margin either side of the line.
+    # heading line to count as "in the way". Cars are ~1 wide, so this leaves a
+  # generous margin either side of the line.
   avoid cone: 180         # `perceive`'s forward arc (degrees). The sensor only reports cars in front
-                          # of / beside the rival, never a tailgater behind, so the nearest car AHEAD
-                          # is the one fed to the corridor — the case the rival actually has to dodge.
+    # of / beside the rival, never a tailgater behind, so the nearest car AHEAD
+  # is the one fed to the corridor — the case the rival actually has to dodge.
   avoid strength: 2.5     # GAIN on the avoidance steer (see `ai steer`): AvoidObstacles' sideways
-                          # component (at most ~0.9, and smaller the further off the threat) is
-                          # multiplied by this and added straight onto the nav steer. ~2.5 means a
-                          # car squarely ahead saturates the steering toward the dodge well before
-                          # contact, so the rival commits to going around. Safe to run this high
-                          # because the corridor only ever sees cars AHEAD — it can't swing a rival
-                          # sideways at a car beside or behind it. Lower for lazier, later dodges.
+    # component (at most ~0.9, and smaller the further off the threat) is
+    # multiplied by this and added straight onto the nav steer. ~2.5 means a
+    # car squarely ahead saturates the steering toward the dodge well before
+    # contact, so the rival commits to going around. Safe to run this high
+    # because the corridor only ever sees cars AHEAD — it can't swing a rival
+  # sideways at a car beside or behind it. Lower for lazier, later dodges.
 
 Variables:
   laps: 0
@@ -442,16 +454,16 @@ Entities:
             Do: steer yaw
             With:
               - !expr
-                  Do: ai steer
-                  With:
-                    - !entity { Id: rival 1, Property: Rotation }
-                    - !entity { Id: rival 1, Property: Position }
-                    - !var nav dir
-                    - !var foe pos
-                    - !var foe seen
-                    - !var avoid lookahead
-                    - !var avoid radius
-                    - !var avoid strength
+                Do: ai steer
+                With:
+                  - !entity { Id: rival 1, Property: Rotation }
+                  - !entity { Id: rival 1, Property: Position }
+                  - !var nav dir
+                  - !var foe pos
+                  - !var foe seen
+                  - !var avoid lookahead
+                  - !var avoid radius
+                  - !var avoid strength
               - !entity { Id: rival 1, Property: Rotation }
               - !rigidbody { Id: rival 1, Property: Velocity }
               - !var turn rate
@@ -558,16 +570,16 @@ Entities:
             Do: steer yaw
             With:
               - !expr
-                  Do: ai steer
-                  With:
-                    - !entity { Id: rival 2, Property: Rotation }
-                    - !entity { Id: rival 2, Property: Position }
-                    - !var nav dir
-                    - !var foe pos
-                    - !var foe seen
-                    - !var avoid lookahead
-                    - !var avoid radius
-                    - !var avoid strength
+                Do: ai steer
+                With:
+                  - !entity { Id: rival 2, Property: Rotation }
+                  - !entity { Id: rival 2, Property: Position }
+                  - !var nav dir
+                  - !var foe pos
+                  - !var foe seen
+                  - !var avoid lookahead
+                  - !var avoid radius
+                  - !var avoid strength
               - !entity { Id: rival 2, Property: Rotation }
               - !rigidbody { Id: rival 2, Property: Velocity }
               - !var turn rate
@@ -674,16 +686,16 @@ Entities:
             Do: steer yaw
             With:
               - !expr
-                  Do: ai steer
-                  With:
-                    - !entity { Id: rival 3, Property: Rotation }
-                    - !entity { Id: rival 3, Property: Position }
-                    - !var nav dir
-                    - !var foe pos
-                    - !var foe seen
-                    - !var avoid lookahead
-                    - !var avoid radius
-                    - !var avoid strength
+                Do: ai steer
+                With:
+                  - !entity { Id: rival 3, Property: Rotation }
+                  - !entity { Id: rival 3, Property: Position }
+                  - !var nav dir
+                  - !var foe pos
+                  - !var foe seen
+                  - !var avoid lookahead
+                  - !var avoid radius
+                  - !var avoid strength
               - !entity { Id: rival 3, Property: Rotation }
               - !rigidbody { Id: rival 3, Property: Velocity }
               - !var turn rate
@@ -924,7 +936,7 @@ Entities:
         Listeners:
           - !gameover
 
-  # ---- Chase camera --------------------------------------------------------
+          # ---- Chase camera --------------------------------------------------------
   camera:
     Tags: [ camera ]
     Position: !var camera start
