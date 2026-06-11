@@ -26,6 +26,7 @@ namespace Tests.Voxelization
 
 			Assert.That(read.Id, Is.EqualTo("villager"));
 			Assert.That(read.Rigged, Is.True);
+			Assert.That(read.Symmetry, Is.EqualTo("bilateral"));
 			Assert.That(read.HeightInVoxels, Is.EqualTo(10));
 			Assert.That(read.Palette.Select(p => p.Key), Is.EqualTo(new[] { 'S', 'B', 'K' }));
 			Assert.That(read.Parts.Count, Is.EqualTo(6));
@@ -58,12 +59,15 @@ parts:
         - A
   - id: right
     parent: root
+    loose: true
     mirror: { source: left, axis: x }
 ";
 
 			var model = VModelYaml.Read(yaml);
 
 			Assert.That(model.FindPart("right")!.Pivot, Is.EqualTo(new Vector3Int(3, 1, 2)));
+			Assert.That(model.FindPart("right")!.Loose, Is.True);
+			Assert.That(model.FindPart("left")!.Loose, Is.False);
 		}
 
 		[Test]

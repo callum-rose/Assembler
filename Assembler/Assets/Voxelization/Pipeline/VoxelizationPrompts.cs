@@ -57,9 +57,15 @@ namespace Assembler.Voxelization
 			"- Choose `layers` for small organic/detailed parts (head, torso); `script` for geometric, parametric, " +
 			$"repetitive, or large parts (trunks, wheels, foliage). Any part over {config.PartVoxelBudget} declared " +
 			"voxels MUST be a script (or be split into smaller parts).\n" +
-			"- Bilateral symmetry is free: author one side, then declare the twin as " +
-			"`mirror: { source: <part>, axis: x }` instead of `data` (pivot may be omitted — it is derived by " +
-			"reflection). Mirror sources must be declared before the mirror.\n" +
+			"- BILATERAL ASSETS ARE STRICT: the finished model must be exactly mirror-symmetric across the x centre " +
+			"plane (this is validated). NEVER author geometry on both sides. Centre parts must be symmetric in x " +
+			"(odd widths centred on x=0, or even widths split evenly across the plane). Author every off-centre part " +
+			"on ONE side only, and declare its twin as `mirror: { source: <part>, axis: x }` instead of `data` " +
+			"(pivot may be omitted — it is derived by reflection). Mirror sources must be declared before the " +
+			"mirror. Plan side-part pivots as exact reflections of each other.\n" +
+			"- Parts whose geometry is naturally scattered (foliage, leaves, debris, pebbles) may set `loose: true` " +
+			"on the part so disconnected chunks within it are allowed. Never mark body parts, limbs, or structural " +
+			"pieces loose — a floating leaf is fine, a floating hand is not.\n" +
 			"- Parts must physically touch their parent at the joint, and the whole model must hit the required " +
 			"voxel height exactly: plan part sizes and pivots so they add up.\n" +
 			"- Palette: at most 12 colours, each a single-character key. `_` is reserved for empty.\n" +

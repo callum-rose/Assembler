@@ -36,7 +36,7 @@ namespace Tests.Voxelization
 
 			Assert.That(assembled.AssemblyIssues.IsValid, Is.True,
 				string.Join("\n", assembled.AssemblyIssues.Issues));
-			Assert.That(assembled.Composed.Voxels.Count, Is.EqualTo(48));
+			Assert.That(assembled.Composed.Voxels.Count, Is.EqualTo(52));
 			Assert.That(assembled.Composed.Size.y, Is.EqualTo(10), "villager must be exactly 10 voxels tall");
 		}
 

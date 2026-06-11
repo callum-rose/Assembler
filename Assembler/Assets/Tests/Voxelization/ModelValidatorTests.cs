@@ -148,11 +148,47 @@ namespace Tests.Voxelization
 			Assert.That(Validate(model, mismatching).Issues.Any(i => i.Code == IssueCode.SilhouetteMismatch), Is.True);
 		}
 
-		private static VoxelRigModel SinglePartModel(string[] layers, Vector3Int size, float realWorldHeight = 1.8f) => new()
+		[Test]
+		public void LoosePart_MaySplitIntoChunks()
+		{
+			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), realWorldHeight: 0.54f, loose: true);
+			var report = Validate(model);
+
+			Assert.That(report.Issues.Any(i => i.Code == IssueCode.FloatingChunk), Is.False,
+				"loose parts are allowed disconnected chunks");
+		}
+
+		[Test]
+		public void BilateralAsymmetry_IsReported()
+		{
+			// Occupancy is lopsided in x: mirroring across the bbox centre plane
+			// does not reproduce the model.
+			var model = SinglePartModel(new[] { "A.A\nAA." }, new Vector3Int(3, 1, 2), realWorldHeight: 0.18f, symmetry: "bilateral");
+			var report = Validate(model);
+
+			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric), Is.True);
+		}
+
+		[Test]
+		public void BilateralSymmetricModel_PassesTheSymmetryCheck()
+		{
+			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), realWorldHeight: 0.36f, symmetry: "bilateral");
+			var report = Validate(model);
+
+			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric), Is.False);
+		}
+
+		private static VoxelRigModel SinglePartModel(
+			string[] layers,
+			Vector3Int size,
+			float realWorldHeight = 1.8f,
+			bool loose = false,
+			string symmetry = "none") => new()
 		{
 			Id = "t",
 			Unit = 0.18f,
 			RealWorldHeight = realWorldHeight,
+			Symmetry = symmetry,
 			Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 			Parts = new[]
 			{
@@ -160,6 +196,7 @@ namespace Tests.Voxelization
 				{
 					Id = "solo",
 					Pivot = Vector3Int.zero,
+					Loose = loose,
 					Data = new LayersPartData(size, Vector3Int.zero, layers),
 				},
 			},

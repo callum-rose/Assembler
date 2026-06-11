@@ -18,6 +18,7 @@ namespace Assembler.Voxelization
 		DisconnectedPart,
 		PaletteMismatch,
 		SilhouetteMismatch,
+		Asymmetric,
 	}
 
 	/// <summary>

@@ -16,6 +16,14 @@ namespace Assembler.Voxelization
 		public string Id { get; init; } = string.Empty;
 		public string Parent { get; init; } = VoxelRigModel.RootId;
 		public Vector3Int Pivot { get; init; }
+
+		/// <summary>
+		/// Loose connectivity: the part may contain disconnected chunks
+		/// (foliage, scatter, debris) without failing validation. A floating
+		/// leaf is fine; a floating hand is not — the planner decides per part.
+		/// </summary>
+		public bool Loose { get; init; }
+
 		public PartData Data { get; init; } = new PlannedPartData(PartEncoding.Layers, Vector3Int.one, Vector3Int.zero, string.Empty);
 	}
 
@@ -37,6 +45,11 @@ namespace Assembler.Voxelization
 		public string Id { get; init; } = string.Empty;
 		public int Version { get; init; } = 1;
 		public bool Rigged { get; init; }
+
+		/// <summary>Symmetry contract from the manifest: bilateral | radial:N | none. Bilateral models must mirror across their centre x plane.</summary>
+		public string Symmetry { get; init; } = "none";
+
+		public bool IsBilateral => Symmetry == "bilateral";
 
 		/// <summary>Metres per voxel — the set-wide scale anchor.</summary>
 		public float Unit { get; init; } = 0.1f;

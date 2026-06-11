@@ -22,7 +22,7 @@ namespace Tests.Voxelization
 			};
 
 			var torsoLayer = "BBB\nBBB";
-			var headLayer = "SS\nSS";
+			var headLayer = "SSS\nSSS";
 
 			var parts = new[]
 			{
@@ -56,7 +56,7 @@ namespace Tests.Voxelization
 					Parent = "torso",
 					Pivot = new Vector3Int(0, 4, 0),
 					Data = new LayersPartData(
-						new Vector3Int(2, 2, 2),
+						new Vector3Int(3, 2, 2),
 						new Vector3Int(-1, 0, -1),
 						new[] { headLayer, headLayer }),
 				},
@@ -83,6 +83,7 @@ namespace Tests.Voxelization
 			{
 				Id = "villager",
 				Rigged = true,
+				Symmetry = "bilateral",
 				Unit = 0.18f,
 				RealWorldHeight = 1.8f,
 				Origin = "feet_center",

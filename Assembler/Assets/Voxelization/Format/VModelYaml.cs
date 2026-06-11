@@ -29,6 +29,7 @@ namespace Assembler.Voxelization
 				Id = YamlNodes.GetString(root, "model"),
 				Version = YamlNodes.GetInt(root, "version", 1),
 				Rigged = YamlNodes.GetBool(root, "rigged"),
+				Symmetry = YamlNodes.GetString(root, "symmetry", "none"),
 				Unit = YamlNodes.GetFloat(root, "unit", 0.1f),
 				RealWorldHeight = YamlNodes.GetFloat(root, "real_world_height"),
 				Origin = YamlNodes.GetString(root, "origin", "feet_center"),
@@ -44,6 +45,7 @@ namespace Assembler.Voxelization
 			sb.Append("model: ").Append(model.Id).Append('\n');
 			sb.Append("version: ").Append(model.Version).Append('\n');
 			sb.Append("rigged: ").Append(model.Rigged ? "true" : "false").Append('\n');
+			sb.Append("symmetry: ").Append(model.Symmetry).Append('\n');
 			sb.Append("unit: ").Append(YamlNodes.Float(model.Unit)).Append('\n');
 			sb.Append("real_world_height: ").Append(YamlNodes.Float(model.RealWorldHeight)).Append('\n');
 			sb.Append("origin: ").Append(model.Origin).Append('\n');
@@ -75,6 +77,10 @@ namespace Assembler.Voxelization
 			sb.Append("  - id: ").Append(part.Id).Append('\n');
 			sb.Append("    parent: ").Append(part.Parent).Append('\n');
 			sb.Append("    pivot: ").Append(YamlNodes.Vector(part.Pivot)).Append('\n');
+			if (part.Loose)
+			{
+				sb.Append("    loose: true\n");
+			}
 
 			switch (part.Data)
 			{
@@ -183,6 +189,7 @@ namespace Assembler.Voxelization
 					Id = id,
 					Parent = YamlNodes.GetString(partMap, "parent", VoxelRigModel.RootId),
 					Pivot = YamlNodes.GetVector3Int(partMap, "pivot", Vector3Int.zero),
+					Loose = YamlNodes.GetBool(partMap, "loose"),
 					Data = ReadPartData(partMap, id),
 				});
 			}

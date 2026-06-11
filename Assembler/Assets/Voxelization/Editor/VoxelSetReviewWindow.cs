@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Assembler.Voxels.Scripting;
 using UnityEditor;
 using UnityEngine;
@@ -12,10 +13,10 @@ namespace Assembler.Voxelization.Editor
 {
 	/// <summary>
 	/// Stage 6 — the operator's review gallery. Paste/generate a manifest, run
-	/// the batch autonomously, then review rendered previews per model with
-	/// accept (write exports to the output folder), regenerate (re-run from
-	/// planning), or refine (re-run with a note). Token usage per stage is
-	/// shown from day one.
+	/// the batch (assets generate in parallel and auto-export as they finish),
+	/// then review rendered previews per model with regenerate / refine. The
+	/// right sidebar carries the live status line, elapsed time, per-stage
+	/// token usage with estimated spend, and the log.
 	/// </summary>
 	public sealed class VoxelSetReviewWindow : EditorWindow
 	{
@@ -24,33 +25,49 @@ namespace Assembler.Voxelization.Editor
 		private const string BriefPref = "Assembler.Voxelization.GameBrief";
 		private const string OutputFolderPref = "Assembler.Voxelization.OutputFolder";
 		private const string ImageFolderPref = "Assembler.Voxelization.ImageFolder";
-		private const float PreviewSize = 160f;
+		private const string StageModelPrefPrefix = "Assembler.Voxelization.Model.";
+		private const float PreviewSize = 200f;
+		private const float SidebarWidth = 360f;
+
+		private static readonly string[] ModelOptions =
+		{
+			"claude-sonnet-4-6",
+			"claude-haiku-4-5",
+			"claude-opus-4-8",
+		};
 
 		private string _apiKey = string.Empty;
 		private string _gameBrief = string.Empty;
 		private string _manifestYaml = string.Empty;
 		private string _outputFolder = "Assets/Resources/Voxels/Sets/";
 		private string _imageFolder = string.Empty;
+		private string _manifestModel = VoxelizationConfig.DefaultModel;
+		private string _planningModel = VoxelizationConfig.DefaultModel;
+		private string _authoringModel = VoxelizationConfig.DefaultModel;
 
 		private readonly Dictionary<string, ModelResult> _results = new();
 		private readonly Dictionary<string, Texture2D> _previews = new();
 		private readonly Dictionary<string, string> _refineNotes = new();
+		private readonly Dictionary<string, Vector2> _infoScrolls = new();
 		private readonly StringBuilder _log = new();
 		private TokenUsageTracker _usage = new();
 
-		private readonly VoxelizationConfig _config = VoxelizationConfig.Default;
+		private readonly System.Diagnostics.Stopwatch _runTimer = new();
+		private string _statusLine = string.Empty;
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
 		private Vector2 _scroll;
 		private Vector2 _briefScroll;
 		private Vector2 _manifestScroll;
 		private Vector2 _logScroll;
+		private GUIStyle? _logStyle;
+		private GUIStyle? _statusStyle;
 
 		[MenuItem("Assembler/Voxel Set Review")]
 		public static void Open()
 		{
 			var window = GetWindow<VoxelSetReviewWindow>("Voxel Set Review");
-			window.minSize = new Vector2(820, 600);
+			window.minSize = new Vector2(960, 600);
 			window.Show();
 		}
 
@@ -61,17 +78,24 @@ namespace Assembler.Voxelization.Editor
 			_manifestYaml = EditorPrefs.GetString(ManifestPref, string.Empty);
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
+			_manifestModel = EditorPrefs.GetString(StageModelPrefPrefix + "Manifest", VoxelizationConfig.DefaultModel);
+			_planningModel = EditorPrefs.GetString(StageModelPrefPrefix + "Planning", VoxelizationConfig.DefaultModel);
+			_authoringModel = EditorPrefs.GetString(StageModelPrefPrefix + "Authoring", VoxelizationConfig.DefaultModel);
+			EditorApplication.update += OnEditorUpdate;
 		}
 
 		private void OnDisable()
 		{
+			EditorApplication.update -= OnEditorUpdate;
 			_cts?.Cancel();
 		}
 
 		private void OnGUI()
 		{
-			_scroll = EditorGUILayout.BeginScrollView(_scroll);
+			EditorGUILayout.BeginHorizontal();
 
+			EditorGUILayout.BeginVertical();
+			_scroll = EditorGUILayout.BeginScrollView(_scroll);
 			DrawSettings();
 			EditorGUILayout.Space();
 			DrawManifest();
@@ -79,12 +103,31 @@ namespace Assembler.Voxelization.Editor
 			DrawRunControls();
 			EditorGUILayout.Space();
 			DrawGallery();
-			EditorGUILayout.Space();
-			DrawUsage();
-			DrawLog();
-
 			EditorGUILayout.EndScrollView();
+			EditorGUILayout.EndVertical();
+
+			EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(SidebarWidth));
+			DrawSidebar();
+			EditorGUILayout.EndVertical();
+
+			EditorGUILayout.EndHorizontal();
 		}
+
+		private void OnEditorUpdate()
+		{
+			// Keep the timer and streaming status line moving while a run is live.
+			if (_isRunning)
+			{
+				Repaint();
+			}
+		}
+
+		private VoxelizationConfig BuildConfig() => VoxelizationConfig.Default with
+		{
+			ManifestModel = _manifestModel,
+			PlanningModel = _planningModel,
+			AuthoringModel = _authoringModel,
+		};
 
 		private void DrawSettings()
 		{
@@ -101,13 +144,52 @@ namespace Assembler.Voxelization.Editor
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_outputFolder = EditorGUILayout.TextField("Output folder", _outputFolder);
-				_imageFolder = EditorGUILayout.TextField("Reference image folder", _imageFolder);
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(OutputFolderPref, _outputFolder);
+				}
+			}
+
+			EditorGUILayout.BeginHorizontal();
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_imageFolder = EditorGUILayout.TextField("Reference image folder", _imageFolder);
+				if (scope.changed)
+				{
 					EditorPrefs.SetString(ImageFolderPref, _imageFolder);
 				}
 			}
+
+			if (GUILayout.Button(EditorGUIUtility.IconContent("Folder Icon"), GUILayout.Width(30), GUILayout.Height(18)))
+			{
+				var picked = EditorUtility.OpenFolderPanel("Reference image folder", _imageFolder, string.Empty);
+				if (!string.IsNullOrEmpty(picked))
+				{
+					_imageFolder = picked;
+					EditorPrefs.SetString(ImageFolderPref, _imageFolder);
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
+
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_manifestModel = DrawModelPopup("Manifest model", _manifestModel);
+				_planningModel = DrawModelPopup("Planning model", _planningModel);
+				_authoringModel = DrawModelPopup("Authoring model", _authoringModel);
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(StageModelPrefPrefix + "Manifest", _manifestModel);
+					EditorPrefs.SetString(StageModelPrefPrefix + "Planning", _planningModel);
+					EditorPrefs.SetString(StageModelPrefPrefix + "Authoring", _authoringModel);
+				}
+			}
+		}
+
+		private static string DrawModelPopup(string label, string current)
+		{
+			var index = Mathf.Max(0, Array.IndexOf(ModelOptions, current));
+			return ModelOptions[EditorGUILayout.Popup(label, index, ModelOptions)];
 		}
 
 		private void DrawManifest()
@@ -152,7 +234,7 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.BeginHorizontal();
 			using (new EditorGUI.DisabledScope(_isRunning || string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_manifestYaml)))
 			{
-				if (GUILayout.Button(_isRunning ? "Running..." : "Run batch"))
+				if (GUILayout.Button(_isRunning ? "Running..." : "Run batch (assets in parallel)"))
 				{
 					RunBatchAsync();
 				}
@@ -176,7 +258,7 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			EditorGUILayout.LabelField("Gallery", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("Gallery (models auto-export to the output folder as they finish)", EditorStyles.boldLabel);
 			foreach (var result in _results.Values.ToList())
 			{
 				DrawResult(result);
@@ -189,40 +271,28 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 			EditorGUILayout.BeginHorizontal();
 
-			var preview = PreviewFor(result);
-			if (preview != null)
+			var previewRect = GUILayoutUtility.GetRect(
+				PreviewSize, PreviewSize, GUILayout.Width(PreviewSize), GUILayout.Height(PreviewSize));
+			if (PreviewFor(result) is { } preview)
 			{
-				GUILayout.Label(preview, GUILayout.Width(PreviewSize), GUILayout.Height(PreviewSize));
+				GUI.DrawTexture(previewRect, preview, ScaleMode.ScaleToFit);
 			}
 			else
 			{
-				GUILayout.Box("no preview", GUILayout.Width(PreviewSize), GUILayout.Height(PreviewSize));
+				GUI.Box(previewRect, "no preview");
 			}
 
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.LabelField($"{result.AssetId} — {result.Status}", EditorStyles.boldLabel);
 
-			if (result.Error.Length > 0)
-			{
-				EditorGUILayout.HelpBox(result.Error, MessageType.Error);
-			}
-
-			foreach (var issue in result.Report.Issues.Take(6))
-			{
-				EditorGUILayout.LabelField(issue.ToString(), EditorStyles.miniLabel);
-			}
-
-			if (result.Report.Issues.Count > 6)
-			{
-				EditorGUILayout.LabelField($"... and {result.Report.Issues.Count - 6} more", EditorStyles.miniLabel);
-			}
+			DrawResultInfo(result);
 
 			EditorGUILayout.BeginHorizontal();
 			using (new EditorGUI.DisabledScope(_isRunning || result.Export == null))
 			{
-				if (GUILayout.Button("Accept", GUILayout.Width(90)))
+				if (GUILayout.Button("Re-export", GUILayout.Width(90)))
 				{
-					Accept(result);
+					ExportToAssets(result);
 				}
 			}
 
@@ -255,6 +325,50 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.EndVertical();
 		}
 
+		private void DrawResultInfo(ModelResult result)
+		{
+			_infoScrolls.TryGetValue(result.AssetId, out var scroll);
+			scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(PreviewSize - 60));
+			_infoScrolls[result.AssetId] = scroll;
+
+			if (result.Error.Length > 0)
+			{
+				EditorGUILayout.LabelField("FAILED: " + result.Error, EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+			}
+
+			// ExpandWidth(false) sizes each label to its content so the scroll
+			// view grows a horizontal bar instead of clipping long issue text.
+			foreach (var issue in result.Report.Issues)
+			{
+				EditorGUILayout.LabelField(issue.ToString(), EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+			}
+
+			if (result.Error.Length == 0 && result.Report.IsValid)
+			{
+				EditorGUILayout.LabelField("validation clean", EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+			}
+
+			EditorGUILayout.EndScrollView();
+		}
+
+		private void DrawSidebar()
+		{
+			var elapsed = _runTimer.Elapsed;
+			EditorGUILayout.LabelField(
+				_isRunning ? $"Running — {elapsed:mm\\:ss}" : elapsed.Ticks > 0 ? $"Done in {elapsed:mm\\:ss}" : "Idle",
+				EditorStyles.boldLabel);
+
+			if (_isRunning && _statusLine.Length > 0)
+			{
+				_statusStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+				EditorGUILayout.LabelField(_statusLine, _statusStyle);
+			}
+
+			DrawUsage();
+			EditorGUILayout.Space();
+			DrawLog();
+		}
+
 		private void DrawUsage()
 		{
 			var snapshot = _usage.Snapshot();
@@ -263,24 +377,21 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			EditorGUILayout.LabelField("Token usage", EditorStyles.boldLabel);
+			var config = BuildConfig();
 			var totalUsd = 0.0;
 			foreach (var stage in snapshot)
 			{
-				var rates = TokenPricing.RatesFor(_config.ModelForStage(stage.Stage));
+				var rates = TokenPricing.RatesFor(config.ModelForStage(stage.Stage));
 				var stageUsd = TokenPricing.EstimateUsd(stage.Tokens, rates);
 				totalUsd += stageUsd;
 				EditorGUILayout.LabelField(
-					$"{stage.Stage}: {stage.Requests} request(s), in {stage.Tokens.InputTokens:n0} " +
-					$"(cache r {stage.Tokens.CacheReadInputTokens:n0} / w {stage.Tokens.CacheCreationInputTokens:n0}), " +
+					$"{stage.Stage}: {stage.Requests} req, in {stage.Tokens.InputTokens:n0} " +
+					$"(c {stage.Tokens.CacheReadInputTokens:n0}/{stage.Tokens.CacheCreationInputTokens:n0}), " +
 					$"out {stage.Tokens.OutputTokens:n0} — ~${stageUsd:0.000}",
 					EditorStyles.miniLabel);
 			}
 
-			EditorGUILayout.LabelField($"Estimated spend this session: ~${totalUsd:0.000}", EditorStyles.boldLabel);
-			EditorGUILayout.LabelField(
-				"Estimated from token usage and published per-model rates — the API does not expose your account's remaining balance.",
-				EditorStyles.miniLabel);
+			EditorGUILayout.LabelField($"Estimated spend: ~${totalUsd:0.000}", EditorStyles.boldLabel);
 		}
 
 		private void DrawLog()
@@ -290,9 +401,12 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
-			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(160));
-			EditorGUILayout.SelectableLabel(_log.ToString(), EditorStyles.textArea, GUILayout.ExpandHeight(true));
+			_logStyle ??= new GUIStyle(EditorStyles.label) { wordWrap = true, fontSize = 10 };
+			var text = _log.ToString();
+			var height = _logStyle.CalcHeight(new GUIContent(text), SidebarWidth - 40f);
+
+			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.ExpandHeight(true));
+			EditorGUILayout.SelectableLabel(text, _logStyle, GUILayout.Height(Mathf.Max(height, 60f)), GUILayout.ExpandWidth(true));
 			EditorGUILayout.EndScrollView();
 		}
 
@@ -314,7 +428,7 @@ namespace Assembler.Voxelization.Editor
 			return texture;
 		}
 
-		private void Accept(ModelResult result)
+		private void ExportToAssets(ModelResult result)
 		{
 			if (result.Export == null)
 			{
@@ -324,19 +438,18 @@ namespace Assembler.Voxelization.Editor
 			var directory = Path.Combine(_outputFolder, result.AssetId);
 			result.Export.WriteToDisk(directory);
 			AssetDatabase.Refresh();
-			Log($"{result.AssetId}: accepted -> {directory}");
+			Log($"{result.AssetId}: exported -> {directory}");
 		}
 
 		private async void RunGenerateManifestAsync()
 		{
-			_isRunning = true;
-			_cts = new CancellationTokenSource();
+			StartRun(clearResults: false);
 			try
 			{
-				using var gateway = new AnthropicGateway(_apiKey, _usage);
-				var generator = new ManifestGenerator(gateway, _config);
+				using var gateway = NewGateway();
+				var generator = new ManifestGenerator(gateway, BuildConfig());
 				Log("Generating manifest...");
-				var manifest = await generator.GenerateAsync(_gameBrief, _cts.Token);
+				var manifest = await generator.GenerateAsync(_gameBrief, _cts!.Token);
 				_manifestYaml = ManifestYaml.Write(manifest);
 				EditorPrefs.SetString(ManifestPref, _manifestYaml);
 				Log("Manifest generated. Review it (attach 'reference:' entries if you have images), then run the batch.");
@@ -362,22 +475,20 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			_isRunning = true;
-			_cts = new CancellationTokenSource();
-			_results.Clear();
-			ClearPreviews();
-			_usage = new TokenUsageTracker();
-
+			StartRun(clearResults: true);
 			try
 			{
-				using var gateway = new AnthropicGateway(_apiKey, _usage);
+				using var gateway = NewGateway();
 				var orchestrator = NewOrchestrator(gateway);
-				foreach (var asset in manifest.Assets)
+				var progress = NewProgress();
+
+				// All assets run concurrently; each stores and auto-exports the
+				// moment it completes so finished work survives a recompile.
+				await Task.WhenAll(manifest.Assets.Select(async asset =>
 				{
-					_cts.Token.ThrowIfCancellationRequested();
-					var result = await orchestrator.RunAssetAsync(manifest, asset, string.Empty, _cts.Token, NewProgress());
+					var result = await orchestrator.RunAssetAsync(manifest, asset, string.Empty, _cts!.Token, progress);
 					StoreResult(result);
-				}
+				}));
 
 				Log("Batch complete.");
 			}
@@ -409,15 +520,13 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			_isRunning = true;
-			_cts = new CancellationTokenSource();
+			StartRun(clearResults: false);
 			try
 			{
-				using var gateway = new AnthropicGateway(_apiKey, _usage);
+				using var gateway = NewGateway();
 				var orchestrator = NewOrchestrator(gateway);
-				var result = await orchestrator.RunAssetAsync(manifest, asset, refinementNote, _cts.Token, NewProgress());
+				var result = await orchestrator.RunAssetAsync(manifest, asset, refinementNote, _cts!.Token, NewProgress());
 				StoreResult(result);
-				Log($"{assetId}: done ({result.Status}).");
 			}
 			catch (OperationCanceledException)
 			{
@@ -433,13 +542,17 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
+		private AnthropicGateway NewGateway() =>
+			new(_apiKey, _usage, onActivity: status => _statusLine = status);
+
 		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
 		{
+			var config = BuildConfig();
 			var images = string.IsNullOrWhiteSpace(_imageFolder)
 				? (IReferenceImageSource)NullReferenceImageSource.Instance
 				: new FileReferenceImageSource(_imageFolder);
-			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(_config.ScriptLimits));
-			return new SetOrchestrator(gateway, _config, images, runner, _usage);
+			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(config.ScriptLimits));
+			return new SetOrchestrator(gateway, config, images, runner, _usage);
 		}
 
 		private bool TryParseManifest(out SetManifest manifest)
@@ -472,6 +585,28 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			_previews.Remove(result.AssetId);
+			Log($"{result.AssetId}: {result.Status}");
+
+			// Auto-export so the model is inspectable in the project (and on
+			// disk, surviving a domain reload) without waiting for the batch.
+			if (result.Export != null)
+			{
+				ExportToAssets(result);
+			}
+		}
+
+		private void StartRun(bool clearResults)
+		{
+			_isRunning = true;
+			_cts = new CancellationTokenSource();
+			_statusLine = string.Empty;
+			_runTimer.Restart();
+			if (clearResults)
+			{
+				_results.Clear();
+				ClearPreviews();
+				_usage = new TokenUsageTracker();
+			}
 		}
 
 		private void ClearPreviews()
@@ -487,6 +622,8 @@ namespace Assembler.Voxelization.Editor
 		private void FinishRun()
 		{
 			_isRunning = false;
+			_runTimer.Stop();
+			_statusLine = string.Empty;
 			_cts?.Dispose();
 			_cts = null;
 			Repaint();
@@ -495,6 +632,7 @@ namespace Assembler.Voxelization.Editor
 		private void Log(string message)
 		{
 			_log.AppendLine(message);
+			_logScroll.y = float.MaxValue;
 			Repaint();
 		}
 	}

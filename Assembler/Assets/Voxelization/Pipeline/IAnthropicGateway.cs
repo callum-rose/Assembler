@@ -24,18 +24,25 @@ namespace Assembler.Voxelization
 			int maxToolIterations = AnthropicClient.DefaultMaxToolIterations);
 	}
 
-	/// <summary>One <see cref="AnthropicClient"/> per model id, all reporting into one usage tracker.</summary>
+	/// <summary>
+	/// One <see cref="AnthropicClient"/> per model id, all reporting into one
+	/// usage tracker. <paramref name="onActivity"/> receives a live status line
+	/// as responses stream in, so a UI can show progress during the long quiet
+	/// stretches of a model call.
+	/// </summary>
 	public sealed class AnthropicGateway : IAnthropicGateway
 	{
 		private readonly string _apiKey;
 		private readonly TokenUsageTracker _usage;
+		private readonly Action<string>? _onActivity;
 		private readonly Dictionary<string, AnthropicClient> _clients = new();
 		private readonly object _gate = new();
 
-		public AnthropicGateway(string apiKey, TokenUsageTracker usage)
+		public AnthropicGateway(string apiKey, TokenUsageTracker usage, Action<string>? onActivity = null)
 		{
 			_apiKey = apiKey;
 			_usage = usage;
+			_onActivity = onActivity;
 		}
 
 		public Task<string> SendAsync(
@@ -48,10 +55,17 @@ namespace Assembler.Voxelization
 			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse = null,
 			int maxToolIterations = AnthropicClient.DefaultMaxToolIterations)
 		{
+			_onActivity?.Invoke($"{stage}: waiting for {model}...");
+			var streamed = 0;
 			return ClientFor(model).SendAsync(
 				systemPrompt,
 				messages,
 				ct,
+				onDelta: delta =>
+				{
+					streamed += delta.Length;
+					_onActivity?.Invoke($"{stage}: streaming... {streamed:n0} chars");
+				},
 				tools: tools,
 				onToolUse: onToolUse,
 				maxToolIterations: maxToolIterations,

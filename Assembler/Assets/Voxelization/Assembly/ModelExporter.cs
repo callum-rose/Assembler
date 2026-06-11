@@ -34,13 +34,24 @@ namespace Assembler.Voxelization
 	/// </summary>
 	public static class ModelExporter
 	{
-		public static ExportedModel Export(AssembledModel assembled)
+		public static ExportedModel Export(AssembledModel assembled) => Export(assembled, ReferenceBrief.None);
+
+		public static ExportedModel Export(AssembledModel assembled, ReferenceBrief brief)
 		{
 			var model = assembled.Model;
+
+			// The vmodel yaml IS the raw generation data — it carries every
+			// authored layers block and part script, so a model can be rebuilt
+			// or hand-edited later. The brief rides alongside when present.
 			var files = new Dictionary<string, byte[]>
 			{
 				[$"{model.Id}.vmodel.yaml"] = Utf8(VModelYaml.Write(model)),
 			};
+
+			if (!brief.IsEmpty)
+			{
+				files["reference_brief.yaml"] = Utf8(ReferenceBriefYaml.Write(brief));
+			}
 
 			if (assembled.Composed.Voxels.Count > 0)
 			{

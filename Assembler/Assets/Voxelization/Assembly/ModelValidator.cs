@@ -14,10 +14,12 @@ namespace Assembler.Voxelization
 	public sealed class ModelValidator
 	{
 		private readonly float _silhouetteIouThreshold;
+		private readonly float _symmetryIouThreshold;
 
-		public ModelValidator(float silhouetteIouThreshold = 0.75f)
+		public ModelValidator(float silhouetteIouThreshold = 0.75f, float symmetryIouThreshold = 0.97f)
 		{
 			_silhouetteIouThreshold = silhouetteIouThreshold;
+			_symmetryIouThreshold = symmetryIouThreshold;
 		}
 
 		public ValidationReport Validate(AssembledModel assembled, ReferenceBrief brief)
@@ -26,11 +28,16 @@ namespace Assembler.Voxelization
 			var model = assembled.Model;
 
 			CheckScale(assembled, issues);
+			CheckBilateralSymmetry(assembled, issues);
 			foreach (var part in assembled.Parts)
 			{
 				CheckDeclaredSize(part, issues);
 				CheckPaletteLegality(model, part, issues);
-				CheckFloatingChunks(part, issues);
+				if (!part.Part.Loose)
+				{
+					CheckFloatingChunks(part, issues);
+				}
+
 				CheckTouchesParent(assembled, part, issues);
 			}
 
@@ -59,6 +66,35 @@ namespace Assembler.Voxelization
 				issues.Add(new ValidationIssue(string.Empty, IssueCode.ScaleMismatch,
 					$"Model is {actual} voxels tall but the manifest requires {target} " +
 					$"({assembled.Model.RealWorldHeight}m at {assembled.Model.Unit}m/voxel, tolerance ±{tolerance})."));
+			}
+		}
+
+		/// <summary>
+		/// Bilateral models must mirror across the centre x plane of their own
+		/// bounding box (x' = min.x + max.x − x, which also handles even widths
+		/// where the plane falls between cells). Occupancy IoU below the
+		/// threshold means geometry was authored on both sides instead of
+		/// mirrored, or pivots drifted off the plane.
+		/// </summary>
+		private void CheckBilateralSymmetry(AssembledModel assembled, List<ValidationIssue> issues)
+		{
+			if (!assembled.Model.IsBilateral || assembled.Composed.Voxels.Count == 0)
+			{
+				return;
+			}
+
+			var cells = assembled.Composed.Voxels.Keys;
+			var occupancy = new HashSet<Vector3Int>(cells);
+			var sum = assembled.Composed.Min.x + assembled.Composed.Max.x;
+			var intersection = cells.Count(p => occupancy.Contains(new Vector3Int(sum - p.x, p.y, p.z)));
+			var union = 2 * occupancy.Count - intersection;
+			var iou = union == 0 ? 1f : (float)intersection / union;
+
+			if (iou < _symmetryIouThreshold)
+			{
+				issues.Add(new ValidationIssue(string.Empty, IssueCode.Asymmetric,
+					$"Model is only {iou:P0} mirror-symmetric across its centre x plane (threshold {_symmetryIouThreshold:P0}). " +
+					"Author geometry on one side only and declare the other side as mirror parts."));
 			}
 		}
 

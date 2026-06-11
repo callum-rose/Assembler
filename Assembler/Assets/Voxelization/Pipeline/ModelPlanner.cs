@@ -82,13 +82,14 @@ namespace Assembler.Voxelization
 				throw new FormatException("The plan declared no palette.");
 			}
 
-			// The manifest, not the plan, owns identity and scale.
+			// The manifest, not the plan, owns identity, scale, and symmetry.
 			skeleton = skeleton with
 			{
 				Id = asset.Id,
 				Unit = manifest.Unit,
 				RealWorldHeight = asset.RealWorldHeight,
 				Rigged = asset.Rig,
+				Symmetry = asset.Symmetry,
 				Parts = skeleton.Parts.Select(EnforceBudget).ToArray(),
 			};
 
