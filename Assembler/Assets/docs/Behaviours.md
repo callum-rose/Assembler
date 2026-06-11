@@ -485,13 +485,14 @@ No properties.
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
-Fires once after a delay (starts the countdown on entity start, or on Execute).
+Fires once after a delay.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
+| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -777,6 +778,21 @@ Moves an entity to a target along a grid path, recomputed on a cadence.
 | Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
 | AgentRadius | float | Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths. |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+
+## `patrol`
+Walks an entity through an ordered list of waypoints, advancing on arrival.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Waypoints | List<Vector3> | Ordered world points to patrol (a vector-list !var, an inline list, or an !expr PositionList). |
+| Loop | bool | Wrap back to the first waypoint after the last (patrol loop) instead of stopping. |
+| PingPong | bool | Reverse direction at each end instead of wrapping (overrides Loop). |
+| ArriveRadius | float | Distance at which the current waypoint counts as reached and the index advances. |
+| Speed | float | Movement speed in units per second. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+| CurrentIndex | int | Name of an int variable to publish the current waypoint index into (omit to skip; for FSM/debug). |
 
 ## `grid mover`
 Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
