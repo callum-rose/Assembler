@@ -108,12 +108,16 @@ Constants:
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
                           # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
-  avoid radius: 3.0       # other cars within this distance push a rival's heading aside
-  avoid strength: 0.5     # MUST stay < 1: `Separate` returns a full-magnitude unit push the
-                          # instant any car is in range, so the nav heading (magnitude 1) has
-                          # to outweigh it — otherwise a rival passing the parked player swings
-                          # perpendicular and ploughs into the wall. 0.5 = a ~27° dodge at most;
-                          # physical collision handles anything closer.
+  avoid lookahead: 5.0    # how far ahead (units) a rival scans for traffic in its path; only cars
+                          # inside this forward corridor trigger an avoidance swerve (~1s at cruise)
+  avoid radius: 2.0       # corridor half-width (units): a car must be within this of the rival's
+                          # heading line to count as "in the way"
+  avoid strength: 0.5     # weight of the avoidance swerve against the nav heading (magnitude 1).
+                          # `AvoidObstacles` ramps its push from 0 at the look-ahead edge to full on
+                          # contact and reacts only to cars actually AHEAD in the corridor — so, unlike
+                          # the raw `Separate` this replaced, it never swings a rival perpendicular at a
+                          # car beside or behind it. 0.5 keeps the nav route dominant; physical collision
+                          # handles anything closer.
 
 Variables:
   laps: 0
@@ -228,16 +232,19 @@ Expressions:
   # that blends two pulls on the XZ plane:
   #   nav   — the unit direction `navigate` wants (its A* route velocity, written to the
   #           car's `nav dir` variable each frame);
-  #   avoid — a `Separate` repulsion away from the other three cars (player + two rivals,
-  #           passed in as live positions a/b/c) so a rival steers around traffic instead
-  #           of ploughing through it. Only cars within `avoidRadius` push.
+  #   avoid — an `AvoidObstacles` swerve away from the other three cars (player + two rivals,
+  #           passed in as live positions a/b/c) when one lies AHEAD in the rival's path. It
+  #           scans `lookAhead` units along the car's forward heading and only reacts to cars
+  #           inside that forward corridor (within `avoidRadius` of the heading line), ramping
+  #           the push up as the car closes — so a rival weaves around traffic in front of it
+  #           without flinching at cars beside or behind it.
   # Steering sign uses the car's own right axis (forward's in-plane perpendicular, same as
   # `drive velocity`): a desired heading off to the right wants positive steer. When the
   # desired heading is behind the car (forward dot < 0) it commits to a full-lock turn in
   # the nearer direction rather than dithering near zero.
   ai steer:
-    ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float ]
-    ArgumentNames: [ rotation, self, navDir, a, b, c, avoidRadius, avoidStrength ]
+    ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float, float ]
+    ArgumentNames: [ rotation, self, navDir, a, b, c, lookAhead, avoidRadius, avoidStrength ]
     ReturnType: float
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: |
@@ -245,7 +252,7 @@ Expressions:
       var forward = new Vector3(heading.x, 0f, heading.y);
       var right = new Vector3(forward.z, 0f, -forward.x);
       var others = new List<Vector3> { a, b, c };
-      var avoid = Separate(self, others, avoidRadius, 1f);
+      var avoid = AvoidObstacles(self, forward, others, lookAhead, avoidRadius, 1f);
       var nav = Normalize(new Vector3(navDir.x, 0f, navDir.z));
       var desired = Normalize(AddVector(nav, ScaleVector(avoid, avoidStrength)));
       var fwdDot = Dot(forward, desired);
@@ -404,6 +411,7 @@ Entities:
                     - !entity { Id: car, Property: Position }
                     - !entity { Id: rival 2, Property: Position }
                     - !entity { Id: rival 3, Property: Position }
+                    - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
               - !entity { Id: rival 1, Property: Rotation }
@@ -508,6 +516,7 @@ Entities:
                     - !entity { Id: car, Property: Position }
                     - !entity { Id: rival 1, Property: Position }
                     - !entity { Id: rival 3, Property: Position }
+                    - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
               - !entity { Id: rival 2, Property: Rotation }
@@ -612,6 +621,7 @@ Entities:
                     - !entity { Id: car, Property: Position }
                     - !entity { Id: rival 1, Property: Position }
                     - !entity { Id: rival 2, Property: Position }
+                    - !var avoid lookahead
                     - !var avoid radius
                     - !var avoid strength
               - !entity { Id: rival 3, Property: Rotation }

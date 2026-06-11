@@ -704,6 +704,20 @@ Like Single) but eases to a stop, scaling speed down inside the slowing radius.
 
 **Returns** (Vector3): A velocity toward the target, ramped to zero as the target is reached.
 
+### `Vector3 AvoidObstacles(Vector3 position, Vector3 velocity, List<Vector3> obstacles, float lookAhead, float avoidRadius, float maxSpeed)`
+Steer away from obstacles that lie ahead within a look-ahead distance, for collision avoidance. Only obstacles in front of the current heading and inside the swept corridor threaten; the nearest such obstacle produces a lateral swerve (away from it) plus a braking component, ramping up as it closes. Complements Single) (which repels in every direction) by reacting only to what is actually in the agent's path.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| position | Vector3 | Current position. |
+| velocity | Vector3 | Current velocity; its direction is the heading scanned for obstacles. |
+| obstacles | List<Vector3> | Positions of obstacles to dodge. |
+| lookAhead | float | How far ahead along the heading to scan; obstacles beyond this are ignored. |
+| avoidRadius | float | Corridor half-width: obstacles further than this off the heading line clear the agent. |
+| maxSpeed | float | Speed of the returned velocity at full imminence (units per second). |
+
+**Returns** (Vector3): A swerve-and-brake velocity away from the nearest threatening obstacle, or zero if none threaten.
+
 ### `Vector3 Evade(Vector3 position, Vector3 target, Vector3 targetVelocity, float maxSpeed)`
 Flee the target's predicted future position, dodging a moving threat.
 

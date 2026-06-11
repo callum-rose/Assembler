@@ -64,6 +64,61 @@ namespace Tests.Resolving
 		}
 
 		[Test]
+		public void AvoidObstaclesBrakesAndSwervesForObstacleAhead()
+		{
+			// Heading +x; obstacle dead ahead, slightly to the +y side -> swerve to -y plus a braking -x component.
+			var obstacles = new List<Vector3> { new(3, 0.5f, 0) };
+			var v = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), obstacles, 6f, 2f, 4f);
+
+			Assert.Less(v.x, 0f, "should brake against the heading");
+			Assert.Less(v.y, 0f, "should swerve away from the obstacle's side");
+			Assert.That(v.magnitude, Is.LessThanOrEqualTo(4f + Tol));
+		}
+
+		[Test]
+		public void AvoidObstaclesIgnoresObstacleBehind()
+		{
+			var obstacles = new List<Vector3> { new(-3, 0, 0) };
+			var v = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), obstacles, 6f, 2f, 4f);
+			Assert.That(v.magnitude, Is.EqualTo(0f).Within(Tol));
+		}
+
+		[Test]
+		public void AvoidObstaclesIgnoresObstacleOutsideCorridor()
+		{
+			// Ahead in x, but far off the heading line (beyond avoidRadius) -> clears the agent.
+			var obstacles = new List<Vector3> { new(3, 50, 0) };
+			var v = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), obstacles, 6f, 2f, 4f);
+			Assert.That(v.magnitude, Is.EqualTo(0f).Within(Tol));
+		}
+
+		[Test]
+		public void AvoidObstaclesIgnoresObstacleBeyondLookAhead()
+		{
+			var obstacles = new List<Vector3> { new(50, 0, 0) };
+			var v = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), obstacles, 6f, 2f, 4f);
+			Assert.That(v.magnitude, Is.EqualTo(0f).Within(Tol));
+		}
+
+		[Test]
+		public void AvoidObstaclesGrowsAsObstacleCloses()
+		{
+			var near = new List<Vector3> { new(1, 0.5f, 0) };
+			var far = new List<Vector3> { new(5, 0.5f, 0) };
+			var vNear = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), near, 6f, 2f, 4f);
+			var vFar = SteeringMath.AvoidObstacles(Vector3.zero, new Vector3(2, 0, 0), far, 6f, 2f, 4f);
+			Assert.Greater(vNear.magnitude, vFar.magnitude);
+		}
+
+		[Test]
+		public void AvoidObstaclesIsZeroWhenStationary()
+		{
+			var obstacles = new List<Vector3> { new(3, 0, 0) };
+			var v = SteeringMath.AvoidObstacles(Vector3.zero, Vector3.zero, obstacles, 6f, 2f, 4f);
+			Assert.That(v.magnitude, Is.EqualTo(0f).Within(Tol));
+		}
+
+		[Test]
 		public void Heading2DMeasuresFromPositiveX()
 		{
 			Assert.That(SteeringMath.Heading2D(Vector3.zero, new Vector3(0, 1, 0)), Is.EqualTo(90f).Within(Tol));

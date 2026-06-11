@@ -112,6 +112,76 @@ namespace Assembler.Libraries
 			return push.sqrMagnitude > 1e-6f ? push.normalized * maxSpeed : Vector3.zero;
 		}
 
+		/// <summary>
+		/// Steer away from obstacles that lie ahead within a look-ahead distance, for collision avoidance.
+		/// Only obstacles in front of the current heading and inside the swept corridor threaten; the nearest
+		/// such obstacle produces a lateral swerve (away from it) plus a braking component, ramping up as it
+		/// closes. Complements <see cref="Separate"/> (which repels in every direction) by reacting only to
+		/// what is actually in the agent's path.
+		/// </summary>
+		/// <param name="position">Current position.</param>
+		/// <param name="velocity">Current velocity; its direction is the heading scanned for obstacles.</param>
+		/// <param name="obstacles">Positions of obstacles to dodge.</param>
+		/// <param name="lookAhead">How far ahead along the heading to scan; obstacles beyond this are ignored.</param>
+		/// <param name="avoidRadius">Corridor half-width: obstacles further than this off the heading line clear the agent.</param>
+		/// <param name="maxSpeed">Speed of the returned velocity at full imminence (units per second).</param>
+		/// <returns>A swerve-and-brake velocity away from the nearest threatening obstacle, or zero if none threaten.</returns>
+		public static Vector3 AvoidObstacles(Vector3 position, Vector3 velocity, List<Vector3> obstacles,
+			float lookAhead, float avoidRadius, float maxSpeed)
+		{
+			if (velocity.sqrMagnitude < 1e-6f || obstacles == null)
+			{
+				return Vector3.zero;
+			}
+
+			var heading = velocity.normalized;
+			var nearestAhead = float.MaxValue;
+			var threatLateral = Vector3.zero;
+
+			foreach (var obstacle in obstacles)
+			{
+				var offset = obstacle - position;
+				var ahead = Vector3.Dot(offset, heading);
+
+				// Skip obstacles behind the agent or beyond the look-ahead distance.
+				if (ahead < 0f || ahead > lookAhead)
+				{
+					continue;
+				}
+
+				// Perpendicular distance from the heading line; obstacles outside the corridor clear the agent.
+				var lateral = offset - heading * ahead;
+				if (lateral.magnitude > avoidRadius)
+				{
+					continue;
+				}
+
+				// The closest threatening obstacle dominates the avoidance.
+				if (ahead < nearestAhead)
+				{
+					nearestAhead = ahead;
+					threatLateral = lateral;
+				}
+			}
+
+			if (nearestAhead == float.MaxValue)
+			{
+				return Vector3.zero;
+			}
+
+			// Swerve away from the obstacle, or pick a fixed side (2D-left) for one dead ahead on the line.
+			var lateralMag = threatLateral.magnitude;
+			var away = lateralMag > 1e-4f
+				? -threatLateral / lateralMag
+				: new Vector3(-heading.y, heading.x, heading.z);
+
+			// Imminence grows from 0 at the look-ahead edge to 1 right on top of the agent.
+			var imminence = lookAhead > 1e-4f ? 1f - nearestAhead / lookAhead : 1f;
+
+			// Lateral swerve plus a braking component along the heading, scaled by how imminent the collision is.
+			return (away - heading * 0.5f).normalized * (maxSpeed * Mathf.Clamp01(imminence));
+		}
+
 		/// <summary>Heading angle from one point toward another, in degrees CCW from +x, in [-180, 180].</summary>
 		/// <param name="from">The origin point.</param>
 		/// <param name="to">The point to face.</param>
