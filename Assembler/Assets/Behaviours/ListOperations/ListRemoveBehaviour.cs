@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   List: Reference to the target list variable.
 	///   Value: Item to remove.
 	/// </remarks>
-	public abstract class ListRemoveBehaviour<T> : GameBehaviour<ListRemoveData<T>>
+	public abstract class ListRemoveBehaviour<T> : GameBehaviour<ListRemoveData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Data.List.Get(ctx).Remove(Data.Value.Get(ctx));
 		}

@@ -7,9 +7,9 @@ namespace Assembler.Behaviours.Visual
 	/// <remarks>
 	/// Properties:
 	/// </remarks>
-	public class ToggleActive : GameBehaviour<ToggleActiveData>
+	public class ToggleActive : GameBehaviour<ToggleActiveData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			gameObject.SetActive(!gameObject.activeSelf);
 		}

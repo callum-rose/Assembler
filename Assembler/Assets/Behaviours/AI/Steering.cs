@@ -20,18 +20,16 @@ namespace Assembler.Behaviours.AI
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update() => Execute(TriggerContext.Empty);
-
-		public override void Execute(TriggerContext ctx)
+		private void Update()
 		{
 			var blended = Vector3.zero;
 
 			foreach (var force in Data.Forces)
 			{
-				blended += force.Force.Get(ctx) * force.Weight.Get(ctx);
+				blended += force.Force.Get() * force.Weight.Get();
 			}
 
-			var maxSpeed = Data.MaxSpeed.Get(ctx);
+			var maxSpeed = Data.MaxSpeed.Get();
 
 			if (blended.sqrMagnitude > maxSpeed * maxSpeed)
 			{

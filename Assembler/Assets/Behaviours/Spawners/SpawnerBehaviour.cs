@@ -22,13 +22,13 @@ namespace Assembler.Behaviours.Spawners
 	///   Rotation: Euler rotation in degrees for the spawned entity.
 	///   Parameters: Optional name→value overrides forwarded to the template's parameter slots.
 	/// </remarks>
-	public class SpawnerBehaviour : GameBehaviour<SpawnerData>, INeedsSpawner
+	public class SpawnerBehaviour : GameBehaviour<SpawnerData>, INeedsSpawner, IAmExecutable
 	{
 		public IEntitySpawner Spawner { get; set; }
 
 		private int _sequentialIndex;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Spawner.Spawn(PickTemplateId(ctx),
 				Data.Position.Get(ctx),

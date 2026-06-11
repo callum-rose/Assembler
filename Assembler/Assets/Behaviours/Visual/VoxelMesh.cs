@@ -23,7 +23,5 @@ namespace Assembler.Behaviours.Visual
 
 			data.Scale.UseIfValueExists(s => meshGo.transform.localScale = s);
 		}
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }

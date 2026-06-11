@@ -55,7 +55,7 @@ namespace Tests.Behaviours
 			// Drive the steering loop directly (Execute integrates onto the transform when no output is set).
 			for (var i = 0; i < 400; i++)
 			{
-				navigate.Execute(TriggerContext.Empty);
+				navigate.Step();
 			}
 
 			Assert.Less(Vector3.Distance(_go.transform.position, new Vector3(5, 0, 0)), 0.2f);

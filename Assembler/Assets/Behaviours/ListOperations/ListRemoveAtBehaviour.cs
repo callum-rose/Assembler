@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   List: Reference to the target list variable.
 	///   Index: Zero-based position to remove from.
 	/// </remarks>
-	public abstract class ListRemoveAtBehaviour<T> : GameBehaviour<ListRemoveAtData<T>>
+	public abstract class ListRemoveAtBehaviour<T> : GameBehaviour<ListRemoveAtData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var list = Data.List.Get(ctx);
 			var index = Data.Index.Get(ctx);

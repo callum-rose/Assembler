@@ -7,9 +7,9 @@ namespace Assembler.Behaviours.Spawners
 	/// <remarks>
 	/// Properties:
 	/// </remarks>
-	public class DestroyBehaviour : GameBehaviour<DestroyData>
+	public class DestroyBehaviour : GameBehaviour<DestroyData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Destroy(gameObject);
 			NotifyListeners(ctx);

@@ -14,14 +14,6 @@ namespace Assembler.Behaviours.Visual
 	/// </remarks>
 	public class ActivePoll : GameBehaviour<ActivePollData>
 	{
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
-
-		public override void Execute(TriggerContext ctx)
-		{
-			gameObject.SetActive(Data.Active.Get(ctx));
-		}
+		private void Update() => gameObject.SetActive(Data.Active.Get());
 	}
 }

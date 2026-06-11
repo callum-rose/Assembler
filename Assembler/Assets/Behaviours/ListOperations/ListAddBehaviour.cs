@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   List: Reference to the target list variable.
 	///   Value: Item to append.
 	/// </remarks>
-	public abstract class ListAddBehaviour<T> : GameBehaviour<ListAddData<T>>
+	public abstract class ListAddBehaviour<T> : GameBehaviour<ListAddData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Data.List.Get(ctx).Add(Data.Value.Get(ctx));
 		}

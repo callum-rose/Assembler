@@ -38,6 +38,11 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
+Variables:
+  # Leader movement state, written by the WASD key edges and integrated each
+  # frame by the single `move` velocity behaviour (see issue #201).
+  leader velocity: !vec { X: 0, Y: 0, Z: 0 }
+
 Expressions:
   shift y:
     ArgumentTypes: [ vector, float ]
@@ -83,48 +88,88 @@ Entities:
           IsWire: false
           Colour: !var leader colour
 
-      # WASD-driven motion via four velocity behaviours, each gated by a
-      # key-hold trigger. Standard pattern.
-      hold left:
-        Type: key hold trigger
+      # WASD-driven motion: a key press sets the shared `leader velocity` variable
+      # and releasing it stops; the single `move` velocity behaviour integrates
+      # that variable each frame. Targeting a `velocity` behaviour from a trigger
+      # is a no-op — velocity already runs every frame — and is now a build error
+      # (see issue #201).
+      move:
+        Type: velocity
+        Properties:
+          Velocity: !var leader velocity
+      press left:
+        Type: key down trigger
         Properties: { Key: "a" }
         Listeners:
           - EntityId: leader
-            BehaviourId: move left
-      move left:
-        Type: velocity
+            BehaviourId: go left
+      release left:
+        Type: key up trigger
+        Properties: { Key: "a" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: stop
+      go left:
+        Type: vector variable setter
         Properties:
-          Velocity: !vec { X: -4, Y: 0, Z: 0 }
-      hold right:
-        Type: key hold trigger
+          VariableId: !var leader velocity
+          Value: !vec { X: -4, Y: 0, Z: 0 }
+      press right:
+        Type: key down trigger
         Properties: { Key: "d" }
         Listeners:
           - EntityId: leader
-            BehaviourId: move right
-      move right:
-        Type: velocity
+            BehaviourId: go right
+      release right:
+        Type: key up trigger
+        Properties: { Key: "d" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: stop
+      go right:
+        Type: vector variable setter
         Properties:
-          Velocity: !vec { X: 4, Y: 0, Z: 0 }
-      hold up:
-        Type: key hold trigger
+          VariableId: !var leader velocity
+          Value: !vec { X: 4, Y: 0, Z: 0 }
+      press up:
+        Type: key down trigger
         Properties: { Key: "w" }
         Listeners:
           - EntityId: leader
-            BehaviourId: move up
-      move up:
-        Type: velocity
+            BehaviourId: go up
+      release up:
+        Type: key up trigger
+        Properties: { Key: "w" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: stop
+      go up:
+        Type: vector variable setter
         Properties:
-          Velocity: !vec { X: 0, Y: 4, Z: 0 }
-      hold down:
-        Type: key hold trigger
+          VariableId: !var leader velocity
+          Value: !vec { X: 0, Y: 4, Z: 0 }
+      press down:
+        Type: key down trigger
         Properties: { Key: "s" }
         Listeners:
           - EntityId: leader
-            BehaviourId: move down
-      move down:
-        Type: velocity
+            BehaviourId: go down
+      release down:
+        Type: key up trigger
+        Properties: { Key: "s" }
+        Listeners:
+          - EntityId: leader
+            BehaviourId: stop
+      go down:
+        Type: vector variable setter
         Properties:
-          Velocity: !vec { X: 0, Y: -4, Z: 0 }
+          VariableId: !var leader velocity
+          Value: !vec { X: 0, Y: -4, Z: 0 }
+      stop:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var leader velocity
+          Value: !vec { X: 0, Y: 0, Z: 0 }
 
   follower below:
     Position: !vec { X: 0, Y: -1.5, Z: 0 }

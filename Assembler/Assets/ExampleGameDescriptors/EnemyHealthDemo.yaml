@@ -102,6 +102,10 @@ Templates:
 
   player_template:
     Tags: [ player ]
+    Variables:
+      # Movement state, mutated by the WASD key edges and integrated each frame
+      # by the single `move` velocity behaviour below (see issue #201).
+      velocity: !var stopped
     Behaviours:
       gizmo:
         Type: cube gizmo
@@ -118,43 +122,87 @@ Templates:
         Type: rigidbody
         Properties:
           UseGravity: false
-      # WASD movement: holding a key sets velocity in that direction.
-      up hold:
-        Type: key hold trigger
+      # WASD movement: a key press sets the shared `velocity` variable to that
+      # direction and releasing it resets to stopped; the single `move` velocity
+      # behaviour integrates that variable each frame. Wiring a key trigger
+      # straight at a `velocity` behaviour is a no-op — velocity already runs every
+      # frame — and is now a build error (see issue #201).
+      move:
+        Type: velocity
+        Properties: { Velocity: !var velocity }
+      up press:
+        Type: key down trigger
         Properties: { Key: !var player up key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go up
+      up release:
+        Type: key up trigger
+        Properties: { Key: !var player up key }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: stop
       go up:
-        Type: velocity
-        Properties: { Velocity: !var player up vel }
-      down hold:
-        Type: key hold trigger
+        Type: vector variable setter
+        Properties:
+          VariableId: !var velocity
+          Value: !var player up vel
+      down press:
+        Type: key down trigger
         Properties: { Key: !var player down key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go down
+      down release:
+        Type: key up trigger
+        Properties: { Key: !var player down key }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: stop
       go down:
-        Type: velocity
-        Properties: { Velocity: !var player down vel }
-      left hold:
-        Type: key hold trigger
+        Type: vector variable setter
+        Properties:
+          VariableId: !var velocity
+          Value: !var player down vel
+      left press:
+        Type: key down trigger
         Properties: { Key: !var player left key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go left
+      left release:
+        Type: key up trigger
+        Properties: { Key: !var player left key }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: stop
       go left:
-        Type: velocity
-        Properties: { Velocity: !var player left vel }
-      right hold:
-        Type: key hold trigger
+        Type: vector variable setter
+        Properties:
+          VariableId: !var velocity
+          Value: !var player left vel
+      right press:
+        Type: key down trigger
         Properties: { Key: !var player right key }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go right
+      right release:
+        Type: key up trigger
+        Properties: { Key: !var player right key }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: stop
       go right:
-        Type: velocity
-        Properties: { Velocity: !var player right vel }
+        Type: vector variable setter
+        Properties:
+          VariableId: !var velocity
+          Value: !var player right vel
+      stop:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var velocity
+          Value: !var stopped
 
 Expressions:
   int sub:

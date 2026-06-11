@@ -22,7 +22,7 @@ namespace Assembler.Behaviours.AI
 		{
 			// Fire the initial state's OnEnter once, after all behaviours have been initialised so that
 			// listener targets are registered.
-			if (Data.States.TryGetValue(Data.CurrentState.Get(TriggerContext.Empty), out var initial))
+			if (Data.States.TryGetValue(Data.CurrentState.Get(), out var initial))
 			{
 				foreach (var listener in initial.OnEnter)
 				{
@@ -31,15 +31,13 @@ namespace Assembler.Behaviours.AI
 			}
 		}
 
-		private void Update() => Execute(TriggerContext.Empty);
-
-		public override void Execute(TriggerContext ctx)
+		private void Update()
 		{
-			var current = Data.CurrentState.Get(ctx);
+			var current = Data.CurrentState.Get();
 
 			foreach (var transition in Data.Transitions)
 			{
-				if (transition.From != current || !transition.When.Get(ctx))
+				if (transition.From != current || !transition.When.Get())
 				{
 					continue;
 				}
@@ -48,7 +46,7 @@ namespace Assembler.Behaviours.AI
 				{
 					foreach (var listener in from.OnExit)
 					{
-						listener.Notify(ctx);
+						listener.Notify(TriggerContext.Empty);
 					}
 				}
 
@@ -58,7 +56,7 @@ namespace Assembler.Behaviours.AI
 				{
 					foreach (var listener in to.OnEnter)
 					{
-						listener.Notify(ctx);
+						listener.Notify(TriggerContext.Empty);
 					}
 				}
 

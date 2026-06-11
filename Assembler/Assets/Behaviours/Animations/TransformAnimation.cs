@@ -20,13 +20,13 @@ namespace Assembler.Behaviours.Animations
 	///     inCubic/…, inQuart/…, inQuint/…, inExpo/…, inCirc/…, inElastic/…, inBack/…, inBounce/…, and the
 	///     flash variants (flash, inFlash, outFlash, inOutFlash). Case/space-insensitive. Defaults to inOutSine.
 	/// </remarks>
-	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>
+	public abstract class TransformAnimation : GameBehaviour<TransformAnimationData>, IAmExecutable
 	{
 		private Tween? _activeTween;
 
 		protected abstract Vector3 Current { get; set; }
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			_activeTween?.Kill();
 

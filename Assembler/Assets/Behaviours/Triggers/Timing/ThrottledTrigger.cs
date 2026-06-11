@@ -9,13 +9,13 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// Properties:
 	///   Rate: Maximum number of forwarded triggers per second.
 	/// </remarks>
-	public sealed class ThrottledTrigger : Trigger<ThrottledTriggerData>, INeedsGameClock
+	public sealed class ThrottledTrigger : Trigger<ThrottledTriggerData>, INeedsGameClock, IAmExecutable
 	{
 		public IGameClock Clock { get; set; } = null!;
 
 		private double _lastTriggerTime = double.NegativeInfinity;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var rate = Data.Rate.Get(ctx);
 			if (rate <= 0f)

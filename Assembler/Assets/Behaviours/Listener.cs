@@ -29,9 +29,9 @@ namespace Assembler.Behaviours
 
 	public sealed class DirectListener : Listener
 	{
-		private readonly GameBehaviour _target;
+		private readonly IAmExecutable _target;
 
-		public DirectListener(GameBehaviour target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
+		public DirectListener(IAmExecutable target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_target = target;
 		}
@@ -41,9 +41,10 @@ namespace Assembler.Behaviours
 #if DEBUG_CONSOLE
 		public override IEnumerable<GameBehaviour> DebugTargets()
 		{
-			if (_target != null)
+			// Every IAmExecutable is a GameBehaviour MonoBehaviour.
+			if (_target is GameBehaviour behaviour && behaviour != null)
 			{
-				yield return _target;
+				yield return behaviour;
 			}
 		}
 #endif
@@ -68,13 +69,15 @@ namespace Assembler.Behaviours
 		public override void Notify(TriggerContext ctx)
 		{
 			var preparedCtx = Prepare(ctx);
-			var targets = _resolveTargets(_entityTag.Get(preparedCtx));
+			var entityTag = _entityTag.Get(preparedCtx);
+			var targets = _resolveTargets(entityTag);
 
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute(preparedCtx);
+					behaviour.EnsureExecutable(
+						$"targeting behaviours on entities tagged '{entityTag}'").Execute(preparedCtx);
 				}
 			}
 		}
@@ -114,7 +117,7 @@ namespace Assembler.Behaviours
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute(preparedCtx);
+					behaviour.EnsureExecutable($"targeting behaviours tagged '{tag}'").Execute(preparedCtx);
 				}
 			}
 		}

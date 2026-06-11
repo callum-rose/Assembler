@@ -8,9 +8,9 @@ namespace Assembler.Behaviours.ListOperations
 	/// Properties:
 	///   List: Reference to the target list variable.
 	/// </remarks>
-	public abstract class ListClearBehaviour<T> : GameBehaviour<ListClearData<T>>
+	public abstract class ListClearBehaviour<T> : GameBehaviour<ListClearData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Data.List.Get(ctx).Clear();
 		}

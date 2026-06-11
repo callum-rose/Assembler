@@ -35,7 +35,5 @@ namespace Assembler.Behaviours.Visual
 			light.range = data.Range.ValueOr(10f);
 			light.spotAngle = data.SpotAngle.ValueOr(30f);
 		}
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }

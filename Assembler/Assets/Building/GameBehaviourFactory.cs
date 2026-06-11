@@ -874,7 +874,7 @@ namespace Assembler.Building
 			listeners.Select(l => (Listener)(l switch
 			{
 				DirectListenerInfo direct => new DirectListener(
-					listenerRegistry[direct.BehaviourDescriptor],
+					ResolveExecutable(listenerRegistry, direct.BehaviourDescriptor),
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
@@ -887,10 +887,18 @@ namespace Assembler.Building
 					tag => listenerRegistry.GetByBehaviourTag(tag),
 					behaviourTagged.OutputMapping),
 				GameOverListenerInfo gameOver => new DirectListener(
-					listenerRegistry[new BehaviourDescriptor(
-						GameOverController.EntityId, GameOverController.EndBehaviourId)],
+					ResolveExecutable(listenerRegistry,
+						new BehaviourDescriptor(GameOverController.EntityId, GameOverController.EndBehaviourId)),
 					gameOver.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
+
+		// Looks up a build-time-known listener target and hard-fails when it is not executable — a trigger or
+		// self-driven behaviour wired as a Listeners: target does nothing, so reject it loudly rather than
+		// silently no-op (see issue #201). The guard itself lives in the shared EnsureExecutable extension.
+		private static IAmExecutable ResolveExecutable(
+			IReadOnlyBehaviourRegistry registry, BehaviourDescriptor descriptor) =>
+			registry[descriptor].EnsureExecutable(
+				$"targeting behaviour '{descriptor.BehaviourId}' on entity '{descriptor.EntityId}'");
 	}
 }

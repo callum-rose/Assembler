@@ -27,7 +27,5 @@ namespace Assembler.Behaviours.Sprites
 				spriteGo.transform.localScale = new Vector3(size.x / nativeSize.x, size.y / nativeSize.y, 1f);
 			});
 		}
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }
