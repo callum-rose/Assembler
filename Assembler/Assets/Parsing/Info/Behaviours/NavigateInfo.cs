@@ -37,9 +37,10 @@ namespace Assembler.Parsing.Info.Behaviours
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("SlowingRadius"), 0.75f),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Recompute"), 0.25f),
 				ValueSourceFactory.CreateValueSource<string>(ctx, props.GetValueOrDefault("Mode"), "astar"),
-				// Negative => inherit the game-wide Navigation AgentRadius; set a value here to give this agent its
-				// own clearance, so a larger agent routes around obstacles more widely than a smaller one.
-				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius"), -1f),
+				// Optional: when unset this resolves to a null provider and the agent falls back to the game-wide
+				// Navigation DefaultAgentRadius at the point of use. Set it to give this agent its own clearance,
+				// so a larger agent routes around obstacles more widely than a smaller one.
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius")),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, props.GetValueOrDefault("Output")));
 		}
 

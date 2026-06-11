@@ -391,7 +391,7 @@ namespace Assembler.Parsing
 				dto.ObstacleTag ?? defaults.ObstacleTag,
 				plane,
 				dto.Diagonal ?? defaults.AllowDiagonal,
-				dto.AgentRadius ?? defaults.AgentRadius);
+				dto.DefaultAgentRadius ?? defaults.DefaultAgentRadius);
 		}
 
 		private static NavPlane ParseNavPlane(string? plane) =>

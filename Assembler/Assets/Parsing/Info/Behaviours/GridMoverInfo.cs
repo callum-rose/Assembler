@@ -27,9 +27,10 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, props.GetValueOrDefault("Direction")),
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Speed"), 4f),
-				// Negative => inherit the game-wide Navigation AgentRadius. Tile-locked movers usually want 0 (a
-				// one-cell agent); a larger value treats narrow gaps as blocked, like the navigate behaviour.
-				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius"), -1f));
+				// Optional: when unset this resolves to a null provider and falls back to the game-wide Navigation
+				// DefaultAgentRadius at the point of use. Tile-locked movers usually want 0 (a one-cell agent); a
+				// larger value treats narrow gaps as blocked, like the navigate behaviour.
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("AgentRadius")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

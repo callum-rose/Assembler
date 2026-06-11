@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Assembler.Behaviours.AI
 {
 	/// <summary>Static configuration for the walkability grid, sourced from the descriptor's <c>Navigation:</c>
-	/// section. <see cref="AgentRadius"/> is the game-wide <em>default</em> clearance, used by a navigating agent
+	/// section. <see cref="DefaultAgentRadius"/> is the game-wide default clearance, used by a navigating agent
 	/// that doesn't set its own radius.</summary>
 	public sealed record NavGridSettings(
 		float CellSize,
@@ -18,13 +18,13 @@ namespace Assembler.Behaviours.AI
 		string ObstacleTag,
 		NavPlane Plane,
 		bool AllowDiagonal,
-		float AgentRadius)
+		float DefaultAgentRadius)
 	{
 		/// <summary>The build-pipeline mapping from the parsed <see cref="NavigationInfo"/> — the single source
 		/// of the grid's configuration and defaults.</summary>
 		public static NavGridSettings From(NavigationInfo info) =>
 			new(info.CellSize, info.MinX, info.MinY, info.MaxX, info.MaxY, info.ObstacleTag, info.Plane,
-				info.AllowDiagonal, info.AgentRadius);
+				info.AllowDiagonal, info.DefaultAgentRadius);
 
 		public static NavGridSettings Default => From(NavigationInfo.Default);
 	}
@@ -57,9 +57,13 @@ namespace Assembler.Behaviours.AI
 
 		public float CellSize => _settings.CellSize;
 
+		/// <summary>The game-wide default agent radius, used as the fallback by a navigating agent whose own
+		/// <c>AgentRadius</c> is unset.</summary>
+		public float DefaultAgentRadius => _settings.DefaultAgentRadius;
+
 		/// <summary>Whether the cell containing <paramref name="world"/> is on the grid and walkable for an agent
-		/// of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default). Used by
-		/// grid-locked movers to decide whether the next cell in a direction is enterable.</summary>
+		/// of the given <paramref name="agentRadius"/> (world units). Used by grid-locked movers to decide whether
+		/// the next cell in a direction is enterable.</summary>
 		public bool IsWalkable(Vector3 world, float agentRadius)
 		{
 			var grid = GridFor(agentRadius);
@@ -96,8 +100,8 @@ namespace Assembler.Behaviours.AI
 		}
 
 		/// <summary>World-space waypoints from <paramref name="from"/> to <paramref name="to"/> (goal last) for an
-		/// agent of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default), or
-		/// just the goal if no grid path exists.</summary>
+		/// agent of the given <paramref name="agentRadius"/> (world units), or just the goal if no grid path
+		/// exists.</summary>
 		public IReadOnlyList<Vector3> Path(Vector3 from, Vector3 to, float agentRadius)
 		{
 			var plane = _settings.Plane;
@@ -127,8 +131,8 @@ namespace Assembler.Behaviours.AI
 		}
 
 		/// <summary>Unit flow direction from <paramref name="position"/> toward <paramref name="goal"/> for an agent
-		/// of the given <paramref name="agentRadius"/> (a negative radius inherits the game-wide default), using a
-		/// flow field cached per (goal cell, radius) and rebuilt only when first seen or evicted.</summary>
+		/// of the given <paramref name="agentRadius"/> (world units), using a flow field cached per (goal cell,
+		/// radius) and rebuilt only when first seen or evicted.</summary>
 		public Vector3 FlowDirection(Vector3 position, Vector3 goal, float agentRadius)
 		{
 			var plane = _settings.Plane;
@@ -190,13 +194,12 @@ namespace Assembler.Behaviours.AI
 			return inflated;
 		}
 
-		// The clearance in whole cells: a negative radius inherits the game-wide default, then round up so a
-		// fractional radius never under-clears (matching NavGrid.Inflate's own rounding).
-		private int CellRadiusOf(float agentRadius)
-		{
-			var radius = agentRadius < 0f ? _settings.AgentRadius : agentRadius;
-			return radius <= 0f ? 0 : Mathf.CeilToInt(radius / _settings.CellSize);
-		}
+		// The clearance in whole cells: zero (or any non-positive radius) means no inflation; otherwise round up
+		// so a fractional radius never under-clears (matching NavGrid.Inflate's own rounding). Callers pass the
+		// agent's resolved radius — the "inherit the game-wide default when unset" fallback lives at the call
+		// site (the navigate / grid mover behaviours, via AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius)).
+		private int CellRadiusOf(float agentRadius) =>
+			agentRadius <= 0f ? 0 : Mathf.CeilToInt(agentRadius / _settings.CellSize);
 
 		// Memoised: the uninflated grid is built once on first use and reused as the source for every inflated
 		// variant. CreateBaseGrid is a pure factory (no field side effects), so this stays a null-coalescing get.

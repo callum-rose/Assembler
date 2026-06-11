@@ -149,22 +149,22 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void NegativeAgentRadiusInheritsTheNavigationDefault()
+		public void ServiceExposesTheConfiguredDefaultAgentRadius()
 		{
-			AddObstacle<SphereCollider>(Vector3.zero).radius = 0.4f;
-			// A game-wide default of 2 with no per-call radius (negative => inherit) clears the same cell as an
-			// explicit radius of 2 does.
-			var service = ObstacleService(NavPlane.XY, agentRadius: 2f);
-
-			Assert.IsFalse(service.IsWalkable(new Vector3(2.5f, 0.5f, 0f), -1f),
-				"a negative radius inherits the Navigation default (2) and clears the cell");
+			// The navigate / grid mover behaviours read this as the fallback for an unset per-agent AgentRadius
+			// (via AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius)); the negative-sentinel approach is gone.
+			Assert.AreEqual(2f, ObstacleService(NavPlane.XY, defaultAgentRadius: 2f).DefaultAgentRadius, 1e-4f);
+			Assert.AreEqual(0f, ObstacleService(NavPlane.XY).DefaultAgentRadius, 1e-4f);
 		}
 
-		// A grid service whose obstacles are exactly the test-created entities tagged ObstacleTag. AgentRadius here
-		// is the game-wide DEFAULT (used when a query passes a negative radius); query methods take the per-agent
-		// radius explicitly.
-		private static NavGridService ObstacleService(NavPlane plane, float agentRadius = 0f) =>
-			new(NavGridSettings.Default with { Plane = plane, ObstacleTag = ObstacleTag, AgentRadius = agentRadius });
+		// A grid service whose obstacles are exactly the test-created entities tagged ObstacleTag.
+		// DefaultAgentRadius is the game-wide fallback the behaviours apply when an agent's own radius is unset;
+		// the service's query methods take the per-agent radius explicitly.
+		private static NavGridService ObstacleService(NavPlane plane, float defaultAgentRadius = 0f) =>
+			new(NavGridSettings.Default with
+			{
+				Plane = plane, ObstacleTag = ObstacleTag, DefaultAgentRadius = defaultAgentRadius
+			});
 
 		// Creates an active obstacle-tagged entity at a world position with a collider of the requested shape,
 		// tracked for teardown. The caller configures the collider's dimensions on the returned component.

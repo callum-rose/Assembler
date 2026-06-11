@@ -21,7 +21,7 @@ namespace Assembler.Behaviours.AI
 	///   SlowingRadius: Distance from the goal at which to begin easing to a stop.
 	///   Recompute: Seconds between route recomputes (0 recomputes every frame).
 	///   Mode: "astar" (per-agent path) or "flowfield" (shared-goal field).
-	///   AgentRadius: Clearance kept from obstacles for this agent's route, in world units; negative (the default) inherits the game-wide Navigation AgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths.
+	///   AgentRadius: Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths.
 	///   Output: Name of the vector variable to write the desired velocity into (omit to move the entity directly).
 	/// </remarks>
 	public sealed class Navigate : GameBehaviour<NavigateData>, INeedsGameClock, INeedsNavigation
@@ -42,7 +42,8 @@ namespace Assembler.Behaviours.AI
 			var speed = Data.Speed.Get(ctx);
 			var slowingRadius = Data.SlowingRadius.Get(ctx);
 			var recompute = Data.Recompute.Get(ctx);
-			var agentRadius = Data.AgentRadius.Get(ctx);
+			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
+			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
 
 			_sinceRecompute += Clock.DeltaTime;
 

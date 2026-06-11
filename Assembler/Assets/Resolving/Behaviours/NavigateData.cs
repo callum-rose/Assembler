@@ -10,7 +10,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> Recompute { get; }
 		public IValueProvider<string> Mode { get; }
 
-		/// <summary>Clearance for this agent's route; negative inherits the game-wide Navigation default.</summary>
+		/// <summary>Clearance for this agent's route; a null provider (unset) inherits the game-wide Navigation
+		/// default via <c>ValueOr</c> at the point of use.</summary>
 		public IValueProvider<float> AgentRadius { get; }
 
 		/// <summary>Velocity variable to write; a <see cref="NullValueProvider{T}"/> drives the transform directly.</summary>

@@ -16,7 +16,7 @@ namespace Assembler.Behaviours.AI
 	/// Properties:
 	///   Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
 	///   Speed: Movement speed in units per second.
-	///   AgentRadius: Clearance used for walkability checks, in world units; negative (the default) inherits the game-wide Navigation AgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
+	///   AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
 	/// </summary>
 	public sealed class GridMover : GameBehaviour<GridMoverData>, INeedsGameClock, INeedsNavigation
 	{
@@ -32,7 +32,8 @@ namespace Assembler.Behaviours.AI
 		public override void Execute(TriggerContext ctx)
 		{
 			var cellSize = Nav.CellSize;
-			var agentRadius = Data.AgentRadius.Get(ctx);
+			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
+			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
 
 			if (!_initialised)
 			{

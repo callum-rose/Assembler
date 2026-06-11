@@ -27,13 +27,13 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 # The shared walkability grid: half-unit cells, spanning the arena, treating any entity
-# tagged `wall` as an obstacle. AgentRadius here is the game-wide DEFAULT clearance — the
+# tagged `wall` as an obstacle. DefaultAgentRadius is the game-wide DEFAULT clearance — the
 # small agent leaves its own AgentRadius unset and so inherits this 0.
 Navigation:
   CellSize: 0.5
   Bounds: { Min: !vec { X: -10, Y: -8 }, Max: !vec { X: 10, Y: 8 } }
   ObstacleTag: wall
-  AgentRadius: 0
+  DefaultAgentRadius: 0
 
 Constants:
   small size: !vec { X: 0.5, Y: 0.5, Z: 0.5 }

@@ -21,8 +21,9 @@ namespace Assembler.Deserialisation.Dtos
 		/// set <c>false</c> for four-connected, grid-aligned movement (e.g. a Pacman-style maze).</summary>
 		public bool? Diagonal { get; init; }
 
-		/// <summary>How far (world units) to inflate obstacles so paths keep clearance. Omitted/0 means no
-		/// inflation.</summary>
-		public float? AgentRadius { get; init; }
+		/// <summary>The game-wide default clearance (world units) by which obstacles are inflated, used by any
+		/// agent that doesn't set its own <c>AgentRadius</c>. Omitted/0 means no inflation. A <c>navigate</c> or
+		/// <c>grid mover</c> behaviour can override it per agent.</summary>
+		public float? DefaultAgentRadius { get; init; }
 	}
 }
