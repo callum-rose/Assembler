@@ -50,7 +50,19 @@ namespace Assembler.Voxels
 				var id = new string(r.ReadChars(4));
 				var contentSize = r.ReadInt32();
 				var childrenSize = r.ReadInt32();
+
+				if (contentSize < 0 || childrenSize < 0)
+				{
+					throw new InvalidDataException(
+						$".vox chunk '{id}' has negative size (content={contentSize}, children={childrenSize}).");
+				}
+
 				var contentEnd = ms.Position + contentSize;
+				if (contentEnd + childrenSize > ms.Length)
+				{
+					throw new InvalidDataException(
+						$".vox chunk '{id}' extends beyond end of file.");
+				}
 
 				switch (id)
 				{
@@ -64,7 +76,19 @@ namespace Assembler.Voxels
 						// need the declared SIZE chunk values.
 						break;
 					case "XYZI":
+						if (contentSize < 4)
+						{
+							throw new InvalidDataException(
+								$".vox XYZI chunk content too short ({contentSize} bytes).");
+						}
+
 						var count = r.ReadInt32();
+						if (count < 0 || (long)count * 4 > contentSize - 4)
+						{
+							throw new InvalidDataException(
+								$".vox XYZI chunk has invalid voxel count {count} for content size {contentSize}.");
+						}
+
 						for (var i = 0; i < count; i++)
 						{
 							var vx = r.ReadByte();
