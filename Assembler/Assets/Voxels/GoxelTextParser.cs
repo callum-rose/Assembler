@@ -12,7 +12,10 @@ namespace Assembler.Voxels
 	/// </summary>
 	public static class GoxelTextParser
 	{
-		public static VoxelModel Parse(string text)
+		public static VoxelModel Parse(string text) => Parse(text, out _);
+
+		/// <param name="skippedLines">Number of non-blank, non-comment lines that could not be parsed.</param>
+		public static VoxelModel Parse(string text, out int skippedLines)
 		{
 			var voxels = new Dictionary<Vector3Int, byte>();
 			var paletteIndex = new Dictionary<Color32, byte>(new Color32Comparer());
@@ -21,6 +24,7 @@ namespace Assembler.Voxels
 			Vector3Int min = new(int.MaxValue, int.MaxValue, int.MaxValue);
 			Vector3Int max = new(int.MinValue, int.MinValue, int.MinValue);
 			var hasAny = false;
+			skippedLines = 0;
 
 			var lines = text.Split('\n');
 			foreach (var rawLine in lines)
@@ -34,6 +38,7 @@ namespace Assembler.Voxels
 				var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 				if (parts.Length < 4)
 				{
+					skippedLines++;
 					continue;
 				}
 
@@ -41,11 +46,13 @@ namespace Assembler.Voxels
 					!int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y) ||
 					!int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var z))
 				{
+					skippedLines++;
 					continue;
 				}
 
 				if (!TryParseHexColor(parts[3], out var colour))
 				{
+					skippedLines++;
 					continue;
 				}
 

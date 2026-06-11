@@ -275,7 +275,7 @@ Fires every frame while the named key is held down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | One of "w", "a", "s", "d", "up", "down", "left", "right". |
+| Key | string | Legacy input key name (lowercase), e.g. "w", "space", "escape", "up", "mouse0". |
 
 ## `key down trigger`
 Fires on the frame the named key is pressed down.
@@ -284,7 +284,7 @@ Fires on the frame the named key is pressed down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `key up trigger`
 Fires on the frame the named key is released.
@@ -293,7 +293,7 @@ Fires on the frame the named key is released.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `mouse button trigger`
 Fires on a mouse button event during the selected phase (press, release, or hold).
@@ -485,13 +485,14 @@ No properties.
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
-Fires once after a delay (starts the countdown on entity start, or on Execute).
+Fires once after a delay.
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
+| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -752,6 +753,25 @@ Sensor that scans for the nearest tagged entity and writes the result into black
 | HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
 | LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
 
+## `perceive all`
+Sensor that scans for every tagged entity in range and writes them into blackboard list variables.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| Positions | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's position. |
+| Ids | List<string> | !var reference to the string-list variable cleared and filled with each detected entity's id. |
+| Velocities | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans). |
+| Count | int | !var reference to the int variable set to the number of entities detected this scan. |
+
 ## `steering`
 Blends a weighted list of steering forces into one velocity each frame.
 
@@ -777,6 +797,21 @@ Moves an entity to a target along a grid path, recomputed on a cadence.
 | Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
 | AgentRadius | float | Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths. |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+
+## `patrol`
+Walks an entity through an ordered list of waypoints, advancing on arrival.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Waypoints | List<Vector3> | Ordered world points to patrol (a vector-list !var, an inline list, or an !expr PositionList). |
+| Loop | bool | Wrap back to the first waypoint after the last (patrol loop) instead of stopping. |
+| PingPong | bool | Reverse direction at each end instead of wrapping (overrides Loop). |
+| ArriveRadius | float | Distance at which the current waypoint counts as reached and the index advances. |
+| Speed | float | Movement speed in units per second. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+| CurrentIndex | int | Name of an int variable to publish the current waypoint index into (omit to skip; for FSM/debug). |
 
 ## `grid mover`
 Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and

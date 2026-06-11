@@ -47,7 +47,7 @@ namespace Assembler.Building
 		public static ResolvedGame Resolve(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
-			if (!HasGameOverListener(gameInfo))
+			if (!GameOverReachability.HasReachableGameOver(gameInfo))
 			{
 				throw new InvalidOperationException(
 					"Game descriptor must declare a game-over path (at least one !gameover listener).");
@@ -238,19 +238,6 @@ namespace Assembler.Building
 				behaviours,
 				Array.Empty<ValueInfo>(),
 				Array.Empty<ChildEntityInfo>());
-		}
-
-		private static bool HasGameOverListener(GameInfo gameInfo)
-		{
-			bool InBehaviours(IEnumerable<BehaviourInfo> behaviours) =>
-				behaviours.Any(b => b.Listeners.Any(l => l is GameOverListenerInfo));
-
-			bool InChildren(IEnumerable<ChildEntityInfo> children) =>
-				children.Any(c => InBehaviours(c.Behaviours) || InChildren(c.Children));
-
-			bool InEntity(EntityInfo e) => InBehaviours(e.Behaviours) || InChildren(e.Children);
-
-			return gameInfo.Entities.Any(InEntity) || gameInfo.Templates.Any(InEntity);
 		}
 	}
 

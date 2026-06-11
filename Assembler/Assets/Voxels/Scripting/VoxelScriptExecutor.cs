@@ -82,6 +82,9 @@ namespace Assembler.Voxels.Scripting
 		{
 			var limits = _limits;
 
+			// CTS linked to the outer token so external cancellation also stops the builder.
+			using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+
 			// Run compile + execute off the calling thread so a hard wall-clock
 			// timeout can fire even if the script never cooperatively yields.
 			var runTask = Task.Run(() =>
@@ -89,13 +92,17 @@ namespace Assembler.Voxels.Scripting
 				var compiler = new ExpressionMethodCompiler();
 				compiler.RegisterType(typeof(VoxelAxis));
 				var func = compiler.CompileFunc<VoxelBuilder, VoxelModel>(script, "b");
-				var builder = new VoxelBuilder(limits);
+				var builder = new VoxelBuilder(limits, cts.Token);
 				return func(builder);
-			}, ct);
+			}); // no ct on Task.Run — the builder enforces the budget cooperatively
 
 			var finished = await Task.WhenAny(runTask, Task.Delay(limits.WallClock, ct)).ConfigureAwait(false);
 			if (finished != runTask)
 			{
+				ct.ThrowIfCancellationRequested();
+				// Signal the builder so the runTask self-terminates via its cooperative
+				// check rather than spinning until the next stopwatch sample.
+				cts.Cancel();
 				throw new VoxelScriptException(
 					$"Script exceeded its wall-clock budget of {limits.WallClock.TotalSeconds:0.##}s.");
 			}

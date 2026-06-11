@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Assembler.Compiler.Compiler;
 using Assembler.Core;
 using Assembler.Extensions;
@@ -236,6 +235,9 @@ namespace Assembler.Resolving
 			IReadOnlyList<ExpressionInfo> expressions,
 			IReadOnlyDictionary<string, ExpressionInfo> byCallableName)
 		{
+			// Precompute the set of bare names each body invokes as a call, once per expression.
+			var calledNamesById = expressions.ToDictionary(e => e.Id, e => ExtractCalledNames(e.Expression));
+
 			var ordered = new List<ExpressionInfo>();
 			var visited = new HashSet<string>();
 			var onStack = new HashSet<string>();
@@ -249,6 +251,8 @@ namespace Assembler.Resolving
 
 				onStack.Add(info.Id);
 
+				var calledNames = calledNamesById[info.Id];
+
 				foreach (var entry in byCallableName)
 				{
 					if (entry.Value.Id == info.Id)
@@ -256,7 +260,7 @@ namespace Assembler.Resolving
 						continue;
 					}
 
-					if (CallsExpression(info.Expression, entry.Key))
+					if (calledNames.Contains(entry.Key))
 					{
 						if (onStack.Contains(entry.Value.Id))
 						{
@@ -283,8 +287,39 @@ namespace Assembler.Resolving
 		private static string GetCallableName(ExpressionInfo info) =>
 			string.IsNullOrWhiteSpace(info.CallableAlias) ? info.Id.ToCamelCase() : info.CallableAlias!;
 
-		private static bool CallsExpression(string body, string callableName) =>
-			Regex.IsMatch(body, $@"(?<![A-Za-z0-9_]){Regex.Escape(callableName)}\s*\(");
+		// Extracts the bare names invoked as calls (`name(`) in an expression body, for cross-expression
+		// dependency detection. Walks the lexer's tokens rather than scanning source text, so names inside
+		// string literals and `//` comments are ignored (the lexer strips them), and a member call like
+		// `list.count(...)` is not mistaken for a call to an expression named `count` — a preceding `.`
+		// excludes it. A body that fails to tokenise contributes no dependencies; it surfaces its own
+		// positioned compile error later in CompileAndRegister.
+		private static HashSet<string> ExtractCalledNames(string body)
+		{
+			List<Token> tokens;
+
+			try
+			{
+				tokens = new Lexer(body).Tokenize();
+			}
+			catch
+			{
+				return new HashSet<string>();
+			}
+
+			var called = new HashSet<string>();
+
+			for (var i = 0; i + 1 < tokens.Count; i++)
+			{
+				if (tokens[i].Type == TokenType.Identifier &&
+					tokens[i + 1].Type == TokenType.LeftParen &&
+					(i == 0 || tokens[i - 1].Type != TokenType.Dot))
+				{
+					called.Add(tokens[i].Value);
+				}
+			}
+
+			return called;
+		}
 
 		public (Type delegateType, Delegate @delegate) GetCompiled(string id)
 		{

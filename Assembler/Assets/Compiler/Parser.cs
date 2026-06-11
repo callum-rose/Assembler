@@ -162,6 +162,14 @@ namespace Assembler.Compiler.Compiler
 				at);
 		}
 
+		// Validates that a control-flow condition is boolean. The Expression factory (IfThenElse/Condition/
+		// Loop) would otherwise throw a position-less ArgumentException ("Argument must be boolean") for
+		// e.g. `while (1)`; checking here lets the error carry the condition's line/column and a clear message.
+		private Expression RequireBoolean(Expression condition, Token at) =>
+			condition.Type == typeof(bool)
+				? condition
+				: throw Error($"Condition must be boolean, but is '{condition.Type.Name}'", at);
+
 		public Parser(List<Token> tokens)
 		{
 			_tokens = tokens;
@@ -240,6 +248,35 @@ namespace Assembler.Compiler.Compiler
 		private CompileException Error(string message) => Error(message, Current);
 
 		private static CompileException Error(string message, Token at) => new(message, at.Line, at.Column);
+
+		// Sentinel carried while a dotted identifier prefix (e.g. `UnityEngine.Random`) is still being
+		// accumulated and hasn't yet resolved to a Type — the next segment may complete it. It is never a
+		// real value: if one survives to a point where a value is required (a call/index target, or the end
+		// of a postfix chain), the dotted name was a typo and is reported as an unknown identifier. `Name` is
+		// the accumulated dotted path tried so far; `Origin` positions the error at where the name began.
+		private sealed class UnresolvedNamespace
+		{
+			public string Name { get; }
+			public Token Origin { get; }
+
+			public UnresolvedNamespace(string name, Token origin) => (Name, Origin) = (name, origin);
+		}
+
+		// Wraps an unresolved-namespace sentinel in a Type-carrying constant so it can flow through the
+		// expression tree until it either accumulates into a real Type or is rejected at a value site.
+		private static Expression UnresolvedNamespaceConstant(string name, Token origin) =>
+			Expression.Constant(new UnresolvedNamespace(name, origin), typeof(UnresolvedNamespace));
+
+		// Throws "Unknown identifier" when an expression is an unresolved-namespace sentinel that reached a
+		// position where a value is required — its dotted name never resolved to a registered type. A no-op
+		// for every other expression.
+		private static void RejectUnresolvedNamespace(Expression expr)
+		{
+			if (expr is ConstantExpression { Value: UnresolvedNamespace ns })
+			{
+				throw Error($"Unknown identifier '{ns.Name}'", ns.Origin);
+			}
+		}
 
 		public Expression ParseMethodBody(Dictionary<string, Type> parameters)
 		{
@@ -354,9 +391,7 @@ namespace Assembler.Compiler.Compiler
 			{
 				do
 				{
-					var paramTypeToken = Current;
-					Advance();
-					var paramType = GetTypeFromToken(paramTypeToken.Type);
+					var paramType = ParseSignatureType();
 					var paramName = Expect(TokenType.Identifier).Value;
 					parameters.Add((paramType, paramName));
 				}
@@ -366,7 +401,7 @@ namespace Assembler.Compiler.Compiler
 			Expect(TokenType.RightParen);
 
 			// Capture method body tokens
-			Expect(TokenType.LeftBrace);
+			var openBrace = Expect(TokenType.LeftBrace);
 			var bodyTokens = new List<Token>();
 			int braceCount = 1;
 
@@ -390,7 +425,42 @@ namespace Assembler.Compiler.Compiler
 				Advance();
 			}
 
+			// Reaching EOF with the brace still open means the body was never closed. Without this the
+			// truncated body parses on and fails later with an unrelated, mispositioned error.
+			if (braceCount > 0)
+			{
+				throw Error($"Unbalanced braces in body of local method '{name}': missing '}}' before end of input.",
+					openBrace);
+			}
+
 			return (name, returnType, parameters, bodyTokens);
+		}
+
+		// Parses a type in a local-method signature: a built-in keyword (`int`/`float`/…) or a resolvable
+		// (possibly dotted) registered type name such as `UnityEngine.Vector3`. Emits a positioned compile
+		// error rather than the bare Exception GetTypeFromToken would throw for an unregistered name.
+		private Type ParseSignatureType()
+		{
+			if (IsTypeToken(Current.Type) || Current.Type == TokenType.Void)
+			{
+				var keyword = Current;
+				Advance();
+				return GetTypeFromToken(keyword.Type);
+			}
+
+			var nameToken = Expect(TokenType.Identifier);
+			var typeName = nameToken.Value;
+
+			while (Current.Type == TokenType.Dot)
+			{
+				Match(TokenType.Dot);
+				typeName += "." + Expect(TokenType.Identifier).Value;
+			}
+
+			return TryResolveType(typeName)
+				?? throw Error(
+					$"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					nameToken);
 		}
 
 		private void CompileLocalMethod(string name,
@@ -705,7 +775,7 @@ namespace Assembler.Compiler.Compiler
 					or TokenType.Bool
 					or TokenType.Float
 					or TokenType.Double => ParseVariableDeclaration(),
-				TokenType.LeftBrace => ParseBlock(),
+				TokenType.LeftBrace => ParseBraceBlock(),
 				_ => ParseExpressionStatement()
 			};
 		}
@@ -757,10 +827,46 @@ namespace Assembler.Compiler.Compiler
 			}
 		}
 
-		private Expression ParseBlock()
+		// Ends the lexical scope a block or loop opened: removes from name resolution every local it
+		// declared (everything added to _declaredVariables since `markerCount`), so those names leave
+		// scope. The ParameterExpressions stay where they were bound; only their visibility ends, which
+		// lets a sibling scope reuse the same name, exactly as in C#. Because a declaration that would
+		// shadow an enclosing name is rejected up front (see DeclareLocal), no removal here can erase an
+		// outer binding — there is nothing to restore.
+		private void ExitScope(int markerCount)
+		{
+			for (int i = markerCount; i < _declaredVariables.Count; i++)
+			{
+				_variables.Remove(_declaredVariables[i].Name!);
+			}
+		}
+
+		// Registers a freshly declared local, enforcing C#'s rule that a name already visible in this or
+		// an enclosing scope cannot be redeclared (CS0136/CS0128). Returns the bound ParameterExpression.
+		private ParameterExpression DeclareLocal(Type type, string name, Token nameToken)
+		{
+			if (_variables.ContainsKey(name))
+			{
+				throw Error(
+					$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					nameToken);
+			}
+
+			var variable = Expression.Variable(type, name);
+			_variables[name] = variable;
+			_declaredVariables.Add(variable);
+			return variable;
+		}
+
+		// Parses a `{ ... }` block with proper lexical scoping, shared by bare statement blocks and the
+		// bodies of if/else/for/while. Variables declared inside are bound on the resulting Expression.Block
+		// and their names leave the enclosing scope on exit, so they don't leak into the surrounding method
+		// scope (where they'd otherwise read back as an unassigned default).
+		private Expression ParseBraceBlock()
 		{
 			Expect(TokenType.LeftBrace);
 
+			var initialVarCount = _declaredVariables.Count;
 			var statements = new List<Expression>();
 
 			while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
@@ -770,14 +876,40 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.RightBrace);
 
-			return Expression.Block(statements);
+			// Detach the variables declared in this block from the enclosing method scope: they belong to
+			// this block's Expression.Block, not _declaredVariables (which binds the whole method body). Drop
+			// their names from scope first so a sibling block may reuse them.
+			var blockVariables = _declaredVariables.GetRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+			ExitScope(initialVarCount);
+			_declaredVariables.RemoveRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+
+			// A non-void final statement becomes the block's result value (e.g. an if-branch that returns).
+			if (statements.Count > 0 && statements[^1].Type != typeof(void))
+			{
+				var resultType = statements[^1].Type;
+
+				if (blockVariables.Count > 0)
+				{
+					return Expression.Block(resultType, blockVariables, statements);
+				}
+
+				return statements.Count == 1 ? statements[0] : Expression.Block(resultType, statements);
+			}
+
+			if (blockVariables.Count > 0)
+			{
+				return Expression.Block(blockVariables, statements);
+			}
+
+			return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
 		}
 
 		private Expression ParseIf()
 		{
 			var ifToken = Expect(TokenType.If);
 			Expect(TokenType.LeftParen);
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.RightParen);
 
 			var ifTrue = ParseStatementOrBlock();
@@ -803,54 +935,7 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseStatementOrBlock()
 		{
-			if (Current.Type == TokenType.LeftBrace)
-			{
-				Expect(TokenType.LeftBrace);
-				var statements = new List<Expression>();
-				var blockVariables = new List<ParameterExpression>();
-
-				// Save current variable count to track new ones
-				var initialVarCount = _declaredVariables.Count;
-
-				while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
-				{
-					statements.Add(ParseStatement());
-				}
-
-				Expect(TokenType.RightBrace);
-
-				// Collect variables declared in this block
-				for (int i = initialVarCount; i < _declaredVariables.Count; i++)
-				{
-					blockVariables.Add(_declaredVariables[i]);
-				}
-
-				// Check if last statement is a return (non-void expression)
-				if (statements.Count > 0)
-				{
-					var lastStmt = statements[^1];
-
-					// If it's a non-void expression, use it as the block result
-					if (lastStmt.Type != typeof(void))
-					{
-						if (blockVariables.Count > 0)
-						{
-							return Expression.Block(lastStmt.Type, blockVariables, statements);
-						}
-
-						return statements.Count == 1 ? lastStmt : Expression.Block(lastStmt.Type, statements);
-					}
-				}
-
-				if (blockVariables.Count > 0)
-				{
-					return Expression.Block(blockVariables, statements);
-				}
-
-				return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
-			}
-
-			return ParseStatement();
+			return Current.Type == TokenType.LeftBrace ? ParseBraceBlock() : ParseStatement();
 		}
 
 		private Expression ParseFor()
@@ -858,8 +943,12 @@ namespace Assembler.Compiler.Compiler
 			Expect(TokenType.For);
 			Expect(TokenType.LeftParen);
 
+			// The initializer's loop variable is scoped to the loop (header + body) in C#.
+			var initialVarCount = _declaredVariables.Count;
+
 			var initializer = ParseStatement();
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.Semicolon);
 			var increment = ParseExpression();
 
@@ -875,6 +964,10 @@ namespace Assembler.Compiler.Compiler
 
 			_breakLabels.Pop();
 			_continueLabels.Pop();
+
+			// Drop the loop variable's name from scope so it doesn't leak past the loop and a sibling loop
+			// can reuse it. Its binding stays in _declaredVariables (the method block), which is harmless.
+			ExitScope(initialVarCount);
 
 			return Expression.Block(
 				initializer,
@@ -897,7 +990,8 @@ namespace Assembler.Compiler.Compiler
 		{
 			Expect(TokenType.While);
 			Expect(TokenType.LeftParen);
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.RightParen);
 
 			var breakLabel = Expression.Label("break");
@@ -1024,9 +1118,9 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.Semicolon);
 
-			var variable = Expression.Variable(type, name);
-			_variables[name] = variable;
-			_declaredVariables.Add(variable);
+			// Register after parsing the initializer so a self-reference resolves against the outer scope,
+			// not this (still unassigned) local — but DeclareLocal still rejects redeclaring a visible name.
+			var variable = DeclareLocal(type, name, nameToken);
 
 			if (initializer != null)
 			{
@@ -1266,6 +1360,9 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.LeftParen))
 				{
+					// `name(...)` where `name` is a still-unresolved dotted prefix (a member access keeps
+					// accumulating instead) means the name was a typo — report it before the call site.
+					RejectUnresolvedNamespace(expr);
 					expr = ParseFunctionCall(expr);
 				}
 				else if (Match(TokenType.Dot))
@@ -1274,6 +1371,7 @@ namespace Assembler.Compiler.Compiler
 				}
 				else if (Match(TokenType.LeftBracket))
 				{
+					RejectUnresolvedNamespace(expr);
 					expr = ParseIndexAccess(expr);
 				}
 				else
@@ -1282,6 +1380,9 @@ namespace Assembler.Compiler.Compiler
 				}
 			}
 
+			// A sentinel that reaches here (e.g. a bare `Mthf.Foo`) never resolved to a type — report it
+			// rather than letting the typed constant leak into the surrounding expression as a value.
+			RejectUnresolvedNamespace(expr);
 			return expr;
 		}
 
@@ -1330,14 +1431,15 @@ namespace Assembler.Compiler.Compiler
 				return BuildCompoundAssign(Expression.Divide, indexAccess, ParseExpression());
 			}
 
+			// Postfix `a[i]++` / `a[i]--`: yield the element's value before incrementing (see ParsePrimary).
 			if (Match(TokenType.Increment))
 			{
-				return Expression.PreIncrementAssign(indexAccess);
+				return Expression.PostIncrementAssign(indexAccess);
 			}
 
 			if (Match(TokenType.Decrement))
 			{
-				return Expression.PreDecrementAssign(indexAccess);
+				return Expression.PostDecrementAssign(indexAccess);
 			}
 
 			return indexAccess;
@@ -1477,18 +1579,17 @@ namespace Assembler.Compiler.Compiler
 
 			// Handle nested type / namespace continuation (e.g. UnityEngine.Random where UnityEngine alone
 			// isn't a Type yet). If we have a "namespace sentinel", the previous step stored the partial
-			// dotted name in the sentinel string; try to resolve again with the new segment.
-			if (staticTargetType == null && instance is ConstantExpression ns && ns.Type == typeof(string) &&
-				ns.Value is string nsPrefix && nsPrefix.StartsWith("__ns:"))
+			// dotted name; try to resolve again with the new segment appended.
+			if (staticTargetType == null && instance is ConstantExpression { Value: UnresolvedNamespace ns })
 			{
-				var combined = nsPrefix.Substring(5) + "." + memberName;
+				var combined = ns.Name + "." + memberName;
 				var resolved = TryResolveType(combined);
 				if (resolved != null)
 				{
 					return Expression.Constant(resolved, typeof(Type));
 				}
-				// Still not a full type - keep accumulating.
-				return Expression.Constant("__ns:" + combined, typeof(string));
+				// Still not a full type - keep accumulating, preserving the original start position.
+				return UnresolvedNamespaceConstant(combined, ns.Origin);
 			}
 
 			// Static member access on a resolved Type.
@@ -2110,6 +2211,17 @@ namespace Assembler.Compiler.Compiler
 
 					// Create lambda parameter with inferred or default type
 					var lambdaParam = Expression.Parameter(typeof(object), name);
+
+					// C# forbids a lambda parameter shadowing a name already in scope (CS0136). Reject it
+					// rather than overwriting the binding — a blind overwrite-then-remove would delete the
+					// outer variable and silently corrupt later uses of it.
+					if (_variables.ContainsKey(name))
+					{
+						throw Error(
+							$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+							nameToken);
+					}
+
 					_lambdaParameters.Push(lambdaParam);
 					_variables[name] = lambdaParam;
 
@@ -2226,14 +2338,17 @@ namespace Assembler.Compiler.Compiler
 					return BuildCompoundAssign(Expression.Divide, AssignTarget(), ParseExpression());
 				}
 
+				// Postfix `x++` / `x--`: the operator follows the operand, so it must yield the value
+				// *before* incrementing (Post*, not Pre*). The difference only shows when the result is
+				// used (e.g. `x++ + 1`); as a bare statement either form mutates `x` the same way.
 				if (Match(TokenType.Increment))
 				{
-					return Expression.PreIncrementAssign(AssignTarget());
+					return Expression.PostIncrementAssign(AssignTarget());
 				}
 
 				if (Match(TokenType.Decrement))
 				{
-					return Expression.PreDecrementAssign(AssignTarget());
+					return Expression.PostDecrementAssign(AssignTarget());
 				}
 
 				if (_variables.TryGetValue(name, out var variable))
@@ -2252,7 +2367,7 @@ namespace Assembler.Compiler.Compiler
 					{
 						return Expression.Constant(asType, typeof(Type));
 					}
-					return Expression.Constant("__ns:" + name, typeof(string));
+					return UnresolvedNamespaceConstant(name, nameToken);
 				}
 
 				// Maybe a bare type reference (rare, but harmless to support).
@@ -2715,12 +2830,21 @@ namespace Assembler.Compiler.Compiler
 		private Expression ParseLambdaWithType(Type? parameterType)
 		{
 			// Parse: identifier => expression
-			var paramName = Expect(TokenType.Identifier).Value;
+			var paramToken = Expect(TokenType.Identifier);
+			var paramName = paramToken.Value;
 			Expect(TokenType.Arrow);
 
 			// Use inferred type or default to object
 			var actualType = parameterType ?? typeof(object);
 			var lambdaParam = Expression.Parameter(actualType, paramName);
+
+			// C# forbids a lambda parameter shadowing a name already in scope (CS0136); see the inline site.
+			if (_variables.ContainsKey(paramName))
+			{
+				throw Error(
+					$"A local or parameter named '{paramName}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					paramToken);
+			}
 
 			_lambdaParameters.Push(lambdaParam);
 			_variables[paramName] = lambdaParam;

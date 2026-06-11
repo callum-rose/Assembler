@@ -24,7 +24,9 @@ namespace Tests.Behaviours
 
 			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
 
+#if DEBUG_CONSOLE
 			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
+#endif
 		}
 
 		// Builds a minimal stand-in for a button prefab: a Button + a child TMP label, with the view wired.

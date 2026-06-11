@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	public record TimerTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<float> Delay)
+	public record TimerTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<float> Delay, ValueSource<bool> AutoStart)
 		: BehaviourInfo(Id, Listeners)
 	{
 		public static TimerTriggerInfo Create(string id,
@@ -11,12 +11,14 @@ namespace Assembler.Parsing.Info.Behaviours
 			TransformContext ctx) =>
 			new(id,
 				listeners,
-				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Delay")));
+				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Delay")),
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart")));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
 			new TimerTriggerInfo(Id,
 				substitutedListeners,
-				Delay.SubstituteParameters(ctx));
+				Delay.SubstituteParameters(ctx),
+				AutoStart.SubstituteParameters(ctx));
 	}
 }

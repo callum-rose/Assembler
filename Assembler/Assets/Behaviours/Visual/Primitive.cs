@@ -29,19 +29,25 @@ namespace Assembler.Behaviours.Visual
 			primitive.name = shape.ToString();
 			primitive.transform.SetParent(transform, false);
 
+			primitive.GetComponent<MeshRenderer>().sharedMaterial = Resources.Load<Material>("Materials/Primitive");
+
 			// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
 			// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without
 			// entering play mode) can strip it too — plain Destroy throws in edit mode.
 			if (primitive.TryGetComponent<Collider>(out var collider))
 			{
+#if UNITY_EDITOR
 				if (Application.isPlaying)
 				{
+#endif
 					Destroy(collider);
+#if UNITY_EDITOR
 				}
 				else
 				{
 					DestroyImmediate(collider);
 				}
+#endif
 			}
 
 			data.Size.UseIfValueExists(size => primitive.transform.localScale = size);

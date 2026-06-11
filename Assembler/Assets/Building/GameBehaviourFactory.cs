@@ -290,7 +290,8 @@ namespace Assembler.Building
 					(i, ctx) => new OnStartTriggerData(i.Id)),
 				[typeof(TimerTriggerInfo)] = Entry<TimerTriggerInfo, TimerTrigger, TimerTriggerData>(
 					(i, ctx) => new TimerTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution))),
+						i.Delay.Resolve(ctx.Resolution),
+						i.AutoStart.Resolve(ctx.Resolution))),
 				[typeof(DeferredTriggerInfo)] = Entry<DeferredTriggerInfo, DeferredTrigger, DeferredTriggerData>(
 					(i, ctx) => new DeferredTriggerData(i.Id,
 						i.Delay.Resolve(ctx.Resolution))),
@@ -525,6 +526,19 @@ namespace Assembler.Building
 						i.TargetPosition.ResolveWritable(ctx.Resolution),
 						i.HasTarget.ResolveWritable(ctx.Resolution),
 						i.LastKnownPosition.ResolveWritable(ctx.Resolution))),
+				[typeof(PerceiveAllInfo)] = Entry<PerceiveAllInfo, PerceiveAll, PerceiveAllData>(
+					(i, ctx) => new PerceiveAllData(i.Id,
+						i.Tag.Resolve(ctx.Resolution),
+						i.Radius.Resolve(ctx.Resolution),
+						i.ConeAngle.Resolve(ctx.Resolution),
+						i.Forward.Resolve(ctx.Resolution),
+						i.RequireLineOfSight.Resolve(ctx.Resolution),
+						i.Obstacles.Resolve(ctx.Resolution),
+						i.Interval.Resolve(ctx.Resolution),
+						i.Positions.Resolve(ctx.Resolution),
+						i.Ids.Resolve(ctx.Resolution),
+						i.Velocities.Resolve(ctx.Resolution),
+						i.Count.ResolveWritable(ctx.Resolution))),
 				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
 					(i, ctx) => new SteeringData(i.Id,
 						i.Forces.Select(f => new SteeringForce(
@@ -545,7 +559,16 @@ namespace Assembler.Building
 					(i, ctx) => new GridMoverData(i.Id,
 						i.Direction.Resolve(ctx.Resolution),
 						i.Speed.Resolve(ctx.Resolution),
-						i.AgentRadius.Resolve(ctx.Resolution)))
+						i.AgentRadius.Resolve(ctx.Resolution))),
+				[typeof(PatrolInfo)] = Entry<PatrolInfo, Patrol, PatrolData>(
+					(i, ctx) => new PatrolData(i.Id,
+						i.Waypoints.Resolve(ctx.Resolution),
+						i.Loop.Resolve(ctx.Resolution),
+						i.PingPong.Resolve(ctx.Resolution),
+						i.ArriveRadius.Resolve(ctx.Resolution),
+						i.Speed.Resolve(ctx.Resolution),
+						i.Output.ResolveWritable(ctx.Resolution),
+						i.CurrentIndex.ResolveWritable(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);
