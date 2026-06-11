@@ -126,6 +126,13 @@ namespace Assembler.Building
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;
 
+			// On destruction the entity self-evicts from every runtime index it was registered in. The deregistrations
+			// hang off one event rather than separate registry refs on the entity; each captures the id it needs.
+			var entityId = entityInfo.Id;
+			gameEntity.Destroying += () => _entityQuery.Unregister(entityId);
+			gameEntity.Destroying += () => _entityTransforms.Unregister(entityId);
+			gameEntity.Destroying += () => _behaviourRegistry.DeregisterEntity(entityId);
+
 			// Activate now that GameEntity is configured: its Awake self-registers into the query index.
 			gameObject.SetActive(true);
 
