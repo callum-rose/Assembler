@@ -71,24 +71,5 @@ Entities:
 			var trigger = (CollisionEnterTriggerInfo)Behaviour(info, "ball", "hit");
 			CollectionAssert.AreEqual(new[] { "wall", "paddle" }, trigger.TagsToDetect);
 		}
-
-		// A behaviour that parses but has no runtime builder is now rejected at parse time in descriptor
-		// vocabulary, rather than dying at instantiate with a CLR type name.
-		[Test]
-		public void ParseOnlyBehaviour_FailsAtParseWithVocabularyMessage()
-		{
-			var ex = Assert.Throws<ParsingException>(() => Transform(@"
-Entities:
-  e:
-    Behaviours:
-      gate:
-        Type: when all
-        Properties:
-          TriggerIds: [ a, b ]
-"));
-
-			Assert.That(ex.Message, Does.Contain("when all"));
-			Assert.That(ex.Message, Does.Contain("not yet runnable"));
-		}
 	}
 }

@@ -597,6 +597,21 @@ Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 |------|------|-------------|
 | other_position | Vector3 | Other entity's world position at the moment of exit. |
 
+## `trigger stay trigger`
+Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TagsToDetect | IReadOnlyList<string> | Only fire while the other entity has at least one of these tags. Leave empty to fire on any entity. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position this frame. |
+
 ## `collision exit trigger`
 Fires when a non-trigger collision ends with another entity matching TagsToDetect.
 
@@ -1869,37 +1884,6 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 | Name | Type | Description |
 |------|------|-------------|
 | value | float | The new slider value after the change. |
-
----
-
-## Parse-only behaviours (not yet runnable)
-
-These behaviours are registered in the parse catalogue and accept the properties below, but have no runtime `GameBehaviour` implementation — they parse from YAML yet will not execute. Treat them as unsupported until a MonoBehaviour mapping is added in `GameBehaviourFactory`.
-
-### `condition`
-
-| Name | Type |
-|------|------|
-| ExpressionId | string |
-| Arguments | IReadOnlyList<IValueSourceArg> |
-
-### `trigger stay trigger`
-
-| Name | Type |
-|------|------|
-| TagsToDetect | IReadOnlyList<string> |
-
-### `when all`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
-
-### `when any`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
 
 ---
 

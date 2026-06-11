@@ -326,6 +326,9 @@ namespace Assembler.Building
 				[typeof(TriggerExitTriggerInfo)] = Entry<TriggerExitTriggerInfo, TriggerExit, PhysicalTriggerData>(
 					(i, ctx) => new TriggerExitTriggerData(i.Id,
 						i.TagsToDetect)),
+				[typeof(TriggerStayTriggerInfo)] = Entry<TriggerStayTriggerInfo, TriggerStay, PhysicalTriggerData>(
+					(i, ctx) => new TriggerStayTriggerData(i.Id,
+						i.TagsToDetect)),
 				[typeof(ConditionGateInfo)] = Entry<ConditionGateInfo, ConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution))),
