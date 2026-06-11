@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -48,6 +49,116 @@ namespace Tests.Voxels
 				Assert.AreEqual(originalColour.g, readColour.g);
 				Assert.AreEqual(originalColour.b, readColour.b);
 			}
+		}
+
+		// ---- VoxReader robustness -------------------------------------------
+
+		[Test]
+		public void VoxReader_NegativeContentSize_Throws()
+		{
+			var bytes = BuildCorruptVox(contentSize: -1, childrenSize: 0);
+			Assert.Throws<InvalidDataException>(() => VoxReader.Read(bytes));
+		}
+
+		[Test]
+		public void VoxReader_NegativeChildrenSize_Throws()
+		{
+			var bytes = BuildCorruptVox(contentSize: 0, childrenSize: -1);
+			Assert.Throws<InvalidDataException>(() => VoxReader.Read(bytes));
+		}
+
+		[Test]
+		public void VoxReader_ChunkExtendsBeyondFile_Throws()
+		{
+			// childrenSize pushes the end position well past the byte array.
+			var bytes = BuildCorruptVox(contentSize: 0, childrenSize: 9999);
+			Assert.Throws<InvalidDataException>(() => VoxReader.Read(bytes));
+		}
+
+		[Test]
+		public void VoxReader_XyziCountExceedsContent_Throws()
+		{
+			var bytes = BuildCorruptXyziVox(count: 10000, actualVoxels: 1);
+			Assert.Throws<InvalidDataException>(() => VoxReader.Read(bytes));
+		}
+
+		// ---- VoxWriter robustness -------------------------------------------
+
+		[Test]
+		public void VoxWriter_ExtentOver255_Throws()
+		{
+			const string text = "0 0 0 ff0000\n256 0 0 00ff00"; // extent 256 in X
+			var model = GoxelTextParser.Parse(text);
+			Assert.Throws<InvalidDataException>(() => VoxWriter.Write(model));
+		}
+
+		[Test]
+		public void VoxWriter_ExtentExactly255_Succeeds()
+		{
+			const string text = "0 0 0 ff0000\n255 0 0 00ff00"; // extent exactly 255
+			var model = GoxelTextParser.Parse(text);
+			Assert.DoesNotThrow(() => VoxWriter.Write(model));
+		}
+
+		// ---- GoxelTextParser skipped-line count -----------------------------
+
+		[Test]
+		public void GoxelTextParser_ReportsSkippedLines()
+		{
+			const string text = "0 0 0 ff0000\nbadline\n# comment\n1 0 0 notahex";
+			var model = GoxelTextParser.Parse(text, out var skipped);
+			Assert.AreEqual(1, model.Voxels.Count);
+			Assert.AreEqual(2, skipped, "badline + notahex should be counted");
+		}
+
+		[Test]
+		public void GoxelTextParser_NoSkipped_ReturnsZero()
+		{
+			const string text = "0 0 0 ff0000\n1 0 0 00ff00";
+			GoxelTextParser.Parse(text, out var skipped);
+			Assert.AreEqual(0, skipped);
+		}
+
+		// ---- Helpers for corrupt .vox construction --------------------------
+
+		private static byte[] BuildCorruptVox(int contentSize, int childrenSize)
+		{
+			using var ms = new System.IO.MemoryStream();
+			using var w = new System.IO.BinaryWriter(ms);
+			// Header
+			w.Write(new[] { (byte)'V', (byte)'O', (byte)'X', (byte)' ' });
+			w.Write(150); // version
+			// MAIN chunk with the given (possibly corrupt) sizes
+			w.Write(new[] { (byte)'M', (byte)'A', (byte)'I', (byte)'N' });
+			w.Write(contentSize);
+			w.Write(childrenSize);
+			return ms.ToArray();
+		}
+
+		private static byte[] BuildCorruptXyziVox(int count, int actualVoxels)
+		{
+			using var ms = new System.IO.MemoryStream();
+			using var w = new System.IO.BinaryWriter(ms);
+			w.Write(new[] { (byte)'V', (byte)'O', (byte)'X', (byte)' ' });
+			w.Write(150);
+			// MAIN with SIZE + XYZI children
+			var xyziContent = 4 + actualVoxels * 4; // header count + actual data
+			var childrenSize = 12 + 12 + xyziContent; // SIZE header+content + XYZI header+content
+			w.Write(new[] { (byte)'M', (byte)'A', (byte)'I', (byte)'N' });
+			w.Write(0); w.Write(childrenSize);
+			// SIZE chunk
+			w.Write(new[] { (byte)'S', (byte)'I', (byte)'Z', (byte)'E' });
+			w.Write(12); w.Write(0);
+			w.Write(1); w.Write(1); w.Write(1);
+			// XYZI chunk: content claims `count` voxels but only `actualVoxels` are present
+			w.Write(new[] { (byte)'X', (byte)'Y', (byte)'Z', (byte)'I' });
+			w.Write(xyziContent); w.Write(0);
+			w.Write(count); // advertised count > actual data
+			for (var i = 0; i < actualVoxels; i++)
+			{
+				w.Write((byte)0); w.Write((byte)0); w.Write((byte)0); w.Write((byte)1);
+			}
+			return ms.ToArray();
 		}
 
 		private static (Vector3Int size, Dictionary<Vector3Int, byte> voxels, Color32[] palette) ReadVox(byte[] bytes)
