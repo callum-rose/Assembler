@@ -164,8 +164,8 @@ namespace Assembler.Parsing
 				return TemplateInstantiator.Instantiate(template,
 					entityId,
 					ctx,
-					ValueSourceFactory.CreateOptionalValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Position)),
-					ValueSourceFactory.CreateOptionalValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Rotation)),
+					ValueSourceFactory.CreateValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Position)),
+					ValueSourceFactory.CreateValueSource<Vector3>(entityCtx, AssemblerValueConverter.ToAssemblerValue(entityDto.Rotation)),
 					parameters,
 					entityDto.Tags,
 					ownBehaviours,
@@ -198,8 +198,8 @@ namespace Assembler.Parsing
 				.Select(b => CreateBehaviour(childCtx, b.Key, b.Value))
 				.ToArray();
 
-			var position = ValueSourceFactory.CreateOptionalValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Position));
-			var rotation = ValueSourceFactory.CreateOptionalValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Rotation));
+			var position = ValueSourceFactory.CreateValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Position));
+			var rotation = ValueSourceFactory.CreateValueSource<Vector3>(childCtx, AssemblerValueConverter.ToAssemblerValue(dto.Rotation));
 
 			var nestedChildren = BuildChildren(childCtx, dto.Children);
 
