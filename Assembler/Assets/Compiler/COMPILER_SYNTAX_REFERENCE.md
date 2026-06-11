@@ -54,6 +54,12 @@ double c = 3.14;      // floating point
 double d = -2.5;      // negative floating point
 ```
 
+A numeric value is implicitly widened to the type it flows into — no explicit cast needed — at
+declarations, assignments, `return`, and the branches of a ternary / `if`-`else`. So `float x = 1;`,
+`return 0.5;` from a float-returning expression, and `cond ? 1 : 2.0` (unified to `double`) all
+compile. An impossible conversion (e.g. `return "text";` into an `int`) is a positioned compile error,
+not a runtime crash.
+
 ### String Literals
 ```csharp
 string text = "Hello World";
