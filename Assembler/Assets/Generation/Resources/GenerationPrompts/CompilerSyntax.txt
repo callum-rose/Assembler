@@ -94,9 +94,14 @@ x /= 4;             // divide and assign
 
 ### Increment/Decrement
 ```csharp
-x++;                // pre-increment
-x--;                // pre-decrement
+x++;                // postfix increment — yields the value before incrementing (no prefix ++x)
+x--;                // postfix decrement — yields the value before decrementing
 ```
+
+### Scoping
+Variables are block-scoped like C#: a variable declared in a `{ ... }` block or loop is out of scope
+after it, and re-declaring a name already visible in the same or an enclosing scope (including a lambda
+parameter shadowing an outer variable) is a compile error. Sibling scopes may reuse a name.
 
 ---
 

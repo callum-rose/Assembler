@@ -775,7 +775,7 @@ namespace Assembler.Compiler.Compiler
 					or TokenType.Bool
 					or TokenType.Float
 					or TokenType.Double => ParseVariableDeclaration(),
-				TokenType.LeftBrace => ParseBlock(),
+				TokenType.LeftBrace => ParseBraceBlock(),
 				_ => ParseExpressionStatement()
 			};
 		}
@@ -827,10 +827,46 @@ namespace Assembler.Compiler.Compiler
 			}
 		}
 
-		private Expression ParseBlock()
+		// Ends the lexical scope a block or loop opened: removes from name resolution every local it
+		// declared (everything added to _declaredVariables since `markerCount`), so those names leave
+		// scope. The ParameterExpressions stay where they were bound; only their visibility ends, which
+		// lets a sibling scope reuse the same name, exactly as in C#. Because a declaration that would
+		// shadow an enclosing name is rejected up front (see DeclareLocal), no removal here can erase an
+		// outer binding — there is nothing to restore.
+		private void ExitScope(int markerCount)
+		{
+			for (int i = markerCount; i < _declaredVariables.Count; i++)
+			{
+				_variables.Remove(_declaredVariables[i].Name!);
+			}
+		}
+
+		// Registers a freshly declared local, enforcing C#'s rule that a name already visible in this or
+		// an enclosing scope cannot be redeclared (CS0136/CS0128). Returns the bound ParameterExpression.
+		private ParameterExpression DeclareLocal(Type type, string name, Token nameToken)
+		{
+			if (_variables.ContainsKey(name))
+			{
+				throw Error(
+					$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					nameToken);
+			}
+
+			var variable = Expression.Variable(type, name);
+			_variables[name] = variable;
+			_declaredVariables.Add(variable);
+			return variable;
+		}
+
+		// Parses a `{ ... }` block with proper lexical scoping, shared by bare statement blocks and the
+		// bodies of if/else/for/while. Variables declared inside are bound on the resulting Expression.Block
+		// and their names leave the enclosing scope on exit, so they don't leak into the surrounding method
+		// scope (where they'd otherwise read back as an unassigned default).
+		private Expression ParseBraceBlock()
 		{
 			Expect(TokenType.LeftBrace);
 
+			var initialVarCount = _declaredVariables.Count;
 			var statements = new List<Expression>();
 
 			while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
@@ -840,7 +876,32 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.RightBrace);
 
-			return Expression.Block(statements);
+			// Detach the variables declared in this block from the enclosing method scope: they belong to
+			// this block's Expression.Block, not _declaredVariables (which binds the whole method body). Drop
+			// their names from scope first so a sibling block may reuse them.
+			var blockVariables = _declaredVariables.GetRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+			ExitScope(initialVarCount);
+			_declaredVariables.RemoveRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+
+			// A non-void final statement becomes the block's result value (e.g. an if-branch that returns).
+			if (statements.Count > 0 && statements[^1].Type != typeof(void))
+			{
+				var resultType = statements[^1].Type;
+
+				if (blockVariables.Count > 0)
+				{
+					return Expression.Block(resultType, blockVariables, statements);
+				}
+
+				return statements.Count == 1 ? statements[0] : Expression.Block(resultType, statements);
+			}
+
+			if (blockVariables.Count > 0)
+			{
+				return Expression.Block(blockVariables, statements);
+			}
+
+			return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
 		}
 
 		private Expression ParseIf()
@@ -874,60 +935,16 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseStatementOrBlock()
 		{
-			if (Current.Type == TokenType.LeftBrace)
-			{
-				Expect(TokenType.LeftBrace);
-				var statements = new List<Expression>();
-				var blockVariables = new List<ParameterExpression>();
-
-				// Save current variable count to track new ones
-				var initialVarCount = _declaredVariables.Count;
-
-				while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
-				{
-					statements.Add(ParseStatement());
-				}
-
-				Expect(TokenType.RightBrace);
-
-				// Collect variables declared in this block
-				for (int i = initialVarCount; i < _declaredVariables.Count; i++)
-				{
-					blockVariables.Add(_declaredVariables[i]);
-				}
-
-				// Check if last statement is a return (non-void expression)
-				if (statements.Count > 0)
-				{
-					var lastStmt = statements[^1];
-
-					// If it's a non-void expression, use it as the block result
-					if (lastStmt.Type != typeof(void))
-					{
-						if (blockVariables.Count > 0)
-						{
-							return Expression.Block(lastStmt.Type, blockVariables, statements);
-						}
-
-						return statements.Count == 1 ? lastStmt : Expression.Block(lastStmt.Type, statements);
-					}
-				}
-
-				if (blockVariables.Count > 0)
-				{
-					return Expression.Block(blockVariables, statements);
-				}
-
-				return statements.Count > 0 ? Expression.Block(statements) : Expression.Empty();
-			}
-
-			return ParseStatement();
+			return Current.Type == TokenType.LeftBrace ? ParseBraceBlock() : ParseStatement();
 		}
 
 		private Expression ParseFor()
 		{
 			Expect(TokenType.For);
 			Expect(TokenType.LeftParen);
+
+			// The initializer's loop variable is scoped to the loop (header + body) in C#.
+			var initialVarCount = _declaredVariables.Count;
 
 			var initializer = ParseStatement();
 			var conditionToken = Current;
@@ -947,6 +964,10 @@ namespace Assembler.Compiler.Compiler
 
 			_breakLabels.Pop();
 			_continueLabels.Pop();
+
+			// Drop the loop variable's name from scope so it doesn't leak past the loop and a sibling loop
+			// can reuse it. Its binding stays in _declaredVariables (the method block), which is harmless.
+			ExitScope(initialVarCount);
 
 			return Expression.Block(
 				initializer,
@@ -1097,9 +1118,9 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.Semicolon);
 
-			var variable = Expression.Variable(type, name);
-			_variables[name] = variable;
-			_declaredVariables.Add(variable);
+			// Register after parsing the initializer so a self-reference resolves against the outer scope,
+			// not this (still unassigned) local — but DeclareLocal still rejects redeclaring a visible name.
+			var variable = DeclareLocal(type, name, nameToken);
 
 			if (initializer != null)
 			{
@@ -1410,14 +1431,15 @@ namespace Assembler.Compiler.Compiler
 				return BuildCompoundAssign(Expression.Divide, indexAccess, ParseExpression());
 			}
 
+			// Postfix `a[i]++` / `a[i]--`: yield the element's value before incrementing (see ParsePrimary).
 			if (Match(TokenType.Increment))
 			{
-				return Expression.PreIncrementAssign(indexAccess);
+				return Expression.PostIncrementAssign(indexAccess);
 			}
 
 			if (Match(TokenType.Decrement))
 			{
-				return Expression.PreDecrementAssign(indexAccess);
+				return Expression.PostDecrementAssign(indexAccess);
 			}
 
 			return indexAccess;
@@ -2189,6 +2211,17 @@ namespace Assembler.Compiler.Compiler
 
 					// Create lambda parameter with inferred or default type
 					var lambdaParam = Expression.Parameter(typeof(object), name);
+
+					// C# forbids a lambda parameter shadowing a name already in scope (CS0136). Reject it
+					// rather than overwriting the binding — a blind overwrite-then-remove would delete the
+					// outer variable and silently corrupt later uses of it.
+					if (_variables.ContainsKey(name))
+					{
+						throw Error(
+							$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+							nameToken);
+					}
+
 					_lambdaParameters.Push(lambdaParam);
 					_variables[name] = lambdaParam;
 
@@ -2305,14 +2338,17 @@ namespace Assembler.Compiler.Compiler
 					return BuildCompoundAssign(Expression.Divide, AssignTarget(), ParseExpression());
 				}
 
+				// Postfix `x++` / `x--`: the operator follows the operand, so it must yield the value
+				// *before* incrementing (Post*, not Pre*). The difference only shows when the result is
+				// used (e.g. `x++ + 1`); as a bare statement either form mutates `x` the same way.
 				if (Match(TokenType.Increment))
 				{
-					return Expression.PreIncrementAssign(AssignTarget());
+					return Expression.PostIncrementAssign(AssignTarget());
 				}
 
 				if (Match(TokenType.Decrement))
 				{
-					return Expression.PreDecrementAssign(AssignTarget());
+					return Expression.PostDecrementAssign(AssignTarget());
 				}
 
 				if (_variables.TryGetValue(name, out var variable))
@@ -2794,12 +2830,21 @@ namespace Assembler.Compiler.Compiler
 		private Expression ParseLambdaWithType(Type? parameterType)
 		{
 			// Parse: identifier => expression
-			var paramName = Expect(TokenType.Identifier).Value;
+			var paramToken = Expect(TokenType.Identifier);
+			var paramName = paramToken.Value;
 			Expect(TokenType.Arrow);
 
 			// Use inferred type or default to object
 			var actualType = parameterType ?? typeof(object);
 			var lambdaParam = Expression.Parameter(actualType, paramName);
+
+			// C# forbids a lambda parameter shadowing a name already in scope (CS0136); see the inline site.
+			if (_variables.ContainsKey(paramName))
+			{
+				throw Error(
+					$"A local or parameter named '{paramName}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					paramToken);
+			}
 
 			_lambdaParameters.Push(lambdaParam);
 			_variables[paramName] = lambdaParam;
