@@ -47,8 +47,11 @@ namespace Assembler.Parsing.Info
 	}
 
 	/// <summary>A <c>!entity { Id, Property }</c> reference — reads a transform property (position,
-	/// rotation, scale) off an entity by id at runtime. Resolves to a live <c>Vector3</c>.</summary>
-	public sealed record EntityPropertyRef(string Id, EntityProperty Property) : AssemblerRef(Id);
+	/// rotation, scale) off an entity by id at runtime. Resolves to a live <c>Vector3</c>.
+	/// When the <c>Id</c> was written as <c>!parameter &lt;name&gt;</c> (e.g. <c>self_id</c>),
+	/// <see cref="IdParameter"/> carries that parameter name and <see cref="AssemblerRef.Id"/> is
+	/// empty until template instantiation substitutes the resolved entity id in.</summary>
+	public sealed record EntityPropertyRef(string Id, EntityProperty Property, string? IdParameter = null) : AssemblerRef(Id);
 
 	/// <summary>A physics property exposed by the <c>!rigidbody { Id, Property }</c> tag.</summary>
 	public enum RigidbodyProperty

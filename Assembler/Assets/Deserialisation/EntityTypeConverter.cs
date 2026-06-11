@@ -14,7 +14,7 @@ namespace Assembler.Deserialisation
 		{
 			parser.Consume<MappingStart>();
 
-			string? id = null;
+			object? id = null;
 			string? property = null;
 
 			while (!parser.TryConsume<MappingEnd>(out _))
@@ -22,8 +22,11 @@ namespace Assembler.Deserialisation
 				var key = parser.Consume<Scalar>().Value;
 				switch (key)
 				{
+					// Id may be a tagged value (e.g. !parameter self_id), so defer to the root deserializer
+					// rather than consuming a bare scalar — a plain id deserialises to a string, a !parameter
+					// to a ParamRefDto.
 					case "Id":
-						id = parser.Consume<Scalar>().Value;
+						id = rootDeserializer(typeof(object));
 						break;
 					case "Property":
 						property = parser.Consume<Scalar>().Value;
@@ -34,7 +37,7 @@ namespace Assembler.Deserialisation
 				}
 			}
 
-			if (string.IsNullOrWhiteSpace(id))
+			if (id is null || (id is string s && string.IsNullOrWhiteSpace(s)))
 			{
 				throw new YamlException("!entity requires a non-empty 'Id' key (the entity to read).");
 			}

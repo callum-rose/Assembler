@@ -48,6 +48,82 @@ Entities:
 		}
 
 		[Test]
+		public void TemplateBehaviourCanReferenceOwnTransformViaSelfId()
+		{
+			var yaml = @"
+Templates:
+  mover_template:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Id: !parameter self_id, Property: Position }
+Entities:
+  mover:
+    Template: { Id: mover_template }
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
+			var source = (EntityPropertySource<Vector3>)translate.Displacement;
+
+			// self_id substituted in at instantiation, so the source reads the instance's own transform.
+			Assert.AreEqual("mover", source.EntityId);
+			Assert.IsNull(source.EntityIdParameter);
+			Assert.AreEqual(EntityProperty.Position, source.Property);
+		}
+
+		[Test]
+		public void TemplateBehaviourEntityParameterResolvesToSuppliedId()
+		{
+			// !entity { Id: !parameter ... } also threads a non-self parameter through, resolved from
+			// the supplied template parameters (mirroring listeners' EntityId: !parameter <name>).
+			var yaml = @"
+Templates:
+  follower_template:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Id: !parameter target, Property: Position }
+Entities:
+  follower:
+    Template:
+      Id: follower_template
+      Parameters:
+        target: leader
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
+			var source = (EntityPropertySource<Vector3>)translate.Displacement;
+
+			Assert.AreEqual("leader", source.EntityId);
+			Assert.IsNull(source.EntityIdParameter);
+		}
+
+		[Test]
+		public void TemplateBehaviourEntityParameterMissingThrows()
+		{
+			var yaml = @"
+Templates:
+  follower_template:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Id: !parameter target, Property: Position }
+Entities:
+  follower:
+    Template: { Id: follower_template }
+";
+
+			Assert.Throws<ParsingException>(() => Transformer.Transform(new GameFileParser().Parse(yaml)));
+		}
+
+		[Test]
 		public void TestTemplateOverride()
 		{
 			var yaml = @"

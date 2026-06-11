@@ -77,7 +77,7 @@ namespace Assembler.Parsing
 				// stage never receives DTOs.
 				(VarRefDto v, { ResolvedValues: null }) => new VarRef(v.Id ?? string.Empty),
 				(AssetRefDto v, { ResolvedValues: null }) => new AssetRef(v.Id ?? string.Empty),
-				(EntityRefDto v, { ResolvedValues: null }) => new EntityPropertyRef(v.Id ?? string.Empty, ParseEntityProperty(v.Property)),
+				(EntityRefDto v, { ResolvedValues: null }) => ToEntityPropertyRef(v),
 				(RigidbodyRefDto v, { ResolvedValues: null }) => new RigidbodyPropertyRef(v.Id ?? string.Empty, ParseRigidbodyProperty(v.Property)),
 				(ClockRefDto v, { ResolvedValues: null }) => new ClockRef(v.Property ?? string.Empty),
 				(EntityQueryRefDto v, { ResolvedValues: null }) => new QueryRef(
@@ -171,6 +171,19 @@ namespace Assembler.Parsing
 
 		private static AssemblerValue ResolveRef(RefDto refDto, IReadOnlyList<ValueInfo> resolvedValues) =>
 			resolvedValues.ResolveValue(refDto.Id);
+
+		// Builds the !entity IR. A literal Id is carried verbatim; a !parameter Id (a ParamRefDto) is
+		// captured as IdParameter so template instantiation can substitute the resolved entity id later
+		// (mirroring how a listener's `EntityId: !parameter self_id` is threaded through).
+		private static EntityPropertyRef ToEntityPropertyRef(EntityRefDto dto) =>
+			dto.Id switch
+			{
+				ParamRefDto p => new EntityPropertyRef(string.Empty, ParseEntityProperty(dto.Property), p.Id ?? string.Empty),
+				string s => new EntityPropertyRef(s, ParseEntityProperty(dto.Property)),
+				null => new EntityPropertyRef(string.Empty, ParseEntityProperty(dto.Property)),
+				_ => throw new ParsingException(
+					$"!entity 'Id' must be an entity id or !parameter, but was {dto.Id.GetType().Name}.")
+			};
 
 		private static EntityProperty ParseEntityProperty(string? property) =>
 			(property ?? string.Empty).Trim().ToLowerInvariant() switch
