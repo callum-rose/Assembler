@@ -21,7 +21,7 @@ namespace Assembler.Behaviours.Rotation
 
 		private void Update() => Step();
 
-		private void Step()
+		internal void Step()
 		{
 			var ctx = TriggerContext.Empty;
 			var offset = Data.Target.Get(ctx) - transform.position;
