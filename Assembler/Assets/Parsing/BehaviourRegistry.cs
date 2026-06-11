@@ -87,6 +87,7 @@ namespace Assembler.Parsing
 				["perceive"] = PerceiveInfo.Create,
 				["steering"] = SteeringInfo.Create,
 				["navigate"] = NavigateInfo.Create,
+				["patrol"] = PatrolInfo.Create,
 				["grid mover"] = GridMoverInfo.Create,
 				["vector variable setter"] = VariableSetterInfo<Vector3>.Create,
 				["int variable setter"] = VariableSetterInfo<int>.Create,
