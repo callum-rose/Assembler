@@ -108,16 +108,20 @@ Constants:
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
                           # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
-  avoid lookahead: 5.0    # how far ahead (units) a rival scans for traffic in its path; only cars
-                          # inside this forward corridor trigger an avoidance swerve (~1s at cruise)
-  avoid radius: 2.0       # corridor half-width (units): a car must be within this of the rival's
-                          # heading line to count as "in the way"
-  avoid strength: 0.5     # weight of the avoidance swerve against the nav heading (magnitude 1).
-                          # `AvoidObstacles` ramps its push from 0 at the look-ahead edge to full on
-                          # contact and reacts only to cars actually AHEAD in the corridor — so, unlike
-                          # the raw `Separate` this replaced, it never swings a rival perpendicular at a
-                          # car beside or behind it. 0.5 keeps the nav route dominant; physical collision
-                          # handles anything closer.
+  avoid lookahead: 7.0    # how far ahead (units) a rival scans for traffic in its path; only cars
+                          # inside this forward corridor trigger an avoidance swerve. ~1.4s at the
+                          # rival cruise, so a rival starts moving over while still well back rather
+                          # than reacting at the last moment
+  avoid radius: 2.5       # corridor half-width (units): a car must be within this of the rival's
+                          # heading line to count as "in the way". Cars are ~1 wide, so this leaves a
+                          # generous margin either side of the line
+  avoid strength: 2.5     # GAIN on the avoidance steer (see `ai steer`): the avoid velocity's
+                          # sideways component (at most ~0.9, and smaller the further off the threat)
+                          # is multiplied by this and added straight onto the nav steer. ~2.5 means a
+                          # car squarely ahead saturates the steering toward the dodge well before
+                          # contact, so the rival commits to going around. Safe to run this high
+                          # because the corridor only ever sees cars AHEAD — it can't swing a rival
+                          # sideways at a car beside or behind it. Lower for lazier, later dodges.
 
 Variables:
   laps: 0
@@ -228,20 +232,24 @@ Expressions:
 
   # AI steering input (the rivals' "hands on the wheel"). Returns a steer value in [-1, 1]
   # that feeds the SAME `steer yaw` the player uses — so a rival turns at the same rate-
-  # limited, speed-gated authority and never snaps. It points the car at a DESIRED heading
-  # that blends two pulls on the XZ plane:
-  #   nav   — the unit direction `navigate` wants (its A* route velocity, written to the
-  #           car's `nav dir` variable each frame);
-  #   avoid — an `AvoidObstacles` swerve away from the other three cars (player + two rivals,
-  #           passed in as live positions a/b/c) when one lies AHEAD in the rival's path. It
-  #           scans `lookAhead` units along the car's forward heading and only reacts to cars
-  #           inside that forward corridor (within `avoidRadius` of the heading line), ramping
-  #           the push up as the car closes — so a rival weaves around traffic in front of it
-  #           without flinching at cars beside or behind it.
-  # Steering sign uses the car's own right axis (forward's in-plane perpendicular, same as
-  # `drive velocity`): a desired heading off to the right wants positive steer. When the
-  # desired heading is behind the car (forward dot < 0) it commits to a full-lock turn in
-  # the nearer direction rather than dithering near zero.
+  # limited, speed-gated authority and never snaps. It sums TWO steering pulls:
+  #   navSteer   — turn toward the heading `navigate` wants (its A* route velocity, written to
+  #                the car's `nav dir` variable each frame). When that heading is behind the car
+  #                (forward dot < 0) it commits to a full-lock turn in the nearer direction
+  #                rather than dithering near zero.
+  #   avoidSteer — turn away from the other three cars (player + two rivals, passed in as live
+  #                positions a/b/c) when one lies AHEAD in the rival's path. `AvoidObstacles`
+  #                scans `lookAhead` units along the forward heading and only reacts to cars
+  #                inside the forward corridor (within `avoidRadius` of the heading line), with a
+  #                push that grows as the car closes.
+  # Crucially, the avoidance is consumed as a STEERING term, not a heading blend: we project the
+  # avoid velocity onto the car's own right axis (`Dot(right, avoid)`) and add it, scaled by
+  # `avoidStrength`, straight onto the nav steer. Projecting onto `right` keeps only the in-plane
+  # sideways component — it discards the helper's braking term (a rival can't brake, only steer)
+  # and any out-of-plane noise — and giving it its own gain (rather than diluting it inside a
+  # normalised heading) is what lets a rival actually pull out and go around a car ahead instead
+  # of nosing into it. Because the corridor only ever sees cars AHEAD, a big gain is safe: it
+  # can't swing a rival perpendicular at a car beside or behind it the way a raw `Separate` could.
   ai steer:
     ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float, float ]
     ArgumentNames: [ rotation, self, navDir, a, b, c, lookAhead, avoidRadius, avoidStrength ]
@@ -254,10 +262,11 @@ Expressions:
       var others = new List<Vector3> { a, b, c };
       var avoid = AvoidObstacles(self, forward, others, lookAhead, avoidRadius, 1f);
       var nav = Normalize(new Vector3(navDir.x, 0f, navDir.z));
-      var desired = Normalize(AddVector(nav, ScaleVector(avoid, avoidStrength)));
-      var fwdDot = Dot(forward, desired);
-      var rightDot = Dot(right, desired);
-      return fwdDot < 0f ? (rightDot >= 0f ? 1f : -1f) : Clamp(rightDot * 2f, -1f, 1f);
+      var navFwd = Dot(forward, nav);
+      var navRight = Dot(right, nav);
+      var navSteer = navFwd < 0f ? (navRight >= 0f ? 1f : -1f) : Clamp(navRight * 2f, -1f, 1f);
+      var avoidSteer = Dot(right, avoid) * avoidStrength;
+      return Clamp(navSteer + avoidSteer, -1f, 1f);
 
 Entities:
   # ---- The drivable car ----------------------------------------------------
