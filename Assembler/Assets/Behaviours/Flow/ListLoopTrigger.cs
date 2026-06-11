@@ -12,9 +12,9 @@ namespace Assembler.Behaviours.Flow
 	///   item [T]: The current element of the list.
 	///   index [int]: Zero-based position of the current element.
 	/// </remarks>
-	public abstract class ListLoopTrigger<T> : Trigger<ListLoopTriggerData<T>>
+	public abstract class ListLoopTrigger<T> : Trigger<ListLoopTriggerData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var list = Data.List.Get(ctx);
 

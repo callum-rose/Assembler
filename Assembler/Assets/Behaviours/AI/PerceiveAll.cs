@@ -31,7 +31,7 @@ namespace Assembler.Behaviours.AI
 	///   Velocities: !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans).
 	///   Count: !var reference to the int variable set to the number of entities detected this scan.
 	/// </remarks>
-	public sealed class PerceiveAll : GameBehaviour<PerceiveAllData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock
+	public sealed class PerceiveAll : GameBehaviour<PerceiveAllData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock, IAmExecutable
 	{
 		public EntityQueryService Query { get; set; } = null!;
 		public LineOfSightService Sight { get; set; } = null!;
@@ -52,7 +52,7 @@ namespace Assembler.Behaviours.AI
 
 		private void Start() => StartCoroutine(ScanLoop());
 
-		public override void Execute(TriggerContext ctx) => Scan();
+		public void Execute(TriggerContext ctx) => Scan();
 
 		private IEnumerator ScanLoop()
 		{
@@ -60,32 +60,31 @@ namespace Assembler.Behaviours.AI
 			{
 				Scan();
 
-				var interval = Data.Interval.Get(TriggerContext.Empty);
+				var interval = Data.Interval.Get();
 				yield return interval > 0f ? new WaitForGameSeconds(Clock, interval) : null;
 			}
 		}
 
 		private void Scan()
 		{
-			var ctx = TriggerContext.Empty;
 			var self = transform.position;
-			var tag = Data.Tag.Get(ctx);
-			var radius = Data.Radius.Get(ctx);
+			var tag = Data.Tag.Get();
+			var radius = Data.Radius.Get();
 
 			// Exclude this entity from its own scan: a same-tag query would otherwise always detect itself at
 			// distance 0, polluting separation/alignment with a zero-offset neighbour.
 			var selfId = Entity.Id;
 
 			var candidates = ConeConfigured
-				? Query.WithinCone(self, Data.Forward.Get(ctx), tag, radius, Data.ConeAngle.Get(ctx) * 0.5f, selfId)
+				? Query.WithinCone(self, Data.Forward.Get(), tag, radius, Data.ConeAngle.Get() * 0.5f, selfId)
 				: Query.WithinRadius(self, tag, radius, selfId);
 
-			var requireSight = Data.RequireLineOfSight.Get(ctx);
-			var obstacles = requireSight ? Data.Obstacles.Get(ctx) : string.Empty;
+			var requireSight = Data.RequireLineOfSight.Get();
+			var obstacles = requireSight ? Data.Obstacles.Get() : string.Empty;
 
-			var positions = WritePositions ? Data.Positions.Get(ctx) : null;
-			var ids = WriteIds ? Data.Ids.Get(ctx) : null;
-			var velocities = WriteVelocities ? Data.Velocities.Get(ctx) : null;
+			var positions = WritePositions ? Data.Positions.Get() : null;
+			var ids = WriteIds ? Data.Ids.Get() : null;
+			var velocities = WriteVelocities ? Data.Velocities.Get() : null;
 
 			positions?.Clear();
 			ids?.Clear();

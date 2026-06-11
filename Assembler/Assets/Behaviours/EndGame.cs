@@ -7,9 +7,9 @@ namespace Assembler.Behaviours
 	/// <remarks>
 	/// Properties:
 	/// </remarks>
-	public class EndGame : GameBehaviour<EndGameData>
+	public class EndGame : GameBehaviour<EndGameData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			GetComponentInParent<GameController>()?.EndGame();
 			NotifyListeners(ctx);

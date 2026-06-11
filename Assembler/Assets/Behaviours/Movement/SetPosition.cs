@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Position: World-space position to teleport the entity to on each execution.
 	/// </remarks>
-	public class SetPosition : GameBehaviour<SetPositionData>
+	public class SetPosition : GameBehaviour<SetPositionData>, IAmExecutable
 	{
 		private IValueProvider<Vector3> _position;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Movement
 			_position = behaviourInfo.ValueExpression;
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			transform.position = _position.Get(ctx);
 		}

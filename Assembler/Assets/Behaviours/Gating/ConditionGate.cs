@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.Gating
 	/// Properties:
 	///   Condition: Boolean expression checked on each Execute call.
 	/// </remarks>
-	public class ConditionGate : Trigger<ConditionGateData>
+	public class ConditionGate : Trigger<ConditionGateData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (Data.Condition.Get(ctx))
 			{

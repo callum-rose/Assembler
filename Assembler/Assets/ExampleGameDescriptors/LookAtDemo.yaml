@@ -1,0 +1,165 @@
+Game:
+  Title: Look At Demo (3D)
+  Description: >
+    A WASD-driven player cube roams a 3D ground plane while three elongated
+    "turrets" track it with the `look at` behaviour — the declarative form of
+    the `LookRotationXZ` library helper. Each turret reads the player's live
+    position via `!entity { Id: player, Property: Position }` and yaws about +Y
+    to face it. Two turrets snap instantly (TurnRate 0); the third eases round
+    at 120 deg/sec, so you can see the difference between a hard snap and a
+    rate-limited turn. The turret bodies are long along their local +Z (their
+    forward), making the facing obvious.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#141821"
+
+Constants:
+  step forward: !vec { X: 0, Y: 0, Z: 0.14 }
+  step back: !vec { X: 0, Y: 0, Z: -0.14 }
+  step left: !vec { X: -0.14, Y: 0, Z: 0 }
+  step right: !vec { X: 0.14, Y: 0, Z: 0 }
+  follow offset: !vec { X: 0, Y: 9, Z: -11 }
+  camera start: !vec { X: 0, Y: 9, Z: -11 }
+  turret size: !vec { X: 0.5, Y: 0.5, Z: 1.6 }
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold forward:
+        Type: key hold trigger
+        Properties:
+          Key: "w"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move forward
+      move forward:
+        Type: translate
+        Properties:
+          Displacement: !var step forward
+      hold back:
+        Type: key hold trigger
+        Properties:
+          Key: "s"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move back
+      move back:
+        Type: translate
+        Properties:
+          Displacement: !var step back
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "a"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var step left
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var step right
+      quit:
+        Type: key down trigger
+        Properties:
+          Key: "q"
+        Listeners: [ !gameover ]
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 40, Y: 0.1, Z: 40 }
+          IsWire: true
+          Colour: !colour grey
+
+  # Snaps to face the player every frame (TurnRate defaults to 0).
+  turret a:
+    Position: !vec { X: -7, Y: 0.5, Z: 7 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var turret size
+          IsWire: false
+          Colour: !colour red
+      face player:
+        Type: look at
+        Properties:
+          Target: !entity { Id: player, Property: Position }
+
+  # Also snaps, from the opposite corner.
+  turret b:
+    Position: !vec { X: 7, Y: 0.5, Z: 9 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var turret size
+          IsWire: false
+          Colour: !colour blue
+      face player:
+        Type: look at
+        Properties:
+          Target: !entity { Id: player, Property: Position }
+
+  # Eases round at a limited rate, so it visibly lags a fast-moving player.
+  turret c:
+    Position: !vec { X: 0, Y: 0.5, Z: 13 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !var turret size
+          IsWire: false
+          Colour: !colour yellow
+      face player:
+        Type: look at
+        Properties:
+          Target: !entity { Id: player, Property: Position }
+          TurnRate: 120
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.5
+
+  camera rig:
+    Position: !var camera start
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          LookAt: { Tag: player }
+          Mode: "3d"
+          Priority: 10
+          Lens: 60
+          Damping: 0.5
+          FollowOffset: !var follow offset

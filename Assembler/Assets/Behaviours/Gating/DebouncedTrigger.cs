@@ -10,13 +10,13 @@ namespace Assembler.Behaviours.Gating
 	/// Properties:
 	///   Interval: Seconds that must elapse since the previous incoming trigger before another one is forwarded.
 	/// </remarks>
-	public sealed class DebouncedTrigger : Trigger<DebouncedTriggerData>, INeedsGameClock
+	public sealed class DebouncedTrigger : Trigger<DebouncedTriggerData>, INeedsGameClock, IAmExecutable
 	{
 		public IGameClock Clock { get; set; } = null!;
 
 		private double _lastTriggerTime = double.NegativeInfinity;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var now = Clock.Time;
 			var interval = Data.Interval.Get(ctx);

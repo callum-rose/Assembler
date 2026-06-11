@@ -206,6 +206,10 @@ namespace Assembler.Building
 				[typeof(SetRotationInfo)] = Entry<SetRotationInfo, SetRotation, SetRotationData>(
 					(i, ctx) => new SetRotationData(i.Id,
 						i.ValueExpression.Resolve(ctx.Resolution))),
+				[typeof(LookAtInfo)] = Entry<LookAtInfo, LookAt, LookAtData>(
+					(i, ctx) => new LookAtData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.TurnRate.Resolve(ctx.Resolution))),
 				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
 					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
@@ -326,6 +330,9 @@ namespace Assembler.Building
 						i.TagsToDetect)),
 				[typeof(TriggerExitTriggerInfo)] = Entry<TriggerExitTriggerInfo, TriggerExit, PhysicalTriggerData>(
 					(i, ctx) => new TriggerExitTriggerData(i.Id,
+						i.TagsToDetect)),
+				[typeof(TriggerStayTriggerInfo)] = Entry<TriggerStayTriggerInfo, TriggerStay, PhysicalTriggerData>(
+					(i, ctx) => new TriggerStayTriggerData(i.Id,
 						i.TagsToDetect)),
 				[typeof(ConditionGateInfo)] = Entry<ConditionGateInfo, ConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
@@ -868,22 +875,31 @@ namespace Assembler.Building
 			listeners.Select(l => (Listener)(l switch
 			{
 				DirectListenerInfo direct => new DirectListener(
-					listenerRegistry[direct.BehaviourDescriptor],
+					ResolveExecutable(listenerRegistry, direct.BehaviourDescriptor),
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
-					entityTagged.BehaviourId,
-					listenerRegistry.GetByEntityTagAndBehaviourId,
+					entityTagged.BehaviourId is { } behaviourId
+						? tag => listenerRegistry.GetByEntityTagAndBehaviourId(tag, behaviourId)
+						: listenerRegistry.GetByEntityTag,
 					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),
 					tag => listenerRegistry.GetByBehaviourTag(tag),
 					behaviourTagged.OutputMapping),
 				GameOverListenerInfo gameOver => new DirectListener(
-					listenerRegistry[new BehaviourDescriptor(
-						GameOverController.EntityId, GameOverController.EndBehaviourId)],
+					ResolveExecutable(listenerRegistry,
+						new BehaviourDescriptor(GameOverController.EntityId, GameOverController.EndBehaviourId)),
 					gameOver.OutputMapping),
 				_ => throw new ArgumentException($"Unsupported listener type '{l.GetType()}'")
 			})).ToArray();
+
+		// Looks up a build-time-known listener target and hard-fails when it is not executable — a trigger or
+		// self-driven behaviour wired as a Listeners: target does nothing, so reject it loudly rather than
+		// silently no-op (see issue #201). The guard itself lives in the shared EnsureExecutable extension.
+		private static IAmExecutable ResolveExecutable(
+			IReadOnlyBehaviourRegistry registry, BehaviourDescriptor descriptor) =>
+			registry[descriptor].EnsureExecutable(
+				$"targeting behaviour '{descriptor.BehaviourId}' on entity '{descriptor.EntityId}'");
 	}
 }

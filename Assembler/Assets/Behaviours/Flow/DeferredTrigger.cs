@@ -11,11 +11,11 @@ namespace Assembler.Behaviours.Flow
 	/// Properties:
 	///   Delay: Seconds to wait between Execute and notifying listeners.
 	/// </remarks>
-	public sealed class DeferredTrigger : Trigger<DeferredTriggerData>, INeedsGameClock
+	public sealed class DeferredTrigger : Trigger<DeferredTriggerData>, INeedsGameClock, IAmExecutable
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var captured = ctx;
 			var delay = Data.Delay.Get(ctx);

@@ -25,14 +25,9 @@ namespace Assembler.Behaviours.Movement
 			}
 		}
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
-		{
-			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(ctx), Data.Max.Get(ctx)));
-		}
+		internal void Step() =>
+			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(), Data.Max.Get()));
 	}
 }

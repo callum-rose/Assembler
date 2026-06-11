@@ -15,15 +15,12 @@ namespace Assembler.Behaviours.Movement
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
 			transform.position = Vector3.MoveTowards(
-				transform.position, Data.Target.Get(ctx), Data.Speed.Get(ctx) * Clock.DeltaTime);
+				transform.position, Data.Target.Get(), Data.Speed.Get() * Clock.DeltaTime);
 		}
 	}
 }

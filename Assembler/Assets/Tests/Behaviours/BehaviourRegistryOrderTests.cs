@@ -17,7 +17,6 @@ namespace Tests.Behaviours
 	{
 		private sealed class StubBehaviour : GameBehaviour
 		{
-			public override void Execute(TriggerContext ctx) { }
 		}
 
 		private readonly List<GameObject> _created = new();

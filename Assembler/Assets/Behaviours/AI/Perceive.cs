@@ -28,7 +28,7 @@ namespace Assembler.Behaviours.AI
 	///   HasTarget: !var reference to the bool variable set true while a target is visible, false otherwise.
 	///   LastKnownPosition: !var reference to the vector variable updated ONLY while visible (memory of last sighting).
 	/// </remarks>
-	public sealed class Perceive : GameBehaviour<PerceiveData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock
+	public sealed class Perceive : GameBehaviour<PerceiveData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock, IAmExecutable
 	{
 		public EntityQueryService Query { get; set; } = null!;
 		public LineOfSightService Sight { get; set; } = null!;
@@ -39,7 +39,7 @@ namespace Assembler.Behaviours.AI
 
 		private void Start() => StartCoroutine(ScanLoop());
 
-		public override void Execute(TriggerContext ctx) => Scan();
+		public void Execute(TriggerContext ctx) => Scan();
 
 		private IEnumerator ScanLoop()
 		{
@@ -47,20 +47,19 @@ namespace Assembler.Behaviours.AI
 			{
 				Scan();
 
-				var interval = Data.Interval.Get(TriggerContext.Empty);
+				var interval = Data.Interval.Get();
 				yield return interval > 0f ? new WaitForGameSeconds(Clock, interval) : null;
 			}
 		}
 
 		private void Scan()
 		{
-			var ctx = TriggerContext.Empty;
 			var self = transform.position;
 
-			var found = TryFindTarget(self, Data.Tag.Get(ctx), Data.Radius.Get(ctx), ctx, out var targetId);
+			var found = TryFindTarget(self, Data.Tag.Get(), Data.Radius.Get(), out var targetId);
 
 			if (!found || !Query.TryGetPosition(targetId, out var position) ||
-				(Data.RequireLineOfSight.Get(ctx) && !Sight.CanSee(self, position, Data.Obstacles.Get(ctx))))
+				(Data.RequireLineOfSight.Get() && !Sight.CanSee(self, position, Data.Obstacles.Get())))
 			{
 				// Lost the target: flip the flag but keep target_id / target_position / last_known_position so
 				// downstream behaviours can steer toward the last sighting.
@@ -74,7 +73,7 @@ namespace Assembler.Behaviours.AI
 			Data.HasTarget.Set(true);
 		}
 
-		private bool TryFindTarget(Vector3 self, string tag, float radius, TriggerContext ctx, out string targetId)
+		private bool TryFindTarget(Vector3 self, string tag, float radius, out string targetId)
 		{
 			// Exclude this entity from its own scan: a same-tag perceive would otherwise always detect itself at
 			// distance 0, making separation/nearest-ally relationships impossible.
@@ -85,7 +84,7 @@ namespace Assembler.Behaviours.AI
 				return Query.TryNearest(self, tag, radius, selfId, out targetId);
 			}
 
-			var candidates = Query.WithinCone(self, Data.Forward.Get(ctx), tag, radius, Data.ConeAngle.Get(ctx) * 0.5f, selfId);
+			var candidates = Query.WithinCone(self, Data.Forward.Get(), tag, radius, Data.ConeAngle.Get() * 0.5f, selfId);
 
 			targetId = string.Empty;
 			var found = false;

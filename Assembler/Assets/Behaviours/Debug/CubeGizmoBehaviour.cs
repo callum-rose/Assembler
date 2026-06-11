@@ -13,11 +13,6 @@ namespace Assembler.Behaviours.Debug
 	/// </remarks>
 	public class CubeGizmoBehaviour : GameBehaviour<CubeGizmoData>
 	{
-		public override void Execute(TriggerContext ctx)
-		{
-
-		}
-
 		private void OnDrawGizmos()
 		{
 			if (Data == null)

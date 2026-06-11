@@ -9,11 +9,11 @@ namespace Assembler.Behaviours.Time
 	/// Properties:
 	///   Scale: Playback rate applied to the shared game clock; 0 pauses, 0.5 halves speed, 1 is normal. Negative values are clamped to 0.
 	/// </remarks>
-	public class SetTimeScale : GameBehaviour<SetTimeScaleData>, INeedsGameClock
+	public class SetTimeScale : GameBehaviour<SetTimeScaleData>, INeedsGameClock, IAmExecutable
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			Clock.TimeScale = Data.Scale.Get(ctx);
 		}

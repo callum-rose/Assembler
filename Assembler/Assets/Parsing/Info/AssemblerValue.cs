@@ -111,7 +111,7 @@ namespace Assembler.Parsing.Info
 
 	public sealed record DictValue(IReadOnlyDictionary<string, AssemblerValue> Value) : AssemblerValue;
 
-	public sealed record ListValue(IReadOnlyList<AssemblerValue> Value) : AssemblerValue;
+	public sealed record ListValue(IReadOnlyList<AssemblerValue> Items) : AssemblerValue;
 
 	/// <summary>
 	/// A list value with a known element CLR type — produced by typed YAML tags

@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Torque: World-space torque vector applied with ForceMode.Force (mass-dependent angular acceleration).
 	/// </remarks>
-	public sealed class AddTorqueBehaviour : GameBehaviour<AddTorqueData>
+	public sealed class AddTorqueBehaviour : GameBehaviour<AddTorqueData>, IAmExecutable
 	{
 		private Rigidbody _rigidbody;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Physics
 			_rigidbody = GetComponent<Rigidbody>();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (_rigidbody == null)
 			{

@@ -11,9 +11,9 @@ namespace Assembler.Behaviours.Gating
 	/// Properties:
 	///   Condition: Boolean expression checked on each Execute call; listeners fire when it is false.
 	/// </remarks>
-	public class InverseConditionGate : Trigger<ConditionGateData>
+	public class InverseConditionGate : Trigger<ConditionGateData>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (!Data.Condition.Get(ctx))
 			{

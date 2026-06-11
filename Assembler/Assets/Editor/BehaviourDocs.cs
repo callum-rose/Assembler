@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Assembler.Behaviours;
 using Assembler.Building;
 using Assembler.Parsing.Info;
 using UnityEditor;
@@ -110,6 +111,8 @@ namespace Editor
 					sb.AppendLine("_No summary — add `<summary>` on " + monoType.Name + "._");
 				}
 				sb.AppendLine();
+				sb.AppendLine(DescribeRole(monoType));
+				sb.AppendLine();
 
 				if (infoProps.Count > 0)
 				{
@@ -190,6 +193,36 @@ namespace Editor
 			}
 
 			return sb.ToString();
+		}
+
+		// Classifies a behaviour by how it participates in the trigger/listener graph (see issue #201):
+		// executable behaviours are the only valid `Listeners:` targets (they implement IAmExecutable);
+		// triggers emit to listeners; everything else runs itself each frame and is not a listener target.
+		private static string DescribeRole(Type monoType)
+		{
+			var executable = typeof(IAmExecutable).IsAssignableFrom(monoType);
+			var trigger = IsTrigger(monoType);
+
+			return (executable, trigger) switch
+			{
+				(true, true) => "**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).",
+				(true, false) => "**Role:** Executable (valid `Listeners:` target).",
+				(false, true) => "**Role:** Trigger (event source — emits to listeners; not a listener target).",
+				(false, false) => "**Role:** Continuous / passive (runs itself; not a listener target)."
+			};
+		}
+
+		private static bool IsTrigger(Type monoType)
+		{
+			for (var t = monoType; t is not null && t != typeof(object); t = t.BaseType)
+			{
+				if (t.IsGenericType && t.GetGenericTypeDefinition().Name == "Trigger`1")
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		// ----------------------------------------------------------------------

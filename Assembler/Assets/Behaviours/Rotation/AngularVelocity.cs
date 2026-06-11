@@ -14,14 +14,9 @@ namespace Assembler.Behaviours.Rotation
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update()
-		{
-			Execute(TriggerContext.Empty);
-		}
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
-		{
-			transform.Rotate(Data.AngularVelocity.Get(ctx) * Clock.DeltaTime, Space.World);
-		}
+		internal void Step() =>
+			transform.Rotate(Data.AngularVelocity.Get() * Clock.DeltaTime, Space.World);
 	}
 }
