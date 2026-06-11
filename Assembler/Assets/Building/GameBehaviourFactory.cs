@@ -403,6 +403,7 @@ namespace Assembler.Building
 							CameraTargetResolver.Resolve(i.Target, res, ResolveByEntityTag),
 							i.Radius.Resolve(res),
 							i.Height.Resolve(res),
+							i.OrbitSpeed.Resolve(res),
 							i.Damping.Resolve(res),
 							i.Priority.Resolve(res),
 							i.Lens.Resolve(res)), i.Listeners.ToListeners(lr, res));

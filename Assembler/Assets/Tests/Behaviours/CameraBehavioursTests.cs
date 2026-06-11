@@ -143,6 +143,7 @@ namespace Tests.Behaviours
 					new ValueProvider<Transform>(target),
 					new ValueProvider<float>(7f),
 					new ValueProvider<float>(2f),
+					new ValueProvider<float>(45f),
 					NullValueProvider<float>.Instance,
 					NullValueProvider<int>.Instance,
 					NullValueProvider<float>.Instance),

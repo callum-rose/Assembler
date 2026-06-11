@@ -8,6 +8,7 @@ namespace Assembler.Parsing.Info.Behaviours
 		CameraTargetSource Target,
 		ValueSource<float> Radius,
 		ValueSource<float> Height,
+		ValueSource<float> OrbitSpeed,
 		ValueSource<float> Damping,
 		ValueSource<int> Priority,
 		ValueSource<float> Lens) : BehaviourInfo(Id, Listeners)
@@ -21,6 +22,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				CameraTargetSource.Parse(ctx, props.GetValueOrDefault("Target") ?? NoValue.Instance, id, "Target"),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Radius")),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Height")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("OrbitSpeed")),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Damping")),
 				ValueSourceFactory.CreateOptionalValueSource<int>(ctx, props.GetValueOrDefault("Priority")),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("Lens")));
@@ -32,6 +34,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				Target.SubstituteParameters(ctx),
 				Radius.SubstituteParameters(ctx),
 				Height.SubstituteParameters(ctx),
+				OrbitSpeed.SubstituteParameters(ctx),
 				Damping.SubstituteParameters(ctx),
 				Priority.SubstituteParameters(ctx),
 				Lens.SubstituteParameters(ctx));

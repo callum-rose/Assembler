@@ -742,6 +742,7 @@ Adds a Cinemachine virtual camera that orbits a target entity at a fixed radius 
 | Target | Tag/Id | Entity to orbit, as { Tag: <entity-tag> } or { Id: <entity-id> }. |
 | Radius | float | Orbit distance from the target in world units (default Cinemachine's 10). |
 | Height | float | Vertical offset above the target the camera orbits around (default 0). |
+| OrbitSpeed | float | Auto-orbit rate in degrees per second around the target (default 0 = hold a fixed angle). |
 | Damping | float | How softly the camera tracks the target (seconds-ish); 0 is instant. |
 | Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
 | Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
