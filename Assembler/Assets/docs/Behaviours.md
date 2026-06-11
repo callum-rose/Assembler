@@ -275,7 +275,7 @@ Fires every frame while the named key is held down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | One of "w", "a", "s", "d", "up", "down", "left", "right". |
+| Key | string | Legacy input key name (lowercase), e.g. "w", "space", "escape", "up", "mouse0". |
 
 ## `key down trigger`
 Fires on the frame the named key is pressed down.
@@ -284,7 +284,7 @@ Fires on the frame the named key is pressed down.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `key up trigger`
 Fires on the frame the named key is released.
@@ -293,7 +293,7 @@ Fires on the frame the named key is released.
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `mouse button trigger`
 Fires on a mouse button event during the selected phase (press, release, or hold).
