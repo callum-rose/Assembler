@@ -108,11 +108,13 @@ Constants:
   rival reach: 4.0        # a rival switches its nav goal to the NEXT corner once this close, so
                           # the route flows through corners rather than aiming into the wall
   rival recompute: 0.3    # seconds between A* re-plans (cheap; static obstacles)
-  avoid radius: 4.5       # `perceive` range + the distance at which the avoidance push starts;
-                          # the push scales from 0 here up to full strength on contact
-  avoid strength: 0.7     # peak heading nudge (on top of a foe). Kept < 1 so the magnitude-1 nav
-                          # heading always wins and a rival can never be swung perpendicular; the
-                          # closeness scaling means it's far gentler than this except point-blank.
+  avoid radius: 8.0       # `perceive` range + the distance at which the avoidance push starts.
+                          # Large on purpose: steering is rate-limited, so a rival needs to begin
+                          # peeling away well before contact. The push scales from 0 here up to
+                          # full strength on contact.
+  avoid strength: 0.95    # peak heading nudge (on top of a foe). Stays just under 1 so the
+                          # magnitude-1 nav heading still edges it out and a rival can't be swung
+                          # fully perpendicular; the closeness scaling keeps it gentle until close.
 
 Variables:
   laps: 0
