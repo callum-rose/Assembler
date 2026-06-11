@@ -1898,45 +1898,135 @@ namespace Tests.Compiler
 			Assert.That(func(1), Is.EqualTo(42));
 		}
 
-		// A block that declares a variable shadowing an outer one must restore the outer binding on exit,
-		// so a later read sees the outer variable rather than the block's unassigned duplicate.
+		// A variable declared inside a block goes out of scope when the block closes; reading it afterwards
+		// is an error (C# CS0103), not a silent default-valued leak.
 		[Test]
-		public void BlockShadowingVariableRestoresOuterAfterBlock()
+		public void BlockScopedVariableIsOutOfScopeAfterBlock()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>(
+					$$"""
+					  if (true)
+					  {
+					      int inner = 5;
+					  }
+					  return inner;
+					  """));
+
+			Assert.That(ex.Message, Does.Contain("inner"));
+		}
+
+		// Redeclaring a name already visible in an enclosing scope is a compile error, matching C# (CS0136) —
+		// rather than silently shadowing it and reading back the wrong variable.
+		[Test]
+		public void BlockRedeclaringEnclosingVariableIsCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int>(
+					$$"""
+					  int y = 7;
+					  if (true)
+					  {
+					      int y = 100;
+					  }
+					  return y;
+					  """));
+
+			Assert.That(ex.Message, Does.Contain("y").And.Contain("enclosing"));
+		}
+
+		// Two sibling blocks may each declare the same name — neither is in scope for the other, so this is
+		// legal in C# and must keep compiling.
+		[Test]
+		public void SiblingBlocksMayReuseVariableName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+
+			var func = compiler.CompileFunc<int, int>(
+				$$"""
+				  int total = 0;
+				  if (x > 0)
+				  {
+				      int y = 10;
+				      total = total + y;
+				  }
+				  if (x > 0)
+				  {
+				      int y = 20;
+				      total = total + y;
+				  }
+				  return total;
+				  """,
+				"x");
+
+			Assert.That(func(1), Is.EqualTo(30));
+		}
+
+		// Two sibling for-loops may each declare `i`: the first loop's variable is out of scope by the
+		// second, so reusing the name is legal (matches C#).
+		[Test]
+		public void SiblingForLoopsMayReuseLoopVariable()
 		{
 			var compiler = new ExpressionMethodCompiler();
 
 			var func = compiler.CompileFunc<int>(
 				$$"""
-				  int y = 7;
-				  if (true)
+				  int total = 0;
+				  for (int i = 0; i < 3; i++)
 				  {
-				      int y = 100;
-				      y = y + 1;
+				      total = total + i;
 				  }
-				  return y;
+				  for (int i = 0; i < 4; i++)
+				  {
+				      total = total + i;
+				  }
+				  return total;
 				  """);
 
-			Assert.That(func(), Is.EqualTo(7));
+			// (0+1+2) + (0+1+2+3) = 3 + 6 = 9.
+			Assert.That(func(), Is.EqualTo(9));
 		}
 
-		// A lambda parameter that shadows a method parameter must not permanently delete it: the outer
-		// variable has to remain usable after the lambda.
+		// A lambda parameter shadowing a name already in scope is a compile error (C# CS0136) — not a
+		// silent overwrite that deletes the outer variable.
 		[Test]
-		public void LambdaParameterShadowingDoesNotDeleteOuterVariable()
+		public void LambdaParameterShadowingEnclosingVariableIsCompileError()
 		{
 			var compiler = new ExpressionMethodCompiler();
 			compiler.RegisterStaticMethods(typeof(Enumerable));
 
-			var func = compiler.CompileFunc<int, int>(
-				$$"""
-				  var list = new List<int> { 1, 2, 3 };
-				  var bigger = list.Where(x => x > 1).Count();
-				  return bigger + x;
-				  """,
-				"x");
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<int, int>(
+					$$"""
+					  var list = new List<int> { 1, 2, 3 };
+					  var bigger = list.Where(x => x > 1).Count();
+					  return bigger + x;
+					  """,
+					"x"));
 
-			// 2 elements > 1, plus the still-intact outer x (10) → 12.
-			Assert.That(func(10), Is.EqualTo(12));
+			Assert.That(ex.Message, Does.Contain("x").And.Contain("enclosing"));
+		}
+
+		// Sibling lambdas in a chain may reuse a parameter name — each parameter is out of scope once its
+		// lambda is parsed — so a non-colliding name keeps working end to end.
+		[Test]
+		public void ChainedLambdasMayReuseParameterName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Enumerable));
+
+			var func = compiler.CompileFunc<int>(
+				$$"""
+				  var list = new List<int> { 1, 2, 3, 4 };
+				  return list.Where(n => n > 1).Select(n => n * 2).Sum();
+				  """);
+
+			// {2,3,4} → {4,6,8} → 18.
+			Assert.That(func(), Is.EqualTo(18));
 		}
 
 		// Postfix `x++` yields the value before incrementing, so `x++ + 1` is `old + 1`, not `(x+1) + 1`.

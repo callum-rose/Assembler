@@ -757,35 +757,46 @@ namespace Assembler.Compiler.Compiler
 			}
 		}
 
-		// Restores `name` to what it meant before a block/lambda bound it: the outer binding it shadowed,
-		// or nothing if the name was previously unbound. (TryGetValue yields null for an absent key, and a
-		// present ParameterExpression is never null, so null unambiguously means "was unbound".)
-		private void RestoreVariable(string name, ParameterExpression? previous)
+		// Ends the lexical scope a block or loop opened: removes from name resolution every local it
+		// declared (everything added to _declaredVariables since `markerCount`), so those names leave
+		// scope. The ParameterExpressions stay where they were bound; only their visibility ends, which
+		// lets a sibling scope reuse the same name, exactly as in C#. Because a declaration that would
+		// shadow an enclosing name is rejected up front (see DeclareLocal), no removal here can erase an
+		// outer binding — there is nothing to restore.
+		private void ExitScope(int markerCount)
 		{
-			if (previous != null)
+			for (int i = markerCount; i < _declaredVariables.Count; i++)
 			{
-				_variables[name] = previous;
+				_variables.Remove(_declaredVariables[i].Name!);
 			}
-			else
+		}
+
+		// Registers a freshly declared local, enforcing C#'s rule that a name already visible in this or
+		// an enclosing scope cannot be redeclared (CS0136/CS0128). Returns the bound ParameterExpression.
+		private ParameterExpression DeclareLocal(Type type, string name, Token nameToken)
+		{
+			if (_variables.ContainsKey(name))
 			{
-				_variables.Remove(name);
+				throw Error(
+					$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					nameToken);
 			}
+
+			var variable = Expression.Variable(type, name);
+			_variables[name] = variable;
+			_declaredVariables.Add(variable);
+			return variable;
 		}
 
 		// Parses a `{ ... }` block with proper lexical scoping, shared by bare statement blocks and the
 		// bodies of if/else/for/while. Variables declared inside are bound on the resulting Expression.Block
-		// and unwound from the enclosing scope on exit, so they neither leak into the surrounding method
-		// scope (where they'd read as an unassigned default) nor clobber an outer variable they shadow.
+		// and their names leave the enclosing scope on exit, so they don't leak into the surrounding method
+		// scope (where they'd otherwise read back as an unassigned default).
 		private Expression ParseBraceBlock()
 		{
 			Expect(TokenType.LeftBrace);
 
-			// Snapshot the name table so block-local declarations vanish on exit and shadowed outer
-			// variables are restored. Only declarations mutate _variables, so a full snapshot/restore is
-			// exactly C# block scoping; assignments leave the table untouched and so survive correctly.
-			var savedScope = new Dictionary<string, ParameterExpression>(_variables);
 			var initialVarCount = _declaredVariables.Count;
-
 			var statements = new List<Expression>();
 
 			while (Current.Type != TokenType.RightBrace && Current.Type != TokenType.EndOfFile)
@@ -796,15 +807,11 @@ namespace Assembler.Compiler.Compiler
 			Expect(TokenType.RightBrace);
 
 			// Detach the variables declared in this block from the enclosing method scope: they belong to
-			// this block's Expression.Block, not _declaredVariables (which binds the whole method body).
+			// this block's Expression.Block, not _declaredVariables (which binds the whole method body). Drop
+			// their names from scope first so a sibling block may reuse them.
 			var blockVariables = _declaredVariables.GetRange(initialVarCount, _declaredVariables.Count - initialVarCount);
+			ExitScope(initialVarCount);
 			_declaredVariables.RemoveRange(initialVarCount, _declaredVariables.Count - initialVarCount);
-
-			_variables.Clear();
-			foreach (var entry in savedScope)
-			{
-				_variables[entry.Key] = entry.Value;
-			}
 
 			// A non-void final statement becomes the block's result value (e.g. an if-branch that returns).
 			if (statements.Count > 0 && statements[^1].Type != typeof(void))
@@ -865,6 +872,9 @@ namespace Assembler.Compiler.Compiler
 			Expect(TokenType.For);
 			Expect(TokenType.LeftParen);
 
+			// The initializer's loop variable is scoped to the loop (header + body) in C#.
+			var initialVarCount = _declaredVariables.Count;
+
 			var initializer = ParseStatement();
 			var condition = ParseExpression();
 			Expect(TokenType.Semicolon);
@@ -882,6 +892,10 @@ namespace Assembler.Compiler.Compiler
 
 			_breakLabels.Pop();
 			_continueLabels.Pop();
+
+			// Drop the loop variable's name from scope so it doesn't leak past the loop and a sibling loop
+			// can reuse it. Its binding stays in _declaredVariables (the method block), which is harmless.
+			ExitScope(initialVarCount);
 
 			return Expression.Block(
 				initializer,
@@ -1031,9 +1045,9 @@ namespace Assembler.Compiler.Compiler
 
 			Expect(TokenType.Semicolon);
 
-			var variable = Expression.Variable(type, name);
-			_variables[name] = variable;
-			_declaredVariables.Add(variable);
+			// Register after parsing the initializer so a self-reference resolves against the outer scope,
+			// not this (still unassigned) local — but DeclareLocal still rejects redeclaring a visible name.
+			var variable = DeclareLocal(type, name, nameToken);
 
 			if (initializer != null)
 			{
@@ -2118,18 +2132,24 @@ namespace Assembler.Compiler.Compiler
 
 					// Create lambda parameter with inferred or default type
 					var lambdaParam = Expression.Parameter(typeof(object), name);
-					_lambdaParameters.Push(lambdaParam);
 
-					// Bind the parameter while parsing the body, then restore whatever the name meant
-					// before — if it shadowed an outer variable, a blind Remove would delete that outer
-					// binding permanently and break later uses of it.
-					_variables.TryGetValue(name, out var shadowed);
+					// C# forbids a lambda parameter shadowing a name already in scope (CS0136). Reject it
+					// rather than overwriting the binding — a blind overwrite-then-remove would delete the
+					// outer variable and silently corrupt later uses of it.
+					if (_variables.ContainsKey(name))
+					{
+						throw Error(
+							$"A local or parameter named '{name}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+							nameToken);
+					}
+
+					_lambdaParameters.Push(lambdaParam);
 					_variables[name] = lambdaParam;
 
 					var lambdaBody = ParseExpression();
 
 					_lambdaParameters.Pop();
-					RestoreVariable(name, shadowed);
+					_variables.Remove(name);
 
 					return Expression.Lambda(lambdaBody, lambdaParam);
 				}
@@ -2731,23 +2751,29 @@ namespace Assembler.Compiler.Compiler
 		private Expression ParseLambdaWithType(Type? parameterType)
 		{
 			// Parse: identifier => expression
-			var paramName = Expect(TokenType.Identifier).Value;
+			var paramToken = Expect(TokenType.Identifier);
+			var paramName = paramToken.Value;
 			Expect(TokenType.Arrow);
 
 			// Use inferred type or default to object
 			var actualType = parameterType ?? typeof(object);
 			var lambdaParam = Expression.Parameter(actualType, paramName);
 
-			_lambdaParameters.Push(lambdaParam);
+			// C# forbids a lambda parameter shadowing a name already in scope (CS0136); see the inline site.
+			if (_variables.ContainsKey(paramName))
+			{
+				throw Error(
+					$"A local or parameter named '{paramName}' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter",
+					paramToken);
+			}
 
-			// Restore any outer variable this parameter shadows on exit (see the inline-lambda site).
-			_variables.TryGetValue(paramName, out var shadowed);
+			_lambdaParameters.Push(lambdaParam);
 			_variables[paramName] = lambdaParam;
 
 			var lambdaBody = ParseExpression();
 
 			_lambdaParameters.Pop();
-			RestoreVariable(paramName, shadowed);
+			_variables.Remove(paramName);
 
 			return Expression.Lambda(lambdaBody, lambdaParam);
 		}
