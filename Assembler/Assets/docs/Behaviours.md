@@ -279,6 +279,8 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 ## `look at`
 Turns the entity each frame to face Target in the XZ ground plane (a yaw about +Y).
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -648,6 +650,13 @@ Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 
 ## `every frame trigger`
 Fires every Unity Update frame. Use for behaviours that must run continuously.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+No properties.
+
+## `fixed update trigger`
+Fires every Unity FixedUpdate step. Use for physics-step-aligned, fixed-timestep logic.
 
 **Role:** Trigger (event source — emits to listeners; not a listener target).
 
