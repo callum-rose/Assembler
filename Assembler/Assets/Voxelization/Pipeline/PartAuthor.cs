@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
 using Assembler.Voxels.Scripting;
+using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -66,7 +67,7 @@ namespace Assembler.Voxelization
 				{
 					var block = FencedBlockExtractor.Extract(response, "layers")
 								?? throw new FormatException("Response contained no ```layers fenced block.");
-					var data = new LayersPartData(planned.Size, planned.Offset, SplitLayers(block));
+					var data = new LayersPartData(planned.Size, planned.Offset, SplitLayers(block, planned.Size));
 
 					// Decode now so dimension/key errors surface here, where we can
 					// feed them straight back, rather than later in assembly.
@@ -120,8 +121,16 @@ namespace Assembler.Voxelization
 			return new ScriptPartData(planned.Size, planned.Offset, script!);
 		}
 
-		private static IReadOnlyList<string> SplitLayers(string block)
+		/// <summary>
+		/// Groups the fenced block's rows into layers. Blank lines are the
+		/// intended separators, but models often misplace them (between every
+		/// row, or not at all), so when the grouping doesn't yield size.y layers
+		/// and the total row count is exactly size.y * size.z, the rows are
+		/// re-chunked deterministically instead of failing the attempt.
+		/// </summary>
+		private static IReadOnlyList<string> SplitLayers(string block, Vector3Int size)
 		{
+			var rows = new List<string>();
 			var layers = new List<string>();
 			var current = new List<string>();
 			foreach (var raw in block.Replace("\r", string.Empty).Split('\n'))
@@ -134,10 +143,19 @@ namespace Assembler.Voxelization
 				else
 				{
 					current.Add(line);
+					rows.Add(line);
 				}
 			}
 
 			Flush();
+
+			if (layers.Count != size.y && rows.Count == size.y * size.z)
+			{
+				return Enumerable.Range(0, size.y)
+					.Select(y => string.Join("\n", rows.Skip(y * size.z).Take(size.z)))
+					.ToList();
+			}
+
 			return layers;
 
 			void Flush()

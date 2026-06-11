@@ -17,7 +17,7 @@ namespace Assembler.Voxelization
 		public string AuthoringModel { get; init; } = DefaultModel;
 
 		/// <summary>Attempts per part inside one authoring call (initial + parse-failure retries).</summary>
-		public int MaxPartAttempts { get; init; } = 2;
+		public int MaxPartAttempts { get; init; } = 3;
 
 		/// <summary>Validation-driven re-author rounds per model after the first assembly.</summary>
 		public int MaxValidationRounds { get; init; } = 2;

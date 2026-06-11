@@ -146,6 +146,8 @@ namespace Assembler.Voxelization
 			"- The block contains exactly size.y layers, bottom layer (y=0) first, separated by ONE blank line.\n" +
 			"- Each layer is exactly size.z rows of exactly size.x characters. Row 1 of a layer is z=0 (the back); " +
 			"later rows step towards the viewer.\n" +
+			"- Blank lines go ONLY between layers, never between the rows of one layer — a layer with size.z = 2 " +
+			"is two consecutive lines with no gap.\n" +
 			"- Each character is a palette key, or '.' for empty.\n\n" +
 			"Quality rules:\n" +
 			"- The part must be ONE connected volume (no floating chunks).\n" +

@@ -157,6 +157,24 @@ poses:
 		}
 
 		[Test]
+		public void PartAuthor_RegroupsRowsWhenBlankLinesAreMisplaced()
+		{
+			// Sonnet sometimes puts a blank line between every row (or none at
+			// all). With 2 layers of 2 rows each, this response groups into 4
+			// one-row layers — the author must re-chunk instead of failing.
+			var planned = new PlannedPartData(PartEncoding.Layers, new Vector3Int(2, 2, 2), Vector3Int.zero, "block");
+			var model = SkeletonModel(planned);
+			var gateway = new FakeGateway().Enqueue("```layers\nWW\n\nW.\n\n.W\n\nWW\n```");
+
+			var data = (LayersPartData)new PartAuthor(gateway, VoxelizationConfig.Default)
+				.AuthorAsync(model, ReferenceBrief.None, model.Parts[0], planned, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(1), "should succeed without a retry");
+			Assert.That(data.Layers, Is.EqualTo(new[] { "WW\nW.", ".W\nWW" }));
+		}
+
+		[Test]
 		public void SetOrchestrator_RunsPlanAuthorAssembleValidateExport()
 		{
 			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse);
