@@ -55,6 +55,26 @@ Variables:
   score: !var initial score
   current gap y: !var initial gap y
 
+# Flapping is wired to one abstract `flap` button action. Desktop binds it to
+# Space; mobile binds it to the on-screen Flap button.
+Controls:
+  Actions:
+    flap: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      flap: [ "<Keyboard>/space" ]
+    mobile:
+      flap: [ "<Gamepad>/buttonSouth" ]
+
+  OnScreen:
+    - Type: button
+      Action: flap
+      Label: Flap
+      Anchor: lower-center
+      Offset: { X: 0, Y: 240 }
+      Size:   { X: 460, Y: 300 }
+
 Templates:
   pipe_template:
     Tags: [ pipe ]
@@ -178,8 +198,8 @@ Entities:
               - !clock deltaTime
 
       jump key:
-        Type: key down trigger
-        Properties: { Key: "space" }
+        Type: input action
+        Properties: { Action: flap }
         Listeners:
           - EntityId: bird
             BehaviourId: jump

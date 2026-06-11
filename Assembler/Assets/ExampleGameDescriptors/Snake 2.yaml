@@ -1,10 +1,10 @@
 Game:
   Title: Snake 2
   Description: >
-    Classic Snake. Use WASD to change direction. The snake moves one cell every
-    interval, leaving body segments behind it. Eat food to grow longer and gain
-    points. Hit a wall or your own tail and it's game over. Reach 10 points to
-    win.
+    Classic Snake. Use WASD (or the on-screen d-pad) to change direction. The
+    snake moves one cell every interval, leaving body segments behind it. Eat
+    food to grow longer and gain points. Hit a wall or your own tail and it's
+    game over. Reach 10 points to win.
 
 World:
   Dimensionality: 2
@@ -15,135 +15,126 @@ Physics:
 
 Constants:
   # Scoring
-  - Id: initial score
-    Value: 0
-  - Id: score per food
-    Value: 1
-  - Id: score to win
-    Value: 10
+  initial score: 0
+  score per food: 1
+  score to win: 10
 
   # Grid / movement
-  - Id: cell size
-    Value: 0.6
-  - Id: step interval
-    Value: 0.15
-  - Id: initial segment lifetime
-    Value: 0.75
+  cell size: 0.6
+  step interval: 0.15
+  initial segment lifetime: 0.75
 
   # Directions (one cell per step)
-  - Id: dir up
-    Value: !vec { X: 0, Y: 0.6 }
-  - Id: dir down
-    Value: !vec { X: 0, Y: -0.6 }
-  - Id: dir left
-    Value: !vec { X: -0.6, Y: 0 }
-  - Id: dir right
-    Value: !vec { X: 0.6, Y: 0 }
-  - Id: zero vec
-    Value: !vec { X: 0, Y: 0 }
+  dir up: !vec { X: 0, Y: 0.6 }
+  dir down: !vec { X: 0, Y: -0.6 }
+  dir left: !vec { X: -0.6, Y: 0 }
+  dir right: !vec { X: 0.6, Y: 0 }
+  zero vec: !vec { X: 0, Y: 0 }
 
   # Starting state
-  - Id: head start position
-    Value: !vec { X: 0, Y: 0 }
-  - Id: initial direction
-    Value: !vec { X: 0.6, Y: 0 }
+  head start position: !vec { X: 0, Y: 0 }
+  initial direction: !vec { X: 0.6, Y: 0 }
 
   # Sizes
-  - Id: head size
-    Value: !vec { X: 0.55, Y: 0.55 }
-  - Id: segment size
-    Value: !vec { X: 0.5, Y: 0.5 }
-  - Id: food size
-    Value: !vec { X: 0.5, Y: 0.5 }
-  - Id: horizontal wall size
-    Value: !vec { X: 15.6, Y: 0.6 }
-  - Id: vertical wall size
-    Value: !vec { X: 0.6, Y: 15.6 }
+  head size: !vec { X: 0.55, Y: 0.55 }
+  segment size: !vec { X: 0.5, Y: 0.5 }
+  food size: !vec { X: 0.5, Y: 0.5 }
+  horizontal wall size: !vec { X: 15.6, Y: 0.6 }
+  vertical wall size: !vec { X: 0.6, Y: 15.6 }
 
   # Wall positions
-  - Id: top wall position
-    Value: !vec { X: 0, Y: 7.5 }
-  - Id: bottom wall position
-    Value: !vec { X: 0, Y: -7.5 }
-  - Id: left wall position
-    Value: !vec { X: -7.5, Y: 0 }
-  - Id: right wall position
-    Value: !vec { X: 7.5, Y: 0 }
+  top wall position: !vec { X: 0, Y: 7.5 }
+  bottom wall position: !vec { X: 0, Y: -7.5 }
+  left wall position: !vec { X: -7.5, Y: 0 }
+  right wall position: !vec { X: 7.5, Y: 0 }
 
   # Camera
-  - Id: camera position
-    Value: !vec { X: 0, Y: 0, Z: -10 }
-  - Id: camera rotation
-    Value: !vec { X: 0, Y: 0, Z: 0 }
-  - Id: camera view
-    Value: "orthographic"
-  - Id: camera size
-    Value: 8
-
-  # Colours referenced by name via !colour <name> (see Pong for the pattern)
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 8
 
 Variables:
-  - Id: score
-    Value: !var initial score
+  score: !var initial score
 
-  # Direction the snake will move on the next step. Updated by WASD input.
-  - Id: direction
-    Value: !var initial direction
+  # Direction the snake will move on the next step. Updated by the move action.
+  direction: !var initial direction
 
   # Tracks the head's logical grid position so spawners can place segments
   # at the snake's *previous* cell each tick (the spawner Position is a value
   # provider, so we can drive it from this variable).
-  - Id: head pos
-    Value: !var head start position
+  head pos: !var head start position
 
   # Where the head was on the previous tick — this is where new segments
   # spawn (one cell behind the head, so the head never overlaps its own
   # freshly-spawned tail piece).
-  - Id: prev head pos
-    Value: !var head start position
+  prev head pos: !var head start position
 
   # Lifetime applied to each spawned tail segment. Eating food extends this
   # so segments persist longer, making the snake effectively longer.
-  - Id: segment lifetime
-    Value: !var initial segment lifetime
+  segment lifetime: !var initial segment lifetime
 
   # Game over flag — set when the snake hits a wall or its own tail.
-  - Id: is dead
-    Value: false
+  is dead: false
 
   # Positions currently occupied by snake body segments. Updated each step:
   # the previous head cell is appended when a segment spawns, the oldest entry
   # is removed when a segment expires. The food-spawn expression reads this
   # to avoid placing food on top of the snake.
-  - Id: segment positions
-    Value: !vec []
+  segment positions: !vec []
+
+# Driving is wired to one abstract `move` (vector2) action. On desktop WASD feeds
+# it via a 2DVector composite; on mobile the on-screen d-pad feeds the same action.
+# `snap dir` converts the analogue/d-pad vector into a cardinal cell step, holding
+# the current heading when the input is neutral (so the snake keeps moving).
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+    mobile:
+      move: [ "<Gamepad>/dpad" ]   # d-pad → a Vector2 dpad control
+
+  OnScreen:
+    - Type: dpad
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 280, Y: 280 }
+      Size:   { X: 380, Y: 380 }
 
 Expressions:
-  - Id: int add
+  int add:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
 
-  - Id: float add
+  float add:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ a, b ]
     ReturnType: float
     Expression: "a + b;"
 
-  - Id: vec add
+  vec add:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ a, b ]
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(a.x + b.x, a.y + b.y, a.z + b.z);"
 
-  - Id: int greater or equal
+  int greater or equal:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
 
-  - Id: is game over
+  is game over:
     ArgumentTypes: [ int, int, bool ]
     ArgumentNames: [ score, target, dead ]
     ReturnType: bool
@@ -153,7 +144,7 @@ Expressions:
   # Takes the list of cells currently occupied by the snake so food never
   # spawns inside the body. Bails out after 50 attempts if the snake fills
   # the arena (in practice this never happens at score-to-win = 10).
-  - Id: next food position
+  next food position:
     ArgumentTypes: [ vector list ]
     ArgumentNames: [ taken ]
     ReturnType: vector
@@ -176,41 +167,52 @@ Expressions:
       }
       return new Vector3(x, y, 0f);
 
-  - Id: format score
+  format score:
     ArgumentTypes: [ int ]
     ArgumentNames: [ s ]
     ReturnType: string
     Expression: "\"Score: \" + s;"
 
+  # Convert the move action's analogue/d-pad vector into a single cardinal cell
+  # step (magnitude `cell`). A neutral input keeps the current heading, so the
+  # snake glides on between presses exactly as the old key-down version did.
+  snap dir:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ input, current, cell ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: >
+      if (Abs(input.x) < 0.3f && Abs(input.y) < 0.3f) { return current; }
+      if (Abs(input.x) >= Abs(input.y)) { return new Vector3(input.x > 0f ? cell : -cell, 0f, 0f); }
+      return new Vector3(0f, input.y > 0f ? cell : -cell, 0f);
+
 Templates:
-  - Id: h_wall_template
-    Tags:
-      - wall
+  h_wall_template:
+    Tags: [ wall ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var horizontal wall size
           IsWire: false
           Colour: !colour white
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var horizontal wall size
           IsTrigger: false
 
-  - Id: v_wall_template
-    Tags:
-      - wall
+  v_wall_template:
+    Tags: [ wall ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var vertical wall size
           IsWire: false
           Colour: !colour white
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var vertical wall size
           IsTrigger: false
@@ -218,23 +220,22 @@ Templates:
   # Body segment — spawned at the head's *previous* cell each step.
   # Has a timer trigger that destroys it after `segment lifetime` seconds,
   # creating the tail. Effective length = segment lifetime / step interval.
-  - Id: segment_template
-    Tags:
-      - segment
+  segment_template:
+    Tags: [ segment ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var segment size
           IsWire: false
           Colour: !colour green
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var segment size
           IsTrigger: true
-      - Type: timer trigger
-        Id: lifetime timer
+      lifetime timer:
+        Type: timer trigger
         Properties:
           Delay: !var segment lifetime
         Listeners:
@@ -244,34 +245,33 @@ Templates:
             BehaviourId: untrack oldest segment
           - EntityId: !parameter self_id
             BehaviourId: self destruct
-      - Type: destroy
-        Id: self destruct
+      self destruct:
+        Type: destroy
 
   # Food — visually a yellow square. On contact with the head it hides,
   # then food manager spawns the next piece and score is incremented.
   # Has a rigidbody so trigger detection works reliably even though the
   # head moves via transform-driven `translate`.
-  - Id: food_template
-    Tags:
-      - food
+  food_template:
+    Tags: [ food ]
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var food size
           IsWire: false
           Colour: !colour yellow
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var food size
           IsTrigger: true
-      - Type: rigidbody
-        Id: rigidbody
+      rigidbody:
+        Type: rigidbody
         Properties:
           UseGravity: false
-      - Type: trigger enter trigger
-        Id: eaten trigger
+      eaten trigger:
+        Type: trigger enter trigger
         Properties:
           TagsToDetect:
             - head
@@ -284,22 +284,22 @@ Templates:
             BehaviourId: grow snake
           - EntityId: !parameter self_id
             BehaviourId: self destruct
-      - Type: destroy
-        Id: self destruct
+      self destruct:
+        Type: destroy
 
 Entities:
   # Game-over poll: every frame the gate checks the end condition; when it
   # holds, the gate fires !gameover, which ends and unloads the game.
-  - Id: game over
+  game over:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: every frame trigger
-        Id: tick
+      tick:
+        Type: every frame trigger
         Listeners:
           - EntityId: game over
             BehaviourId: gate
-      - Type: condition gate
-        Id: gate
+      gate:
+        Type: condition gate
         Properties:
           Condition: !expr
             Do: is game over
@@ -311,43 +311,42 @@ Entities:
           - !gameover
 
   # --- Walls ---
-  - Id: top wall
+  top wall:
     Template: { Id: h_wall_template }
     Position: !var top wall position
 
-  - Id: bottom wall
+  bottom wall:
     Template: { Id: h_wall_template }
     Position: !var bottom wall position
 
-  - Id: left wall
+  left wall:
     Template: { Id: v_wall_template }
     Position: !var left wall position
 
-  - Id: right wall
+  right wall:
     Template: { Id: v_wall_template }
     Position: !var right wall position
 
   # --- Snake Head ---
-  - Id: snake head
-    Tags:
-      - head
+  snake head:
+    Tags: [ head ]
     Position: !var head start position
     Behaviours:
-      - Type: cube gizmo
-        Id: gizmo
+      gizmo:
+        Type: cube gizmo
         Properties:
           Size: !var head size
           IsWire: false
           Colour: !colour red
 
-      - Type: box collider
-        Id: box collider
+      box collider:
+        Type: box collider
         Properties:
           Size: !var head size
           IsTrigger: false
 
-      - Type: rigidbody
-        Id: rigidbody
+      rigidbody:
+        Type: rigidbody
         Properties:
           UseGravity: false
 
@@ -356,8 +355,8 @@ Entities:
       # transform, then spawn a segment at the previous cell.
       # Listener order matters — segment manager fires LAST so it reads the
       # updated `prev head pos` variable.
-      - Type: interval trigger
-        Id: step timer
+      step timer:
+        Type: interval trigger
         Properties:
           Interval: !var step interval
         Listeners:
@@ -374,14 +373,14 @@ Entities:
           - EntityId: segment manager
             BehaviourId: track segment position
 
-      - Type: vector variable setter
-        Id: record prev pos
+      record prev pos:
+        Type: vector variable setter
         Properties:
           VariableId: !var prev head pos
           Value: !var head pos
 
-      - Type: vector variable setter
-        Id: advance head pos
+      advance head pos:
+        Type: vector variable setter
         Properties:
           VariableId: !var head pos
           Value: !expr
@@ -390,67 +389,34 @@ Entities:
               - !var head pos
               - !var direction
 
-      - Type: translate
-        Id: step move
+      step move:
+        Type: translate
         Properties:
           Displacement: !var direction
 
-      # Direction input — key down (one event per press)
-      - Type: key down trigger
-        Id: up key
-        Properties:
-          Key: "w"
+      # Direction input — the `move` action (WASD on desktop, on-screen d-pad on
+      # mobile) fires every frame; `snap dir` turns its vector into a cardinal
+      # cell step, keeping the current heading when the stick/pad is neutral.
+      move input:
+        Type: input action
+        Properties: { Action: move }
         Listeners:
           - EntityId: snake head
-            BehaviourId: set dir up
-      - Type: vector variable setter
-        Id: set dir up
+            BehaviourId: apply dir
+      apply dir:
+        Type: vector variable setter
         Properties:
           VariableId: !var direction
-          Value: !var dir up
-
-      - Type: key down trigger
-        Id: down key
-        Properties:
-          Key: "s"
-        Listeners:
-          - EntityId: snake head
-            BehaviourId: set dir down
-      - Type: vector variable setter
-        Id: set dir down
-        Properties:
-          VariableId: !var direction
-          Value: !var dir down
-
-      - Type: key down trigger
-        Id: left key
-        Properties:
-          Key: "a"
-        Listeners:
-          - EntityId: snake head
-            BehaviourId: set dir left
-      - Type: vector variable setter
-        Id: set dir left
-        Properties:
-          VariableId: !var direction
-          Value: !var dir left
-
-      - Type: key down trigger
-        Id: right key
-        Properties:
-          Key: "d"
-        Listeners:
-          - EntityId: snake head
-            BehaviourId: set dir right
-      - Type: vector variable setter
-        Id: set dir right
-        Properties:
-          VariableId: !var direction
-          Value: !var dir right
+          Value: !expr
+            Do: snap dir
+            With:
+              - !output axis
+              - !var direction
+              - !var cell size
 
       # Death triggers — wall collision (solid) or tail trigger sets is dead.
-      - Type: collision enter trigger
-        Id: wall hit
+      wall hit:
+        Type: collision enter trigger
         Properties:
           TagsToDetect:
             - wall
@@ -458,8 +424,8 @@ Entities:
           - EntityId: game manager
             BehaviourId: set dead
 
-      - Type: trigger enter trigger
-        Id: self hit
+      self hit:
+        Type: trigger enter trigger
         Properties:
           TagsToDetect:
             - segment
@@ -472,29 +438,29 @@ Entities:
   # auto-destroys after `segment lifetime` seconds, so the tail trails the
   # head and naturally shortens at the back. Eating food increases the
   # lifetime, effectively growing the snake.
-  - Id: segment manager
+  segment manager:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: spawner
-        Id: spawn segment
+      spawn segment:
+        Type: spawner
         Properties:
           TemplateId: segment_template
           Position: !var prev head pos
 
-      - Type: vector list add
-        Id: track segment position
+      track segment position:
+        Type: vector list add
         Properties:
           List: !var segment positions
           Value: !var prev head pos
 
-      - Type: vector list remove at
-        Id: untrack oldest segment
+      untrack oldest segment:
+        Type: vector list remove at
         Properties:
           List: !var segment positions
           Index: 0
 
-      - Type: float variable setter
-        Id: grow snake
+      grow snake:
+        Type: float variable setter
         Properties:
           VariableId: !var segment lifetime
           Value: !expr
@@ -504,11 +470,11 @@ Entities:
               - !var step interval
 
   # --- Score Tracker ---
-  - Id: score tracker
+  score tracker:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: int variable setter
-        Id: increment score
+      increment score:
+        Type: int variable setter
         Properties:
           VariableId: !var score
           Value: !expr
@@ -520,17 +486,17 @@ Entities:
   # --- Food Manager ---
   # Spawns first food on start, then a new piece each time the current one
   # is eaten. Position is re-evaluated each spawn via the random expression.
-  - Id: food manager
+  food manager:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: on start trigger
-        Id: on start
+      on start:
+        Type: on start trigger
         Listeners:
           - EntityId: food manager
             BehaviourId: spawn next food
 
-      - Type: spawner
-        Id: spawn next food
+      spawn next food:
+        Type: spawner
         Properties:
           TemplateId: food_template
           Position: !expr
@@ -539,21 +505,21 @@ Entities:
               - !var segment positions
 
   # --- Game Manager ---
-  - Id: game manager
+  game manager:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: bool variable setter
-        Id: set dead
+      set dead:
+        Type: bool variable setter
         Properties:
           VariableId: !var is dead
           Value: true
 
   # --- Score Display ---
-  - Id: score display
+  score display:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      - Type: text label
-        Id: score text
+      score text:
+        Type: text label
         Properties:
           Text: !expr
             Do: format score
@@ -568,14 +534,13 @@ Entities:
             Height: 50
 
   # --- Camera ---
-  - Id: camera
-    Tags:
-      - camera
+  camera:
+    Tags: [ camera ]
     Position: !var camera position
     Rotation: !var camera rotation
     Behaviours:
-      - Type: camera
-        Id: camera
+      camera:
+        Type: camera
         Properties:
           View: !var camera view
           Size: !var camera size

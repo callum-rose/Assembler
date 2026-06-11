@@ -45,6 +45,7 @@ Constants:
   pacman speed: 5
   ghost speed: 3.5
   fright duration: 6
+  move cell: 1.0          # heading magnitude fed to the grid mover (one cell)
 
   ghost house: !vec { X: 0, Y: 4, Z: 0 }
 
@@ -58,6 +59,31 @@ Variables:
   pac dir: !vec { X: 0, Y: 0, Z: 0 }
   frightened: false
   fright until: 0.0
+
+# Pacman's heading is wired to one abstract `move` (vector2) action. Desktop feeds
+# it with a WASD 2DVector composite; mobile feeds the same action from the on-screen
+# d-pad. `snap dir` turns that vector into a unit cardinal heading for the grid mover.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+    mobile:
+      move: [ "<Gamepad>/dpad" ]   # d-pad → a Vector2 dpad control
+
+  OnScreen:
+    - Type: dpad
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 280, Y: 280 }
+      Size:   { X: 380, Y: 380 }
 
 Localisation:
   DefaultLocale: en
@@ -110,6 +136,19 @@ Expressions:
   pill count:
     ReturnType: int
     Expression: "return pillField().Count();"
+
+  # Convert the move action's analogue/d-pad vector into a unit cardinal heading
+  # for the grid mover. Neutral input keeps the current heading (so Pacman waits
+  # at the start and keeps gliding between presses).
+  snap dir:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ input, current, cell ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: >
+      if (Abs(input.x) < 0.3f && Abs(input.y) < 0.3f) { return current; }
+      if (Abs(input.x) >= Abs(input.y)) { return new Vector3(input.x > 0f ? cell : -cell, 0f, 0f); }
+      return new Vector3(0f, input.y > 0f ? cell : -cell, 0f);
 
   # Where a frightened ghost runs to: the maze corner diagonally opposite Pacman.
   flee target:
@@ -356,35 +395,23 @@ Entities:
           Direction: !var pac dir
           Speed: !var pacman speed
 
-      # WASD sets the requested heading; the grid mover applies it at the next cell.
-      go up:
-        Type: key down trigger
-        Properties: { Key: "w" }
-        Listeners: [ { EntityId: pacman, BehaviourId: face up } ]
-      face up:
+      # The `move` action (WASD on desktop, on-screen d-pad on mobile) sets the
+      # requested heading; the grid mover applies it at the next cell centre.
+      # `snap dir` keeps the current heading while the pad is neutral.
+      move input:
+        Type: input action
+        Properties: { Action: move }
+        Listeners: [ { EntityId: pacman, BehaviourId: apply dir } ]
+      apply dir:
         Type: vector variable setter
-        Properties: { VariableId: !var pac dir, Value: !vec { X: 0, Y: 1, Z: 0 } }
-      go down:
-        Type: key down trigger
-        Properties: { Key: "s" }
-        Listeners: [ { EntityId: pacman, BehaviourId: face down } ]
-      face down:
-        Type: vector variable setter
-        Properties: { VariableId: !var pac dir, Value: !vec { X: 0, Y: -1, Z: 0 } }
-      go left:
-        Type: key down trigger
-        Properties: { Key: "a" }
-        Listeners: [ { EntityId: pacman, BehaviourId: face left } ]
-      face left:
-        Type: vector variable setter
-        Properties: { VariableId: !var pac dir, Value: !vec { X: -1, Y: 0, Z: 0 } }
-      go right:
-        Type: key down trigger
-        Properties: { Key: "d" }
-        Listeners: [ { EntityId: pacman, BehaviourId: face right } ]
-      face right:
-        Type: vector variable setter
-        Properties: { VariableId: !var pac dir, Value: !vec { X: 1, Y: 0, Z: 0 } }
+        Properties:
+          VariableId: !var pac dir
+          Value: !expr
+            Do: snap dir
+            With:
+              - !output axis
+              - !var pac dir
+              - !var move cell
 
       # The tunnel sensors warp Pacman across; the grid mover re-anchors after the jump.
       to right side:

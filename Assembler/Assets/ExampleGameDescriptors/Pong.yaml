@@ -219,6 +219,41 @@ Controls:
       move-left-down:  [ "<Gamepad>/leftStick/down" ]
       move-right-up:   [ "<Gamepad>/rightStick/up" ]
       move-right-down: [ "<Gamepad>/rightStick/down" ]
+    # Mobile scheme: each on-screen button derives its control path from here.
+    # Four distinct simple button paths so the four hold-buttons are independent.
+    mobile:
+      move-left-up:    [ "<Gamepad>/dpad/up" ]
+      move-left-down:  [ "<Gamepad>/dpad/down" ]
+      move-right-up:   [ "<Gamepad>/buttonNorth" ]
+      move-right-down: [ "<Gamepad>/buttonSouth" ]
+
+  # On-screen touch buttons, rendered only when the active platform is Mobile:
+  # left paddle up/down on the left edge, right paddle up/down on the right edge.
+  OnScreen:
+    - Type: button
+      Action: move-left-up
+      Label: "P1 ▲"
+      Anchor: lower-left
+      Offset: { X: 200, Y: 540 }
+      Size:   { X: 220, Y: 220 }
+    - Type: button
+      Action: move-left-down
+      Label: "P1 ▼"
+      Anchor: lower-left
+      Offset: { X: 200, Y: 200 }
+      Size:   { X: 220, Y: 220 }
+    - Type: button
+      Action: move-right-up
+      Label: "P2 ▲"
+      Anchor: lower-right
+      Offset: { X: 200, Y: 540 }
+      Size:   { X: 220, Y: 220 }
+    - Type: button
+      Action: move-right-down
+      Label: "P2 ▼"
+      Anchor: lower-right
+      Offset: { X: 200, Y: 200 }
+      Size:   { X: 220, Y: 220 }
 
 Expressions:
   paddle bounce:

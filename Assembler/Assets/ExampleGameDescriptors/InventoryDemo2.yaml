@@ -115,6 +115,24 @@ Controls:
       quit:
         - "<Keyboard>/escape"
         - "<Keyboard>/q"
+    # Mobile scheme: the on-screen widgets derive their control path from here.
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]    # joystick → a stick control
+      quit: [ "<Gamepad>/buttonSouth" ]  # button   → a button control
+
+  # On-screen touch widgets, rendered only when the active platform is Mobile.
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 360, Y: 360 }
+    - Type: button
+      Action: quit
+      Label: Quit
+      Anchor: lower-right
+      Offset: { X: 200, Y: 200 }
+      Size:   { X: 220, Y: 220 }
 
 Localisation:
   DefaultLocale: en

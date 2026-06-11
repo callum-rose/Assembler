@@ -88,8 +88,42 @@ Variables:
   enemies alive: 0                # currently alive in the current wave
   score: !var start score
   lives: !var start lives
-  # Single-player movement state, mutated by the A/D key edges.
+  # Single-player movement state, driven by the `move` action's x each frame.
   player velocity: !var stopped
+
+# Movement + firing are wired to abstract actions. `move` (vector2) carries the
+# left/right axis on x; `fire` is a button press. Desktop binds A/D + Space; mobile
+# binds the on-screen joystick + Fire button.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }   # x moves the defender left/right
+    fire: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      fire: [ "<Keyboard>/space" ]
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]
+      fire: [ "<Gamepad>/buttonSouth" ]
+
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 340, Y: 340 }
+    - Type: button
+      Action: fire
+      Label: Fire
+      Anchor: lower-right
+      Offset: { X: 210, Y: 210 }
+      Size:   { X: 240, Y: 240 }
 
 Localisation:
   DefaultLocale: en
@@ -428,53 +462,31 @@ Entities:
           Min: !var player min bound
           Max: !var player max bound
 
-      # --- A / D as press/release edges so holding moves and releasing stops ---
-      left down:
-        Type: key down trigger
-        Properties: { Key: "a" }
+      # --- Movement: the `move` action's x sets the defender's velocity each
+      #     frame (joystick on mobile, A/D on desktop). A neutral axis stops it. ---
+      move input:
+        Type: input action
+        Properties: { Action: move }
         Listeners:
           - EntityId: player
-            BehaviourId: go left
-      left up:
-        Type: key up trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: stop
-      go left:
+            BehaviourId: apply move
+      apply move:
         Type: vector variable setter
         Properties:
           VariableId: !var player velocity
-          Value: !var move left velocity
+          Value: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg1, 0f, 0f)'
+            ArgumentTypes: [ float, float ]
+            ReturnType: vector
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With:
+              - !output x
+              - !var player speed
 
-      right down:
-        Type: key down trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: go right
-      right up:
-        Type: key up trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: stop
-      go right:
-        Type: vector variable setter
-        Properties:
-          VariableId: !var player velocity
-          Value: !var move right velocity
-
-      stop:
-        Type: vector variable setter
-        Properties:
-          VariableId: !var player velocity
-          Value: !var stopped
-
-      # --- Fire (Space) ---
+      # --- Fire (Space / on-screen Fire button) ---
       fire key:
-        Type: key down trigger
-        Properties: { Key: "space" }
+        Type: input action
+        Properties: { Action: fire }
         Listeners:
           - EntityId: player
             BehaviourId: fire bullet
