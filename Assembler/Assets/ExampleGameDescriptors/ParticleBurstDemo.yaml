@@ -1,0 +1,294 @@
+Game:
+  Title: Particle Burst — Juice Showcase
+  Description: >
+    One configurable `particle burst` behaviour standing in for several "juice"
+    effects, each just a different set of properties fired by a different trigger:
+
+      • DUST   — press Space: the player cube coughs up a soft grey puff that
+                 sprays upward and fades. Billboard particles, no gravity.
+      • IMPACT — the yellow ball bounces between two walls; each wall collision
+                 fires a spark burst aligned to the surface normal
+                 (`Direction: !output contact_normal`) that inherits the ball's
+                 momentum (`InheritVelocity: !output other_velocity`).
+      • DEBRIS — press F: the brown crate shatters into tumbling cube-mesh chunks
+                 with gravity that bounce off the ground (`Collision: true`), then
+                 the crate destroys itself. The world-space particles outlive it.
+
+    Press Escape to quit (`!gameover`).
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0a0c12"
+
+Constants:
+  move step: 0.12
+
+Controls:
+  Actions:
+    move:  { Type: value,  ValueType: vector2 }
+    puff:  { Type: button, Phase: down }
+    smash: { Type: button, Phase: down }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      puff:  [ "<Keyboard>/space" ]
+      smash: [ "<Keyboard>/f" ]
+      quit:  [ "<Keyboard>/escape" ]
+
+Entities:
+  # A dim, tilted key light so the 3D primitives aren't near-black under URP.
+  sun:
+    Rotation: !vec { X: 55, Y: -25, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: directional
+          Colour: !colour "#cdd6ff"
+          Intensity: 1.1
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Tags: [ ground ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#cfd4dc"
+          Size: !vec { X: 30, Y: 0.2, Z: 30 }
+      # A real collider so the death-debris chunks (Collision: true) bounce off it.
+      floor:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 30, Y: 0.2, Z: 30 }
+
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0.6, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#5ad17a"
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+
+      # Analogue WASD on the ground plane.
+      move action:
+        Type: input action
+        Properties:
+          Action: move
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(arg0 * arg2, 0f, arg1 * arg2)'
+            With:
+              - !output x
+              - !output y
+              - !var move step
+
+      # DUST: Space coughs a soft upward puff. No gravity, fades from grey to clear.
+      puff action:
+        Type: input action
+        Properties:
+          Action: puff
+        Listeners:
+          - EntityId: player
+            BehaviourId: dust
+      dust:
+        Type: particle burst
+        Properties:
+          Count: 18
+          Direction: !vec { X: 0, Y: 1, Z: 0 }
+          Spread: 55
+          Speed: 2.2
+          SpeedVariation: 0.5
+          Lifetime: 0.7
+          StartColour: !colour { R: 0.85, G: 0.85, B: 0.82, A: 0.7 }
+          EndColour: !colour { R: 0.85, G: 0.85, B: 0.82, A: 0 }
+          StartSize: 0.25
+          EndSize: 0.05
+          Gravity: -0.1
+          Drag: 1.5
+
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+  ball:
+    Tags: [ ball ]
+    Position: !vec { X: -4, Y: 0.6, Z: 6 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: sphere
+          Colour: !colour "#ffd23f"
+          Size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+      collider:
+        Type: sphere collider
+        Properties:
+          Radius: 0.4
+          Bounciness: 1
+      rigidbody:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          LinearDamping: 0
+      # Kick it sideways once on start so it bounces between the two walls.
+      kickoff:
+        Type: on start trigger
+        Listeners:
+          - EntityId: ball
+            BehaviourId: kick
+      kick:
+        Type: add impulse
+        Properties:
+          Impulse: !vec { X: 6, Y: 0, Z: 0 }
+
+      # IMPACT: each wall collision sprays sparks along the surface normal,
+      # carrying a fraction of whatever the ball was doing at the moment of impact.
+      wall hit:
+        Type: collision enter trigger
+        Properties:
+          TagsToDetect: [ wall ]
+        Listeners:
+          - EntityId: ball
+            BehaviourId: sparks
+            Outputs:
+              contact_normal: contact_normal
+              other_velocity: other_velocity
+      sparks:
+        Type: particle burst
+        Properties:
+          Count: 14
+          Direction: !output contact_normal
+          InheritVelocity: !output other_velocity
+          InheritFactor: 0.3
+          Spread: 22
+          Speed: 5
+          SpeedVariation: 0.4
+          Lifetime: 0.45
+          StartColour: !colour "#fff1a6"
+          EndColour: !colour { R: 1, G: 0.55, B: 0.1, A: 0 }
+          StartSize: 0.12
+          Gravity: 0.5
+
+  wall left:
+    Tags: [ wall ]
+    Position: !vec { X: -8, Y: 0.6, Z: 6 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#3a4a6b"
+          Size: !vec { X: 0.5, Y: 2, Z: 6 }
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 0.5, Y: 2, Z: 6 }
+          Bounciness: 1
+
+  wall right:
+    Tags: [ wall ]
+    Position: !vec { X: 8, Y: 0.6, Z: 6 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#3a4a6b"
+          Size: !vec { X: 0.5, Y: 2, Z: 6 }
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 0.5, Y: 2, Z: 6 }
+          Bounciness: 1
+
+  crate:
+    Tags: [ crate ]
+    Position: !vec { X: 4, Y: 0.6, Z: -4 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#9c6b3f"
+          Size: !vec { X: 1.2, Y: 1.2, Z: 1.2 }
+
+      # DEBRIS: F shatters the crate into tumbling cube chunks that fall and bounce,
+      # then destroys the crate itself. The burst's world-space particles live on.
+      smash action:
+        Type: input action
+        Properties:
+          Action: smash
+        Listeners:
+          - EntityId: crate
+            BehaviourId: debris
+          - EntityId: crate
+            BehaviourId: remove
+      debris:
+        Type: particle burst
+        Properties:
+          Count: 12
+          Direction: !vec { X: 0, Y: 1, Z: 0 }
+          Spread: 70
+          Speed: 4
+          SpeedVariation: 0.6
+          Lifetime: 1.4
+          StartColour: !colour "#9c6b3f"
+          EndColour: !colour "#6b4a2b"
+          StartSize: 0.28
+          EndSize: 0.2
+          Gravity: 1.6
+          Shape: cube
+          Collision: true
+      remove:
+        Type: destroy
+
+  camera:
+    Tags: [ camera ]
+    Position: !vec { X: 0, Y: 7, Z: -10 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+
+  camera rig:
+    Position: !vec { X: 0, Y: 7, Z: -10 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          LookAt: { Tag: player }
+          Mode: "3d"
+          Priority: 10
+          Lens: 60
+          Damping: 0.5
+          FollowOffset: !vec { X: 0, Y: 7, Z: -10 }

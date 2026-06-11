@@ -191,6 +191,7 @@ namespace Assembler.Parsing
 				["voxel mesh"] = VoxelMeshInfo.Create,
 				["primitive"] = PrimitiveInfo.Create,
 				["light"] = LightInfo.Create,
+				["particle burst"] = ParticleBurstInfo.Create,
 				["audio source"] = AudioSourceInfo.Create,
 				["sphere gizmo"] = SphereGizmoInfo.Create,
 				["cube gizmo"] = CubeGizmoInfo.Create,
