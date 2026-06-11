@@ -16,6 +16,12 @@ namespace Assembler.Voxels.Scripting
 
 		Task<AnthropicToolResult> HandleToolUseAsync(AnthropicToolUse use, CancellationToken ct);
 
+		/// <summary>
+		/// Compiles and runs a script directly (no tool loop), under the same
+		/// safety limits as tool-driven runs.
+		/// </summary>
+		Task<VoxelModel> RunScriptAsync(string script, CancellationToken ct);
+
 		/// <summary>Source of the most recent successful script, if any.</summary>
 		string? LastScript { get; }
 
