@@ -52,6 +52,7 @@ namespace Assembler.Parsing
 				["scroll wheel trigger"] = ScrollWheelTriggerInfo.Create,
 				["axis trigger"] = AxisTriggerInfo.Create,
 				["input action"] = InputActionTriggerInfo.Create,
+				["cursor lock"] = CursorLockInfo.Create,
 				["gamepad button trigger"] = GamepadButtonTriggerInfo.Create,
 				["tap trigger"] = TapTriggerInfo.Create,
 				["double tap trigger"] = DoubleTapTriggerInfo.Create,

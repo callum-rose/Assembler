@@ -372,6 +372,16 @@ Relays an abstract input action (declared in the descriptor's Controls section a
 | x | float | For value actions, the current x component. |
 | y | float | For value actions, the current y component. |
 
+## `cursor lock`
+Locks (and optionally hides) the hardware cursor so relative mouse-look deltas keep flowing past the screen edges; applied on start and on Execute, and restored when the entity is destroyed (e.g. on game-over).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Locked | bool | Whether to lock the cursor to the window centre (default true). |
+| Visible | bool | Whether the cursor stays visible while locked (default false). |
+
 ## `gamepad button trigger`
 Fires on a gamepad / joystick button event (press, release, or hold).
 
