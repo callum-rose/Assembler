@@ -10,9 +10,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   Index: Zero-based position to insert at. Valid range is [0, Count].
 	///   Value: Item to insert.
 	/// </remarks>
-	public abstract class ListInsertBehaviour<T> : GameBehaviour<ListInsertData<T>>
+	public abstract class ListInsertBehaviour<T> : GameBehaviour<ListInsertData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var list = Data.List.Get(ctx);
 			var index = Data.Index.Get(ctx);

@@ -32,9 +32,5 @@ namespace Assembler.Behaviours.Camera
 			// Lets one-shot Cinemachine Impulse signals (camera shake) move this camera.
 			gameObject.AddComponent<CinemachineImpulseListener>();
 		}
-
-		public override void Execute(TriggerContext ctx)
-		{
-		}
 	}
 }

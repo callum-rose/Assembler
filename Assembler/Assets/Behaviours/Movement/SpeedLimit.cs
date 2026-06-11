@@ -27,11 +27,12 @@ namespace Assembler.Behaviours.Movement
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(ctx), Data.Max.Get(ctx)));
 		}
 	}

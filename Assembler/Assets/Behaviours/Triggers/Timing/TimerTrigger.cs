@@ -12,7 +12,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 	///   Delay: Seconds to wait before notifying listeners.
 	///   AutoStart: When true the countdown starts on entity start; when false it waits for an Execute call from upstream.
 	/// </remarks>
-	public class TimerTrigger : TimingTrigger<TimerTriggerData>, INeedsGameClock
+	public class TimerTrigger : TimingTrigger<TimerTriggerData>, INeedsGameClock, IAmExecutable
 	{
 		public IGameClock Clock { get; set; } = null!;
 
@@ -24,7 +24,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 				Execute(TriggerContext.Empty);
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (_currentCoroutine is not null)
 				StopCoroutine(_currentCoroutine);

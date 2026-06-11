@@ -9,9 +9,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   List: Reference to the target list variable.
 	///   Value: List whose items replace List's contents (typically an expression returning a list).
 	/// </remarks>
-	public abstract class ListSetBehaviour<T> : GameBehaviour<ListSetData<T>>
+	public abstract class ListSetBehaviour<T> : GameBehaviour<ListSetData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var list = Data.List.Get(ctx);
 			list.Clear();

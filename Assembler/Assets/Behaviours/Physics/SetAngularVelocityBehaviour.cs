@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   AngularVelocity: World-space angular velocity in radians per second around each axis.
 	/// </remarks>
-	public sealed class SetAngularVelocityBehaviour : GameBehaviour<SetAngularVelocityData>
+	public sealed class SetAngularVelocityBehaviour : GameBehaviour<SetAngularVelocityData>, IAmExecutable
 	{
 		private Rigidbody _rigidbody;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Physics
 			_rigidbody = GetComponent<Rigidbody>();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (_rigidbody == null)
 			{

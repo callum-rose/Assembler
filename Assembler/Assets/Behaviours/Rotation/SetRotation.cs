@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Rotation
 	/// Properties:
 	///   Rotation: World-space Euler angles (degrees) to set the entity's rotation to on each execution.
 	/// </remarks>
-	public class SetRotation : GameBehaviour<SetRotationData>
+	public class SetRotation : GameBehaviour<SetRotationData>, IAmExecutable
 	{
 		private IValueProvider<Vector3> _rotation;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Rotation
 			_rotation = behaviourInfo.ValueExpression;
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			transform.eulerAngles = _rotation.Get(ctx);
 		}

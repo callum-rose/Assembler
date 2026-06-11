@@ -26,11 +26,12 @@ namespace Assembler.Behaviours.Movement
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var dt = Clock.DeltaTime;
 
 			if (Data.Velocity is not NullValueProvider<Vector3>)

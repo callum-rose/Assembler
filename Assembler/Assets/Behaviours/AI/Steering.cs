@@ -20,10 +20,11 @@ namespace Assembler.Behaviours.AI
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var blended = Vector3.zero;
 
 			foreach (var force in Data.Forces)

@@ -16,11 +16,12 @@ namespace Assembler.Behaviours.Visual
 	{
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			gameObject.SetActive(Data.Active.Get(ctx));
 		}
 	}

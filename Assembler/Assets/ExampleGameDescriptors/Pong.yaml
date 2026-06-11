@@ -13,8 +13,9 @@ Constants:
   initial score: 0
   left paddle initial position: !vec { X: -5, Y: 0 }
   right paddle initial position: !vec { X: 5, Y: 0 }
-  paddle up speed: 5
-  paddle down speed: -5
+  # Per-frame nudge applied by the hold-action -> translate paddle movement below.
+  paddle move up step: !vec { X: 0, Y: 0.12 }
+  paddle move down step: !vec { X: 0, Y: -0.12 }
   upper wall position: !vec { X: 0, Y: 3 }
   lower wall position: !vec { X: 0, Y: -3 }
   left goal position: !vec { X: -6, Y: 0 }
@@ -64,11 +65,12 @@ Templates:
           - EntityId: !parameter self_id
             BehaviourId: move up
       move up:
-        Type: velocity
+        Type: translate
         Properties:
-          Velocity: !vec
-            X: 0
-            Y: !var paddle up speed
+          # The action fires every frame it is held (key-hold semantics); each fire
+          # nudges the paddle by this step. A `velocity` behaviour ignores Execute, so
+          # targeting one from a trigger is a no-op and now a build error (issue #201).
+          Displacement: !var paddle move up step
       down action:
         Type: input action
         Properties:
@@ -77,11 +79,9 @@ Templates:
           - EntityId: !parameter self_id
             BehaviourId: move down
       move down:
-        Type: velocity
+        Type: translate
         Properties:
-          Velocity: !vec
-            X: 0
-            Y: !var paddle down speed
+          Displacement: !var paddle move down step
 
   wall_template:
     Tags: [ wall ]

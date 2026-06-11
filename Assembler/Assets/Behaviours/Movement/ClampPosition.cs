@@ -16,11 +16,12 @@ namespace Assembler.Behaviours.Movement
 	{
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var min = Data.Min.Get(ctx);
 			var max = Data.Max.Get(ctx);
 			var p = transform.position;

@@ -31,10 +31,11 @@ namespace Assembler.Behaviours.AI
 			}
 		}
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var current = Data.CurrentState.Get(ctx);
 
 			foreach (var transition in Data.Transitions)

@@ -17,11 +17,12 @@ namespace Assembler.Behaviours.Movement
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			transform.position = Vector3.MoveTowards(
 				transform.position, Data.Target.Get(ctx), Data.Speed.Get(ctx) * Clock.DeltaTime);
 		}

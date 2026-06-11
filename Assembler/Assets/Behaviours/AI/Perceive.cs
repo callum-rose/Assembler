@@ -28,7 +28,7 @@ namespace Assembler.Behaviours.AI
 	///   HasTarget: !var reference to the bool variable set true while a target is visible, false otherwise.
 	///   LastKnownPosition: !var reference to the vector variable updated ONLY while visible (memory of last sighting).
 	/// </remarks>
-	public sealed class Perceive : GameBehaviour<PerceiveData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock
+	public sealed class Perceive : GameBehaviour<PerceiveData>, INeedsEntityQuery, INeedsLineOfSight, INeedsGameClock, IAmExecutable
 	{
 		public EntityQueryService Query { get; set; } = null!;
 		public LineOfSightService Sight { get; set; } = null!;
@@ -39,7 +39,7 @@ namespace Assembler.Behaviours.AI
 
 		private void Start() => StartCoroutine(ScanLoop());
 
-		public override void Execute(TriggerContext ctx) => Scan();
+		public void Execute(TriggerContext ctx) => Scan();
 
 		private IEnumerator ScanLoop()
 		{

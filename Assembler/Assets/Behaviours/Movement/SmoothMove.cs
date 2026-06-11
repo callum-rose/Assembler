@@ -21,11 +21,12 @@ namespace Assembler.Behaviours.Movement
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			transform.position = Vector3.SmoothDamp(
 				transform.position, Data.Target.Get(ctx), ref _velocity,
 				Data.SmoothTime.Get(ctx), Mathf.Infinity, Clock.DeltaTime);

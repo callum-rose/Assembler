@@ -40,10 +40,6 @@ namespace Assembler.Behaviours
 		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours;
 #endif
 
-		/// <summary>Runs when a trigger notifies this behaviour. Passive/state-driven behaviours that don't
-		/// react to triggers can leave this as the default no-op.</summary>
-		public virtual void Execute(TriggerContext ctx) { }
-
 		/// <summary>Wires the owning entity. Called once by the build pipeline before initialisation; the
 		/// private property setter keeps <see cref="Entity"/> read-only to subclasses.</summary>
 		public void SetEntity(GameEntity entity) => Entity = entity;

@@ -16,11 +16,12 @@ namespace Assembler.Behaviours.Rotation
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			transform.Rotate(Data.AngularVelocity.Get(ctx) * Clock.DeltaTime, Space.World);
 		}
 	}

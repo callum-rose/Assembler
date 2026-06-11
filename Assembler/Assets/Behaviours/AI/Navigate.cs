@@ -33,10 +33,11 @@ namespace Assembler.Behaviours.AI
 		private IReadOnlyList<Vector3> _path = Array.Empty<Vector3>();
 		private int _pathIndex;
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var self = transform.position;
 			var target = Data.Target.Get(ctx);
 			var speed = Data.Speed.Get(ctx);

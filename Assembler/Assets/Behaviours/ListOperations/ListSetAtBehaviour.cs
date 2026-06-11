@@ -10,9 +10,9 @@ namespace Assembler.Behaviours.ListOperations
 	///   Index: Zero-based position to overwrite.
 	///   Value: New item.
 	/// </remarks>
-	public abstract class ListSetAtBehaviour<T> : GameBehaviour<ListSetAtData<T>>
+	public abstract class ListSetAtBehaviour<T> : GameBehaviour<ListSetAtData<T>>, IAmExecutable
 	{
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			var list = Data.List.Get(ctx);
 			var index = Data.Index.Get(ctx);

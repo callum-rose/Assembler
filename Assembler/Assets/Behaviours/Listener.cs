@@ -17,6 +17,16 @@ namespace Assembler.Behaviours
 
 		protected TriggerContext Prepare(TriggerContext ctx) => ctx.WithRenamed(_outputMapping);
 
+		/// <summary>Casts a resolved target to <see cref="IAmExecutable"/>, throwing a descriptive error when it
+		/// is not — i.e. when a listener resolves to a trigger or self-driven behaviour that does nothing when
+		/// invoked. Tagged listeners resolve targets dynamically, so this guard runs at notify time.</summary>
+		protected static IAmExecutable RequireExecutable(GameBehaviour behaviour, string targetDescription) =>
+			behaviour as IAmExecutable ?? throw new InvalidOperationException(
+				$"Listener {targetDescription} resolved to behaviour '{behaviour.GetType().Name}', which is not " +
+				"executable — it is a trigger or continuous (self-driven) behaviour that runs itself and does " +
+				"nothing when invoked by a listener. For input-driven motion, mutate a velocity variable that a " +
+				"single `velocity` behaviour integrates, or use `translate`.");
+
 #if DEBUG_CONSOLE
 		/// <summary>
 		/// The behaviours this listener currently resolves to. Debug-only graph inspection. Tagged
@@ -29,9 +39,9 @@ namespace Assembler.Behaviours
 
 	public sealed class DirectListener : Listener
 	{
-		private readonly GameBehaviour _target;
+		private readonly IAmExecutable _target;
 
-		public DirectListener(GameBehaviour target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
+		public DirectListener(IAmExecutable target, IReadOnlyDictionary<string, string> outputMapping) : base(outputMapping)
 		{
 			_target = target;
 		}
@@ -41,9 +51,10 @@ namespace Assembler.Behaviours
 #if DEBUG_CONSOLE
 		public override IEnumerable<GameBehaviour> DebugTargets()
 		{
-			if (_target != null)
+			// Every IAmExecutable is a GameBehaviour MonoBehaviour.
+			if (_target is GameBehaviour behaviour && behaviour != null)
 			{
-				yield return _target;
+				yield return behaviour;
 			}
 		}
 #endif
@@ -73,13 +84,15 @@ namespace Assembler.Behaviours
 			}
 
 			var preparedCtx = Prepare(ctx);
-			var targets = _resolveTargets(_entityTag.Get(preparedCtx), _behaviourId);
+			var entityTag = _entityTag.Get(preparedCtx);
+			var targets = _resolveTargets(entityTag, _behaviourId);
 
 			foreach (var behaviour in targets)
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute(preparedCtx);
+					RequireExecutable(behaviour,
+						$"targeting behaviour '{_behaviourId}' on entities tagged '{entityTag}'").Execute(preparedCtx);
 				}
 			}
 		}
@@ -121,7 +134,7 @@ namespace Assembler.Behaviours
 			{
 				if (behaviour != null)
 				{
-					behaviour.Execute(preparedCtx);
+					RequireExecutable(behaviour, $"targeting behaviours tagged '{tag}'").Execute(preparedCtx);
 				}
 			}
 		}

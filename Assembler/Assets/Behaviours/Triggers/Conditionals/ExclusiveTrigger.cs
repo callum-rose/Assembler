@@ -8,11 +8,11 @@ namespace Assembler.Behaviours.Triggers.Conditionals
 	/// Properties:
 	///   Group: Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates.
 	/// </remarks>
-	public class ExclusiveTrigger : Trigger<ExclusiveTriggerData>
+	public class ExclusiveTrigger : Trigger<ExclusiveTriggerData>, IAmExecutable
 	{
 		public ExclusiveGroupRegistry Registry { get; set; } = null!;
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (Registry.TryClaim(Data.Group.Get(ctx)))
 			{

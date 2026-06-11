@@ -60,7 +60,5 @@ namespace Assembler.Behaviours.Visual
 				primitive.GetComponent<MeshRenderer>().SetPropertyBlock(block);
 			});
 		}
-
-		public override void Execute(TriggerContext ctx) { }
 	}
 }

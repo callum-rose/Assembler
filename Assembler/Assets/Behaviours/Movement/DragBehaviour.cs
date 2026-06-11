@@ -30,11 +30,12 @@ namespace Assembler.Behaviours.Movement
 
 		private void Update()
 		{
-			Execute(TriggerContext.Empty);
+			Step();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var decay = Mathf.Exp(-Data.Coefficient.Get(ctx) * Clock.DeltaTime);
 			Data.Velocity.Set(Data.Velocity.Get(ctx) * decay);
 		}

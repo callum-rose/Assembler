@@ -27,10 +27,11 @@ namespace Assembler.Behaviours.AI
 		private Vector3 _target;
 		private Vector3 _heading = Vector3.zero;
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var cellSize = Nav.CellSize;
 			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
 			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);

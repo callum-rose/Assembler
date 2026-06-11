@@ -35,10 +35,11 @@ namespace Assembler.Behaviours.AI
 		private int _index;
 		private int _direction = 1;
 
-		private void Update() => Execute(TriggerContext.Empty);
+		private void Update() => Step();
 
-		public override void Execute(TriggerContext ctx)
+		internal void Step()
 		{
+			var ctx = TriggerContext.Empty;
 			var waypoints = Data.Waypoints.Get(ctx);
 
 			// Empty (or unset) route: nothing to patrol — hold position and emit zero velocity.

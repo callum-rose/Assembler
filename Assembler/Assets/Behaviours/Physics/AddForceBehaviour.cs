@@ -9,7 +9,7 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Force: World-space force vector applied with ForceMode.Force (mass-dependent, frame-rate independent acceleration).
 	/// </remarks>
-	public sealed class AddForceBehaviour : GameBehaviour<AddForceData>
+	public sealed class AddForceBehaviour : GameBehaviour<AddForceData>, IAmExecutable
 	{
 		private Rigidbody _rigidbody;
 
@@ -18,7 +18,7 @@ namespace Assembler.Behaviours.Physics
 			_rigidbody = GetComponent<Rigidbody>();
 		}
 
-		public override void Execute(TriggerContext ctx)
+		public void Execute(TriggerContext ctx)
 		{
 			if (_rigidbody == null)
 			{
