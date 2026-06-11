@@ -205,6 +205,10 @@ namespace Assembler.Building
 				[typeof(SetRotationInfo)] = Entry<SetRotationInfo, SetRotation, SetRotationData>(
 					(i, ctx) => new SetRotationData(i.Id,
 						i.ValueExpression.Resolve(ctx.Resolution))),
+				[typeof(LookAtInfo)] = Entry<LookAtInfo, LookAt, LookAtData>(
+					(i, ctx) => new LookAtData(i.Id,
+						i.Target.Resolve(ctx.Resolution),
+						i.TurnRate.Resolve(ctx.Resolution))),
 				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
 					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),

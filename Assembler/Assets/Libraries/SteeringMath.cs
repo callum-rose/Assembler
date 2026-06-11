@@ -240,5 +240,27 @@ namespace Assembler.Libraries
 		/// <returns>An euler-angles vector (0, 0, heading) suitable for an entity's Rotation.</returns>
 		public static Vector3 LookRotation2D(Vector3 from, Vector3 to) =>
 			new(0f, 0f, Heading2D(from, to));
+
+		/// <summary>
+		/// Yaw angle (rotation about +Y) that faces a direction in the XZ ground plane, in degrees.
+		/// Inverts the engine's heading convention <c>forward = (sin yaw, cos yaw)</c> shared by the
+		/// steering/drive helpers: yaw 0 looks down +z, yaw 90 down +x. The y component of
+		/// <paramref name="direction"/> is ignored, so a 3D offset can be passed straight in.
+		/// </summary>
+		/// <param name="direction">The direction to face (x and z used, y ignored). Need not be normalized.</param>
+		/// <returns>The yaw angle in degrees, in [-180, 180] (0 if the direction is flat-zero).</returns>
+		public static float YawFromDirectionXZ(Vector3 direction) =>
+			Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+
+		/// <summary>
+		/// Euler rotation that faces from one point toward another in the XZ ground plane — a pure yaw
+		/// about +Y. The 3D-ground-plane counterpart of <c>LookRotation2D</c> (which is an XY z-roll),
+		/// matching the <c>forward = (sin yaw, cos yaw)</c> heading convention used elsewhere in the codebase.
+		/// </summary>
+		/// <param name="from">The origin point.</param>
+		/// <param name="to">The point to aim at.</param>
+		/// <returns>An euler-angles vector (0, yaw, 0) suitable for an entity's Rotation.</returns>
+		public static Vector3 LookRotationXZ(Vector3 from, Vector3 to) =>
+			new(0f, YawFromDirectionXZ(to - from), 0f);
 	}
 }

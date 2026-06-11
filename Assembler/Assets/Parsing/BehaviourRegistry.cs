@@ -41,6 +41,7 @@ namespace Assembler.Parsing
 				["angular velocity"] = AngularVelocityInfo.Create,
 				["rotate"] = RotateInfo.Create,
 				["rotation setter"] = SetRotationInfo.Create,
+				["look at"] = LookAtInfo.Create,
 				["move animation"] = MoveAnimationInfo.Create,
 				["scale animation"] = ScaleAnimationInfo.Create,
 				["rotate animation"] = RotateAnimationInfo.Create,

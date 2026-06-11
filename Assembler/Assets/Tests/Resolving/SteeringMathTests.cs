@@ -181,5 +181,49 @@ namespace Tests.Resolving
 			var euler = SteeringMath.LookRotation2D(Vector3.zero, new Vector3(0, 1, 0));
 			Assert.That(euler.z, Is.EqualTo(90f).Within(Tol));
 		}
+
+		[Test]
+		public void YawFromDirectionXZFacesPlusZAsZero()
+		{
+			Assert.That(SteeringMath.YawFromDirectionXZ(new Vector3(0, 0, 1)), Is.EqualTo(0f).Within(Tol));
+		}
+
+		[Test]
+		public void YawFromDirectionXZFacesPlusXAsNinety()
+		{
+			Assert.That(SteeringMath.YawFromDirectionXZ(new Vector3(1, 0, 0)), Is.EqualTo(90f).Within(Tol));
+		}
+
+		[Test]
+		public void YawFromDirectionXZFacesMinusXAsMinusNinety()
+		{
+			Assert.That(SteeringMath.YawFromDirectionXZ(new Vector3(-1, 0, 0)), Is.EqualTo(-90f).Within(Tol));
+		}
+
+		[Test]
+		public void YawFromDirectionXZIgnoresYComponent()
+		{
+			// A steep vertical offset must not perturb the yaw: only x/z determine the heading.
+			Assert.That(SteeringMath.YawFromDirectionXZ(new Vector3(1, 99, 0)), Is.EqualTo(90f).Within(Tol));
+		}
+
+		[Test]
+		public void YawFromDirectionXZInvertsTheForwardConvention()
+		{
+			// forward = (sin yaw, cos yaw) in XZ; recovering yaw from that forward must round-trip.
+			const float yaw = 37f;
+			var rad = yaw * Mathf.Deg2Rad;
+			var forward = new Vector3(Mathf.Sin(rad), 0, Mathf.Cos(rad));
+			Assert.That(SteeringMath.YawFromDirectionXZ(forward), Is.EqualTo(yaw).Within(Tol));
+		}
+
+		[Test]
+		public void LookRotationXZPutsHeadingOnYWithFlatXAndZ()
+		{
+			var euler = SteeringMath.LookRotationXZ(Vector3.zero, new Vector3(1, 0, 0));
+			Assert.That(euler.x, Is.EqualTo(0f).Within(Tol));
+			Assert.That(euler.y, Is.EqualTo(90f).Within(Tol));
+			Assert.That(euler.z, Is.EqualTo(0f).Within(Tol));
+		}
 	}
 }

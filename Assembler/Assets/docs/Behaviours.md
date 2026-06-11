@@ -232,6 +232,16 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 |------|------|-------------|
 | Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
 
+## `look at`
+Turns the entity each frame to face Target in the XZ ground plane (a yaw about +Y).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space point to face. |
+| TurnRate | float | Maximum turn speed in degrees/sec; 0 (the default) snaps instantly to face the target. |
+
 ## `move animation`
 Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
 
