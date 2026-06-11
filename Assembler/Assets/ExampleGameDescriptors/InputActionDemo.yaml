@@ -50,6 +50,12 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.instructions: "Reach the gold goal.   Desktop platform: WASD (quit Esc/Q).   Gamepad platform: Arrow keys (quit Backspace).   Switch via the Game Launcher Platform dropdown."
+
 # Abstract actions + the physical inputs that feed them, declared per platform.
 # Adding a console/touch scheme later is a new Bindings block — entities untouched.
 Controls:
@@ -156,21 +162,36 @@ Entities:
           Size: !var goal size
           IsTrigger: true
 
+  # HUD: a ui canvas roots the tree; a vertical ui container auto-lays-out its
+  # child label, sized via PreferredWidth/PreferredHeight.
   hud:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      instructions:
-        Type: text label
+      canvas:
+        Type: ui canvas
         Properties:
-          Label: ""
-          Text: "Reach the gold goal.   Desktop platform: WASD (quit Esc/Q).   Gamepad platform: Arrow keys (quit Backspace).   Switch via the Game Launcher Platform dropdown."
-          FontSize: 18
-          Rect:
-            Anchor: top-left
-            X: 20
-            Y: 20
-            Width: 760
-            Height: 40
+          MatchWidthOrHeight: 0.5
+    Children:
+      layout:
+        Behaviours:
+          container:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 12
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.instructions
+                  FontSize: 18
+                  PreferredWidth: 760
+                  PreferredHeight: 40
 
   camera:
     Position: !var camera position

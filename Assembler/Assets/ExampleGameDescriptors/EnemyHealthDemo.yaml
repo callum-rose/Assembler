@@ -37,6 +37,12 @@ Constants:
 Variables:
   enemies remaining: 3
 
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.remaining: "Enemies remaining: {0}"
+
 Templates:
   enemy_template:
     Tags: [ enemy ]
@@ -266,20 +272,34 @@ Entities:
           View: !var camera view
           Size: !var camera size
 
-  remaining display:
+  # HUD: a ui canvas roots the tree; a vertical ui container auto-lays-out its
+  # child labels. The label's Text is re-read each frame, so binding it to a
+  # localised template that reads `enemies remaining` shows the live count.
+  ui:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      label:
-        Type: text label
+      canvas:
+        Type: ui canvas
         Properties:
-          Text: !expr
-            Do: '"Enemies remaining: " + arg0'
-            With:
-              - !var enemies remaining
-          FontSize: 28
-          Rect:
-            Anchor: top-left
-            X: 20
-            Y: 20
-            Width: 300
-            Height: 50
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 12
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          remaining:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.remaining, Arguments: [ !var enemies remaining ] }
+                  FontSize: 28
+                  PreferredWidth: 400
+                  PreferredHeight: 44

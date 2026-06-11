@@ -22,6 +22,7 @@ Constants:
   bubble size: 0.6
   rise speed: !vec { X: 0, Y: 1.2 }
   one: 1
+  bubbles to pop: 10
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera rotation: !vec { X: 0, Y: 0, Z: 0 }
   camera view: "orthographic"
@@ -30,6 +31,12 @@ Constants:
 Variables:
   bubbles spawned: 0
   bubbles popped: 0
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.stats: "Spawned: {0}   Popped: {1}"
 
 Templates:
   bubble_template:
@@ -79,6 +86,27 @@ Expressions:
     ReturnType: int
     Expression: "a + b;"
 Entities:
+  # Game-over poll: every frame the gate checks whether enough bubbles have been
+  # popped; once they have, the gate fires !gameover, which ends the game.
+  game over:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: game over
+            BehaviourId: gate
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'arg0 >= arg1'
+            With:
+              - !var bubbles popped
+              - !var bubbles to pop
+        Listeners:
+          - !gameover
+
   bubble spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
@@ -120,21 +148,34 @@ Entities:
           View: !var camera view
           Size: !var camera size
 
-  stats display:
+  # HUD: a ui canvas roots the tree; a vertical ui container auto-lays-out its
+  # child label. The label's Text is re-read each frame, so the localised
+  # template tracking both counters updates live.
+  ui:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
-      label:
-        Type: text label
+      canvas:
+        Type: ui canvas
         Properties:
-          Text: !expr
-            Do: '"Spawned: " + arg0 + "   Popped: " + arg1'
-            With:
-              - !var bubbles spawned
-              - !var bubbles popped
-          FontSize: 28
-          Rect:
-            Anchor: top-left
-            X: 20
-            Y: 20
-            Width: 400
-            Height: 50
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 12
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          stats:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.stats, Arguments: [ !var bubbles spawned, !var bubbles popped ] }
+                  FontSize: 28
+                  PreferredWidth: 500
+                  PreferredHeight: 44
