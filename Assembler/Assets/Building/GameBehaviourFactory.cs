@@ -335,38 +335,6 @@ namespace Assembler.Building
 				[typeof(InverseConditionGateInfo)] = Entry<InverseConditionGateInfo, InverseConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution))),
-				// `condition` is a gate keyed off a declared boolean expression invoked by id + arguments
-				// (the named-call ABI), so synthesise the ExpressionSource<bool> here and reuse ConditionGate's
-				// data/runtime. The expression name is a literal at author time, read once via the id provider.
-				[typeof(ConditionInfo)] = new(typeof(Condition), (go, info, ctx) =>
-				{
-					var i = (ConditionInfo)info;
-					var b = go.AddComponent<Condition>();
-					var expressionId = i.ExpressionId.Resolve(ctx.Resolution).Get();
-					var condition = new ExpressionSource<bool>(expressionId, i.Arguments).Resolve(ctx.Resolution);
-					return (b, lr => b.Initialise(new ConditionGateData(i.Id, condition),
-						i.Listeners.ToListeners(lr, ctx.Resolution)));
-				}),
-				// `when all` references sibling triggers by id and fires once all have fired. It can't be wired
-				// into their listener lists (the inverse direction), so it subscribes to each trigger's fire
-				// hook. Resolve the siblings against this entity here, where the live registry is in hand.
-				[typeof(WhenAllInfo)] = new(typeof(WhenAll), (go, info, ctx) =>
-				{
-					var i = (WhenAllInfo)info;
-					var b = go.AddComponent<WhenAll>();
-					return (b, lr =>
-					{
-						b.Initialise(new WhenAllData(i.Id, i.TriggerIds),
-							i.Listeners.ToListeners(lr, ctx.Resolution));
-
-						var entityId = go.GetComponent<GameEntity>().Id;
-						foreach (var triggerId in i.TriggerIds.Distinct())
-						{
-							b.Observe(ResolveSiblingTrigger(lr, entityId, triggerId, i.Id), triggerId);
-						}
-					}
-					);
-				}),
 				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
 				{
 					var i = (ExclusiveTriggerInfo)info;
@@ -799,25 +767,6 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ListClearData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-		}
-
-		// Resolves a `when all` TriggerId to the live behaviour on the same entity, with a descriptor-vocabulary
-		// error if it's missing (rather than a bare KeyNotFoundException from the registry indexer).
-		private static GameBehaviour ResolveSiblingTrigger(IReadOnlyBehaviourRegistry registry,
-			string entityId,
-			string triggerId,
-			string whenAllId)
-		{
-			try
-			{
-				return registry[new BehaviourDescriptor(entityId, triggerId)];
-			}
-			catch (KeyNotFoundException)
-			{
-				throw new ArgumentException(
-					$"'when all' behaviour '{whenAllId}' references trigger '{triggerId}', " +
-					$"which does not exist on entity '{entityId}'.");
-			}
 		}
 
 		private static GameObject RequireUiPrefab(

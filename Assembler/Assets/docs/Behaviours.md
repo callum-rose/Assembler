@@ -484,18 +484,6 @@ No properties.
 | angle | float | Current angle of the line between the two fingers, in degrees. |
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
-## `condition`
-Forwards an upstream trigger to its listeners only when the named boolean expression evaluates to
-            true at that moment. Like condition gate, but the predicate is a declared expression invoked
-            by id with explicit arguments rather than an inline !expr.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| ExpressionId | string | Id (or CallableAs alias) of a declared expression returning bool. |
-| Arguments | list | Operands passed positionally to that expression each time the gate is evaluated. |
-
 ## `timer trigger`
 Fires once after a delay.
 
@@ -657,16 +645,6 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 | contact_normal | Vector3 | Surface normal at the contact point. |
 | other_velocity | Vector3 | Other body's linear velocity (zero if no Rigidbody). |
 | other_position | Vector3 | Other entity's world position. |
-
-## `when all`
-Fires its listeners once every referenced trigger has fired at least once, then re-arms. An AND-gate
-            across triggers: useful for "do X only after A and B and C have all happened" without chaining gates.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| TriggerIds | IReadOnlyList<string> | Ids of the triggers (on this entity) to AND together; fires when all have fired, then resets. |
 
 ## `spawner`
 Spawns an instance of a template at a position when Executed.

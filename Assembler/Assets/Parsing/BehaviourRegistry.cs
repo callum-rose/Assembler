@@ -16,17 +16,6 @@ namespace Assembler.Parsing
 
 	public static class BehaviourRegistry
 	{
-		/// <summary>
-		/// Behaviours that <see cref="All"/> can parse but that have no runtime builder yet — they are
-		/// recognised vocabulary but not runnable. The transformer rejects them at <em>parse</em> time with
-		/// a descriptor-vocabulary message, instead of letting them die downstream at instantiate with a CLR
-		/// type name. <c>BehaviourRegistryParseOnlyTests</c> asserts this set exactly accounts for the gap
-		/// between <see cref="All"/> and <c>GameBehaviourFactory</c>'s builders, so it can't silently drift.
-		/// Currently empty — every catalogued behaviour is runnable. To shelve a not-yet-runnable behaviour,
-		/// add its name here (and a builder later to make it runnable, then remove it).
-		/// </summary>
-		public readonly static HashSet<string> ParseOnly = new();
-
 		public readonly static IReadOnlyDictionary<string, BehaviourFactory> All =
 			new Dictionary<string, BehaviourFactory>
 			{
@@ -70,7 +59,6 @@ namespace Assembler.Parsing
 				["swipe trigger"] = SwipeTriggerInfo.Create,
 				["drag trigger"] = DragTriggerInfo.Create,
 				["pinch and rotate trigger"] = PinchAndRotateTriggerInfo.Create,
-				["condition"] = ConditionInfo.Create,
 				["timer trigger"] = TimerTriggerInfo.Create,
 				["deferred trigger"] = DeferredTriggerInfo.Create,
 				["debounced trigger"] = DebouncedTriggerInfo.Create,
@@ -84,7 +72,6 @@ namespace Assembler.Parsing
 				["trigger stay trigger"] = TriggerStayTriggerInfo.Create,
 				["collision exit trigger"] = CollisionExitTriggerInfo.Create,
 				["collision stay trigger"] = CollisionStayTriggerInfo.Create,
-				["when all"] = WhenAllInfo.Create,
 				["spawner"] = SpawnerInfo.Create,
 				["destroy"] = DestroyInfo.Create,
 				["position setter"] = SetPositionInfo.Create,

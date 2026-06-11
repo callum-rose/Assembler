@@ -71,22 +71,5 @@ Entities:
 			var trigger = (CollisionEnterTriggerInfo)Behaviour(info, "ball", "hit");
 			CollectionAssert.AreEqual(new[] { "wall", "paddle" }, trigger.TagsToDetect);
 		}
-
-		// `when all` used to be parse-only (rejected at parse time); it is now runnable, so it parses cleanly.
-		// The parse-time rejection mechanism still guards any future not-yet-runnable behaviour (empty today),
-		// covered structurally by BehaviourRegistryParseOnlyTests.
-		[Test]
-		public void FormerlyParseOnlyBehaviour_NowParses()
-		{
-			Assert.DoesNotThrow(() => Transform(@"
-Entities:
-  e:
-    Behaviours:
-      gate:
-        Type: when all
-        Properties:
-          TriggerIds: [ a, b ]
-"));
-		}
 	}
 }

@@ -1539,16 +1539,6 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 
 ---
 
-## `condition`
-Forwards an upstream trigger to its listeners only when the named boolean expression evaluates to true at that moment. Like `condition gate`, but the predicate is a declared expression invoked by id with explicit arguments rather than an inline `!expr`.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| ExpressionId | string | Id (or CallableAs alias) of a declared expression returning bool. |
-| Arguments | list | Operands passed positionally to that expression each time the gate is evaluated. |
-
 ## `trigger stay trigger`
 Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
 
@@ -1563,15 +1553,6 @@ Fires every physics frame while an entity matching TagsToDetect stays inside thi
 | Name | Type | Description |
 |------|------|-------------|
 | other_position | Vector3 | Other entity's world position this frame. |
-
-## `when all`
-Fires its listeners once every referenced trigger has fired at least once, then re-arms. An AND-gate across triggers: useful for "do X only after A and B and C have all happened" without chaining gates.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| TriggerIds | IReadOnlyList<string> | Ids of the triggers (on this entity) to AND together; fires when all have fired, then resets. |
 
 ---
 

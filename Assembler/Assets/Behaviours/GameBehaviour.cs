@@ -26,12 +26,6 @@ namespace Assembler.Behaviours
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
-		// Per-instance fire hook. Lets an aggregator (e.g. `when all`) observe this behaviour firing by id,
-		// rather than being wired into its listener list. Independent of SetBase, so subscription order
-		// relative to initialisation doesn't matter. The always-compiled, opt-in sibling of the
-		// DEBUG_CONSOLE Fired event below (which broadcasts every fire to the debug overlay).
-		private Action<TriggerContext>? _onFired;
-
 #if DEBUG_CONSOLE
 		/// <summary>
 		/// Raised whenever any behaviour notifies its listeners, just before the listeners run. Lets the
@@ -54,10 +48,6 @@ namespace Assembler.Behaviours
 		/// private property setter keeps <see cref="Entity"/> read-only to subclasses.</summary>
 		public void SetEntity(GameEntity entity) => Entity = entity;
 
-		/// <summary>Subscribe to this behaviour firing (notifying its listeners). Used by aggregators like
-		/// <c>when all</c> that observe other triggers by id rather than appearing in their listener lists.</summary>
-		public void SubscribeFired(Action<TriggerContext> handler) => _onFired += handler;
-
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{
 			Id = behaviourData.Id;
@@ -73,8 +63,6 @@ namespace Assembler.Behaviours
 #if DEBUG_CONSOLE
 			Fired?.Invoke(this, ctx);
 #endif
-			_onFired?.Invoke(ctx);
-
 			foreach (var listener in _listeners)
 			{
 				listener.Notify(ctx);
