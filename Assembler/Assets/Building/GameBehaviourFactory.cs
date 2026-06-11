@@ -9,6 +9,7 @@ using Assembler.Behaviours.Camera;
 using Assembler.Behaviours.Debug;
 using Assembler.Behaviours.Flow;
 using Assembler.Behaviours.Gating;
+using Assembler.Behaviours.Input;
 using Assembler.Behaviours.ListOperations;
 using Assembler.Behaviours.Movement;
 using Assembler.Behaviours.Physics;
@@ -237,6 +238,10 @@ namespace Assembler.Building
 						i.Phase.Resolve(ctx.Resolution))),
 				[typeof(MousePositionTriggerInfo)] = Entry<MousePositionTriggerInfo, MousePositionTrigger, MousePositionTriggerData>(
 					(i, ctx) => new MousePositionTriggerData(i.Id)),
+				[typeof(CursorLockInfo)] = Entry<CursorLockInfo, CursorLock, CursorLockData>(
+					(i, ctx) => new CursorLockData(i.Id,
+						i.Locked.Resolve(ctx.Resolution),
+						i.Visible.Resolve(ctx.Resolution))),
 				[typeof(ScrollWheelTriggerInfo)] = Entry<ScrollWheelTriggerInfo, ScrollWheelTrigger, ScrollWheelTriggerData>(
 					(i, ctx) => new ScrollWheelTriggerData(i.Id)),
 				[typeof(AxisTriggerInfo)] = Entry<AxisTriggerInfo, AxisTrigger, AxisTriggerData>(

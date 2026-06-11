@@ -81,6 +81,7 @@ Variables:
 Controls:
   Actions:
     move: { Type: value, ValueType: vector2 }   # WASD -> axis x (strafe) / y (forward)
+    look: { Type: value, ValueType: vector2 }   # raw mouse delta -> axis x (yaw)
     shoot: { Type: button, Phase: down }          # fire one bullet on press
     quit: { Type: button, Phase: down }
   Bindings:
@@ -91,6 +92,10 @@ Controls:
           Down: "<Keyboard>/s"
           Left: "<Keyboard>/a"
           Right: "<Keyboard>/d"
+      # Raw relative pointer motion. Only flows continuously while the cursor is locked
+      # (see the `look capture` cursor lock on the player), so there's no screen-edge dead zone.
+      look:
+        - "<Mouse>/delta"
       shoot:
         - "<Mouse>/leftButton"
         - "<Keyboard>/space"
@@ -307,9 +312,15 @@ Entities:
               - !entity { Id: player, Property: Rotation }
               - !var move speed
 
-      # --- Look: mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
+      # --- Look: lock the cursor so raw mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
+      # Locks (and hides) the OS pointer on start so the `look` value action (bound to <Mouse>/delta)
+      # keeps reporting motion past the screen edges; restored automatically when the game ends.
+      look capture:
+        Type: cursor lock
+        Properties: { Locked: true, Visible: false }
       mouse look:
-        Type: mouse position trigger
+        Type: input action
+        Properties: { Action: look }
         Listeners:
           - EntityId: player
             BehaviourId: apply yaw
@@ -321,7 +332,7 @@ Entities:
             ArgumentTypes: [ vector, float ]
             ReturnType: vector
             With:
-              - !output mouse_delta
+              - !output axis
               - !var mouse sensitivity
       turn left key:
         Type: key hold trigger
