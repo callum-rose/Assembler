@@ -1,7 +1,8 @@
+using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
-namespace Assembler.Behaviours.Triggers
+namespace Assembler.Behaviours.Flow
 {
 	/// <summary>Iterates List synchronously when Executed, firing listeners once per element.</summary>
 	/// <remarks>

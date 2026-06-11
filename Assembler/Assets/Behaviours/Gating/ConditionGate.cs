@@ -1,7 +1,8 @@
+using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 
-namespace Assembler.Behaviours.Triggers.Conditionals
+namespace Assembler.Behaviours.Gating
 {
 	/// <summary>Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.</summary>
 	/// <remarks>

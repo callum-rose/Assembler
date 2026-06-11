@@ -1,8 +1,9 @@
+using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 
-namespace Assembler.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Gating
 {
 	/// <summary>Forwards a trigger event only when no prior trigger has been received within the last Interval seconds. Use to suppress rapid repeat triggers.</summary>
 	/// <remarks>

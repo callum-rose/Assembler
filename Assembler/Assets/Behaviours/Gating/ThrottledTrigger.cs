@@ -1,8 +1,9 @@
+using Assembler.Behaviours.Triggers;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 
-namespace Assembler.Behaviours.Triggers.Timing
+namespace Assembler.Behaviours.Gating
 {
 	/// <summary>Forwards at most Rate trigger events per second. Incoming triggers that arrive sooner than 1/Rate seconds after the previous forwarded one are dropped.</summary>
 	/// <remarks>
