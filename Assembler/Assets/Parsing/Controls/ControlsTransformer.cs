@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Deserialisation.Dtos;
 using Assembler.Extensions;
+using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
+using UnityEngine;
 
 namespace Assembler.Parsing.Controls
 {
@@ -38,7 +41,42 @@ namespace Assembler.Parsing.Controls
 								.Select(b => TransformBinding(p.Key, a.Key, b))
 								.ToList()));
 
-			return new ControlsInfo(actions, bindings);
+			var onScreen = dto.OnScreen
+				.EmptyIfNull()
+				.Select(TransformOnScreen)
+				.ToList();
+
+			return new ControlsInfo(actions, bindings, onScreen);
+		}
+
+		// Default widget footprint (px) when the descriptor omits Size; Offset defaults to the anchored corner.
+		private static readonly Vector3 DefaultSize = new(200f, 200f, 0f);
+
+		private static OnScreenControlInfo TransformOnScreen(OnScreenControlDto dto)
+		{
+			if (string.IsNullOrWhiteSpace(dto.Type))
+			{
+				throw new ParsingException("On-screen control is missing required 'Type' (joystick, dpad or button).");
+			}
+
+			if (string.IsNullOrWhiteSpace(dto.Action))
+			{
+				throw new ParsingException(
+					$"On-screen control of type '{dto.Type}' is missing required 'Action'.");
+			}
+
+			var kind = BehaviourEnums.Parse<OnScreenControlKind>(dto.Type);
+
+			// Anchor is optional; on-screen overlays default to the lower-left corner.
+			var anchor = string.IsNullOrWhiteSpace(dto.Anchor)
+				? TextAnchor.LowerLeft
+				: BehaviourEnums.Parse<TextAnchor>(dto.Anchor);
+
+			// Offset/Size are literal pixel quantities, so resolve them against no variables.
+			var offset = dto.Offset?.ToVector3(Array.Empty<ValueInfo>()) ?? Vector3.zero;
+			var size = dto.Size?.ToVector3(Array.Empty<ValueInfo>()) ?? DefaultSize;
+
+			return new OnScreenControlInfo(kind, dto.Action, anchor, offset, size, dto.Label);
 		}
 
 		private static ActionInfo TransformAction(string name, ActionDto dto)

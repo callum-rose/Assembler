@@ -19,6 +19,7 @@
         "Assembler.Input",
         "Assembler.Generation",
         "UnityEngine.UI",
+        "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

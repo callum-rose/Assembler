@@ -1,4 +1,5 @@
 using System;
+using Assembler.Parsing.Controls;
 using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
@@ -86,6 +87,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(CameraConfinerMode) ? ParseCameraConfinerMode(normalised, raw) :
 				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
+				typeof(TEnum) == typeof(OnScreenControlKind) ? ParseOnScreenControlKind(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
 
 			return (TEnum)parsed;
@@ -227,6 +229,16 @@ namespace Assembler.Parsing.Info.Behaviours
 				"up" => ButtonPhase.Up,
 				_ => throw new ParsingException(
 					$"Unknown button phase '{raw}'. Valid values: hold, down, up")
+			};
+
+		private static OnScreenControlKind ParseOnScreenControlKind(string s, string raw) =>
+			s switch
+			{
+				"joystick" or "stick" => OnScreenControlKind.Joystick,
+				"dpad" or "directionalpad" => OnScreenControlKind.DPad,
+				"button" => OnScreenControlKind.Button,
+				_ => throw new ParsingException(
+					$"Unknown on-screen control type '{raw}'. Valid values: joystick, dpad, button")
 			};
 	}
 }

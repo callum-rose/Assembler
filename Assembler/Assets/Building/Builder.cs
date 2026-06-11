@@ -59,6 +59,7 @@ namespace Assembler.Building
 			var activeGroup = PlatformFallback.ResolveGroup(platform, controls);
 
 			ControlsValidator.Validate(gameInfo, controls, activeGroup);
+			OnScreenControlsValidator.Validate(controls);
 
 			var controlsAsset = InputActionBuilder.Build(controls, activeGroup);
 
@@ -89,6 +90,7 @@ namespace Assembler.Building
 			return new ResolvedGame(
 				gameInfo,
 				controls,
+				platform,
 				controlsAsset,
 				variableRegistry,
 				compiledExpressionsRegistry,
@@ -204,6 +206,10 @@ namespace Assembler.Building
 				}
 			}
 
+			// 4c. Render the on-screen touch controls overlay (no-op unless the active platform is Mobile and the
+			// descriptor declares Controls.OnScreen). Pure rendering on top of the already-built input asset.
+			OnScreenControlsBuilder.Build(controls, resolved.ActivePlatform, uiPrefabs, gameRoot.transform);
+
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
 
@@ -249,6 +255,7 @@ namespace Assembler.Building
 	public sealed record ResolvedGame(
 		GameInfo GameInfo,
 		ControlsInfo Controls,
+		InputPlatform ActivePlatform,
 		InputActionAsset ControlsAsset,
 		VariableRegistry VariableRegistry,
 		CompiledExpressionsRegistry CompiledExpressionsRegistry,

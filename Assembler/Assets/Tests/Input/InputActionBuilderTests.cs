@@ -45,7 +45,7 @@ namespace Tests.Input
 				["gamepad"] = gamepad
 			};
 
-			return new ControlsInfo(actions, bindings);
+			return new ControlsInfo(actions, bindings, new List<OnScreenControlInfo>());
 		}
 
 		[Test]
