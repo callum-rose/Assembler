@@ -162,6 +162,14 @@ namespace Assembler.Compiler.Compiler
 				at);
 		}
 
+		// Validates that a control-flow condition is boolean. The Expression factory (IfThenElse/Condition/
+		// Loop) would otherwise throw a position-less ArgumentException ("Argument must be boolean") for
+		// e.g. `while (1)`; checking here lets the error carry the condition's line/column and a clear message.
+		private Expression RequireBoolean(Expression condition, Token at) =>
+			condition.Type == typeof(bool)
+				? condition
+				: throw Error($"Condition must be boolean, but is '{condition.Type.Name}'", at);
+
 		public Parser(List<Token> tokens)
 		{
 			_tokens = tokens;
@@ -240,6 +248,35 @@ namespace Assembler.Compiler.Compiler
 		private CompileException Error(string message) => Error(message, Current);
 
 		private static CompileException Error(string message, Token at) => new(message, at.Line, at.Column);
+
+		// Sentinel carried while a dotted identifier prefix (e.g. `UnityEngine.Random`) is still being
+		// accumulated and hasn't yet resolved to a Type — the next segment may complete it. It is never a
+		// real value: if one survives to a point where a value is required (a call/index target, or the end
+		// of a postfix chain), the dotted name was a typo and is reported as an unknown identifier. `Name` is
+		// the accumulated dotted path tried so far; `Origin` positions the error at where the name began.
+		private sealed class UnresolvedNamespace
+		{
+			public string Name { get; }
+			public Token Origin { get; }
+
+			public UnresolvedNamespace(string name, Token origin) => (Name, Origin) = (name, origin);
+		}
+
+		// Wraps an unresolved-namespace sentinel in a Type-carrying constant so it can flow through the
+		// expression tree until it either accumulates into a real Type or is rejected at a value site.
+		private static Expression UnresolvedNamespaceConstant(string name, Token origin) =>
+			Expression.Constant(new UnresolvedNamespace(name, origin), typeof(UnresolvedNamespace));
+
+		// Throws "Unknown identifier" when an expression is an unresolved-namespace sentinel that reached a
+		// position where a value is required — its dotted name never resolved to a registered type. A no-op
+		// for every other expression.
+		private static void RejectUnresolvedNamespace(Expression expr)
+		{
+			if (expr is ConstantExpression { Value: UnresolvedNamespace ns })
+			{
+				throw Error($"Unknown identifier '{ns.Name}'", ns.Origin);
+			}
+		}
 
 		public Expression ParseMethodBody(Dictionary<string, Type> parameters)
 		{
@@ -354,9 +391,7 @@ namespace Assembler.Compiler.Compiler
 			{
 				do
 				{
-					var paramTypeToken = Current;
-					Advance();
-					var paramType = GetTypeFromToken(paramTypeToken.Type);
+					var paramType = ParseSignatureType();
 					var paramName = Expect(TokenType.Identifier).Value;
 					parameters.Add((paramType, paramName));
 				}
@@ -366,7 +401,7 @@ namespace Assembler.Compiler.Compiler
 			Expect(TokenType.RightParen);
 
 			// Capture method body tokens
-			Expect(TokenType.LeftBrace);
+			var openBrace = Expect(TokenType.LeftBrace);
 			var bodyTokens = new List<Token>();
 			int braceCount = 1;
 
@@ -390,7 +425,42 @@ namespace Assembler.Compiler.Compiler
 				Advance();
 			}
 
+			// Reaching EOF with the brace still open means the body was never closed. Without this the
+			// truncated body parses on and fails later with an unrelated, mispositioned error.
+			if (braceCount > 0)
+			{
+				throw Error($"Unbalanced braces in body of local method '{name}': missing '}}' before end of input.",
+					openBrace);
+			}
+
 			return (name, returnType, parameters, bodyTokens);
+		}
+
+		// Parses a type in a local-method signature: a built-in keyword (`int`/`float`/…) or a resolvable
+		// (possibly dotted) registered type name such as `UnityEngine.Vector3`. Emits a positioned compile
+		// error rather than the bare Exception GetTypeFromToken would throw for an unregistered name.
+		private Type ParseSignatureType()
+		{
+			if (IsTypeToken(Current.Type) || Current.Type == TokenType.Void)
+			{
+				var keyword = Current;
+				Advance();
+				return GetTypeFromToken(keyword.Type);
+			}
+
+			var nameToken = Expect(TokenType.Identifier);
+			var typeName = nameToken.Value;
+
+			while (Current.Type == TokenType.Dot)
+			{
+				Match(TokenType.Dot);
+				typeName += "." + Expect(TokenType.Identifier).Value;
+			}
+
+			return TryResolveType(typeName)
+				?? throw Error(
+					$"Type '{typeName}' not found. Make sure to register custom types or use fully qualified names.",
+					nameToken);
 		}
 
 		private void CompileLocalMethod(string name,
@@ -838,7 +908,8 @@ namespace Assembler.Compiler.Compiler
 		{
 			var ifToken = Expect(TokenType.If);
 			Expect(TokenType.LeftParen);
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.RightParen);
 
 			var ifTrue = ParseStatementOrBlock();
@@ -876,7 +947,8 @@ namespace Assembler.Compiler.Compiler
 			var initialVarCount = _declaredVariables.Count;
 
 			var initializer = ParseStatement();
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.Semicolon);
 			var increment = ParseExpression();
 
@@ -918,7 +990,8 @@ namespace Assembler.Compiler.Compiler
 		{
 			Expect(TokenType.While);
 			Expect(TokenType.LeftParen);
-			var condition = ParseExpression();
+			var conditionToken = Current;
+			var condition = RequireBoolean(ParseExpression(), conditionToken);
 			Expect(TokenType.RightParen);
 
 			var breakLabel = Expression.Label("break");
@@ -1287,6 +1360,9 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.LeftParen))
 				{
+					// `name(...)` where `name` is a still-unresolved dotted prefix (a member access keeps
+					// accumulating instead) means the name was a typo — report it before the call site.
+					RejectUnresolvedNamespace(expr);
 					expr = ParseFunctionCall(expr);
 				}
 				else if (Match(TokenType.Dot))
@@ -1295,6 +1371,7 @@ namespace Assembler.Compiler.Compiler
 				}
 				else if (Match(TokenType.LeftBracket))
 				{
+					RejectUnresolvedNamespace(expr);
 					expr = ParseIndexAccess(expr);
 				}
 				else
@@ -1303,6 +1380,9 @@ namespace Assembler.Compiler.Compiler
 				}
 			}
 
+			// A sentinel that reaches here (e.g. a bare `Mthf.Foo`) never resolved to a type — report it
+			// rather than letting the typed constant leak into the surrounding expression as a value.
+			RejectUnresolvedNamespace(expr);
 			return expr;
 		}
 
@@ -1499,18 +1579,17 @@ namespace Assembler.Compiler.Compiler
 
 			// Handle nested type / namespace continuation (e.g. UnityEngine.Random where UnityEngine alone
 			// isn't a Type yet). If we have a "namespace sentinel", the previous step stored the partial
-			// dotted name in the sentinel string; try to resolve again with the new segment.
-			if (staticTargetType == null && instance is ConstantExpression ns && ns.Type == typeof(string) &&
-				ns.Value is string nsPrefix && nsPrefix.StartsWith("__ns:"))
+			// dotted name; try to resolve again with the new segment appended.
+			if (staticTargetType == null && instance is ConstantExpression { Value: UnresolvedNamespace ns })
 			{
-				var combined = nsPrefix.Substring(5) + "." + memberName;
+				var combined = ns.Name + "." + memberName;
 				var resolved = TryResolveType(combined);
 				if (resolved != null)
 				{
 					return Expression.Constant(resolved, typeof(Type));
 				}
-				// Still not a full type - keep accumulating.
-				return Expression.Constant("__ns:" + combined, typeof(string));
+				// Still not a full type - keep accumulating, preserving the original start position.
+				return UnresolvedNamespaceConstant(combined, ns.Origin);
 			}
 
 			// Static member access on a resolved Type.
@@ -2288,7 +2367,7 @@ namespace Assembler.Compiler.Compiler
 					{
 						return Expression.Constant(asType, typeof(Type));
 					}
-					return Expression.Constant("__ns:" + name, typeof(string));
+					return UnresolvedNamespaceConstant(name, nameToken);
 				}
 
 				// Maybe a bare type reference (rare, but harmless to support).

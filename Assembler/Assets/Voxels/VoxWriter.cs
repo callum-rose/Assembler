@@ -50,6 +50,14 @@ namespace Assembler.Voxels
 			using var ms = new MemoryStream();
 			using var w = new BinaryWriter(ms);
 			var count = model.Voxels.Count;
+
+			var ext = model.Max - model.Min;
+			if (ext.x > 255 || ext.y > 255 || ext.z > 255)
+			{
+				throw new InvalidDataException(
+					$"VoxWriter: model extent {ext.x + 1}x{ext.y + 1}x{ext.z + 1} exceeds the 256-cell .vox coordinate limit.");
+			}
+
 			WriteChunkHeader(w, "XYZI", contentSize: 4 + count * 4, childrenSize: 0);
 			w.Write(count);
 

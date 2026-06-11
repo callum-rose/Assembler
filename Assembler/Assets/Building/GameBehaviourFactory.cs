@@ -290,7 +290,8 @@ namespace Assembler.Building
 					(i, ctx) => new OnStartTriggerData(i.Id)),
 				[typeof(TimerTriggerInfo)] = Entry<TimerTriggerInfo, TimerTrigger, TimerTriggerData>(
 					(i, ctx) => new TimerTriggerData(i.Id,
-						i.Delay.Resolve(ctx.Resolution))),
+						i.Delay.Resolve(ctx.Resolution),
+						i.AutoStart.Resolve(ctx.Resolution))),
 				[typeof(DeferredTriggerInfo)] = Entry<DeferredTriggerInfo, DeferredTrigger, DeferredTriggerData>(
 					(i, ctx) => new DeferredTriggerData(i.Id,
 						i.Delay.Resolve(ctx.Resolution))),

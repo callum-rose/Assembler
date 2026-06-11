@@ -26,7 +26,8 @@ namespace Assembler.Behaviours.Triggers.Timing
 
 		private void Start()
 		{
-			Execute(TriggerContext.Empty);
+			if (Data.AutoStart.Get(TriggerContext.Empty))
+				Execute(TriggerContext.Empty);
 		}
 
 		public override void Execute(TriggerContext ctx)
