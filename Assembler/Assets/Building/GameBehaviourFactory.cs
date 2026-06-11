@@ -313,6 +313,8 @@ namespace Assembler.Building
 						i.AutoStart.Resolve(ctx.Resolution))),
 				[typeof(EveryFrameTriggerInfo)] = Entry<EveryFrameTriggerInfo, EveryFrameTrigger, EveryFrameTriggerData>(
 					(i, ctx) => new EveryFrameTriggerData(i.Id)),
+				[typeof(FixedUpdateTriggerInfo)] = Entry<FixedUpdateTriggerInfo, FixedUpdateTrigger, FixedUpdateTriggerData>(
+					(i, ctx) => new FixedUpdateTriggerData(i.Id)),
 				// The physical collision/trigger behaviours derive from GameBehaviour<PhysicalTriggerData>
 				// (via PhysicalTrigger), so TData is the PhysicalTriggerData base — the concrete *TriggerData
 				// the lambda builds upcasts to it.

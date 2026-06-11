@@ -655,6 +655,13 @@ Fires every Unity Update frame. Use for behaviours that must run continuously.
 
 No properties.
 
+## `fixed update trigger`
+Fires every Unity FixedUpdate step. Use for physics-step-aligned, fixed-timestep logic.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+No properties.
+
 ## `collision enter trigger`
 Fires when a non-trigger collision begins with another entity matching TagsToDetect. Requires colliders + a Rigidbody.
 

@@ -67,6 +67,7 @@ namespace Assembler.Parsing
 				["on start trigger"] = OnStartTriggerInfo.Create,
 				["interval trigger"] = IntervalTriggerInfo.Create,
 				["every frame trigger"] = EveryFrameTriggerInfo.Create,
+				["fixed update trigger"] = FixedUpdateTriggerInfo.Create,
 				["collision enter trigger"] = CollisionEnterTriggerInfo.Create,
 				["trigger enter trigger"] = TriggerEnterTriggerInfo.Create,
 				["trigger exit trigger"] = TriggerExitTriggerInfo.Create,
