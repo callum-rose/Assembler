@@ -78,6 +78,22 @@ namespace Assembler.Parsing.Info
 
 	public sealed record TriggerOutputSource<T>(string OutputName) : ValueSource<T>;
 
+	/// <summary>A <c>!if</c> conditional value: yields <see cref="Then"/> when <see cref="Condition"/> reads
+	/// true, otherwise <see cref="Else"/>. The condition and both branches are resolved live each read, and
+	/// only the selected branch is read (matching C# ternary short-circuiting). Lets a setter pick between two
+	/// values in one place rather than via two condition-gated setters.</summary>
+	public sealed record ConditionalSource<T>(
+		ValueSource<bool> Condition,
+		ValueSource<T> Then,
+		ValueSource<T> Else) : ValueSource<T>
+	{
+		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
+			new ConditionalSource<T>(
+				Condition.SubstituteParameters(ctx),
+				Then.SubstituteParameters(ctx),
+				Else.SubstituteParameters(ctx));
+	}
+
 	/// <summary>Properties exposed by the game clock to descriptor expressions via the <c>!clock</c> tag.</summary>
 	public enum ClockProperty
 	{

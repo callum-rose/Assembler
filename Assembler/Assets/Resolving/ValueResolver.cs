@@ -25,6 +25,8 @@ namespace Assembler.Resolving
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
 				QuerySource<T> query => new QueryValueProvider<T>(ctx.EntityQuery, query.Kind, query.EntityTag,
 					query.Origin.Resolve(ctx), query.MaxRange.Resolve(ctx)),
+				ConditionalSource<T> conditional => new ConditionalValueProvider<T>(
+					conditional.Condition.Resolve(ctx), conditional.Then.Resolve(ctx), conditional.Else.Resolve(ctx)),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),

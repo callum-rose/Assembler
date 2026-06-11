@@ -98,6 +98,17 @@ namespace Assembler.Parsing
 			return new QuerySource<T>(kind, queryRef.EntityTag, origin, maxRange);
 		}
 
+		// Builds an !if value source: the condition is typed as bool, and both branches share the use-site type
+		// T so the conditional slots in anywhere a plain ValueSource<T> would (e.g. a setter's Value).
+		private static ValueSource<T> BuildConditionalSource<T>(TransformContext ctx, ConditionalRef conditionalRef)
+		{
+			var condition = CreateValueSource<bool>(ctx, conditionalRef.Condition);
+			var thenValue = CreateValueSource<T>(ctx, conditionalRef.Then);
+			var elseValue = CreateValueSource<T>(ctx, conditionalRef.Else);
+
+			return new ConditionalSource<T>(condition, thenValue, elseValue);
+		}
+
 		private static ClockProperty ParseClockProperty(string property) =>
 			property.Trim().ToLowerInvariant() switch
 			{
@@ -171,6 +182,7 @@ namespace Assembler.Parsing
 				ClockRef clockRef => throw new ParsingException(
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				QueryRef queryRef => BuildQuerySource<T>(ctx, queryRef),
+				ConditionalRef conditionalRef => BuildConditionalSource<T>(ctx, conditionalRef),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
 				TextRef textRef when typeof(T) == typeof(string) =>
 					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),

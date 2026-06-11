@@ -81,6 +81,14 @@ namespace Assembler.Parsing.Info
 		AssemblerValue Origin,
 		AssemblerValue MaxRange) : AssemblerValue;
 
+	/// <summary>A <c>!if { Condition, Then, Else }</c> conditional value. <see cref="Condition"/> is a boolean
+	/// value source; <see cref="Then"/>/<see cref="Else"/> are the two branch values (typed at the use site).
+	/// All three are resolved live each read, and only the selected branch is read.</summary>
+	public sealed record ConditionalRef(
+		AssemblerValue Condition,
+		AssemblerValue Then,
+		AssemblerValue Else) : AssemblerValue;
+
 	public sealed record OutputRef(string Id) : AssemblerRef(Id);
 
 	public sealed record ParamRef(string Id) : AssemblerRef(Id);

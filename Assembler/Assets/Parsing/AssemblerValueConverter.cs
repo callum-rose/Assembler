@@ -85,6 +85,10 @@ namespace Assembler.Parsing
 					v.EntityTag ?? string.Empty,
 					ToAssemblerValue(v.Origin),
 					ToAssemblerValue(v.MaxRange)),
+				(ConditionalRefDto v, { ResolvedValues: null }) => new ConditionalRef(
+					ToAssemblerValue(v.Condition),
+					ToAssemblerValue(v.Then),
+					ToAssemblerValue(v.Else)),
 				(OutputRefDto v, { ResolvedValues: null }) => new OutputRef(v.Id ?? string.Empty),
 				(ParamRefDto v, { ResolvedValues: null }) => new ParamRef(v.Id ?? string.Empty),
 				// A nested `!gameover` (e.g. inside a state machine OnEnter/OnExit list) deserialises to a
