@@ -284,6 +284,22 @@ RegisterTypes: [ UnityEngine.Vector3 ] # extra types the body may construct
 RegisterTypeStatics: [ UnityEngine.Mathf ]
 ```
 
+> **`!output` operands are NOT inferred — always give them an explicit `ArgumentTypes` entry.** A
+> trigger output's type is only known to the trigger that emits it, so an inline `!expr` defaults an
+> `!output` operand to `float`. If you read a non-float output (e.g. a `Vector3` like `mouse_delta`)
+> and then access a member (`arg0.x`), the body fails to compile (`'x' is not a member of type
+> 'System.Single'`). Look up the output's type in the behaviour's **Outputs** table (`Behaviours.md`)
+> and declare it:
+>
+> ```yaml
+> Displacement: !expr
+>   Do: 'new UnityEngine.Vector3(0f, arg0.x * arg1, 0f)'
+>   ArgumentTypes: [ vector, float ]   # mouse_delta is Vector3 — without this, arg0.x won't compile
+>   With:
+>     - !output mouse_delta
+>     - !var mouse sensitivity
+> ```
+
 Reach for `ReturnType` especially in **object contexts** (spawner / template `Parameters:`, and
 `!text` / condition arguments), where the use-site type can't be inferred. On a **named** `Do` call
 these hints are ignored (the named expression declares its own).
@@ -571,6 +587,10 @@ downstream:
 
 Only triggers with declared **Outputs** in the catalogue produce values to bind. Don't make up output
 names.
+
+When you feed an `!output` into an **inline** `!expr` (a `Do:` body, not a named expression), declare
+its type with `ArgumentTypes` — the type is read from the trigger's **Outputs** table, not inferred,
+and defaults to `float` otherwise. See **Inline type hints** above.
 
 ---
 
