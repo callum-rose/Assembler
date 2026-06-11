@@ -691,6 +691,91 @@ Adds a Cinemachine virtual camera that follows and/or looks at a target entity, 
 | ScreenOffset | Vector3 | 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5); z is ignored. |
 | FollowOffset | Vector3 | 3D only — world-space offset the camera maintains from the target. |
 
+## `camera shake`
+Emits a one-shot Cinemachine impulse when Executed (typically from a collision or other trigger),
+            shaking every camera in range. Lives on any entity — no virtual camera required — and pairs with the
+            CinemachineImpulseListener the camera behaviour already adds.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Force | float | Impulse amplitude scalar (default 1). Read on every fire, so it may be an expression/variable. |
+| Duration | float | How long the shake lasts in seconds (default Cinemachine's 0.2). Applied at build. |
+| Velocity | Vector3 | Direction and base magnitude of the kick (default (0,-1,0), i.e. downward). Scaled by Force. |
+
+## `camera noise`
+Adds constant handheld/ambient camera shake to a virtual camera via a Cinemachine
+            BasicMultiChannelPerlin noise component. Pick a bundled noise profile by name and scale its
+            amplitude/frequency.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Profile | string | Bundled noise profile name (default "Handheld_normal_mild"). e.g. "Handheld_normal_strong", "6D Shake". |
+| Amplitude | float | Multiplier on the profile's positional/rotational shake (default 1 = the profile's own amount). |
+| Frequency | float | Multiplier on how fast the shake oscillates (default 1 = the profile's own rate). |
+
+## `camera zoom`
+Adds a Cinemachine FollowZoom extension that auto-adjusts the camera's field of view to hold
+            the follow target at a constant on-screen width (dolly-zoom style framing).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Width | float | Target's desired on-screen width in world units (default Cinemachine's 2). Smaller = more zoomed in. |
+| Damping | float | How softly the FOV adjusts, in seconds (default 1); 0 is instant. |
+| MinFOV | float | Lower bound on the field of view in degrees (default 3) — the most it will zoom in. |
+| MaxFOV | float | Upper bound on the field of view in degrees (default 60) — the most it will zoom out. |
+
+## `camera orbit`
+Adds a Cinemachine virtual camera that orbits a target entity at a fixed radius and height
+            (third-person / orbital framing), blended by the brain on the output camera. Mirrors
+            camera follow but uses an orbital body rather than a screen/offset rig.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Tag/Id | Entity to orbit, as { Tag: <entity-tag> } or { Id: <entity-id> }. |
+| Radius | float | Orbit distance from the target in world units (default Cinemachine's 10). |
+| Height | float | Vertical offset above the target the camera orbits around (default 0). |
+| OrbitSpeed | float | Auto-orbit rate in degrees per second around the target (default 0 = hold a fixed angle). |
+| Damping | float | How softly the camera tracks the target (seconds-ish); 0 is instant. |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
+
+## `camera confiner`
+Adds a Cinemachine confiner extension that clamps the virtual camera so it never leaves a bounding
+            volume defined by another entity's collider. Mode picks a 2D Collider2D boundary or a 3D
+            Collider volume.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Bounds | Tag/Id | Entity whose collider defines the boundary, as { Tag: … } or { Id: … }. 2D mode reads its Collider2D, 3D mode its Collider. |
+| Mode | CameraConfinerMode | "2d" (clamp to a Collider2D, default) or "3d" (clamp to a Collider volume). |
+| Damping | float | 2D only — how softly the camera is pushed back inside the bounds, in seconds (default 0 = instant). |
+| Padding | float | Distance from the edge at which the camera starts slowing before the hard boundary (default 0). |
+
+## `camera group`
+Adds a Cinemachine virtual camera that frames a whole group of entities at once: it builds a
+            TargetGroup from every entity carrying Tag and uses GroupFraming to auto-zoom so they
+            all stay on screen. The membership is rebuilt each frame, so the group tracks spawns and deaths.
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag whose members the camera frames; re-queried every frame so spawned/destroyed entities update the group. |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Damping | float | How softly the framing reacts as members move, in seconds (default Cinemachine's 2); 0 is instant. |
+| FramingSize | float | How much of the screen the group should fill, 0..1 (default Cinemachine's 0.8). |
+| Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
+
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
 

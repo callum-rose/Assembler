@@ -1,0 +1,152 @@
+Game:
+  Title: Camera Group Demo (3D)
+  Description: >
+    A single `camera group` rig frames every entity tagged "crowd" at once, auto-zooming via
+    GroupFraming so they all stay on screen. The green player is one crowd member you can drive with
+    WASD — walk away from the others and the camera pulls back to keep everyone framed; regroup and it
+    zooms back in. The group membership is rebuilt each frame, so it also tracks spawns/deaths. Press Q
+    to quit.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#141821"
+
+Constants:
+  step forward: !vec { X: 0, Y: 0, Z: 0.14 }
+  step back: !vec { X: 0, Y: 0, Z: -0.14 }
+  step left: !vec { X: -0.14, Y: 0, Z: 0 }
+  step right: !vec { X: 0.14, Y: 0, Z: 0 }
+  camera start: !vec { X: 0, Y: 8, Z: -16 }
+
+Entities:
+  player:
+    Tags: [ crowd ]
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold forward:
+        Type: key hold trigger
+        Properties:
+          Key: "w"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move forward
+      move forward:
+        Type: translate
+        Properties:
+          Displacement: !var step forward
+      hold back:
+        Type: key hold trigger
+        Properties:
+          Key: "s"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move back
+      move back:
+        Type: translate
+        Properties:
+          Displacement: !var step back
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "a"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var step left
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var step right
+      quit:
+        Type: key down trigger
+        Properties:
+          Key: "q"
+        Listeners: [ !gameover ]
+
+  friend a:
+    Tags: [ crowd ]
+    Position: !vec { X: -5, Y: 0.5, Z: 3 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour blue
+
+  friend b:
+    Tags: [ crowd ]
+    Position: !vec { X: 5, Y: 0.5, Z: 4 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour yellow
+
+  friend c:
+    Tags: [ crowd ]
+    Position: !vec { X: 0, Y: 0.5, Z: 7 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour magenta
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 40, Y: 0.1, Z: 40 }
+          IsWire: true
+          Colour: !colour grey
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.5
+
+  group rig:
+    Position: !var camera start
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      group:
+        Type: camera group
+        Properties:
+          Tag: crowd
+          Priority: 10
+          Damping: 1.2
+          FramingSize: 0.8
+          Lens: 60

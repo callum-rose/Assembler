@@ -47,6 +47,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		ThreeD
 	}
 
+	/// <summary>Which collider dimension a <c>camera confiner</c> clamps against: a 2D
+	/// <c>Collider2D</c> boundary (<c>CinemachineConfiner2D</c>) or a 3D <c>Collider</c> volume
+	/// (<c>CinemachineConfiner3D</c>).</summary>
+	public enum CameraConfinerMode
+	{
+		TwoD,
+		ThreeD
+	}
+
 	/// <summary>The kind of scene <c>light</c> to create. Maps onto the realtime subset of
 	/// <c>UnityEngine.LightType</c> (the non-realtime Area/Disc types are intentionally excluded).</summary>
 	public enum LightKind
@@ -74,6 +83,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(TextAnchor) ? ParseTextAnchor(normalised, raw) :
 				typeof(TEnum) == typeof(CameraProjection) ? ParseCameraProjection(normalised, raw) :
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
+				typeof(TEnum) == typeof(CameraConfinerMode) ? ParseCameraConfinerMode(normalised, raw) :
 				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
@@ -188,6 +198,15 @@ namespace Assembler.Parsing.Info.Behaviours
 				"3d" => CameraFollowMode.ThreeD,
 				_ => throw new ParsingException(
 					$"Unknown camera follow mode '{raw}'. Valid values: 2d, 3d")
+			};
+
+		private static CameraConfinerMode ParseCameraConfinerMode(string s, string raw) =>
+			s switch
+			{
+				"2d" => CameraConfinerMode.TwoD,
+				"3d" => CameraConfinerMode.ThreeD,
+				_ => throw new ParsingException(
+					$"Unknown camera confiner mode '{raw}'. Valid values: 2d, 3d")
 			};
 
 		private static LightKind ParseLightKind(string s, string raw) =>
