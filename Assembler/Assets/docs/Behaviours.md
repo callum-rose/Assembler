@@ -279,6 +279,8 @@ Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typi
 ## `look at`
 Turns the entity each frame to face Target in the XZ ground plane (a yaw about +Y).
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -2089,17 +2091,6 @@ Iterates a record list when Executed, firing listeners once per element. See Lis
 | item | T | The current element of the list. |
 | index | int | Zero-based position of the current element. |
 
-## `active poll`
-Polls a boolean value every frame and sets the entity GameObject's active state to match it.
-
-**Role:** Continuous / passive (runs itself; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Active | bool | Boolean (usually a variable or expression) re-read each frame; true keeps the entity active, false deactivates it. |
-
 ## `set active`
 Sets the entity GameObject's active state to the Active value when Executed by an upstream trigger.
 
@@ -2110,6 +2101,18 @@ Sets the entity GameObject's active state to the Active value when Executed by a
 | Name | Type | Description |
 |------|------|-------------|
 | Active | bool | Boolean applied to the entity's active state on each Execute; true activates, false deactivates. |
+
+## `set behaviour enabled`
+Sets the enabled state of one or more target behaviours to the Enabled value when Executed by an upstream trigger.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Targets | IReadOnlyList<ListenerInfo> | The behaviour(s) to enable/disable — a list of listener-style references (EntityId + BehaviourId, EntityTag, or BehaviourTag). Tag references re-query live state on each Execute, so they pick up matching behaviours added after build. Targets need not be executable, so self-driven behaviours (e.g. velocity) can be toggled. |
+| Enabled | bool | Boolean applied to each target's enabled state on every Execute; true enables, false disables. Disabling stops a behaviour's Unity callbacks (Update etc.), so it halts self-driven behaviours but does not block one from being invoked by a listener. |
 
 ## `set timescale`
 Sets the game clock's time scale when Executed by an upstream trigger. A scale of 0 pauses gameplay, 0.5 is slow-motion, 1 is normal speed.
@@ -2128,6 +2131,17 @@ Flips the entity GameObject's active state each time it is Executed by an upstre
 **Role:** Executable (valid `Listeners:` target).
 
 No properties.
+
+## `toggle behaviour enabled`
+Flips the enabled state of one or more target behaviours each time it is Executed by an upstream trigger.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Targets | IReadOnlyList<ListenerInfo> | The behaviour(s) to toggle — a list of listener-style references (EntityId + BehaviourId, EntityTag, or BehaviourTag). Tag references re-query live state on each Execute, so they pick up matching behaviours added after build. Targets need not be executable, so self-driven behaviours (e.g. velocity) can be toggled. Each target is flipped relative to its own current state. |
 
 ## `sprite`
 Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
@@ -2321,4 +2335,3 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 - `grid mover`: property `Direction` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `grid mover`: property `Speed` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `grid mover`: property `AgentRadius` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
-- `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.
