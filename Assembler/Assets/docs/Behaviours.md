@@ -700,6 +700,8 @@ Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 ## `trigger stay trigger`
 Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -825,6 +827,8 @@ Emits a one-shot Cinemachine impulse when Executed (typically from a collision o
             shaking every camera in range. Lives on any entity — no virtual camera required — and pairs with the
             CinemachineImpulseListener the camera behaviour already adds.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -838,6 +842,8 @@ Adds constant handheld/ambient camera shake to a virtual camera via a Cinemachin
             BasicMultiChannelPerlin noise component. Pick a bundled noise profile by name and scale its
             amplitude/frequency.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -849,6 +855,8 @@ Adds constant handheld/ambient camera shake to a virtual camera via a Cinemachin
 ## `camera zoom`
 Adds a Cinemachine FollowZoom extension that auto-adjusts the camera's field of view to hold
             the follow target at a constant on-screen width (dolly-zoom style framing).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -863,6 +871,8 @@ Adds a Cinemachine FollowZoom extension that auto-adjusts the camera's field of 
 Adds a Cinemachine virtual camera that orbits a target entity at a fixed radius and height
             (third-person / orbital framing), blended by the brain on the output camera. Mirrors
             camera follow but uses an orbital body rather than a screen/offset rig.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -881,6 +891,8 @@ Adds a Cinemachine confiner extension that clamps the virtual camera so it never
             volume defined by another entity's collider. Mode picks a 2D Collider2D boundary or a 3D
             Collider volume.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -894,6 +906,8 @@ Adds a Cinemachine confiner extension that clamps the virtual camera so it never
 Adds a Cinemachine virtual camera that frames a whole group of entities at once: it builds a
             TargetGroup from every entity carrying Tag and uses GroupFraming to auto-zoom so they
             all stay on screen. The membership is rebuilt each frame, so the group tracks spawns and deaths.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -979,6 +993,8 @@ Sensor that scans for the nearest tagged entity and writes the result into black
 
 ## `perceive all`
 Sensor that scans for every tagged entity in range and writes them into blackboard list variables.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
