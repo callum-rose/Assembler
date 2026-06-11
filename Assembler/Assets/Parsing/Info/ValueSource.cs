@@ -56,10 +56,10 @@ namespace Assembler.Parsing.Info
 
 	/// <summary>A transform property (position/rotation/scale) sourced from an entity by id via the
 	/// <c>!entity</c> tag (resolved live each read). <typeparamref name="T"/> must be <c>Vector3</c>.
-	/// <see cref="EntityId"/> is a <see cref="ParameterizableEntityId"/>, so an id written as
+	/// <see cref="EntityId"/> is a <see cref="ParameterisableEntityId"/>, so an id written as
 	/// <c>!parameter &lt;name&gt;</c> stays pending until <see cref="SubstituteParameters"/> fills in the
 	/// resolved entity id at template instantiation.</summary>
-	public sealed record EntityPropertySource<T>(ParameterizableEntityId EntityId, EntityProperty Property)
+	public sealed record EntityPropertySource<T>(ParameterisableEntityId EntityId, EntityProperty Property)
 		: ValueSource<T>
 	{
 		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
