@@ -1,0 +1,159 @@
+Game:
+  Title: Camera Extras Demo (2D)
+  Description: >
+    A player cube followed by a 2D Cinemachine virtual camera, layered with the new camera modifiers:
+    constant handheld `camera noise` and dolly-style `camera zoom` on the follow rig, plus a one-shot
+    `camera shake` fired by pressing space. Modifier behaviours sit on the same entity as the vcam and
+    are listed after it.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Constants:
+  move step: !vec { X: 0.12, Y: 0, Z: 0 }
+  move step left: !vec { X: -0.12, Y: 0, Z: 0 }
+  move step up: !vec { X: 0, Y: 0.12, Z: 0 }
+  move step down: !vec { X: 0, Y: -0.12, Z: 0 }
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+
+Entities:
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "right"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var move step
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "left"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var move step left
+      hold up:
+        Type: key hold trigger
+        Properties:
+          Key: "up"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move up
+      move up:
+        Type: translate
+        Properties:
+          Displacement: !var move step up
+      hold down:
+        Type: key hold trigger
+        Properties:
+          Key: "down"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move down
+      move down:
+        Type: translate
+        Properties:
+          Displacement: !var move step down
+
+  marker a:
+    Position: !vec { X: -8, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 3 }
+          IsWire: false
+          Colour: !colour red
+
+  marker b:
+    Position: !vec { X: 8, Y: 2, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 0.6, Y: 3 }
+          IsWire: false
+          Colour: !colour blue
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "orthographic"
+          Size: 6
+          DefaultBlend: 0.5
+      # Press space to kick the camera with a one-shot impulse. The shake source lives here; the
+      # impulse listener that the `camera` behaviour adds makes the output camera move in response.
+      press space:
+        Type: key down trigger
+        Properties:
+          Key: "space"
+        Listeners:
+          - EntityId: camera
+            BehaviourId: shake
+      shake:
+        Type: camera shake
+        Properties:
+          Force: 2
+          Duration: 0.4
+          Velocity: !vec { X: 0.3, Y: 1, Z: 0 }
+      # Press Q to quit — the only thing ending this demo, satisfying the game-over requirement.
+      quit:
+        Type: key down trigger
+        Properties:
+          Key: "q"
+        Listeners: [ !gameover ]
+
+  camera rig:
+    Position: !vec { X: 0, Y: 0, Z: -10 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      follow:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          Mode: "2d"
+          Priority: 10
+          Lens: 6
+          Damping: 0.6
+          DeadZone: 0.1
+          CameraDistance: 10
+      # Modifiers: must come after `follow`, which adds the virtual camera they attach to.
+      noise:
+        Type: camera noise
+        Properties:
+          Profile: "Handheld_normal_mild"
+          Amplitude: 0.5
+          Frequency: 1
+      zoom:
+        Type: camera zoom
+        Properties:
+          Width: 4
+          Damping: 1
+          MinFOV: 10
+          MaxFOV: 60

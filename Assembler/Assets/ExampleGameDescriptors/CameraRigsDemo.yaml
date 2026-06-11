@@ -1,0 +1,178 @@
+Game:
+  Title: Camera Rigs Demo (3D)
+  Description: >
+    A 3D field showing the new standalone virtual-camera rigs. `camera orbit` circles the player at a
+    fixed radius/height and is clamped inside an arena box by a `camera confiner` (3D mode, reading the
+    arena entity's Collider). A lower-priority `camera group` rig frames every "crowd" member at once,
+    auto-zooming to keep them all on screen. Switch between rigs by changing their Priority.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#141821"
+
+Constants:
+  step forward: !vec { X: 0, Y: 0, Z: 0.12 }
+  step back: !vec { X: 0, Y: 0, Z: -0.12 }
+  step left: !vec { X: -0.12, Y: 0, Z: 0 }
+  step right: !vec { X: 0.12, Y: 0, Z: 0 }
+  camera start: !vec { X: 0, Y: 6, Z: -12 }
+
+Entities:
+  player:
+    Tags: [ player, crowd ]
+    Position: !vec { X: 0, Y: 0.5, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour green
+      hold forward:
+        Type: key hold trigger
+        Properties:
+          Key: "w"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move forward
+      move forward:
+        Type: translate
+        Properties:
+          Displacement: !var step forward
+      hold back:
+        Type: key hold trigger
+        Properties:
+          Key: "s"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move back
+      move back:
+        Type: translate
+        Properties:
+          Displacement: !var step back
+      hold left:
+        Type: key hold trigger
+        Properties:
+          Key: "a"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move left
+      move left:
+        Type: translate
+        Properties:
+          Displacement: !var step left
+      hold right:
+        Type: key hold trigger
+        Properties:
+          Key: "d"
+        Listeners:
+          - EntityId: player
+            BehaviourId: move right
+      move right:
+        Type: translate
+        Properties:
+          Displacement: !var step right
+      # Press Q to quit — the only thing ending this demo, satisfying the game-over requirement.
+      quit:
+        Type: key down trigger
+        Properties:
+          Key: "q"
+        Listeners: [ !gameover ]
+
+  friend a:
+    Tags: [ crowd ]
+    Position: !vec { X: -5, Y: 0.5, Z: 4 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour blue
+
+  friend b:
+    Tags: [ crowd ]
+    Position: !vec { X: 5, Y: 0.5, Z: 6 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !colour yellow
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 40, Y: 0.1, Z: 40 }
+          IsWire: true
+          Colour: !colour grey
+
+  # The arena's box collider defines the volume the orbit camera is confined to.
+  arena bounds:
+    Position: !vec { X: 0, Y: 6, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 30, Y: 16, Z: 30 }
+          IsWire: true
+          Colour: !colour cyan
+      bounds:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 30, Y: 16, Z: 30 }
+          IsTrigger: true
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera start
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0.5
+
+  orbit rig:
+    Position: !var camera start
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      orbit:
+        Type: camera orbit
+        Properties:
+          Target: { Tag: player }
+          Radius: 12
+          Height: 3
+          Damping: 0.6
+          Priority: 10
+          Lens: 60
+      # Modifier: clamps the orbit camera inside the arena box. Must come after `orbit`.
+      confine:
+        Type: camera confiner
+        Properties:
+          Bounds: { Id: arena bounds }
+          Mode: "3d"
+          Padding: 1
+
+  group rig:
+    Position: !var camera start
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      group:
+        Type: camera group
+        Properties:
+          Tag: crowd
+          Priority: 5
+          Damping: 1.5
+          FramingSize: 0.7
+          Lens: 60
