@@ -104,6 +104,64 @@ namespace Assembler.Compiler.Compiler
 			return Expression.Assign(target, combined);
 		}
 
+		// Coerces a value expression to `target`, mirroring the implicit conversions C# permits at
+		// assignment-shaped sites (return, plain `=`, ternary/if-else branches, arguments): identity,
+		// reference/boxing upcast and numeric widening along the NumericRank ladder. The conversion is
+		// emitted through the Expression factory, but a conversion the factory rejects is translated from
+		// its raw ArgumentException/InvalidOperationException into a positioned CompileException, so the
+		// error carries the line/column the CompileException contract (and the LLM fix-loop) depends on.
+		private Expression Coerce(Expression value, Type target, Token at)
+		{
+			if (target == typeof(void) || value.Type == target)
+			{
+				return value;
+			}
+
+			try
+			{
+				return Expression.Convert(value, target);
+			}
+			catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+			{
+				throw Error($"Cannot convert type '{value.Type.Name}' to '{target.Name}'", at);
+			}
+		}
+
+		// Unifies the two arms of a conditional (ternary `?:` or a value-returning if/else) to a common
+		// type, since Expression.Condition requires both arms to share a type. Mirrors C#'s rule that one
+		// arm must be implicitly convertible to the other: widens the narrower numeric arm along the
+		// NumericRank ladder, otherwise coerces toward whichever arm the other is assignable to.
+		private (Expression ifTrue, Expression ifFalse) UnifyConditionalBranches(
+			Expression ifTrue, Expression ifFalse, Token at)
+		{
+			if (ifTrue.Type == ifFalse.Type)
+			{
+				return (ifTrue, ifFalse);
+			}
+
+			if (NumericRank.TryGetValue(ifTrue.Type, out var trueRank) &&
+				NumericRank.TryGetValue(ifFalse.Type, out var falseRank))
+			{
+				return trueRank < falseRank
+					? (Coerce(ifTrue, ifFalse.Type, at), ifFalse)
+					: (ifTrue, Coerce(ifFalse, ifTrue.Type, at));
+			}
+
+			if (ifFalse.Type.IsAssignableFrom(ifTrue.Type))
+			{
+				return (Coerce(ifTrue, ifFalse.Type, at), ifFalse);
+			}
+
+			if (ifTrue.Type.IsAssignableFrom(ifFalse.Type))
+			{
+				return (ifTrue, Coerce(ifFalse, ifTrue.Type, at));
+			}
+
+			throw Error(
+				$"Branches of a conditional have incompatible types '{ifTrue.Type.Name}' and '{ifFalse.Type.Name}'",
+				at);
+		}
+
 		public Parser(List<Token> tokens)
 		{
 			_tokens = tokens;
@@ -230,7 +288,7 @@ namespace Assembler.Compiler.Compiler
 			if (statements.Count > 0 && statements[^1].Type != typeof(void))
 			{
 				var last = statements[^1];
-				statements[^1] = Expression.Return(_returnLabel, last, returnType);
+				statements[^1] = Expression.Return(_returnLabel, Coerce(last, returnType, Current), returnType);
 			}
 
 			statements.Add(Expression.Label(_returnLabel, Expression.Default(returnType)));
@@ -717,7 +775,7 @@ namespace Assembler.Compiler.Compiler
 
 		private Expression ParseIf()
 		{
-			Expect(TokenType.If);
+			var ifToken = Expect(TokenType.If);
 			Expect(TokenType.LeftParen);
 			var condition = ParseExpression();
 			Expect(TokenType.RightParen);
@@ -728,10 +786,11 @@ namespace Assembler.Compiler.Compiler
 			{
 				var ifFalse = ParseStatementOrBlock();
 
-				// Use Condition for value-returning branches
+				// Use Condition for value-returning branches, unifying their types so the factory accepts them.
 				if (ifTrue.Type != typeof(void) && ifFalse.Type != typeof(void))
 				{
-					return Expression.Condition(condition, ifTrue, ifFalse);
+					var (unifiedTrue, unifiedFalse) = UnifyConditionalBranches(ifTrue, ifFalse, ifToken);
+					return Expression.Condition(condition, unifiedTrue, unifiedFalse);
 				}
 
 				return Expression.IfThenElse(condition, ifTrue, ifFalse);
@@ -879,10 +938,11 @@ namespace Assembler.Compiler.Compiler
 				return Expression.Return(_returnLabel);
 			}
 
+			var valueToken = Current;
 			var value = ParseExpression();
 			Expect(TokenType.Semicolon);
 
-			return Expression.Return(_returnLabel, value, _returnType);
+			return Expression.Return(_returnLabel, Coerce(value, _returnType, valueToken), _returnType);
 		}
 
 		private Expression ParseBreak()
@@ -946,7 +1006,8 @@ namespace Assembler.Compiler.Compiler
 		{
 			var type = ParseDeclarationType();
 
-			var name = Expect(TokenType.Identifier).Value;
+			var nameToken = Expect(TokenType.Identifier);
+			var name = nameToken.Value;
 
 			Expression? initializer = null;
 
@@ -969,12 +1030,7 @@ namespace Assembler.Compiler.Compiler
 
 			if (initializer != null)
 			{
-				// Convert initializer if needed
-				if (initializer.Type != type)
-				{
-					initializer = Expression.Convert(initializer, type);
-				}
-				return Expression.Assign(variable, initializer);
+				return Expression.Assign(variable, Coerce(initializer, type, nameToken));
 			}
 
 			return Expression.Empty();
@@ -996,12 +1052,14 @@ namespace Assembler.Compiler.Compiler
 		{
 			var expr = ParseLogicalOr();
 
-			if (Match(TokenType.Question))
+			if (Current.Type == TokenType.Question)
 			{
+				var questionToken = Expect(TokenType.Question);
 				var trueExpr = ParseExpression();
 				Expect(TokenType.Colon);
 				var falseExpr = ParseExpression();
-				return Expression.Condition(expr, trueExpr, falseExpr);
+				var (ifTrue, ifFalse) = UnifyConditionalBranches(trueExpr, falseExpr, questionToken);
+				return Expression.Condition(expr, ifTrue, ifFalse);
 			}
 
 			return expr;
@@ -1247,13 +1305,9 @@ namespace Assembler.Compiler.Compiler
 
 			if (Match(TokenType.Assign))
 			{
+				var valueToken = Current;
 				var value = ParseExpression();
-				if (value.Type != indexAccess.Type)
-				{
-					value = Expression.Convert(value, indexAccess.Type);
-				}
-
-				return Expression.Assign(indexAccess, value);
+				return Expression.Assign(indexAccess, Coerce(value, indexAccess.Type, valueToken));
 			}
 
 			if (Match(TokenType.PlusAssign))
@@ -1398,9 +1452,10 @@ namespace Assembler.Compiler.Compiler
 			// Assignment to member
 			if (Match(TokenType.Assign))
 			{
+				var valueToken = Current;
 				var value = ParseExpression();
 				var member = Expression.PropertyOrField(instance, memberName);
-				return Expression.Assign(member, value);
+				return Expression.Assign(member, Coerce(value, member.Type, valueToken));
 			}
 
 			// Property or field access
@@ -2145,8 +2200,10 @@ namespace Assembler.Compiler.Compiler
 
 				if (Match(TokenType.Assign))
 				{
+					var valueToken = Current;
 					var value = ParseExpression();
-					return Expression.Assign(AssignTarget(), value);
+					var target = AssignTarget();
+					return Expression.Assign(target, Coerce(value, target.Type, valueToken));
 				}
 
 				if (Match(TokenType.PlusAssign))
@@ -2624,8 +2681,10 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.Assign))
 				{
+					var valueToken = Current;
 					var value = ParseExpression();
-					return Expression.Assign(Expression.Property(null, property), value);
+					var staticProperty = Expression.Property(null, property);
+					return Expression.Assign(staticProperty, Coerce(value, staticProperty.Type, valueToken));
 				}
 				return Expression.Property(null, property);
 			}
@@ -2635,8 +2694,10 @@ namespace Assembler.Compiler.Compiler
 			{
 				if (Match(TokenType.Assign))
 				{
+					var valueToken = Current;
 					var value = ParseExpression();
-					return Expression.Assign(Expression.Field(null, field), value);
+					var staticField = Expression.Field(null, field);
+					return Expression.Assign(staticField, Coerce(value, staticField.Type, valueToken));
 				}
 				return Expression.Field(null, field);
 			}

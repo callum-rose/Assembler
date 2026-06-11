@@ -56,6 +56,22 @@ namespace Assembler.Compiler.Compiler
 
 		public Delegate Compile(string code, Type returnType, out Type delegateType, params (Type type, string name)[] parameters)
 		{
+			try
+			{
+				return CompileInternal(code, returnType, out delegateType, parameters);
+			}
+			catch (ArgumentException ex)
+			{
+				// The parser positions every error it raises as a CompileException. A raw ArgumentException
+				// escaping from the Expression factory (e.g. a type mismatch at an unguarded site) carries no
+				// position, so re-throw it as a CompileException to keep the contract callers — the LLM
+				// fix-loop and Tools/check-expression.sh — depend on. There is no token here, so position 0,0.
+				throw new CompileException($"Type conversion failed: {ex.Message}", 0, 0, ex);
+			}
+		}
+
+		private Delegate CompileInternal(string code, Type returnType, out Type delegateType, params (Type type, string name)[] parameters)
+		{
 			var lexer = new Lexer(code);
 			var tokens = lexer.Tokenize();
 

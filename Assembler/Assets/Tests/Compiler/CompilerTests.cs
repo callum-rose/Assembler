@@ -1764,6 +1764,120 @@ namespace Tests.Compiler
 			Assert.Throws<CompileException>(
 				() => compiler.CompileFunc<TestVector3>("return new TestVector3(1, 2, 3) { 4 };"));
 		}
+
+		// --- Numeric coercion at assignment-shaped sites (issue #230) ---
+
+		[Test]
+		public void ReturnCoercesIntLiteralToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return 1;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void ReturnCoercesDoubleLiteralToFloat()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("return 0.5;");
+			Assert.That(func(), Is.EqualTo(0.5f));
+		}
+
+		[Test]
+		public void ImplicitReturnCoercesToReturnType()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			// No explicit `return` — the trailing expression statement is the implicit return value.
+			var func = compiler.CompileFunc<float>("1;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void PlainAssignCoercesToVariableType()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("float x = 0f; x = 1; return x;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void DeclarationCoercesInitializer()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<float>("float x = 1; return x;");
+			Assert.That(func(), Is.EqualTo(1f));
+		}
+
+		[Test]
+		public void TernaryUnifiesNumericBranches()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var func = compiler.CompileFunc<bool, double>("return c ? 1 : 2.0;", "c");
+			Assert.That(func(true), Is.EqualTo(1.0));
+			Assert.That(func(false), Is.EqualTo(2.0));
+		}
+
+		[Test]
+		public void IfElseUnifiesNumericBranchTails()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			// Each branch tail is a non-void assignment of a different type (int vs double); the if/else is
+			// built as an Expression.Condition, which previously threw because the arm types didn't match.
+			var func = compiler.CompileFunc<bool, int>(
+				$$"""
+				  int a = 0;
+				  double b = 0.0;
+				  if (c) { a = 1; } else { b = 2.0; }
+				  return a;
+				  """,
+				"c");
+			Assert.That(func(true), Is.EqualTo(1));
+			Assert.That(func(false), Is.EqualTo(0));
+		}
+
+		[Test]
+		public void InstanceMemberAssignmentCoerces()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(CoercionTarget), "CoercionTarget");
+			var func = compiler.CompileFunc<CoercionTarget>(
+				"CoercionTarget t = new CoercionTarget(); t.Value = 3; return t;");
+			Assert.That(func().Value, Is.EqualTo(3f));
+		}
+
+		[Test]
+		public void StaticFieldAssignmentCoerces()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterType(typeof(CoercionTarget), "CoercionTarget");
+			var func = compiler.CompileFunc<float>("CoercionTarget.Shared = 7; return CoercionTarget.Shared;");
+			Assert.That(func(), Is.EqualTo(7f));
+		}
+
+		[Test]
+		public void ImpossibleReturnConversionIsAPositionedCompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(() => compiler.CompileFunc<int>("return \"hello\";"));
+			Assert.That(ex.Message, Does.Contain("Cannot convert"));
+			Assert.That(ex.Line, Is.GreaterThan(0));
+		}
+
+		[Test]
+		public void IncompatibleTernaryBranchesIsACompileError()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			var ex = Assert.Throws<CompileException>(
+				() => compiler.CompileFunc<bool, object>("return c ? \"text\" : 1;", "c"));
+			Assert.That(ex.Message, Does.Contain("incompatible"));
+		}
+	}
+
+	public class CoercionTarget
+	{
+		public static float Shared;
+
+		public float Value { get; set; }
 	}
 
 	public class TestVector3
