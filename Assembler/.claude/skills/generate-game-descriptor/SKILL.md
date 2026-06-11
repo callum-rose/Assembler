@@ -712,9 +712,22 @@ YAML sequences:
 TagsToDetect: [ left paddle, right paddle ]
 ```
 
-To declare an empty list as a Variable's initial value, use the matching tag (e.g. `!vec []` for a
-vector list, `[]` for an untyped list — match the surrounding examples in the catalogue's
-`* list *` behaviours).
+A list-typed Variable/Constant can be **seeded with initial elements** — it does not have to start
+empty and be filled at runtime. Use the matching element tag and list the elements inline:
+
+```yaml
+Constants:
+  route: !vec [ { X: -4, Y: 4 }, { X: 4, Y: 4 }, { X: 4, Y: -4 }, { X: -4, Y: -4 } ]   # four waypoints
+  spawn weights: !int [ 5, 10, 15 ]
+Variables:
+  occupied: !vec []        # an empty list, to be filled at runtime by `* list add`
+```
+
+This is the clean home for static list data (waypoint routes, spawn tables, level layouts) — prefer
+it over baking values into a `ternary` expression and indexing by int. Read a seeded list from an
+`!expr` like any other list value (LINQ, or `route[i]` indexing). The tagged element kinds are
+`!int`, `!float`, `!bool`, `!string`, `!vec`, `!colour`, `!record`; an untagged `[]` is an untyped
+list. Match the surrounding examples in the catalogue's `* list *` behaviours.
 
 ---
 
