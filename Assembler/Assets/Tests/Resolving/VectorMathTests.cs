@@ -85,6 +85,49 @@ namespace Tests.Resolving
 			AssertVec(VectorMath.IntegratePosition(V(1, 1), V(2, 4), 0.5f), 2, 3);
 		}
 
+		[Test]
+		public void ForwardFromYawFacesPlusZThenPlusX()
+		{
+			// Yaw 0 faces +Z; yaw 90 faces +X — matching Quaternion.Euler(0, yaw, 0) * forward.
+			AssertVec(VectorMath.ForwardFromYaw(0), 0, 0, 1);
+			AssertVec(VectorMath.ForwardFromYaw(90), 1, 0, 0);
+			AssertVec(VectorMath.ForwardFromYaw(180), 0, 0, -1);
+		}
+
+		[Test]
+		public void RightFromYawIsNinetyClockwiseOfForward()
+		{
+			// Yaw 0: right is +X; yaw 90: right is -Z.
+			AssertVec(VectorMath.RightFromYaw(0), 1, 0, 0);
+			AssertVec(VectorMath.RightFromYaw(90), 0, 0, -1);
+		}
+
+		[Test]
+		public void YawHelpersMatchUnityQuaternion()
+		{
+			foreach (var yaw in new[] { 17f, 123f, -48f })
+			{
+				var q = Quaternion.Euler(0f, yaw, 0f);
+				var fwd = q * Vector3.forward;
+				var right = q * Vector3.right;
+				AssertVec(VectorMath.ForwardFromYaw(yaw), fwd.x, fwd.y, fwd.z);
+				AssertVec(VectorMath.RightFromYaw(yaw), right.x, right.y, right.z);
+			}
+		}
+
+		[Test]
+		public void AnglesHelpersMatchUnityQuaternionBasis()
+		{
+			var euler = V(20, 45, 10);
+			var q = Quaternion.Euler(euler);
+			var fwd = q * Vector3.forward;
+			var right = q * Vector3.right;
+			var up = q * Vector3.up;
+			AssertVec(VectorMath.ForwardFromAngles(euler), fwd.x, fwd.y, fwd.z);
+			AssertVec(VectorMath.RightFromAngles(euler), right.x, right.y, right.z);
+			AssertVec(VectorMath.UpFromAngles(euler), up.x, up.y, up.z);
+		}
+
 		// ---- compiler integration -------------------------------------------------
 
 		private static CompiledExpressionsRegistry NewRegistry() =>
