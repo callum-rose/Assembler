@@ -1,0 +1,112 @@
+Game:
+  Title: Behaviour Enable/Disable Demo
+  Description: |
+    A cube drifts to the right, driven by a self-driven `velocity` behaviour.
+
+      (auto)  — every second an `interval trigger` fires `toggle behaviour
+                enabled` at the cube's `drift` behaviour, so it stops and
+                starts on its own.
+      F       — `set behaviour enabled` with Enabled: false freezes the cube.
+      G       — `set behaviour enabled` with Enabled: true resumes it.
+      Q       — quits (game over).
+
+    `set behaviour enabled` / `toggle behaviour enabled` target other behaviours
+    by the same reference shape listeners use (EntityId + BehaviourId, EntityTag,
+    or BehaviourTag). Disabling a behaviour stops its Unity callbacks (Update),
+    which is exactly how a self-driven behaviour like `velocity` is halted.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0d1117"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  cube size: !vec { X: 1, Y: 1 }
+  drift speed: !vec { X: 2, Y: 0 }
+  pulse interval: 1.0
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  zero rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
+
+Entities:
+  mover:
+    Position: !vec { X: -4, Y: 0, Z: 0 }
+    Rotation: !var zero rotation
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !var cube size
+          IsWire: false
+          Colour: !colour cyan
+      # Self-driven: runs every frame until something disables it.
+      drift:
+        Type: velocity
+        Properties:
+          Velocity: !var drift speed
+
+  controller:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !var zero rotation
+    Behaviours:
+      pulse:
+        Type: interval trigger
+        Properties:
+          Interval: !var pulse interval
+        Listeners:
+          - EntityId: controller
+            BehaviourId: flip drift
+      # Flips the cube's drift on/off relative to its current state.
+      flip drift:
+        Type: toggle behaviour enabled
+        Properties:
+          Targets:
+            - EntityId: mover
+              BehaviourId: drift
+
+      freeze key:
+        Type: key down trigger
+        Properties: { Key: "f" }
+        Listeners:
+          - EntityId: controller
+            BehaviourId: freeze
+      freeze:
+        Type: set behaviour enabled
+        Properties:
+          Enabled: false
+          Targets:
+            - EntityId: mover
+              BehaviourId: drift
+
+      resume key:
+        Type: key down trigger
+        Properties: { Key: "g" }
+        Listeners:
+          - EntityId: controller
+            BehaviourId: resume
+      resume:
+        Type: set behaviour enabled
+        Properties:
+          Enabled: true
+          Targets:
+            - EntityId: mover
+              BehaviourId: drift
+
+      quit:
+        Type: key down trigger
+        Properties: { Key: "q" }
+        Listeners: [ !gameover ]
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var zero rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

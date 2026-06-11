@@ -498,12 +498,28 @@ namespace Assembler.Building
 						i.Intensity.Resolve(ctx.Resolution),
 						i.Range.Resolve(ctx.Resolution),
 						i.SpotAngle.Resolve(ctx.Resolution))),
-				[typeof(ActivePollInfo)] = Entry<ActivePollInfo, ActivePoll, ActivePollData>(
-					(i, ctx) => new ActivePollData(i.Id,
-						i.Active.Resolve(ctx.Resolution))),
 				[typeof(SetActiveInfo)] = Entry<SetActiveInfo, SetActive, SetActiveData>(
 					(i, ctx) => new SetActiveData(i.Id,
 						i.Active.Resolve(ctx.Resolution))),
+				[typeof(SetBehaviourEnabledInfo)] = new(typeof(SetBehaviourEnabled), (go, info, ctx) =>
+				{
+					var i = (SetBehaviourEnabledInfo)info;
+					var b = go.AddComponent<SetBehaviourEnabled>();
+					return (b, lr => b.Initialise(
+						new SetBehaviourEnabledData(i.Id,
+							ResolveBehaviourTargets(i.Targets, lr, ctx.Resolution),
+							i.Enabled.Resolve(ctx.Resolution)),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
+				[typeof(ToggleBehaviourEnabledInfo)] = new(typeof(ToggleBehaviourEnabled), (go, info, ctx) =>
+				{
+					var i = (ToggleBehaviourEnabledInfo)info;
+					var b = go.AddComponent<ToggleBehaviourEnabled>();
+					return (b, lr => b.Initialise(
+						new ToggleBehaviourEnabledData(i.Id,
+							ResolveBehaviourTargets(i.Targets, lr, ctx.Resolution)),
+						i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(SetTimeScaleInfo)] = Entry<SetTimeScaleInfo, SetTimeScale, SetTimeScaleData>(
 					(i, ctx) => new SetTimeScaleData(i.Id,
 						i.Scale.Resolve(ctx.Resolution))),
@@ -908,5 +924,65 @@ namespace Assembler.Building
 			IReadOnlyBehaviourRegistry registry, BehaviourDescriptor descriptor) =>
 			registry[descriptor].EnsureExecutable(
 				$"targeting behaviour '{descriptor.BehaviourId}' on entity '{descriptor.EntityId}'");
+
+		// Resolves a behaviour's Targets: set (the behaviours it acts on, e.g. to toggle their `enabled`)
+		// into a closure over the live registry — mirroring ToListeners, but yielding the behaviour components
+		// themselves rather than wrapping them as executable listeners. Targets are deliberately NOT run
+		// through EnsureExecutable: enabling/disabling a self-driven behaviour is the prime use case, exactly
+		// the kind of target a Listeners: wiring rejects.
+		private static BehaviourTargets ResolveBehaviourTargets(
+			IReadOnlyList<ListenerInfo> targets,
+			IReadOnlyBehaviourRegistry registry,
+			ResolutionContext ctx)
+		{
+			var resolvers = targets.Select(t => ResolveBehaviourTarget(t, registry, ctx)).ToArray();
+			return new BehaviourTargets(c => resolvers.SelectMany(r => r(c)).ToArray());
+		}
+
+		private static Func<TriggerContext, IReadOnlyList<Behaviour>> ResolveBehaviourTarget(
+			ListenerInfo target, IReadOnlyBehaviourRegistry registry, ResolutionContext ctx)
+		{
+			switch (target)
+			{
+				case DirectListenerInfo direct:
+					{
+						// A direct id names a build-time behaviour, registered before this runs; capture it once.
+						var single = new[] { registry[direct.BehaviourDescriptor] };
+						return _ => single;
+					}
+				case EntityTaggedListenerInfo entityTagged:
+					{
+						Func<string, IReadOnlyList<GameBehaviour>> query = entityTagged.BehaviourId is { } behaviourId
+							? tag => registry.GetByEntityTagAndBehaviourId(tag, behaviourId)
+							: registry.GetByEntityTag;
+						return TagTargets(entityTagged.EntityTag.Resolve(ctx), query);
+					}
+				case BehaviourTaggedListenerInfo behaviourTagged:
+					return TagTargets(behaviourTagged.BehaviourTag.Resolve(ctx),
+						tag => registry.GetByBehaviourTag(tag));
+				default:
+					throw new ArgumentException(
+						$"Unsupported behaviour target '{target.GetType()}' — use a direct EntityId + BehaviourId, " +
+						"EntityTag, or BehaviourTag.");
+			}
+		}
+
+		// Tag targets re-query the registry on each call so behaviours added after build are picked up; an
+		// empty/absent tag yields no targets rather than throwing. IReadOnlyList<GameBehaviour> widens to
+		// IReadOnlyList<Behaviour> by covariance.
+		private static Func<TriggerContext, IReadOnlyList<Behaviour>> TagTargets(
+			IValueProvider<string> tagProvider,
+			Func<string, IReadOnlyList<GameBehaviour>> query) =>
+			ctx =>
+			{
+				var tag = tagProvider.Get(ctx);
+				if (string.IsNullOrEmpty(tag))
+				{
+					return Array.Empty<Behaviour>();
+				}
+
+				// Widens IReadOnlyList<GameBehaviour> to IReadOnlyList<Behaviour> by covariance.
+				return query(tag);
+			};
 	}
 }

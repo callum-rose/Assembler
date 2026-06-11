@@ -72,6 +72,32 @@ namespace Assembler.Parsing
 				.ToArray();
 
 		/// <summary>
+		/// Parses a behaviour's <c>Targets:</c> property — the set of behaviours it acts on (e.g. to
+		/// enable/disable them). Reuses the nested-listener shape (direct EntityId + BehaviourId, EntityTag,
+		/// or BehaviourTag) but requires at least one target and rejects <c>!gameover</c>, which is not a
+		/// toggleable behaviour.
+		/// </summary>
+		public static IReadOnlyList<ListenerInfo> ParseTargets(TransformContext ctx, AssemblerValue? raw, string behaviourId)
+		{
+			var targets = ParseNestedListeners(ctx, raw ?? NoValue.Instance);
+
+			if (targets.Count == 0)
+			{
+				throw new ParsingException(
+					$"Behaviour '{behaviourId}': Targets must list at least one behaviour to act on " +
+					"(by EntityId + BehaviourId, EntityTag, or BehaviourTag).");
+			}
+
+			if (targets.Any(t => t is GameOverListenerInfo))
+			{
+				throw new ParsingException(
+					$"Behaviour '{behaviourId}': Targets cannot include !gameover — it is not a toggleable behaviour.");
+			}
+
+			return targets;
+		}
+
+		/// <summary>
 		/// Builds listeners authored *inside* a behaviour's properties (e.g. a state machine's per-state
 		/// <c>OnEnter</c>/<c>OnExit</c> hooks). Unlike the top-level <c>Listeners:</c> field, these arrive
 		/// as already-converted <see cref="AssemblerValue"/>s (<see cref="DictValue"/> entries, or a

@@ -181,10 +181,11 @@ namespace Assembler.Parsing
 				["record list clear"] = ListClearInfo<Record>.Create,
 				["record list loop trigger"] = ListLoopTriggerInfo<Record>.Create,
 
-				["active poll"] = ActivePollInfo.Create,
 				["set active"] = SetActiveInfo.Create,
+				["set behaviour enabled"] = SetBehaviourEnabledInfo.Create,
 				["set timescale"] = SetTimeScaleInfo.Create,
 				["toggle active"] = ToggleActiveInfo.Create,
+				["toggle behaviour enabled"] = ToggleBehaviourEnabledInfo.Create,
 
 				["sprite"] = SpriteInfo.Create,
 				["voxel mesh"] = VoxelMeshInfo.Create,

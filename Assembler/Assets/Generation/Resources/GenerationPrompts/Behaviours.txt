@@ -5,15 +5,22 @@ Generated from `Assembler.Behaviours` XML doc comments. Each behaviour's descrip
 ## `box collider`
 Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/trigger physics events.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Size | Vector3 | Local-space dimensions of the box (x, y, z). |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `sphere collider`
 Adds a Unity SphereCollider to the entity. Required for collision/trigger physics events.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -21,9 +28,14 @@ Adds a Unity SphereCollider to the entity. Required for collision/trigger physic
 |------|------|-------------|
 | Radius | float | Local-space radius of the sphere. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `capsule collider`
 Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physics events.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -33,9 +45,14 @@ Adds a Unity CapsuleCollider to the entity. Required for collision/trigger physi
 | Height | float | Local-space total height of the capsule along its Direction axis. |
 | Direction | int | Axis the capsule is aligned to — 0 = X, 1 = Y, 2 = Z. |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `mesh collider`
 Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFilter. Required for collision/trigger physics events on arbitrary meshes (e.g. voxel meshes).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -43,9 +60,14 @@ Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFil
 |------|------|-------------|
 | Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `rigidbody`
 Adds a Unity Rigidbody to the entity so it participates in physics simulation.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -58,9 +80,12 @@ Adds a Unity Rigidbody to the entity so it participates in physics simulation.
 | AngularDamping | float | Damping applied to angular velocity (Unity's Rigidbody.angularDamping). |
 | FreezePosition | Vector3 | Per-axis position freeze (any non-zero component locks that axis, e.g. (1, 0, 1) freezes X and Z). |
 | FreezeRotation | Vector3 | Per-axis rotation freeze (any non-zero component locks that axis). |
+| CentreOfMass | Vector3 | Local-space centre of mass offset. Overrides Unity's auto-computed centre so the body rotates and balances about this point (e.g. push it back to spin a vehicle about its rear axle). Omit to keep the automatic centre. |
 
 ## `add force`
 Adds a continuous world-space force to the entity's Rigidbody when Executed (typically via a trigger).
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -71,6 +96,8 @@ Adds a continuous world-space force to the entity's Rigidbody when Executed (typ
 ## `add impulse`
 Adds an instantaneous world-space impulse to the entity's Rigidbody when Executed (typically via a trigger).
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -79,6 +106,8 @@ Adds an instantaneous world-space impulse to the entity's Rigidbody when Execute
 
 ## `add torque`
 Adds a continuous world-space torque to the entity's Rigidbody when Executed (typically via a trigger).
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -89,6 +118,8 @@ Adds a continuous world-space torque to the entity's Rigidbody when Executed (ty
 ## `set velocity`
 Sets the entity's Rigidbody linear velocity to Velocity when Executed (typically via a trigger).
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -97,6 +128,8 @@ Sets the entity's Rigidbody linear velocity to Velocity when Executed (typically
 
 ## `set angular velocity`
 Sets the entity's Rigidbody angular velocity to AngularVelocity when Executed (typically via a trigger).
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -107,6 +140,8 @@ Sets the entity's Rigidbody angular velocity to AngularVelocity when Executed (t
 ## `velocity`
 Moves the entity each frame by Velocity * deltaTime.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -115,6 +150,8 @@ Moves the entity each frame by Velocity * deltaTime.
 
 ## `acceleration`
 Integrates Acceleration into a velocity each frame.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -126,6 +163,8 @@ Integrates Acceleration into a velocity each frame.
 ## `drag`
 Exponentially decays a shared velocity variable each frame, modelling linear drag.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -135,6 +174,8 @@ Exponentially decays a shared velocity variable each frame, modelling linear dra
 
 ## `speed limit`
 Clamps a shared velocity variable's magnitude to Max each frame.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -146,6 +187,8 @@ Clamps a shared velocity variable's magnitude to Max each frame.
 ## `move towards`
 Moves the entity toward Target at a constant Speed, never overshooting.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -155,6 +198,8 @@ Moves the entity toward Target at a constant Speed, never overshooting.
 
 ## `smooth move`
 Eases the entity toward Target with a critically-damped spring (Vector3.SmoothDamp).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -166,6 +211,8 @@ Eases the entity toward Target with a critically-damped spring (Vector3.SmoothDa
 ## `clamp position`
 Constrains the entity's position to the axis-aligned box between Min and Max each frame.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -175,6 +222,8 @@ Constrains the entity's position to the axis-aligned box between Min and Max eac
 
 ## `wrap position`
 Wraps the entity's position around the box between Min and Max each frame (toroidal screen-wrap).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -186,6 +235,8 @@ Wraps the entity's position around the box between Min and Max each frame (toroi
 ## `translate`
 Adds Displacement to the entity's world position each time it Executes (e.g. via a trigger).
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -194,6 +245,8 @@ Adds Displacement to the entity's world position each time it Executes (e.g. via
 
 ## `angular velocity`
 Rotates the entity each frame by AngularVelocity * deltaTime (Euler degrees per second).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -204,6 +257,8 @@ Rotates the entity each frame by AngularVelocity * deltaTime (Euler degrees per 
 ## `rotate`
 Adds Displacement (Euler degrees) to the entity's world rotation each time it Executes (e.g. via a trigger).
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -213,14 +268,30 @@ Adds Displacement (Euler degrees) to the entity's world rotation each time it Ex
 ## `rotation setter`
 Sets the entity's world rotation to Rotation (Euler degrees) when Executed (typically via a trigger).
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Rotation | Vector3 | World-space Euler angles (degrees) to set the entity's rotation to on each execution. |
 
+## `look at`
+Turns the entity each frame to face Target in the XZ ground plane (a yaw about +Y).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World-space point to face. |
+| TurnRate | float | Maximum turn speed in degrees/sec; 0 (the default) snaps instantly to face the target. |
+
 ## `move animation`
 Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -229,11 +300,13 @@ Tweens the entity's world position from Start to End over Duration. See Transfor
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `scale animation`
 Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -241,11 +314,13 @@ Tweens the entity's local scale from Start to End over Duration. See TransformAn
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `rotate animation`
 Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -253,44 +328,52 @@ Tweens the entity's euler angles from Start to End over Duration. See TransformA
 | Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
 | End | Vector3 | Value to animate to. |
 | Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | string | Name of the DOTween ease to apply (e.g. "linear", "inOutSine"). Defaults to InOutSine. |
+| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
 
 ## `key hold trigger`
 Fires every frame while the named key is held down.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | One of "w", "a", "s", "d", "up", "down", "left", "right". |
+| Key | string | Legacy input key name (lowercase), e.g. "w", "space", "escape", "up", "mouse0". |
 
 ## `key down trigger`
 Fires on the frame the named key is pressed down.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `key up trigger`
 Fires on the frame the named key is released.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Key | string | KeyCode name to listen for (e.g. "Space", "W", "Mouse0"). |
+| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
 
 ## `mouse button trigger`
 Fires on a mouse button event during the selected phase (press, release, or hold).
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Button | int | Mouse button index — 0 (left), 1 (right), 2 (middle). |
-| Phase | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+| Phase | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ### Outputs
 
@@ -300,6 +383,8 @@ Fires on a mouse button event during the selected phase (press, release, or hold
 
 ## `mouse position trigger`
 Fires every frame the mouse moves, publishing the current position and frame delta.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 No properties.
 
@@ -313,6 +398,8 @@ No properties.
 ## `scroll wheel trigger`
 Fires on frames where the mouse scroll wheel moved.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 No properties.
 
 ### Outputs
@@ -323,6 +410,8 @@ No properties.
 
 ## `axis trigger`
 Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -345,6 +434,8 @@ Relays an abstract input action (declared in the descriptor's Controls section a
             behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis
             trigger, emitting axis/x/y every frame.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -362,15 +453,19 @@ Relays an abstract input action (declared in the descriptor's Controls section a
 ## `gamepad button trigger`
 Fires on a gamepad / joystick button event (press, release, or hold).
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Button | string | Unity key string for the gamepad button (e.g. "joystick button 0", "joystick 1 button 1"). |
-| Mode | string | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
+| Mode | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ## `tap trigger`
 Fires once when the pointer is pressed and released quickly without moving (a tap).
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -388,6 +483,8 @@ Fires once when the pointer is pressed and released quickly without moving (a ta
 ## `double tap trigger`
 Fires when two quick taps land close together within a short interval (a double-tap).
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -403,6 +500,8 @@ Fires when two quick taps land close together within a short interval (a double-
 
 ## `long press trigger`
 Fires once when the pointer is held still for a threshold time (a long press).
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -420,6 +519,8 @@ Fires once when the pointer is held still for a threshold time (a long press).
 
 ## `swipe trigger`
 Fires when the pointer is dragged far enough, fast enough, and then released (a swipe).
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -441,6 +542,8 @@ Fires when the pointer is dragged far enough, fast enough, and then released (a 
 ## `drag trigger`
 Fires every frame the pointer moves while held down (a drag), reporting the per-frame movement.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -458,6 +561,8 @@ Fires every frame the pointer moves while held down (a drag), reporting the per-
 ## `pinch and rotate trigger`
 Fires every frame two fingers change their separation or orientation (a pinch / zoom and twist).
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 No properties.
 
 ### Outputs
@@ -472,16 +577,21 @@ No properties.
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
 ## `timer trigger`
-Fires once after a delay (starts the countdown on entity start, or on Execute).
+Fires once after a delay.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
+| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -492,6 +602,8 @@ Forwards a trigger event to listeners after a delay. Insert between an upstream 
 ## `debounced trigger`
 Forwards a trigger event only when no prior trigger has been received within the last Interval seconds. Use to suppress rapid repeat triggers.
 
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
 ### Properties
 
 | Name | Type | Description |
@@ -500,6 +612,8 @@ Forwards a trigger event only when no prior trigger has been received within the
 
 ## `throttled trigger`
 Forwards at most Rate trigger events per second. Incoming triggers that arrive sooner than 1/Rate seconds after the previous forwarded one are dropped.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -510,10 +624,14 @@ Forwards at most Rate trigger events per second. Incoming triggers that arrive s
 ## `on start trigger`
 Fires once when the entity is first started.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 No properties.
 
 ## `interval trigger`
 Fires repeatedly at an interval. Optionally limited to a number of repetitions.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -533,10 +651,14 @@ Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 ## `every frame trigger`
 Fires every Unity Update frame. Use for behaviours that must run continuously.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 No properties.
 
 ## `collision enter trigger`
 Fires when a non-trigger collision begins with another entity matching TagsToDetect. Requires colliders + a Rigidbody.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -556,6 +678,8 @@ Fires when a non-trigger collision begins with another entity matching TagsToDet
 ## `trigger enter trigger`
 Fires when an entity matching TagsToDetect enters this entity's trigger collider.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -571,6 +695,8 @@ Fires when an entity matching TagsToDetect enters this entity's trigger collider
 ## `trigger exit trigger`
 Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -583,8 +709,27 @@ Fires when an entity matching TagsToDetect exits this entity's trigger collider.
 |------|------|-------------|
 | other_position | Vector3 | Other entity's world position at the moment of exit. |
 
+## `trigger stay trigger`
+Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| TagsToDetect | IReadOnlyList<string> | Only fire while the other entity has at least one of these tags. Leave empty to fire on any entity. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position this frame. |
+
 ## `collision exit trigger`
 Fires when a non-trigger collision ends with another entity matching TagsToDetect.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -602,6 +747,8 @@ Fires when a non-trigger collision ends with another entity matching TagsToDetec
 ## `collision stay trigger`
 Fires every physics frame while colliding with another entity matching TagsToDetect.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -618,13 +765,17 @@ Fires every physics frame while colliding with another entity matching TagsToDet
 | other_position | Vector3 | Other entity's world position. |
 
 ## `spawner`
-Spawns an instance of a named template at a position when Executed.
+Spawns an instance of a template at a position when Executed.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| TemplateId | string | Id of the template to instantiate. |
+| TemplateId | string | Id of the template to instantiate. Used as a fallback when Templates is empty. |
+| Templates | IReadOnlyList<SpawnTemplateInfo> | Optional list of template ids (or { Template, Weight } maps); one is chosen per spawn. Takes precedence over TemplateId when non-empty. |
+| Selection | string | How Templates is sampled: 'random' (weighted, the default) or 'sequential' (round-robin in list order; weights ignored). |
 | Position | Vector3 | World-space position for the spawned entity. |
 | Rotation | Vector3 | Euler rotation in degrees for the spawned entity. |
 | Parameters | IReadOnlyDictionary<string, ValueSource<object>> | Optional name→value overrides forwarded to the template's parameter slots. |
@@ -632,10 +783,14 @@ Spawns an instance of a named template at a position when Executed.
 ## `destroy`
 Destroys the entity's GameObject when Executed and notifies any listeners.
 
+**Role:** Executable (valid `Listeners:` target).
+
 No properties.
 
 ## `position setter`
 Sets the entity's world position to Position when Executed (typically via a trigger).
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -647,11 +802,13 @@ Sets the entity's world position to Position when Executed (typically via a trig
 Adds the output Unity Camera plus a Cinemachine brain, so virtual cameras (e.g. camera follow)
             can drive and blend this camera. Also adds an impulse listener so camera shake is visible.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| View | string | "orthographic" for a 2D-style camera; any other value uses a perspective projection. |
+| View | CameraProjection | "orthographic" for a 2D-style camera, or "perspective" (default) for a 3D projection. |
 | Size | float | Orthographic size in world units (only used when View = "orthographic"). |
 | DefaultBlend | float | Default blend time in seconds when the brain cuts between virtual cameras (0 = instant cut). |
 
@@ -660,14 +817,16 @@ Adds a Cinemachine virtual camera that follows and/or looks at a target entity, 
             the output camera. Mode picks a 2D screen-space rig or a 3D world-offset rig; omit Target
             for a pure look-at camera.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
 | Target | Tag/Id | Entity to follow, as { Tag: <entity-tag> } or { Id: <entity-id> }. Omit for look-at only. |
 | LookAt | Tag/Id | Entity to aim at, as { Tag: … } or { Id: … }. Adds an aim composer. |
-| Mode | string | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
-| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Mode | CameraFollowMode | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. Re-read every frame, so binding it to a variable/expression dynamically switches which camera is live (Cinemachine blends across). |
 | Lens | float | Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection. |
 | Damping | float | How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim. |
 | DeadZone | float | 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting. |
@@ -675,8 +834,107 @@ Adds a Cinemachine virtual camera that follows and/or looks at a target entity, 
 | ScreenOffset | Vector3 | 2D only — where on screen the target sits, as an offset from centre (-0.5..0.5); z is ignored. |
 | FollowOffset | Vector3 | 3D only — world-space offset the camera maintains from the target. |
 
+## `camera shake`
+Emits a one-shot Cinemachine impulse when Executed (typically from a collision or other trigger),
+            shaking every camera in range. Lives on any entity — no virtual camera required — and pairs with the
+            CinemachineImpulseListener the camera behaviour already adds.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Force | float | Impulse amplitude scalar (default 1). Read on every fire, so it may be an expression/variable. |
+| Duration | float | How long the shake lasts in seconds (default Cinemachine's 0.2). Applied at build. |
+| Velocity | Vector3 | Direction and base magnitude of the kick (default (0,-1,0), i.e. downward). Scaled by Force. |
+
+## `camera noise`
+Adds constant handheld/ambient camera shake to a virtual camera via a Cinemachine
+            BasicMultiChannelPerlin noise component. Pick a bundled noise profile by name and scale its
+            amplitude/frequency.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Profile | string | Bundled noise profile name (default "Handheld_normal_mild"). e.g. "Handheld_normal_strong", "6D Shake". |
+| Amplitude | float | Multiplier on the profile's positional/rotational shake (default 1 = the profile's own amount). |
+| Frequency | float | Multiplier on how fast the shake oscillates (default 1 = the profile's own rate). |
+
+## `camera zoom`
+Adds a Cinemachine FollowZoom extension that auto-adjusts the camera's field of view to hold
+            the follow target at a constant on-screen width (dolly-zoom style framing).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Width | float | Target's desired on-screen width in world units (default Cinemachine's 2). Smaller = more zoomed in. |
+| Damping | float | How softly the FOV adjusts, in seconds (default 1); 0 is instant. |
+| MinFOV | float | Lower bound on the field of view in degrees (default 3) — the most it will zoom in. |
+| MaxFOV | float | Upper bound on the field of view in degrees (default 60) — the most it will zoom out. |
+
+## `camera orbit`
+Adds a Cinemachine virtual camera that orbits a target entity at a fixed radius and height
+            (third-person / orbital framing), blended by the brain on the output camera. Mirrors
+            camera follow but uses an orbital body rather than a screen/offset rig.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Tag/Id | Entity to orbit, as { Tag: <entity-tag> } or { Id: <entity-id> }. |
+| Radius | float | Orbit distance from the target in world units (default Cinemachine's 10). |
+| Height | float | Vertical offset above the target the camera orbits around (default 0). |
+| OrbitSpeed | float | Auto-orbit rate in degrees per second around the target (default 0 = hold a fixed angle). |
+| Damping | float | How softly the camera tracks the target (seconds-ish); 0 is instant. |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
+
+## `camera confiner`
+Adds a Cinemachine confiner extension that clamps the virtual camera so it never leaves a bounding
+            volume defined by another entity's collider. Mode picks a 2D Collider2D boundary or a 3D
+            Collider volume.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Bounds | Tag/Id | Entity whose collider defines the boundary, as { Tag: … } or { Id: … }. 2D mode reads its Collider2D, 3D mode its Collider. |
+| Mode | CameraConfinerMode | "2d" (clamp to a Collider2D, default) or "3d" (clamp to a Collider volume). |
+| Damping | float | 2D only — how softly the camera is pushed back inside the bounds, in seconds (default 0 = instant). |
+| Padding | float | Distance from the edge at which the camera starts slowing before the hard boundary (default 0). |
+
+## `camera group`
+Adds a Cinemachine virtual camera that frames a whole group of entities at once: it builds a
+            TargetGroup from every entity carrying Tag and uses GroupFraming to auto-zoom so they
+            all stay on screen. The membership is rebuilt each frame, so the group tracks spawns and deaths.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag whose members the camera frames; re-queried every frame so spawned/destroyed entities update the group. |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Damping | float | How softly the framing reacts as members move, in seconds (default Cinemachine's 2); 0 is instant. |
+| FramingSize | float | How much of the screen the group should fill, 0..1 (default Cinemachine's 0.8). |
+| Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
+
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -687,6 +945,8 @@ Forwards an upstream trigger to listeners only when Condition evaluates to true 
 ## `inverse condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to false at that moment.
 
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
 ### Properties
 
 | Name | Type | Description |
@@ -695,6 +955,8 @@ Forwards an upstream trigger to listeners only when Condition evaluates to false
 
 ## `exclusive trigger`
 Forwards an upstream trigger to listeners only if no other trigger sharing the same Group has already fired this frame.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -709,6 +971,8 @@ Finite state machine for entity AI. Holds the current state in an entity string-
             is deterministic. On a transition it fires the old state's OnExit hooks then the new state's
             OnEnter hooks; the initial state's OnEnter fires once on start.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -718,8 +982,122 @@ Finite state machine for entity AI. Holds the current state in an entity string-
 | States | IReadOnlyList<StateInfo> | Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover). |
 | Transitions | IReadOnlyList<TransitionInfo> | Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken. |
 
+## `perceive`
+Sensor that scans for the nearest tagged entity and writes the result into blackboard variables.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| TargetId | string | !var reference to the string variable that receives the detected entity id. |
+| TargetPosition | Vector3 | !var reference to the vector variable that receives the detected entity position. |
+| HasTarget | bool | !var reference to the bool variable set true while a target is visible, false otherwise. |
+| LastKnownPosition | Vector3 | !var reference to the vector variable updated ONLY while visible (memory of last sighting). |
+
+## `perceive all`
+Sensor that scans for every tagged entity in range and writes them into blackboard list variables.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to look for. |
+| Radius | float | Detection range in world units. |
+| ConeAngle | float | Optional full cone angle in degrees; omit for an omnidirectional scan. Needs Forward. |
+| Forward | Vector3 | Optional facing direction for the cone (a direction vector). |
+| RequireLineOfSight | bool | When true, a candidate is only detected if no obstacle blocks the line to it. |
+| Obstacles | string | Entity tag that blocks line of sight (empty means nothing blocks). |
+| Interval | float | Seconds between scans; 0 scans every frame. Trades responsiveness for cost. |
+| Positions | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's position. |
+| Ids | List<string> | !var reference to the string-list variable cleared and filled with each detected entity's id. |
+| Velocities | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans). |
+| Count | int | !var reference to the int variable set to the number of entities detected this scan. |
+
+## `steering`
+Blends a weighted list of steering forces into one velocity each frame.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Forces | IReadOnlyList<SteeringForceInfo> | List of { Force, Weight } entries; Force is a Vector3 (e.g. !expr Seek(...)), Weight a float. |
+| MaxSpeed | float | Upper bound on the blended velocity's magnitude. |
+| Output | Vector3 | Name of the vector variable to write the blended velocity into (omit to move the entity directly). |
+
+## `navigate`
+Moves an entity to a target along a grid path, recomputed on a cadence.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Target | Vector3 | World point to navigate to. |
+| Speed | float | Movement speed in units per second. |
+| SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
+| Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
+| Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
+| AgentRadius | float | Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+
+## `patrol`
+Walks an entity through an ordered list of waypoints, advancing on arrival.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Waypoints | List<Vector3> | Ordered world points to patrol (a vector-list !var, an inline list, or an !expr PositionList). |
+| Loop | bool | Wrap back to the first waypoint after the last (patrol loop) instead of stopping. |
+| PingPong | bool | Reverse direction at each end instead of wrapping (overrides Loop). |
+| ArriveRadius | float | Distance at which the current waypoint counts as reached and the index advances. |
+| Speed | float | Movement speed in units per second. |
+| Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
+| CurrentIndex | int | Name of an int variable to publish the current waypoint index into (omit to skip; for FSM/debug). |
+
+## `grid mover`
+Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
+            only re-decides direction once it arrives there, so motion is always grid-aligned and never diagonal
+            (classic maze movement). At each cell it turns onto the requested Direction if that neighbour is
+            walkable, else continues its current heading, else stops. Walkability and cell geometry come from the
+            NavGridService, so a player driven by this and the AI driven by navigate share one
+            maze. Robust to external teleports (a wrap position tunnel): a large jump re-anchors to the new
+            cell instead of dragging the entity back.
+            Properties:
+              Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
+              Speed: Movement speed in units per second.
+              AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Direction | Vector3 |  |
+| Speed | float |  |
+| AgentRadius | float |  |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -731,6 +1109,8 @@ Writes a Vector3 value into the referenced variable when Executed. See VariableS
 ## `int variable setter`
 Writes a int value into the referenced variable when Executed. See VariableSetterBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -740,6 +1120,8 @@ Writes a int value into the referenced variable when Executed. See VariableSette
 
 ## `float variable setter`
 Writes a float value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -751,6 +1133,8 @@ Writes a float value into the referenced variable when Executed. See VariableSet
 ## `bool variable setter`
 Writes a bool value into the referenced variable when Executed. See VariableSetterBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -760,6 +1144,8 @@ Writes a bool value into the referenced variable when Executed. See VariableSett
 
 ## `string variable setter`
 Writes a string value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -771,6 +1157,8 @@ Writes a string value into the referenced variable when Executed. See VariableSe
 ## `colour variable setter`
 Writes a Color value into the referenced variable when Executed. See VariableSetterBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -778,8 +1166,130 @@ Writes a Color value into the referenced variable when Executed. See VariableSet
 | VariableId | Color | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
 | Value | Color | Source value to assign. Can be a constant, expression, or another variable reference. |
 
+## `record variable setter`
+Writes a record value into the referenced variable when Executed. See VariableSetterBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Record | Reference to the destination variable (typed). Typically a `!ref` to a variable declared on the entity or game. |
+| Value | Record | Source value to assign. Can be a constant, expression, or another variable reference. |
+
+## `int variable changed trigger`
+Fires when an int variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | int | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `float variable changed trigger`
+Fires when a float variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | float | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `bool variable changed trigger`
+Fires when a bool variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | bool | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `string variable changed trigger`
+Fires when a string variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | string | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `vector variable changed trigger`
+Fires when a vector variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Vector3 | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
+## `colour variable changed trigger`
+Fires when a colour variable changes. See VariableChangedTrigger.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| VariableId | Color | The variable to watch. Must be a writable `!var` reference of the matching type. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| value | T | The variable's new value. |
+| previous | T | The variable's value immediately before the change. |
+
 ## `vector list add`
 Appends a Vector3 value to the end of the target list when Executed. See ListAddBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -790,6 +1300,8 @@ Appends a Vector3 value to the end of the target list when Executed. See ListAdd
 
 ## `vector list insert`
 Inserts a Vector3 value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -802,6 +1314,8 @@ Inserts a Vector3 value into the target list at a given index when Executed. See
 ## `vector list remove at`
 Removes the Vector3 item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -812,6 +1326,8 @@ Removes the Vector3 item at a given index from the target list when Executed. Se
 ## `vector list remove`
 Removes the first occurrence of a Vector3 value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -821,6 +1337,8 @@ Removes the first occurrence of a Vector3 value from the target list when Execut
 
 ## `vector list set at`
 Overwrites the Vector3 item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -833,6 +1351,8 @@ Overwrites the Vector3 item at a given index in the target list when Executed. S
 ## `vector list set`
 Replaces the entire contents of the target Vector3 list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -842,6 +1362,8 @@ Replaces the entire contents of the target Vector3 list with another list when E
 
 ## `vector list add range`
 Appends every item from another Vector3 list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -853,6 +1375,8 @@ Appends every item from another Vector3 list to the target list when Executed. S
 ## `vector list clear`
 Removes all items from the target Vector3 list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -861,6 +1385,8 @@ Removes all items from the target Vector3 list when Executed. See ListClearBehav
 
 ## `vector list loop trigger`
 Iterates a Vector3 list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -878,6 +1404,8 @@ Iterates a Vector3 list when Executed, firing listeners once per element. See Li
 ## `int list add`
 Appends a int value to the end of the target list when Executed. See ListAddBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -887,6 +1415,8 @@ Appends a int value to the end of the target list when Executed. See ListAddBeha
 
 ## `int list insert`
 Inserts a int value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -899,6 +1429,8 @@ Inserts a int value into the target list at a given index when Executed. See Lis
 ## `int list remove at`
 Removes the int item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -909,6 +1441,8 @@ Removes the int item at a given index from the target list when Executed. See Li
 ## `int list remove`
 Removes the first occurrence of a int value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -918,6 +1452,8 @@ Removes the first occurrence of a int value from the target list when Executed. 
 
 ## `int list set at`
 Overwrites the int item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -930,6 +1466,8 @@ Overwrites the int item at a given index in the target list when Executed. See L
 ## `int list set`
 Replaces the entire contents of the target int list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -939,6 +1477,8 @@ Replaces the entire contents of the target int list with another list when Execu
 
 ## `int list add range`
 Appends every item from another int list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -950,6 +1490,8 @@ Appends every item from another int list to the target list when Executed. See L
 ## `int list clear`
 Removes all items from the target int list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -958,6 +1500,8 @@ Removes all items from the target int list when Executed. See ListClearBehaviour
 
 ## `int list loop trigger`
 Iterates a int list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -975,6 +1519,8 @@ Iterates a int list when Executed, firing listeners once per element. See ListLo
 ## `float list add`
 Appends a float value to the end of the target list when Executed. See ListAddBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -984,6 +1530,8 @@ Appends a float value to the end of the target list when Executed. See ListAddBe
 
 ## `float list insert`
 Inserts a float value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -996,6 +1544,8 @@ Inserts a float value into the target list at a given index when Executed. See L
 ## `float list remove at`
 Removes the float item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1006,6 +1556,8 @@ Removes the float item at a given index from the target list when Executed. See 
 ## `float list remove`
 Removes the first occurrence of a float value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1015,6 +1567,8 @@ Removes the first occurrence of a float value from the target list when Executed
 
 ## `float list set at`
 Overwrites the float item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1027,6 +1581,8 @@ Overwrites the float item at a given index in the target list when Executed. See
 ## `float list set`
 Replaces the entire contents of the target float list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1036,6 +1592,8 @@ Replaces the entire contents of the target float list with another list when Exe
 
 ## `float list add range`
 Appends every item from another float list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1047,6 +1605,8 @@ Appends every item from another float list to the target list when Executed. See
 ## `float list clear`
 Removes all items from the target float list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1055,6 +1615,8 @@ Removes all items from the target float list when Executed. See ListClearBehavio
 
 ## `float list loop trigger`
 Iterates a float list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -1072,6 +1634,8 @@ Iterates a float list when Executed, firing listeners once per element. See List
 ## `bool list add`
 Appends a bool value to the end of the target list when Executed. See ListAddBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1081,6 +1645,8 @@ Appends a bool value to the end of the target list when Executed. See ListAddBeh
 
 ## `bool list insert`
 Inserts a bool value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1093,6 +1659,8 @@ Inserts a bool value into the target list at a given index when Executed. See Li
 ## `bool list remove at`
 Removes the bool item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1103,6 +1671,8 @@ Removes the bool item at a given index from the target list when Executed. See L
 ## `bool list remove`
 Removes the first occurrence of a bool value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1112,6 +1682,8 @@ Removes the first occurrence of a bool value from the target list when Executed.
 
 ## `bool list set at`
 Overwrites the bool item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1124,6 +1696,8 @@ Overwrites the bool item at a given index in the target list when Executed. See 
 ## `bool list set`
 Replaces the entire contents of the target bool list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1133,6 +1707,8 @@ Replaces the entire contents of the target bool list with another list when Exec
 
 ## `bool list add range`
 Appends every item from another bool list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1144,6 +1720,8 @@ Appends every item from another bool list to the target list when Executed. See 
 ## `bool list clear`
 Removes all items from the target bool list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1152,6 +1730,8 @@ Removes all items from the target bool list when Executed. See ListClearBehaviou
 
 ## `bool list loop trigger`
 Iterates a bool list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -1169,6 +1749,8 @@ Iterates a bool list when Executed, firing listeners once per element. See ListL
 ## `string list add`
 Appends a string value to the end of the target list when Executed. See ListAddBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1178,6 +1760,8 @@ Appends a string value to the end of the target list when Executed. See ListAddB
 
 ## `string list insert`
 Inserts a string value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1190,6 +1774,8 @@ Inserts a string value into the target list at a given index when Executed. See 
 ## `string list remove at`
 Removes the string item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1200,6 +1786,8 @@ Removes the string item at a given index from the target list when Executed. See
 ## `string list remove`
 Removes the first occurrence of a string value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1209,6 +1797,8 @@ Removes the first occurrence of a string value from the target list when Execute
 
 ## `string list set at`
 Overwrites the string item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1221,6 +1811,8 @@ Overwrites the string item at a given index in the target list when Executed. Se
 ## `string list set`
 Replaces the entire contents of the target string list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1230,6 +1822,8 @@ Replaces the entire contents of the target string list with another list when Ex
 
 ## `string list add range`
 Appends every item from another string list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1241,6 +1835,8 @@ Appends every item from another string list to the target list when Executed. Se
 ## `string list clear`
 Removes all items from the target string list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1249,6 +1845,8 @@ Removes all items from the target string list when Executed. See ListClearBehavi
 
 ## `string list loop trigger`
 Iterates a string list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -1266,6 +1864,8 @@ Iterates a string list when Executed, firing listeners once per element. See Lis
 ## `colour list add`
 Appends a Color value to the end of the target list when Executed. See ListAddBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1275,6 +1875,8 @@ Appends a Color value to the end of the target list when Executed. See ListAddBe
 
 ## `colour list insert`
 Inserts a Color value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1287,6 +1889,8 @@ Inserts a Color value into the target list at a given index when Executed. See L
 ## `colour list remove at`
 Removes the Color item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1297,6 +1901,8 @@ Removes the Color item at a given index from the target list when Executed. See 
 ## `colour list remove`
 Removes the first occurrence of a Color value from the target list when Executed. See ListRemoveBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1306,6 +1912,8 @@ Removes the first occurrence of a Color value from the target list when Executed
 
 ## `colour list set at`
 Overwrites the Color item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1318,6 +1926,8 @@ Overwrites the Color item at a given index in the target list when Executed. See
 ## `colour list set`
 Replaces the entire contents of the target Color list with another list when Executed. See ListSetBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1327,6 +1937,8 @@ Replaces the entire contents of the target Color list with another list when Exe
 
 ## `colour list add range`
 Appends every item from another Color list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1338,6 +1950,8 @@ Appends every item from another Color list to the target list when Executed. See
 ## `colour list clear`
 Removes all items from the target Color list when Executed. See ListClearBehaviour.
 
+**Role:** Executable (valid `Listeners:` target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1346,6 +1960,8 @@ Removes all items from the target Color list when Executed. See ListClearBehavio
 
 ## `colour list loop trigger`
 Iterates a Color list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
 ### Properties
 
@@ -1360,17 +1976,125 @@ Iterates a Color list when Executed, firing listeners once per element. See List
 | item | T | The current element of the list. |
 | index | int | Zero-based position of the current element. |
 
-## `active poll`
-Polls a boolean value every frame and sets the entity GameObject's active state to match it.
+## `record list add`
+Appends a record value to the end of the target list when Executed. See ListAddBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Active | bool | Boolean (usually a variable or expression) re-read each frame; true keeps the entity active, false deactivates it. |
+| List | List<Record> | Reference to the target list variable. |
+| Value | Record | Item to append. |
+
+## `record list insert`
+Inserts a record value into the target list at a given index when Executed. See ListInsertBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to insert at. Valid range is [0, Count]. |
+| Value | Record | Item to insert. |
+
+## `record list remove at`
+Removes the record item at a given index from the target list when Executed. See ListRemoveAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to remove from. |
+
+## `record list remove`
+Removes the first occurrence (by reference identity) of a record from the target list when Executed. See ListRemoveBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Value | Record | Item to remove. |
+
+## `record list set at`
+Overwrites the record item at a given index in the target list when Executed. See ListSetAtBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Index | int | Zero-based position to overwrite. |
+| Value | Record | New item. |
+
+## `record list set`
+Replaces the entire contents of the target record list with another list when Executed. See ListSetBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Value | List<Record> | List whose items replace List's contents (typically an expression returning a list). |
+
+## `record list add range`
+Appends every item from another record list to the target list when Executed. See ListAddRangeBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+| Other | List<Record> | List whose items will be appended to List. |
+
+## `record list clear`
+Removes all items from the target record list when Executed. See ListClearBehaviour.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the target list variable. |
+
+## `record list loop trigger`
+Iterates a record list when Executed, firing listeners once per element. See ListLoopTrigger.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| List | List<Record> | Reference to the list to iterate over. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| item | T | The current element of the list. |
+| index | int | Zero-based position of the current element. |
 
 ## `set active`
 Sets the entity GameObject's active state to the Active value when Executed by an upstream trigger.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1378,8 +2102,22 @@ Sets the entity GameObject's active state to the Active value when Executed by a
 |------|------|-------------|
 | Active | bool | Boolean applied to the entity's active state on each Execute; true activates, false deactivates. |
 
+## `set behaviour enabled`
+Sets the enabled state of one or more target behaviours to the Enabled value when Executed by an upstream trigger.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Targets | IReadOnlyList<ListenerInfo> | The behaviour(s) to enable/disable — a list of listener-style references (EntityId + BehaviourId, EntityTag, or BehaviourTag). Tag references re-query live state on each Execute, so they pick up matching behaviours added after build. Targets need not be executable, so self-driven behaviours (e.g. velocity) can be toggled. |
+| Enabled | bool | Boolean applied to each target's enabled state on every Execute; true enables, false disables. Disabling stops a behaviour's Unity callbacks (Update etc.), so it halts self-driven behaviours but does not block one from being invoked by a listener. |
+
 ## `set timescale`
 Sets the game clock's time scale when Executed by an upstream trigger. A scale of 0 pauses gameplay, 0.5 is slow-motion, 1 is normal speed.
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1390,10 +2128,25 @@ Sets the game clock's time scale when Executed by an upstream trigger. A scale o
 ## `toggle active`
 Flips the entity GameObject's active state each time it is Executed by an upstream trigger.
 
+**Role:** Executable (valid `Listeners:` target).
+
 No properties.
+
+## `toggle behaviour enabled`
+Flips the enabled state of one or more target behaviours each time it is Executed by an upstream trigger.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Targets | IReadOnlyList<ListenerInfo> | The behaviour(s) to toggle — a list of listener-style references (EntityId + BehaviourId, EntityTag, or BehaviourTag). Tag references re-query live state on each Execute, so they pick up matching behaviours added after build. Targets need not be executable, so self-driven behaviours (e.g. velocity) can be toggled. Each target is flipped relative to its own current state. |
 
 ## `sprite`
 Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -1405,6 +2158,8 @@ Renders a 2D sprite as a child of the entity, optionally rescaled to Size.
 ## `voxel mesh`
 Renders a voxel mesh asset as a child of the entity.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1415,16 +2170,36 @@ Renders a voxel mesh asset as a child of the entity.
 ## `primitive`
 Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Shape | string | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
+| Shape | PrimitiveType | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
 | Colour | Color | Optional tint applied to the primitive's material. |
 | Size | Vector3 | Optional local scale of the primitive child. |
 
+## `light`
+Adds a realtime UnityEngine.Light to the entity so a 3D scene is lit
+            (without one, primitive meshes render near-black under URP's Lit shader).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Type | LightKind | One of "directional", "point", "spot" (defaults to "directional"). |
+| Colour | Color | Optional light colour (defaults to white). |
+| Intensity | float | Optional brightness multiplier (defaults to 1). |
+| Range | float | Optional reach in world units for point/spot lights (defaults to 10). |
+| SpotAngle | float | Optional cone angle in degrees for spot lights (defaults to 30). |
+
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
+
+**Role:** Executable (valid `Listeners:` target).
 
 ### Properties
 
@@ -1435,7 +2210,9 @@ Plays an audio clip when Executed (or on start, if configured).
 | Loop | bool | When true the clip loops once started. |
 
 ## `sphere gizmo`
-Debug-draws a sphere gizmo at the entity's position in the Scene view.
+Debug-draws a sphere gizmo at the entity's position. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -1446,7 +2223,9 @@ Debug-draws a sphere gizmo at the entity's position in the Scene view.
 | Colour | Color | Gizmo colour. |
 
 ## `cube gizmo`
-Debug-draws a cube gizmo at the entity's position in the Scene view.
+Debug-draws a cube gizmo at the entity's position. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -1457,7 +2236,9 @@ Debug-draws a cube gizmo at the entity's position in the Scene view.
 | Colour | Color | Gizmo colour. |
 
 ## `line gizmo`
-Debug-draws a line gizmo between two points in the entity's local transform space.
+Debug-draws a line gizmo between two points in the entity's local transform space. Editor-only: gizmos render in the Scene view (or the Game view with Gizmos enabled), never in a built player or the default Game view — use `primitive` for geometry that renders in-game.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -1471,6 +2252,8 @@ Debug-draws a line gizmo between two points in the entity's local transform spac
 Roots a UI tree: adds a screen-space Canvas that scales with screen size. Place child UI
             entities (containers, labels, buttons) under this entity to compose the interface.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1483,19 +2266,23 @@ Groups child UI entities. By default it arranges them in a vertical or horizonta
             using a uGUI layout group so UIs reflow responsively without hand-placed coordinates; with
             Direction "none" it adds no layout group and children are positioned manually.
 
+**Role:** Continuous / passive (runs itself; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
 |------|------|-------------|
-| Direction | string | "vertical" (default), "horizontal", or "none" (no layout group — manual placement). |
+| Direction | LayoutDirection | "vertical" (default), "horizontal", or "none"/"manual"/"free" (no layout group — manual placement). |
 | Spacing | float | Gap between children, in reference pixels (layout directions only). |
 | Padding | float | Inner padding on all sides, in reference pixels (layout directions only). |
-| ChildAlignment | string | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
+| ChildAlignment | TextAnchor | e.g. "middle-center", "upper-left" (see TextAnchor names; layout directions only). |
 | FitContent | bool | When true, the container shrinks to fit its children (adds a ContentSizeFitter). |
 
 ## `text label`
 Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every frame, so
             binding it to a variable or expression shows live values (scores, timers, etc.).
+
+**Role:** Continuous / passive (runs itself; not a listener target).
 
 ### Properties
 
@@ -1510,6 +2297,8 @@ Displays a line of text via a uGUI/TextMeshPro label. The text is re-read every 
 A clickable uGUI button. Acts as a trigger: notifies its listeners each time it is
             clicked. The caption is re-read every frame, so it can be bound to a variable/expression.
 
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
 ### Properties
 
 | Name | Type | Description |
@@ -1520,6 +2309,8 @@ A clickable uGUI button. Acts as a trigger: notifies its listeners each time it 
 
 ## `ui slider`
 A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
 
 ### Properties
 
@@ -1539,23 +2330,8 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 
 ---
 
-## `trigger stay trigger`
-Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| TagsToDetect | IReadOnlyList<string> | Only fire while the other entity has at least one of these tags. Leave empty to fire on any entity. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| other_position | Vector3 | Other entity's world position this frame. |
-
----
-
 ## Doc-gen warnings
 
-- `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.
+- `grid mover`: property `Direction` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
+- `grid mover`: property `Speed` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
+- `grid mover`: property `AgentRadius` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
