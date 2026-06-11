@@ -64,7 +64,7 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"Spawner '{id}': Templates must be a list of template ids or {{ Template, Weight }} entries.");
 			}
 
-			return list.Value.Select(item => item switch
+			return list.Items.Select(item => item switch
 			{
 				StringValue s => new SpawnTemplateInfo(s.Value, new ConstantSource<float>(1f)),
 				DictValue d => new SpawnTemplateInfo(

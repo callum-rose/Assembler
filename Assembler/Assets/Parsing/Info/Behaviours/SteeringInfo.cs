@@ -59,7 +59,7 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"steering '{id}': Forces must be a list of {{ Force, Weight }} entries.");
 			}
 
-			return list.Value.Select(item => item switch
+			return list.Items.Select(item => item switch
 			{
 				DictValue d => new SteeringForceInfo(
 					ValueSourceFactory.CreateValueSource<Vector3>(ctx, d.Value.GetValueOrDefault("Force")),

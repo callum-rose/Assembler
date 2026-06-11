@@ -25,29 +25,18 @@ namespace Assembler.Parsing
 			raw is NoValue ? None<T>.Instance : CreateValueSource<T>(ctx, raw);
 
 		internal static IReadOnlyList<string> ConvertStringList(AssemblerValue? value) =>
-			ListItems(value) is { } items
-				? items
-					.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
-					.ToArray()
-				: Array.Empty<string>();
-
-		internal static IReadOnlyList<IValueSourceArg> ConvertArgumentList(TransformContext ctx,
-			AssemblerValue? value) =>
-			ListItems(value) is { } items
-				? items.Select(item => (IValueSourceArg)
-					CreateValueSource<object>(ctx, item)).ToArray()
-				: Array.Empty<IValueSourceArg>();
+			(value switch
+			{
+				ListValue list => list.Items,
+				TypedListValue typedList => typedList.Items,
+				_ => Array.Empty<AssemblerValue>()
+			})
+			.Select(item => item is StringValue sv ? sv.Value : item?.ToString() ?? string.Empty)
+			.ToArray();
 
 		// The elements of a list property, whether authored untyped (`[a, b]` → ListValue) or with a typed
 		// tag (`!string [a, b]` → TypedListValue). Matching only ListValue silently dropped typed lists to
 		// empty, so e.g. `TagsToDetect: !string [wall, paddle]` detected nothing. Returns null for non-lists.
-		private static IReadOnlyList<AssemblerValue>? ListItems(AssemblerValue? value) =>
-			value switch
-			{
-				ListValue list => list.Value,
-				TypedListValue typed => typed.Items,
-				_ => null
-			};
 
 		private static IReadOnlyList<IValueSourceArg> BuildTextArguments(TransformContext ctx, TextRef textRef)
 		{
@@ -286,9 +275,9 @@ namespace Assembler.Parsing
 		private static object BuildListFromUntyped(TransformContext ctx, ListValue list, Type elementType)
 		{
 			var listType = typeof(List<>).MakeGenericType(elementType);
-			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Value.Count);
+			var result = (System.Collections.IList)Activator.CreateInstance(listType, list.Items.Count);
 
-			foreach (var item in list.Value)
+			foreach (var item in list.Items)
 			{
 				result.Add(UnwrapPrimitive(ctx, item, elementType));
 			}

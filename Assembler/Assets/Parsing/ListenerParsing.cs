@@ -80,7 +80,7 @@ namespace Assembler.Parsing
 		/// </summary>
 		public static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue raw) =>
 			raw is ListValue list
-				? list.Value.Select(item => ParseNestedListener(ctx, item)).ToArray()
+				? list.Items.Select(item => ParseNestedListener(ctx, item)).ToArray()
 				: Array.Empty<ListenerInfo>();
 
 		private static ListenerInfo ParseNestedListener(TransformContext ctx, AssemblerValue item)
