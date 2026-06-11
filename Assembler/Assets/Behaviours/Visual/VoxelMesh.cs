@@ -21,7 +21,9 @@ namespace Assembler.Behaviours.Visual
 			filter.sharedMesh = data.Mesh.Get();
 			meshGo.AddComponent<MeshRenderer>();
 
-			data.Scale.UseIfValueExists(s => meshGo.transform.localScale = s);
+			// Live-bind the scale so a !var/!expr/!clock animates the mesh; an omitted Scale falls back to
+			// Vector3.one, matching the transform's default (so the no-Scale case is unchanged).
+			data.Scale.BindLive(this, s => meshGo.transform.localScale = s, Vector3.one);
 		}
 	}
 }

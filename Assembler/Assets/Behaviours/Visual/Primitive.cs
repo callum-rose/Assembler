@@ -50,7 +50,9 @@ namespace Assembler.Behaviours.Visual
 #endif
 			}
 
-			data.Size.UseIfValueExists(size => primitive.transform.localScale = size);
+			// Live-bind the scale so a !var/!expr/!clock animates the primitive's size; an omitted Size falls
+			// back to Vector3.one, matching the transform's default (so the no-Size case is unchanged).
+			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
 
 			data.Colour.UseIfValueExists(colour =>
 			{

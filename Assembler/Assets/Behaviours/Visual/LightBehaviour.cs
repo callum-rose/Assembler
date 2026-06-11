@@ -24,16 +24,19 @@ namespace Assembler.Behaviours.Visual
 		protected override void OnInitialise(LightData data)
 		{
 			var light = gameObject.AddComponent<Light>();
-			light.type = data.Type.ValueOr(LightKind.Directional) switch
+
+			// BindLive drives each property live when bound to a !var/!expr/!clock and keeps today's
+			// init-once behaviour (apply the Unity-default fallback) when the property is a constant or omitted.
+			data.Type.BindLive(this, kind => light.type = kind switch
 			{
 				LightKind.Point => LightType.Point,
 				LightKind.Spot => LightType.Spot,
 				_ => LightType.Directional
-			};
-			light.color = data.Colour.ValueOr(Color.white);
-			light.intensity = data.Intensity.ValueOr(1f);
-			light.range = data.Range.ValueOr(10f);
-			light.spotAngle = data.SpotAngle.ValueOr(30f);
+			}, LightKind.Directional);
+			data.Colour.BindLive(this, c => light.color = c, Color.white);
+			data.Intensity.BindLive(this, i => light.intensity = i, 1f);
+			data.Range.BindLive(this, r => light.range = r, 10f);
+			data.SpotAngle.BindLive(this, a => light.spotAngle = a, 30f);
 		}
 	}
 }

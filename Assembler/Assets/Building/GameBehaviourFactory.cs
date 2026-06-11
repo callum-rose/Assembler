@@ -92,6 +92,11 @@ namespace Assembler.Building
 				needsNav.Nav = ctx.Nav;
 			}
 
+			if (behaviour is INeedsLiveProperties needsLive)
+			{
+				needsLive.LiveProperties = ctx.LiveProperties;
+			}
+
 			return (behaviour, initialise);
 		}
 
