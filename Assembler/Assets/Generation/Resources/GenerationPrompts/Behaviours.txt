@@ -1539,34 +1539,20 @@ A uGUI slider. Acts as a trigger: notifies its listeners whenever the value chan
 
 ---
 
-## Parse-only behaviours (not yet runnable)
+## `trigger stay trigger`
+Fires every physics frame while an entity matching TagsToDetect stays inside this entity's trigger collider.
 
-These behaviours are registered in the parse catalogue and accept the properties below, but have no runtime `GameBehaviour` implementation — they parse from YAML yet will not execute. Treat them as unsupported until a MonoBehaviour mapping is added in `GameBehaviourFactory`.
+### Properties
 
-### `condition`
+| Name | Type | Description |
+|------|------|-------------|
+| TagsToDetect | IReadOnlyList<string> | Only fire while the other entity has at least one of these tags. Leave empty to fire on any entity. |
 
-| Name | Type |
-|------|------|
-| ExpressionId | string |
-| Arguments | IReadOnlyList<IValueSourceArg> |
+### Outputs
 
-### `trigger stay trigger`
-
-| Name | Type |
-|------|------|
-| TagsToDetect | IReadOnlyList<string> |
-
-### `when all`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
-
-### `when any`
-
-| Name | Type |
-|------|------|
-| TriggerIds | IReadOnlyList<string> |
+| Name | Type | Description |
+|------|------|-------------|
+| other_position | Vector3 | Other entity's world position this frame. |
 
 ---
 

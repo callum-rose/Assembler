@@ -63,7 +63,7 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"Camera behaviour '{behaviourId}': {field} must be a list of {{ Tag: … }} / {{ Id: … }} entries.");
 			}
 
-			return list.Value.Select(item => Parse(ctx, item, behaviourId, field)).ToArray();
+			return list.Items.Select(item => Parse(ctx, item, behaviourId, field)).ToArray();
 		}
 	}
 

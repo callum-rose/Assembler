@@ -326,6 +326,9 @@ namespace Assembler.Building
 				[typeof(TriggerExitTriggerInfo)] = Entry<TriggerExitTriggerInfo, TriggerExit, PhysicalTriggerData>(
 					(i, ctx) => new TriggerExitTriggerData(i.Id,
 						i.TagsToDetect)),
+				[typeof(TriggerStayTriggerInfo)] = Entry<TriggerStayTriggerInfo, TriggerStay, PhysicalTriggerData>(
+					(i, ctx) => new TriggerStayTriggerData(i.Id,
+						i.TagsToDetect)),
 				[typeof(ConditionGateInfo)] = Entry<ConditionGateInfo, ConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution))),
@@ -871,8 +874,9 @@ namespace Assembler.Building
 					direct.OutputMapping),
 				EntityTaggedListenerInfo entityTagged => new EntityTaggedListener(
 					entityTagged.EntityTag.Resolve(ctx),
-					entityTagged.BehaviourId,
-					listenerRegistry.GetByEntityTagAndBehaviourId,
+					entityTagged.BehaviourId is { } behaviourId
+						? tag => listenerRegistry.GetByEntityTagAndBehaviourId(tag, behaviourId)
+						: listenerRegistry.GetByEntityTag,
 					entityTagged.OutputMapping),
 				BehaviourTaggedListenerInfo behaviourTagged => new BehaviourTaggedListener(
 					behaviourTagged.BehaviourTag.Resolve(ctx),

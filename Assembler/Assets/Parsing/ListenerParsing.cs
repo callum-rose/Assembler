@@ -40,7 +40,10 @@ namespace Assembler.Parsing
 						var entityTag = ValueSourceFactory.CreateValueSource<string>(ctx,
 							AssemblerValueConverter.ToAssemblerValue(l.EntityTag));
 
-						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId ?? string.Empty) { OutputMapping = outputs };
+						// A null BehaviourId is preserved (not coerced to ""): it means "fan out to every
+						// behaviour on entities carrying this tag", per CLAUDE.md's "optionally filtered by
+						// behaviour ID". The wiring picks GetByEntityTag vs GetByEntityTagAndBehaviourId on it.
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId) { OutputMapping = outputs };
 					}
 
 					if (l.BehaviourTag != null)
@@ -77,7 +80,7 @@ namespace Assembler.Parsing
 		/// </summary>
 		public static IReadOnlyList<ListenerInfo> ParseNestedListeners(TransformContext ctx, AssemblerValue raw) =>
 			raw is ListValue list
-				? list.Value.Select(item => ParseNestedListener(ctx, item)).ToArray()
+				? list.Items.Select(item => ParseNestedListener(ctx, item)).ToArray()
 				: Array.Empty<ListenerInfo>();
 
 		private static ListenerInfo ParseNestedListener(TransformContext ctx, AssemblerValue item)
@@ -107,7 +110,9 @@ namespace Assembler.Parsing
 					"BehaviourTag targets all behaviours carrying that tag.");
 			}
 
-			var behaviourId = (fields.GetValueOrDefault("BehaviourId") as StringValue)?.Value ?? string.Empty;
+			// Null (omitted) BehaviourId is preserved for the entity-tag fan-out (see GetListeners); the
+			// direct-descriptor path below still coerces it to "" since a direct listener targets one behaviour.
+			var behaviourId = (fields.GetValueOrDefault("BehaviourId") as StringValue)?.Value;
 
 			if (hasEntityTag)
 			{
@@ -127,7 +132,7 @@ namespace Assembler.Parsing
 
 			var entityId = ResolveNestedEntityId(ctx, fields.GetValueOrDefault("EntityId") ?? NoValue.Instance);
 
-			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId)) { OutputMapping = outputs };
+			return new DirectListenerInfo(new BehaviourDescriptor(entityId, behaviourId ?? string.Empty)) { OutputMapping = outputs };
 		}
 
 		private static IReadOnlyDictionary<string, string> ParseNestedOutputMapping(AssemblerValue value) =>
