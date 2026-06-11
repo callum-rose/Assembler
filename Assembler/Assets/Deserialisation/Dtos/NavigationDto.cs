@@ -20,5 +20,10 @@ namespace Assembler.Deserialisation.Dtos
 		/// <summary>Whether path/flow searches may step diagonally. Defaults to <c>true</c> (eight-connected);
 		/// set <c>false</c> for four-connected, grid-aligned movement (e.g. a Pacman-style maze).</summary>
 		public bool? Diagonal { get; init; }
+
+		/// <summary>The game-wide default clearance (world units) by which obstacles are inflated, used by any
+		/// agent that doesn't set its own <c>AgentRadius</c>. Omitted/0 means no inflation. A <c>navigate</c> or
+		/// <c>grid mover</c> behaviour can override it per agent.</summary>
+		public float? DefaultAgentRadius { get; init; }
 	}
 }

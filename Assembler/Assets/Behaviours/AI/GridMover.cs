@@ -16,6 +16,7 @@ namespace Assembler.Behaviours.AI
 	/// Properties:
 	///   Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
 	///   Speed: Movement speed in units per second.
+	///   AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
 	/// </summary>
 	public sealed class GridMover : GameBehaviour<GridMoverData>, INeedsGameClock, INeedsNavigation
 	{
@@ -31,6 +32,8 @@ namespace Assembler.Behaviours.AI
 		public override void Execute(TriggerContext ctx)
 		{
 			var cellSize = Nav.CellSize;
+			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.
+			var agentRadius = Data.AgentRadius.ValueOr(ctx, Nav.DefaultAgentRadius);
 
 			if (!_initialised)
 			{
@@ -54,7 +57,7 @@ namespace Assembler.Behaviours.AI
 			if (desired != Vector3.zero && desired == -_heading)
 			{
 				var back = Nav.CellCentre(transform.position + desired * cellSize);
-				if (Nav.IsWalkable(back))
+				if (Nav.IsWalkable(back, agentRadius))
 				{
 					_heading = desired;
 					_target = back;
@@ -81,12 +84,12 @@ namespace Assembler.Behaviours.AI
 				remaining -= toTarget;
 
 				// Turn onto the requested heading when the cell that way is open; otherwise keep going straight.
-				if (desired != Vector3.zero && Nav.IsWalkable(Nav.CellCentre(_target + desired * cellSize)))
+				if (desired != Vector3.zero && Nav.IsWalkable(Nav.CellCentre(_target + desired * cellSize), agentRadius))
 				{
 					_heading = desired;
 				}
 
-				if (_heading != Vector3.zero && Nav.IsWalkable(Nav.CellCentre(_target + _heading * cellSize)))
+				if (_heading != Vector3.zero && Nav.IsWalkable(Nav.CellCentre(_target + _heading * cellSize), agentRadius))
 				{
 					_target = Nav.CellCentre(_target + _heading * cellSize);
 				}

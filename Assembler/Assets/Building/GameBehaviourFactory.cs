@@ -539,11 +539,13 @@ namespace Assembler.Building
 						i.SlowingRadius.Resolve(ctx.Resolution),
 						i.Recompute.Resolve(ctx.Resolution),
 						i.Mode.Resolve(ctx.Resolution),
+						i.AgentRadius.Resolve(ctx.Resolution),
 						i.Output.ResolveWritable(ctx.Resolution))),
 				[typeof(GridMoverInfo)] = Entry<GridMoverInfo, GridMover, GridMoverData>(
 					(i, ctx) => new GridMoverData(i.Id,
 						i.Direction.Resolve(ctx.Resolution),
-						i.Speed.Resolve(ctx.Resolution)))
+						i.Speed.Resolve(ctx.Resolution),
+						i.AgentRadius.Resolve(ctx.Resolution)))
 			};
 
 			RegisterVariableSetter<Vector3, Vector3Setter>(map);

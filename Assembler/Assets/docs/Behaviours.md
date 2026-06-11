@@ -775,6 +775,7 @@ Moves an entity to a target along a grid path, recomputed on a cadence.
 | SlowingRadius | float | Distance from the goal at which to begin easing to a stop. |
 | Recompute | float | Seconds between route recomputes (0 recomputes every frame). |
 | Mode | string | "astar" (per-agent path) or "flowfield" (shared-goal field). |
+| AgentRadius | float | Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths. |
 | Output | Vector3 | Name of the vector variable to write the desired velocity into (omit to move the entity directly). |
 
 ## `grid mover`
@@ -788,6 +789,7 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
             Properties:
               Direction: Requested heading, re-read each frame (bind to a variable an input trigger writes); snapped to a cardinal.
               Speed: Movement speed in units per second.
+              AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
 
 ### Properties
 
@@ -795,6 +797,7 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
 |------|------|-------------|
 | Direction | Vector3 |  |
 | Speed | float |  |
+| AgentRadius | float |  |
 
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
@@ -1869,4 +1872,5 @@ These behaviours are registered in the parse catalogue and accept the properties
 
 - `grid mover`: property `Direction` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `grid mover`: property `Speed` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
+- `grid mover`: property `AgentRadius` on `GridMoverInfo` is missing from `GridMover`'s `Properties:` block.
 - `active poll`: `ActivePoll` documents `Note` in its `Properties:` block but `ActivePollInfo` has no such property.
