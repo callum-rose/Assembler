@@ -683,7 +683,7 @@ Adds a Cinemachine virtual camera that follows and/or looks at a target entity, 
 | Target | Tag/Id | Entity to follow, as { Tag: <entity-tag> } or { Id: <entity-id> }. Omit for look-at only. |
 | LookAt | Tag/Id | Entity to aim at, as { Tag: … } or { Id: … }. Adds an aim composer. |
 | Mode | CameraFollowMode | "2d" (screen-space framing, default) or "3d" (world-space follow offset + aim). |
-| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. |
+| Priority | int | Virtual-camera priority; the brain shows the highest-priority live vcam. Re-read every frame, so binding it to a variable/expression dynamically switches which camera is live (Cinemachine blends across). |
 | Lens | float | Orthographic size (2D) or field of view in degrees (3D), depending on the output camera projection. |
 | Damping | float | How softly the camera follows (seconds-ish); 0 is instant. Applies to body and aim. |
 | DeadZone | float | 2D only — size (0..1 of the screen) of the region the target can move in without the camera reacting. |
