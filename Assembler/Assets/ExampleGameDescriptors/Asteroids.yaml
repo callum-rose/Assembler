@@ -28,6 +28,7 @@ Constants:
   ship initial facing: !vec { X: 0, Y: 1 }
   ship initial velocity: !vec { X: 0, Y: 0 }
   thrust impulse: 0.03
+  turn deg: 1.0          # ship yaw per frame at full steer (matches the old A/D feel)
   brake velocity: !vec { X: 0, Y: 0 }
 
   # Bullet
@@ -58,6 +59,49 @@ Variables:
   ship position: !var ship start position
   ship velocity: !var ship initial velocity
   ship facing: !var ship initial facing
+
+# Flying is wired to abstract actions, not physical keys. `move` (vector2) carries
+# steering on x and thrust on y; `fire`/`brake` are button presses. Desktop binds
+# them to A/D/W/S + Space; mobile binds them to the on-screen joystick + buttons.
+Controls:
+  Actions:
+    move:  { Type: value, ValueType: vector2 }   # x steers (A/D), y>0 thrusts (W)
+    fire:  { Type: button, Phase: down }
+    brake: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      fire:  [ "<Keyboard>/space" ]
+      brake: [ "<Keyboard>/s" ]
+    mobile:
+      move:  [ "<Gamepad>/leftStick" ]   # joystick → a stick control
+      fire:  [ "<Gamepad>/buttonSouth" ]
+      brake: [ "<Gamepad>/buttonEast" ]
+
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 260, Y: 260 }
+      Size:   { X: 360, Y: 360 }
+    - Type: button
+      Action: fire
+      Label: Fire
+      Anchor: lower-right
+      Offset: { X: 210, Y: 210 }
+      Size:   { X: 230, Y: 230 }
+    - Type: button
+      Action: brake
+      Label: Brake
+      Anchor: lower-right
+      Offset: { X: 210, Y: 470 }
+      Size:   { X: 200, Y: 200 }
 
 Templates:
   bullet_template:
@@ -278,59 +322,47 @@ Entities:
               - !var ship velocity
               - !clock deltaTime
 
-      # --- Rotation (A / D) ---
-      rotate left key:
-        Type: key hold trigger
-        Properties: { Key: "a" }
+      # --- Steering + thrust: one analogue `move` action drives both. x steers
+      #     (A/D or stick-x), y > 0 thrusts (W or stick-up). It fires every frame,
+      #     so a neutral stick rotates by 0 and adds no thrust.
+      move input:
+        Type: input action
+        Properties: { Action: move }
         Listeners:
           - EntityId: ship
-            BehaviourId: rotate left
-      rotate left:
-        Type: vector variable setter
-        Properties:
-          VariableId: !var ship facing
-          Value: !expr
-            Do: 'Rotate2D(arg0, 1f)'
-            With:
-              - !var ship facing
-
-      rotate right key:
-        Type: key hold trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: rotate right
-      rotate right:
-        Type: vector variable setter
-        Properties:
-          VariableId: !var ship facing
-          Value: !expr
-            Do: 'Rotate2D(arg0, -1f)'
-            With:
-              - !var ship facing
-
-      # --- Thrust (W held) ---
-      thrust key:
-        Type: key hold trigger
-        Properties: { Key: "w" }
-        Listeners:
+            BehaviourId: apply steer
           - EntityId: ship
             BehaviourId: apply thrust
+      apply steer:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship facing
+          Value: !expr
+            Do: 'Rotate2D(arg0, -arg1 * arg2)'
+            ArgumentTypes: [ vector, float, float ]
+            ReturnType: vector
+            With:
+              - !var ship facing
+              - !output x
+              - !var turn deg
       apply thrust:
         Type: vector variable setter
         Properties:
           VariableId: !var ship velocity
           Value: !expr
-            Do: 'AddVector(arg0, ScaleVector(arg1, arg2))'
+            Do: 'AddVector(arg0, ScaleVector(arg1, arg2 * Max(arg3, 0f)))'
+            ArgumentTypes: [ vector, vector, float, float ]
+            ReturnType: vector
             With:
               - !var ship velocity
               - !var ship facing
               - !var thrust impulse
+              - !output y
 
-      # --- Brake (S down) ---
+      # --- Brake (S / on-screen Brake button) ---
       brake key:
-        Type: key down trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: brake }
         Listeners:
           - EntityId: ship
             BehaviourId: brake
@@ -340,10 +372,10 @@ Entities:
           VariableId: !var ship velocity
           Value: !var brake velocity
 
-      # --- Fire (Space) ---
+      # --- Fire (Space / on-screen Fire button) ---
       fire key:
-        Type: key down trigger
-        Properties: { Key: "space" }
+        Type: input action
+        Properties: { Action: fire }
         Listeners:
           - EntityId: ship
             BehaviourId: fire bullet

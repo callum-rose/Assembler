@@ -47,20 +47,48 @@ Constants:
 Variables:
   player position: !var player start position
   player velocity: !var initial player velocity
-  left held: false
-  right held: false
+  # Horizontal input (-1..1), written each frame from the `move` action.
+  move x: 0.0
   max height: !var initial max height
   next platform y: !var initial platform y
   is dead: false
 
+# Horizontal movement is wired to one abstract `move` (vector2) action. Desktop
+# binds it to A/D + the arrow keys; mobile binds it to the on-screen joystick.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]   # joystick → a stick control
+
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 260, Y: 260 }
+      Size:   { X: 360, Y: 360 }
+
 Expressions:
   apply input:
-    ArgumentTypes: [ vector, bool, bool, float ]
-    ArgumentNames: [ vel, left, right, speed ]
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ vel, moveX, speed ]
     ReturnType: vector
     Expression: |
-      float vx = right ? speed : (left ? -speed : 0f);
-      return new UnityEngine.Vector3(vx, vel.y, 0f);
+      return new UnityEngine.Vector3(moveX * speed, vel.y, 0f);
 
   integrate position:
     ArgumentTypes: [ vector, vector, float, float ]
@@ -193,8 +221,7 @@ Entities:
             Do: apply input
             With:
               - !var player velocity
-              - !var left held
-              - !var right held
+              - !var move x
               - !var player move speed
 
       integrate position:
@@ -228,69 +255,25 @@ Entities:
                   With:
                     - !var player position
 
-      # ---- Input: track left/right held state via key down + key up ----
-      left down:
-        Type: key down trigger
-        Properties: { Key: "left" }
+      # ---- Input: the `move` action (A/D + arrows on desktop, on-screen joystick
+      #      on mobile) writes its x into `move x` each frame; the tick's
+      #      `apply input` reads it to set horizontal velocity. ----
+      move input:
+        Type: input action
+        Properties: { Action: move }
         Listeners:
           - EntityId: player
-            BehaviourId: set left true
-      left up:
-        Type: key up trigger
-        Properties: { Key: "left" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set left false
-      right down:
-        Type: key down trigger
-        Properties: { Key: "right" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set right true
-      right up:
-        Type: key up trigger
-        Properties: { Key: "right" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set right false
-
-      a down:
-        Type: key down trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set left true
-      a up:
-        Type: key up trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set left false
-      d down:
-        Type: key down trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set right true
-      d up:
-        Type: key up trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: set right false
-
-      set left true:
-        Type: bool variable setter
-        Properties: { VariableId: !var left held, Value: true }
-      set left false:
-        Type: bool variable setter
-        Properties: { VariableId: !var left held, Value: false }
-      set right true:
-        Type: bool variable setter
-        Properties: { VariableId: !var right held, Value: true }
-      set right false:
-        Type: bool variable setter
-        Properties: { VariableId: !var right held, Value: false }
+            BehaviourId: set move x
+      set move x:
+        Type: float variable setter
+        Properties:
+          VariableId: !var move x
+          Value: !expr
+            Do: 'arg0'
+            ArgumentTypes: [ float ]
+            ReturnType: float
+            With:
+              - !output x
 
       # ---- Bouncing on platforms (only when falling) ----
       land on platform:

@@ -55,8 +55,69 @@ Variables:
   # Scratch: number of rows cleared by the most recent lock.
   lines now: 0
   is dead: false
-  # True while the S key is held (global so a piece spawned mid-hold keeps dropping).
+  # True while the soft-drop input is held (global so a piece spawned mid-hold keeps dropping).
   soft dropping: false
+
+# Controls. Each input is a discrete button action (per-press), matching the old
+# key-down semantics: move/rotate/hard-drop fire once per press; soft-drop uses a
+# down+up pair to toggle the global `soft dropping` flag. Desktop binds A/D/W/S +
+# Space; mobile binds the on-screen buttons (◀ ▶ ⟳ ▼ ⤓) below.
+Controls:
+  Actions:
+    move-left:    { Type: button, Phase: down }
+    move-right:   { Type: button, Phase: down }
+    rotate-piece: { Type: button, Phase: down }
+    hard-drop:    { Type: button, Phase: down }
+    soft-press:   { Type: button, Phase: down }   # soft-drop pressed → flag on
+    soft-release: { Type: button, Phase: up }      # soft-drop released → flag off
+
+  Bindings:
+    desktop:
+      move-left:    [ "<Keyboard>/a" ]
+      move-right:   [ "<Keyboard>/d" ]
+      rotate-piece: [ "<Keyboard>/w" ]
+      hard-drop:    [ "<Keyboard>/space" ]
+      soft-press:   [ "<Keyboard>/s" ]
+      soft-release: [ "<Keyboard>/s" ]
+    mobile:
+      move-left:    [ "<Gamepad>/dpad/left" ]
+      move-right:   [ "<Gamepad>/dpad/right" ]
+      rotate-piece: [ "<Gamepad>/buttonNorth" ]
+      hard-drop:    [ "<Gamepad>/buttonSouth" ]
+      soft-press:   [ "<Gamepad>/dpad/down" ]
+      soft-release: [ "<Gamepad>/dpad/down" ]
+
+  OnScreen:
+    - Type: button
+      Action: move-left
+      Label: "◀"
+      Anchor: lower-left
+      Offset: { X: 200, Y: 210 }
+      Size:   { X: 210, Y: 210 }
+    - Type: button
+      Action: move-right
+      Label: "▶"
+      Anchor: lower-left
+      Offset: { X: 440, Y: 210 }
+      Size:   { X: 210, Y: 210 }
+    - Type: button
+      Action: soft-press
+      Label: "▼"
+      Anchor: lower-left
+      Offset: { X: 320, Y: 440 }
+      Size:   { X: 210, Y: 210 }
+    - Type: button
+      Action: rotate-piece
+      Label: "⟳"
+      Anchor: lower-right
+      Offset: { X: 210, Y: 450 }
+      Size:   { X: 230, Y: 230 }
+    - Type: button
+      Action: hard-drop
+      Label: "⤓"
+      Anchor: lower-right
+      Offset: { X: 210, Y: 200 }
+      Size:   { X: 230, Y: 230 }
 
 Expressions:
   # ---- pure helpers -------------------------------------------------------
@@ -301,8 +362,8 @@ Templates:
 
       # ---- horizontal movement ----
       left key:
-        Type: key down trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: move-left }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: left gate
@@ -325,8 +386,8 @@ Templates:
             Do: move origin
             With: [ !var origin, -1, 0 ]
       right key:
-        Type: key down trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: move-right }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: right gate
@@ -351,8 +412,8 @@ Templates:
 
       # ---- rotation ----
       rotate key:
-        Type: key down trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: rotate-piece }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: rotate gate
@@ -386,14 +447,14 @@ Templates:
       # `soft interval` seconds and, while the flag is set, drives the same
       # fall-ok / fall-blocked gates as gravity (so it locks on landing).
       soft press:
-        Type: key down trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: soft-press }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: set soft on
       soft release:
-        Type: key up trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: soft-release }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: set soft off
@@ -420,8 +481,8 @@ Templates:
 
       # ---- hard drop (teleport to landing, then lock) ----
       hard drop key:
-        Type: key down trigger
-        Properties: { Key: "space" }
+        Type: input action
+        Properties: { Action: hard-drop }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: apply hard drop

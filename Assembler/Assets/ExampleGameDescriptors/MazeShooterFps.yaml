@@ -84,6 +84,9 @@ Controls:
     look: { Type: value, ValueType: vector2 }   # raw mouse delta -> axis x (yaw)
     shoot: { Type: button, Phase: down }          # fire one bullet on press
     quit: { Type: button, Phase: down }
+    # Arrow-key / on-screen turning (the mouse `look` action stays desktop-only).
+    turn-left:  { Type: button, Phase: hold }
+    turn-right: { Type: button, Phase: hold }
   Bindings:
     desktop:
       move:
@@ -101,6 +104,48 @@ Controls:
         - "<Keyboard>/space"
       quit:
         - "<Keyboard>/escape"
+      turn-left:  [ "<Keyboard>/leftArrow" ]
+      turn-right: [ "<Keyboard>/rightArrow" ]
+    # Mobile scheme: left joystick moves; on-screen buttons turn / fire / quit.
+    # `look` (mouse delta) has no mobile binding — touch turning is the dpad buttons.
+    mobile:
+      move:       [ "<Gamepad>/leftStick" ]
+      shoot:      [ "<Gamepad>/buttonSouth" ]
+      quit:       [ "<Gamepad>/buttonEast" ]
+      turn-left:  [ "<Gamepad>/dpad/left" ]
+      turn-right: [ "<Gamepad>/dpad/right" ]
+
+  # On-screen touch widgets, rendered only when the active platform is Mobile.
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 360, Y: 360 }
+    - Type: button
+      Action: turn-left
+      Label: "◀"
+      Anchor: lower-right
+      Offset: { X: 470, Y: 220 }
+      Size:   { X: 200, Y: 200 }
+    - Type: button
+      Action: turn-right
+      Label: "▶"
+      Anchor: lower-right
+      Offset: { X: 240, Y: 220 }
+      Size:   { X: 200, Y: 200 }
+    - Type: button
+      Action: shoot
+      Label: Fire
+      Anchor: lower-right
+      Offset: { X: 250, Y: 460 }
+      Size:   { X: 220, Y: 220 }
+    - Type: button
+      Action: quit
+      Label: Quit
+      Anchor: upper-right
+      Offset: { X: 140, Y: 120 }
+      Size:   { X: 160, Y: 160 }
 
 Expressions:
   # WASD input (axis) rotated by the player's yaw, scaled to a rigidbody velocity.
@@ -335,8 +380,8 @@ Entities:
               - !output axis
               - !var mouse sensitivity
       turn left key:
-        Type: key hold trigger
-        Properties: { Key: "left" }
+        Type: input action
+        Properties: { Action: turn-left }
         Listeners:
           - EntityId: player
             BehaviourId: turn left
@@ -344,8 +389,8 @@ Entities:
         Type: rotate
         Properties: { Displacement: !var arrow turn back }
       turn right key:
-        Type: key hold trigger
-        Properties: { Key: "right" }
+        Type: input action
+        Properties: { Action: turn-right }
         Listeners:
           - EntityId: player
             BehaviourId: turn right
