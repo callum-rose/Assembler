@@ -19,9 +19,12 @@ namespace Assembler.Behaviours.Rotation
 	{
 		public IGameClock Clock { get; set; } = null!;
 
-		private void Update()
+		private void Update() => Step();
+
+		internal void Step()
 		{
-			var offset = Data.Target.Get() - transform.position;
+			var ctx = TriggerContext.Empty;
+			var offset = Data.Target.Get(ctx) - transform.position;
 
 			// Nothing to face if the target is directly above/below (no XZ heading); keep the current rotation.
 			if (offset.x * offset.x + offset.z * offset.z < 1e-8f)
@@ -31,7 +34,7 @@ namespace Assembler.Behaviours.Rotation
 
 			var desiredYaw = SteeringMath.YawFromDirectionXZ(offset);
 			var euler = transform.eulerAngles;
-			var turnRate = Data.TurnRate.Get();
+			var turnRate = Data.TurnRate.Get(ctx);
 			var yaw = turnRate > 0f
 				? Mathf.MoveTowardsAngle(euler.y, desiredYaw, turnRate * Clock.DeltaTime)
 				: desiredYaw;

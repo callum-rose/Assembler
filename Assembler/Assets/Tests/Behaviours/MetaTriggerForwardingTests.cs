@@ -1,8 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
-using Assembler.Behaviours.Triggers.Conditionals;
-using Assembler.Behaviours.Triggers.Timing;
+using Assembler.Behaviours.Gating;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
