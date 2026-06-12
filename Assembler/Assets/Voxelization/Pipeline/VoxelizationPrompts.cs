@@ -103,28 +103,22 @@ namespace Assembler.Voxelization
 			"poses:\n" +
 			"  idle: {}\n" +
 			"```\n\n" +
-			"If a reference image is attached, it is AUTHORITATIVE: extract its palette (locked — the model palette " +
-			"must use exactly these colours), proportions, signature features, and a front silhouette, and ALSO " +
-			"output a fenced block labelled `brief`:\n" +
-			"```brief\n" +
-			"reference_brief:\n" +
-			"  source: <reference name>\n" +
-			"  real_world_dims: { height: 1.8, width: 0.5, depth: 0.3 }\n" +
-			"  palette: { S: \"#e0b080\" }\n" +
-			"  proportions: { head: 0.13, torso: 0.4, legs: 0.47 }\n" +
-			"  signature_features: [\"blue shirt\", \"brown boots\"]\n" +
-			"  silhouette:\n" +
-			"    face: front\n" +
-			"    size: [<model width in voxels>, <model height in voxels>]\n" +
-			"    rows:\n" +
-			"      - \"..##..\"\n" +
-			"```\n" +
-			"Silhouette rows are listed top row first; '#' = solid, '.' = empty; the grid must match the planned " +
-			"model's front bounding box. Mark gaps between limbs and the body (and between legs) as '.' — never blob " +
-			"separate shapes into one solid mass; those gaps are signature features. For bilateral assets every row " +
-			"must be exactly left-right symmetric and the width odd. Without an image, output no `brief` block.";
+			"A REFERENCE BRIEF may be provided in the user message. It was transcribed from the reference image by a " +
+			"separate, independent pass and is AUTHORITATIVE — you cannot reinterpret it to fit your design:\n" +
+			"- Lock the palette to the brief's colours exactly.\n" +
+			"- Plan part sizes DIRECTLY from the silhouette rows ('#' = solid, '.' = empty, top row first). Read limb " +
+			"thickness from its columns: a 1-cell-wide arm in the silhouette is a 1-voxel-thick part, never wider. " +
+			"Preserve its gaps (e.g. between arms and torso) — never fill them with part volume.\n" +
+			"- These are CHECKED DETERMINISTICALLY and the plan is rejected otherwise: the model's overall width must " +
+			"match the silhouette width (within 1 voxel), and every silhouette cell must fall inside some part's box.\n" +
+			"If the reference image is also attached, use it only for styling detail the brief doesn't capture.";
 
-		public static string PlanningUser(SetManifest manifest, ManifestAsset asset, bool hasImage, string refinementNote)
+		public static string PlanningUser(
+			SetManifest manifest,
+			ManifestAsset asset,
+			ReferenceBrief brief,
+			bool hasImage,
+			string refinementNote)
 		{
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
@@ -139,10 +133,15 @@ namespace Assembler.Voxelization
 			sb.Append("Other assets in the set (for stylistic consistency): ")
 				.Append(string.Join(", ", others)).Append('\n');
 
+			if (!brief.IsEmpty)
+			{
+				sb.Append("\nReference brief (authoritative — plan part boxes to match its silhouette exactly):\n");
+				sb.Append(ReferenceBriefYaml.Write(brief));
+			}
+
 			if (hasImage)
 			{
-				sb.Append("\nA reference image of ").Append(asset.Reference)
-					.Append(" is attached. It is authoritative for palette, proportions, and silhouette.\n");
+				sb.Append("\nThe reference image is attached for styling detail.\n");
 			}
 
 			if (refinementNote.Length > 0)
@@ -151,6 +150,79 @@ namespace Assembler.Voxelization
 			}
 
 			sb.Append("\nPlan the model.");
+			return sb.ToString();
+		}
+
+		// ---- Stage 1a: reference brief extraction -----------------------------
+
+		public const string BriefSystem =
+			"You transcribe ONE reference image into a structured brief for a voxel-model pipeline. You do NOT plan, " +
+			"design, or improve anything — you only record what the image shows, as precisely as a scanner.\n\n" +
+			"The image typically shows a voxel/pixel-art style subject on a plain background: identify the underlying " +
+			"cell grid and read it cell by cell. For other art, judge the cells at the requested resolution.\n\n" +
+			"Output exactly one fenced block labelled `brief`:\n" +
+			"```brief\n" +
+			"reference_brief:\n" +
+			"  source: <reference name>\n" +
+			"  real_world_dims: { height: 1.8, width: 0.5, depth: 0.3 }\n" +
+			"  palette: { S: \"#e0b080\" }\n" +
+			"  proportions: { head: 0.13, torso: 0.4, legs: 0.47 }\n" +
+			"  signature_features: [\"blue shirt\", \"brown boots\", \"1-voxel gap between arms and torso\"]\n" +
+			"  silhouette:\n" +
+			"    face: front\n" +
+			"    size: [<width in cells>, <height in cells>]\n" +
+			"    rows:\n" +
+			"      - \"..##..\"\n" +
+			"```\n" +
+			"Rules:\n" +
+			"- Palette: at most 12 colours, single-character keys, hex values read from the image.\n" +
+			"- Silhouette rows are listed top row first; '#' = solid, '.' = empty; one character per cell.\n" +
+			"- COUNT CAREFULLY: the silhouette width and height must match the subject's actual cell counts. Trace " +
+			"each row of the image before writing it.\n" +
+			"- Mark gaps between limbs and the body (and between legs) as '.' — never blob separate shapes into one " +
+			"solid mass; gaps are signature features and belong in signature_features too.\n" +
+			"- For bilateral subjects the rows must be exactly left-right symmetric (prefer an odd width).\n" +
+			"- proportions are fractions of total height per region, summing to ~1.";
+
+		public static string BriefUser(SetManifest manifest, ManifestAsset asset) =>
+			$"Reference: {asset.Reference}\n" +
+			$"Subject: {asset.Id}\n" +
+			$"Real-world height: {YamlNodes.Float(asset.RealWorldHeight)}m at {YamlNodes.Float(manifest.Unit)}m/voxel " +
+			$"-> transcribe the silhouette at {manifest.HeightInVoxels(asset)} rows tall if the image's own grid allows.\n" +
+			$"Symmetry: {asset.Symmetry}\n\n" +
+			"Transcribe the attached image into the brief.";
+
+		// ---- Stage 3: review -------------------------------------------------
+
+		public const string ReviewSystem =
+			"You review a finished voxel model against its reference. You see ASCII projections of what was " +
+			"actually built (palette keys, top row first) and, when available, the original reference image.\n\n" +
+			CoordinateDoc + "\n\n" +
+			"Flag ONLY substantive structural problems: limbs the wrong length or thickness, parts in the wrong " +
+			"place (including shifted in depth — compare the SIDE/TOP views), upside-down details (e.g. shoes at " +
+			"the TOP of a leg), missing gaps between limbs and body, or colour regions in the wrong place. Ignore " +
+			"single-voxel taste differences and styling.\n\n" +
+			"If the model is a faithful match, reply with exactly: OK\n" +
+			"Otherwise reply with a short numbered list of corrections, phrased as instructions to the planner " +
+			"(which parts to resize, move, or re-shape, and how). No preamble.";
+
+		public static string ReviewUser(VoxelRigModel model, string views, bool hasImage)
+		{
+			var sb = new StringBuilder();
+			sb.Append("Model: ").Append(model.Id)
+				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall, ")
+				.Append(model.Parts.Count).Append(" parts)\n");
+			sb.Append("Palette:\n");
+			foreach (var entry in model.Palette)
+			{
+				sb.Append("  ").Append(entry.Key).Append(" = ").Append(entry.ToHex()).Append('\n');
+			}
+
+			sb.Append('\n').Append(views).Append('\n');
+			sb.Append(hasImage
+				? "\nThe original reference image is attached — it is the ground truth. Compare the built views against it.\n"
+				: "\nNo reference image: judge against the model's name and sane anatomy/structure.\n");
+			sb.Append("\nReply OK, or a numbered list of corrections for the planner.");
 			return sb.ToString();
 		}
 
@@ -234,6 +306,11 @@ namespace Assembler.Voxelization
 				.Append(", y ").Append(worldMin.y).Append("..").Append(worldMax.y)
 				.Append(", z ").Append(worldMin.z).Append("..").Append(worldMax.z)
 				.Append(" (y=0 is the ground)\n");
+			if (worldMin.y == 0)
+			{
+				sb.Append("  GROUND: this part touches the ground. Your FIRST layer is the LOWEST row of the part — " +
+						  "feet/shoes/base details go in the first layer, never the last.\n");
+			}
 			if (planned.Note.Length > 0)
 			{
 				sb.Append("  note: ").Append(planned.Note).Append('\n');

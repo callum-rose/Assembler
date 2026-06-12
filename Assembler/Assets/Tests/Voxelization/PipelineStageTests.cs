@@ -111,7 +111,7 @@ poses:
 		{
 			var gateway = new FakeGateway().Enqueue(PlanResponse);
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			// The plan said real_world_height: 99; the manifest owns scale.
@@ -127,7 +127,7 @@ poses:
 			var config = VoxelizationConfig.Default with { PartVoxelBudget = 3 };
 			var gateway = new FakeGateway().Enqueue(PlanResponse);
 			var plan = new ModelPlanner(gateway, config)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			var planned = (PlannedPartData)plan.Skeleton.Parts.Single().Data;
@@ -154,7 +154,7 @@ poses:
 				.Enqueue(PlanResponse.Replace("size: [2, 2, 1]", "size: [3, 2, 1]"));
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(manifest, manifest.Assets[0], AnthropicImage.None, string.Empty, CancellationToken.None)
+				.PlanAsync(manifest, manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
@@ -163,7 +163,7 @@ poses:
 		}
 
 		[Test]
-		public void ModelPlanner_SymmetrizesTheBriefSilhouetteForBilateralAssets()
+		public void BriefExtractor_SymmetrizesTheSilhouetteForBilateralAssets()
 		{
 			var manifest = new SetManifest
 			{
@@ -174,8 +174,7 @@ poses:
 					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Symmetry = "bilateral", Reference = "ref.png" },
 				},
 			};
-			var response = PlanResponse.Replace("size: [2, 2, 1]", "size: [3, 2, 1]") + @"
-```brief
+			var gateway = new FakeGateway().Enqueue(@"```brief
 reference_brief:
   source: ref.png
   silhouette:
@@ -184,16 +183,66 @@ reference_brief:
     rows:
       - ""#..""
       - ""##.""
-```";
-			var gateway = new FakeGateway().Enqueue(response);
+```");
 
-			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }),
-					string.Empty, CancellationToken.None)
+			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
+				.ExtractAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }), CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			// Each row is unioned with its own reflection.
-			Assert.That(plan.Brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "###" }));
+			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "###" }));
+			Assert.That(gateway.Calls.Single().Stage, Is.EqualTo(BriefExtractor.Stage));
+		}
+
+		[Test]
+		public void SetOrchestrator_ExtractsTheBriefBeforePlanning_WhenAReferenceImageExists()
+		{
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Reference = "ref.png" },
+				},
+			};
+			var images = new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>
+			{
+				["ref.png"] = new("image/png", new byte[] { 1 }),
+			});
+			var gateway = new FakeGateway()
+				.Enqueue(@"```brief
+reference_brief:
+  source: ref.png
+  silhouette:
+    face: front
+    size: [2, 2]
+    rows:
+      - ""##""
+      - ""##""
+```")
+				.Enqueue(PlanResponse)
+				.Enqueue(LayersResponse)
+				.Enqueue("OK");
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				images,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var result = orchestrator
+				.RunAssetAsync(manifest, manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(result.Status, Is.EqualTo(ModelStatus.Ready),
+				result.Error + "\n" + string.Join("\n", result.Report.Issues));
+			Assert.That(gateway.Calls.Select(c => c.Stage).Take(2),
+				Is.EqualTo(new[] { BriefExtractor.Stage, ModelPlanner.Stage }));
+
+			// The planner received the transcribed silhouette as locked input.
+			Assert.That(gateway.Calls[1].Messages[0].Content, Does.Contain("Reference brief (authoritative"));
+			Assert.That(result.Brief.Silhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
 		}
 
 		[Test]
@@ -289,7 +338,8 @@ poses:
 			var gateway = new FakeGateway()
 				.Enqueue(plan)
 				.Enqueue("```layers\nWWW\nWW.\n```")
-				.Enqueue("```layers\nWWW\nW.W\n```");
+				.Enqueue("```layers\nWWW\nW.W\n```")
+				.Enqueue("OK");
 			var orchestrator = new SetOrchestrator(
 				gateway,
 				VoxelizationConfig.Default,
@@ -303,7 +353,8 @@ poses:
 
 			Assert.That(result.Status, Is.EqualTo(ModelStatus.Ready),
 				result.Error + "\n" + string.Join("\n", result.Report.Issues));
-			Assert.That(gateway.Calls.Count, Is.EqualTo(3));
+			Assert.That(gateway.Calls.Count, Is.EqualTo(4), "plan, author, re-author, review");
+			Assert.That(gateway.Calls[3].Stage, Is.EqualTo(SetOrchestrator.ReviewStage));
 
 			var reauthor = gateway.Calls[2].Messages[0].Content;
 			Assert.That(reauthor, Does.Contain("not left-right symmetric"));
@@ -312,9 +363,36 @@ poses:
 		}
 
 		[Test]
+		public void SetOrchestrator_ReviewCorrectionsTriggerAFullReplanWithTheNote()
+		{
+			var gateway = new FakeGateway()
+				.Enqueue(PlanResponse)
+				.Enqueue(LayersResponse)
+				.Enqueue("1. Make the crate one voxel wider at the base.") // review → corrections
+				.Enqueue(PlanResponse)                                     // re-plan carries the note
+				.Enqueue(LayersResponse);
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				NullReferenceImageSource.Instance,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var result = orchestrator
+				.RunAssetAsync(Manifest, Manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			// MaxReviewRounds = 1: plan, author, review, re-plan, author — no second review.
+			Assert.That(result.Status, Is.EqualTo(ModelStatus.Ready),
+				result.Error + "\n" + string.Join("\n", result.Report.Issues));
+			Assert.That(gateway.Calls.Count, Is.EqualTo(5));
+			Assert.That(gateway.Calls[3].Messages[0].Content, Does.Contain("one voxel wider"));
+		}
+
+		[Test]
 		public void SetOrchestrator_RunsPlanAuthorAssembleValidateExport()
 		{
-			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse);
+			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse).Enqueue("OK");
 			var orchestrator = new SetOrchestrator(
 				gateway,
 				VoxelizationConfig.Default,

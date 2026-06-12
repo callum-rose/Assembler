@@ -22,6 +22,14 @@ namespace Assembler.Voxelization
 		/// <summary>Validation-driven re-author rounds per model after the first assembly.</summary>
 		public int MaxValidationRounds { get; init; } = 2;
 
+		/// <summary>
+		/// Post-validation review rounds: a vision-capable call compares the
+		/// built views (plus the reference image) against the intent, and its
+		/// corrections trigger a full re-plan. Catches what code checks cannot:
+		/// upside-down details, depth shifts, wrong proportions on a clean pass.
+		/// </summary>
+		public int MaxReviewRounds { get; init; } = 1;
+
 		/// <summary>Declared-volume cap above which a planned layers part is demoted to a script part.</summary>
 		public int PartVoxelBudget { get; init; } = 4000;
 
@@ -44,7 +52,9 @@ namespace Assembler.Voxelization
 		public string ModelForStage(string stage) => stage switch
 		{
 			ManifestGenerator.Stage => ManifestModel,
+			BriefExtractor.Stage => PlanningModel,
 			ModelPlanner.Stage => PlanningModel,
+			SetOrchestrator.ReviewStage => PlanningModel,
 			_ => AuthoringModel,
 		};
 	}

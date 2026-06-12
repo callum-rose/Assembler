@@ -10,11 +10,12 @@ namespace Assembler.Voxelization
 	public sealed record ModelPlan(VoxelRigModel Skeleton, ReferenceBrief Brief);
 
 	/// <summary>
-	/// Stage 1: one call per model producing the part skeleton (and, iff a
-	/// reference image is attached, the reference brief — the only vision call
-	/// in the pipeline). Code re-anchors whatever came back to the manifest's
-	/// unit/height and demotes over-budget layers parts to scripts, so the
-	/// scale bible and the voxel budget hold regardless of what the model said.
+	/// Stage 1b: one call per model producing the part skeleton. The reference
+	/// brief arrives as locked INPUT (independently transcribed by
+	/// <see cref="BriefExtractor"/>), so the deterministic gates judge the plan
+	/// against ground truth the planner cannot bend to fit its own design. Code
+	/// re-anchors whatever came back to the manifest's unit/height and demotes
+	/// over-budget layers parts to scripts.
 	/// </summary>
 	public sealed class ModelPlanner
 	{
@@ -36,11 +37,12 @@ namespace Assembler.Voxelization
 			SetManifest manifest,
 			ManifestAsset asset,
 			AnthropicImage referenceImage,
+			ReferenceBrief brief,
 			string refinementNote,
 			CancellationToken ct)
 		{
 			var hasImage = !referenceImage.IsEmpty;
-			var userText = VoxelizationPrompts.PlanningUser(manifest, asset, hasImage, refinementNote);
+			var userText = VoxelizationPrompts.PlanningUser(manifest, asset, brief, hasImage, refinementNote);
 			var messages = new List<AnthropicMessage>
 			{
 				hasImage
@@ -53,7 +55,7 @@ namespace Assembler.Voxelization
 				var response = await _gateway.SendAsync(
 					Stage, _config.PlanningModel, VoxelizationPrompts.PlanningSystem(_config), messages, ct).ConfigureAwait(false);
 
-				var (plan, feedback) = TryParse(response, manifest, asset, hasImage);
+				var (plan, feedback) = TryParse(response, manifest, asset, brief);
 				if (plan != null)
 				{
 					return plan;
@@ -69,16 +71,16 @@ namespace Assembler.Voxelization
 			}
 		}
 
-		private (ModelPlan? Plan, string Feedback) TryParse(string response, SetManifest manifest, ManifestAsset asset, bool hasImage)
+		private (ModelPlan? Plan, string Feedback) TryParse(string response, SetManifest manifest, ManifestAsset asset, ReferenceBrief brief)
 		{
 			ModelPlan plan;
 			try
 			{
-				plan = Parse(response, manifest, asset, hasImage);
+				plan = Parse(response, manifest, asset, brief);
 			}
 			catch (FormatException ex)
 			{
-				return (null, $"That plan could not be parsed: {ex.Message}\nEmit the corrected fenced block(s).");
+				return (null, $"That plan could not be parsed: {ex.Message}\nEmit the corrected ```vmodel block.");
 			}
 
 			var geometryErrors = PlanGeometryChecks.Errors(plan.Skeleton);
@@ -87,17 +89,17 @@ namespace Assembler.Voxelization
 				return (null,
 					"That skeleton can never assemble bilaterally symmetric — these were rejected by deterministic geometry checks:\n- " +
 					string.Join("\n- ", geometryErrors) +
-					"\nFix the skeleton and emit the corrected fenced block(s).");
+					"\nFix the skeleton and emit the corrected ```vmodel block.");
 			}
 
 			var feasibility = PlanGeometryChecks.SilhouetteFeasibilityError(
-				plan.Skeleton, plan.Brief, _config.SilhouetteCoverageThreshold);
+				plan.Skeleton, brief, _config.SilhouetteCoverageThreshold);
 			return feasibility == null
 				? (plan, string.Empty)
-				: (null, feasibility + "\nRe-emit BOTH the ```vmodel and ```brief blocks.");
+				: (null, feasibility + "\nEmit the corrected ```vmodel block.");
 		}
 
-		private ModelPlan Parse(string response, SetManifest manifest, ManifestAsset asset, bool hasImage)
+		private ModelPlan Parse(string response, SetManifest manifest, ManifestAsset asset, ReferenceBrief brief)
 		{
 			var vmodelYaml = FencedBlockExtractor.Extract(response, "vmodel")
 							 ?? throw new FormatException("Response contained no ```vmodel fenced block.");
@@ -123,41 +125,7 @@ namespace Assembler.Voxelization
 				Parts = skeleton.Parts.Select(EnforceBudget).ToArray(),
 			};
 
-			var brief = ReferenceBrief.None;
-			if (hasImage)
-			{
-				var briefYaml = FencedBlockExtractor.Extract(response, "brief")
-								?? throw new FormatException("A reference image was attached but the response contained no ```brief fenced block.");
-				brief = ReferenceBriefYaml.Read(briefYaml) with { Source = asset.Reference };
-				if (skeleton.IsBilateral)
-				{
-					brief = SymmetrizeSilhouette(brief);
-				}
-			}
-
 			return new ModelPlan(skeleton, brief);
-		}
-
-		/// <summary>
-		/// A lopsided vision read of a bilateral subject would poison both the
-		/// authoring guidance and the silhouette IoU oracle, so the silhouette is
-		/// forced symmetric in code: each row becomes the union of itself and its
-		/// reflection.
-		/// </summary>
-		private static ReferenceBrief SymmetrizeSilhouette(ReferenceBrief brief)
-		{
-			if (brief.Silhouette.IsEmpty)
-			{
-				return brief;
-			}
-
-			var rows = brief.Silhouette.Rows
-				.Select(row => new string(Enumerable.Range(0, row.Length)
-					.Select(i => row[i] == '#' || row[row.Length - 1 - i] == '#' ? '#' : '.')
-					.ToArray()))
-				.ToArray();
-
-			return brief with { Silhouette = brief.Silhouette with { Rows = rows } };
 		}
 
 		private VoxelPart EnforceBudget(VoxelPart part)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.Anthropic;
 
 namespace Assembler.Voxelization
 {
@@ -42,9 +43,13 @@ namespace Assembler.Voxelization
 	/// </summary>
 	public sealed class SetOrchestrator
 	{
+		public const string ReviewStage = "3-review";
+
+		private readonly IAnthropicGateway _gateway;
 		private readonly VoxelizationConfig _config;
 		private readonly IReferenceImageSource _images;
 		private readonly TokenUsageTracker _usage;
+		private readonly BriefExtractor _briefer;
 		private readonly ModelPlanner _planner;
 		private readonly PartAuthor _author;
 		private readonly ModelAssembler _assembler;
@@ -57,7 +62,9 @@ namespace Assembler.Voxelization
 			IPartScriptRunner scriptRunner,
 			TokenUsageTracker usage)
 		{
+			_gateway = gateway;
 			_config = config;
+			_briefer = new BriefExtractor(gateway, config);
 			_images = images;
 			_usage = usage;
 			_planner = new ModelPlanner(gateway, config);
@@ -86,55 +93,90 @@ namespace Assembler.Voxelization
 		{
 			try
 			{
-				progress?.Report($"{asset.Id}: planning...");
 				var image = asset.HasReference
 					? await _images.LoadAsync(asset.Reference, ct)
-					: Assembler.Anthropic.AnthropicImage.None;
-				var plan = await _planner.PlanAsync(manifest, asset, image, refinementNote, ct);
-				progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
+					: AnthropicImage.None;
 
-				var model = plan.Skeleton;
-				var plannedById = model.Parts
-					.Where(p => p.Data is PlannedPartData)
-					.ToDictionary(p => p.Id, p => (PlannedPartData)p.Data);
-
-				foreach (var partId in plannedById.Keys)
+				var brief = ReferenceBrief.None;
+				if (!image.IsEmpty)
 				{
-					ct.ThrowIfCancellationRequested();
-					var planned = plannedById[partId];
-					progress?.Report(
-						$"{asset.Id}: authoring {partId} ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
-						$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}{Note(planned)})...");
-					model = await AuthorPartAsync(model, plan.Brief, partId, planned, string.Empty, ct);
+					progress?.Report($"{asset.Id}: transcribing the reference image...");
+					brief = await _briefer.ExtractAsync(manifest, asset, image, ct);
+					progress?.Report($"{asset.Id}: reference brief — {brief.Palette.Count} colours, " +
+									 $"silhouette {brief.Silhouette.Size.x}x{brief.Silhouette.Size.y}");
 				}
 
-				progress?.Report($"{asset.Id}: assembling...");
-				var assembled = await _assembler.AssembleAsync(model, ct);
-				var report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
-				ReportOutcome(asset.Id, assembled, report, progress);
+				var note = refinementNote;
+				ModelPlan plan = null!;
+				VoxelRigModel model = null!;
+				AssembledModel assembled = null!;
+				ValidationReport report = null!;
 
-				for (var round = 1; round <= _config.MaxValidationRounds && !report.IsValid; round++)
+				for (var review = 0; ; review++)
 				{
-					var failing = report.FailingPartIds.Where(plannedById.ContainsKey).ToList();
-					if (failing.Count == 0)
+					progress?.Report($"{asset.Id}: planning...");
+					plan = await _planner.PlanAsync(manifest, asset, image, brief, note, ct);
+					progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
+
+					model = plan.Skeleton;
+					var plannedById = model.Parts
+						.Where(p => p.Data is PlannedPartData)
+						.ToDictionary(p => p.Id, p => (PlannedPartData)p.Data);
+
+					foreach (var partId in plannedById.Keys)
+					{
+						ct.ThrowIfCancellationRequested();
+						var planned = plannedById[partId];
+						progress?.Report(
+							$"{asset.Id}: authoring {partId} ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
+							$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}{Note(planned)})...");
+						model = await AuthorPartAsync(model, plan.Brief, partId, planned, string.Empty, ct);
+					}
+
+					progress?.Report($"{asset.Id}: assembling...");
+					assembled = await _assembler.AssembleAsync(model, ct);
+					report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
+					ReportOutcome(asset.Id, assembled, report, progress);
+
+					for (var round = 1; round <= _config.MaxValidationRounds && !report.IsValid; round++)
+					{
+						var failing = report.FailingPartIds.Where(plannedById.ContainsKey).ToList();
+						if (failing.Count == 0)
+						{
+							break;
+						}
+
+						var views = RenderedViews(assembled, plan.Brief);
+						foreach (var partId in failing)
+						{
+							ct.ThrowIfCancellationRequested();
+							var issuesText = string.Join("\n", report.Issues
+								.Where(i => i.PartId == partId)
+								.Select(i => i.ToString()));
+							progress?.Report($"{asset.Id}: re-authoring {partId} (round {round}) because: {issuesText}");
+							model = await AuthorPartAsync(model, plan.Brief, partId, plannedById[partId], $"{issuesText}\n\n{views}", ct);
+						}
+
+						assembled = await _assembler.AssembleAsync(model, ct);
+						report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
+						ReportOutcome(asset.Id, assembled, report, progress);
+					}
+
+					if (review >= _config.MaxReviewRounds)
 					{
 						break;
 					}
 
-					var views = RenderedViews(assembled, plan.Brief);
-					foreach (var partId in failing)
+					progress?.Report($"{asset.Id}: reviewing the result against the reference...");
+					var corrections = await ReviewAsync(image, model, assembled, plan.Brief, ct);
+					if (corrections.Length == 0)
 					{
-						ct.ThrowIfCancellationRequested();
-						var issuesText = string.Join("\n", report.Issues
-							.Where(i => i.PartId == partId)
-							.Select(i => i.ToString()));
-						progress?.Report($"{asset.Id}: re-authoring {partId} (round {round}) because: {issuesText}");
-						model = await AuthorPartAsync(model, plan.Brief, partId, plannedById[partId], $"{issuesText}\n\n{views}", ct);
+						progress?.Report($"{asset.Id}: review — looks faithful");
+						break;
 					}
 
-					assembled = await _assembler.AssembleAsync(model, ct);
-					report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
-					ReportOutcome(asset.Id, assembled, report, progress);
+					progress?.Report($"{asset.Id}: review requested corrections — re-planning:\n{corrections}");
+					note = refinementNote.Length > 0 ? $"{refinementNote}\n{corrections}" : corrections;
 				}
 
 				progress?.Report($"{asset.Id}: exporting...");
@@ -227,6 +269,39 @@ namespace Assembler.Voxelization
 				progress?.Report($"{assetId}: validation found {report.Issues.Count} issue(s):\n  " +
 								 string.Join("\n  ", report.Issues.Select(i => i.ToString())));
 			}
+		}
+
+		/// <summary>
+		/// One vision-capable call comparing the built ASCII views (and the
+		/// original reference image when there is one) against the intent.
+		/// Returns an empty string when the model is approved, otherwise the
+		/// reviewer's corrections — fed back into a full re-plan, since shape
+		/// problems live in part sizes and pivots that re-authoring cannot touch.
+		/// </summary>
+		private async Task<string> ReviewAsync(
+			AnthropicImage image,
+			VoxelRigModel model,
+			AssembledModel assembled,
+			ReferenceBrief brief,
+			CancellationToken ct)
+		{
+			var user = VoxelizationPrompts.ReviewUser(model, RenderedViews(assembled, brief), !image.IsEmpty);
+			var messages = new List<AnthropicMessage>
+			{
+				image.IsEmpty
+					? new AnthropicMessage("user", user)
+					: new AnthropicMessage("user", user, new[] { image }),
+			};
+
+			var response = await _gateway.SendAsync(
+				ReviewStage, _config.PlanningModel, VoxelizationPrompts.ReviewSystem, messages, ct);
+			return IsApproval(response) ? string.Empty : response.Trim();
+		}
+
+		private static bool IsApproval(string response)
+		{
+			var firstLine = response.Trim().Split('\n')[0].Trim().TrimEnd('.', '!');
+			return firstLine.Equals("OK", StringComparison.OrdinalIgnoreCase);
 		}
 
 		private async Task<VoxelRigModel> AuthorPartAsync(
