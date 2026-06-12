@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -120,14 +121,15 @@ namespace Assembler.Voxelization
 						break;
 					}
 
+					var views = RenderedViews(assembled, plan.Brief);
 					foreach (var partId in failing)
 					{
 						ct.ThrowIfCancellationRequested();
-						var feedback = string.Join("\n", report.Issues
+						var issuesText = string.Join("\n", report.Issues
 							.Where(i => i.PartId == partId)
 							.Select(i => i.ToString()));
-						progress?.Report($"{asset.Id}: re-authoring {partId} (round {round}) because: {feedback}");
-						model = await AuthorPartAsync(model, plan.Brief, partId, plannedById[partId], feedback, ct);
+						progress?.Report($"{asset.Id}: re-authoring {partId} (round {round}) because: {issuesText}");
+						model = await AuthorPartAsync(model, plan.Brief, partId, plannedById[partId], $"{issuesText}\n\n{views}", ct);
 					}
 
 					assembled = await _assembler.AssembleAsync(model, ct);
@@ -177,6 +179,36 @@ namespace Assembler.Voxelization
 
 			return $"{skeleton.Parts.Count} parts: {string.Join(", ", parts)}; " +
 				   $"{skeleton.Palette.Count} colours; {skeleton.Poses.Count} pose(s); target {skeleton.HeightInVoxels} voxels tall";
+		}
+
+		/// <summary>
+		/// ASCII views of what was actually assembled, given to re-authoring calls
+		/// so the model can see its mistake instead of inferring it from an issue
+		/// string. Front + side + top suffice: bilateral models mirror left/right,
+		/// and back/bottom rarely disambiguate anything.
+		/// </summary>
+		private static string RenderedViews(AssembledModel assembled, ReferenceBrief brief)
+		{
+			var palette = assembled.Model.Palette;
+			var sb = new StringBuilder();
+			sb.Append("What the WHOLE assembled model currently looks like (palette keys, top row first):\n");
+			sb.Append("FRONT view (x right, y up):\n")
+				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Front)).Append('\n');
+			sb.Append("SIDE view, from the model's right (z right towards the viewer-side, y up):\n")
+				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Side)).Append('\n');
+			sb.Append("TOP view (x right; top row is the model's front):\n")
+				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Top)).Append('\n');
+
+			if (!brief.Silhouette.IsEmpty)
+			{
+				sb.Append("Reference front silhouette the FRONT view must match ('#' solid):\n");
+				foreach (var row in brief.Silhouette.Rows)
+				{
+					sb.Append(row).Append('\n');
+				}
+			}
+
+			return sb.ToString().TrimEnd();
 		}
 
 		private static string Note(PlannedPartData planned) =>

@@ -237,6 +237,81 @@ reference_brief:
 		}
 
 		[Test]
+		public void PartUser_IncludesWorldExtent_AndBriefSilhouette()
+		{
+			var planned = new PlannedPartData(PartEncoding.Layers, new Vector3Int(2, 2, 1), new Vector3Int(-1, 0, 0), "crate");
+			var model = SkeletonModel(planned);
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", ".#" }),
+			};
+
+			var prompt = VoxelizationPrompts.PartUser(model, brief, model.Parts[0], planned, string.Empty);
+
+			Assert.That(prompt, Does.Contain("occupies world cells: x -1..0, y 0..1, z 0..0"));
+			Assert.That(prompt, Does.Contain("front silhouette of the WHOLE model"));
+			Assert.That(prompt, Does.Contain(".#"));
+		}
+
+		[Test]
+		public void SetOrchestrator_ReauthorFeedbackShowsAsciiViewsOfWhatWasBuilt()
+		{
+			// One bilateral slab: the first authoring is lopsided (attributed
+			// Asymmetric), the retry is symmetric. The re-author call must carry
+			// ASCII views of the assembled model so the author can see the error.
+			const string plan = @"```vmodel
+model: slab
+version: 1
+rigged: false
+unit: 1
+real_world_height: 2
+origin: feet_center
+palette:
+  _: none
+  W: ""#aa7733""
+parts:
+  - id: slab
+    parent: root
+    pivot: [0, 0, 0]
+    data: { encoding: planned, planned: layers, size: [3, 1, 2], offset: [-1, 0, -1], note: ""slab"" }
+poses:
+```";
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "slab", RealWorldHeight = 2f, Symmetry = "bilateral" },
+				},
+			};
+			var gateway = new FakeGateway()
+				.Enqueue(plan)
+				.Enqueue("```layers\nWWW\nWW.\n```")
+				.Enqueue("```layers\nWWW\nW.W\n```");
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				NullReferenceImageSource.Instance,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var result = orchestrator
+				.RunAssetAsync(manifest, manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(result.Status, Is.EqualTo(ModelStatus.Ready),
+				result.Error + "\n" + string.Join("\n", result.Report.Issues));
+			Assert.That(gateway.Calls.Count, Is.EqualTo(3));
+
+			var reauthor = gateway.Calls[2].Messages[0].Content;
+			Assert.That(reauthor, Does.Contain("not left-right symmetric"));
+			Assert.That(reauthor, Does.Contain("FRONT view"));
+			Assert.That(reauthor, Does.Contain("WWW"));
+		}
+
+		[Test]
 		public void SetOrchestrator_RunsPlanAuthorAssembleValidateExport()
 		{
 			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse);

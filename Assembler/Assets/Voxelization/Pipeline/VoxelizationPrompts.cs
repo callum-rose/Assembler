@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Text;
+using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -215,6 +216,13 @@ namespace Assembler.Voxelization
 				.Append("  pivot in parent: ").Append(YamlNodes.Vector(part.Pivot)).Append('\n');
 			sb.Append("  size: ").Append(YamlNodes.Vector(planned.Size))
 				.Append("  offset: ").Append(YamlNodes.Vector(planned.Offset)).Append('\n');
+
+			var worldMin = PlanGeometryChecks.WorldPivot(model, part) + planned.Offset;
+			var worldMax = worldMin + planned.Size - Vector3Int.one;
+			sb.Append("  occupies world cells: x ").Append(worldMin.x).Append("..").Append(worldMax.x)
+				.Append(", y ").Append(worldMin.y).Append("..").Append(worldMax.y)
+				.Append(", z ").Append(worldMin.z).Append("..").Append(worldMax.z)
+				.Append(" (y=0 is the ground)\n");
 			if (planned.Note.Length > 0)
 			{
 				sb.Append("  note: ").Append(planned.Note).Append('\n');
@@ -251,6 +259,16 @@ namespace Assembler.Voxelization
 				foreach (var kv in brief.Proportions)
 				{
 					sb.Append("  proportion ").Append(kv.Key).Append(": ").Append(YamlNodes.Float(kv.Value)).Append('\n');
+				}
+
+				if (!brief.Silhouette.IsEmpty)
+				{
+					sb.Append("  front silhouette of the WHOLE model (top row first, '#' solid) — author your part so ")
+						.Append("the cells it occupies match it:\n");
+					foreach (var row in brief.Silhouette.Rows)
+					{
+						sb.Append("    ").Append(row).Append('\n');
+					}
 				}
 			}
 

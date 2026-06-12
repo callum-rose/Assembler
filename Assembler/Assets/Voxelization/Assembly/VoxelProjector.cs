@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using Assembler.Voxels;
 using UnityEngine;
 
@@ -69,6 +71,57 @@ namespace Assembler.Voxelization
 			}
 
 			return colours;
+		}
+
+		/// <summary>
+		/// Colour-keyed ASCII projection (nearest voxel wins), image-style top row
+		/// first, '.' where empty. This is the feedback medium for authoring
+		/// models: they write ASCII layers, so they read ASCII views.
+		/// </summary>
+		public static string Ascii(VoxelModel model, IReadOnlyList<PaletteEntry> palette, ProjectionFace face)
+		{
+			if (model.Voxels.Count == 0)
+			{
+				return "(empty)";
+			}
+
+			var (width, height) = Dimensions(model, face);
+			var keys = new char[width, height];
+			var nearest = new int[width, height];
+			for (var u = 0; u < width; u++)
+			{
+				for (var v = 0; v < height; v++)
+				{
+					keys[u, v] = PaletteEntry.EmptyCell;
+					nearest[u, v] = int.MinValue;
+				}
+			}
+
+			foreach (var kv in model.Voxels)
+			{
+				var (u, v, depth) = MapToPlane(kv.Key - model.Min, face);
+				if (depth > nearest[u, v])
+				{
+					nearest[u, v] = depth;
+					keys[u, v] = kv.Value >= 1 && kv.Value <= palette.Count ? palette[kv.Value - 1].Key : '?';
+				}
+			}
+
+			var sb = new StringBuilder();
+			for (var v = height - 1; v >= 0; v--)
+			{
+				for (var u = 0; u < width; u++)
+				{
+					sb.Append(keys[u, v]);
+				}
+
+				if (v > 0)
+				{
+					sb.Append('\n');
+				}
+			}
+
+			return sb.ToString();
 		}
 
 		private static (int width, int height) Dimensions(VoxelModel model, ProjectionFace face)
