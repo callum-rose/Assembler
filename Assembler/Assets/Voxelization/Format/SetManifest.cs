@@ -14,6 +14,16 @@ namespace Assembler.Voxelization
 	{
 		public string Id { get; init; } = string.Empty;
 		public float RealWorldHeight { get; init; }
+
+		/// <summary>Bounding-box extent along z, the model's FORWARD axis (a car's nose-to-tail length). 0 = unconstrained.</summary>
+		public float Length { get; init; }
+
+		/// <summary>Bounding-box extent along x, the model's left-right axis (a car's track width). 0 = unconstrained.</summary>
+		public float Width { get; init; }
+
+		/// <summary>How strictly the bounding box is enforced: each specified extent must match within ± this many voxels.</summary>
+		public int Tolerance { get; init; } = 1;
+
 		public string Symmetry { get; init; } = "none";
 		public bool Rig { get; init; }
 		public string Reference { get; init; } = string.Empty;
@@ -37,5 +47,14 @@ namespace Assembler.Voxelization
 
 		public int HeightInVoxels(ManifestAsset asset) =>
 			Mathf.Max(1, Mathf.RoundToInt(asset.RealWorldHeight / Mathf.Max(1e-6f, Unit)));
+
+		/// <summary>Target length in voxels (z, forward); 0 = unconstrained.</summary>
+		public int LengthInVoxels(ManifestAsset asset) => OptionalVoxels(asset.Length);
+
+		/// <summary>Target width in voxels (x, left-right); 0 = unconstrained.</summary>
+		public int WidthInVoxels(ManifestAsset asset) => OptionalVoxels(asset.Width);
+
+		private int OptionalVoxels(float extent) =>
+			extent <= 0f ? 0 : Mathf.Max(1, Mathf.RoundToInt(extent / Mathf.Max(1e-6f, Unit)));
 	}
 }

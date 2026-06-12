@@ -37,7 +37,11 @@ namespace Assembler.Voxelization
 					assets.Add(new ManifestAsset
 					{
 						Id = id,
-						RealWorldHeight = YamlNodes.GetFloat(assetMap, "real_world_height"),
+						RealWorldHeight = YamlNodes.GetFloat(assetMap, "height",
+							YamlNodes.GetFloat(assetMap, "real_world_height")),
+						Length = YamlNodes.GetFloat(assetMap, "length"),
+						Width = YamlNodes.GetFloat(assetMap, "width"),
+						Tolerance = YamlNodes.GetInt(assetMap, "tolerance", 1),
 						Symmetry = YamlNodes.GetString(assetMap, "symmetry", "none"),
 						Rig = YamlNodes.GetBool(assetMap, "rig"),
 						Reference = YamlNodes.GetString(assetMap, "reference"),
@@ -62,7 +66,22 @@ namespace Assembler.Voxelization
 			foreach (var asset in manifest.Assets)
 			{
 				sb.Append("  - id: ").Append(asset.Id).Append('\n');
-				sb.Append("    real_world_height: ").Append(YamlNodes.Float(asset.RealWorldHeight)).Append('\n');
+				sb.Append("    height: ").Append(YamlNodes.Float(asset.RealWorldHeight)).Append('\n');
+				if (asset.Length > 0f)
+				{
+					sb.Append("    length: ").Append(YamlNodes.Float(asset.Length)).Append('\n');
+				}
+
+				if (asset.Width > 0f)
+				{
+					sb.Append("    width: ").Append(YamlNodes.Float(asset.Width)).Append('\n');
+				}
+
+				if (asset.Tolerance != 1)
+				{
+					sb.Append("    tolerance: ").Append(asset.Tolerance).Append('\n');
+				}
+
 				sb.Append("    symmetry: ").Append(asset.Symmetry).Append('\n');
 				sb.Append("    rig: ").Append(asset.Rig ? "true" : "false").Append('\n');
 				if (asset.HasReference)

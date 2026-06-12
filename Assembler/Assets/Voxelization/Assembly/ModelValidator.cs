@@ -62,14 +62,20 @@ namespace Assembler.Voxelization
 				return;
 			}
 
-			var target = assembled.Model.HeightInVoxels;
-			var actual = assembled.Composed.Size.y;
-			var tolerance = Mathf.Max(1, Mathf.RoundToInt(target * 0.1f));
-			if (Mathf.Abs(actual - target) > tolerance)
+			var model = assembled.Model;
+			var size = assembled.Composed.Size;
+			var tolerance = Mathf.Max(Mathf.Max(0, model.SizeTolerance), Mathf.RoundToInt(model.HeightInVoxels * 0.1f));
+			CheckExtent(size.y, model.HeightInVoxels, tolerance, "tall (y)", issues);
+			CheckExtent(size.z, model.TargetLength, Mathf.Max(0, model.SizeTolerance), "long (z, the forward axis)", issues);
+			CheckExtent(size.x, model.TargetWidth, Mathf.Max(0, model.SizeTolerance), "wide (x)", issues);
+		}
+
+		private static void CheckExtent(int actual, int target, int tolerance, string description, List<ValidationIssue> issues)
+		{
+			if (target > 0 && Mathf.Abs(actual - target) > tolerance)
 			{
 				issues.Add(new ValidationIssue(string.Empty, IssueCode.ScaleMismatch,
-					$"Model is {actual} voxels tall but the manifest requires {target} " +
-					$"({assembled.Model.RealWorldHeight}m at {assembled.Model.Unit}m/voxel, tolerance ±{tolerance})."));
+					$"Model is {actual} voxels {description} but the manifest requires {target} (tolerance ±{tolerance})."));
 			}
 		}
 

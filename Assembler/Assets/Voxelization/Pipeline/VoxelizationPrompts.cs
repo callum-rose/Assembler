@@ -22,16 +22,20 @@ namespace Assembler.Voxelization
 			"You are the art director for a voxel game asset set. Given a game brief, produce the set manifest " +
 			"(the 'scale bible') that keeps every asset's size consistent relative to the others.\n\n" +
 			"Rules:\n" +
-			"- `unit` is ALWAYS 1, and `real_world_height` is the asset's height IN VOXELS (the field name is " +
-			"historical). Pick a keystone asset (usually a character) at a good voxel height — a person reads well at " +
-			"~10-16 voxels — and size everything else relative to it (a car roughly half a person's height but " +
-			"longer, a house several times taller). Small props still get enough voxels to read; nothing exceeds " +
-			"roughly 100 voxels on its longest axis.\n" +
+			"- `unit` is ALWAYS 1; all dimensions are IN VOXELS. Pick a keystone asset (usually a character) at a " +
+			"good voxel height — a person reads well at ~10-16 voxels — and size everything else relative to it. " +
+			"Small props still get enough voxels to read; nothing exceeds roughly 100 voxels on its longest axis.\n" +
+			"- Every asset gets its FULL BOUNDING BOX, in a fixed orientation shared by all models: `height` is the " +
+			"extent UP (y), `length` is the extent along the asset's FORWARD axis (z — a car's nose-to-tail length, " +
+			"an animal's head-to-tail), `width` is the extent LEFT-RIGHT (x — a car's track, a person's shoulder " +
+			"span). Get the aspect right: a car is LONGER than it is wide and wider than it is tall; a person is " +
+			"taller than wide and very shallow front-to-back. Optional `tolerance` (default 1) is the ± voxels the " +
+			"built model may deviate on each axis — these are enforced deterministically downstream.\n" +
 			"- ONE asset per distinct THING placed in the game world. A compound object is a single asset whose " +
 			"components become parts of its rig at the planning stage — a car is one asset (wheels, body, and windows " +
 			"are its parts, NOT separate assets); a windmill is one asset including its blades. Only split something " +
 			"out when the game places it independently (a detachable trailer, a pickup item).\n" +
-			"- Every asset needs: `id` (snake_case), `real_world_height` (height in voxels), " +
+			"- Every asset needs: `id` (snake_case), `height`, `length`, `width` (voxels), " +
 			"`symmetry` (bilateral | radial:N | none), `rig` (true only for things that need posing/animation).\n" +
 			"- Do not invent `reference` entries; reference images are attached by the operator afterwards.\n\n" +
 			"Output exactly one fenced block labelled `yaml` in this shape:\n" +
@@ -40,9 +44,17 @@ namespace Assembler.Voxelization
 			"unit: 1\n" +
 			"assets:\n" +
 			"  - id: villager\n" +
-			"    real_world_height: 12\n" +
+			"    height: 12\n" +
+			"    length: 3\n" +
+			"    width: 7\n" +
 			"    symmetry: bilateral\n" +
 			"    rig: true\n" +
+			"  - id: cart\n" +
+			"    height: 6\n" +
+			"    length: 14\n" +
+			"    width: 7\n" +
+			"    symmetry: bilateral\n" +
+			"    rig: false\n" +
 			"```";
 
 		public static string ManifestUser(string gameBrief) =>
@@ -89,10 +101,14 @@ namespace Assembler.Voxelization
 			"- Parts whose geometry is naturally scattered (foliage, leaves, debris, pebbles) may set `loose: true` " +
 			"on the part so disconnected chunks within it are allowed. Never mark body parts, limbs, or structural " +
 			"pieces loose — a floating leaf is fine, a floating hand is not.\n" +
-			"- Parts must physically touch their parent at the joint, and the whole model must hit the required " +
-			"voxel height exactly (checked deterministically; the lowest geometry sits at y=0): plan part sizes and " +
-			"pivots so they add up. A limb separated from the body by a gap along its length still connects at the " +
-			"joint — give the torso a wide shoulder row for arms to attach to, never a free-floating limb.\n" +
+			"- BOUNDING BOX: the model has fixed target dimensions in a fixed orientation — height up (y), LENGTH " +
+			"along the forward axis (z: nose-to-tail, head-to-tail), width left-right (x). Plan part boxes that span " +
+			"each given target within its tolerance (checked deterministically, lowest geometry at y=0). Put the " +
+			"LONG dimension of an elongated subject on z, never on x: a car's wheelbase runs along z and exceeds its " +
+			"track width across x.\n" +
+			"- Parts must physically touch their parent at the joint: plan part sizes and pivots so they add up. " +
+			"A limb separated from the body by a gap along its length still connects at the joint — give the torso " +
+			"a wide shoulder row for arms to attach to, never a free-floating limb.\n" +
 			"- Declare parts parents-first: a part's `parent` (and a mirror's `source`) must appear EARLIER in the " +
 			"list (checked deterministically).\n" +
 			"- Palette: at most 12 colours, each a single-character key. `_` is reserved for empty.\n" +
@@ -141,7 +157,10 @@ namespace Assembler.Voxelization
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
 			sb.Append("Asset: ").Append(asset.Id).Append('\n');
-			sb.Append("Height: the model must be ").Append(manifest.HeightInVoxels(asset)).Append(" voxels tall\n");
+			sb.Append("Bounding box (each specified extent is enforced ±").Append(Mathf.Max(0, asset.Tolerance)).Append("):\n");
+			sb.Append("  height (y, up): ").Append(manifest.HeightInVoxels(asset)).Append(" voxels\n");
+			sb.Append("  length (z, FORWARD, nose-to-tail): ").Append(Extent(manifest.LengthInVoxels(asset))).Append('\n');
+			sb.Append("  width (x, left-right): ").Append(Extent(manifest.WidthInVoxels(asset))).Append('\n');
 			sb.Append("Symmetry: ").Append(asset.Symmetry).Append('\n');
 			sb.Append("Rig: ").Append(asset.Rig ? "yes" : "no").Append('\n');
 
@@ -168,6 +187,8 @@ namespace Assembler.Voxelization
 			sb.Append("\nPlan the model.");
 			return sb.ToString();
 		}
+
+		private static string Extent(int voxels) => voxels > 0 ? $"{voxels} voxels" : "unconstrained";
 
 		// ---- Stage 1a: reference brief extraction -----------------------------
 

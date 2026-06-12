@@ -81,9 +81,12 @@ namespace Assembler.Voxelization
 		}
 
 		/// <summary>
-		/// The part boxes must stack to the manifest height with the lowest
-		/// geometry on the ground — a plan that is the wrong height fails scale
-		/// validation after the entire authoring spend, so reject it up front.
+		/// The part boxes must span the target bounding box — height (y) always,
+		/// length (z, the forward axis) and width (x) when the manifest specifies
+		/// them — within the model's size tolerance, with the lowest geometry on
+		/// the ground. A wrong-sized plan fails scale validation after the entire
+		/// authoring spend, so reject it up front. This is what stops a car
+		/// coming out wider than it is long.
 		/// </summary>
 		private static void CheckVerticalExtent(VoxelRigModel skeleton, List<string> errors)
 		{
@@ -93,20 +96,39 @@ namespace Assembler.Voxelization
 				return;
 			}
 
-			var minY = boxes.Min(b => b.Min.y);
-			var maxY = boxes.Max(b => b.Max.y);
-			var span = maxY - minY + 1;
-			var target = skeleton.HeightInVoxels;
-			if (Mathf.Abs(span - target) > 1)
-			{
-				errors.Add($"The part boxes span {span} voxels vertically (y {minY}..{maxY}) but the model must be " +
-						   $"{target} voxels tall — resize the plan so the boxes stack to exactly {target}.");
-			}
+			var tolerance = Mathf.Max(0, skeleton.SizeTolerance);
+			CheckExtent(boxes, 1, skeleton.HeightInVoxels, tolerance, "tall (y, up)", errors);
+			CheckExtent(boxes, 2, skeleton.TargetLength, tolerance, "long (z, the FORWARD axis, nose-to-tail)", errors);
+			CheckExtent(boxes, 0, skeleton.TargetWidth, tolerance, "wide (x, left-right)", errors);
 
+			var minY = boxes.Min(b => b.Min.y);
 			if (minY != 0)
 			{
 				errors.Add($"The lowest part box starts at y={minY}, but the origin is feet_center: the lowest " +
 						   "geometry must sit at y=0 (the ground).");
+			}
+		}
+
+		private static void CheckExtent(
+			IReadOnlyList<(Vector3Int Min, Vector3Int Max)> boxes,
+			int axis,
+			int target,
+			int tolerance,
+			string description,
+			List<string> errors)
+		{
+			if (target <= 0)
+			{
+				return;
+			}
+
+			var min = boxes.Min(b => b.Min[axis]);
+			var max = boxes.Max(b => b.Max[axis]);
+			var span = max - min + 1;
+			if (Mathf.Abs(span - target) > tolerance)
+			{
+				errors.Add($"The part boxes span {span} voxels {description} but the model must be {target} " +
+						   $"(±{tolerance}) — resize or re-place parts on that axis.");
 			}
 		}
 

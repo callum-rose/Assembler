@@ -235,6 +235,7 @@ namespace Assembler.Voxelization
 		{
 			var palette = assembled.Model.Palette;
 			var sb = new StringBuilder();
+			sb.Append(MeasuredDimensions(assembled)).Append('\n');
 			sb.Append("What the WHOLE assembled model currently looks like (palette keys, top row first):\n");
 			sb.Append("FRONT view (x right, y up):\n")
 				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Front)).Append('\n');
@@ -259,6 +260,31 @@ namespace Assembler.Voxelization
 			}
 
 			return sb.ToString().TrimEnd();
+		}
+
+		/// <summary>
+		/// Measured vs target bounding box, spelled out so the reviewer judges
+		/// proportions as numbers instead of inferring them from ASCII — an
+		/// 11-wide x 7-long car reads fine in a front view but is obviously
+		/// wrong stated as dimensions.
+		/// </summary>
+		private static string MeasuredDimensions(AssembledModel assembled)
+		{
+			var size = assembled.Composed.Size;
+			var model = assembled.Model;
+			var targets = new List<string> { $"{model.HeightInVoxels} tall" };
+			if (model.TargetLength > 0)
+			{
+				targets.Add($"{model.TargetLength} long");
+			}
+
+			if (model.TargetWidth > 0)
+			{
+				targets.Add($"{model.TargetWidth} wide");
+			}
+
+			return $"Assembled size: {size.x} wide (x, left-right) x {size.y} tall (y) x {size.z} long " +
+				   $"(z, forward) — target: {string.Join(", ", targets)}.";
 		}
 
 		private static string Note(PlannedPartData planned) =>

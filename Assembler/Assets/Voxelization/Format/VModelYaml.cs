@@ -32,6 +32,9 @@ namespace Assembler.Voxelization
 				Symmetry = YamlNodes.GetString(root, "symmetry", "none"),
 				Unit = YamlNodes.GetFloat(root, "unit", 0.1f),
 				RealWorldHeight = YamlNodes.GetFloat(root, "real_world_height"),
+				TargetLength = YamlNodes.GetInt(root, "target_length"),
+				TargetWidth = YamlNodes.GetInt(root, "target_width"),
+				SizeTolerance = YamlNodes.GetInt(root, "size_tolerance", 1),
 				Origin = YamlNodes.GetString(root, "origin", "feet_center"),
 				Palette = palette,
 				Parts = parts,
@@ -48,6 +51,21 @@ namespace Assembler.Voxelization
 			sb.Append("symmetry: ").Append(model.Symmetry).Append('\n');
 			sb.Append("unit: ").Append(YamlNodes.Float(model.Unit)).Append('\n');
 			sb.Append("real_world_height: ").Append(YamlNodes.Float(model.RealWorldHeight)).Append('\n');
+			if (model.TargetLength > 0)
+			{
+				sb.Append("target_length: ").Append(model.TargetLength).Append('\n');
+			}
+
+			if (model.TargetWidth > 0)
+			{
+				sb.Append("target_width: ").Append(model.TargetWidth).Append('\n');
+			}
+
+			if (model.SizeTolerance != 1)
+			{
+				sb.Append("size_tolerance: ").Append(model.SizeTolerance).Append('\n');
+			}
+
 			sb.Append("origin: ").Append(model.Origin).Append('\n');
 
 			sb.Append("palette:\n");

@@ -55,6 +55,15 @@ namespace Assembler.Voxelization
 		public float Unit { get; init; } = 0.1f;
 		public float RealWorldHeight { get; init; }
 
+		/// <summary>Target bounding-box extent in voxels along z, the FORWARD axis (nose-to-tail). 0 = unconstrained.</summary>
+		public int TargetLength { get; init; }
+
+		/// <summary>Target bounding-box extent in voxels along x, the left-right axis. 0 = unconstrained.</summary>
+		public int TargetWidth { get; init; }
+
+		/// <summary>± voxels each specified bounding-box extent may deviate (plan gate and validator).</summary>
+		public int SizeTolerance { get; init; } = 1;
+
 		/// <summary>Placement anchor / ground contact point (e.g. feet_center).</summary>
 		public string Origin { get; init; } = "feet_center";
 

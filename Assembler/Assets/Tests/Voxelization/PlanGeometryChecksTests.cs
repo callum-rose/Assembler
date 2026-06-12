@@ -104,7 +104,7 @@ namespace Tests.Voxelization
 			var model = Model(Planned("column", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 4, 1), new Vector3Int(0, 0, 0)));
 			var errors = PlanGeometryChecks.Errors(model);
 
-			Assert.That(errors.Single(), Does.Contain("must be 2 voxels tall"));
+			Assert.That(errors.Single(), Does.Contain("tall").And.Contain("must be 2"));
 		}
 
 		[Test]

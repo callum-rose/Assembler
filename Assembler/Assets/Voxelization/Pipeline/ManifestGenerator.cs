@@ -75,7 +75,12 @@ namespace Assembler.Voxelization
 				{
 					Unit = 1f,
 					Assets = manifest.Assets
-						.Select(a => a with { RealWorldHeight = manifest.HeightInVoxels(a) })
+						.Select(a => a with
+						{
+							RealWorldHeight = manifest.HeightInVoxels(a),
+							Length = manifest.LengthInVoxels(a),
+							Width = manifest.WidthInVoxels(a),
+						})
 						.ToList(),
 				};
 	}
