@@ -31,7 +31,12 @@ namespace Assembler.Voxelization.Editor
 		private const float SidebarWidth = 360f;
 
 		// Fetched from the Anthropic models API on startup (newest first) rather
-		// than hardcoded, so the picker stays current as new models ship.
+		// than hardcoded, so the picker stays current as new models ship. Models
+		// released before the previous calendar year are dropped, keeping the
+		// list to recent generations rather than every legacy id.
+		private static DateTimeOffset ModelRecencyCutoff =>
+			new(DateTime.UtcNow.Year - 1, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
 		private string[] _modelOptions = Array.Empty<string>();
 		private bool _modelsLoading;
 		private string? _modelsError;
@@ -309,7 +314,7 @@ namespace Assembler.Voxelization.Editor
 
 			try
 			{
-				var models = await AnthropicClient.ListModelsAsync(_apiKey, token);
+				var models = await AnthropicClient.ListModelsAsync(_apiKey, ModelRecencyCutoff, token);
 				if (token.IsCancellationRequested)
 				{
 					return;
