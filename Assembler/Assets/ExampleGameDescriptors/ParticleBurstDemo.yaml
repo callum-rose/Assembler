@@ -4,24 +4,33 @@ Game:
     One configurable `particle burst` behaviour standing in for several "juice"
     effects, each just a different set of properties fired by a different trigger:
 
-      • DUST   — press Space: the player cube coughs up a soft grey puff that
-                 sprays upward and fades. Billboard particles, no gravity.
+      • DUST   — press Space: the green player cube coughs up a soft grey puff
+                 that sprays upward and fades. Billboard particles, no gravity.
       • IMPACT — the yellow ball bounces between two walls; each wall collision
                  fires a spark burst aligned to the surface normal
-                 (`Direction: !output contact_normal`) that inherits the ball's
-                 momentum (`InheritVelocity: !output other_velocity`).
+                 (`Direction: !output contact_normal`) that drifts off with the
+                 ball's momentum (`InheritVelocity: !var ball velocity`).
       • DEBRIS — press F: the brown crate shatters into tumbling cube-mesh chunks
                  with gravity that bounce off the ground (`Collision: true`), then
                  the crate destroys itself. The world-space particles outlive it.
 
-    Press Escape to quit (`!gameover`).
+    The camera is fixed so every effect stays in frame. The ball reflects its own
+    velocity off the walls (it doesn't rely on physics restitution), the same
+    deterministic bounce Pong uses. Press Escape to quit (`!gameover`).
 
 World:
   Dimensionality: 3
   BackgroundColor: "#0a0c12"
 
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
 Constants:
   move step: 0.12
+
+Variables:
+  # Drives the ball via a `velocity` behaviour; the wall collision reflects it.
+  ball velocity: !vec { X: 6, Y: 0, Z: 0 }
 
 Controls:
   Actions:
@@ -64,16 +73,16 @@ Entities:
         Properties:
           Shape: cube
           Colour: !colour "#cfd4dc"
-          Size: !vec { X: 30, Y: 0.2, Z: 30 }
+          Size: !vec { X: 26, Y: 0.2, Z: 18 }
       # A real collider so the death-debris chunks (Collision: true) bounce off it.
       floor:
         Type: box collider
         Properties:
-          Size: !vec { X: 30, Y: 0.2, Z: 30 }
+          Size: !vec { X: 26, Y: 0.2, Z: 18 }
 
   player:
     Tags: [ player ]
-    Position: !vec { X: 0, Y: 0.6, Z: 0 }
+    Position: !vec { X: -4, Y: 0.6, Z: -1 }
     Rotation: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
@@ -134,7 +143,7 @@ Entities:
 
   ball:
     Tags: [ ball ]
-    Position: !vec { X: -4, Y: 0.6, Z: 6 }
+    Position: !vec { X: -7, Y: 0.6, Z: 4 }
     Rotation: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
@@ -147,42 +156,53 @@ Entities:
         Type: sphere collider
         Properties:
           Radius: 0.4
-          Bounciness: 1
+      # Dynamic (gravity off) so collisions are detected; movement and the bounce
+      # are driven by the `velocity` behaviour + reflection below, not by physics.
       rigidbody:
         Type: rigidbody
         Properties:
           UseGravity: false
-          LinearDamping: 0
-      # Kick it sideways once on start so it bounces between the two walls.
-      kickoff:
-        Type: on start trigger
-        Listeners:
-          - EntityId: ball
-            BehaviourId: kick
-      kick:
-        Type: add impulse
+          FreezePosition: !vec { X: 0, Y: 1, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+      move:
+        Type: velocity
         Properties:
-          Impulse: !vec { X: 6, Y: 0, Z: 0 }
+          Velocity: !var ball velocity
 
-      # IMPACT: each wall collision sprays sparks along the surface normal,
-      # carrying a fraction of whatever the ball was doing at the moment of impact.
+      # IMPACT: each wall collision reflects the ball's velocity off the surface
+      # normal AND sprays sparks along that same normal, drifting off with the
+      # (reflected) momentum. Reflect runs first so the sparks fly away from the wall.
       wall hit:
         Type: collision enter trigger
         Properties:
           TagsToDetect: [ wall ]
         Listeners:
           - EntityId: ball
+            BehaviourId: reflect
+            Outputs:
+              contact_normal: contact_normal
+          - EntityId: ball
             BehaviourId: sparks
             Outputs:
               contact_normal: contact_normal
-              other_velocity: other_velocity
+      reflect:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ball velocity
+          Value: !expr
+            Do: 'UnityEngine.Vector3.Reflect(arg0, arg1)'
+            ReturnType: vector
+            ArgumentTypes: [ vector, vector ]
+            With:
+              - !var ball velocity
+              - !output contact_normal
       sparks:
         Type: particle burst
         Properties:
           Count: 14
           Direction: !output contact_normal
-          InheritVelocity: !output other_velocity
-          InheritFactor: 0.3
+          InheritVelocity: !var ball velocity
+          InheritFactor: 0.25
           Spread: 22
           Speed: 5
           SpeedVariation: 0.4
@@ -194,7 +214,7 @@ Entities:
 
   wall left:
     Tags: [ wall ]
-    Position: !vec { X: -8, Y: 0.6, Z: 6 }
+    Position: !vec { X: -9, Y: 0.6, Z: 4 }
     Rotation: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
@@ -207,11 +227,10 @@ Entities:
         Type: box collider
         Properties:
           Size: !vec { X: 0.5, Y: 2, Z: 6 }
-          Bounciness: 1
 
   wall right:
     Tags: [ wall ]
-    Position: !vec { X: 8, Y: 0.6, Z: 6 }
+    Position: !vec { X: 9, Y: 0.6, Z: 4 }
     Rotation: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
@@ -224,11 +243,10 @@ Entities:
         Type: box collider
         Properties:
           Size: !vec { X: 0.5, Y: 2, Z: 6 }
-          Bounciness: 1
 
   crate:
     Tags: [ crate ]
-    Position: !vec { X: 4, Y: 0.6, Z: -4 }
+    Position: !vec { X: 3, Y: 0.6, Z: -1 }
     Rotation: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       body:
@@ -268,27 +286,14 @@ Entities:
       remove:
         Type: destroy
 
+  # Fixed camera angled down over the arena so the player, bouncing ball, and
+  # crate are all in frame for the whole session — nothing follows, nothing leaves.
   camera:
     Tags: [ camera ]
-    Position: !vec { X: 0, Y: 7, Z: -10 }
-    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Position: !vec { X: 0, Y: 12, Z: -13 }
+    Rotation: !vec { X: 38, Y: 0, Z: 0 }
     Behaviours:
       camera:
         Type: camera
         Properties:
           View: "perspective"
-
-  camera rig:
-    Position: !vec { X: 0, Y: 7, Z: -10 }
-    Rotation: !vec { X: 0, Y: 0, Z: 0 }
-    Behaviours:
-      follow:
-        Type: camera follow
-        Properties:
-          Target: { Tag: player }
-          LookAt: { Tag: player }
-          Mode: "3d"
-          Priority: 10
-          Lens: 60
-          Damping: 0.5
-          FollowOffset: !vec { X: 0, Y: 7, Z: -10 }
