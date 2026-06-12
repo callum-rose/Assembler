@@ -13,6 +13,14 @@ namespace Assembler.Voxelization
 	public sealed record ManifestAsset
 	{
 		public string Id { get; init; } = string.Empty;
+
+		/// <summary>
+		/// Binding per-asset theming distilled from the game brief (colours,
+		/// materials, style, distinguishing features). Downstream stages must
+		/// match it, inventing only where it is silent.
+		/// </summary>
+		public string Description { get; init; } = string.Empty;
+
 		public float RealWorldHeight { get; init; }
 
 		/// <summary>Bounding-box extent along z, the model's FORWARD axis (a car's nose-to-tail length). 0 = unconstrained.</summary>

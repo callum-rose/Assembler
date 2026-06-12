@@ -137,6 +137,7 @@ namespace Assembler.Voxelization
 			skeleton = skeleton with
 			{
 				Id = asset.Id,
+				Description = asset.Description,
 				Unit = manifest.Unit,
 				RealWorldHeight = asset.RealWorldHeight,
 				TargetLength = manifest.LengthInVoxels(asset),

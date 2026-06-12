@@ -46,6 +46,9 @@ namespace Assembler.Voxelization
 		public int Version { get; init; } = 1;
 		public bool Rigged { get; init; }
 
+		/// <summary>Binding theming from the manifest (colours, materials, style); empty when none was given.</summary>
+		public string Description { get; init; } = string.Empty;
+
 		/// <summary>Symmetry contract from the manifest: bilateral | radial:N | none. Bilateral models must mirror across their centre x plane.</summary>
 		public string Symmetry { get; init; } = "none";
 

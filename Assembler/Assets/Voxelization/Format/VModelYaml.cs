@@ -29,6 +29,7 @@ namespace Assembler.Voxelization
 				Id = YamlNodes.GetString(root, "model"),
 				Version = YamlNodes.GetInt(root, "version", 1),
 				Rigged = YamlNodes.GetBool(root, "rigged"),
+				Description = YamlNodes.GetString(root, "description"),
 				Symmetry = YamlNodes.GetString(root, "symmetry", "none"),
 				Unit = YamlNodes.GetFloat(root, "unit", 0.1f),
 				RealWorldHeight = YamlNodes.GetFloat(root, "real_world_height"),
@@ -48,6 +49,10 @@ namespace Assembler.Voxelization
 			sb.Append("model: ").Append(model.Id).Append('\n');
 			sb.Append("version: ").Append(model.Version).Append('\n');
 			sb.Append("rigged: ").Append(model.Rigged ? "true" : "false").Append('\n');
+			if (model.Description.Length > 0)
+			{
+				sb.Append("description: ").Append(YamlNodes.Quote(model.Description)).Append('\n');
+			}
 			sb.Append("symmetry: ").Append(model.Symmetry).Append('\n');
 			sb.Append("unit: ").Append(YamlNodes.Float(model.Unit)).Append('\n');
 			sb.Append("real_world_height: ").Append(YamlNodes.Float(model.RealWorldHeight)).Append('\n');

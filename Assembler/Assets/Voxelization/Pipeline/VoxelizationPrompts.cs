@@ -35,7 +35,11 @@ namespace Assembler.Voxelization
 			"components become parts of its rig at the planning stage — a car is one asset (wheels, body, and windows " +
 			"are its parts, NOT separate assets); a windmill is one asset including its blades. Only split something " +
 			"out when the game places it independently (a detachable trailer, a pickup item).\n" +
-			"- Every asset needs: `id` (snake_case), `height`, `length`, `width` (voxels), " +
+			"- `description` is BINDING theming for the asset, carried verbatim to every later stage: distil into it " +
+			"EVERYTHING the brief says about this asset — colours, materials, style, distinguishing features (a " +
+			"brief's 'green crossy-road style car' must yield a description saying green and blocky-minimal) — then " +
+			"fill obvious gaps with sensible choices. Never drop a stated detail.\n" +
+			"- Every asset needs: `id` (snake_case), `description`, `height`, `length`, `width` (voxels), " +
 			"`symmetry` (bilateral | radial:N | none), `rig` (true only for things that need posing/animation).\n" +
 			"- Do not invent `reference` entries; reference images are attached by the operator afterwards.\n\n" +
 			"Output exactly one fenced block labelled `yaml` in this shape:\n" +
@@ -44,12 +48,14 @@ namespace Assembler.Voxelization
 			"unit: 1\n" +
 			"assets:\n" +
 			"  - id: villager\n" +
+			"    description: \"peasant in a brown tunic and dark boots, tanned skin, simple low-detail style\"\n" +
 			"    height: 12\n" +
 			"    length: 3\n" +
 			"    width: 7\n" +
 			"    symmetry: bilateral\n" +
 			"    rig: true\n" +
 			"  - id: cart\n" +
+			"    description: \"weathered oak hand-cart with two spoked wheels, muted browns\"\n" +
 			"    height: 6\n" +
 			"    length: 14\n" +
 			"    width: 7\n" +
@@ -158,6 +164,12 @@ namespace Assembler.Voxelization
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
 			sb.Append("Asset: ").Append(asset.Id).Append('\n');
+			if (asset.Description.Length > 0)
+			{
+				sb.Append("Description (BINDING — palette and shapes must match it; invent only where it is silent): ")
+					.Append(asset.Description).Append('\n');
+			}
+
 			sb.Append("Bounding box (each specified extent is enforced ±").Append(Mathf.Max(0, asset.Tolerance)).Append("):\n");
 			sb.Append("  height (y, up): ").Append(manifest.HeightInVoxels(asset)).Append(" voxels\n");
 			sb.Append("  length (z, FORWARD, nose-to-tail): ").Append(Extent(manifest.LengthInVoxels(asset))).Append('\n');
@@ -259,6 +271,12 @@ namespace Assembler.Voxelization
 			sb.Append("Model: ").Append(model.Id)
 				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall, ")
 				.Append(model.Parts.Count).Append(" parts)\n");
+			if (model.Description.Length > 0)
+			{
+				sb.Append("Description (BINDING — flag any departure from it, e.g. wrong dominant colour): ")
+					.Append(model.Description).Append('\n');
+			}
+
 			sb.Append("Palette:\n");
 			foreach (var entry in model.Palette)
 			{
@@ -361,6 +379,11 @@ namespace Assembler.Voxelization
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
 				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall overall)\n");
+			if (model.Description.Length > 0)
+			{
+				sb.Append("Description (BINDING — match it): ").Append(model.Description).Append('\n');
+			}
+
 			sb.Append("Palette:\n");
 			foreach (var entry in model.Palette)
 			{

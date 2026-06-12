@@ -37,6 +37,7 @@ namespace Assembler.Voxelization
 					assets.Add(new ManifestAsset
 					{
 						Id = id,
+						Description = YamlNodes.GetString(assetMap, "description"),
 						RealWorldHeight = YamlNodes.GetFloat(assetMap, "height",
 							YamlNodes.GetFloat(assetMap, "real_world_height")),
 						Length = YamlNodes.GetFloat(assetMap, "length"),
@@ -66,6 +67,11 @@ namespace Assembler.Voxelization
 			foreach (var asset in manifest.Assets)
 			{
 				sb.Append("  - id: ").Append(asset.Id).Append('\n');
+				if (asset.Description.Length > 0)
+				{
+					sb.Append("    description: ").Append(YamlNodes.Quote(asset.Description)).Append('\n');
+				}
+
 				sb.Append("    height: ").Append(YamlNodes.Float(asset.RealWorldHeight)).Append('\n');
 				if (asset.Length > 0f)
 				{
