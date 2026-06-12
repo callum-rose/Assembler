@@ -183,6 +183,45 @@ poses:
 		}
 
 		[Test]
+		public void ModelPlanner_RejectsAnInlineAuthoredPlan_AndRetriesWithFeedback()
+		{
+			// The planner emitted finished geometry (encoding: script) instead of a
+			// `planned` placeholder — that skips authoring and assembles to nothing,
+			// so it must bounce back and the corrected planned plan be accepted.
+			const string inlineAuthored = @"```vmodel
+model: crate
+version: 1
+rigged: false
+unit: 1
+real_world_height: 99
+origin: feet_center
+palette:
+  _: none
+  W: ""#aa7733""
+parts:
+  - id: box
+    parent: root
+    pivot: [0, 0, 0]
+    data:
+      encoding: script
+      size: [2, 2, 1]
+      offset: [-1, 0, 0]
+      source: |-
+        return b.Build();
+poses:
+```";
+			var gateway = new FakeGateway().Enqueue(inlineAuthored).Enqueue(PlanResponse);
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
+			Assert.That(gateway.Calls[1].Messages[2].Content, Does.Contain("SKELETON"));
+			Assert.That(plan.Skeleton.Parts.Single().Data, Is.TypeOf<PlannedPartData>());
+		}
+
+		[Test]
 		public void BriefExtractor_SymmetrizesTheSilhouetteForBilateralAssets()
 		{
 			var manifest = new SetManifest
@@ -483,6 +522,78 @@ poses:
 			Assert.That(result.Export!.Files.Keys, Does.Contain("crate.vmodel.yaml"));
 			Assert.That(result.Export.Files.Keys, Does.Contain("crate.vox"));
 			Assert.That(result.Assembled!.Composed.Voxels.Count, Is.EqualTo(4));
+		}
+
+		[Test]
+		public void SetOrchestrator_RefineAppliesEditsWithoutRePlanning()
+		{
+			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse).Enqueue("OK");
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				NullReferenceImageSource.Instance,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var previous = orchestrator
+				.RunAssetAsync(Manifest, Manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+			Assert.That(previous.Status, Is.EqualTo(ModelStatus.Ready), previous.Error);
+			var callsBeforeRefine = gateway.Calls.Count;
+			var box = previous.Model.FindPart("box");
+
+			// A pure recolour: no part is geometry-edited, so the only model call is
+			// the refine itself — no brief, no plan, no authoring.
+			gateway.Enqueue("```edits\n- { op: recolour, key: W, colour: \"#1188cc\" }\n```");
+			var refined = orchestrator
+				.RefineAssetAsync(Manifest, Manifest.Assets[0], previous, "make the crate blue", CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(refined.Status, Is.EqualTo(ModelStatus.Ready),
+				refined.Error + "\n" + string.Join("\n", refined.Report.Issues));
+			Assert.That(gateway.Calls.Count, Is.EqualTo(callsBeforeRefine + 1), "refine should make exactly one model call");
+			Assert.That(gateway.Calls[callsBeforeRefine].Stage, Is.EqualTo(ModelRefiner.Stage));
+			Assert.That(refined.Model.Palette.Single().ToHex(), Is.EqualTo("#1188cc"));
+
+			// The untouched part is reference-equal, so its export is bit-identical.
+			Assert.That(ReferenceEquals(refined.Model.FindPart("box"), box), Is.True);
+		}
+
+		[Test]
+		public void SetOrchestrator_RefineEscalatesAReplanToTheFullPipeline()
+		{
+			var gateway = new FakeGateway().Enqueue(PlanResponse).Enqueue(LayersResponse).Enqueue("OK");
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				NullReferenceImageSource.Instance,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var previous = orchestrator
+				.RunAssetAsync(Manifest, Manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+			var callsBeforeRefine = gateway.Calls.Count;
+
+			// A structural note: the refiner emits a single replan op, so the orchestrator
+			// runs the full pipeline (refine call, then plan, author, review).
+			gateway
+				.Enqueue("```edits\n- { op: replan, reason: \"add a lid\" }\n```")
+				.Enqueue(PlanResponse)
+				.Enqueue(LayersResponse)
+				.Enqueue("OK");
+
+			var refined = orchestrator
+				.RefineAssetAsync(Manifest, Manifest.Assets[0], previous, "add a lid", CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(refined.Status, Is.EqualTo(ModelStatus.Ready), refined.Error);
+			Assert.That(gateway.Calls.Skip(callsBeforeRefine).Select(c => c.Stage),
+				Is.EqualTo(new[] { ModelRefiner.Stage, ModelPlanner.Stage, PartAuthor.Stage, SetOrchestrator.ReviewStage }));
+
+			// The re-plan was seeded with the previously accepted model.
+			Assert.That(gateway.Calls[callsBeforeRefine + 1].Messages[0].Content,
+				Does.Contain("previously accepted model"));
 		}
 
 		[Test]

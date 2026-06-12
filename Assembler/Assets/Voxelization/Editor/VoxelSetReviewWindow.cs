@@ -759,13 +759,25 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			StartRun(clearResults: false);
+			// Single-asset runs reuse the existing run folder (the refined export is
+			// the new version of the same asset) and keep the log.
+			StartRun(clearResults: false, newRunFolder: _runFolder.Length == 0);
 			_inFlight[assetId] = "queued...";
 			try
 			{
 				using var gateway = NewGateway();
 				var orchestrator = NewOrchestrator(gateway);
-				var result = await orchestrator.RunAssetAsync(manifest, asset, refinementNote, _cts!.Token, NewProgress());
+
+				// A non-empty note over a usable previous result refines (minimal
+				// edits) instead of re-planning from scratch; everything else (the
+				// Regenerate button, or a refine with no good base) runs the full pipeline.
+				var canRefine = refinementNote.Length > 0
+					&& _results.TryGetValue(assetId, out var previous)
+					&& previous.Status != ModelStatus.Failed
+					&& previous.Model.Parts.Count > 0;
+				var result = canRefine
+					? await orchestrator.RefineAssetAsync(manifest, asset, _results[assetId], refinementNote, _cts!.Token, NewProgress())
+					: await orchestrator.RunAssetAsync(manifest, asset, refinementNote, _cts!.Token, NewProgress());
 				StoreResult(result);
 			}
 			catch (OperationCanceledException)
@@ -840,6 +852,18 @@ namespace Assembler.Voxelization.Editor
 		private void StoreResult(ModelResult result)
 		{
 			_inFlight.Remove(result.AssetId);
+
+			// A failed refine/regenerate must not destroy a good previous result:
+			// keep the old export/preview and surface the error on it instead.
+			if (result.Status == ModelStatus.Failed &&
+				_results.TryGetValue(result.AssetId, out var existing) &&
+				existing.Status != ModelStatus.Failed)
+			{
+				_results[result.AssetId] = existing with { Error = "refine failed: " + result.Error };
+				Log($"{result.AssetId}: refine failed — kept the previous result. {result.Error}");
+				return;
+			}
+
 			_results[result.AssetId] = result;
 			if (_previews.TryGetValue(result.AssetId, out var old) && old != null)
 			{
@@ -892,7 +916,14 @@ namespace Assembler.Voxelization.Editor
 			_isRunning = true;
 			_cts = new CancellationTokenSource();
 			_statusLine = string.Empty;
-			_log.Clear();
+
+			// Only a fresh batch wipes the log; a single regenerate/refine appends to
+			// it so its history stays alongside the run that produced the asset.
+			if (clearResults)
+			{
+				_log.Clear();
+			}
+
 			_inFlight.Clear();
 			if (newRunFolder)
 			{

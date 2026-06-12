@@ -173,7 +173,8 @@ namespace Assembler.Voxelization
 			ReferenceBrief brief,
 			bool hasImage,
 			string refinementNote,
-			string styleGuidance = "")
+			string styleGuidance = "",
+			string previousModelYaml = "")
 		{
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
@@ -215,6 +216,12 @@ namespace Assembler.Voxelization
 			if (refinementNote.Length > 0)
 			{
 				sb.Append("\nOperator refinement note (apply it):\n").Append(refinementNote).Append('\n');
+			}
+
+			if (previousModelYaml.Length > 0)
+			{
+				sb.Append("\nThe previously accepted model (your starting point — keep what the note doesn't change):\n")
+					.Append("```vmodel\n").Append(previousModelYaml).Append("\n```\n");
 			}
 
 			sb.Append("\nPlan the model.");
@@ -308,6 +315,78 @@ namespace Assembler.Voxelization
 			}
 
 			sb.Append("\nReply OK, or a numbered list of corrections for the planner.");
+			return sb.ToString();
+		}
+
+		// ---- Stage 4: refine (minimal edits to an accepted model) ------------
+
+		public const string RefineSystem =
+			"You make a SMALL, TARGETED edit to a voxel model the operator already accepted. You are NOT re-planning: " +
+			"keep everything the operator's note does not mention exactly as it is. You output a short list of EDIT " +
+			"OPERATIONS; code applies them, re-assembles the affected parts, and re-validates.\n\n" +
+			CoordinateDoc + "\n\n" +
+			"Output EXACTLY one fenced block labelled `edits` containing a YAML sequence of operations, e.g.:\n" +
+			"```edits\n" +
+			"- { op: recolour, key: B, colour: \"#cc2222\" }\n" +
+			"- { op: move_pivot, part: head, delta: [0, 1, 0] }\n" +
+			"```\n\n" +
+			"The operations:\n" +
+			"- `{ op: recolour, key: K, colour: \"#rrggbb\" }` — change palette key K everywhere it is used. Use this " +
+			"only when EVERY part using K should change.\n" +
+			"- `{ op: add_colour, key: R, colour: \"#rrggbb\" }` — add a new palette key (≤12 colours total).\n" +
+			"- `{ op: remap_colour, part: hat, from: G, to: R }` — within ONE part, swap key G for key R. This is how " +
+			"you recolour just one part: `add_colour` the new shade, then `remap_colour` that part to it.\n" +
+			"- `{ op: move_pivot, part: head, delta: [0, 1, 0] }` — nudge a part (and its mirror twin follows). A part " +
+			"on the centre plane of a bilateral model may move only in y/z.\n" +
+			"- `{ op: move_offset, part: torso, delta: [0, 0, -1] }` — shift a part's geometry within its own box.\n" +
+			"- `{ op: reauthor, part: hat, instructions: \"wider brim\", size: [5, 2, 5] }` — re-draw one part from your " +
+			"instructions; include `size`/`offset` only to resize its box (this is how you make a part bigger).\n" +
+			"- `{ op: delete, part: tail }` — remove a part and anything that depends on it.\n" +
+			"- `{ op: replan, reason: \"...\" }` — escape hatch: emit this SINGLE op when the request is structural or " +
+			"ambiguous (add a whole new part, change the silhouette, rework proportions) — the model is re-planned in full.\n\n" +
+			"Rules:\n" +
+			"- Emit the FEWEST operations that satisfy the note. Never re-emit the model or unrelated edits.\n" +
+			"- Edit only the AUTHORED side of a mirror pair (e.g. `arm.L`, never `arm.R`); the twin follows automatically. " +
+			"Likewise recolour/remap the source of a copy, not the copy.\n" +
+			"- Prefer `add_colour` + `remap_colour` for a scoped recolour; reserve `recolour` for a genuinely global change.\n" +
+			"- If you cannot express the note with these ops, emit a single `replan` op — do not force a bad edit.";
+
+		public static string RefineUser(VoxelRigModel model, ReferenceBrief brief, string note, string styleGuidance = "")
+		{
+			var sb = new StringBuilder();
+			sb.Append("Model: ").Append(model.Id)
+				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall, ")
+				.Append(model.Parts.Count).Append(" parts)\n");
+			if (model.Description.Length > 0)
+			{
+				sb.Append("Description (BINDING — the note overrides it only where it conflicts): ")
+					.Append(model.Description).Append('\n');
+			}
+
+			sb.Append("\nThe accepted model (your starting point):\n");
+			sb.Append("```vmodel\n").Append(VModelYaml.Write(model)).Append("\n```\n");
+
+			if (!brief.IsEmpty)
+			{
+				if (brief.Palette.Count > 0)
+				{
+					sb.Append("\nReference palette: ")
+						.Append(string.Join(", ", brief.Palette.Select(e => $"{e.Key}={e.ToHex()}"))).Append('\n');
+				}
+
+				if (brief.SignatureFeatures.Count > 0)
+				{
+					sb.Append("Reference signature features: ").Append(string.Join(", ", brief.SignatureFeatures)).Append('\n');
+				}
+			}
+
+			if (styleGuidance.Length > 0)
+			{
+				sb.Append("\nGlobal style guidance from the operator (follow it):\n").Append(styleGuidance).Append('\n');
+			}
+
+			sb.Append("\nOperator note (make this change, nothing else):\n").Append(note).Append('\n');
+			sb.Append("\nEmit the edits.");
 			return sb.ToString();
 		}
 
