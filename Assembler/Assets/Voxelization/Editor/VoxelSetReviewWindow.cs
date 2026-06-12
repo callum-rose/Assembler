@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.Anthropic;
 using Assembler.Voxels.Scripting;
 using UnityEditor;
 using UnityEngine;
@@ -29,12 +30,12 @@ namespace Assembler.Voxelization.Editor
 		private const float PreviewSize = 200f;
 		private const float SidebarWidth = 360f;
 
-		private static readonly string[] ModelOptions =
-		{
-			"claude-sonnet-4-6",
-			"claude-haiku-4-5",
-			"claude-opus-4-8",
-		};
+		// Fetched from the Anthropic models API on startup (newest first) rather
+		// than hardcoded, so the picker stays current as new models ship.
+		private string[] _modelOptions = Array.Empty<string>();
+		private bool _modelsLoading;
+		private string? _modelsError;
+		private CancellationTokenSource? _modelsCts;
 
 		private string _apiKey = string.Empty;
 		private string _gameBrief = string.Empty;
@@ -89,12 +90,14 @@ namespace Assembler.Voxelization.Editor
 			_showAdvanced = EditorPrefs.GetBool(AdvancedFoldoutPref, false);
 			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
+			RefreshModels();
 		}
 
 		private void OnDisable()
 		{
 			EditorApplication.update -= OnEditorUpdate;
 			_cts?.Cancel();
+			_modelsCts?.Cancel();
 			if (_settings != null)
 			{
 				AssetDatabase.SaveAssetIfDirty(_settings);
@@ -181,6 +184,19 @@ namespace Assembler.Voxelization.Editor
 
 			EditorGUILayout.EndHorizontal();
 
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Stage models", EditorStyles.boldLabel);
+			GUILayout.FlexibleSpace();
+			using (new EditorGUI.DisabledScope(_modelsLoading || string.IsNullOrWhiteSpace(_apiKey)))
+			{
+				if (GUILayout.Button(_modelsLoading ? "Loading..." : "Refresh", GUILayout.Width(80)))
+				{
+					RefreshModels();
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
+
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
 				_settings.ManifestModel = DrawModelPopup("Manifest model", _settings.ManifestModel);
@@ -190,6 +206,11 @@ namespace Assembler.Voxelization.Editor
 				{
 					EditorUtility.SetDirty(_settings);
 				}
+			}
+
+			if (_modelsError != null)
+			{
+				EditorGUILayout.HelpBox($"Couldn't load model list: {_modelsError}", MessageType.Warning);
 			}
 
 			DrawAdvancedSettings();
@@ -248,10 +269,69 @@ namespace Assembler.Voxelization.Editor
 			serialized.FindProperty(nameof(VoxelizationSettings.SilhouetteCoverageThreshold)).floatValue = defaults.SilhouetteCoverageThreshold;
 		}
 
-		private static string DrawModelPopup(string label, string current)
+		private string DrawModelPopup(string label, string current)
 		{
-			var index = Mathf.Max(0, Array.IndexOf(ModelOptions, current));
-			return ModelOptions[EditorGUILayout.Popup(label, index, ModelOptions)];
+			// Always keep the saved selection in the list so the popup can show it
+			// before the models load (or if it names one the API no longer lists).
+			var options = string.IsNullOrEmpty(current) || _modelOptions.Contains(current)
+				? _modelOptions
+				: _modelOptions.Append(current).ToArray();
+
+			if (options.Length == 0)
+			{
+				EditorGUILayout.LabelField(label, _modelsLoading ? "Loading models..." : "Enter an API key to load models");
+				return current;
+			}
+
+			var index = Mathf.Max(0, Array.IndexOf(options, current));
+			return options[EditorGUILayout.Popup(label, index, options)];
+		}
+
+		/// <summary>
+		/// Pulls the current model list from the Anthropic API for the model
+		/// pickers. No-op without an API key; failures surface as a warning rather
+		/// than throwing, since the saved selections still drive a run.
+		/// </summary>
+		private async void RefreshModels()
+		{
+			if (_modelsLoading || string.IsNullOrWhiteSpace(_apiKey))
+			{
+				return;
+			}
+
+			_modelsCts?.Cancel();
+			_modelsCts = new CancellationTokenSource();
+			var token = _modelsCts.Token;
+
+			_modelsLoading = true;
+			_modelsError = null;
+			Repaint();
+
+			try
+			{
+				var models = await AnthropicClient.ListModelsAsync(_apiKey, token);
+				if (token.IsCancellationRequested)
+				{
+					return;
+				}
+
+				_modelOptions = models.ToArray();
+			}
+			catch (OperationCanceledException)
+			{
+			}
+			catch (Exception ex)
+			{
+				_modelsError = ex.Message;
+			}
+			finally
+			{
+				if (!token.IsCancellationRequested)
+				{
+					_modelsLoading = false;
+					Repaint();
+				}
+			}
 		}
 
 		private void DrawManifest()
