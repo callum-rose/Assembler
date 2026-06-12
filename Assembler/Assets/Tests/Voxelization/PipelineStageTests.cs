@@ -183,6 +183,45 @@ poses:
 		}
 
 		[Test]
+		public void ModelPlanner_RejectsAnInlineAuthoredPlan_AndRetriesWithFeedback()
+		{
+			// The planner emitted finished geometry (encoding: script) instead of a
+			// `planned` placeholder — that skips authoring and assembles to nothing,
+			// so it must bounce back and the corrected planned plan be accepted.
+			const string inlineAuthored = @"```vmodel
+model: crate
+version: 1
+rigged: false
+unit: 1
+real_world_height: 99
+origin: feet_center
+palette:
+  _: none
+  W: ""#aa7733""
+parts:
+  - id: box
+    parent: root
+    pivot: [0, 0, 0]
+    data:
+      encoding: script
+      size: [2, 2, 1]
+      offset: [-1, 0, 0]
+      source: |-
+        return b.Build();
+poses:
+```";
+			var gateway = new FakeGateway().Enqueue(inlineAuthored).Enqueue(PlanResponse);
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
+			Assert.That(gateway.Calls[1].Messages[2].Content, Does.Contain("SKELETON"));
+			Assert.That(plan.Skeleton.Parts.Single().Data, Is.TypeOf<PlannedPartData>());
+		}
+
+		[Test]
 		public void BriefExtractor_SymmetrizesTheSilhouetteForBilateralAssets()
 		{
 			var manifest = new SetManifest

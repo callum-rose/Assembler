@@ -87,6 +87,24 @@ namespace Assembler.Voxelization
 				return (null, $"That plan could not be parsed: {ex.Message}\nEmit the corrected ```vmodel block.");
 			}
 
+			// The plan is a SKELETON: parts must be `planned` (or free mirrors/copies),
+			// never authored inline. A planner that writes geometry itself skips the
+			// authoring stage entirely and the model assembles to nothing — so reject
+			// it here and make the planner emit `planned` placeholders.
+			var inlineAuthored = plan.Skeleton.Parts
+				.Where(p => p.Data is LayersPartData or ScriptPartData or PrimitivesPartData)
+				.Select(p => $"{p.Id} ({p.Data.Encoding.ToString().ToLowerInvariant()})")
+				.ToList();
+			if (inlineAuthored.Count > 0)
+			{
+				return (null,
+					"The plan must be a SKELETON only — these parts carry inline geometry instead of being planned: " +
+					string.Join(", ", inlineAuthored) + ". Declare EACH authored part as " +
+					"`data: { encoding: planned, planned: layers|script|primitives, size: [x,y,z], offset: [x,y,z], note: \"...\" }` " +
+					"and write NO geometry yourself (no layers, no shapes, no script) — every part is authored in a separate later " +
+					"stage.\nEmit the corrected ```vmodel block.");
+			}
+
 			var geometryErrors = PlanGeometryChecks.Errors(plan.Skeleton);
 			if (geometryErrors.Count > 0)
 			{
