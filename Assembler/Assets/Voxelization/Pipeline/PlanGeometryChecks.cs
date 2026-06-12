@@ -47,6 +47,94 @@ namespace Assembler.Voxelization
 			return errors;
 		}
 
+		/// <summary>
+		/// Box-coverage feasibility against the reference silhouette: a part's
+		/// voxels can never leave its declared box, so any silhouette cell no box
+		/// reaches is unfillable by authoring — the plan's shape is wrong (stubby
+		/// limbs, too-narrow model) and must be re-planned, not re-authored.
+		/// Both masks are compared in the model's own voxel frame (height-anchored,
+		/// x centre-aligned, ground-aligned). Returns null when feasible.
+		/// </summary>
+		public static string? SilhouetteFeasibilityError(VoxelRigModel skeleton, ReferenceBrief brief, float coverageThreshold)
+		{
+			var spec = brief.Silhouette;
+			if (spec.IsEmpty || spec.Size.x <= 0 || spec.Size.y <= 0)
+			{
+				return null;
+			}
+
+			var boxes = PartBoxes(skeleton);
+			if (boxes.Count == 0)
+			{
+				return null;
+			}
+
+			var height = skeleton.HeightInVoxels;
+			var width = Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
+
+			// The reference mask, resampled into the model's voxel frame ([x, y], y=0 bottom).
+			var target = new bool[width, height];
+			for (var x = 0; x < width; x++)
+			{
+				for (var y = 0; y < height; y++)
+				{
+					var u = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * spec.Size.x / width), 0, spec.Size.x - 1);
+					var row = spec.Size.y - 1 - Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * spec.Size.y / height), 0, spec.Size.y - 1);
+					target[x, y] = row < spec.Rows.Count && u < spec.Rows[row].Length && spec.Rows[row][u] == '#';
+				}
+			}
+
+			// The union of part boxes, centre-aligned in x and ground-aligned in y.
+			var minX = boxes.Min(b => b.Min.x);
+			var maxX = boxes.Max(b => b.Max.x);
+			var minY = boxes.Min(b => b.Min.y);
+			var dx = (width - 1) / 2 - Mathf.RoundToInt((minX + maxX) / 2f);
+			var covered = new bool[width, height];
+			foreach (var (boxMin, boxMax) in boxes)
+			{
+				for (var x = boxMin.x; x <= boxMax.x; x++)
+				{
+					for (var y = boxMin.y; y <= boxMax.y; y++)
+					{
+						var gx = x + dx;
+						var gy = y - minY;
+						if (gx >= 0 && gx < width && gy >= 0 && gy < height)
+						{
+							covered[gx, gy] = true;
+						}
+					}
+				}
+			}
+
+			var solid = 0;
+			var hit = 0;
+			for (var x = 0; x < width; x++)
+			{
+				for (var y = 0; y < height; y++)
+				{
+					if (target[x, y])
+					{
+						solid++;
+						hit += covered[x, y] ? 1 : 0;
+					}
+				}
+			}
+
+			if (solid == 0)
+			{
+				return null;
+			}
+
+			var coverage = (float)hit / solid;
+			return coverage >= coverageThreshold
+				? null
+				: $"Even if every part completely fills its declared box, the plan covers only {coverage:P0} of the " +
+				  $"reference front silhouette (needs {coverageThreshold:P0}) — the planned shape is wrong (limbs too " +
+				  $"short, model too narrow, parts misplaced). Compared at {width}x{height} (top row first):\n" +
+				  $"PLANNED BOX COVERAGE:\n{RenderMask(covered)}\nREFERENCE SILHOUETTE:\n{RenderMask(target)}\n" +
+				  "Resize or re-place parts so their boxes reach every silhouette cell.";
+		}
+
 		/// <summary>Pivot accumulated up the parent chain (the part's local origin in model space).</summary>
 		public static Vector3Int WorldPivot(VoxelRigModel model, VoxelPart part)
 		{
@@ -60,6 +148,89 @@ namespace Assembler.Voxelization
 
 			return world;
 		}
+
+		private static string RenderMask(bool[,] mask)
+		{
+			var width = mask.GetLength(0);
+			var height = mask.GetLength(1);
+			var sb = new System.Text.StringBuilder();
+			for (var y = height - 1; y >= 0; y--)
+			{
+				for (var x = 0; x < width; x++)
+				{
+					sb.Append(mask[x, y] ? '#' : '.');
+				}
+
+				if (y > 0)
+				{
+					sb.Append('\n');
+				}
+			}
+
+			return sb.ToString();
+		}
+
+		/// <summary>World-space cell boxes every part's geometry is confined to (mirror boxes are reflections of their source's).</summary>
+		private static IReadOnlyList<(Vector3Int Min, Vector3Int Max)> PartBoxes(VoxelRigModel skeleton)
+		{
+			var boxes = new List<(Vector3Int, Vector3Int)>();
+			foreach (var part in skeleton.Parts)
+			{
+				if (part.Data is MirrorPartData mirror)
+				{
+					var source = skeleton.FindPart(mirror.Source);
+					var (offset, size) = SizeAndOffsetOf(source?.Data);
+					if (size == Vector3Int.zero)
+					{
+						continue;
+					}
+
+					var localMin = offset;
+					var localMax = offset + size - Vector3Int.one;
+					var reflectedMin = localMin;
+					var reflectedMax = localMax;
+					switch (mirror.Axis)
+					{
+						case MirrorAxis.X:
+							reflectedMin.x = -localMax.x;
+							reflectedMax.x = -localMin.x;
+							break;
+						case MirrorAxis.Y:
+							reflectedMin.y = -localMax.y;
+							reflectedMax.y = -localMin.y;
+							break;
+						default:
+							reflectedMin.z = -localMax.z;
+							reflectedMax.z = -localMin.z;
+							break;
+					}
+
+					var world = WorldPivot(skeleton, part);
+					boxes.Add((world + reflectedMin, world + reflectedMax));
+				}
+				else
+				{
+					var (offset, size) = SizeAndOffsetOf(part.Data);
+					if (size == Vector3Int.zero)
+					{
+						continue;
+					}
+
+					var world = WorldPivot(skeleton, part);
+					boxes.Add((world + offset, world + offset + size - Vector3Int.one));
+				}
+			}
+
+			return boxes;
+		}
+
+		private static (Vector3Int Offset, Vector3Int Size) SizeAndOffsetOf(PartData? data) => data switch
+		{
+			PlannedPartData planned => (planned.Offset, planned.Size),
+			LayersPartData layers => (layers.Offset, layers.Size),
+			ScriptPartData script => (script.Offset, script.Size),
+			_ => (Vector3Int.zero, Vector3Int.zero),
+		};
 
 		private static void CheckMirror(VoxelRigModel skeleton, VoxelPart part, MirrorPartData mirror, List<string> errors)
 		{

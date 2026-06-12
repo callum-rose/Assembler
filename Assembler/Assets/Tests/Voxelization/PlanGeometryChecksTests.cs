@@ -86,6 +86,37 @@ namespace Tests.Voxelization
 			Assert.That(errors.Single(), Does.Contain("mirror across x"));
 		}
 
+		[Test]
+		public void SilhouetteFeasibility_RejectsPlansWhoseBoxesCannotCoverTheReference()
+		{
+			// A single 1-wide column of boxes vs a fully solid 3-wide reference:
+			// the side columns are unreachable by any authoring.
+			var model = Model(Planned("column", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 4, 1), new Vector3Int(0, 0, 0)))
+				with
+			{ RealWorldHeight = 4f };
+			var brief = FullSilhouetteBrief();
+
+			var error = PlanGeometryChecks.SilhouetteFeasibilityError(model, brief, 0.9f);
+
+			Assert.That(error, Does.Contain("REFERENCE SILHOUETTE"));
+		}
+
+		[Test]
+		public void SilhouetteFeasibility_AcceptsPlansWhoseBoxesCoverTheReference()
+		{
+			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
+				with
+			{ RealWorldHeight = 4f };
+
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, FullSilhouetteBrief(), 0.9f), Is.Null);
+		}
+
+		private static ReferenceBrief FullSilhouetteBrief() => new()
+		{
+			Source = "ref.png",
+			Silhouette = new SilhouetteSpec("front", new Vector3Int(3, 4, 0), new[] { "###", "###", "###", "###" }),
+		};
+
 		private static VoxelRigModel Model(params VoxelPart[] parts) => new()
 		{
 			Id = "t",

@@ -27,6 +27,13 @@ namespace Assembler.Voxelization
 
 		public float SilhouetteIouThreshold { get; init; } = 0.75f;
 
+		/// <summary>
+		/// Minimum fraction of reference-silhouette cells the planned part boxes
+		/// must be able to reach — below this the plan is bounced back to the
+		/// planner, since no authoring can fill cells outside every box.
+		/// </summary>
+		public float SilhouetteCoverageThreshold { get; init; } = 0.9f;
+
 		public VoxelScriptLimits ScriptLimits { get; init; } = VoxelScriptLimits.Default;
 
 		public static VoxelizationConfig Default { get; } = new();

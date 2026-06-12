@@ -55,9 +55,13 @@ namespace Assembler.Voxelization
 			"- `data` declares the plan: `encoding: planned`, `planned: layers|script`, `size: [x,y,z]`, " +
 			"`offset: [x,y,z]` (where grid cell 0,0,0 sits in the part's local frame — use it to centre geometry " +
 			"on the joint), and a one-line `note` telling the author what the part looks like.\n" +
-			"- Choose `layers` for small organic/detailed parts (head, torso); `script` for geometric, parametric, " +
-			$"repetitive, or large parts (trunks, wheels, foliage). Any part over {config.PartVoxelBudget} declared " +
-			"voxels MUST be a script (or be split into smaller parts).\n" +
+			"- Choose `layers` for small or organic parts — anything under ~100 declared voxels (heads, torsos, limbs, " +
+			"feet) is ALWAYS layers; `script` only pays off for large geometric, parametric, or repetitive parts " +
+			$"(trunks, walls, wheels, foliage). Any part over {config.PartVoxelBudget} declared voxels MUST be a " +
+			"script (or be split into smaller parts).\n" +
+			"- Proportions matter as much as symmetry: match limb lengths to the reference/subject. Human arms reach " +
+			"from the shoulders to mid-thigh — nearly as long as the legs — and limbs at this scale are long and " +
+			"thin (1 voxel thick), never stubby blocks.\n" +
 			"- BILATERAL ASSETS ARE STRICT: the finished model must be exactly mirror-symmetric across the x=0 plane. " +
 			"The skeleton is checked deterministically and REJECTED if its geometry cannot be symmetric:\n" +
 			"  * Centre parts (pelvis, torso, neck, head): pivot.x = 0, size.x ODD, offset.x = -(size.x-1)/2, so the " +
@@ -216,6 +220,12 @@ namespace Assembler.Voxelization
 				.Append("  pivot in parent: ").Append(YamlNodes.Vector(part.Pivot)).Append('\n');
 			sb.Append("  size: ").Append(YamlNodes.Vector(planned.Size))
 				.Append("  offset: ").Append(YamlNodes.Vector(planned.Offset)).Append('\n');
+
+			var localMax = planned.Offset + planned.Size - Vector3Int.one;
+			sb.Append("  allowed local cells: x ").Append(planned.Offset.x).Append("..").Append(localMax.x)
+				.Append(", y ").Append(planned.Offset.y).Append("..").Append(localMax.y)
+				.Append(", z ").Append(planned.Offset.z).Append("..").Append(localMax.z)
+				.Append(" — place geometry HERE, not at the origin\n");
 
 			var worldMin = PlanGeometryChecks.WorldPivot(model, part) + planned.Offset;
 			var worldMax = worldMin + planned.Size - Vector3Int.one;

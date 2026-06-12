@@ -80,7 +80,7 @@ namespace Assembler.Voxelization
 					try
 					{
 						var built = await _scriptRunner.RunAsync(script.Source, ct).ConfigureAwait(false);
-						return RemapToModelPalette(model, part.Id, built, issues);
+						return FitToWindow(RemapToModelPalette(model, part.Id, built, issues), script.Size, script.Offset, model);
 					}
 					catch (OperationCanceledException)
 					{
@@ -130,6 +130,48 @@ namespace Assembler.Voxelization
 			}
 
 			return LayersCodec.ToModel(mirrored, model.Palette);
+		}
+
+		/// <summary>
+		/// Script authors routinely build their shape at the origin instead of at
+		/// the declared offset, which cascades into SizeExceeded and
+		/// DisconnectedPart failures even though the shape itself is right. When
+		/// the shape fits the declared size, snap it into the declared window with
+		/// the minimal per-axis shift; genuinely oversized shapes pass through
+		/// unchanged so validation reports them.
+		/// </summary>
+		private static VoxelModel FitToWindow(VoxelModel grid, Vector3Int size, Vector3Int offset, VoxelRigModel model)
+		{
+			if (grid.Voxels.Count == 0)
+			{
+				return grid;
+			}
+
+			var min = grid.Min;
+			var max = grid.Max;
+			var shift = Vector3Int.zero;
+			for (var axis = 0; axis < 3; axis++)
+			{
+				var lo = offset[axis];
+				var hi = offset[axis] + size[axis] - 1;
+				if (max[axis] - min[axis] > hi - lo)
+				{
+					continue;
+				}
+
+				if (min[axis] < lo)
+				{
+					shift[axis] = lo - min[axis];
+				}
+				else if (max[axis] > hi)
+				{
+					shift[axis] = hi - max[axis];
+				}
+			}
+
+			return shift == Vector3Int.zero
+				? grid
+				: LayersCodec.ToModel(grid.Voxels.ToDictionary(kv => kv.Key + shift, kv => kv.Value), model.Palette);
 		}
 
 		private static VoxelModel RemapToModelPalette(

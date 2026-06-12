@@ -82,12 +82,19 @@ namespace Assembler.Voxelization
 			}
 
 			var geometryErrors = PlanGeometryChecks.Errors(plan.Skeleton);
-			return geometryErrors.Count == 0
-				? (plan, string.Empty)
-				: (null,
+			if (geometryErrors.Count > 0)
+			{
+				return (null,
 					"That skeleton can never assemble bilaterally symmetric — these were rejected by deterministic geometry checks:\n- " +
 					string.Join("\n- ", geometryErrors) +
 					"\nFix the skeleton and emit the corrected fenced block(s).");
+			}
+
+			var feasibility = PlanGeometryChecks.SilhouetteFeasibilityError(
+				plan.Skeleton, plan.Brief, _config.SilhouetteCoverageThreshold);
+			return feasibility == null
+				? (plan, string.Empty)
+				: (null, feasibility + "\nRe-emit BOTH the ```vmodel and ```brief blocks.");
 		}
 
 		private ModelPlan Parse(string response, SetManifest manifest, ManifestAsset asset, bool hasImage)

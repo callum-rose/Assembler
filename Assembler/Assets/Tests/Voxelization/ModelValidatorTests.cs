@@ -113,6 +113,53 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void ScriptBuiltAtTheOrigin_IsSnappedIntoTheDeclaredWindow()
+		{
+			var palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) };
+			var model = new VoxelRigModel
+			{
+				Id = "t",
+				Unit = 1f,
+				RealWorldHeight = 2f,
+				Palette = palette,
+				Parts = new[]
+				{
+					new VoxelPart
+					{
+						Id = "arm",
+						Pivot = Vector3Int.zero,
+						// Declared window: x 0..0, y -2..-1, z -1..0.
+						Data = new ScriptPartData(new Vector3Int(1, 2, 2), new Vector3Int(0, -2, -1), "stub"),
+					},
+				},
+			};
+
+			// The "script" builds the right shape but at the origin, the classic
+			// authoring mistake — it must be snapped into the window, not failed.
+			var grid = LayersCodec.ToModel(new Dictionary<Vector3Int, byte>
+			{
+				[new Vector3Int(0, 0, 0)] = 1,
+				[new Vector3Int(0, 1, 0)] = 1,
+				[new Vector3Int(0, 0, 1)] = 1,
+				[new Vector3Int(0, 1, 1)] = 1,
+			}, palette);
+
+			var assembled = new ModelAssembler(new StubScriptRunner(_ => grid))
+				.AssembleAsync(model, CancellationToken.None).GetAwaiter().GetResult();
+			var report = new ModelValidator().Validate(assembled, ReferenceBrief.None);
+
+			Assert.That(report.Issues.Any(i => i.Code == IssueCode.SizeExceeded), Is.False,
+				string.Join("\n", report.Issues));
+			Assert.That(assembled.FindPart("arm")!.Grid.Voxels.Keys, Is.EquivalentTo(new[]
+			{
+				new Vector3Int(0, -2, -1),
+				new Vector3Int(0, -1, -1),
+				new Vector3Int(0, -2, 0),
+				new Vector3Int(0, -1, 0),
+			}));
+		}
+
+		[Test]
 		public void BriefPaletteMismatch_IsReported()
 		{
 			var model = SinglePartModel(new[] { "A" }, new Vector3Int(1, 1, 1), realWorldHeight: 0.18f);

@@ -180,10 +180,10 @@ reference_brief:
   source: ref.png
   silhouette:
     face: front
-    size: [4, 2]
+    size: [3, 2]
     rows:
-      - ""#...""
-      - ""##..""
+      - ""#..""
+      - ""##.""
 ```";
 			var gateway = new FakeGateway().Enqueue(response);
 
@@ -193,7 +193,7 @@ reference_brief:
 				.GetAwaiter().GetResult();
 
 			// Each row is unioned with its own reflection.
-			Assert.That(plan.Brief.Silhouette.Rows, Is.EqualTo(new[] { "#..#", "####" }));
+			Assert.That(plan.Brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "###" }));
 		}
 
 		[Test]
