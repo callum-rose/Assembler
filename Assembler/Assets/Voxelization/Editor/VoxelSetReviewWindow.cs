@@ -202,15 +202,16 @@ namespace Assembler.Voxelization.Editor
 		private void DrawManifest()
 		{
 			EditorGUILayout.LabelField("Game brief (Stage 0 input)", EditorStyles.boldLabel);
-			_briefScroll = EditorGUILayout.BeginScrollView(_briefScroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(120));
+			_briefScroll = EditorGUILayout.BeginScrollView(_briefScroll, GUILayout.Height(120));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				// Sized to its content (not the viewport) so the scroll view
-				// actually scrolls once the text outgrows the box.
-				var width = EditorGUIUtility.currentViewWidth - SidebarWidth - 60f;
+				// Wrapped prose defeats the layout pass's height calculation (it
+				// reports one line), so the field gets an explicit width and its
+				// content height — taller than the viewport means a scrollbar.
+				var width = position.width - SidebarWidth - 60f;
 				var height = EditorStyles.textArea.CalcHeight(new GUIContent(_gameBrief), width);
 				_gameBrief = EditorGUILayout.TextArea(
-					_gameBrief, GUILayout.MinHeight(Mathf.Max(40f, height + 10f)), GUILayout.ExpandHeight(true));
+					_gameBrief, GUILayout.Width(width), GUILayout.Height(Mathf.Max(104f, height + 10f)));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(BriefPref, _gameBrief);
