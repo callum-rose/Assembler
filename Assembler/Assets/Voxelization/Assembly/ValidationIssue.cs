@@ -9,6 +9,7 @@ namespace Assembler.Voxelization
 		NotAuthored,
 		LayersInvalid,
 		ScriptFailed,
+		PrimitivesInvalid,
 		MirrorInvalid,
 		HierarchyInvalid,
 		PaletteBreach,

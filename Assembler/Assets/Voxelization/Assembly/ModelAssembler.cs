@@ -92,6 +92,17 @@ namespace Assembler.Voxelization
 						return EmptyGrid(model);
 					}
 
+				case PrimitivesPartData primitives:
+					try
+					{
+						return PrimitivesCodec.Decode(primitives, model.Palette);
+					}
+					catch (FormatException ex)
+					{
+						issues.Add(new ValidationIssue(part.Id, IssueCode.PrimitivesInvalid, ex.Message));
+						return EmptyGrid(model);
+					}
+
 				case MirrorPartData mirror:
 					if (!resolved.TryGetValue(mirror.Source, out var source))
 					{

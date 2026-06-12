@@ -106,6 +106,17 @@ namespace Assembler.Voxelization
 					sb.Append("      offset: ").Append(YamlNodes.Vector(script.Offset)).Append('\n');
 					YamlNodes.AppendBlockScalar(sb, "      source: ", script.Source, 8);
 					break;
+				case PrimitivesPartData primitives:
+					sb.Append("    data:\n");
+					sb.Append("      encoding: primitives\n");
+					sb.Append("      size: ").Append(YamlNodes.Vector(primitives.Size)).Append('\n');
+					sb.Append("      offset: ").Append(YamlNodes.Vector(primitives.Offset)).Append('\n');
+					sb.Append("      shapes:\n");
+					foreach (var shape in primitives.Shapes)
+					{
+						sb.Append("        - ").Append(YamlNodes.Quote(shape)).Append('\n');
+					}
+					break;
 				case PlannedPartData planned:
 					sb.Append("    data:\n");
 					sb.Append("      encoding: planned\n");
@@ -222,13 +233,31 @@ namespace Assembler.Voxelization
 			{
 				"layers" => new LayersPartData(size, offset, ReadLayers(dataMap, id)),
 				"script" => new ScriptPartData(size, offset, YamlNodes.GetString(dataMap, "source")),
+				"primitives" => new PrimitivesPartData(size, offset, ReadShapes(dataMap, id)),
 				"planned" => new PlannedPartData(
-					YamlNodes.GetString(dataMap, "planned", "layers") == "script" ? PartEncoding.Script : PartEncoding.Layers,
+					ParsePlannedEncoding(YamlNodes.GetString(dataMap, "planned", "layers")),
 					size,
 					offset,
 					YamlNodes.GetString(dataMap, "note")),
 				var other => throw new FormatException($"Part '{id}': unknown encoding '{other}'."),
 			};
+		}
+
+		private static PartEncoding ParsePlannedEncoding(string planned) => planned switch
+		{
+			"script" => PartEncoding.Script,
+			"primitives" => PartEncoding.Primitives,
+			_ => PartEncoding.Layers,
+		};
+
+		private static IReadOnlyList<string> ReadShapes(YamlMappingNode dataMap, string id)
+		{
+			if (YamlNodes.Find(dataMap, "shapes") is not YamlSequenceNode seq)
+			{
+				throw new FormatException($"Part '{id}': primitives encoding requires a 'shapes' sequence.");
+			}
+
+			return seq.Children.Select(YamlNodes.ScalarValue).ToList();
 		}
 
 		private static IReadOnlyList<string> ReadLayers(YamlMappingNode dataMap, string id)

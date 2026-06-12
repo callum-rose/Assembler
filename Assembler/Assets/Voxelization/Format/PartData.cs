@@ -7,6 +7,7 @@ namespace Assembler.Voxelization
 	{
 		Layers,
 		Script,
+		Primitives,
 		Mirror,
 		Planned,
 	}
@@ -49,6 +50,19 @@ namespace Assembler.Voxelization
 	public sealed record ScriptPartData(Vector3Int Size, Vector3Int Offset, string Source) : PartData
 	{
 		public override PartEncoding Encoding => PartEncoding.Script;
+	}
+
+	/// <summary>
+	/// Declarative solid shapes (box / sphere / cylinder, with rounding and
+	/// half-clips), one per line, rasterized deterministically by
+	/// <see cref="PrimitivesCodec"/>. Cheaper and more reliable than a script
+	/// for geometric parts — "box 0 0 0 5 5 5" instead of code that builds one.
+	/// Shape coordinates are grid cells; the grid is placed at
+	/// <paramref name="Offset"/> like the other encodings.
+	/// </summary>
+	public sealed record PrimitivesPartData(Vector3Int Size, Vector3Int Offset, IReadOnlyList<string> Shapes) : PartData
+	{
+		public override PartEncoding Encoding => PartEncoding.Primitives;
 	}
 
 	/// <summary>

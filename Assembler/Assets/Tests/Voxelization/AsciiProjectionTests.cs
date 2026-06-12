@@ -43,6 +43,23 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void Ascii_BackViewMirrorsXAndShowsTheFarthestVoxel()
+		{
+			// Two voxels share an (x, y) column; from behind, the LOWER-z one is
+			// nearest. x also flips: the right edge of the front view is the left
+			// edge of the back view.
+			var model = LayersCodec.ToModel(new Dictionary<Vector3Int, byte>
+			{
+				[new Vector3Int(0, 0, 0)] = 1,
+				[new Vector3Int(0, 0, 1)] = 2,
+				[new Vector3Int(1, 0, 1)] = 2,
+			}, Palette);
+
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Front), Is.EqualTo("BB"));
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Back), Is.EqualTo("BA"));
+		}
+
+		[Test]
 		public void Ascii_EmptyModelSaysSo() =>
 			Assert.That(
 				VoxelProjector.Ascii(LayersCodec.ToModel(new Dictionary<Vector3Int, byte>(), Palette), Palette, ProjectionFace.Front),

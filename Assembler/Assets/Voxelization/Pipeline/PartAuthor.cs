@@ -40,9 +40,12 @@ namespace Assembler.Voxelization
 			string feedback,
 			CancellationToken ct)
 		{
-			return planned.PlannedEncoding == PartEncoding.Script
-				? AuthorScriptAsync(model, brief, part, planned, feedback, ct)
-				: AuthorLayersAsync(model, brief, part, planned, feedback, ct);
+			return planned.PlannedEncoding switch
+			{
+				PartEncoding.Script => AuthorScriptAsync(model, brief, part, planned, feedback, ct),
+				PartEncoding.Primitives => AuthorPrimitivesAsync(model, brief, part, planned, feedback, ct),
+				_ => AuthorLayersAsync(model, brief, part, planned, feedback, ct),
+			};
 		}
 
 		private async Task<PartData> AuthorLayersAsync(
@@ -83,6 +86,51 @@ namespace Assembler.Voxelization
 				catch (FormatException ex)
 				{
 					throw new VoxelizationException($"Authoring layers for '{part.Id}' failed: {ex.Message}", ex);
+				}
+			}
+		}
+
+		private async Task<PartData> AuthorPrimitivesAsync(
+			VoxelRigModel model,
+			ReferenceBrief brief,
+			VoxelPart part,
+			PlannedPartData planned,
+			string feedback,
+			CancellationToken ct)
+		{
+			var messages = new List<AnthropicMessage>
+			{
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback)),
+			};
+
+			for (var attempt = 1; ; attempt++)
+			{
+				var response = await _gateway.SendAsync(
+					Stage, _config.AuthoringModel, VoxelizationPrompts.PrimitivesSystem, messages, ct).ConfigureAwait(false);
+
+				try
+				{
+					var block = FencedBlockExtractor.Extract(response, "primitives")
+								?? throw new FormatException("Response contained no ```primitives fenced block.");
+					var data = new PrimitivesPartData(
+						planned.Size,
+						planned.Offset,
+						block.Replace("\r", string.Empty).Split('\n').ToList());
+
+					// Rasterize now so grammar/key errors surface here, where we can
+					// feed them straight back, rather than later in assembly.
+					PrimitivesCodec.Decode(data, model.Palette);
+					return data;
+				}
+				catch (FormatException ex) when (attempt < _config.MaxPartAttempts)
+				{
+					messages.Add(new AnthropicMessage("assistant", response));
+					messages.Add(new AnthropicMessage("user",
+						$"Those shapes are invalid: {ex.Message}\nEmit the corrected ```primitives block only."));
+				}
+				catch (FormatException ex)
+				{
+					throw new VoxelizationException($"Authoring primitives for '{part.Id}' failed: {ex.Message}", ex);
 				}
 			}
 		}

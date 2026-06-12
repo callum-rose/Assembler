@@ -16,6 +16,9 @@ namespace Assembler.Voxelization
 
 		/// <summary>Viewer above looking along -y: u = x, v = z.</summary>
 		Top,
+
+		/// <summary>Viewer at -z looking along +z (behind the model): u = mirrored x, v = y.</summary>
+		Back,
 	}
 
 	/// <summary>
@@ -30,6 +33,7 @@ namespace Assembler.Voxelization
 		{
 			"side" => ProjectionFace.Side,
 			"top" => ProjectionFace.Top,
+			"back" => ProjectionFace.Back,
 			_ => ProjectionFace.Front,
 		};
 
@@ -39,7 +43,7 @@ namespace Assembler.Voxelization
 			var grid = new bool[width, height];
 			foreach (var p in model.Voxels.Keys)
 			{
-				var (u, v, _) = MapToPlane(p - model.Min, face);
+				var (u, v, _) = MapToPlane(p - model.Min, model.Size, face);
 				grid[u, v] = true;
 			}
 
@@ -62,7 +66,7 @@ namespace Assembler.Voxelization
 
 			foreach (var kv in model.Voxels)
 			{
-				var (u, v, depth) = MapToPlane(kv.Key - model.Min, face);
+				var (u, v, depth) = MapToPlane(kv.Key - model.Min, model.Size, face);
 				if (depth > nearest[u, v])
 				{
 					nearest[u, v] = depth;
@@ -99,7 +103,7 @@ namespace Assembler.Voxelization
 
 			foreach (var kv in model.Voxels)
 			{
-				var (u, v, depth) = MapToPlane(kv.Key - model.Min, face);
+				var (u, v, depth) = MapToPlane(kv.Key - model.Min, model.Size, face);
 				if (depth > nearest[u, v])
 				{
 					nearest[u, v] = depth;
@@ -129,15 +133,16 @@ namespace Assembler.Voxelization
 			var size = model.Size;
 			return face switch
 			{
-				ProjectionFace.Front => (Math.Max(1, size.x), Math.Max(1, size.y)),
+				ProjectionFace.Front or ProjectionFace.Back => (Math.Max(1, size.x), Math.Max(1, size.y)),
 				ProjectionFace.Side => (Math.Max(1, size.z), Math.Max(1, size.y)),
 				_ => (Math.Max(1, size.x), Math.Max(1, size.z)),
 			};
 		}
 
-		private static (int u, int v, int depth) MapToPlane(Vector3Int p, ProjectionFace face) => face switch
+		private static (int u, int v, int depth) MapToPlane(Vector3Int p, Vector3Int size, ProjectionFace face) => face switch
 		{
 			ProjectionFace.Front => (p.x, p.y, p.z),
+			ProjectionFace.Back => (size.x - 1 - p.x, p.y, -p.z),
 			ProjectionFace.Side => (p.z, p.y, p.x),
 			_ => (p.x, p.z, p.y),
 		};

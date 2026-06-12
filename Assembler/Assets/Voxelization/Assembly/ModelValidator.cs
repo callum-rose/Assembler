@@ -140,6 +140,7 @@ namespace Assembler.Voxelization
 			{
 				LayersPartData layers => (layers.Size, layers.Offset),
 				ScriptPartData script => (script.Size, script.Offset),
+				PrimitivesPartData primitives => (primitives.Size, primitives.Offset),
 				_ => (Vector3Int.zero, Vector3Int.zero),
 			};
 

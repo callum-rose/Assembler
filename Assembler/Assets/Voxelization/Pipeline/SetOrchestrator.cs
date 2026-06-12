@@ -226,8 +226,9 @@ namespace Assembler.Voxelization
 		/// <summary>
 		/// ASCII views of what was actually assembled, given to re-authoring calls
 		/// so the model can see its mistake instead of inferring it from an issue
-		/// string. Front + side + top suffice: bilateral models mirror left/right,
-		/// and back/bottom rarely disambiguate anything.
+		/// string. Front + side + top suffice for bilateral models (left/right
+		/// mirror); asymmetric models also get the back view, since their rear can
+		/// differ from what front + side imply. Bottom rarely disambiguates anything.
 		/// </summary>
 		private static string RenderedViews(AssembledModel assembled, ReferenceBrief brief)
 		{
@@ -240,6 +241,12 @@ namespace Assembler.Voxelization
 				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Side)).Append('\n');
 			sb.Append("TOP view (x right; top row is the model's front):\n")
 				.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Top)).Append('\n');
+
+			if (!assembled.Model.IsBilateral)
+			{
+				sb.Append("BACK view, from behind the model (x runs opposite to the FRONT view, y up):\n")
+					.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Back)).Append('\n');
+			}
 
 			if (!brief.Silhouette.IsEmpty)
 			{

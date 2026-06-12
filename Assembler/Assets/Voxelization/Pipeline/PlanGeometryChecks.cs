@@ -305,6 +305,7 @@ namespace Assembler.Voxelization
 			PlannedPartData planned => (planned.Offset, planned.Size),
 			LayersPartData layers => (layers.Offset, layers.Size),
 			ScriptPartData script => (script.Offset, script.Size),
+			PrimitivesPartData primitives => (primitives.Offset, primitives.Size),
 			_ => (Vector3Int.zero, Vector3Int.zero),
 		};
 
@@ -364,6 +365,7 @@ namespace Assembler.Voxelization
 				PlannedPartData planned => (planned.Size, planned.Offset),
 				LayersPartData layers => (layers.Size, layers.Offset),
 				ScriptPartData script => (script.Size, script.Offset),
+				PrimitivesPartData primitives => (primitives.Size, primitives.Offset),
 				_ => (Vector3Int.zero, Vector3Int.zero),
 			};
 

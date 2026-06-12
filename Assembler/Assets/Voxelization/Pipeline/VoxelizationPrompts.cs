@@ -13,7 +13,8 @@ namespace Assembler.Voxelization
 	{
 		private const string CoordinateDoc =
 			"Coordinates are integer voxel cells, Y-up: x = right, y = up, z = forward (towards the viewer). " +
-			"y = 0 is the ground plane.";
+			"y = 0 is the ground plane. FACING: the subject faces the viewer — its front (face, eyes, beak, chest, " +
+			"headlights, windshield) goes on the HIGH-z side, its back/tail on the low-z side.";
 
 		// ---- Stage 0: manifest ----------------------------------------------
 
@@ -52,13 +53,15 @@ namespace Assembler.Voxelization
 			"- Each part: `id`, `parent` (another part id, or `root`), `pivot` [x,y,z] = the joint position in the " +
 			"PARENT's local frame (the part rotates around this point when posed). The part's own local origin sits " +
 			"at its pivot.\n" +
-			"- `data` declares the plan: `encoding: planned`, `planned: layers|script`, `size: [x,y,z]`, " +
+			"- `data` declares the plan: `encoding: planned`, `planned: layers|script|primitives`, `size: [x,y,z]`, " +
 			"`offset: [x,y,z]` (where grid cell 0,0,0 sits in the part's local frame — use it to centre geometry " +
 			"on the joint), and a one-line `note` telling the author what the part looks like.\n" +
-			"- Choose `layers` for small or organic parts — anything under ~100 declared voxels (heads, torsos, limbs, " +
-			"feet) is ALWAYS layers; `script` only pays off for large geometric, parametric, or repetitive parts " +
-			$"(trunks, walls, wheels, foliage). Any part over {config.PartVoxelBudget} declared voxels MUST be a " +
-			"script (or be split into smaller parts).\n" +
+			"- Choosing the encoding: `primitives` for parts that ARE simple solids or unions of a few — car bodies, " +
+			"wheels (shallow cylinders), trunks, poles, walls, hulls, table tops; there is no point hand-drawing or " +
+			"scripting a box. `layers` for small or organic parts that need cell-level detail (heads, torsos, limbs, " +
+			"feet) — anything under ~100 declared voxels with surface detail. `script` only for parametric or " +
+			$"repetitive patterns primitives cannot express. Any part over {config.PartVoxelBudget} declared voxels " +
+			"MUST be primitives or a script (or be split into smaller parts).\n" +
 			"- Proportions matter as much as symmetry: match limb lengths to the reference/subject. Human arms reach " +
 			"from the shoulders to mid-thigh — nearly as long as the legs — and limbs at this scale are long and " +
 			"thin (1 voxel thick), never stubby blocks.\n" +
@@ -257,6 +260,31 @@ namespace Assembler.Voxelization
 			"```layers\n" +
 			".BB.\nBBBB\n.BB.\n\n" +
 			".BB.\nBBBB\n.BB.\n" +
+			"```\n" +
+			"Output ONLY the fenced block.";
+
+		public const string PrimitivesSystem =
+			"You author the voxel geometry of ONE part of a larger model as a list of solid primitive shapes.\n\n" +
+			CoordinateDoc + "\n\n" +
+			"Output format — one fenced block labelled `primitives`, one shape per line:\n" +
+			"  box      KEY minX minY minZ sizeX sizeY sizeZ        (optional trailing: round R)\n" +
+			"  sphere   KEY cx cy cz r                              (optional trailing: half +y / -y / +x / -x / +z / -z)\n" +
+			"  cylinder KEY axis baseX baseY baseZ r h              (axis is x, y, or z; optional trailing half clip)\n" +
+			"Rules:\n" +
+			"- KEY is a declared palette key. Coordinates are GRID cells from [0,0,0] to size-1 — the grid is placed " +
+			"at the declared offset for you; do NOT add the offset yourself.\n" +
+			"- Centres and radii may be fractional: a 4-wide wheel is `cylinder K z 1.5 1.5 0 2 2` (centre between " +
+			"cells; a cell is included when its centre lies within the radius). Box min/size and cylinder height are " +
+			"whole numbers.\n" +
+			"- `round R` rounds a box's edges/corners with radius R. `half` keeps only the named side of a sphere or " +
+			"cylinder (a dome is `sphere ... half +y`).\n" +
+			"- Later lines overwrite earlier ones where they overlap — build big solids first, then details on top.\n" +
+			"- Shapes are clipped to the declared size; geometry must still form ONE connected volume and fill the " +
+			"window's role in the model (no floating pieces).\n\n" +
+			"Example for a 5x3x5 base slab on a roller, palette G=grey, K=black:\n" +
+			"```primitives\n" +
+			"box G 0 1 0 5 2 5 round 1\n" +
+			"cylinder K z 2 0.5 0 1.5 5\n" +
 			"```\n" +
 			"Output ONLY the fenced block.";
 

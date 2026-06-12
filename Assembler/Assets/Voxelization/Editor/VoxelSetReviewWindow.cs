@@ -49,11 +49,13 @@ namespace Assembler.Voxelization.Editor
 		private readonly Dictionary<string, Texture2D> _previews = new();
 		private readonly Dictionary<string, string> _refineNotes = new();
 		private readonly Dictionary<string, Vector2> _infoScrolls = new();
+		private readonly Dictionary<string, string> _inFlight = new();
 		private readonly StringBuilder _log = new();
 		private TokenUsageTracker _usage = new();
 
 		private readonly System.Diagnostics.Stopwatch _runTimer = new();
 		private string _statusLine = string.Empty;
+		private string _runFolder = string.Empty;
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
 		private Vector2 _scroll;
@@ -62,6 +64,7 @@ namespace Assembler.Voxelization.Editor
 		private Vector2 _logScroll;
 		private GUIStyle? _logStyle;
 		private GUIStyle? _statusStyle;
+		private GUIStyle? _infoStyle;
 
 		[MenuItem("Assembler/Voxel Set Review")]
 		public static void Open()
@@ -253,18 +256,47 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawGallery()
 		{
-			if (_results.Count == 0)
+			if (_results.Count == 0 && _inFlight.Count == 0)
 			{
 				return;
 			}
 
-			EditorGUILayout.LabelField("Gallery (models auto-export to the output folder as they finish)", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("Gallery (models auto-export to this run's subfolder as they finish)", EditorStyles.boldLabel);
 			foreach (var result in _results.Values.ToList())
 			{
 				DrawResult(result);
 				EditorGUILayout.Space();
 			}
+
+			// Assets still generating get a placeholder box from the moment the
+			// run starts, showing the latest progress line for that asset.
+			foreach (var pending in _inFlight.Where(kv => !_results.ContainsKey(kv.Key)).ToList())
+			{
+				DrawPlaceholder(pending.Key, pending.Value);
+				EditorGUILayout.Space();
+			}
 		}
+
+		private void DrawPlaceholder(string assetId, string activity)
+		{
+			EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+			EditorGUILayout.BeginHorizontal();
+
+			var previewRect = GUILayoutUtility.GetRect(
+				PreviewSize, PreviewSize, GUILayout.Width(PreviewSize), GUILayout.Height(PreviewSize));
+			GUI.Box(previewRect, $"generating{Dots()}");
+
+			EditorGUILayout.BeginVertical();
+			EditorGUILayout.LabelField($"{assetId} — processing", EditorStyles.boldLabel);
+			_statusStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+			EditorGUILayout.LabelField(activity, _statusStyle);
+			EditorGUILayout.EndVertical();
+
+			EditorGUILayout.EndHorizontal();
+			EditorGUILayout.EndVertical();
+		}
+
+		private static string Dots() => new('.', 1 + (int)(EditorApplication.timeSinceStartup * 2) % 3);
 
 		private void DrawResult(ModelResult result)
 		{
@@ -284,6 +316,11 @@ namespace Assembler.Voxelization.Editor
 
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.LabelField($"{result.AssetId} — {result.Status}", EditorStyles.boldLabel);
+			if (_inFlight.TryGetValue(result.AssetId, out var activity))
+			{
+				_statusStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+				EditorGUILayout.LabelField($"regenerating{Dots()} {activity}", _statusStyle);
+			}
 
 			DrawResultInfo(result);
 
@@ -327,28 +364,35 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawResultInfo(ModelResult result)
 		{
+			var text = ResultInfoText(result);
+			_infoStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = false };
+
+			// One selectable label sized to its content: the surrounding scroll
+			// view scrolls both axes and the text is copyable like the log.
+			var size = _infoStyle.CalcSize(new GUIContent(text));
 			_infoScrolls.TryGetValue(result.AssetId, out var scroll);
 			scroll = EditorGUILayout.BeginScrollView(scroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(PreviewSize - 60));
 			_infoScrolls[result.AssetId] = scroll;
+			EditorGUILayout.SelectableLabel(
+				text, _infoStyle, GUILayout.MinWidth(size.x + 10), GUILayout.MinHeight(size.y + 4));
+			EditorGUILayout.EndScrollView();
+		}
 
+		private static string ResultInfoText(ModelResult result)
+		{
+			var lines = new List<string>();
 			if (result.Error.Length > 0)
 			{
-				EditorGUILayout.LabelField("FAILED: " + result.Error, EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+				lines.Add("FAILED: " + result.Error);
 			}
 
-			// ExpandWidth(false) sizes each label to its content so the scroll
-			// view grows a horizontal bar instead of clipping long issue text.
-			foreach (var issue in result.Report.Issues)
-			{
-				EditorGUILayout.LabelField(issue.ToString(), EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
-			}
-
+			lines.AddRange(result.Report.Issues.Select(i => i.ToString()));
 			if (result.Error.Length == 0 && result.Report.IsValid)
 			{
-				EditorGUILayout.LabelField("validation clean", EditorStyles.miniLabel, GUILayout.ExpandWidth(false));
+				lines.Add("validation clean");
 			}
 
-			EditorGUILayout.EndScrollView();
+			return string.Join("\n", lines);
 		}
 
 		private void DrawSidebar()
@@ -396,6 +440,17 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawLog()
 		{
+			EditorGUILayout.BeginHorizontal();
+			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
+			using (new EditorGUI.DisabledScope(_log.Length == 0))
+			{
+				if (GUILayout.Button("Clear", GUILayout.Width(50)))
+				{
+					_log.Clear();
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
 			if (_log.Length == 0)
 			{
 				return;
@@ -435,7 +490,9 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			var directory = Path.Combine(_outputFolder, result.AssetId);
+			// Models land in this run's subfolder so successive runs never collide.
+			var root = _runFolder.Length > 0 ? _runFolder : _outputFolder;
+			var directory = Path.Combine(root, result.AssetId);
 			result.Export.WriteToDisk(directory);
 			AssetDatabase.Refresh();
 			Log($"{result.AssetId}: exported -> {directory}");
@@ -443,7 +500,7 @@ namespace Assembler.Voxelization.Editor
 
 		private async void RunGenerateManifestAsync()
 		{
-			StartRun(clearResults: false);
+			StartRun(clearResults: false, newRunFolder: false);
 			try
 			{
 				using var gateway = NewGateway();
@@ -476,6 +533,11 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			StartRun(clearResults: true);
+			foreach (var asset in manifest.Assets)
+			{
+				_inFlight[asset.Id] = "queued...";
+			}
+
 			try
 			{
 				using var gateway = NewGateway();
@@ -521,6 +583,7 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			StartRun(clearResults: false);
+			_inFlight[assetId] = "queued...";
 			try
 			{
 				using var gateway = NewGateway();
@@ -573,11 +636,33 @@ namespace Assembler.Voxelization.Editor
 		private IProgress<string> NewProgress() => new Progress<string>(message =>
 		{
 			Log(message);
+			UpdateActivity(message);
 			Repaint();
 		});
 
+		/// <summary>
+		/// Progress lines are "assetId: what's happening"; the gallery placeholder
+		/// for that asset shows the latest one.
+		/// </summary>
+		private void UpdateActivity(string message)
+		{
+			var firstLine = message.Split('\n')[0];
+			var split = firstLine.IndexOf(": ", StringComparison.Ordinal);
+			if (split <= 0)
+			{
+				return;
+			}
+
+			var assetId = firstLine[..split];
+			if (_inFlight.ContainsKey(assetId))
+			{
+				_inFlight[assetId] = firstLine[(split + 2)..];
+			}
+		}
+
 		private void StoreResult(ModelResult result)
 		{
+			_inFlight.Remove(result.AssetId);
 			_results[result.AssetId] = result;
 			if (_previews.TryGetValue(result.AssetId, out var old) && old != null)
 			{
@@ -595,11 +680,16 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
-		private void StartRun(bool clearResults)
+		private void StartRun(bool clearResults, bool newRunFolder = true)
 		{
 			_isRunning = true;
 			_cts = new CancellationTokenSource();
 			_statusLine = string.Empty;
+			_log.Clear();
+			_inFlight.Clear();
+			_runFolder = newRunFolder
+				? Path.Combine(_outputFolder, $"run-{DateTime.Now:yyyy-MM-dd-HHmmss}")
+				: string.Empty;
 			_runTimer.Restart();
 			if (clearResults)
 			{
@@ -624,13 +714,35 @@ namespace Assembler.Voxelization.Editor
 			_isRunning = false;
 			_runTimer.Stop();
 			_statusLine = string.Empty;
+			_inFlight.Clear();
+			ExportSessionLog();
 			_cts?.Dispose();
 			_cts = null;
 			Repaint();
 		}
 
+		private void ExportSessionLog()
+		{
+			if (_runFolder.Length == 0 || _log.Length == 0)
+			{
+				return;
+			}
+
+			Directory.CreateDirectory(_runFolder);
+			File.WriteAllText(Path.Combine(_runFolder, "session.log"), _log.ToString());
+			AssetDatabase.Refresh();
+		}
+
 		private void Log(string message)
 		{
+			// Each entry opens with a bullet + run timestamp so entries are easy
+			// to tell apart in the stream.
+			_log.Append("• ");
+			if (_runTimer.IsRunning)
+			{
+				_log.Append('[').Append(_runTimer.Elapsed.ToString(@"mm\:ss")).Append("] ");
+			}
+
 			_log.AppendLine(message);
 			_logScroll.y = float.MaxValue;
 			Repaint();
