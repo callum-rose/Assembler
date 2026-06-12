@@ -22,7 +22,7 @@ namespace Assembler.Voxelization
 			_symmetryIouThreshold = symmetryIouThreshold;
 		}
 
-		public ValidationReport Validate(AssembledModel assembled, ReferenceBrief brief)
+		public ValidationReport Validate(AssembledModel assembled, ReferenceBrief brief, bool checkBriefPalette = true)
 		{
 			var issues = new List<ValidationIssue>();
 			var model = assembled.Model;
@@ -47,7 +47,13 @@ namespace Assembler.Voxelization
 
 			if (!brief.IsEmpty)
 			{
-				CheckBriefPalette(model, brief, issues);
+				// A noted refine relaxes the palette lock (the operator's note
+				// outranks the brief), but the silhouette gates stay.
+				if (checkBriefPalette)
+				{
+					CheckBriefPalette(model, brief, issues);
+				}
+
 				CheckSilhouette(assembled.Composed, brief, issues);
 			}
 

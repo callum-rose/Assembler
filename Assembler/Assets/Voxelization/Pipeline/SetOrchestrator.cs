@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -51,6 +52,7 @@ namespace Assembler.Voxelization
 		private readonly TokenUsageTracker _usage;
 		private readonly BriefExtractor _briefer;
 		private readonly ModelPlanner _planner;
+		private readonly ModelRefiner _refiner;
 		private readonly PartAuthor _author;
 		private readonly ModelAssembler _assembler;
 		private readonly ModelValidator _validator;
@@ -68,6 +70,7 @@ namespace Assembler.Voxelization
 			_images = images;
 			_usage = usage;
 			_planner = new ModelPlanner(gateway, config);
+			_refiner = new ModelRefiner(gateway, config);
 			_author = new PartAuthor(gateway, config);
 			_assembler = new ModelAssembler(scriptRunner);
 			_validator = new ModelValidator(config.SilhouetteIouThreshold);
@@ -89,16 +92,30 @@ namespace Assembler.Voxelization
 			ManifestAsset asset,
 			string refinementNote,
 			CancellationToken ct,
-			IProgress<string>? progress = null)
+			IProgress<string>? progress = null,
+			ModelResult? previousResult = null)
 		{
+			// Track the last good assembly outside the loop: a late failure after we
+			// already have one degrades to NeedsReview instead of throwing it away.
+			AssembledModel? assembled = null;
+			var report = ValidationReport.Clean;
+			var brief = ReferenceBrief.None;
+			var degradeError = string.Empty;
+
 			try
 			{
 				var image = asset.HasReference
 					? await _images.LoadAsync(asset.Reference, ct)
 					: AnthropicImage.None;
 
-				var brief = ReferenceBrief.None;
-				if (!image.IsEmpty)
+				// On a re-run seeded by a previous result, reuse its accepted brief:
+				// re-transcribing the reference is non-deterministic and would shift
+				// the gates a passing model already cleared.
+				if (previousResult != null && !previousResult.Brief.IsEmpty)
+				{
+					brief = previousResult.Brief;
+				}
+				else if (!image.IsEmpty)
 				{
 					progress?.Report($"{asset.Id}: transcribing the reference image...");
 					brief = await _briefer.ExtractAsync(manifest, asset, image, ct);
@@ -107,91 +124,65 @@ namespace Assembler.Voxelization
 				}
 
 				var note = refinementNote;
-				ModelPlan plan = null!;
-				VoxelRigModel model = null!;
-				AssembledModel assembled = null!;
-				ValidationReport report = null!;
+				var suppressPaletteGate = refinementNote.Length > 0;
+				var previousModelYaml = previousResult != null ? VModelYaml.Write(previousResult.Model) : string.Empty;
 
 				for (var review = 0; ; review++)
 				{
-					progress?.Report($"{asset.Id}: planning...");
-					plan = await _planner.PlanAsync(manifest, asset, image, brief, note, ct);
-					progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
-
-					model = plan.Skeleton;
-					var plannedById = model.Parts
-						.Where(p => p.Data is PlannedPartData)
-						.ToDictionary(p => p.Id, p => (PlannedPartData)p.Data);
-
-					foreach (var partId in plannedById.Keys)
+					try
 					{
-						ct.ThrowIfCancellationRequested();
-						var planned = plannedById[partId];
-						progress?.Report(
-							$"{asset.Id}: authoring {partId} ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
-							$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}{Note(planned)})...");
-						model = await AuthorPartAsync(model, plan.Brief, partId, planned, string.Empty, ct);
-					}
+						progress?.Report($"{asset.Id}: planning...");
+						var plan = await _planner.PlanAsync(
+							manifest, asset, image, brief, note, ct, previousModelYaml, suppressPaletteGate);
+						brief = plan.Brief;
+						progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
 
-					progress?.Report($"{asset.Id}: assembling...");
-					assembled = await _assembler.AssembleAsync(model, ct);
-					report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
-					ReportOutcome(asset.Id, assembled, report, progress);
+						var model = plan.Skeleton;
+						var plannedById = model.Parts
+							.Where(p => p.Data is PlannedPartData)
+							.ToDictionary(p => p.Id, p => (PlannedPartData)p.Data);
 
-					for (var round = 1; round <= _config.MaxValidationRounds && !report.IsValid; round++)
-					{
-						var failing = report.FailingPartIds.Where(plannedById.ContainsKey).ToList();
-						if (failing.Count == 0)
+						foreach (var partId in plannedById.Keys)
+						{
+							ct.ThrowIfCancellationRequested();
+							var planned = plannedById[partId];
+							progress?.Report(
+								$"{asset.Id}: authoring {partId} ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
+								$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}{Note(planned)})...");
+							model = await AuthorPartAsync(model, brief, partId, planned, string.Empty, ct);
+						}
+
+						(model, assembled, report) = await AssembleAndRepairAsync(
+							model, brief, plannedById, asset.Id, !suppressPaletteGate, ct, progress);
+
+						if (review >= _config.MaxReviewRounds)
 						{
 							break;
 						}
 
-						var views = RenderedViews(assembled, plan.Brief);
-						foreach (var partId in failing)
+						progress?.Report($"{asset.Id}: reviewing the result against the reference...");
+						var corrections = await ReviewAsync(image, model, assembled, brief, ct);
+						if (corrections.Length == 0)
 						{
-							ct.ThrowIfCancellationRequested();
-							var issuesText = string.Join("\n", report.Issues
-								.Where(i => i.PartId == partId)
-								.Select(i => i.ToString()));
-							progress?.Report($"{asset.Id}: re-authoring {partId} (round {round}) because: {issuesText}");
-							model = await AuthorPartAsync(model, plan.Brief, partId, plannedById[partId], $"{issuesText}\n\n{views}", ct);
+							progress?.Report($"{asset.Id}: review — looks faithful");
+							break;
 						}
 
-						assembled = await _assembler.AssembleAsync(model, ct);
-						report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, plan.Brief));
-						ReportOutcome(asset.Id, assembled, report, progress);
+						progress?.Report($"{asset.Id}: review requested corrections — re-planning:\n{corrections}");
+						note = refinementNote.Length > 0 ? $"{refinementNote}\n{corrections}" : corrections;
+						previousModelYaml = VModelYaml.Write(model);
 					}
-
-					if (review >= _config.MaxReviewRounds)
+					catch (VoxelizationException ex) when (assembled != null)
 					{
+						// A later round failed, but an earlier one already produced a
+						// good build — keep it (flagged NeedsReview) rather than failing.
+						degradeError = Truncate(ex.Message);
+						progress?.Report($"{asset.Id}: kept the last good build after a late failure — {ex}");
 						break;
 					}
-
-					progress?.Report($"{asset.Id}: reviewing the result against the reference...");
-					var corrections = await ReviewAsync(image, model, assembled, plan.Brief, ct);
-					if (corrections.Length == 0)
-					{
-						progress?.Report($"{asset.Id}: review — looks faithful");
-						break;
-					}
-
-					progress?.Report($"{asset.Id}: review requested corrections — re-planning:\n{corrections}");
-					note = refinementNote.Length > 0 ? $"{refinementNote}\n{corrections}" : corrections;
 				}
 
-				progress?.Report($"{asset.Id}: exporting...");
-				var export = ModelExporter.Export(assembled, plan.Brief);
-
-				return new ModelResult
-				{
-					AssetId = asset.Id,
-					Status = report.IsValid ? ModelStatus.Ready : ModelStatus.NeedsReview,
-					Model = model,
-					Brief = plan.Brief,
-					Assembled = assembled,
-					Report = report,
-					Export = export,
-				};
+				return ExportResult(asset.Id, assembled!, brief, report, degradeError, progress);
 			}
 			catch (OperationCanceledException)
 			{
@@ -199,15 +190,205 @@ namespace Assembler.Voxelization
 			}
 			catch (Exception ex)
 			{
-				progress?.Report($"{asset.Id}: FAILED — {ex.Message}");
+				progress?.Report($"{asset.Id}: FAILED — {ex}");
 				return new ModelResult
 				{
 					AssetId = asset.Id,
 					Status = ModelStatus.Failed,
-					Error = ex.Message,
+					Error = Truncate(ex.Message),
 				};
 			}
 		}
+
+		/// <summary>
+		/// Applies an operator note to an already-accepted model as minimal edit
+		/// operations (Decision: minor edits must not reconsider the whole model),
+		/// then re-authors only the edited parts, re-assembles, re-validates and
+		/// re-exports. A structural/ambiguous note escalates to a full re-plan,
+		/// seeded with the previous model and brief. Untouched parts stay
+		/// bit-identical because <see cref="ModelEdits.Apply"/> leaves them
+		/// reference-equal and only edited parts are eligible for re-authoring.
+		/// </summary>
+		public async Task<ModelResult> RefineAssetAsync(
+			SetManifest manifest,
+			ManifestAsset asset,
+			ModelResult previous,
+			string note,
+			CancellationToken ct,
+			IProgress<string>? progress = null)
+		{
+			try
+			{
+				progress?.Report($"{asset.Id}: proposing edits...");
+				var ops = await _refiner.ProposeAsync(previous.Model, previous.Brief, note, ct);
+
+				if (ops.Any(o => o is ReplanOp))
+				{
+					var reason = string.Join("; ", ops.OfType<ReplanOp>().Select(o => o.Reason));
+					progress?.Report($"{asset.Id}: refine escalated to a full re-plan — {reason}");
+					var combined = note.Length > 0 ? $"{note}\n{reason}" : reason;
+					return await RunAssetAsync(manifest, asset, combined, ct, progress, previous);
+				}
+
+				var (model, brief, reauthors) = ModelEdits.Apply(previous.Model, previous.Brief, ops);
+				progress?.Report($"{asset.Id}: applied {ops.Count} edit(s); re-authoring {reauthors.Count} part(s)...");
+
+				foreach (var reauthor in reauthors)
+				{
+					ct.ThrowIfCancellationRequested();
+					model = await ReauthorPartAsync(model, brief, reauthor, ct, progress);
+				}
+
+				// Only edited parts may be re-authored by the repair loop; validation
+				// noise on untouched parts must not trigger their (bit-changing) redo.
+				var reauthorable = EditedReauthorable(model, ModelEdits.EditedPartIds(ops));
+				var (_, assembled, report) = await AssembleAndRepairAsync(
+					model, brief, reauthorable, asset.Id, checkBriefPalette: false, ct, progress);
+
+				return ExportResult(asset.Id, assembled, brief, report, string.Empty, progress);
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				progress?.Report($"{asset.Id}: refine FAILED — {ex}");
+				return new ModelResult
+				{
+					AssetId = asset.Id,
+					Status = ModelStatus.Failed,
+					Error = Truncate(ex.Message),
+				};
+			}
+		}
+
+		/// <summary>
+		/// Shared tail: assemble, validate, then re-author the failing parts the
+		/// caller marked as reauthorable for a bounded number of rounds. A
+		/// re-authoring failure after the first assembly degrades to the last good
+		/// build instead of throwing — the asset still exports for review.
+		/// </summary>
+		private async Task<(VoxelRigModel Model, AssembledModel Assembled, ValidationReport Report)> AssembleAndRepairAsync(
+			VoxelRigModel model,
+			ReferenceBrief brief,
+			IReadOnlyDictionary<string, PlannedPartData> reauthorable,
+			string assetId,
+			bool checkBriefPalette,
+			CancellationToken ct,
+			IProgress<string>? progress)
+		{
+			progress?.Report($"{assetId}: assembling...");
+			var assembled = await _assembler.AssembleAsync(model, ct);
+			var report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, brief, checkBriefPalette));
+			ReportOutcome(assetId, assembled, report, progress);
+
+			for (var round = 1; round <= _config.MaxValidationRounds && !report.IsValid; round++)
+			{
+				var failing = report.FailingPartIds.Where(reauthorable.ContainsKey).ToList();
+				if (failing.Count == 0)
+				{
+					break;
+				}
+
+				try
+				{
+					var views = RenderedViews(assembled, brief);
+					foreach (var partId in failing)
+					{
+						ct.ThrowIfCancellationRequested();
+						var issuesText = string.Join("\n", report.Issues
+							.Where(i => i.PartId == partId)
+							.Select(i => i.ToString()));
+						progress?.Report($"{assetId}: re-authoring {partId} (round {round}) because: {issuesText}");
+						model = await AuthorPartAsync(model, brief, partId, reauthorable[partId], $"{issuesText}\n\n{views}", ct);
+					}
+				}
+				catch (VoxelizationException ex)
+				{
+					progress?.Report($"{assetId}: kept the last good build — re-authoring failed: {ex.Message}");
+					break;
+				}
+
+				assembled = await _assembler.AssembleAsync(model, ct);
+				report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, brief, checkBriefPalette));
+				ReportOutcome(assetId, assembled, report, progress);
+			}
+
+			// assembled.Model is the model that produced this composition; returning
+			// it keeps model/assembled consistent even after a mid-round degrade.
+			return (assembled.Model, assembled, report);
+		}
+
+		private static ModelResult ExportResult(
+			string assetId,
+			AssembledModel assembled,
+			ReferenceBrief brief,
+			ValidationReport report,
+			string degradeError,
+			IProgress<string>? progress)
+		{
+			progress?.Report($"{assetId}: exporting...");
+			var export = ModelExporter.Export(assembled, brief);
+
+			return new ModelResult
+			{
+				AssetId = assetId,
+				Status = degradeError.Length > 0 || !report.IsValid ? ModelStatus.NeedsReview : ModelStatus.Ready,
+				Model = assembled.Model,
+				Brief = brief,
+				Assembled = assembled,
+				Report = report,
+				Export = export,
+				Error = degradeError,
+			};
+		}
+
+		/// <summary>The reauthorable window for each edited authored part, so the repair loop can redo just those.</summary>
+		private static IReadOnlyDictionary<string, PlannedPartData> EditedReauthorable(
+			VoxelRigModel model, IReadOnlyCollection<string> editedIds)
+		{
+			var reauthorable = new Dictionary<string, PlannedPartData>();
+			foreach (var id in editedIds)
+			{
+				if (model.FindPart(id) is { Data: not (MirrorPartData or CopyPartData) } part)
+				{
+					reauthorable[id] = PlannedFor(part, size: null, offset: null, instructions: string.Empty);
+				}
+			}
+
+			return reauthorable;
+		}
+
+		private async Task<VoxelRigModel> ReauthorPartAsync(
+			VoxelRigModel model, ReferenceBrief brief, ReauthorOp op, CancellationToken ct, IProgress<string>? progress)
+		{
+			var part = model.FindPart(op.PartId)
+					   ?? throw new VoxelizationException($"Reauthor target '{op.PartId}' is missing from the model.");
+			var planned = PlannedFor(part, op.Size, op.Offset, op.Instructions);
+			progress?.Report(
+				$"{model.Id}/{op.PartId}: re-authoring ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
+				$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}) — {op.Instructions}");
+			return await AuthorPartAsync(model, brief, op.PartId, planned, string.Empty, ct);
+		}
+
+		/// <summary>Recovers a part's encoding/box for re-authoring, applying any resize override from the refine op.</summary>
+		private static PlannedPartData PlannedFor(VoxelPart part, Vector3Int? size, Vector3Int? offset, string instructions)
+		{
+			var (encoding, partSize, partOffset) = part.Data switch
+			{
+				LayersPartData layers => (PartEncoding.Layers, layers.Size, layers.Offset),
+				ScriptPartData script => (PartEncoding.Script, script.Size, script.Offset),
+				PrimitivesPartData primitives => (PartEncoding.Primitives, primitives.Size, primitives.Offset),
+				PlannedPartData planned => (planned.PlannedEncoding, planned.Size, planned.Offset),
+				_ => (PartEncoding.Layers, Vector3Int.one, Vector3Int.zero),
+			};
+
+			return new PlannedPartData(encoding, size ?? partSize, offset ?? partOffset, instructions);
+		}
+
+		private static string Truncate(string message, int max = 500) =>
+			message.Length <= max ? message : message.Substring(0, max) + " … (see log)";
 
 		private static string DescribePlan(VoxelRigModel skeleton)
 		{

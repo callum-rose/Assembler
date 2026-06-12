@@ -39,10 +39,13 @@ namespace Assembler.Voxelization
 			AnthropicImage referenceImage,
 			ReferenceBrief brief,
 			string refinementNote,
-			CancellationToken ct)
+			CancellationToken ct,
+			string previousModelYaml = "",
+			bool suppressPaletteGate = false)
 		{
 			var hasImage = !referenceImage.IsEmpty;
-			var userText = VoxelizationPrompts.PlanningUser(manifest, asset, brief, hasImage, refinementNote, _config.StyleGuidance);
+			var userText = VoxelizationPrompts.PlanningUser(
+				manifest, asset, brief, hasImage, refinementNote, _config.StyleGuidance, previousModelYaml);
 			var messages = new List<AnthropicMessage>
 			{
 				hasImage
@@ -55,7 +58,7 @@ namespace Assembler.Voxelization
 				var response = await _gateway.SendAsync(
 					Stage, _config.PlanningModel, VoxelizationPrompts.PlanningSystem(_config), messages, ct).ConfigureAwait(false);
 
-				var (plan, feedback) = TryParse(response, manifest, asset, brief);
+				var (plan, feedback) = TryParse(response, manifest, asset, brief, suppressPaletteGate);
 				if (plan != null)
 				{
 					return plan;
@@ -71,7 +74,8 @@ namespace Assembler.Voxelization
 			}
 		}
 
-		private (ModelPlan? Plan, string Feedback) TryParse(string response, SetManifest manifest, ManifestAsset asset, ReferenceBrief brief)
+		private (ModelPlan? Plan, string Feedback) TryParse(
+			string response, SetManifest manifest, ManifestAsset asset, ReferenceBrief brief, bool suppressPaletteGate)
 		{
 			ModelPlan plan;
 			try
@@ -92,7 +96,9 @@ namespace Assembler.Voxelization
 					"\nFix the skeleton and emit the corrected ```vmodel block.");
 			}
 
-			if (brief.Palette.Count > 0)
+			// A noted refine lets the operator introduce colours the locked brief
+			// palette never had ("make the car red") — the note outranks the brief.
+			if (brief.Palette.Count > 0 && !suppressPaletteGate)
 			{
 				var allowed = new HashSet<int>(brief.Palette.Select(ColourKey));
 				var rogue = plan.Skeleton.Palette

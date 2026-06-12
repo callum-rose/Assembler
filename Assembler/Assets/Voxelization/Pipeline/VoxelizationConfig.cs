@@ -62,6 +62,7 @@ namespace Assembler.Voxelization
 			RunFolderNamer.Stage => ManifestModel,
 			BriefExtractor.Stage => PlanningModel,
 			ModelPlanner.Stage => PlanningModel,
+			ModelRefiner.Stage => PlanningModel,
 			SetOrchestrator.ReviewStage => PlanningModel,
 			_ => AuthoringModel,
 		};

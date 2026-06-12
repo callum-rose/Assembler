@@ -143,30 +143,43 @@ namespace Assembler.Voxelization
 			string feedback,
 			CancellationToken ct)
 		{
-			var executor = _executorFactory();
 			var messages = new List<AnthropicMessage>
 			{
 				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
 			};
 
-			await _gateway.SendAsync(
-				Stage,
-				_config.AuthoringModel,
-				VoxelizationPrompts.ScriptSystem,
-				messages,
-				ct,
-				tools: new[] { executor.Tool },
-				onToolUse: executor.HandleToolUseAsync,
-				maxToolIterations: _config.ScriptLimits.MaxToolIterations).ConfigureAwait(false);
-
-			var script = executor.LastScript;
-			if (string.IsNullOrWhiteSpace(script))
+			// Like the layers/primitives encoders, a script that never builds gets a
+			// fresh attempt with feedback before the part is given up on — a single
+			// failed tool loop is recoverable.
+			for (var attempt = 1; ; attempt++)
 			{
-				throw new VoxelizationException(
-					$"Authoring script for '{part.Id}' failed: no run_voxel_script call succeeded.");
-			}
+				var executor = _executorFactory();
+				await _gateway.SendAsync(
+					Stage,
+					_config.AuthoringModel,
+					VoxelizationPrompts.ScriptSystem,
+					messages,
+					ct,
+					tools: new[] { executor.Tool },
+					onToolUse: executor.HandleToolUseAsync,
+					maxToolIterations: _config.ScriptLimits.MaxToolIterations).ConfigureAwait(false);
 
-			return new ScriptPartData(planned.Size, planned.Offset, script!);
+				var script = executor.LastScript;
+				if (!string.IsNullOrWhiteSpace(script))
+				{
+					return new ScriptPartData(planned.Size, planned.Offset, script!);
+				}
+
+				if (attempt >= _config.MaxPartAttempts)
+				{
+					throw new VoxelizationException(
+						$"Authoring script for '{part.Id}' failed after {_config.MaxPartAttempts} attempts: no run_voxel_script call succeeded.");
+				}
+
+				messages.Add(new AnthropicMessage("assistant", "(no run_voxel_script call built successfully)"));
+				messages.Add(new AnthropicMessage("user",
+					"Your script never built — call run_voxel_script with a corrected script that ends in `return b.Build();`."));
+			}
 		}
 
 		/// <summary>
