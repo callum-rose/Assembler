@@ -39,6 +39,10 @@ namespace Assembler.Voxelization
 				}
 
 				CheckTouchesParent(assembled, part, issues);
+				if (model.IsBilateral && part.Part.Data is not MirrorPartData && part.WorldPivot.x == 0)
+				{
+					CheckPartMirrorSymmetry(part, issues);
+				}
 			}
 
 			if (!brief.IsEmpty)
@@ -96,6 +100,38 @@ namespace Assembler.Voxelization
 					$"Model is only {iou:P0} mirror-symmetric across its centre x plane (threshold {_symmetryIouThreshold:P0}). " +
 					"Author geometry on one side only and declare the other side as mirror parts."));
 			}
+		}
+
+		/// <summary>
+		/// A centre part (one sitting on the bilateral mirror plane) must itself
+		/// be mirror-symmetric, colours included, across its own x bbox centre.
+		/// Unlike the whole-model check this attributes the issue to the part, so
+		/// the targeted re-authoring loop can act on it.
+		/// </summary>
+		private static void CheckPartMirrorSymmetry(AssembledPart part, List<ValidationIssue> issues)
+		{
+			var voxels = part.Grid.Voxels;
+			if (voxels.Count == 0)
+			{
+				return;
+			}
+
+			var sum = part.Grid.Min.x + part.Grid.Max.x;
+			var mismatches = voxels
+				.Where(kv => !voxels.TryGetValue(new Vector3Int(sum - kv.Key.x, kv.Key.y, kv.Key.z), out var twin) || twin != kv.Value)
+				.Select(kv => kv.Key)
+				.OrderBy(p => p.y).ThenBy(p => p.z).ThenBy(p => p.x)
+				.ToList();
+
+			if (mismatches.Count == 0)
+			{
+				return;
+			}
+
+			var sample = string.Join(", ", mismatches.Take(5).Select(p => $"[{p.x},{p.y},{p.z}]"));
+			issues.Add(new ValidationIssue(part.Part.Id, IssueCode.Asymmetric,
+				$"Part sits on the bilateral mirror plane but is not left-right symmetric: {mismatches.Count} cell(s) " +
+				$"lack a mirrored twin of the same colour (e.g. {sample}). Mirror every voxel and colour across the grid's x centre."));
 		}
 
 		private static void CheckDeclaredSize(AssembledPart part, List<ValidationIssue> issues)

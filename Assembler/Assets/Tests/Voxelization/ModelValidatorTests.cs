@@ -167,6 +167,10 @@ namespace Tests.Voxelization
 			var report = Validate(model);
 
 			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric), Is.True);
+
+			// The lopsided part sits on the mirror plane, so the issue must be
+			// attributed to it — that's what lets the re-authoring loop target it.
+			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric && i.PartId == "solo"), Is.True);
 		}
 
 		[Test]

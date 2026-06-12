@@ -135,6 +135,68 @@ poses:
 		}
 
 		[Test]
+		public void ModelPlanner_RejectsGeometricallyDoomedBilateralSkeleton_AndRetriesWithFeedback()
+		{
+			// The plan's only part is 2 wide at pivot x=0 — an even-width centre
+			// part can never straddle the mirror plane. The planner must bounce it
+			// back with the geometry error and accept the corrected odd-width plan.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Symmetry = "bilateral" },
+				},
+			};
+			var gateway = new FakeGateway()
+				.Enqueue(PlanResponse)
+				.Enqueue(PlanResponse.Replace("size: [2, 2, 1]", "size: [3, 2, 1]"));
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(manifest, manifest.Assets[0], AnthropicImage.None, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
+			Assert.That(gateway.Calls[1].Messages[2].Content, Does.Contain("even width"));
+			Assert.That(((PlannedPartData)plan.Skeleton.Parts.Single().Data).Size.x, Is.EqualTo(3));
+		}
+
+		[Test]
+		public void ModelPlanner_SymmetrizesTheBriefSilhouetteForBilateralAssets()
+		{
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Symmetry = "bilateral", Reference = "ref.png" },
+				},
+			};
+			var response = PlanResponse.Replace("size: [2, 2, 1]", "size: [3, 2, 1]") + @"
+```brief
+reference_brief:
+  source: ref.png
+  silhouette:
+    face: front
+    size: [4, 2]
+    rows:
+      - ""#...""
+      - ""##..""
+```";
+			var gateway = new FakeGateway().Enqueue(response);
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }),
+					string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			// Each row is unioned with its own reflection.
+			Assert.That(plan.Brief.Silhouette.Rows, Is.EqualTo(new[] { "#..#", "####" }));
+		}
+
+		[Test]
 		public void PartAuthor_ParsesLayersFence_AndRetriesWithFeedbackOnBadDimensions()
 		{
 			var planned = new PlannedPartData(PartEncoding.Layers, new Vector3Int(2, 2, 1), new Vector3Int(-1, 0, 0), "crate");
@@ -200,7 +262,7 @@ poses:
 		[Test]
 		public void SetOrchestrator_FailedPlanBecomesFailedResult()
 		{
-			var gateway = new FakeGateway().Enqueue("nothing useful").Enqueue("still nothing");
+			var gateway = new FakeGateway().Enqueue("nothing useful").Enqueue("still nothing").Enqueue("and again");
 			var orchestrator = new SetOrchestrator(
 				gateway,
 				VoxelizationConfig.Default,

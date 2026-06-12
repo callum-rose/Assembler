@@ -57,12 +57,16 @@ namespace Assembler.Voxelization
 			"- Choose `layers` for small organic/detailed parts (head, torso); `script` for geometric, parametric, " +
 			$"repetitive, or large parts (trunks, wheels, foliage). Any part over {config.PartVoxelBudget} declared " +
 			"voxels MUST be a script (or be split into smaller parts).\n" +
-			"- BILATERAL ASSETS ARE STRICT: the finished model must be exactly mirror-symmetric across the x centre " +
-			"plane (this is validated). NEVER author geometry on both sides. Centre parts must be symmetric in x " +
-			"(odd widths centred on x=0, or even widths split evenly across the plane). Author every off-centre part " +
-			"on ONE side only, and declare its twin as `mirror: { source: <part>, axis: x }` instead of `data` " +
-			"(pivot may be omitted — it is derived by reflection). Mirror sources must be declared before the " +
-			"mirror. Plan side-part pivots as exact reflections of each other.\n" +
+			"- BILATERAL ASSETS ARE STRICT: the finished model must be exactly mirror-symmetric across the x=0 plane. " +
+			"The skeleton is checked deterministically and REJECTED if its geometry cannot be symmetric:\n" +
+			"  * Centre parts (pelvis, torso, neck, head): pivot.x = 0, size.x ODD, offset.x = -(size.x-1)/2, so the " +
+			"grid straddles x=0 exactly. A 4-wide part at x=0 can NEVER be centred — never give a centre part an " +
+			"even width.\n" +
+			"  * Paired parts (arms, legs, ears, wheels): author ONE side only and declare the twin as " +
+			"`mirror: { source: <part>, axis: x }` instead of `data` (pivot may be omitted — it is derived by " +
+			"reflection). Every off-centre authored part MUST have such a twin. Mirror sources must be declared " +
+			"before the mirror.\n" +
+			"  * The overall model width is therefore odd.\n" +
 			"- Parts whose geometry is naturally scattered (foliage, leaves, debris, pebbles) may set `loose: true` " +
 			"on the part so disconnected chunks within it are allowed. Never mark body parts, limbs, or structural " +
 			"pieces loose — a floating leaf is fine, a floating hand is not.\n" +
@@ -86,7 +90,7 @@ namespace Assembler.Voxelization
 			"  - id: torso\n" +
 			"    parent: root\n" +
 			"    pivot: [0, 4, 0]\n" +
-			"    data: { encoding: planned, planned: layers, size: [4, 4, 2], offset: [-2, 0, -1], note: \"blue shirt block\" }\n" +
+			"    data: { encoding: planned, planned: layers, size: [3, 4, 2], offset: [-1, 0, -1], note: \"blue shirt block\" }\n" +
 			"  - id: arm.R\n" +
 			"    parent: torso\n" +
 			"    pivot: [3, 3, 0]\n" +
@@ -111,7 +115,8 @@ namespace Assembler.Voxelization
 			"      - \"..##..\"\n" +
 			"```\n" +
 			"Silhouette rows are listed top row first; '#' = solid, '.' = empty; the grid must match the planned " +
-			"model's front bounding box. Without an image, output no `brief` block.";
+			"model's front bounding box. For bilateral assets every row must be exactly left-right symmetric and the " +
+			"width odd. Without an image, output no `brief` block.";
 
 		public static string PlanningUser(SetManifest manifest, ManifestAsset asset, bool hasImage, string refinementNote)
 		{
@@ -213,6 +218,13 @@ namespace Assembler.Voxelization
 			if (planned.Note.Length > 0)
 			{
 				sb.Append("  note: ").Append(planned.Note).Append('\n');
+			}
+
+			if (model.IsBilateral && PlanGeometryChecks.WorldPivot(model, part).x == 0)
+			{
+				sb.Append("  SYMMETRY: this part sits on the mirror plane of a bilateral model. Its grid MUST be " +
+						  "exactly left-right symmetric — column i mirrors column size.x-1-i with identical colours. " +
+						  "This is validated cell-by-cell.\n");
 			}
 
 			sb.Append("\nNeighbouring parts (for proportion/joint context):\n");
