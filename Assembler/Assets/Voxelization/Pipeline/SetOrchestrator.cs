@@ -216,6 +216,7 @@ namespace Assembler.Voxelization
 				PlannedPartData planned =>
 					$"{p.Id} ({planned.PlannedEncoding.ToString().ToLowerInvariant()} {planned.Size.x}x{planned.Size.y}x{planned.Size.z}{(p.Loose ? ", loose" : "")})",
 				MirrorPartData mirror => $"{p.Id} (mirror of {mirror.Source})",
+				CopyPartData copy => $"{p.Id} (copy of {copy.Source})",
 				_ => p.Id,
 			});
 

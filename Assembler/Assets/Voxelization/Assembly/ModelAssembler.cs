@@ -113,6 +113,17 @@ namespace Assembler.Voxelization
 
 					return MirrorGrid(source, mirror.Axis, model);
 
+				case CopyPartData copy:
+					if (!resolved.TryGetValue(copy.Source, out var original))
+					{
+						issues.Add(new ValidationIssue(part.Id, IssueCode.CopyInvalid,
+							$"Copy source '{copy.Source}' is not declared before this part."));
+						return EmptyGrid(model);
+					}
+
+					// Verbatim reuse: the copy's own pivot does the positioning.
+					return original;
+
 				default:
 					issues.Add(new ValidationIssue(part.Id, IssueCode.NotAuthored,
 						"Part is still planned — it has no authored geometry."));

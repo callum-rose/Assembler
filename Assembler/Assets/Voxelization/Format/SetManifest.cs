@@ -22,14 +22,17 @@ namespace Assembler.Voxelization
 	}
 
 	/// <summary>
-	/// The set manifest / scale bible (*.manifest.yaml): one global unit
-	/// (metres per voxel) plus the assets to generate, each anchored to a
-	/// real-world height so scale consistency across the set is automatic.
+	/// The set manifest / scale bible (*.manifest.yaml): the assets to generate,
+	/// each anchored to a height so scale consistency across the set is
+	/// automatic. Generated manifests always use unit 1 with heights expressed
+	/// directly in voxels (only relative scale matters); a hand-written
+	/// metres-style manifest (unit 0.18, height 1.8) still resolves to the same
+	/// voxel counts through <see cref="HeightInVoxels"/>.
 	/// </summary>
 	public sealed record SetManifest
 	{
 		public string Game { get; init; } = string.Empty;
-		public float Unit { get; init; } = 0.18f;
+		public float Unit { get; init; } = 1f;
 		public IReadOnlyList<ManifestAsset> Assets { get; init; } = Array.Empty<ManifestAsset>();
 
 		public int HeightInVoxels(ManifestAsset asset) =>

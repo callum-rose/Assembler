@@ -71,6 +71,11 @@ namespace Assembler.Voxelization
 					errors.Add($"Mirror part '{part.Id}' must be declared after its source '{mirror.Source}'.");
 				}
 
+				if (part.Data is CopyPartData copy && !seen.Contains(copy.Source))
+				{
+					errors.Add($"Copy part '{part.Id}' must be declared after its source '{copy.Source}'.");
+				}
+
 				seen.Add(part.Id);
 			}
 		}
@@ -255,7 +260,7 @@ namespace Assembler.Voxelization
 				if (part.Data is MirrorPartData mirror)
 				{
 					var source = skeleton.FindPart(mirror.Source);
-					var (offset, size) = SizeAndOffsetOf(source?.Data);
+					var (offset, size) = SizeAndOffsetOf(skeleton, source?.Data);
 					if (size == Vector3Int.zero)
 					{
 						continue;
@@ -286,7 +291,7 @@ namespace Assembler.Voxelization
 				}
 				else
 				{
-					var (offset, size) = SizeAndOffsetOf(part.Data);
+					var (offset, size) = SizeAndOffsetOf(skeleton, part.Data);
 					if (size == Vector3Int.zero)
 					{
 						continue;
@@ -300,12 +305,14 @@ namespace Assembler.Voxelization
 			return boxes;
 		}
 
-		private static (Vector3Int Offset, Vector3Int Size) SizeAndOffsetOf(PartData? data) => data switch
+		/// <summary>Declared window of a part's geometry; copies resolve through to their source's window.</summary>
+		private static (Vector3Int Offset, Vector3Int Size) SizeAndOffsetOf(VoxelRigModel skeleton, PartData? data, int depth = 0) => data switch
 		{
 			PlannedPartData planned => (planned.Offset, planned.Size),
 			LayersPartData layers => (layers.Offset, layers.Size),
 			ScriptPartData script => (script.Offset, script.Size),
 			PrimitivesPartData primitives => (primitives.Offset, primitives.Size),
+			CopyPartData copy when depth < 8 => SizeAndOffsetOf(skeleton, skeleton.FindPart(copy.Source)?.Data, depth + 1),
 			_ => (Vector3Int.zero, Vector3Int.zero),
 		};
 
@@ -360,14 +367,7 @@ namespace Assembler.Voxelization
 				return;
 			}
 
-			var (size, offset) = part.Data switch
-			{
-				PlannedPartData planned => (planned.Size, planned.Offset),
-				LayersPartData layers => (layers.Size, layers.Offset),
-				ScriptPartData script => (script.Size, script.Offset),
-				PrimitivesPartData primitives => (primitives.Size, primitives.Offset),
-				_ => (Vector3Int.zero, Vector3Int.zero),
-			};
+			var (offset, size) = SizeAndOffsetOf(skeleton, part.Data);
 
 			if (size.x <= 0)
 			{

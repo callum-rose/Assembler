@@ -43,8 +43,11 @@ namespace Assembler.Voxelization
 			var size = model.Size;
 			var tile = 2 * scale;
 
-			// Screen-space extents of the dimetric projection:
-			// sx = (x - z) * tile/2, sy = y * tile/2 + (x + z) * tile/4 (+ tile for the cube top).
+			// Screen-space extents of the dimetric projection, camera above the
+			// front-right corner looking down: sx = (x - z) * tile/2,
+			// sy = y * tile/2 + depth * tile/4 where depth GROWS away from the
+			// camera, so nearer voxels sit lower on screen (a top-down read,
+			// not bottom-up).
 			var width = (size.x + size.z) * tile / 2 + tile;
 			var height = size.y * tile / 2 + (size.x + size.z) * tile / 4 + tile;
 			var texture = NewTexture(width, height);
@@ -64,8 +67,9 @@ namespace Assembler.Voxelization
 			{
 				var p = kv.Key - model.Min;
 				var colour = model.Palette[kv.Value - 1];
+				var depth = (size.x - 1 - p.x) + (size.z - 1 - p.z);
 				var sx = originX + (p.x - p.z) * tile / 2;
-				var sy = p.y * tile / 2 + (p.x + p.z) * tile / 4;
+				var sy = p.y * tile / 2 + depth * tile / 4;
 				DrawIsoCube(texture, sx, sy, scale, colour);
 			}
 

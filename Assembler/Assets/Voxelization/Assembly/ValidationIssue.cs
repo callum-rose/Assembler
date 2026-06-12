@@ -11,6 +11,7 @@ namespace Assembler.Voxelization
 		ScriptFailed,
 		PrimitivesInvalid,
 		MirrorInvalid,
+		CopyInvalid,
 		HierarchyInvalid,
 		PaletteBreach,
 		SizeExceeded,

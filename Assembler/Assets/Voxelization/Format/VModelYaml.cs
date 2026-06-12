@@ -88,6 +88,9 @@ namespace Assembler.Voxelization
 					sb.Append("    mirror: { source: ").Append(mirror.Source)
 						.Append(", axis: ").Append(mirror.Axis.ToString().ToLowerInvariant()).Append(" }\n");
 					break;
+				case CopyPartData copy:
+					sb.Append("    copy: { source: ").Append(copy.Source).Append(" }\n");
+					break;
 				case LayersPartData layers:
 					sb.Append("    data:\n");
 					sb.Append("      encoding: layers\n");
@@ -221,9 +224,20 @@ namespace Assembler.Voxelization
 				return new MirrorPartData(source, ParseAxis(YamlNodes.GetString(mirrorMap, "axis", "x"), id));
 			}
 
+			if (YamlNodes.Find(partMap, "copy") is YamlMappingNode copyMap)
+			{
+				var source = YamlNodes.GetString(copyMap, "source");
+				if (source.Length == 0)
+				{
+					throw new FormatException($"Part '{id}': copy is missing its 'source'.");
+				}
+
+				return new CopyPartData(source);
+			}
+
 			if (YamlNodes.Find(partMap, "data") is not YamlMappingNode dataMap)
 			{
-				throw new FormatException($"Part '{id}' has neither 'data' nor 'mirror'.");
+				throw new FormatException($"Part '{id}' has neither 'data', 'mirror', nor 'copy'.");
 			}
 
 			var size = YamlNodes.GetVector3Int(dataMap, "size", Vector3Int.one);

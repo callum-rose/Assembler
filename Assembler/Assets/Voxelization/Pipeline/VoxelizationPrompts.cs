@@ -20,21 +20,27 @@ namespace Assembler.Voxelization
 
 		public const string ManifestSystem =
 			"You are the art director for a voxel game asset set. Given a game brief, produce the set manifest " +
-			"(the 'scale bible') that anchors every asset to real-world dimensions through one global unit.\n\n" +
+			"(the 'scale bible') that keeps every asset's size consistent relative to the others.\n\n" +
 			"Rules:\n" +
-			"- Pick a keystone asset (usually a character) and choose `unit` (metres per voxel) so that the keystone " +
-			"comes out at a good voxel height (a person of 1.8m at 10 voxels tall means unit 0.18). Small props get " +
-			"enough voxels to read; large assets stay under roughly 100 voxels on their longest axis.\n" +
-			"- Every asset needs: `id` (snake_case), `real_world_height` (metres — the real object's height), " +
+			"- `unit` is ALWAYS 1, and `real_world_height` is the asset's height IN VOXELS (the field name is " +
+			"historical). Pick a keystone asset (usually a character) at a good voxel height — a person reads well at " +
+			"~10-16 voxels — and size everything else relative to it (a car roughly half a person's height but " +
+			"longer, a house several times taller). Small props still get enough voxels to read; nothing exceeds " +
+			"roughly 100 voxels on its longest axis.\n" +
+			"- ONE asset per distinct THING placed in the game world. A compound object is a single asset whose " +
+			"components become parts of its rig at the planning stage — a car is one asset (wheels, body, and windows " +
+			"are its parts, NOT separate assets); a windmill is one asset including its blades. Only split something " +
+			"out when the game places it independently (a detachable trailer, a pickup item).\n" +
+			"- Every asset needs: `id` (snake_case), `real_world_height` (height in voxels), " +
 			"`symmetry` (bilateral | radial:N | none), `rig` (true only for things that need posing/animation).\n" +
 			"- Do not invent `reference` entries; reference images are attached by the operator afterwards.\n\n" +
 			"Output exactly one fenced block labelled `yaml` in this shape:\n" +
 			"```yaml\n" +
 			"game: medieval_village\n" +
-			"unit: 0.18\n" +
+			"unit: 1\n" +
 			"assets:\n" +
 			"  - id: villager\n" +
-			"    real_world_height: 1.8\n" +
+			"    real_world_height: 12\n" +
 			"    symmetry: bilateral\n" +
 			"    rig: true\n" +
 			"```";
@@ -75,6 +81,11 @@ namespace Assembler.Voxelization
 			"reflection). Every off-centre authored part MUST have such a twin. Mirror sources must be declared " +
 			"before the mirror.\n" +
 			"  * The overall model width is therefore odd.\n" +
+			"- REUSE repeated parts like prefabs: when several parts are identical (four wheels, table legs, fence " +
+			"posts), author ONE and declare each other instance as `copy: { source: <part> }` with its own pivot — " +
+			"the geometry is reused verbatim, only the position differs. Combine with mirrors: wheel.FL authored, " +
+			"wheel.FR = mirror of wheel.FL, wheel.BL = copy of wheel.FL at the rear pivot, wheel.BR = mirror of " +
+			"wheel.BL. Copies are free (no authoring cost) and must be declared after their source.\n" +
 			"- Parts whose geometry is naturally scattered (foliage, leaves, debris, pebbles) may set `loose: true` " +
 			"on the part so disconnected chunks within it are allowed. Never mark body parts, limbs, or structural " +
 			"pieces loose — a floating leaf is fine, a floating hand is not.\n" +
@@ -129,10 +140,8 @@ namespace Assembler.Voxelization
 		{
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
-			sb.Append("Global unit: ").Append(YamlNodes.Float(manifest.Unit)).Append(" metres per voxel\n");
 			sb.Append("Asset: ").Append(asset.Id).Append('\n');
-			sb.Append("Real-world height: ").Append(YamlNodes.Float(asset.RealWorldHeight))
-				.Append("m -> the model must be ").Append(manifest.HeightInVoxels(asset)).Append(" voxels tall\n");
+			sb.Append("Height: the model must be ").Append(manifest.HeightInVoxels(asset)).Append(" voxels tall\n");
 			sb.Append("Symmetry: ").Append(asset.Symmetry).Append('\n');
 			sb.Append("Rig: ").Append(asset.Rig ? "yes" : "no").Append('\n');
 
@@ -198,8 +207,7 @@ namespace Assembler.Voxelization
 		public static string BriefUser(SetManifest manifest, ManifestAsset asset) =>
 			$"Reference: {asset.Reference}\n" +
 			$"Subject: {asset.Id}\n" +
-			$"Real-world height: {YamlNodes.Float(asset.RealWorldHeight)}m at {YamlNodes.Float(manifest.Unit)}m/voxel " +
-			$"-> transcribe the silhouette at {manifest.HeightInVoxels(asset)} rows tall if the image's own grid allows.\n" +
+			$"Transcribe the silhouette at {manifest.HeightInVoxels(asset)} rows tall if the image's own grid allows.\n" +
 			$"Symmetry: {asset.Symmetry}\n\n" +
 			"Transcribe the attached image into the brief.";
 

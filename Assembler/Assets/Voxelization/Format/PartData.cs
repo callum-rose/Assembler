@@ -9,6 +9,7 @@ namespace Assembler.Voxelization
 		Script,
 		Primitives,
 		Mirror,
+		Copy,
 		Planned,
 	}
 
@@ -74,6 +75,18 @@ namespace Assembler.Voxelization
 	public sealed record MirrorPartData(string Source, MirrorAxis Axis) : PartData
 	{
 		public override PartEncoding Encoding => PartEncoding.Mirror;
+	}
+
+	/// <summary>
+	/// A prefab-like reuse of a sibling part: the source's geometry verbatim,
+	/// positioned by this part's own pivot. Four identical wheels author once —
+	/// one authored, one mirror, and copies (or mirrors of copies) for the rear
+	/// pair. Unlike <see cref="MirrorPartData"/> nothing is reflected, so the
+	/// pivot must be declared explicitly.
+	/// </summary>
+	public sealed record CopyPartData(string Source) : PartData
+	{
+		public override PartEncoding Encoding => PartEncoding.Copy;
 	}
 
 	/// <summary>

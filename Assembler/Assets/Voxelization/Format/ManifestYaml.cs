@@ -48,7 +48,7 @@ namespace Assembler.Voxelization
 			return new SetManifest
 			{
 				Game = YamlNodes.GetString(root, "game"),
-				Unit = YamlNodes.GetFloat(root, "unit", 0.18f),
+				Unit = YamlNodes.GetFloat(root, "unit", 1f),
 				Assets = assets,
 			};
 		}
