@@ -219,8 +219,11 @@ namespace Assembler.Voxelization
 		{
 			try
 			{
+				progress?.Report($"{asset.Id}: refining against the note:\n{note}");
 				progress?.Report($"{asset.Id}: proposing edits...");
 				var ops = await _refiner.ProposeAsync(previous.Model, previous.Brief, note, ct);
+				progress?.Report($"{asset.Id}: refiner proposed {ops.Count} op(s):\n  " +
+								 string.Join("\n  ", ops.Select(DescribeOp)));
 
 				if (ops.Any(o => o is ReplanOp))
 				{
@@ -386,6 +389,28 @@ namespace Assembler.Voxelization
 
 			return new PlannedPartData(encoding, size ?? partSize, offset ?? partOffset, instructions);
 		}
+
+		/// <summary>
+		/// Spells out a single refine op — its method and every parameter — so the
+		/// log records exactly what was changed and how, not just how many edits ran.
+		/// </summary>
+		private static string DescribeOp(ModelEditOp op) => op switch
+		{
+			RecolourOp o => $"recolour palette key '{o.Key}' → #{Hex(o.Colour)}",
+			AddColourOp o => $"add_colour key '{o.Key}' = #{Hex(o.Colour)}",
+			RemapPartColourOp o => $"remap_colour on part '{o.PartId}': key '{o.From}' → '{o.To}'",
+			MovePivotOp o => $"move_pivot '{o.PartId}' by ({o.Delta.x}, {o.Delta.y}, {o.Delta.z})",
+			MoveOffsetOp o => $"move_offset '{o.PartId}' by ({o.Delta.x}, {o.Delta.y}, {o.Delta.z})",
+			ReauthorOp o => $"reauthor '{o.PartId}'" +
+							 (o.Size is { } s ? $", resize to {s.x}x{s.y}x{s.z}" : string.Empty) +
+							 (o.Offset is { } off ? $", offset ({off.x}, {off.y}, {off.z})" : string.Empty) +
+							 $" — {o.Instructions}",
+			DeletePartOp o => $"delete '{o.PartId}' (and any dependent children/mirrors/copies)",
+			ReplanOp o => $"replan (escape hatch) — {o.Reason}",
+			_ => op.ToString(),
+		};
+
+		private static string Hex(Color32 c) => $"{c.r:X2}{c.g:X2}{c.b:X2}";
 
 		private static string Truncate(string message, int max = 500) =>
 			message.Length <= max ? message : message.Substring(0, max) + " … (see log)";

@@ -27,6 +27,7 @@ namespace Assembler.Voxelization.Editor
 		private const string OutputFolderPref = "Assembler.Voxelization.OutputFolder";
 		private const string ImageFolderPref = "Assembler.Voxelization.ImageFolder";
 		private const string AdvancedFoldoutPref = "Assembler.Voxelization.ShowAdvanced";
+		private const string VerboseLogPref = "Assembler.Voxelization.VerboseLog";
 		private const float PreviewSize = 200f;
 		private const float SidebarWidth = 360f;
 
@@ -65,6 +66,14 @@ namespace Assembler.Voxelization.Editor
 		// slots aren't listed here and resolve to themselves.
 		private readonly Dictionary<string, string> _baseAssetId = new();
 		private readonly StringBuilder _log = new();
+
+		// Rebuilding the log string and recomputing its height every OnGUI is O(log
+		// size) per frame — fine when the log was headlines, costly now that verbose
+		// mode pours full prompts/responses into it. Cache both, invalidated on append.
+		private string _logText = string.Empty;
+		private float _logHeight;
+		private bool _logDirty = true;
+		private bool _verboseLog;
 		private TokenUsageTracker _usage = new();
 
 		private readonly System.Diagnostics.Stopwatch _runTimer = new();
@@ -99,6 +108,7 @@ namespace Assembler.Voxelization.Editor
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
 			_showAdvanced = EditorPrefs.GetBool(AdvancedFoldoutPref, false);
+			_verboseLog = EditorPrefs.GetBool(VerboseLogPref, true);
 			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
 			RefreshModels();
@@ -664,11 +674,24 @@ namespace Assembler.Voxelization.Editor
 		{
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_verboseLog = GUILayout.Toggle(_verboseLog, new GUIContent(
+					"Verbose",
+					"Log the full prompt, response, tool calls and token usage of every LLM call in the pipeline. " +
+					"Applies to the next run."), GUILayout.Width(70));
+				if (scope.changed)
+				{
+					EditorPrefs.SetBool(VerboseLogPref, _verboseLog);
+				}
+			}
+
 			using (new EditorGUI.DisabledScope(_log.Length == 0))
 			{
 				if (GUILayout.Button("Clear", GUILayout.Width(50)))
 				{
 					_log.Clear();
+					_logDirty = true;
 				}
 			}
 
@@ -679,11 +702,18 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			_logStyle ??= new GUIStyle(EditorStyles.label) { wordWrap = true, fontSize = 10 };
-			var text = _log.ToString();
-			var height = _logStyle.CalcHeight(new GUIContent(text), SidebarWidth - 40f);
+
+			// Only rebuild the string and re-measure when the log actually changed —
+			// otherwise this runs every repaint, and verbose logs make that O(MB).
+			if (_logDirty)
+			{
+				_logText = _log.ToString();
+				_logHeight = _logStyle.CalcHeight(new GUIContent(_logText), SidebarWidth - 40f);
+				_logDirty = false;
+			}
 
 			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.ExpandHeight(true));
-			EditorGUILayout.SelectableLabel(text, _logStyle, GUILayout.Height(Mathf.Max(height, 60f)), GUILayout.ExpandWidth(true));
+			EditorGUILayout.SelectableLabel(_logText, _logStyle, GUILayout.Height(Mathf.Max(_logHeight, 60f)), GUILayout.ExpandWidth(true));
 			EditorGUILayout.EndScrollView();
 		}
 
@@ -861,7 +891,13 @@ namespace Assembler.Voxelization.Editor
 		}
 
 		private AnthropicGateway NewGateway() =>
-			new(_apiKey, _usage, onActivity: status => _statusLine = status);
+			new(_apiKey, _usage,
+				onActivity: status => _statusLine = status,
+				// When verbose, every call's full prompt/response/tool-use/usage lands
+				// in the log. Progress<string> marshals it to the main thread, so the
+				// _log StringBuilder is only ever touched there even though assets run
+				// concurrently on background threads.
+				onTranscript: _verboseLog ? new Progress<string>(Log) : null);
 
 		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
 		{
@@ -990,6 +1026,7 @@ namespace Assembler.Voxelization.Editor
 			if (clearResults)
 			{
 				_log.Clear();
+				_logDirty = true;
 			}
 
 			_inFlight.Clear();
@@ -1061,6 +1098,7 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			_log.AppendLine(message);
+			_logDirty = true;
 			_logScroll.y = float.MaxValue;
 			Repaint();
 		}
