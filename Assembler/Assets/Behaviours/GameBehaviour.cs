@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Assembler.Behaviours
 {
-	public abstract class GameBehaviour : MonoBehaviour, INeedsLiveProperties
+	public abstract class GameBehaviour : MonoBehaviour
 	{
 		[SerializeField] private string[] tags = Array.Empty<string>();
 
@@ -16,11 +16,6 @@ namespace Assembler.Behaviours
 			get => tags;
 			set => tags = value;
 		}
-
-		/// <summary>The shared per-game live-property updater, injected by the build pipeline. Read by
-		/// <see cref="LivePropertyBindingExtensions.BindLive{T}"/> to register polled ticks; only dereferenced
-		/// when a behaviour binds a non-observable provider.</summary>
-		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
 		/// <summary>The entity this behaviour belongs to. Wired once by the build pipeline (see
 		/// <see cref="SetEntity"/>) so every behaviour can reach its owning entity — its id, tags and scope —

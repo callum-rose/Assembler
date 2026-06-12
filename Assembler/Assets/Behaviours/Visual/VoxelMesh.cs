@@ -10,8 +10,10 @@ namespace Assembler.Behaviours.Visual
 	///   Mesh: Asset reference to the Mesh to display.
 	///   Scale: Optional local-space scale multiplier applied to the child renderer.
 	/// </remarks>
-	public class VoxelMesh : GameBehaviour<VoxelMeshData>
+	public class VoxelMesh : GameBehaviour<VoxelMeshData>, INeedsLiveProperties
 	{
+		public LivePropertyUpdater LiveProperties { get; set; } = null!;
+
 		protected override void OnInitialise(VoxelMeshData data)
 		{
 			var meshGo = new GameObject("VoxelMesh");

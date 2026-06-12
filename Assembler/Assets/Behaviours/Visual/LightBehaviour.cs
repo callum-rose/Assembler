@@ -19,8 +19,10 @@ namespace Assembler.Behaviours.Visual
 	///   Range [float]: Optional reach in world units for point/spot lights (defaults to 10).
 	///   SpotAngle [float]: Optional cone angle in degrees for spot lights (defaults to 30).
 	/// </remarks>
-	public class LightBehaviour : GameBehaviour<LightData>
+	public class LightBehaviour : GameBehaviour<LightData>, INeedsLiveProperties
 	{
+		public LivePropertyUpdater LiveProperties { get; set; } = null!;
+
 		protected override void OnInitialise(LightData data)
 		{
 			var light = gameObject.AddComponent<Light>();

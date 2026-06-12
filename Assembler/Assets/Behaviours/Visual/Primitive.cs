@@ -16,11 +16,13 @@ namespace Assembler.Behaviours.Visual
 	///   Colour: Optional tint applied to the primitive's material.
 	///   Size: Optional local scale of the primitive child.
 	/// </remarks>
-	public class Primitive : GameBehaviour<PrimitiveData>
+	public class Primitive : GameBehaviour<PrimitiveData>, INeedsLiveProperties
 	{
 		// URP's Lit shader exposes the main colour as _BaseColor; _Color covers the built-in pipeline.
 		private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 		private static readonly int ColorId = Shader.PropertyToID("_Color");
+
+		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
 		protected override void OnInitialise(PrimitiveData data)
 		{

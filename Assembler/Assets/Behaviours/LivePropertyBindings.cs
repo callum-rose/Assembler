@@ -8,7 +8,7 @@ namespace Assembler.Behaviours
 	/// Per-GameObject cleanup sink for live-property bindings. Variables live game-globally in the
 	/// <c>VariableRegistry</c>, so a destroyed entity's subscription/tick must be torn down or its <c>apply</c>
 	/// would touch a dead Unity component. Added on demand by
-	/// <see cref="LivePropertyBindingExtensions.BindLive{T}"/>; disposes everything it holds in
+	/// <see cref="LivePropertyBindingExtensions.BindLive{T,TOwner}"/>; disposes everything it holds in
 	/// <see cref="OnDestroy"/>.
 	/// </summary>
 	public sealed class LivePropertyBindings : MonoBehaviour

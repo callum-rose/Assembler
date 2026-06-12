@@ -6,7 +6,7 @@ namespace Assembler.Behaviours
 {
 	/// <summary>
 	/// Central per-game driver that re-applies polled live properties once per frame. A behaviour registers a
-	/// tick (via <see cref="LivePropertyBindingExtensions.BindLive{T}"/>) only for a genuinely non-observable
+	/// tick (via <see cref="LivePropertyBindingExtensions.BindLive{T,TOwner}"/>) only for a genuinely non-observable
 	/// provider (clock/query/transform/partial expression); observable providers (variables, constants,
 	/// all-observable expressions) take a push path and never register here. With an empty list,
 	/// <see cref="Update"/> costs ~nothing — a constant-bound property pays no per-frame cost.

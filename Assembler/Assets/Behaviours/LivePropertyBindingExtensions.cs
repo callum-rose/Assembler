@@ -22,8 +22,9 @@ namespace Assembler.Behaviours
 		/// </list>
 		/// The binding is torn down when <paramref name="owner"/>'s GameObject is destroyed.
 		/// </summary>
-		public static void BindLive<T>(this IValueProvider<T> provider,
-			GameBehaviour owner, Action<T> apply, T fallback)
+		public static void BindLive<T, TOwner>(this IValueProvider<T> provider,
+			TOwner owner, Action<T> apply, T fallback)
+			where TOwner : GameBehaviour, INeedsLiveProperties
 		{
 			if (provider is NullValueProvider<T>)
 			{
@@ -31,18 +32,18 @@ namespace Assembler.Behaviours
 				return;
 			}
 
-			apply(provider.Get(TriggerContext.Empty));
+			void Apply() => apply(provider.Get());
+
+			Apply();
 
 			var sink = owner.gameObject.GetOrAddComponent<LivePropertyBindings>();
 
-			void Reapply() => apply(provider.Get(TriggerContext.Empty));
-
 			if (provider is IObservableValueProvider observable)
 			{
-				observable.Invalidated += Reapply;
+				observable.Invalidated += Apply;
 				sink.Add(() =>
 				{
-					observable.Invalidated -= Reapply;
+					observable.Invalidated -= Apply;
 
 					// An ObservableExpressionValueProvider keeps subscriptions to its (game-global) arg
 					// variables; dispose it so a destroyed entity's expression unhooks too. Variables/constants
@@ -56,10 +57,10 @@ namespace Assembler.Behaviours
 				return;
 			}
 
-			var last = provider.Get(TriggerContext.Empty);
+			var last = provider.Get();
 			sink.Add(owner.LiveProperties.Register(() =>
 			{
-				var next = provider.Get(TriggerContext.Empty);
+				var next = provider.Get();
 				if (!EqualityComparer<T>.Default.Equals(next, last))
 				{
 					last = next;

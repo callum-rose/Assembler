@@ -168,7 +168,10 @@ namespace Tests.Behaviours
 			return ticks.Count;
 		}
 
-		private sealed class TestBehaviour : GameBehaviour { }
+		private sealed class TestBehaviour : GameBehaviour, INeedsLiveProperties
+		{
+			public LivePropertyUpdater LiveProperties { get; set; } = null!;
+		}
 
 		// A deliberately non-observable provider: BindLive must route it through the polled path.
 		private sealed class MutableProvider<T> : IValueProvider<T>
