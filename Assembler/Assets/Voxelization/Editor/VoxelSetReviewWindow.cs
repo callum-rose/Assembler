@@ -25,8 +25,7 @@ namespace Assembler.Voxelization.Editor
 		private const string BriefPref = "Assembler.Voxelization.GameBrief";
 		private const string OutputFolderPref = "Assembler.Voxelization.OutputFolder";
 		private const string ImageFolderPref = "Assembler.Voxelization.ImageFolder";
-		private const string StylePref = "Assembler.Voxelization.StyleGuidance";
-		private const string StageModelPrefPrefix = "Assembler.Voxelization.Model.";
+		private const string AdvancedFoldoutPref = "Assembler.Voxelization.ShowAdvanced";
 		private const float PreviewSize = 200f;
 		private const float SidebarWidth = 360f;
 
@@ -42,10 +41,11 @@ namespace Assembler.Voxelization.Editor
 		private string _manifestYaml = string.Empty;
 		private string _outputFolder = "Assets/Resources/Voxels/Sets/";
 		private string _imageFolder = string.Empty;
-		private string _styleGuidance = string.Empty;
-		private string _manifestModel = VoxelizationConfig.DefaultModel;
-		private string _planningModel = VoxelizationConfig.DefaultModel;
-		private string _authoringModel = VoxelizationConfig.DefaultModel;
+
+		// Stage models, style guidance and the granular retry/budget knobs are
+		// persisted in this shared asset rather than per-machine EditorPrefs.
+		private VoxelizationSettings _settings = null!;
+		private bool _showAdvanced;
 
 		private readonly Dictionary<string, ModelResult> _results = new();
 		private readonly Dictionary<string, Texture2D> _previews = new();
@@ -85,10 +85,8 @@ namespace Assembler.Voxelization.Editor
 			_manifestYaml = EditorPrefs.GetString(ManifestPref, string.Empty);
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
-			_styleGuidance = EditorPrefs.GetString(StylePref, string.Empty);
-			_manifestModel = EditorPrefs.GetString(StageModelPrefPrefix + "Manifest", VoxelizationConfig.DefaultModel);
-			_planningModel = EditorPrefs.GetString(StageModelPrefPrefix + "Planning", VoxelizationConfig.DefaultModel);
-			_authoringModel = EditorPrefs.GetString(StageModelPrefPrefix + "Authoring", VoxelizationConfig.DefaultModel);
+			_showAdvanced = EditorPrefs.GetBool(AdvancedFoldoutPref, false);
+			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
 		}
 
@@ -96,6 +94,10 @@ namespace Assembler.Voxelization.Editor
 		{
 			EditorApplication.update -= OnEditorUpdate;
 			_cts?.Cancel();
+			if (_settings != null)
+			{
+				AssetDatabase.SaveAssetIfDirty(_settings);
+			}
 		}
 
 		private void OnGUI()
@@ -133,13 +135,7 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
-		private VoxelizationConfig BuildConfig() => VoxelizationConfig.Default with
-		{
-			ManifestModel = _manifestModel,
-			PlanningModel = _planningModel,
-			AuthoringModel = _authoringModel,
-			StyleGuidance = _styleGuidance.Trim(),
-		};
+		private VoxelizationConfig BuildConfig() => _settings.ToConfig();
 
 		private void DrawSettings()
 		{
@@ -186,16 +182,69 @@ namespace Assembler.Voxelization.Editor
 
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_manifestModel = DrawModelPopup("Manifest model", _manifestModel);
-				_planningModel = DrawModelPopup("Planning model", _planningModel);
-				_authoringModel = DrawModelPopup("Authoring model", _authoringModel);
+				_settings.ManifestModel = DrawModelPopup("Manifest model", _settings.ManifestModel);
+				_settings.PlanningModel = DrawModelPopup("Planning model", _settings.PlanningModel);
+				_settings.AuthoringModel = DrawModelPopup("Authoring model", _settings.AuthoringModel);
 				if (scope.changed)
 				{
-					EditorPrefs.SetString(StageModelPrefPrefix + "Manifest", _manifestModel);
-					EditorPrefs.SetString(StageModelPrefPrefix + "Planning", _planningModel);
-					EditorPrefs.SetString(StageModelPrefPrefix + "Authoring", _authoringModel);
+					EditorUtility.SetDirty(_settings);
 				}
 			}
+
+			DrawAdvancedSettings();
+		}
+
+		/// <summary>
+		/// Collapsible section for the granular retry/budget knobs. Hidden by
+		/// default — these are rarely touched — and persisted with the rest of the
+		/// settings asset. Drawn through the asset's <see cref="SerializedObject"/>
+		/// so each field honours its [Min]/[Range]/[Tooltip] attributes for free.
+		/// </summary>
+		private void DrawAdvancedSettings()
+		{
+			using var scope = new EditorGUI.ChangeCheckScope();
+			_showAdvanced = EditorGUILayout.Foldout(_showAdvanced, "Advanced settings", toggleOnLabelClick: true);
+			if (scope.changed)
+			{
+				EditorPrefs.SetBool(AdvancedFoldoutPref, _showAdvanced);
+			}
+
+			if (!_showAdvanced)
+			{
+				return;
+			}
+
+			var serialized = new SerializedObject(_settings);
+			using (new EditorGUI.IndentLevelScope())
+			{
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxPartAttempts), "Max part attempts");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxValidationRounds), "Max validation rounds");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxReviewRounds), "Max review rounds");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.PartVoxelBudget), "Part voxel budget");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.SilhouetteIouThreshold), "Silhouette IoU threshold");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.SilhouetteCoverageThreshold), "Silhouette coverage threshold");
+
+				if (GUILayout.Button("Reset to defaults", GUILayout.Width(160)))
+				{
+					ResetAdvancedToDefaults(serialized);
+				}
+			}
+
+			serialized.ApplyModifiedProperties();
+		}
+
+		private static void DrawSettingsProperty(SerializedObject serialized, string propertyName, string label) =>
+			EditorGUILayout.PropertyField(serialized.FindProperty(propertyName), new GUIContent(label));
+
+		private static void ResetAdvancedToDefaults(SerializedObject serialized)
+		{
+			var defaults = VoxelizationConfig.Default;
+			serialized.FindProperty(nameof(VoxelizationSettings.MaxPartAttempts)).intValue = defaults.MaxPartAttempts;
+			serialized.FindProperty(nameof(VoxelizationSettings.MaxValidationRounds)).intValue = defaults.MaxValidationRounds;
+			serialized.FindProperty(nameof(VoxelizationSettings.MaxReviewRounds)).intValue = defaults.MaxReviewRounds;
+			serialized.FindProperty(nameof(VoxelizationSettings.PartVoxelBudget)).intValue = defaults.PartVoxelBudget;
+			serialized.FindProperty(nameof(VoxelizationSettings.SilhouetteIouThreshold)).floatValue = defaults.SilhouetteIouThreshold;
+			serialized.FindProperty(nameof(VoxelizationSettings.SilhouetteCoverageThreshold)).floatValue = defaults.SilhouetteCoverageThreshold;
 		}
 
 		private static string DrawModelPopup(string label, string current)
@@ -237,10 +286,10 @@ namespace Assembler.Voxelization.Editor
 			_styleScroll = EditorGUILayout.BeginScrollView(_styleScroll, GUILayout.MinHeight(36), GUILayout.MaxHeight(100));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_styleGuidance = EditorGUILayout.TextArea(_styleGuidance, _wrappedTextArea, GUILayout.ExpandHeight(true));
+				_settings.StyleGuidance = EditorGUILayout.TextArea(_settings.StyleGuidance, _wrappedTextArea, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
-					EditorPrefs.SetString(StylePref, _styleGuidance);
+					EditorUtility.SetDirty(_settings);
 				}
 			}
 
