@@ -1,3 +1,4 @@
+using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.UI;
@@ -18,5 +19,6 @@ namespace Assembler.Building
 		UiPrefabLibrary UiPrefabs,
 		EntityQueryService EntityQuery,
 		LineOfSightService Sight,
-		NavGridService Nav);
+		NavGridService Nav,
+		LivePropertyUpdater LiveProperties);
 }

@@ -139,6 +139,11 @@ namespace Assembler.Building
 			gameRoot.AddComponent<GameController>();
 			gameRoot.AddComponent<GameClockDriver>().Clock = gameClock;
 
+			// Drives polled live properties (clock/query/transform/partial-expression bindings) once per frame.
+			// Pushed (variable/constant/observable-expression) bindings never register here, so its tick list
+			// stays empty unless a genuinely non-observable property is bound live.
+			var liveProperties = gameRoot.AddComponent<LivePropertyUpdater>();
+
 			// Enable the controls asset for the game's lifetime and tie its destruction to the game root, so
 			// individual input triggers never enable/disable (and never leak) the shared asset themselves.
 			gameRoot.AddComponent<ControlsAssetOwner>().Initialise(controlsAsset);
@@ -174,6 +179,7 @@ namespace Assembler.Building
 				navGridService,
 				exclusiveGroupRegistry,
 				gameClock,
+				liveProperties,
 				templatesById,
 				gameInfo.ParseContext,
 				gameRoot.transform,

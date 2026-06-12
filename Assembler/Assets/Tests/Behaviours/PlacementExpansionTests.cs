@@ -66,6 +66,7 @@ namespace Tests.Behaviours
 				new NavGridService(NavGridSettings.Default),
 				new ExclusiveGroupRegistry(clock),
 				clock,
+				_root.AddComponent<Assembler.Behaviours.LivePropertyUpdater>(),
 				new Dictionary<string, EntityInfo> { ["pill"] = template },
 				parseContext,
 				_root.transform,

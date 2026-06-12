@@ -129,6 +129,26 @@ Variables:
   inventory: !record [ { Type: Item, kind: potion, count: 3 } ]   # a record-list variable
 ```
 
+#### Live-driven properties
+
+Many component properties are **live**: when bound to a changing value source they re-apply during play
+rather than being read once at startup. For example a `light`'s `Intensity` bound to `!var glow`,
+`!expr`, or `!clock time` pulses as that source changes — no per-property behaviour needed. The runtime
+picks how to track each binding automatically from the value's type, and only pays for what changes:
+
+| Bound value | How it re-applies | Cost when nothing changes |
+|---|---|---|
+| constant (literal) | applied once; never changes | free |
+| `!var` (variable) | **push** — re-applies the moment the variable is written | free (no write, no work) |
+| `!expr` over only variables/constants | **push** — re-applies when any arg variable is written | free |
+| `!expr` with a `!clock`/`!query`/`!entity`/trigger-output arg | **poll** — re-checked each frame, re-applied only when the value actually changed | one cheap per-frame read |
+| `!clock` / `!query` / `!entity` directly | **poll** — same as above | one cheap per-frame read |
+| omitted (optional property) | the behaviour's default is applied once | free |
+
+Not every property is live — some are read once by design (and a few, like `text label`'s `Text`, are
+re-read every frame regardless). The per-behaviour property descriptions in
+[`Behaviours.md`](Behaviours.md) are the source of truth for a given property.
+
 ### `Records` — map `schemaName → (fieldName → RecordFieldDto)`
 
 Declares named **record schemas** — typed field bags. Each schema is just a map of field name to a

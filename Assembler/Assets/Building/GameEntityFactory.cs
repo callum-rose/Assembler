@@ -31,6 +31,7 @@ namespace Assembler.Building
 		private readonly NavGridService _nav;
 		private readonly ExclusiveGroupRegistry _exclusiveGroups;
 		private readonly IGameClock _clock;
+		private readonly LivePropertyUpdater _liveProperties;
 		private readonly IReadOnlyDictionary<string, EntityInfo> _templates;
 		private readonly TransformContext _parseContext;
 		private readonly Transform _root;
@@ -56,6 +57,7 @@ namespace Assembler.Building
 			NavGridService nav,
 			ExclusiveGroupRegistry exclusiveGroups,
 			IGameClock clock,
+			LivePropertyUpdater liveProperties,
 			IReadOnlyDictionary<string, EntityInfo> templates,
 			TransformContext parseContext,
 			Transform root,
@@ -74,6 +76,7 @@ namespace Assembler.Building
 			_nav = nav;
 			_exclusiveGroups = exclusiveGroups;
 			_clock = clock;
+			_liveProperties = liveProperties;
 			_templates = templates;
 			_parseContext = parseContext;
 			_root = root;
@@ -149,7 +152,8 @@ namespace Assembler.Building
 				_uiPrefabs,
 				_entityQuery,
 				_sight,
-				_nav);
+				_nav,
+				_liveProperties);
 
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{
