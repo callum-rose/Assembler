@@ -26,8 +26,12 @@
 # Flags can be combined; -w is shorthand for --warnings-as-errors.
 #
 # Notes:
-#  - Errors are reported wherever they occur (any error breaks the whole project). Warnings are
-#    filtered to your own code under Assets/ (excluding Assets/Plugins) to avoid third-party noise.
+#  - Output is grouped by CS code to stay compact: repeats of one diagnostic collapse to a single
+#    message line plus its locations, rather than N near-identical full lines.
+#  - Errors in your own code (Assets/, excluding Assets/Plugins) are shown; errors in Library/PackageCache
+#    are collapsed to a one-line count (those are the cold-import/license races a fresh worktree throws,
+#    not anything you fix — re-run to clear). Any error still fails the build. Warnings are filtered to
+#    your own code under Assets/ (excluding Assets/Plugins) to avoid third-party noise.
 #  - The first run in a fresh worktree triggers a full asset import and is slow (minutes). Subsequent
 #    runs reuse the Library/ cache and are fast.
 #  - Like generate-docs.sh / validate-yaml.sh, this runs fine alongside an editor open on a DIFFERENT
@@ -109,35 +113,88 @@ set +e
 set -e
 
 # Pull the compiler diagnostics straight out of the log. Unity logs each one a few times, so awk
-# de-dupes while preserving first-seen order. Errors are reported wherever they occur (any error
-# breaks the build); warnings are restricted to the user's own code (lines starting with Assets/ but
-# not Assets/Plugins/) so the summary isn't drowned in third-party / package warnings.
-ERRORS="$(grep -E ': error CS[0-9]+:' "$LOG" | awk '!seen[$0]++' || true)"
+# de-dupes while preserving first-seen order. The output is grouped by CS code (see GROUP_AWK) so
+# that N repeats of the same warning collapse to one message + N locations instead of N near-identical
+# full lines — the project's ~50 pre-existing nullable warnings otherwise dominate the context budget.
+#
+# Errors are split: those in your own code (Assets/, excluding Assets/Plugins/) are shown grouped;
+# errors anywhere else (Library/PackageCache — the Unity packages) are collapsed to a one-line count,
+# because in practice those are the spurious cold-import / license-handshake races a fresh worktree
+# throws on its first run, not anything you can fix (re-running clears them). Warnings are likewise
+# restricted to your own code so the summary isn't drowned in third-party / package noise.
+ALL_ERRORS="$(grep -E ': error CS[0-9]+:' "$LOG" | awk '!seen[$0]++' || true)"
 WARNINGS="$(grep -E '^Assets/.*: warning CS[0-9]+:' "$LOG" | grep -v '^Assets/Plugins/' | awk '!seen[$0]++' || true)"
 
-ERROR_COUNT=0
-WARNING_COUNT=0
-[[ -n "$ERRORS" ]] && ERROR_COUNT="$(printf '%s\n' "$ERRORS" | grep -c .)"
-[[ -n "$WARNINGS" ]] && WARNING_COUNT="$(printf '%s\n' "$WARNINGS" | grep -c .)"
+ASSETS_ERRORS="$(printf '%s\n' "$ALL_ERRORS" | grep -E '^Assets/' | grep -v '^Assets/Plugins/' || true)"
+EXTERNAL_ERRORS="$(printf '%s\n' "$ALL_ERRORS" | grep -vE '^Assets/' || true)"
+
+# Count only non-empty lines (a blank string still printf's one empty line, which grep -c . excludes).
+count_lines() { [[ -z "$1" ]] && echo 0 || printf '%s\n' "$1" | grep -c .; }
+ASSETS_ERROR_COUNT="$(count_lines "$ASSETS_ERRORS")"
+EXTERNAL_ERROR_COUNT="$(count_lines "$EXTERNAL_ERRORS")"
+WARNING_COUNT="$(count_lines "$WARNINGS")"
+ERROR_COUNT=$((ASSETS_ERROR_COUNT + EXTERNAL_ERROR_COUNT))
+
+# Group "path(L,C): <sev> CSxxxx: message" lines by CS code. A code with one occurrence prints on a
+# single line; a code with many prints the message once followed by its indented locations. Written
+# for BSD (macOS) awk — no gensub / 3-arg match / gawk extensions.
+GROUP_AWK='
+{
+  line = $0
+  if (!match(line, /: (error|warning) CS[0-9]+: /)) next
+  loc = substr(line, 1, RSTART - 1)
+  rest = substr(line, RSTART + 2)
+  sp = index(rest, " ")
+  rest2 = substr(rest, sp + 1)
+  colon = index(rest2, ":")
+  code = substr(rest2, 1, colon - 1)
+  msg = substr(rest2, colon + 2)
+  if (!(code in seen)) { order[++n] = code; seen[code] = 1; firstmsg[code] = msg }
+  count[code]++
+  locs[code] = locs[code] loc "\n"
+}
+END {
+  for (i = 1; i <= n; i++) {
+    c = order[i]
+    if (count[c] == 1) {
+      l = locs[c]; sub(/\n$/, "", l)
+      printf "  %s  %s: %s\n", c, l, firstmsg[c]
+    } else {
+      printf "  %s ×%d  %s\n", c, count[c], firstmsg[c]
+      cnt = split(locs[c], arr, "\n")
+      for (j = 1; j <= cnt; j++) if (arr[j] != "") printf "    %s\n", arr[j]
+    }
+  }
+}'
+
+ERR_SUMMARY="Errors: $ASSETS_ERROR_COUNT"
+[[ "$EXTERNAL_ERROR_COUNT" -gt 0 ]] && ERR_SUMMARY="$ERR_SUMMARY (+$EXTERNAL_ERROR_COUNT external)"
 
 echo
 echo "================== Compile check =================="
-echo "Errors: $ERROR_COUNT   Warnings: $WARNING_COUNT$([[ "$WARNINGS_AS_ERRORS" == "1" ]] && echo '  (warnings treated as errors)')"
-if [[ "$ERROR_COUNT" -gt 0 ]]; then
+echo "$ERR_SUMMARY   Warnings: $WARNING_COUNT$([[ "$WARNINGS_AS_ERRORS" == "1" ]] && echo '  (warnings treated as errors)')"
+if [[ "$ASSETS_ERROR_COUNT" -gt 0 ]]; then
 	echo
-	echo "Errors ($ERROR_COUNT):"
-	printf '%s\n' "$ERRORS" | sed 's/^/  ✗ /'
+	echo "Errors in your code ($ASSETS_ERROR_COUNT):"
+	printf '%s\n' "$ASSETS_ERRORS" | awk "$GROUP_AWK"
+fi
+if [[ "$EXTERNAL_ERROR_COUNT" -gt 0 ]]; then
+	echo
+	echo "$EXTERNAL_ERROR_COUNT external compiler error(s) in Library/PackageCache (not your code) —"
+	echo "  usually a transient cold-import / license race on a fresh worktree; re-run to clear."
 fi
 if [[ "$WARNING_COUNT" -gt 0 ]]; then
 	echo
 	echo "Warnings ($WARNING_COUNT):"
-	printf '%s\n' "$WARNINGS" | sed 's/^/  ⚠ /'
+	printf '%s\n' "$WARNINGS" | awk "$GROUP_AWK"
 fi
 echo "==================================================="
 echo
 echo "Full Unity log: $LOG"
 
-# Verdict: fail on any error, or on any warning when --warnings-as-errors is set.
+# Verdict: fail on any error (your code OR external — both genuinely break the build; an external-only
+# failure is reported as likely cold-import noise, and re-running is the fix), or on any warning when
+# --warnings-as-errors is set.
 if [[ "$ERROR_COUNT" -gt 0 ]]; then
 	exit 1
 fi
