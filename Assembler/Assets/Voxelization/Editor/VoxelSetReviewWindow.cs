@@ -58,6 +58,12 @@ namespace Assembler.Voxelization.Editor
 		private readonly Dictionary<string, string> _refineNotes = new();
 		private readonly Dictionary<string, Vector2> _infoScrolls = new();
 		private readonly Dictionary<string, string> _inFlight = new();
+
+		// A refined model becomes a new gallery slot "{baseId}-v{n}" sitting next to
+		// the original rather than overwriting it. This maps each revision slot back
+		// to its base manifest asset so a revision can itself be re-refined; original
+		// slots aren't listed here and resolve to themselves.
+		private readonly Dictionary<string, string> _baseAssetId = new();
 		private readonly StringBuilder _log = new();
 		private TokenUsageTracker _usage = new();
 
@@ -425,7 +431,10 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			EditorGUILayout.LabelField("Gallery (models auto-export to this run's subfolder as they finish)", EditorStyles.boldLabel);
-			foreach (var result in _results.Values.ToList())
+
+			// Originals and their revisions ("{baseId}-v{n}") group together in order,
+			// so a refined model reads as sitting next to the one it came from.
+			foreach (var result in OrderedResults())
 			{
 				DrawResult(result);
 				EditorGUILayout.Space();
@@ -438,6 +447,47 @@ namespace Assembler.Voxelization.Editor
 				DrawPlaceholder(pending.Key, pending.Value);
 				EditorGUILayout.Space();
 			}
+		}
+
+		/// <summary>Gallery order: by base asset, then revision number, so each
+		/// original is immediately followed by its revisions in sequence.</summary>
+		private IEnumerable<ModelResult> OrderedResults() =>
+			_results.Values
+				.OrderBy(r => BaseIdOf(r.AssetId), StringComparer.Ordinal)
+				.ThenBy(r => RevisionOf(r.AssetId, BaseIdOf(r.AssetId)) ?? 0);
+
+		/// <summary>The base manifest asset id behind a gallery slot — the slot
+		/// itself for originals, the mapped base for "{baseId}-v{n}" revisions.</summary>
+		private string BaseIdOf(string slot) => _baseAssetId.GetValueOrDefault(slot, slot);
+
+		/// <summary>The next free revision slot for a base asset: the original counts
+		/// as v1, so the first refinement is "-v2", the next "-v3", and so on across
+		/// every existing slot for that base.</summary>
+		private string NextRevisionId(string baseId)
+		{
+			var highest = _results.Keys
+				.Select(slot => RevisionOf(slot, baseId))
+				.Where(v => v.HasValue)
+				.Select(v => v!.Value)
+				.DefaultIfEmpty(1)
+				.Max();
+			return $"{baseId}-v{highest + 1}";
+		}
+
+		/// <summary>The revision number a slot represents for a given base — 1 for the
+		/// bare base id, n for "{baseId}-v{n}", null if the slot isn't that base.</summary>
+		private static int? RevisionOf(string slot, string baseId)
+		{
+			if (slot == baseId)
+			{
+				return 1;
+			}
+
+			var prefix = baseId + "-v";
+			return slot.StartsWith(prefix, StringComparison.Ordinal)
+				&& int.TryParse(slot[prefix.Length..], out var version)
+					? version
+					: null;
 		}
 
 		private void DrawPlaceholder(string assetId, string activity)
@@ -745,24 +795,28 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
-		private async void RunSingleAssetAsync(string assetId, string refinementNote)
+		private async void RunSingleAssetAsync(string slotId, string refinementNote)
 		{
 			if (!TryParseManifest(out var manifest))
 			{
 				return;
 			}
 
-			var asset = manifest.Assets.FirstOrDefault(a => a.Id == assetId);
+			// The clicked card may be a revision ("{baseId}-v{n}"); the orchestrator
+			// always works against the underlying manifest asset.
+			var baseId = BaseIdOf(slotId);
+			var asset = manifest.Assets.FirstOrDefault(a => a.Id == baseId);
 			if (asset == null)
 			{
-				Log($"{assetId}: not present in the current manifest.");
+				Log($"{baseId}: not present in the current manifest.");
 				return;
 			}
 
-			// Single-asset runs reuse the existing run folder (the refined export is
-			// the new version of the same asset) and keep the log.
+			// Single-asset runs reuse the existing run folder (the revision exports
+			// next to the original) and keep the log. Progress lines are keyed by the
+			// base id, so the in-flight overlay rides on the base id too.
 			StartRun(clearResults: false, newRunFolder: _runFolder.Length == 0);
-			_inFlight[assetId] = "queued...";
+			_inFlight[baseId] = "queued...";
 			try
 			{
 				using var gateway = NewGateway();
@@ -772,13 +826,25 @@ namespace Assembler.Voxelization.Editor
 				// edits) instead of re-planning from scratch; everything else (the
 				// Regenerate button, or a refine with no good base) runs the full pipeline.
 				var canRefine = refinementNote.Length > 0
-					&& _results.TryGetValue(assetId, out var previous)
+					&& _results.TryGetValue(slotId, out var previous)
 					&& previous.Status != ModelStatus.Failed
 					&& previous.Model.Parts.Count > 0;
 				var result = canRefine
-					? await orchestrator.RefineAssetAsync(manifest, asset, _results[assetId], refinementNote, _cts!.Token, NewProgress())
+					? await orchestrator.RefineAssetAsync(manifest, asset, _results[slotId], refinementNote, _cts!.Token, NewProgress())
 					: await orchestrator.RunAssetAsync(manifest, asset, refinementNote, _cts!.Token, NewProgress());
-				StoreResult(result);
+
+				// A successful refine becomes a brand-new revision slot beside the
+				// original; a regenerate or a failed refine acts on the clicked slot
+				// in place (so the error lands on the card the operator touched).
+				var targetSlot = canRefine && result.Status != ModelStatus.Failed
+					? NextRevisionId(baseId)
+					: slotId;
+				if (targetSlot != baseId)
+				{
+					_baseAssetId[targetSlot] = baseId;
+				}
+
+				StoreResult(result with { AssetId = targetSlot }, inFlightKey: baseId);
 			}
 			catch (OperationCanceledException)
 			{
@@ -786,7 +852,7 @@ namespace Assembler.Voxelization.Editor
 			}
 			catch (Exception ex)
 			{
-				Log($"{assetId} failed: " + ex.Message);
+				Log($"{baseId} failed: " + ex.Message);
 			}
 			finally
 			{
@@ -849,9 +915,11 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
-		private void StoreResult(ModelResult result)
+		private void StoreResult(ModelResult result, string? inFlightKey = null)
 		{
-			_inFlight.Remove(result.AssetId);
+			// The in-flight overlay is keyed by the base id during a refine, which
+			// differs from the new revision's slot id — clear by that key.
+			_inFlight.Remove(inFlightKey ?? result.AssetId);
 
 			// A failed refine/regenerate must not destroy a good previous result:
 			// keep the old export/preview and surface the error on it instead.
@@ -942,6 +1010,7 @@ namespace Assembler.Voxelization.Editor
 			if (clearResults)
 			{
 				_results.Clear();
+				_baseAssetId.Clear();
 				ClearPreviews();
 				_usage = new TokenUsageTracker();
 			}
