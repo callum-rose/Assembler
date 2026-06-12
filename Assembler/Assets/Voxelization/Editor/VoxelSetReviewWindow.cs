@@ -205,7 +205,12 @@ namespace Assembler.Voxelization.Editor
 			_briefScroll = EditorGUILayout.BeginScrollView(_briefScroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(120));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_gameBrief = EditorGUILayout.TextArea(_gameBrief, GUILayout.ExpandHeight(true));
+				// Sized to its content (not the viewport) so the scroll view
+				// actually scrolls once the text outgrows the box.
+				var width = EditorGUIUtility.currentViewWidth - SidebarWidth - 60f;
+				var height = EditorStyles.textArea.CalcHeight(new GUIContent(_gameBrief), width);
+				_gameBrief = EditorGUILayout.TextArea(
+					_gameBrief, GUILayout.MinHeight(Mathf.Max(40f, height + 10f)), GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(BriefPref, _gameBrief);
