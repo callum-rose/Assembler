@@ -33,13 +33,15 @@ namespace Assembler.Voxels.Scripting
 			"you can correct and retry.";
 
 		private readonly VoxelScriptLimits _limits;
+		private readonly string _toolDescription;
 
-		public VoxelScriptExecutor(VoxelScriptLimits? limits = null)
+		public VoxelScriptExecutor(VoxelScriptLimits? limits = null, string? toolDescription = null)
 		{
 			_limits = limits ?? VoxelScriptLimits.Default;
+			_toolDescription = string.IsNullOrWhiteSpace(toolDescription) ? ToolDescription : toolDescription!;
 		}
 
-		public AnthropicTool Tool => new(ToolName, ToolDescription, InputSchemaJson);
+		public AnthropicTool Tool => new(ToolName, _toolDescription, InputSchemaJson);
 
 		public string? LastScript { get; private set; }
 		public string? LastGoxelTextZUp { get; private set; }
@@ -77,6 +79,13 @@ namespace Assembler.Voxels.Scripting
 					"Script failed to compile or run: " + ex.Message, true);
 			}
 		}
+
+		/// <summary>
+		/// Compiles and runs a script directly (no tool loop), under the same safety
+		/// limits as tool-driven runs. Lets callers re-execute a stored part script
+		/// deterministically without involving the API.
+		/// </summary>
+		public Task<VoxelModel> RunScriptAsync(string script, CancellationToken ct) => RunAsync(script, ct);
 
 		private async Task<VoxelModel> RunAsync(string script, CancellationToken ct)
 		{

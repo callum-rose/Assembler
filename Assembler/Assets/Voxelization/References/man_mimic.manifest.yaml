@@ -1,0 +1,8 @@
+game: reference mimic test
+unit: 0.1125
+assets:
+  - id: man
+    real_world_height: 1.8
+    symmetry: bilateral
+    rig: true
+    reference: man_reference.png

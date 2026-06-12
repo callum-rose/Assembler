@@ -114,3 +114,5 @@ ProjectSettings/EntitiesClientSettings [0-9]*.asset
 
 # Claude
 /.claude/worktrees/
+
+/[Aa]ssets/Resources/Voxels/Sets/

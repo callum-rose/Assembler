@@ -50,18 +50,13 @@ namespace Assembler.Anthropic
 			Action<string>? onDelta = null,
 			IReadOnlyList<AnthropicTool>? tools = null,
 			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse = null,
-			int maxToolIterations = DefaultMaxToolIterations)
+			int maxToolIterations = DefaultMaxToolIterations,
+			Action<AnthropicTokenUsage>? onUsage = null)
 		{
-			// Seed the SDK message list from our simple (role, text) messages.
-			// Intermediate tool_use / tool_result turns are appended here as the
-			// loop runs; they never escape into the caller's history.
-			var sdkMessages = messages
-				.Select(m => new MessageParam
-				{
-					Role = RoleFromString(m.Role),
-					Content = m.Content,
-				})
-				.ToList();
+			// Seed the SDK message list from our simple (role, text[, images])
+			// messages. Intermediate tool_use / tool_result turns are appended here
+			// as the loop runs; they never escape into the caller's history.
+			var sdkMessages = messages.Select(BuildMessage).ToList();
 
 			IReadOnlyList<ToolUnion>? sdkTools = tools is { Count: > 0 }
 				? tools.Select(BuildTool).ToArray()
@@ -97,10 +92,24 @@ namespace Assembler.Anthropic
 					var iterationText = new StringBuilder();
 					var toolUses = new Dictionary<long, ToolUseAccumulator>();
 					StopReason? stopReason = null;
+					var usage = AnthropicTokenUsage.Zero;
 
 					await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken))
 					{
-						if (ev.TryPickContentBlockStart(out var start))
+						if (ev.TryPickStart(out var messageStart))
+						{
+							try
+							{
+								var u = messageStart.Message.Usage;
+								usage = new AnthropicTokenUsage(
+									u.InputTokens,
+									u.OutputTokens,
+									u.CacheReadInputTokens ?? 0,
+									u.CacheCreationInputTokens ?? 0);
+							}
+							catch { /* usage not present on this event */ }
+						}
+						else if (ev.TryPickContentBlockStart(out var start))
 						{
 							if (start.ContentBlock.TryPickToolUse(out var toolUseBlock))
 							{
@@ -126,10 +135,14 @@ namespace Assembler.Anthropic
 						{
 							try { stopReason = messageDelta.Delta.StopReason.Value(); }
 							catch { /* stop_reason not present on this delta */ }
+
+							try { usage = usage with { OutputTokens = messageDelta.Usage.OutputTokens }; }
+							catch { /* usage not present on this delta */ }
 						}
 					}
 
 					fullText.Append(iterationText);
+					onUsage?.Invoke(usage);
 
 					var wantsTools = onToolUse != null && toolUses.Count > 0 && stopReason == StopReason.ToolUse;
 					if (!wantsTools)
@@ -195,6 +208,50 @@ namespace Assembler.Anthropic
 			}
 
 			return fullText.ToString();
+		}
+
+		private static MessageParam BuildMessage(AnthropicMessage message)
+		{
+			var role = RoleFromString(message.Role);
+			if (message.Images.Count == 0)
+			{
+				return new MessageParam { Role = role, Content = message.Content };
+			}
+
+			var blocks = new List<ContentBlockParam>();
+			foreach (var image in message.Images)
+			{
+				if (!image.IsEmpty)
+				{
+					blocks.Add(BuildImageBlock(image));
+				}
+			}
+
+			if (!string.IsNullOrEmpty(message.Content))
+			{
+				blocks.Add(new TextBlockParam(message.Content));
+			}
+
+			return new MessageParam { Role = role, Content = blocks };
+		}
+
+		private static ImageBlockParam BuildImageBlock(AnthropicImage image)
+		{
+			// Built from raw JSON rather than the typed source union so this stays
+			// stable across SDK versions that reshape the image source types.
+			var json = JsonSerializer.Serialize(new Dictionary<string, object>
+			{
+				["type"] = "image",
+				["source"] = new Dictionary<string, object>
+				{
+					["type"] = "base64",
+					["media_type"] = image.MediaType,
+					["data"] = Convert.ToBase64String(image.Data),
+				},
+			});
+			var raw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
+					  ?? new Dictionary<string, JsonElement>();
+			return ImageBlockParam.FromRawUnchecked(raw);
 		}
 
 		private static ToolUnion BuildTool(AnthropicTool tool)
