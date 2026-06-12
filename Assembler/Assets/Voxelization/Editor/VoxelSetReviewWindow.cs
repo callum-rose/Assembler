@@ -58,6 +58,7 @@ namespace Assembler.Voxelization.Editor
 		private readonly System.Diagnostics.Stopwatch _runTimer = new();
 		private string _statusLine = string.Empty;
 		private string _runFolder = string.Empty;
+		private string _runTimestamp = string.Empty;
 		private bool _isRunning;
 		private CancellationTokenSource? _cts;
 		private Vector2 _scroll;
@@ -578,6 +579,11 @@ namespace Assembler.Voxelization.Editor
 			try
 			{
 				using var gateway = NewGateway();
+
+				// Name the run folder before any asset finishes — exports use
+				// _runFolder, so the descriptive name must be settled up front.
+				await NameRunFolderAsync(gateway, manifest);
+
 				var orchestrator = NewOrchestrator(gateway);
 				var progress = NewProgress();
 
@@ -717,6 +723,36 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
+		/// <summary>
+		/// Replaces the timestamp-only run folder with "{timestamp}-{descriptive}",
+		/// the descriptive tail generated from the manifest by the LLM. Best-effort:
+		/// a naming failure leaves the timestamp fallback in place rather than
+		/// aborting the batch; cancellation propagates so a cancelled run stops here.
+		/// </summary>
+		private async Task NameRunFolderAsync(AnthropicGateway gateway, SetManifest manifest)
+		{
+			if (_runTimestamp.Length == 0)
+			{
+				return;
+			}
+
+			try
+			{
+				Log("Naming run folder...");
+				var slug = await new RunFolderNamer(gateway, BuildConfig()).NameAsync(manifest, _cts!.Token);
+				_runFolder = Path.Combine(_outputFolder, $"{_runTimestamp}-{slug}");
+				Log($"Run folder: {_runFolder}");
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				Log("Run folder naming failed; keeping timestamp: " + ex.Message);
+			}
+		}
+
 		private void StartRun(bool clearResults, bool newRunFolder = true)
 		{
 			_isRunning = true;
@@ -724,9 +760,19 @@ namespace Assembler.Voxelization.Editor
 			_statusLine = string.Empty;
 			_log.Clear();
 			_inFlight.Clear();
-			_runFolder = newRunFolder
-				? Path.Combine(_outputFolder, $"run-{DateTime.Now:yyyy-MM-dd-HHmmss}")
-				: string.Empty;
+			if (newRunFolder)
+			{
+				// The descriptive tail is filled in asynchronously once a manifest
+				// is in hand (NameRunFolderAsync); until then the timestamp alone is
+				// the fallback so a run always has somewhere to land.
+				_runTimestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
+				_runFolder = Path.Combine(_outputFolder, $"run-{_runTimestamp}");
+			}
+			else
+			{
+				_runTimestamp = string.Empty;
+				_runFolder = string.Empty;
+			}
 			_runTimer.Restart();
 			if (clearResults)
 			{

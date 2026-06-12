@@ -107,6 +107,26 @@ poses:
 		}
 
 		[Test]
+		public void RunFolderNamer_SlugifiesTheModelReplyToKebabCase()
+		{
+			var gateway = new FakeGateway().Enqueue("Pirate Cove Props");
+			var slug = new RunFolderNamer(gateway, VoxelizationConfig.Default)
+				.NameAsync(Manifest, CancellationToken.None).GetAwaiter().GetResult();
+
+			Assert.That(slug, Is.EqualTo("pirate-cove-props"));
+			Assert.That(gateway.Calls.Single().Stage, Is.EqualTo(RunFolderNamer.Stage));
+		}
+
+		[TestCase("medieval-village", "medieval-village")]
+		[TestCase("  Neon Racers!! ", "neon-racers")]
+		[TestCase("spaceships\nignored second line", "spaceships")]
+		[TestCase("`under_water/scene`", "under-water-scene")]
+		[TestCase("", "set")]
+		[TestCase("***", "set")]
+		public void RunFolderNamer_SlugifyIsFilesystemSafe(string raw, string expected) =>
+			Assert.That(RunFolderNamer.Slugify(raw), Is.EqualTo(expected));
+
+		[Test]
 		public void ModelPlanner_ReanchorsScaleToManifest()
 		{
 			var gateway = new FakeGateway().Enqueue(PlanResponse);

@@ -39,7 +39,7 @@ game brief ──0──▶ manifest ──1a─▶ reference brief ──1b─�
 | 3 review | `SetOrchestrator.ReviewAsync` | One vision call: built views + measured-vs-target dimensions + reference image. "OK" or numbered corrections → full **re-plan** (shape problems live in plan-owned sizes/pivots). `MaxReviewRounds`. |
 | export | `Assembly/ModelExporter` | `<id>.vmodel.yaml` (the full generation source — rebuildable), `reference_brief.yaml`, composed `.vox` + `.goxel.txt`, front/iso preview PNGs, per-part `.vox` for rigged models. |
 
-`SetOrchestrator` drives all of it; assets in a batch run in parallel and auto-export the moment they finish into a per-run subfolder (`run-<timestamp>/<asset>/` + `session.log`).
+`SetOrchestrator` drives all of it; assets in a batch run in parallel and auto-export the moment they finish into a per-run subfolder (`<timestamp>-<descriptive>/<asset>/` + `session.log`). The descriptive tail is one short LLM call (`RunFolderNamer`, stage `0-name`) that slugs the manifest into a folder name like `2026-06-12-143501-pirate-cove-props`; the date/timestamp is always kept in front and a naming failure falls back to `run-<timestamp>`.
 
 ## Plan gates (deterministic, pre-authoring)
 

@@ -66,6 +66,20 @@ namespace Assembler.Voxelization
 		public static string ManifestUser(string gameBrief) =>
 			"Game brief:\n" + gameBrief + "\n\nProduce the set manifest.";
 
+		// ---- Run folder naming ----------------------------------------------
+
+		public const string FolderNameSystem =
+			"You name the output folder for a set of voxel game assets. Reply with ONLY a short, descriptive " +
+			"folder name capturing what the set IS — 2 to 4 words, lowercase, words separated by single hyphens " +
+			"(kebab-case). No date, no file extension, no quotes, no explanation. " +
+			"Examples: pirate-cove-props, medieval-village, neon-racers.";
+
+		public static string FolderNameUser(SetManifest manifest)
+		{
+			var assets = string.Join(", ", manifest.Assets.Select(a => a.Id));
+			return $"Game: {manifest.Game}\nAssets: {assets}\n\nName the folder for this set.";
+		}
+
 		// ---- Stage 1: planning ----------------------------------------------
 
 		public static string PlanningSystem(VoxelizationConfig config) =>
