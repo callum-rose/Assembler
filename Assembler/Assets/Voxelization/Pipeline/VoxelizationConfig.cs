@@ -59,6 +59,7 @@ namespace Assembler.Voxelization
 		public string ModelForStage(string stage) => stage switch
 		{
 			ManifestGenerator.Stage => ManifestModel,
+			RunFolderNamer.Stage => ManifestModel,
 			BriefExtractor.Stage => PlanningModel,
 			ModelPlanner.Stage => PlanningModel,
 			SetOrchestrator.ReviewStage => PlanningModel,
