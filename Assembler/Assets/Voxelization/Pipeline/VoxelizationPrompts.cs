@@ -341,7 +341,7 @@ namespace Assembler.Voxelization
 			"You author the voxel geometry of ONE part of a larger model as a list of solid primitive shapes.\n\n" +
 			CoordinateDoc + "\n\n" +
 			"Output format — one fenced block labelled `primitives`, one shape per line:\n" +
-			"  box      KEY minX minY minZ sizeX sizeY sizeZ        (optional trailing: round R)\n" +
+			"  box      KEY minX minY minZ sizeX sizeY sizeZ        (optional trailing: round R [faces/edges])\n" +
 			"  sphere   KEY cx cy cz r                              (optional trailing: half +y / -y / +x / -x / +z / -z)\n" +
 			"  cylinder KEY axis baseX baseY baseZ r h              (axis is x, y, or z; optional trailing half clip)\n" +
 			"Rules:\n" +
@@ -350,14 +350,19 @@ namespace Assembler.Voxelization
 			"- Centres and radii may be fractional: a 4-wide wheel is `cylinder K z 1.5 1.5 0 2 2` (centre between " +
 			"cells; a cell is included when its centre lies within the radius). Box min/size and cylinder height are " +
 			"whole numbers.\n" +
-			"- `round R` rounds a box's edges/corners with radius R. `half` keeps only the named side of a sphere or " +
-			"cylinder (a dome is `sphere ... half +y`).\n" +
+			"- `round R` rounds ALL of a box's edges/corners with radius R. To round only part of it, list faces and/or " +
+			"edges after R: a face `+y` rounds that face's four edges (rounded top), an edge `+y+z` (two perpendicular " +
+			"faces) rounds that one edge. `round 1 +y -x` rounds the top face and the left face.\n" +
+			"- Do NOT round both edges of a face that are only 2 voxels apart — the carvings would meet and shrink the " +
+			"box by a voxel. (So a slab only 2 thick can have ONE major face rounded, e.g. `round 1 +y`, but not both " +
+			"and not all over.) This is rejected; round one edge, make it ≥3 thick, or leave it square.\n" +
+			"- `half` keeps only the named side of a sphere or cylinder (a dome is `sphere ... half +y`).\n" +
 			"- Later lines overwrite earlier ones where they overlap — build big solids first, then details on top.\n" +
 			"- Shapes are clipped to the declared size; geometry must still form ONE connected volume and fill the " +
 			"window's role in the model (no floating pieces).\n\n" +
 			"Example for a 5x3x5 base slab on a roller, palette G=grey, K=black:\n" +
 			"```primitives\n" +
-			"box G 0 1 0 5 2 5 round 1\n" +
+			"box G 0 1 0 5 2 5 round 1 +y\n" +
 			"cylinder K z 2 0.5 0 1.5 5\n" +
 			"```\n" +
 			"Output ONLY the fenced block.";

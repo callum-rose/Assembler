@@ -40,6 +40,82 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void PerFaceRounding_RoundsOnlyTheSelectedFacesEdges()
+		{
+			var grid = Decode(new Vector3Int(3, 3, 3), Vector3Int.zero, "box W 0 0 0 3 3 3 round 1 +y");
+
+			// Only the top face's rim is carved; everything below it stays square.
+			Assert.That(grid.Voxels.Count, Is.EqualTo(19));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 2, 1)), Is.True, "top-face centre");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 2, 0)), Is.False, "top corner stayed");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 2, 0)), Is.False, "top edge stayed");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 0, 0)), Is.True, "bottom corner was rounded");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 1, 0)), Is.True, "vertical edge was rounded");
+		}
+
+		[Test]
+		public void PerEdgeRounding_RoundsOnlyTheSelectedEdge()
+		{
+			var grid = Decode(new Vector3Int(3, 3, 3), Vector3Int.zero, "box W 0 0 0 3 3 3 round 1 +y+z");
+
+			// The single +y/+z edge runs along x — just that line of three cells goes.
+			Assert.That(grid.Voxels.Count, Is.EqualTo(24));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 2, 2)), Is.False);
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 2, 2)), Is.False);
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 2, 0)), Is.True, "a different top corner stayed");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 2, 1)), Is.True);
+		}
+
+		[Test]
+		public void RoundingTwoEdgesOnlyTwoVoxelsApart_IsRejected()
+		{
+			// A box two voxels thick in z: rounding all edges would collapse the
+			// x/y faces and shrink the box, so it is banned.
+			var ex = Assert.Throws<FormatException>(() =>
+				Decode(new Vector3Int(3, 3, 2), Vector3Int.zero, "box W 0 0 0 3 3 2 round 1"));
+			Assert.That(ex!.Message, Does.Contain("collapse"));
+		}
+
+		[Test]
+		public void RoundingOneFaceOfAThinSlab_IsAllowedAndKeepsFullSize()
+		{
+			// Rounding a single major face's rim only rounds each side face's
+			// near edge (not the far one), so nothing collapses and the slab
+			// keeps its full 5x5x2 extent. (Rounding both major faces, or all
+			// over, would pair up the side edges and is rejected.)
+			var grid = Decode(new Vector3Int(5, 5, 2), Vector3Int.zero, "box W 0 0 0 5 5 2 round 1 +z");
+
+			Assert.That(grid.Min, Is.EqualTo(Vector3Int.zero));
+			Assert.That(grid.Max, Is.EqualTo(new Vector3Int(4, 4, 1)));
+		}
+
+		[Test]
+		public void RoundingBothMajorFacesOfAThinSlab_IsRejected()
+		{
+			// +z and -z together round both edges of every side face, which are
+			// only two voxels apart — so the side faces would collapse.
+			var ex = Assert.Throws<FormatException>(() =>
+				Decode(new Vector3Int(5, 5, 2), Vector3Int.zero, "box W 0 0 0 5 5 2 round 1 +z -z"));
+			Assert.That(ex!.Message, Does.Contain("collapse"));
+		}
+
+		[Test]
+		public void Round_WithoutARadius_Throws()
+		{
+			var ex = Assert.Throws<FormatException>(() =>
+				Decode(new Vector3Int(2, 2, 2), Vector3Int.zero, "box W 0 0 0 2 2 2 round"));
+			Assert.That(ex!.Message, Does.Contain("radius"));
+		}
+
+		[Test]
+		public void Round_WithAnUnknownSelector_Throws()
+		{
+			var ex = Assert.Throws<FormatException>(() =>
+				Decode(new Vector3Int(3, 3, 3), Vector3Int.zero, "box W 0 0 0 3 3 3 round 1 +q"));
+			Assert.That(ex!.Message, Does.Contain("face"));
+		}
+
+		[Test]
 		public void Sphere_RasterizesSymmetrically()
 		{
 			var grid = Decode(new Vector3Int(5, 5, 5), Vector3Int.zero, "sphere W 2 2 2 2");
