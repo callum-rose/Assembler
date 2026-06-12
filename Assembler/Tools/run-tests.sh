@@ -19,6 +19,9 @@
 #    open on this worktree before running.
 #  - Unlike generate-docs.sh this does NOT pass -quit: the test run is asynchronous and TestBatch
 #    exits the editor itself once tests finish.
+#  - Like the other scripts, the raw Unity log is captured to a temp file and only TestBatch's
+#    delimited results block is printed, so the summary isn't buried under boot noise. The temp log
+#    path is printed at the end for when you need the full detail.
 #  - Full NUnit XML is written to TestResults/EditMode-results.xml.
 set -euo pipefail
 
@@ -81,12 +84,42 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+LOG="$(mktemp -t assembler-run-tests.XXXXXX.log)"
+
 echo "Running EditMode tests with Unity $VERSION (project: $PROJECT)..."
+
+# Capture the (very noisy) Unity log to a temp file rather than streaming it — only the delimited
+# "TestBatch results" block (pass/fail counts + any failures) is printed, so the summary isn't buried
+# under licensing-handshake errors, asset-import spam, etc. Don't let a non-zero Unity exit abort the
+# script before we extract the report.
 # Note: "${FILTER_ARGS[@]+...}" guards the empty-array case — under `set -u`, macOS's bash 3.2
 # treats a bare "${FILTER_ARGS[@]}" on an empty array as an unbound-variable error.
+set +e
 "$UNITY" \
 	-batchmode -nographics \
 	-projectPath "$PROJECT" \
 	-executeMethod Editor.TestBatch.RunEditModeTests \
 	${FILTER_ARGS[@]+"${FILTER_ARGS[@]}"} \
-	-logFile -
+	-logFile - > "$LOG" 2>&1
+RC=$?
+set -e
+
+# Extract the report between TestBatch's header line and its trailing all-equals footer. The header
+# carries text so it never matches the footer pattern; the footer guard keys off `f` so a stray
+# all-equals line in the boot noise (before the header) can't trip an early exit.
+REPORT="$(awk '/================ TestBatch results ================/{f=1} f{print} f && /^=+$/{exit}' "$LOG")"
+
+echo
+if [[ -n "$REPORT" ]]; then
+	printf '%s\n' "$REPORT"
+else
+	echo "error: no test report found in the Unity log — the editor likely failed to start." >&2
+	echo "       (A fresh worktree's first run does a one-time cold import; re-running usually fixes a" >&2
+	echo "        spurious cold-import failure.)" >&2
+fi
+echo
+echo "Full NUnit XML: $PROJECT/TestResults/EditMode-results.xml"
+echo "Full Unity log: $LOG"
+
+# Verdict comes from TestBatch's exit code (0 = all passed, 1 = a failure/error), which Unity returns.
+exit "$RC"
