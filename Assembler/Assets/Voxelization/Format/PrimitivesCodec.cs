@@ -15,9 +15,16 @@ namespace Assembler.Voxelization
 	/// shapes can be centred between cells.
 	///
 	/// Grammar (tokens whitespace-separated; `#` starts a comment):
-	///   box      KEY minX minY minZ sizeX sizeY sizeZ [round R]
+	///   box      KEY minX minY minZ sizeX sizeY sizeZ [round R [SEL ...]]
 	///   sphere   KEY cx cy cz r [half +x|-x|+y|-y|+z|-z]
 	///   cylinder KEY x|y|z baseX baseY baseZ r h [half +x|-x|+y|-y|+z|-z]
+	///
+	/// `round R` with no selectors rounds all twelve edges. Each optional SEL
+	/// targets the rounding: a face (`+y`) rounds that face's four edges, an
+	/// edge (`+y+z`, two perpendicular face directions) rounds that one edge.
+	/// Rounding both edges of a face that sit only `2R` voxels apart would
+	/// collapse the shared face and shrink the box, so that combination is
+	/// rejected — round at most one, grow the box, or shrink R.
 	/// </summary>
 	public static class PrimitivesCodec
 	{
@@ -94,61 +101,228 @@ namespace Assembler.Voxelization
 		private static (Func<Vector3Int, bool>, Vector3Int, Vector3Int, byte) ParseBox(
 			string[] tokens, int lineNumber, IReadOnlyDictionary<char, byte> keyToIndex)
 		{
-			var (numbers, half) = SplitArguments(tokens, lineNumber);
-			if (half != null)
+			if (Array.FindIndex(tokens, t => t.Equals("half", StringComparison.OrdinalIgnoreCase)) >= 0)
 			{
 				throw Error(lineNumber, tokens, "box does not take a 'half' clip — use sphere or cylinder");
 			}
 
-			var round = 0f;
-			var roundIndex = Array.FindIndex(tokens, t => t.Equals("round", StringComparison.OrdinalIgnoreCase));
-			if (roundIndex >= 0)
-			{
-				if (roundIndex != tokens.Length - 2 || numbers.Count == 0)
-				{
-					throw Error(lineNumber, tokens, "'round R' must be the final two tokens of the box line");
-				}
+			var colour = ColourOf(tokens, lineNumber, keyToIndex);
 
-				round = numbers[^1];
-				numbers = numbers.Take(numbers.Count - 1).ToList();
+			// box KEY <6 numbers> [round R selectors...]
+			var args = tokens.Skip(2).ToArray();
+			var roundIndex = Array.FindIndex(args, t => t.Equals("round", StringComparison.OrdinalIgnoreCase));
+			var numberTokens = roundIndex >= 0 ? args.Take(roundIndex).ToArray() : args;
+			var roundTokens = roundIndex >= 0 ? args.Skip(roundIndex + 1).ToArray() : Array.Empty<string>();
+
+			if (numberTokens.Length != 6)
+			{
+				throw Error(lineNumber, tokens, "box needs 6 numbers: minX minY minZ sizeX sizeY sizeZ (then optional 'round R [faces/edges]')");
 			}
 
-			if (numbers.Count != 6)
-			{
-				throw Error(lineNumber, tokens, "box needs 6 numbers: minX minY minZ sizeX sizeY sizeZ (then optional 'round R')");
-			}
-
-			var boxMin = new Vector3Int(RequireInt(numbers[0], lineNumber, tokens), RequireInt(numbers[1], lineNumber, tokens), RequireInt(numbers[2], lineNumber, tokens));
-			var boxSize = new Vector3Int(RequireInt(numbers[3], lineNumber, tokens), RequireInt(numbers[4], lineNumber, tokens), RequireInt(numbers[5], lineNumber, tokens));
+			var numbers = numberTokens.Select(t => RequireInt(ParseNumber(t, lineNumber, tokens), lineNumber, tokens)).ToArray();
+			var boxMin = new Vector3Int(numbers[0], numbers[1], numbers[2]);
+			var boxSize = new Vector3Int(numbers[3], numbers[4], numbers[5]);
 			if (boxSize.x <= 0 || boxSize.y <= 0 || boxSize.z <= 0)
 			{
 				throw Error(lineNumber, tokens, "box size must be positive on every axis");
 			}
 
 			var boxMax = boxMin + boxSize - Vector3Int.one;
-			var colour = ColourOf(tokens, lineNumber, keyToIndex);
+			if (roundIndex < 0)
+			{
+				return (_ => true, boxMin, boxMax, colour);
+			}
+
+			if (roundTokens.Length == 0)
+			{
+				throw Error(lineNumber, tokens, "'round' must be followed by a radius R (then optional faces/edges to round)");
+			}
+
+			var round = ParseNumber(roundTokens[0], lineNumber, tokens);
 			if (round <= 0f)
 			{
 				return (_ => true, boxMin, boxMax, colour);
 			}
 
-			// Rounded box: cells within `round` of the inset core box. Insets
-			// collapse to the centre plane when the radius exceeds an extent.
-			var innerMin = new Vector3(
-				Mathf.Min(boxMin.x + round, (boxMin.x + boxMax.x) / 2f),
-				Mathf.Min(boxMin.y + round, (boxMin.y + boxMax.y) / 2f),
-				Mathf.Min(boxMin.z + round, (boxMin.z + boxMax.z) / 2f));
-			var innerMax = new Vector3(
-				Mathf.Max(boxMax.x - round, (boxMin.x + boxMax.x) / 2f),
-				Mathf.Max(boxMax.y - round, (boxMin.y + boxMax.y) / 2f),
-				Mathf.Max(boxMax.z - round, (boxMin.z + boxMax.z) / 2f));
-			var radiusSq = (round + Epsilon) * (round + Epsilon);
-			return (cell =>
-			{
-				var clamped = Vector3.Max(innerMin, Vector3.Min(innerMax, cell));
-				return ((Vector3)cell - clamped).sqrMagnitude <= radiusSq;
-			}, boxMin, boxMax, colour);
+			var selectors = roundTokens.Skip(1).ToArray();
+			var edges = selectors.Length == 0 ? AllEdges() : ParseRoundSelectors(selectors, lineNumber, tokens);
+			GuardAgainstFaceCollapse(edges, boxSize, round, lineNumber, tokens);
+
+			return (RoundedBoxPredicate(edges, boxMin, boxMax, round), boxMin, boxMax, colour);
 		}
+
+		/// <summary>
+		/// Rounding carves a quarter-round along each selected edge: a cell is
+		/// dropped when it lies beyond the inset point on both of the edge's
+		/// faces and outside the radius-R quarter circle between them. The union
+		/// over the selected edges gives per-edge / per-face rounding; rounding
+		/// all twelve edges reproduces a uniformly rounded box.
+		/// </summary>
+		private static Func<Vector3Int, bool> RoundedBoxPredicate(
+			IReadOnlyCollection<(int, int)> edges, Vector3Int boxMin, Vector3Int boxMax, float round)
+		{
+			var centre = new Vector3(
+				(boxMin.x + boxMax.x) / 2f, (boxMin.y + boxMax.y) / 2f, (boxMin.z + boxMax.z) / 2f);
+			var radiusSq = (round + Epsilon) * (round + Epsilon);
+			var carves = edges.Select(edge =>
+			{
+				var (axisU, positiveU) = Direction(edge.Item1);
+				var (axisV, positiveV) = Direction(edge.Item2);
+				// Inset point on each face, clamped to the centre so a large R
+				// never carves past the half-way plane.
+				var insetU = positiveU ? Mathf.Max(boxMax[axisU] - round, centre[axisU]) : Mathf.Min(boxMin[axisU] + round, centre[axisU]);
+				var insetV = positiveV ? Mathf.Max(boxMax[axisV] - round, centre[axisV]) : Mathf.Min(boxMin[axisV] + round, centre[axisV]);
+				return (axisU, positiveU, insetU, axisV, positiveV, insetV);
+			}).ToArray();
+
+			return cell =>
+			{
+				foreach (var (axisU, positiveU, insetU, axisV, positiveV, insetV) in carves)
+				{
+					var du = cell[axisU] - insetU;
+					var dv = cell[axisV] - insetV;
+					var beyondU = positiveU ? du > 0f : du < 0f;
+					var beyondV = positiveV ? dv > 0f : dv < 0f;
+					if (beyondU && beyondV && du * du + dv * dv > radiusSq)
+					{
+						return false;
+					}
+				}
+
+				return true;
+			};
+		}
+
+		/// <summary>
+		/// Rejects rounding two edges of a face that are so close their carvings
+		/// meet — that would erase the strip between them and shrink the box by a
+		/// voxel along the shared face's normal. For each face, the two edges
+		/// parallel to one in-plane axis sit `size` cells apart along the other;
+		/// if both are rounded and that span is two voxels (more generally
+		/// `≤ 2R`), the face collapses. A span of one means the two edges are the
+		/// same line, which rounds cleanly, so it is left alone.
+		/// </summary>
+		private static void GuardAgainstFaceCollapse(
+			HashSet<(int, int)> edges, Vector3Int size, float round, int lineNumber, string[] tokens)
+		{
+			var names = new[] { "x", "y", "z" };
+			for (var faceAxis = 0; faceAxis < 3; faceAxis++)
+			{
+				foreach (var facePositive in new[] { false, true })
+				{
+					for (var sepAxis = 0; sepAxis < 3; sepAxis++)
+					{
+						if (sepAxis == faceAxis || size[sepAxis] < 2 || size[sepAxis] > 2f * round)
+						{
+							continue;
+						}
+
+						var edgeLow = Edge(DirectionCode(faceAxis, facePositive), DirectionCode(sepAxis, false));
+						var edgeHigh = Edge(DirectionCode(faceAxis, facePositive), DirectionCode(sepAxis, true));
+						if (edges.Contains(edgeLow) && edges.Contains(edgeHigh))
+						{
+							var face = (facePositive ? "+" : "-") + names[faceAxis];
+							throw Error(lineNumber, tokens,
+								$"rounding both edges of the {face} face that are only {size[sepAxis]} voxels apart (along {names[sepAxis]}) would collapse it and shrink the box — round at most one of them, make the box thicker than {2f * round} along {names[sepAxis]}, or reduce R");
+						}
+					}
+				}
+			}
+		}
+
+		private static HashSet<(int, int)> ParseRoundSelectors(string[] selectors, int lineNumber, string[] tokens)
+		{
+			var edges = new HashSet<(int, int)>();
+			foreach (var selector in selectors)
+			{
+				var directions = SplitDirections(selector, lineNumber, tokens);
+				if (directions.Count == 1)
+				{
+					var (faceAxis, facePositive) = directions[0];
+					for (var other = 0; other < 3; other++)
+					{
+						if (other == faceAxis)
+						{
+							continue;
+						}
+
+						edges.Add(Edge(DirectionCode(faceAxis, facePositive), DirectionCode(other, false)));
+						edges.Add(Edge(DirectionCode(faceAxis, facePositive), DirectionCode(other, true)));
+					}
+				}
+				else
+				{
+					edges.Add(Edge(DirectionCode(directions[0].Axis, directions[0].Positive), DirectionCode(directions[1].Axis, directions[1].Positive)));
+				}
+			}
+
+			return edges;
+		}
+
+		private static List<(int Axis, bool Positive)> SplitDirections(string selector, int lineNumber, string[] tokens)
+		{
+			FormatException Invalid() => Error(lineNumber, tokens, $"'{selector}' is not a face (e.g. +y) or edge (e.g. +y+z) to round");
+
+			var directions = new List<(int, bool)>();
+			for (var i = 0; i < selector.Length; i += 2)
+			{
+				if (i + 2 > selector.Length || ParseDirection(selector.Substring(i, 2)) is not { } direction)
+				{
+					throw Invalid();
+				}
+
+				directions.Add(direction);
+			}
+
+			if (directions.Count is < 1 or > 2)
+			{
+				throw Invalid();
+			}
+
+			if (directions.Count == 2 && directions[0].Item1 == directions[1].Item1)
+			{
+				throw Error(lineNumber, tokens, $"edge selector '{selector}' must name two perpendicular faces (e.g. +y+z), not two on the {new[] { "x", "y", "z" }[directions[0].Item1]} axis");
+			}
+
+			return directions;
+		}
+
+		private static HashSet<(int, int)> AllEdges()
+		{
+			var edges = new HashSet<(int, int)>();
+			for (var a = 0; a < 3; a++)
+			{
+				for (var b = a + 1; b < 3; b++)
+				{
+					foreach (var positiveA in new[] { false, true })
+					{
+						foreach (var positiveB in new[] { false, true })
+						{
+							edges.Add(Edge(DirectionCode(a, positiveA), DirectionCode(b, positiveB)));
+						}
+					}
+				}
+			}
+
+			return edges;
+		}
+
+		private static (int Axis, bool Positive)? ParseDirection(string token) => token.ToLowerInvariant() switch
+		{
+			"+x" => (0, true),
+			"-x" => (0, false),
+			"+y" => (1, true),
+			"-y" => (1, false),
+			"+z" => (2, true),
+			"-z" => (2, false),
+			_ => null,
+		};
+
+		private static int DirectionCode(int axis, bool positive) => axis * 2 + (positive ? 1 : 0);
+
+		private static (int Axis, bool Positive) Direction(int code) => (code / 2, code % 2 == 1);
+
+		private static (int, int) Edge(int first, int second) => first < second ? (first, second) : (second, first);
 
 		private static (Func<Vector3Int, bool>, Vector3Int, Vector3Int, byte) ParseSphere(
 			string[] tokens, int lineNumber, IReadOnlyDictionary<char, byte> keyToIndex)
@@ -228,8 +402,7 @@ namespace Assembler.Voxelization
 
 		/// <summary>
 		/// Numeric arguments after the colour key, plus the optional trailing
-		/// `half ±axis` clip. The `round` keyword is left in place for box to
-		/// pick up positionally (its number lands at the end of the list).
+		/// `half ±axis` clip (sphere / cylinder only).
 		/// </summary>
 		private static (List<float> Numbers, string? Half) SplitArguments(string[] tokens, int lineNumber, int skip = 2)
 		{
@@ -246,21 +419,16 @@ namespace Assembler.Voxelization
 					continue;
 				}
 
-				if (token.Equals("round", StringComparison.OrdinalIgnoreCase))
-				{
-					continue;
-				}
-
-				if (!float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
-				{
-					throw Error(lineNumber, tokens, $"'{token}' is not a number");
-				}
-
-				numbers.Add(value);
+				numbers.Add(ParseNumber(token, lineNumber, tokens));
 			}
 
 			return (numbers, half);
 		}
+
+		private static float ParseNumber(string token, int lineNumber, string[] tokens) =>
+			float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+				? value
+				: throw Error(lineNumber, tokens, $"'{token}' is not a number");
 
 		private static Func<Vector3Int, bool> HalfPredicate(string? half, Vector3 reference)
 		{
