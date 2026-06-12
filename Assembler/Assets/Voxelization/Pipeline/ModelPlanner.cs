@@ -42,7 +42,7 @@ namespace Assembler.Voxelization
 			CancellationToken ct)
 		{
 			var hasImage = !referenceImage.IsEmpty;
-			var userText = VoxelizationPrompts.PlanningUser(manifest, asset, brief, hasImage, refinementNote);
+			var userText = VoxelizationPrompts.PlanningUser(manifest, asset, brief, hasImage, refinementNote, _config.StyleGuidance);
 			var messages = new List<AnthropicMessage>
 			{
 				hasImage

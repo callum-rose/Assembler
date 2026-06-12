@@ -319,7 +319,7 @@ namespace Assembler.Voxelization
 			ReferenceBrief brief,
 			CancellationToken ct)
 		{
-			var user = VoxelizationPrompts.ReviewUser(model, RenderedViews(assembled, brief), !image.IsEmpty);
+			var user = VoxelizationPrompts.ReviewUser(model, RenderedViews(assembled, brief), !image.IsEmpty, _config.StyleGuidance);
 			var messages = new List<AnthropicMessage>
 			{
 				image.IsEmpty

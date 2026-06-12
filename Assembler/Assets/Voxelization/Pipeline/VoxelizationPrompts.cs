@@ -152,7 +152,8 @@ namespace Assembler.Voxelization
 			ManifestAsset asset,
 			ReferenceBrief brief,
 			bool hasImage,
-			string refinementNote)
+			string refinementNote,
+			string styleGuidance = "")
 		{
 			var sb = new StringBuilder();
 			sb.Append("Game: ").Append(manifest.Game).Append('\n');
@@ -177,6 +178,12 @@ namespace Assembler.Voxelization
 			if (hasImage)
 			{
 				sb.Append("\nThe reference image is attached for styling detail.\n");
+			}
+
+			if (styleGuidance.Length > 0)
+			{
+				sb.Append("\nGlobal style guidance from the operator (applies to every asset — follow it):\n")
+					.Append(styleGuidance).Append('\n');
 			}
 
 			if (refinementNote.Length > 0)
@@ -246,7 +253,7 @@ namespace Assembler.Voxelization
 			"Otherwise reply with a short numbered list of corrections, phrased as instructions to the planner " +
 			"(which parts to resize, move, or re-shape, and how). No preamble.";
 
-		public static string ReviewUser(VoxelRigModel model, string views, bool hasImage)
+		public static string ReviewUser(VoxelRigModel model, string views, bool hasImage, string styleGuidance = "")
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
@@ -262,6 +269,12 @@ namespace Assembler.Voxelization
 			sb.Append(hasImage
 				? "\nThe original reference image is attached — it is the ground truth. Compare the built views against it.\n"
 				: "\nNo reference image: judge against the model's name and sane anatomy/structure.\n");
+			if (styleGuidance.Length > 0)
+			{
+				sb.Append("\nThe operator's style guidance (intentional — do not flag adherence to it as a problem):\n")
+					.Append(styleGuidance).Append('\n');
+			}
+
 			sb.Append("\nReply OK, or a numbered list of corrections for the planner.");
 			return sb.ToString();
 		}
@@ -342,7 +355,8 @@ namespace Assembler.Voxelization
 			ReferenceBrief brief,
 			VoxelPart part,
 			PlannedPartData planned,
-			string feedback)
+			string feedback,
+			string styleGuidance = "")
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
@@ -423,6 +437,11 @@ namespace Assembler.Voxelization
 						sb.Append("    ").Append(row).Append('\n');
 					}
 				}
+			}
+
+			if (styleGuidance.Length > 0)
+			{
+				sb.Append("\nGlobal style guidance from the operator (follow it):\n").Append(styleGuidance).Append('\n');
 			}
 
 			if (feedback.Length > 0)

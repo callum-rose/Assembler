@@ -44,6 +44,13 @@ namespace Assembler.Voxelization
 		/// </summary>
 		public float SilhouetteCoverageThreshold { get; init; } = 0.8f;
 
+		/// <summary>
+		/// Operator-supplied set-wide style guidance ("prefer simplicity, rounded
+		/// boxes where possible, only as many parts as needed"), injected into the
+		/// planning, authoring, and review prompts. Empty = none.
+		/// </summary>
+		public string StyleGuidance { get; init; } = string.Empty;
+
 		public VoxelScriptLimits ScriptLimits { get; init; } = VoxelScriptLimits.Default;
 
 		public static VoxelizationConfig Default { get; } = new();

@@ -58,7 +58,7 @@ namespace Assembler.Voxelization
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
 			};
 
 			for (var attempt = 1; ; attempt++)
@@ -100,7 +100,7 @@ namespace Assembler.Voxelization
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
 			};
 
 			for (var attempt = 1; ; attempt++)
@@ -146,7 +146,7 @@ namespace Assembler.Voxelization
 			var executor = _executorFactory();
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
 			};
 
 			await _gateway.SendAsync(

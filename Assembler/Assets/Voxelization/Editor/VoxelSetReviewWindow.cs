@@ -25,6 +25,7 @@ namespace Assembler.Voxelization.Editor
 		private const string BriefPref = "Assembler.Voxelization.GameBrief";
 		private const string OutputFolderPref = "Assembler.Voxelization.OutputFolder";
 		private const string ImageFolderPref = "Assembler.Voxelization.ImageFolder";
+		private const string StylePref = "Assembler.Voxelization.StyleGuidance";
 		private const string StageModelPrefPrefix = "Assembler.Voxelization.Model.";
 		private const float PreviewSize = 200f;
 		private const float SidebarWidth = 360f;
@@ -41,6 +42,7 @@ namespace Assembler.Voxelization.Editor
 		private string _manifestYaml = string.Empty;
 		private string _outputFolder = "Assets/Resources/Voxels/Sets/";
 		private string _imageFolder = string.Empty;
+		private string _styleGuidance = string.Empty;
 		private string _manifestModel = VoxelizationConfig.DefaultModel;
 		private string _planningModel = VoxelizationConfig.DefaultModel;
 		private string _authoringModel = VoxelizationConfig.DefaultModel;
@@ -81,6 +83,7 @@ namespace Assembler.Voxelization.Editor
 			_manifestYaml = EditorPrefs.GetString(ManifestPref, string.Empty);
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
+			_styleGuidance = EditorPrefs.GetString(StylePref, string.Empty);
 			_manifestModel = EditorPrefs.GetString(StageModelPrefPrefix + "Manifest", VoxelizationConfig.DefaultModel);
 			_planningModel = EditorPrefs.GetString(StageModelPrefPrefix + "Planning", VoxelizationConfig.DefaultModel);
 			_authoringModel = EditorPrefs.GetString(StageModelPrefPrefix + "Authoring", VoxelizationConfig.DefaultModel);
@@ -130,6 +133,7 @@ namespace Assembler.Voxelization.Editor
 			ManifestModel = _manifestModel,
 			PlanningModel = _planningModel,
 			AuthoringModel = _authoringModel,
+			StyleGuidance = _styleGuidance.Trim(),
 		};
 
 		private void DrawSettings()
@@ -215,6 +219,16 @@ namespace Assembler.Voxelization.Editor
 				if (GUILayout.Button("Generate manifest from brief"))
 				{
 					RunGenerateManifestAsync();
+				}
+			}
+
+			EditorGUILayout.LabelField("Style guidance (applies to every asset in every run)", EditorStyles.boldLabel);
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_styleGuidance = EditorGUILayout.TextArea(_styleGuidance, GUILayout.MinHeight(36));
+				if (scope.changed)
+				{
+					EditorPrefs.SetString(StylePref, _styleGuidance);
 				}
 			}
 
@@ -316,6 +330,15 @@ namespace Assembler.Voxelization.Editor
 
 			EditorGUILayout.BeginVertical();
 			EditorGUILayout.LabelField($"{result.AssetId} — {result.Status}", EditorStyles.boldLabel);
+			if (result.Assembled is { } assembled && assembled.Composed.Voxels.Count > 0)
+			{
+				var size = assembled.Composed.Size;
+				EditorGUILayout.LabelField(
+					$"{size.x} wide x {size.y} tall x {size.z} long — {assembled.Composed.Voxels.Count:n0} voxels — " +
+					$"{result.Model.Parts.Count} parts",
+					EditorStyles.miniLabel);
+			}
+
 			if (_inFlight.TryGetValue(result.AssetId, out var activity))
 			{
 				_statusStyle ??= new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
