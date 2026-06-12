@@ -84,6 +84,12 @@ namespace Assembler.Voxelization
 			Parts = Parts.Select(p => p.Id == partId ? p with { Data = data } : p).ToArray(),
 		};
 
+		/// <summary>Replaces a whole part (matched by id), preserving declaration order.</summary>
+		public VoxelRigModel WithPart(VoxelPart part) => this with
+		{
+			Parts = Parts.Select(p => p.Id == part.Id ? part : p).ToArray(),
+		};
+
 		/// <summary>The shared 1-based palette every part grid indexes into.</summary>
 		public Color32[] ToPalette() => Palette.Select(e => e.Colour).ToArray();
 

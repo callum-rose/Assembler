@@ -37,6 +37,7 @@ game brief ──0──▶ manifest ──1a─▶ reference brief ──1b─�
 | — validate | `Assembly/ModelValidator` | Pure code: bounding box vs targets, bilateral symmetry (whole-model IoU + per-centre-part cell-exact), connectivity (floating chunks; child touches parent), palette legality, declared-size overflow, brief palette/silhouette IoU. |
 | re-author | `SetOrchestrator` | Failing parts re-authored with the issue text + colour-keyed ASCII views (front/side/top; +back if not bilateral) of what was actually built. `MaxValidationRounds` per plan. |
 | 3 review | `SetOrchestrator.ReviewAsync` | One vision call: built views + measured-vs-target dimensions + reference image. "OK" or numbered corrections → full **re-plan** (shape problems live in plan-owned sizes/pivots). `MaxReviewRounds`. |
+| refine | `Pipeline/LocalEditor` + `SetOrchestrator.RefineAssetAsync` | The **lightweight edit path** (not the batch): a short operator note ("make the car red", "move the left wheel forward 1") → one text call → a targeted `ModelEdit` (palette recolours + per-part pivot/offset/size/note) applied to the *already-generated* model, re-authoring only the parts the note names. Deliberately **skips planning** — the full re-plan is what the plan gates routinely reject, so a minor edit can't fail them. An un-applicable note returns the previous model unchanged (regenerate instead). |
 | export | `Assembly/ModelExporter` | `<id>.vmodel.yaml` (the full generation source — rebuildable), `reference_brief.yaml`, composed `.vox` + `.goxel.txt`, front/iso preview PNGs, per-part `.vox` for rigged models. |
 
 `SetOrchestrator` drives all of it; assets in a batch run in parallel and auto-export the moment they finish into a per-run subfolder (`run-<timestamp>/<asset>/` + `session.log`).
@@ -72,7 +73,7 @@ game brief ──0──▶ manifest ──1a─▶ reference brief ──1b─�
 
 ## Editor & runtime
 
-- `Editor/VoxelSetReviewWindow` — the operator console: brief → manifest → parallel batch, live per-asset gallery (dimensions/voxel/part counts, previews), refine/regenerate per asset, style guidance, per-stage model dropdowns, token spend, log.
+- `Editor/VoxelSetReviewWindow` — the operator console: brief → manifest → parallel batch, live per-asset gallery (dimensions/voxel/part counts, previews), style guidance, per-stage model dropdowns, token spend, log. Per asset: **Regenerate** (full pipeline, optional note → planning) and **Refine** (a note → `RefineAssetAsync`, the local-edit path; falls back to a full regenerate-with-note when there's no prior good model to edit).
 - `Runtime/RigInstantiator` + `VoxelMeshBuilder` — build a GameObject tree (one child per part, pivots as localPosition) from an exported model at runtime.
 - `Assembly/VoxelProjector` (ASCII/occupancy/colour projections), `VoxelPreviewRenderer` (front + top-down dimetric iso PNGs).
 

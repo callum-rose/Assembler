@@ -388,7 +388,7 @@ namespace Assembler.Voxelization.Editor
 			{
 				if (GUILayout.Button("Refine", GUILayout.Width(90)))
 				{
-					RunSingleAssetAsync(result.AssetId, note);
+					RunRefineAsync(result.AssetId, note);
 				}
 			}
 
@@ -635,6 +635,43 @@ namespace Assembler.Voxelization.Editor
 			catch (Exception ex)
 			{
 				Log($"{assetId} failed: " + ex.Message);
+			}
+			finally
+			{
+				FinishRun();
+			}
+		}
+
+		/// <summary>
+		/// The lightweight refine path: edit the already-generated model in place
+		/// from the note, touching only the parts it names. Falls back to a full
+		/// regenerate-with-note when there is no prior good model to edit.
+		/// </summary>
+		private async void RunRefineAsync(string assetId, string note)
+		{
+			if (!_results.TryGetValue(assetId, out var previous) || previous.Status == ModelStatus.Failed
+				|| previous.Model.Parts.Count == 0)
+			{
+				RunSingleAssetAsync(assetId, note);
+				return;
+			}
+
+			StartRun(clearResults: false);
+			_inFlight[assetId] = "queued...";
+			try
+			{
+				using var gateway = NewGateway();
+				var orchestrator = NewOrchestrator(gateway);
+				var result = await orchestrator.RefineAssetAsync(previous, note, _cts!.Token, NewProgress());
+				StoreResult(result);
+			}
+			catch (OperationCanceledException)
+			{
+				Log("Cancelled.");
+			}
+			catch (Exception ex)
+			{
+				Log($"{assetId} refine failed: " + ex.Message);
 			}
 			finally
 			{

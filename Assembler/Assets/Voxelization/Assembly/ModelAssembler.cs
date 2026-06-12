@@ -212,6 +212,11 @@ namespace Assembler.Voxelization
 			var unknown = new HashSet<string>();
 			foreach (var kv in built.Voxels)
 			{
+				if (kv.Value < 1 || kv.Value > built.Palette.Length)
+				{
+					continue;
+				}
+
 				var colour = built.Palette[kv.Value - 1];
 				if (colourToIndex.TryGetValue(ColourKey(colour), out var index))
 				{

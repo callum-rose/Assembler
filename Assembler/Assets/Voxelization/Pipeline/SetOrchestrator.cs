@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -54,6 +55,7 @@ namespace Assembler.Voxelization
 		private readonly PartAuthor _author;
 		private readonly ModelAssembler _assembler;
 		private readonly ModelValidator _validator;
+		private readonly LocalEditor _editor;
 
 		public SetOrchestrator(
 			IAnthropicGateway gateway,
@@ -71,6 +73,7 @@ namespace Assembler.Voxelization
 			_author = new PartAuthor(gateway, config);
 			_assembler = new ModelAssembler(scriptRunner);
 			_validator = new ModelValidator(config.SilhouetteIouThreshold);
+			_editor = new LocalEditor(gateway, config);
 		}
 
 		public async Task<SetResult> RunAsync(SetManifest manifest, CancellationToken ct, IProgress<string>? progress = null)
@@ -207,6 +210,199 @@ namespace Assembler.Voxelization
 					Error = ex.Message,
 				};
 			}
+		}
+
+		/// <summary>
+		/// The lightweight refine path (issue 307): apply a short operator note to
+		/// an already-generated model as a targeted local edit — palette recolours
+		/// plus per-part moves/reshapes — re-authoring only the parts the note
+		/// touches and never re-planning. Falls back nowhere: an empty
+		/// interpretation returns the previous result unchanged so the operator can
+		/// choose a full regenerate. The full re-plan that <see cref="RunAssetAsync"/>
+		/// performs is what the plan gates frequently reject; skipping it is why a
+		/// minor edit no longer errors out.
+		/// </summary>
+		public async Task<ModelResult> RefineAssetAsync(
+			ModelResult previous,
+			string note,
+			CancellationToken ct,
+			IProgress<string>? progress = null)
+		{
+			var assetId = previous.AssetId;
+			try
+			{
+				var model = previous.Model;
+				var brief = previous.Brief;
+				var views = previous.Assembled is { } prior ? RenderedViews(prior, brief) : string.Empty;
+
+				progress?.Report($"{assetId}: interpreting the refinement note...");
+				var edit = await _editor.InterpretAsync(model, views, note, ct);
+				if (edit.IsEmpty)
+				{
+					progress?.Report($"{assetId}: the note needs a full regenerate — no local edit applied.");
+					return previous;
+				}
+
+				if (edit.Palette.Count > 0)
+				{
+					model = model with { Palette = ApplyPaletteEdits(model.Palette, edit.Palette) };
+					progress?.Report($"{assetId}: recoloured {string.Join(", ", edit.Palette.Select(p => p.Key))}");
+				}
+
+				// Deterministic pivot/offset/size moves first, so any re-author sees
+				// the final placement and window. A note (or a size change, which
+				// leaves the old grid the wrong shape) re-authors that one part.
+				var toReauthor = new List<(string Id, string Note)>();
+				foreach (var part in edit.Parts)
+				{
+					model = ApplyPartMove(model, part);
+					if (part.Note.Length > 0 || part.Size.HasValue)
+					{
+						toReauthor.Add((ResolveAuthoredSource(model, part.Id), EditNote(part)));
+					}
+				}
+
+				foreach (var group in toReauthor.GroupBy(r => r.Id))
+				{
+					ct.ThrowIfCancellationRequested();
+					var partId = group.Key;
+					var partNote = string.Join("; ", group.Select(r => r.Note).Where(n => n.Length > 0));
+					var planned = PlannedFrom(model.FindPart(partId)?.Data, partNote);
+					if (planned == null)
+					{
+						progress?.Report($"{assetId}: '{partId}' has no authored geometry to re-author — skipped.");
+						continue;
+					}
+
+					progress?.Report($"{assetId}: re-authoring {partId}...");
+					// The note rides in planned.Note (the author's guidance channel),
+					// so the feedback slot — framed as a validation fix — stays empty.
+					model = await AuthorPartAsync(model, brief, partId, planned, string.Empty, ct);
+				}
+
+				progress?.Report($"{assetId}: assembling...");
+				var assembled = await _assembler.AssembleAsync(model, ct);
+				var report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, brief));
+				ReportOutcome(assetId, assembled, report, progress);
+
+				progress?.Report($"{assetId}: exporting...");
+				var export = ModelExporter.Export(assembled, brief);
+
+				return new ModelResult
+				{
+					AssetId = assetId,
+					Status = report.IsValid ? ModelStatus.Ready : ModelStatus.NeedsReview,
+					Model = model,
+					Brief = brief,
+					Assembled = assembled,
+					Report = report,
+					Export = export,
+				};
+			}
+			catch (OperationCanceledException)
+			{
+				throw;
+			}
+			catch (Exception ex)
+			{
+				progress?.Report($"{assetId}: FAILED — {ex.Message}");
+				return new ModelResult { AssetId = assetId, Status = ModelStatus.Failed, Error = ex.Message };
+			}
+		}
+
+		private static IReadOnlyList<PaletteEntry> ApplyPaletteEdits(
+			IReadOnlyList<PaletteEntry> palette, IReadOnlyList<PaletteEdit> edits)
+		{
+			var result = palette.ToList();
+			foreach (var edit in edits)
+			{
+				var index = result.FindIndex(e => e.Key == edit.Key);
+				if (index >= 0)
+				{
+					result[index] = result[index] with { Colour = edit.Colour };
+				}
+				else
+				{
+					result.Add(new PaletteEntry(edit.Key, edit.Colour));
+				}
+			}
+
+			return result;
+		}
+
+		private static VoxelRigModel ApplyPartMove(VoxelRigModel model, PartEdit edit)
+		{
+			var part = model.FindPart(edit.Id);
+			if (part == null)
+			{
+				return model;
+			}
+
+			var moved = part;
+			if (edit.Pivot is { } pivot)
+			{
+				moved = moved with { Pivot = pivot };
+			}
+
+			if (edit.Offset.HasValue || edit.Size.HasValue)
+			{
+				moved = moved with { Data = ApplyGeometry(moved.Data, edit.Offset, edit.Size) };
+			}
+
+			return model.WithPart(moved);
+		}
+
+		private static PartData ApplyGeometry(PartData data, Vector3Int? offset, Vector3Int? size) => data switch
+		{
+			LayersPartData l => l with { Offset = offset ?? l.Offset, Size = size ?? l.Size },
+			PrimitivesPartData p => p with { Offset = offset ?? p.Offset, Size = size ?? p.Size },
+			ScriptPartData s => s with { Offset = offset ?? s.Offset, Size = size ?? s.Size },
+			PlannedPartData pl => pl with { Offset = offset ?? pl.Offset, Size = size ?? pl.Size },
+			_ => data,
+		};
+
+		private static PlannedPartData? PlannedFrom(PartData? data, string note) => data switch
+		{
+			LayersPartData l => new PlannedPartData(PartEncoding.Layers, l.Size, l.Offset, note),
+			PrimitivesPartData p => new PlannedPartData(PartEncoding.Primitives, p.Size, p.Offset, note),
+			ScriptPartData s => new PlannedPartData(PartEncoding.Script, s.Size, s.Offset, note),
+			PlannedPartData pl => pl with { Note = note.Length > 0 ? note : pl.Note },
+			_ => null,
+		};
+
+		/// <summary>
+		/// A note/resize on a mirror or copy part really targets the authored
+		/// geometry it reuses, so follow the source chain to the part that actually
+		/// holds the grid.
+		/// </summary>
+		private static string ResolveAuthoredSource(VoxelRigModel model, string id)
+		{
+			var seen = new HashSet<string>();
+			var current = id;
+			while (seen.Add(current) && model.FindPart(current)?.Data is var data && data is MirrorPartData or CopyPartData)
+			{
+				current = data switch
+				{
+					MirrorPartData mirror => mirror.Source,
+					CopyPartData copy => copy.Source,
+					_ => current,
+				};
+			}
+
+			return current;
+		}
+
+		private static string EditNote(PartEdit edit)
+		{
+			var resized = edit.Size is { } size
+				? $"resized to {YamlNodes.Vector(size)} — rebuild geometry to fill the new window"
+				: string.Empty;
+			return (edit.Note, resized) switch
+			{
+				({ Length: > 0 }, { Length: > 0 }) => $"{edit.Note} ({resized})",
+				({ Length: > 0 }, _) => edit.Note,
+				_ => resized,
+			};
 		}
 
 		private static string DescribePlan(VoxelRigModel skeleton)

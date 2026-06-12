@@ -62,6 +62,7 @@ namespace Assembler.Voxelization
 			BriefExtractor.Stage => PlanningModel,
 			ModelPlanner.Stage => PlanningModel,
 			SetOrchestrator.ReviewStage => PlanningModel,
+			LocalEditor.Stage => PlanningModel,
 			_ => AuthoringModel,
 		};
 	}

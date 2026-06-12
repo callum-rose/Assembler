@@ -70,7 +70,9 @@ namespace Assembler.Voxelization
 				if (depth > nearest[u, v])
 				{
 					nearest[u, v] = depth;
-					colours[u, v] = model.Palette[kv.Value - 1];
+					colours[u, v] = kv.Value >= 1 && kv.Value <= model.Palette.Length
+						? model.Palette[kv.Value - 1]
+						: (Color32?)null;
 				}
 			}
 
