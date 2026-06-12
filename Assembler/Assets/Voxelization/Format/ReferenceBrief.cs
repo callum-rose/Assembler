@@ -21,6 +21,13 @@ namespace Assembler.Voxelization
 		public static SilhouetteSpec None { get; } = new(string.Empty, Vector3Int.zero, Array.Empty<string>());
 
 		public bool IsEmpty => Rows.Count == 0;
+
+		/// <summary>
+		/// Vision models sometimes transcribe silhouette rows with palette keys
+		/// instead of '#'. Occupancy treats any non-empty marker as solid so a
+		/// colour-keyed transcription cannot silently zero out every check.
+		/// </summary>
+		public static bool IsSolid(char cell) => cell is not ('.' or ' ' or '_');
 	}
 
 	/// <summary>

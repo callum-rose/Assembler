@@ -76,7 +76,11 @@ namespace Assembler.Voxelization
 			"on the part so disconnected chunks within it are allowed. Never mark body parts, limbs, or structural " +
 			"pieces loose — a floating leaf is fine, a floating hand is not.\n" +
 			"- Parts must physically touch their parent at the joint, and the whole model must hit the required " +
-			"voxel height exactly: plan part sizes and pivots so they add up.\n" +
+			"voxel height exactly (checked deterministically; the lowest geometry sits at y=0): plan part sizes and " +
+			"pivots so they add up. A limb separated from the body by a gap along its length still connects at the " +
+			"joint — give the torso a wide shoulder row for arms to attach to, never a free-floating limb.\n" +
+			"- Declare parts parents-first: a part's `parent` (and a mirror's `source`) must appear EARLIER in the " +
+			"list (checked deterministically).\n" +
 			"- Palette: at most 12 colours, each a single-character key. `_` is reserved for empty.\n" +
 			"- Rigged models get named `poses` (part id → [x,y,z] euler degrees, local). Always include `idle: {}`. " +
 			"Unrigged models still use parts (and mirrors) for authoring economy, with `poses:` left empty.\n\n" +
@@ -175,10 +179,14 @@ namespace Assembler.Voxelization
 			"      - \"..##..\"\n" +
 			"```\n" +
 			"Rules:\n" +
-			"- Palette: at most 12 colours, single-character keys, hex values read from the image.\n" +
-			"- Silhouette rows are listed top row first; '#' = solid, '.' = empty; one character per cell.\n" +
+			"- Palette: at most 12 colours, single-character keys, hex values read from the image. Include EVERY " +
+			"distinct colour, even 1-2 cell details (eyes, buttons, trim) — downstream stages are locked to this " +
+			"palette and cannot add colours you missed.\n" +
+			"- Silhouette rows use ONLY two characters: '#' (solid) and '.' (empty) — NEVER palette letters or any " +
+			"other symbol. One character per cell, top row first.\n" +
 			"- COUNT CAREFULLY: the silhouette width and height must match the subject's actual cell counts. Trace " +
-			"each row of the image before writing it.\n" +
+			"each row of the image before writing it. Do not add empty margin rows or columns — the grid hugs the " +
+			"subject's bounding box exactly.\n" +
 			"- Mark gaps between limbs and the body (and between legs) as '.' — never blob separate shapes into one " +
 			"solid mass; gaps are signature features and belong in signature_features too.\n" +
 			"- For bilateral subjects the rows must be exactly left-right symmetric (prefer an odd width).\n" +

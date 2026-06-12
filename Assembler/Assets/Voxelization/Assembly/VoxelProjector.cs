@@ -170,7 +170,7 @@ namespace Assembler.Voxelization
 				{
 					// Rows are image-style: row 0 is the top of the silhouette.
 					var row = height - 1 - v < spec.Rows.Count ? spec.Rows[height - 1 - v] : string.Empty;
-					var expected = u < row.Length && row[u] == '#';
+					var expected = u < row.Length && SilhouetteSpec.IsSolid(row[u]);
 
 					var pu = Mathf.Clamp(Mathf.FloorToInt((u + 0.5f) * projWidth / width), 0, projWidth - 1);
 					var pv = Mathf.Clamp(Mathf.FloorToInt((v + 0.5f) * projHeight / height), 0, projHeight - 1);

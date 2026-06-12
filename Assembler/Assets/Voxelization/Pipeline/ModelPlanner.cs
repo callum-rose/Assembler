@@ -92,12 +92,31 @@ namespace Assembler.Voxelization
 					"\nFix the skeleton and emit the corrected ```vmodel block.");
 			}
 
+			if (brief.Palette.Count > 0)
+			{
+				var allowed = new HashSet<int>(brief.Palette.Select(ColourKey));
+				var rogue = plan.Skeleton.Palette
+					.Where(e => !allowed.Contains(ColourKey(e)))
+					.Select(e => e.ToHex())
+					.ToList();
+				if (rogue.Count > 0)
+				{
+					return (null,
+						$"The plan's palette contains colours not in the locked reference palette: {string.Join(", ", rogue)}. " +
+						$"Use ONLY the brief's colours, hex-exact: {string.Join(", ", brief.Palette.Select(e => e.ToHex()))}.\n" +
+						"Emit the corrected ```vmodel block.");
+				}
+			}
+
 			var feasibility = PlanGeometryChecks.SilhouetteFeasibilityError(
 				plan.Skeleton, brief, _config.SilhouetteCoverageThreshold);
 			return feasibility == null
 				? (plan, string.Empty)
 				: (null, feasibility + "\nEmit the corrected ```vmodel block.");
 		}
+
+		private static int ColourKey(PaletteEntry entry) =>
+			(entry.Colour.r << 16) | (entry.Colour.g << 8) | entry.Colour.b;
 
 		private ModelPlan Parse(string response, SetManifest manifest, ManifestAsset asset, ReferenceBrief brief)
 		{

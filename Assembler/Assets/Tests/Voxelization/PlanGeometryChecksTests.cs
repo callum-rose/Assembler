@@ -87,6 +87,36 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void ChildDeclaredBeforeItsParent_IsRejected()
+		{
+			var model = Model(
+				Planned("head", "torso", new Vector3Int(0, 1, 0), new Vector3Int(1, 1, 1), new Vector3Int(0, 0, 0)),
+				Planned("torso", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 2, 1), new Vector3Int(-1, 0, 0)));
+			var errors = PlanGeometryChecks.Errors(model);
+
+			Assert.That(errors.Single(), Does.Contain("declared before its parent"));
+		}
+
+		[Test]
+		public void WrongVerticalSpan_IsRejected()
+		{
+			// 4 voxels of boxes against a 2-voxel manifest height.
+			var model = Model(Planned("column", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 4, 1), new Vector3Int(0, 0, 0)));
+			var errors = PlanGeometryChecks.Errors(model);
+
+			Assert.That(errors.Single(), Does.Contain("must be 2 voxels tall"));
+		}
+
+		[Test]
+		public void GeometryFloatingAboveTheGround_IsRejected()
+		{
+			var model = Model(Planned("column", "root", new Vector3Int(0, 2, 0), new Vector3Int(1, 2, 1), new Vector3Int(0, 0, 0)));
+			var errors = PlanGeometryChecks.Errors(model);
+
+			Assert.That(errors.Single(), Does.Contain("y=0"));
+		}
+
+		[Test]
 		public void SilhouetteFeasibility_RejectsPlansWhoseBoxesCannotCoverTheReference()
 		{
 			// A single 1-wide column of boxes vs a fully solid 3-wide reference:

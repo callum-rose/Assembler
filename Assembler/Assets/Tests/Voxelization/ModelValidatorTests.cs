@@ -196,6 +196,21 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void ColourKeyedSilhouetteRows_CountAsSolid()
+		{
+			// Vision transcriptions sometimes use palette keys instead of '#'.
+			// They must read as occupancy, not as an all-empty silhouette.
+			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), realWorldHeight: 0.36f);
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "WW", "WW" }),
+			};
+
+			Assert.That(Validate(model, brief).Issues.Any(i => i.Code == IssueCode.SilhouetteMismatch), Is.False);
+		}
+
+		[Test]
 		public void LoosePart_MaySplitIntoChunks()
 		{
 			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), realWorldHeight: 0.54f, loose: true);

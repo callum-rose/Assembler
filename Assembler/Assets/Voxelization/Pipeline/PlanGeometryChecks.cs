@@ -15,18 +15,23 @@ namespace Assembler.Voxelization
 	public static class PlanGeometryChecks
 	{
 		/// <summary>
-		/// Errors that make the skeleton geometrically incapable of bilateral
-		/// symmetry. Empty for non-bilateral models and for sound plans. Messages
-		/// are written as feedback for the planning model.
+		/// Errors that make the skeleton structurally broken (declaration order,
+		/// wrong overall height) or geometrically incapable of bilateral symmetry.
+		/// Empty for sound plans. Messages are written as feedback for the
+		/// planning model — every one of these is unfixable by re-authoring, so
+		/// it must be caught before any authoring spend.
 		/// </summary>
 		public static IReadOnlyList<string> Errors(VoxelRigModel skeleton)
 		{
+			var errors = new List<string>();
+			CheckDeclarationOrder(skeleton, errors);
+			CheckVerticalExtent(skeleton, errors);
+
 			if (!skeleton.IsBilateral)
 			{
-				return Array.Empty<string>();
+				return errors;
 			}
 
-			var errors = new List<string>();
 			var xMirrors = skeleton.Parts
 				.Where(p => p.Data is MirrorPartData { Axis: MirrorAxis.X })
 				.ToLookup(p => ((MirrorPartData)p.Data).Source);
@@ -45,6 +50,59 @@ namespace Assembler.Voxelization
 			}
 
 			return errors;
+		}
+
+		/// <summary>The hierarchy is built in declaration order: parents and mirror sources must come first.</summary>
+		private static void CheckDeclarationOrder(VoxelRigModel skeleton, List<string> errors)
+		{
+			var seen = new HashSet<string>();
+			foreach (var part in skeleton.Parts)
+			{
+				if (part.Parent != VoxelRigModel.RootId && !seen.Contains(part.Parent))
+				{
+					errors.Add(skeleton.FindPart(part.Parent) == null
+						? $"Part '{part.Id}' has unknown parent '{part.Parent}'."
+						: $"Part '{part.Id}' is declared before its parent '{part.Parent}' — declare parents first; " +
+						  "the hierarchy is built in declaration order.");
+				}
+
+				if (part.Data is MirrorPartData mirror && !seen.Contains(mirror.Source))
+				{
+					errors.Add($"Mirror part '{part.Id}' must be declared after its source '{mirror.Source}'.");
+				}
+
+				seen.Add(part.Id);
+			}
+		}
+
+		/// <summary>
+		/// The part boxes must stack to the manifest height with the lowest
+		/// geometry on the ground — a plan that is the wrong height fails scale
+		/// validation after the entire authoring spend, so reject it up front.
+		/// </summary>
+		private static void CheckVerticalExtent(VoxelRigModel skeleton, List<string> errors)
+		{
+			var boxes = PartBoxes(skeleton);
+			if (boxes.Count == 0)
+			{
+				return;
+			}
+
+			var minY = boxes.Min(b => b.Min.y);
+			var maxY = boxes.Max(b => b.Max.y);
+			var span = maxY - minY + 1;
+			var target = skeleton.HeightInVoxels;
+			if (Mathf.Abs(span - target) > 1)
+			{
+				errors.Add($"The part boxes span {span} voxels vertically (y {minY}..{maxY}) but the model must be " +
+						   $"{target} voxels tall — resize the plan so the boxes stack to exactly {target}.");
+			}
+
+			if (minY != 0)
+			{
+				errors.Add($"The lowest part box starts at y={minY}, but the origin is feet_center: the lowest " +
+						   "geometry must sit at y=0 (the ground).");
+			}
 		}
 
 		/// <summary>
@@ -80,7 +138,7 @@ namespace Assembler.Voxelization
 				{
 					var u = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * spec.Size.x / width), 0, spec.Size.x - 1);
 					var row = spec.Size.y - 1 - Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * spec.Size.y / height), 0, spec.Size.y - 1);
-					target[x, y] = row < spec.Rows.Count && u < spec.Rows[row].Length && spec.Rows[row][u] == '#';
+					target[x, y] = row < spec.Rows.Count && u < spec.Rows[row].Length && SilhouetteSpec.IsSolid(spec.Rows[row][u]);
 				}
 			}
 

@@ -53,7 +53,7 @@ namespace Assembler.Voxelization
 				{
 					var yaml = FencedBlockExtractor.Extract(response, "brief")
 							   ?? throw new FormatException("Response contained no ```brief fenced block.");
-					var brief = ReferenceBriefYaml.Read(yaml) with { Source = asset.Reference };
+					var brief = TrimSilhouette(ReferenceBriefYaml.Read(yaml) with { Source = asset.Reference });
 					return asset.Symmetry == "bilateral" ? SymmetrizeSilhouette(brief) : brief;
 				}
 				catch (FormatException ex)
@@ -68,6 +68,82 @@ namespace Assembler.Voxelization
 					messages.Add(new AnthropicMessage("user",
 						$"That brief could not be parsed: {ex.Message}\nEmit the corrected ```brief block."));
 				}
+			}
+		}
+
+		/// <summary>
+		/// Drops fully-empty margin rows/columns and re-anchors the declared size
+		/// to the trimmed grid. Vision reads often pad the subject with empty
+		/// margin, which inflates the silhouette width and then poisons every
+		/// width-anchored check downstream.
+		/// </summary>
+		private static ReferenceBrief TrimSilhouette(ReferenceBrief brief)
+		{
+			var silhouette = brief.Silhouette;
+			if (silhouette.IsEmpty)
+			{
+				return brief;
+			}
+
+			static bool RowEmpty(string row) => row.All(c => !SilhouetteSpec.IsSolid(c));
+
+			var rows = silhouette.Rows;
+			var top = 0;
+			var bottom = rows.Count - 1;
+			while (top <= bottom && RowEmpty(rows[top]))
+			{
+				top++;
+			}
+
+			while (bottom >= top && RowEmpty(rows[bottom]))
+			{
+				bottom--;
+			}
+
+			if (top > bottom)
+			{
+				return brief;
+			}
+
+			var width = rows.Max(r => r.Length);
+			var slice = rows.Skip(top).Take(bottom - top + 1).Select(r => r.PadRight(width, '.')).ToList();
+			var left = slice.Min(r => FirstSolid(r));
+			var right = slice.Max(r => LastSolid(r));
+			var trimmed = slice.Select(r => r.Substring(left, right - left + 1)).ToArray();
+
+			return brief with
+			{
+				Silhouette = silhouette with
+				{
+					Rows = trimmed,
+					Size = new UnityEngine.Vector3Int(right - left + 1, trimmed.Length, 0),
+				},
+			};
+
+			static int FirstSolid(string row)
+			{
+				for (var i = 0; i < row.Length; i++)
+				{
+					if (SilhouetteSpec.IsSolid(row[i]))
+					{
+						return i;
+					}
+				}
+
+				return row.Length - 1;
+			}
+
+			static int LastSolid(string row)
+			{
+				for (var i = row.Length - 1; i >= 0; i--)
+				{
+					if (SilhouetteSpec.IsSolid(row[i]))
+					{
+						return i;
+					}
+				}
+
+				return 0;
 			}
 		}
 

@@ -182,7 +182,7 @@ reference_brief:
     size: [3, 2]
     rows:
       - ""#..""
-      - ""##.""
+      - ""#.#""
 ```");
 
 			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
@@ -190,8 +190,61 @@ reference_brief:
 				.GetAwaiter().GetResult();
 
 			// Each row is unioned with its own reflection.
-			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "###" }));
+			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "#.#" }));
 			Assert.That(gateway.Calls.Single().Stage, Is.EqualTo(BriefExtractor.Stage));
+		}
+
+		[Test]
+		public void BriefExtractor_TrimsEmptyMarginFromTheSilhouette()
+		{
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Reference = "ref.png" },
+				},
+			};
+			var gateway = new FakeGateway().Enqueue(@"```brief
+reference_brief:
+  source: ref.png
+  silhouette:
+    face: front
+    size: [5, 3]
+    rows:
+      - "".....""
+      - "".###.""
+      - "".#.#.""
+```");
+
+			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
+				.ExtractAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }), CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "###", "#.#" }));
+			Assert.That(brief.Silhouette.Size, Is.EqualTo(new Vector3Int(3, 2, 0)));
+		}
+
+		[Test]
+		public void ModelPlanner_RejectsPaletteColoursOutsideTheBrief()
+		{
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Palette = new[] { new PaletteEntry('Z', new Color32(0x11, 0x22, 0x33, 0xff)) },
+			};
+			var gateway = new FakeGateway()
+				.Enqueue(PlanResponse)
+				.Enqueue(PlanResponse.Replace("#aa7733", "#112233"));
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, brief, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
+			Assert.That(gateway.Calls[1].Messages[2].Content, Does.Contain("locked reference palette"));
+			Assert.That(plan.Skeleton.Palette.Single().ToHex(), Is.EqualTo("#112233"));
 		}
 
 		[Test]
