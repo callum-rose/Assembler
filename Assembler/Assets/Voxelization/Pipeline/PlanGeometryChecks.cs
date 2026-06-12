@@ -88,7 +88,8 @@ namespace Assembler.Voxelization
 			var minX = boxes.Min(b => b.Min.x);
 			var maxX = boxes.Max(b => b.Max.x);
 			var minY = boxes.Min(b => b.Min.y);
-			var dx = (width - 1) / 2 - Mathf.RoundToInt((minX + maxX) / 2f);
+			var plannedWidth = maxX - minX + 1;
+			var dx = (width - plannedWidth) / 2 - minX;
 			var covered = new bool[width, height];
 			foreach (var (boxMin, boxMax) in boxes)
 			{
@@ -125,14 +126,31 @@ namespace Assembler.Voxelization
 				return null;
 			}
 
+			// The silhouette is a vision-model guess, so coverage tolerates blob
+			// noise (gaps read as solid). Width is robust to that noise: blobbing
+			// doesn't move a silhouette's bounds, so a wrong overall width is a
+			// reliable doomed-plan signal on its own.
 			var coverage = (float)hit / solid;
-			return coverage >= coverageThreshold
+			var problems = string.Empty;
+			if (Mathf.Abs(plannedWidth - width) > 1)
+			{
+				problems += $"- The plan is {plannedWidth} voxels wide, but the reference proportions demand " +
+							$"~{width} wide at {height} tall.\n";
+			}
+
+			if (coverage < coverageThreshold)
+			{
+				problems += $"- Even if every part completely fills its declared box, the plan covers only " +
+							$"{coverage:P0} of the reference front silhouette (needs {coverageThreshold:P0}) — " +
+							"limbs too short, or parts misplaced.\n";
+			}
+
+			return problems.Length == 0
 				? null
-				: $"Even if every part completely fills its declared box, the plan covers only {coverage:P0} of the " +
-				  $"reference front silhouette (needs {coverageThreshold:P0}) — the planned shape is wrong (limbs too " +
-				  $"short, model too narrow, parts misplaced). Compared at {width}x{height} (top row first):\n" +
+				: $"The planned shape cannot match the reference:\n{problems}" +
+				  $"Compared at {width}x{height} (top row first):\n" +
 				  $"PLANNED BOX COVERAGE:\n{RenderMask(covered)}\nREFERENCE SILHOUETTE:\n{RenderMask(target)}\n" +
-				  "Resize or re-place parts so their boxes reach every silhouette cell.";
+				  "Resize or re-place parts so their boxes reach the silhouette.";
 		}
 
 		/// <summary>Pivot accumulated up the parent chain (the part's local origin in model space).</summary>

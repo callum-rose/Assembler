@@ -120,8 +120,9 @@ namespace Assembler.Voxelization
 			"      - \"..##..\"\n" +
 			"```\n" +
 			"Silhouette rows are listed top row first; '#' = solid, '.' = empty; the grid must match the planned " +
-			"model's front bounding box. For bilateral assets every row must be exactly left-right symmetric and the " +
-			"width odd. Without an image, output no `brief` block.";
+			"model's front bounding box. Mark gaps between limbs and the body (and between legs) as '.' — never blob " +
+			"separate shapes into one solid mass; those gaps are signature features. For bilateral assets every row " +
+			"must be exactly left-right symmetric and the width odd. Without an image, output no `brief` block.";
 
 		public static string PlanningUser(SetManifest manifest, ManifestAsset asset, bool hasImage, string refinementNote)
 		{

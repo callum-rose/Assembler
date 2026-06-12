@@ -111,6 +111,25 @@ namespace Tests.Voxelization
 			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, FullSilhouetteBrief(), 0.9f), Is.Null);
 		}
 
+		[Test]
+		public void SilhouetteFeasibility_ToleratesBlobNoise_WhenTheWidthIsRight()
+		{
+			// Vision silhouettes tend to read gaps as solid. A right-width plan
+			// missing a few such cells (85% coverage here) must NOT be rejected.
+			var model = Model(
+					Planned("slab", "root", new Vector3Int(0, 1, 0), new Vector3Int(5, 3, 1), new Vector3Int(-2, 0, 0)),
+					Planned("stub", "root", new Vector3Int(0, 0, 0), new Vector3Int(2, 1, 1), new Vector3Int(-2, 0, 0)))
+				with
+			{ RealWorldHeight = 4f };
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouette = new SilhouetteSpec("front", new Vector3Int(5, 4, 0), new[] { "#####", "#####", "#####", "#####" }),
+			};
+
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, brief, 0.8f), Is.Null);
+		}
+
 		private static ReferenceBrief FullSilhouetteBrief() => new()
 		{
 			Source = "ref.png",
