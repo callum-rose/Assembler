@@ -43,6 +43,59 @@ namespace Assembler.Anthropic
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
+		/// <summary>
+		/// Fetches the model ids available to this API key, most-recently-released
+		/// first (the order the Models API returns them). Lets pickers populate
+		/// dynamically rather than hardcoding a list that drifts as new models ship.
+		/// When <paramref name="releasedOnOrAfter"/> is set, models released before
+		/// it are dropped, so callers can surface only recent generations.
+		/// </summary>
+		public static async Task<IReadOnlyList<string>> ListModelsAsync(
+			string apiKey,
+			DateTimeOffset? releasedOnOrAfter = null,
+			CancellationToken cancellationToken = default)
+		{
+			if (string.IsNullOrWhiteSpace(apiKey))
+			{
+				throw new ArgumentException("API key is required", nameof(apiKey));
+			}
+
+			using var client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
+			var ids = new List<string>();
+
+			try
+			{
+				var page = await client.Models
+					.List(new global::Anthropic.Models.Models.ModelListParams { Limit = 1000 }, cancellationToken)
+					.ConfigureAwait(false);
+
+				while (true)
+				{
+					var recent = releasedOnOrAfter is { } cutoff
+						? page.Items.Where(model => model.CreatedAt >= cutoff)
+						: page.Items;
+					ids.AddRange(recent.Select(model => model.ID));
+
+					if (!page.HasNext())
+					{
+						break;
+					}
+
+					page = await page.Next(cancellationToken).ConfigureAwait(false);
+				}
+			}
+			catch (AnthropicApiException ex)
+			{
+				throw new AnthropicRequestException(GetStatusCode(ex), ex.Message, ex);
+			}
+			catch (AnthropicException ex)
+			{
+				throw new AnthropicRequestException(0, ex.Message, ex);
+			}
+
+			return ids;
+		}
+
 		public async Task<string> SendAsync(
 			string cachedSystemPrompt,
 			IReadOnlyList<AnthropicMessage> messages,
