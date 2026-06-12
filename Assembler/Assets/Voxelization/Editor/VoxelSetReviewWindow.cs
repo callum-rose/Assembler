@@ -62,11 +62,13 @@ namespace Assembler.Voxelization.Editor
 		private CancellationTokenSource? _cts;
 		private Vector2 _scroll;
 		private Vector2 _briefScroll;
+		private Vector2 _styleScroll;
 		private Vector2 _manifestScroll;
 		private Vector2 _logScroll;
 		private GUIStyle? _logStyle;
 		private GUIStyle? _statusStyle;
 		private GUIStyle? _infoStyle;
+		private GUIStyle? _wrappedTextArea;
 
 		[MenuItem("Assembler/Voxel Set Review")]
 		public static void Open()
@@ -101,7 +103,10 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.BeginHorizontal();
 
 			EditorGUILayout.BeginVertical();
-			_scroll = EditorGUILayout.BeginScrollView(_scroll);
+
+			// Vertical-only: a no-wrap text line must never widen the panel.
+			_scroll = EditorGUILayout.BeginScrollView(
+				_scroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar, GUI.skin.scrollView);
 			DrawSettings();
 			EditorGUILayout.Space();
 			DrawManifest();
@@ -201,11 +206,17 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawManifest()
 		{
+			// EditorStyles.textArea does not word-wrap, so long prose becomes one
+			// wide line: it never overflows vertically (no scrollbar) and pushes
+			// the panel wide instead. Wrapping fixes both — the layout system
+			// computes the wrapped height, so each box's scroll view scrolls.
+			_wrappedTextArea ??= new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+
 			EditorGUILayout.LabelField("Game brief (Stage 0 input)", EditorStyles.boldLabel);
 			_briefScroll = EditorGUILayout.BeginScrollView(_briefScroll, GUILayout.MinHeight(40), GUILayout.MaxHeight(120));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_gameBrief = EditorGUILayout.TextArea(_gameBrief, GUILayout.ExpandHeight(true));
+				_gameBrief = EditorGUILayout.TextArea(_gameBrief, _wrappedTextArea, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(BriefPref, _gameBrief);
@@ -223,20 +234,23 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			EditorGUILayout.LabelField("Style guidance (applies to every asset in every run)", EditorStyles.boldLabel);
+			_styleScroll = EditorGUILayout.BeginScrollView(_styleScroll, GUILayout.MinHeight(36), GUILayout.MaxHeight(100));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_styleGuidance = EditorGUILayout.TextArea(_styleGuidance, GUILayout.MinHeight(36));
+				_styleGuidance = EditorGUILayout.TextArea(_styleGuidance, _wrappedTextArea, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(StylePref, _styleGuidance);
 				}
 			}
 
+			EditorGUILayout.EndScrollView();
+
 			EditorGUILayout.LabelField("Manifest yaml (editable — the scale bible)", EditorStyles.boldLabel);
 			_manifestScroll = EditorGUILayout.BeginScrollView(_manifestScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(240));
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_manifestYaml = EditorGUILayout.TextArea(_manifestYaml, GUILayout.ExpandHeight(true));
+				_manifestYaml = EditorGUILayout.TextArea(_manifestYaml, _wrappedTextArea, GUILayout.ExpandHeight(true));
 				if (scope.changed)
 				{
 					EditorPrefs.SetString(ManifestPref, _manifestYaml);
