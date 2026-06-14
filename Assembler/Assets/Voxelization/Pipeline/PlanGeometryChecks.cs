@@ -127,8 +127,12 @@ namespace Assembler.Voxelization
 			var span = max - min + 1;
 			if (Mathf.Abs(span - target) > tolerance)
 			{
+				var direction = span > target ? "too far apart" : "too close together";
 				errors.Add($"The part boxes span {span} voxels {description} but the model must be {target} " +
-						   $"(±{tolerance}) — resize or re-place parts on that axis.");
+						   $"(±{tolerance}) — the lowest and highest box on this axis are {direction}. Parts that " +
+						   "stack along this axis (e.g. legs under a torso under a head) OVERLAP in world space; size " +
+						   "and place them so the full extent from the lowest box to the highest equals the target, " +
+						   "rather than summing each part's height.");
 			}
 		}
 

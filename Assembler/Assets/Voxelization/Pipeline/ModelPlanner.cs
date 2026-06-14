@@ -21,8 +21,13 @@ namespace Assembler.Voxelization
 	{
 		public const string Stage = "1-planning";
 
-		/// <summary>Total planning calls per asset: the first plan plus feedback rounds for parse/geometry failures.</summary>
-		public const int MaxAttempts = 3;
+		/// <summary>
+		/// Total planning calls per asset: the first plan plus feedback rounds for
+		/// parse/geometry failures. Tight-budget assets (a standing quadruped fitting
+		/// feet+legs+torso+head into a short height) need several correction rounds to
+		/// converge on the bounding box, so this is deliberately generous.
+		/// </summary>
+		public const int MaxAttempts = 5;
 
 		private readonly IAnthropicGateway _gateway;
 		private readonly VoxelizationConfig _config;

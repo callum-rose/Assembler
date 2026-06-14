@@ -599,7 +599,14 @@ poses:
 		[Test]
 		public void SetOrchestrator_FailedPlanBecomesFailedResult()
 		{
-			var gateway = new FakeGateway().Enqueue("nothing useful").Enqueue("still nothing").Enqueue("and again");
+			// Every planning attempt returns garbage, so the planner exhausts its
+			// retries and the asset fails. Enqueue one bad response per attempt.
+			var gateway = new FakeGateway();
+			for (var attempt = 0; attempt < ModelPlanner.MaxAttempts; attempt++)
+			{
+				gateway.Enqueue("nothing useful");
+			}
+
 			var orchestrator = new SetOrchestrator(
 				gateway,
 				VoxelizationConfig.Default,
