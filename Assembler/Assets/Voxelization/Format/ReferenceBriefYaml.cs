@@ -18,7 +18,6 @@ namespace Assembler.Voxelization
 			return new ReferenceBrief
 			{
 				Source = YamlNodes.GetString(root, "source"),
-				RealWorldDims = ReadDims(root),
 				Palette = ReadPalette(root),
 				Proportions = ReadProportions(root),
 				SignatureFeatures = ReadFeatures(root),
@@ -31,9 +30,6 @@ namespace Assembler.Voxelization
 			var sb = new StringBuilder();
 			sb.Append("reference_brief:\n");
 			sb.Append("  source: ").Append(brief.Source).Append('\n');
-			sb.Append("  real_world_dims: { height: ").Append(YamlNodes.Float(brief.RealWorldDims.Height))
-				.Append(", width: ").Append(YamlNodes.Float(brief.RealWorldDims.Width))
-				.Append(", depth: ").Append(YamlNodes.Float(brief.RealWorldDims.Depth)).Append(" }\n");
 
 			var palette = brief.Palette.Select(e => $"{e.Key}: {YamlNodes.Quote(e.ToHex())}");
 			sb.Append("  palette: { ").Append(string.Join(", ", palette)).Append(" }\n");
@@ -60,19 +56,6 @@ namespace Assembler.Voxelization
 			}
 
 			return sb.ToString();
-		}
-
-		private static RealWorldDims ReadDims(YamlMappingNode root)
-		{
-			if (YamlNodes.Find(root, "real_world_dims") is not YamlMappingNode dims)
-			{
-				return RealWorldDims.None;
-			}
-
-			return new RealWorldDims(
-				YamlNodes.GetFloat(dims, "height"),
-				YamlNodes.GetFloat(dims, "width"),
-				YamlNodes.GetFloat(dims, "depth"));
 		}
 
 		private static IReadOnlyList<PaletteEntry> ReadPalette(YamlMappingNode root)

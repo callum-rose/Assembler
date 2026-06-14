@@ -123,7 +123,7 @@ namespace Tests.Voxelization
 			// the side columns are unreachable by any authoring.
 			var model = Model(Planned("column", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 4, 1), new Vector3Int(0, 0, 0)))
 				with
-			{ RealWorldHeight = 4f };
+			{ TargetHeight = 4 };
 			var brief = FullSilhouetteBrief();
 
 			var error = PlanGeometryChecks.SilhouetteFeasibilityError(model, brief, 0.9f);
@@ -136,7 +136,7 @@ namespace Tests.Voxelization
 		{
 			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
 				with
-			{ RealWorldHeight = 4f };
+			{ TargetHeight = 4 };
 
 			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, FullSilhouetteBrief(), 0.9f), Is.Null);
 		}
@@ -150,7 +150,7 @@ namespace Tests.Voxelization
 					Planned("slab", "root", new Vector3Int(0, 1, 0), new Vector3Int(5, 3, 1), new Vector3Int(-2, 0, 0)),
 					Planned("stub", "root", new Vector3Int(0, 0, 0), new Vector3Int(2, 1, 1), new Vector3Int(-2, 0, 0)))
 				with
-			{ RealWorldHeight = 4f };
+			{ TargetHeight = 4 };
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -168,7 +168,7 @@ namespace Tests.Voxelization
 			// column against a 3-deep solid reference, so left is infeasible.
 			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
 				with
-			{ RealWorldHeight = 4f };
+			{ TargetHeight = 4 };
 
 			var front = new ReferenceBrief
 			{
@@ -195,7 +195,7 @@ namespace Tests.Voxelization
 			// is the dog-side-view failure: a 22-cell read against a 16-voxel length).
 			var model = Model(Planned("body", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 6), new Vector3Int(-1, 0, 0)))
 				with
-			{ RealWorldHeight = 4f, TargetLength = 6 };
+			{ TargetHeight = 4, TargetLength = 6 };
 			var left = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -212,7 +212,7 @@ namespace Tests.Voxelization
 			// them (they are enforced solely by the validator's IoU gate).
 			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
 				with
-			{ RealWorldHeight = 4f };
+			{ TargetHeight = 4 };
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -232,8 +232,7 @@ namespace Tests.Voxelization
 		{
 			Id = "t",
 			Symmetry = "bilateral",
-			Unit = 1f,
-			RealWorldHeight = 2f,
+			TargetHeight = 2,
 			Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 			Parts = parts,
 		};

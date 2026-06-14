@@ -37,7 +37,7 @@ namespace Tests.Voxelization
 		public void FloatingChunkInsideAPart_IsReported()
 		{
 			// Two voxels separated by a gap on y.
-			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), realWorldHeight: 0.54f);
+			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), targetHeight: 3);
 			var report = Validate(model);
 
 			Assert.That(report.Issues.Any(i => i.Code == IssueCode.FloatingChunk && i.PartId == "solo"), Is.True);
@@ -50,8 +50,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 0.18f,
-				RealWorldHeight = 0.36f,
+				TargetHeight = 2,
 				Palette = palette,
 				Parts = new[]
 				{
@@ -84,8 +83,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = palette,
 				Parts = new[]
 				{
@@ -119,8 +117,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = palette,
 				Parts = new[]
 				{
@@ -162,7 +159,7 @@ namespace Tests.Voxelization
 		[Test]
 		public void BriefPaletteMismatch_IsReported()
 		{
-			var model = SinglePartModel(new[] { "A" }, new Vector3Int(1, 1, 1), realWorldHeight: 0.18f);
+			var model = SinglePartModel(new[] { "A" }, new Vector3Int(1, 1, 1), targetHeight: 1);
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -178,7 +175,7 @@ namespace Tests.Voxelization
 		public void SilhouetteMatch_PassesWhenExact_FailsWhenDifferent()
 		{
 			// A 2-wide, 2-tall front-facing block.
-			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), realWorldHeight: 0.36f);
+			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), targetHeight: 2);
 
 			var matching = new ReferenceBrief
 			{
@@ -201,7 +198,7 @@ namespace Tests.Voxelization
 			// A 2x2x2 cube: its front projection is a full 2x2, but the top view here
 			// claims a single cell. Front passes; top is flagged — proving the
 			// validator gates each labelled face independently.
-			var model = SinglePartModel(new[] { "AA\nAA", "AA\nAA" }, new Vector3Int(2, 2, 2), realWorldHeight: 0.36f);
+			var model = SinglePartModel(new[] { "AA\nAA", "AA\nAA" }, new Vector3Int(2, 2, 2), targetHeight: 2);
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -222,7 +219,7 @@ namespace Tests.Voxelization
 		{
 			// Vision transcriptions sometimes use palette keys instead of '#'.
 			// They must read as occupancy, not as an all-empty silhouette.
-			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), realWorldHeight: 0.36f);
+			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), targetHeight: 2);
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
@@ -235,7 +232,7 @@ namespace Tests.Voxelization
 		[Test]
 		public void LoosePart_MaySplitIntoChunks()
 		{
-			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), realWorldHeight: 0.54f, loose: true);
+			var model = SinglePartModel(new[] { "A", ".", "A" }, new Vector3Int(1, 3, 1), targetHeight: 3, loose: true);
 			var report = Validate(model);
 
 			Assert.That(report.Issues.Any(i => i.Code == IssueCode.FloatingChunk), Is.False,
@@ -247,7 +244,7 @@ namespace Tests.Voxelization
 		{
 			// Occupancy is lopsided in x: mirroring across the bbox centre plane
 			// does not reproduce the model.
-			var model = SinglePartModel(new[] { "A.A\nAA." }, new Vector3Int(3, 1, 2), realWorldHeight: 0.18f, symmetry: "bilateral");
+			var model = SinglePartModel(new[] { "A.A\nAA." }, new Vector3Int(3, 1, 2), targetHeight: 1, symmetry: "bilateral");
 			var report = Validate(model);
 
 			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric), Is.True);
@@ -260,7 +257,7 @@ namespace Tests.Voxelization
 		[Test]
 		public void BilateralSymmetricModel_PassesTheSymmetryCheck()
 		{
-			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), realWorldHeight: 0.36f, symmetry: "bilateral");
+			var model = SinglePartModel(new[] { "AA", "AA" }, new Vector3Int(2, 2, 1), targetHeight: 2, symmetry: "bilateral");
 			var report = Validate(model);
 
 			Assert.That(report.Issues.Any(i => i.Code == IssueCode.Asymmetric), Is.False);
@@ -269,13 +266,12 @@ namespace Tests.Voxelization
 		private static VoxelRigModel SinglePartModel(
 			string[] layers,
 			Vector3Int size,
-			float realWorldHeight = 1.8f,
+			int targetHeight = 10,
 			bool loose = false,
 			string symmetry = "none") => new()
 		{
 			Id = "t",
-			Unit = 0.18f,
-			RealWorldHeight = realWorldHeight,
+			TargetHeight = targetHeight,
 			Symmetry = symmetry,
 			Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 			Parts = new[]

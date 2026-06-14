@@ -18,8 +18,7 @@ namespace Tests.Voxelization
 		private static readonly SetManifest Manifest = new()
 		{
 			Game = "test",
-			Unit = 1f,
-			Assets = new[] { new ManifestAsset { Id = "crate", RealWorldHeight = 2f } },
+			Assets = new[] { new ManifestAsset { Id = "crate", Height = 2 } },
 		};
 
 		[Test]
@@ -29,8 +28,7 @@ namespace Tests.Voxelization
 model: crate
 version: 1
 rigged: false
-unit: 1
-real_world_height: 99
+target_height: 99
 origin: feet_center
 palette:
   _: none
@@ -56,8 +54,7 @@ poses:
 			var model = new VoxelRigModel
 			{
 				Id = "crate",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = new[] { new PaletteEntry('W', new Color32(170, 119, 51, 255)) },
 				Parts = new[]
 				{

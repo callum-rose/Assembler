@@ -24,7 +24,8 @@ namespace Assembler.Behaviours.Spawners
 	/// </remarks>
 	public class SpawnerBehaviour : GameBehaviour<SpawnerData>, INeedsSpawner, IAmExecutable
 	{
-		public IEntitySpawner Spawner { get; set; }
+		// Injected by the build pipeline (INeedsSpawner) before any behaviour runs, like Clock/Nav; never null at use.
+		public IEntitySpawner Spawner { get; set; } = null!;
 
 		private int _sequentialIndex;
 

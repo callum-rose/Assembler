@@ -47,7 +47,7 @@ namespace Assembler.Voxelization
 
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.BriefUser(manifest, asset, labels, requestedFaces), attachments),
+				new("user", VoxelizationPrompts.BriefUser(asset, labels, requestedFaces), attachments),
 			};
 
 			for (var attempt = 1; ; attempt++)

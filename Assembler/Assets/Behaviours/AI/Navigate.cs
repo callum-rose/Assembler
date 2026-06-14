@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Assembler.Libraries;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.AI
@@ -24,18 +23,15 @@ namespace Assembler.Behaviours.AI
 	///   AgentRadius: Clearance kept from obstacles for this agent's route, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. A larger agent routes around obstacles more widely than a smaller one, so they can take different paths.
 	///   Output: Name of the vector variable to write the desired velocity into (omit to move the entity directly).
 	/// </remarks>
-	public sealed class Navigate : GameBehaviour<NavigateData>, INeedsGameClock, INeedsNavigation
+	public sealed class Navigate : PerFrameBehaviour<NavigateData>, INeedsNavigation
 	{
-		public IGameClock Clock { get; set; } = null!;
 		public NavGridService Nav { get; set; } = null!;
 
 		private float _sinceRecompute;
 		private IReadOnlyList<Vector3> _path = Array.Empty<Vector3>();
 		private int _pathIndex;
 
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			var self = transform.position;
 			var target = Data.Target.Get();

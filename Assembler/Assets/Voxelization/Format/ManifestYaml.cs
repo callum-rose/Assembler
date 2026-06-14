@@ -38,10 +38,9 @@ namespace Assembler.Voxelization
 					{
 						Id = id,
 						Description = YamlNodes.GetString(assetMap, "description"),
-						RealWorldHeight = YamlNodes.GetFloat(assetMap, "height",
-							YamlNodes.GetFloat(assetMap, "real_world_height")),
-						Length = YamlNodes.GetFloat(assetMap, "length"),
-						Width = YamlNodes.GetFloat(assetMap, "width"),
+						Height = YamlNodes.GetInt(assetMap, "height"),
+						Length = YamlNodes.GetInt(assetMap, "length"),
+						Width = YamlNodes.GetInt(assetMap, "width"),
 						Tolerance = YamlNodes.GetInt(assetMap, "tolerance", 1),
 						Symmetry = YamlNodes.GetString(assetMap, "symmetry", "none"),
 						Rig = YamlNodes.GetBool(assetMap, "rig"),
@@ -53,7 +52,6 @@ namespace Assembler.Voxelization
 			return new SetManifest
 			{
 				Game = YamlNodes.GetString(root, "game"),
-				Unit = YamlNodes.GetFloat(root, "unit", 1f),
 				Assets = assets,
 			};
 		}
@@ -101,7 +99,6 @@ namespace Assembler.Voxelization
 		{
 			var sb = new StringBuilder();
 			sb.Append("game: ").Append(manifest.Game).Append('\n');
-			sb.Append("unit: ").Append(YamlNodes.Float(manifest.Unit)).Append('\n');
 			sb.Append("assets:\n");
 			foreach (var asset in manifest.Assets)
 			{
@@ -111,15 +108,15 @@ namespace Assembler.Voxelization
 					sb.Append("    description: ").Append(YamlNodes.Quote(asset.Description)).Append('\n');
 				}
 
-				sb.Append("    height: ").Append(YamlNodes.Float(asset.RealWorldHeight)).Append('\n');
-				if (asset.Length > 0f)
+				sb.Append("    height: ").Append(asset.Height).Append('\n');
+				if (asset.Length > 0)
 				{
-					sb.Append("    length: ").Append(YamlNodes.Float(asset.Length)).Append('\n');
+					sb.Append("    length: ").Append(asset.Length).Append('\n');
 				}
 
-				if (asset.Width > 0f)
+				if (asset.Width > 0)
 				{
-					sb.Append("    width: ").Append(YamlNodes.Float(asset.Width)).Append('\n');
+					sb.Append("    width: ").Append(asset.Width).Append('\n');
 				}
 
 				if (asset.Tolerance != 1)

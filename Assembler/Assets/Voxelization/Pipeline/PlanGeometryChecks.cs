@@ -97,7 +97,7 @@ namespace Assembler.Voxelization
 			}
 
 			var tolerance = Mathf.Max(0, skeleton.SizeTolerance);
-			CheckExtent(boxes, 1, skeleton.HeightInVoxels, tolerance, "tall (y, up)", errors);
+			CheckExtent(boxes, 1, skeleton.TargetHeight, tolerance, "tall (y, up)", errors);
 			CheckExtent(boxes, 2, skeleton.TargetLength, tolerance, "long (z, the FORWARD axis, nose-to-tail)", errors);
 			CheckExtent(boxes, 0, skeleton.TargetWidth, tolerance, "wide (x, left-right)", errors);
 
@@ -183,7 +183,7 @@ namespace Assembler.Voxelization
 			// is invariant under a shared u-flip, so axis selection is all that
 			// matters here — true handedness lives in the validator's IoU path.
 			var uAxis = ProjectionFaceInfo.HorizontalAxis(spec.Face);
-			var height = skeleton.HeightInVoxels;
+			var height = skeleton.TargetHeight;
 
 			// The union of part boxes, centre-aligned on the horizontal axis and ground-aligned in y.
 			var minU = boxes.Min(b => b.Min[uAxis]);

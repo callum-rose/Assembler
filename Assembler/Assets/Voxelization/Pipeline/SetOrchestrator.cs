@@ -428,7 +428,7 @@ namespace Assembler.Voxelization
 			});
 
 			return $"{skeleton.Parts.Count} parts: {string.Join(", ", parts)}; " +
-				   $"{skeleton.Palette.Count} colours; {skeleton.Poses.Count} pose(s); target {skeleton.HeightInVoxels} voxels tall";
+				   $"{skeleton.Palette.Count} colours; {skeleton.Poses.Count} pose(s); target {skeleton.TargetHeight} voxels tall";
 		}
 
 		/// <summary>
@@ -484,7 +484,7 @@ namespace Assembler.Voxelization
 		{
 			var size = assembled.Composed.Size;
 			var model = assembled.Model;
-			var targets = new List<string> { $"{model.HeightInVoxels} tall" };
+			var targets = new List<string> { $"{model.TargetHeight} tall" };
 			if (model.TargetLength > 0)
 			{
 				targets.Add($"{model.TargetLength} long");

@@ -14,27 +14,26 @@ namespace Tests.Voxelization
 			var manifest = ManifestYaml.Read(ManifestYaml.Write(new SetManifest
 			{
 				Game = "g",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "car", RealWorldHeight = 6f, Length = 14f, Width = 7f, Tolerance = 2 },
+					new ManifestAsset { Id = "car", Height = 6, Length = 14, Width = 7, Tolerance = 2 },
 				},
 			}));
 
 			var car = manifest.Assets.Single();
-			Assert.That(car.RealWorldHeight, Is.EqualTo(6f));
-			Assert.That(car.Length, Is.EqualTo(14f));
-			Assert.That(car.Width, Is.EqualTo(7f));
+			Assert.That(car.Height, Is.EqualTo(6));
+			Assert.That(car.Length, Is.EqualTo(14));
+			Assert.That(car.Width, Is.EqualTo(7));
 			Assert.That(car.Tolerance, Is.EqualTo(2));
 		}
 
 		[Test]
-		public void ManifestYaml_StillReadsTheLegacyHeightKey()
+		public void ManifestYaml_ReadsHeight_AndDefaultsUnspecifiedExtents()
 		{
-			var manifest = ManifestYaml.Read("game: g\nunit: 1\nassets:\n  - id: a\n    real_world_height: 10\n");
+			var manifest = ManifestYaml.Read("game: g\nassets:\n  - id: a\n    height: 10\n");
 
-			Assert.That(manifest.Assets.Single().RealWorldHeight, Is.EqualTo(10f));
-			Assert.That(manifest.Assets.Single().Length, Is.EqualTo(0f), "unspecified extents stay unconstrained");
+			Assert.That(manifest.Assets.Single().Height, Is.EqualTo(10));
+			Assert.That(manifest.Assets.Single().Length, Is.EqualTo(0), "unspecified extents stay unconstrained");
 			Assert.That(manifest.Assets.Single().Tolerance, Is.EqualTo(1));
 		}
 
@@ -81,8 +80,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				TargetLength = 4,
 				Palette = Palette,
 				Parts = new[]
@@ -110,18 +108,16 @@ namespace Tests.Voxelization
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Length = 1f, Width = 2f, Tolerance = 2 },
+					new ManifestAsset { Id = "crate", Height = 2, Length = 1, Width = 2, Tolerance = 2 },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```vmodel
 model: crate
 version: 1
 rigged: false
-unit: 1
-real_world_height: 99
+target_height: 99
 origin: feet_center
 palette:
   _: none
@@ -149,8 +145,7 @@ poses:
 			var model = new VoxelRigModel
 			{
 				Id = "car",
-				Unit = 1f,
-				RealWorldHeight = 6f,
+				TargetHeight = 6,
 				TargetLength = 11,
 				TargetWidth = 7,
 				SizeTolerance = 2,
@@ -173,8 +168,7 @@ poses:
 		{
 			Id = "car",
 			Symmetry = "none",
-			Unit = 1f,
-			RealWorldHeight = 4f,
+			TargetHeight = 4,
 			TargetLength = targetLength,
 			TargetWidth = targetWidth,
 			Palette = Palette,

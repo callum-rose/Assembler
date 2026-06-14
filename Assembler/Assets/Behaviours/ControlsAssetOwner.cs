@@ -12,7 +12,9 @@ namespace Assembler.Behaviours
 	/// </summary>
 	public sealed class ControlsAssetOwner : MonoBehaviour
 	{
-		private InputActionAsset _asset;
+		// Null until Initialise runs — OnDestroy can fire first if the game tears down before wiring, hence the
+		// null guard there.
+		private InputActionAsset? _asset;
 
 		public void Initialise(InputActionAsset asset)
 		{

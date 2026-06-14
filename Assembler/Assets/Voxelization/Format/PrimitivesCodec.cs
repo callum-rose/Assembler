@@ -9,15 +9,20 @@ namespace Assembler.Voxelization
 	/// <summary>
 	/// Rasterizes the declarative primitives part encoding into a part-local
 	/// Y-up grid. One shape per line, applied in order (later shapes overwrite
-	/// earlier ones where they overlap), everything clipped to the declared
-	/// window. Coordinates are grid cells (cell 0,0,0 sits at the part's
-	/// declared offset); centres and radii may be fractional so even-sized
-	/// shapes can be centred between cells.
+	/// earlier ones where they overlap; a `cut` shape removes voxels instead of
+	/// adding them), everything clipped to the declared window. Coordinates are
+	/// grid cells (cell 0,0,0 sits at the part's declared offset); centres and
+	/// radii may be fractional so even-sized shapes can be centred between cells.
 	///
 	/// Grammar (tokens whitespace-separated; `#` starts a comment):
 	///   box      KEY minX minY minZ sizeX sizeY sizeZ [round R [SEL ...]]
 	///   sphere   KEY cx cy cz r [half +x|-x|+y|-y|+z|-z]
 	///   cylinder KEY x|y|z baseX baseY baseZ r h [half +x|-x|+y|-y|+z|-z]
+	///   cut SHAPE ...   carves a shape out (same args as above minus KEY)
+	///
+	/// `cut` reuses any shape's geometry but drops every voxel it covers rather
+	/// than filling it — applied in document order, so it removes whatever a
+	/// prior line placed and a later line can fill back in.
 	///
 	/// `round R` with no selectors rounds all twelve edges. Each optional SEL
 	/// targets the rounding: a face (`+y`) rounds that face's four edges, an
@@ -30,9 +35,15 @@ namespace Assembler.Voxelization
 	{
 		private const float Epsilon = 1e-4f;
 
+		// A `cut` line carries no palette key, so we splice this placeholder into
+		// the key slot to reuse the shape parsers unchanged. It maps to colour 0
+		// (empty) — a value real palette keys never take, since they are 1-based —
+		// so the colour a cut "fills" with is harmless and ignored.
+		private const char CutPlaceholderKey = '\0';
+
 		public static Assembler.Voxels.VoxelModel Decode(PrimitivesPartData data, IReadOnlyList<PaletteEntry> palette)
 		{
-			var keyToIndex = new Dictionary<char, byte>();
+			var keyToIndex = new Dictionary<char, byte> { [CutPlaceholderKey] = 0 };
 			for (var i = 0; i < palette.Count; i++)
 			{
 				keyToIndex[palette[i].Key] = (byte)(i + 1);
@@ -71,13 +82,31 @@ namespace Assembler.Voxelization
 			Dictionary<Vector3Int, byte> voxels)
 		{
 			var tokens = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+			// `cut SHAPE ...` carves the shape out instead of filling it. It has no
+			// palette key, so drop the `cut` verb and splice a placeholder into the
+			// key slot, leaving exactly the token layout the shape parsers expect.
+			var cut = tokens[0].Equals("cut", StringComparison.OrdinalIgnoreCase);
+			if (cut)
+			{
+				if (tokens.Length < 2)
+				{
+					throw Error(lineNumber, line, "'cut' must be followed by a shape (box, sphere, or cylinder)");
+				}
+
+				tokens = tokens.Skip(1).Take(1)
+					.Append(CutPlaceholderKey.ToString())
+					.Concat(tokens.Skip(2))
+					.ToArray();
+			}
+
 			var shape = tokens[0].ToLowerInvariant();
 			var (predicate, boundsMin, boundsMax, colour) = shape switch
 			{
 				"box" => ParseBox(tokens, lineNumber, keyToIndex),
 				"sphere" => ParseSphere(tokens, lineNumber, keyToIndex),
 				"cylinder" => ParseCylinder(tokens, lineNumber, keyToIndex),
-				_ => throw Error(lineNumber, line, $"unknown shape '{tokens[0]}' (expected box, sphere, or cylinder)"),
+				_ => throw Error(lineNumber, line, $"unknown shape '{tokens[0]}' (expected box, sphere, or cylinder, optionally prefixed with 'cut')"),
 			};
 
 			var min = Vector3Int.Max(boundsMin, Vector3Int.zero);
@@ -89,7 +118,16 @@ namespace Assembler.Voxelization
 					for (var z = min.z; z <= max.z; z++)
 					{
 						var cell = new Vector3Int(x, y, z);
-						if (predicate(cell))
+						if (!predicate(cell))
+						{
+							continue;
+						}
+
+						if (cut)
+						{
+							voxels.Remove(cell);
+						}
+						else
 						{
 							voxels[cell] = colour;
 						}

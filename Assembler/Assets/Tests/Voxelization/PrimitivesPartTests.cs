@@ -178,6 +178,64 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void Cut_RemovesVoxelsRatherThanColouringThem()
+		{
+			var grid = Decode(new Vector3Int(3, 1, 1), Vector3Int.zero,
+				"box W 0 0 0 3 1 1",
+				"cut box 1 0 0 1 1 1");
+
+			Assert.That(grid.Voxels.Count, Is.EqualTo(2));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 0, 0)), Is.False, "cut cell should be gone, not recoloured");
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(0, 0, 0)), Is.True);
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(2, 0, 0)), Is.True);
+		}
+
+		[Test]
+		public void Cut_HollowsAShell_LeavingTheRind()
+		{
+			var grid = Decode(new Vector3Int(3, 3, 3), Vector3Int.zero,
+				"box W 0 0 0 3 3 3",
+				"cut box 1 1 1 1 1 1");
+
+			// A 3-cube (27 cells) minus its single centre cell.
+			Assert.That(grid.Voxels.Count, Is.EqualTo(26));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 1, 1)), Is.False);
+		}
+
+		[Test]
+		public void Cut_ReusesShapeGeometry_SoSphereAndCylinderCarveToo()
+		{
+			var grid = Decode(new Vector3Int(5, 5, 5), Vector3Int.zero,
+				"box W 0 0 0 5 5 5",
+				"cut sphere 2 2 2 1");
+
+			// The sphere of radius 1 around the centre carves the centre plus its
+			// six face neighbours (7 cells) out of the 125-cell block.
+			Assert.That(grid.Voxels.Count, Is.EqualTo(118));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(2, 2, 2)), Is.False);
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(3, 2, 2)), Is.False);
+		}
+
+		[Test]
+		public void Cut_OfEmptySpace_IsANoOp_AndLaterFillCanRefill()
+		{
+			var grid = Decode(new Vector3Int(3, 1, 1), Vector3Int.zero,
+				"cut box 0 0 0 3 1 1",
+				"box W 1 0 0 1 1 1");
+
+			Assert.That(grid.Voxels.Count, Is.EqualTo(1));
+			Assert.That(grid.Voxels.ContainsKey(new Vector3Int(1, 0, 0)), Is.True);
+		}
+
+		[Test]
+		public void Cut_WithNoShape_Throws()
+		{
+			var ex = Assert.Throws<FormatException>(() =>
+				Decode(new Vector3Int(1, 1, 1), Vector3Int.zero, "box W 0 0 0 1 1 1", "cut"));
+			Assert.That(ex!.Message, Does.Contain("cut"));
+		}
+
+		[Test]
 		public void CommentsAndBlankLines_AreIgnored()
 		{
 			var grid = Decode(new Vector3Int(1, 1, 1), Vector3Int.zero,
@@ -219,8 +277,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "cart",
-				Unit = 1f,
-				RealWorldHeight = 3f,
+				TargetHeight = 3,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -259,8 +316,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "slab",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -287,8 +343,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "broken",
-				Unit = 1f,
-				RealWorldHeight = 1f,
+				TargetHeight = 1,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -313,8 +368,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "cart",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = Palette,
 				Parts = new[]
 				{
