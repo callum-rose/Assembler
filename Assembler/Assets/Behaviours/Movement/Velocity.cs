@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 
 namespace Assembler.Behaviours.Movement
 {
@@ -12,12 +11,8 @@ namespace Assembler.Behaviours.Movement
 	/// Properties:
 	///   Velocity: World-space velocity in units per second.
 	/// </remarks>
-	public class Velocity : GameBehaviour<VelocityData>, INeedsGameClock
+	public class Velocity : PerFrameBehaviour<VelocityData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
-		private void Update() => Step();
-
-		internal void Step() => transform.position += Data.Velocity.Get() * Clock.DeltaTime;
+		internal override void Step() => transform.position += Data.Velocity.Get() * Clock.DeltaTime;
 	}
 }
