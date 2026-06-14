@@ -16,7 +16,7 @@ namespace Assembler.Behaviours.AI
 	///   States: Map of state name to optional { OnEnter, OnExit } hooks. Each hook list uses the same shape as a behaviour's top-level Listeners (EntityId + BehaviourId, EntityTag, BehaviourTag, or !gameover).
 	///   Transitions: Ordered list of { from, to, when }. The first transition whose `from` equals the current state and whose `when` condition is true is taken.
 	/// </remarks>
-	public class StateMachine : GameBehaviour<StateMachineData>
+	public class StateMachine : PerFrameBehaviour<StateMachineData>
 	{
 		private void Start() => EnterInitialState();
 
@@ -38,7 +38,7 @@ namespace Assembler.Behaviours.AI
 			}
 		}
 
-		private void Update()
+		internal override void Step()
 		{
 			var current = Data.CurrentState.Get();
 

@@ -8,7 +8,7 @@ namespace Assembler.Voxelization
 	/// <summary>Builds a Unity Mesh for one part grid. Seam so tests and future runtime meshers can swap in.</summary>
 	public interface IPartMeshProvider
 	{
-		Mesh BuildMesh(string partId, VoxelModel grid, float unit);
+		Mesh BuildMesh(string partId, VoxelModel grid);
 	}
 
 	/// <summary>
@@ -37,7 +37,7 @@ namespace Assembler.Voxelization
 			new Vector3[] { new(0, 0, 0), new(0, 1, 0), new(1, 1, 0), new(1, 0, 0) },
 		};
 
-		public Mesh BuildMesh(string partId, VoxelModel grid, float unit)
+		public Mesh BuildMesh(string partId, VoxelModel grid)
 		{
 			var vertices = new List<Vector3>();
 			var colours = new List<Color32>();
@@ -58,7 +58,7 @@ namespace Assembler.Voxelization
 					var baseIndex = vertices.Count;
 					foreach (var corner in FaceCorners[face])
 					{
-						vertices.Add(((Vector3)cell + corner) * unit);
+						vertices.Add((Vector3)cell + corner);
 						colours.Add(colour);
 						normals.Add(FaceNormals[face]);
 					}

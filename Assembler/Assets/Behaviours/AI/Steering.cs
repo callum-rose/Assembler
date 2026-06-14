@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.AI
@@ -16,11 +15,9 @@ namespace Assembler.Behaviours.AI
 	///   MaxSpeed: Upper bound on the blended velocity's magnitude.
 	///   Output: Name of the vector variable to write the blended velocity into (omit to move the entity directly).
 	/// </remarks>
-	public sealed class Steering : GameBehaviour<SteeringData>, INeedsGameClock
+	public sealed class Steering : PerFrameBehaviour<SteeringData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
-		private void Update()
+		internal override void Step()
 		{
 			var blended = Vector3.zero;
 

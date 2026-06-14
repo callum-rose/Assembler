@@ -78,8 +78,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 1f,
-				RealWorldHeight = 1f,
+				TargetHeight = 1,
 				Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 				Parts = new[]
 				{
@@ -109,8 +108,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "t",
-				Unit = 1f,
-				RealWorldHeight = 1f,
+				TargetHeight = 1,
 				Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 				Parts = new[]
 				{

@@ -11,7 +11,7 @@ namespace Assembler.Resolving
 		{
 			return valueSource switch
 			{
-				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
+				ConstantSource<T> constant => new ConstantValueProvider<T>(constant.Value),
 				ValueReferenceSource<T> variableRef => ctx.Variables.Get<T>(variableRef.VariableId, ctx.Scope),
 				ExpressionSource<T> expressionRef => BuildExpressionProvider(expressionRef, ctx),
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
@@ -61,9 +61,11 @@ namespace Assembler.Resolving
 		}
 
 		// Builds the runtime provider for an !expr. The compiled delegate is pure over the resolved arg
-		// providers, so the expression is observable exactly when every arg is observable: a !var/constant arg
-		// pushes (constants observable-but-silent), while a !clock/!query/trigger-output arg forces the plain
-		// polled variant. Both variants share the arg-marshalling + DynamicInvoke invoker built below.
+		// providers, so the expression is push-eligible exactly when every arg is observable or constant: a
+		// !var arg pushes and a literal arg never changes (so it needs no subscription), while a
+		// !clock/!query/trigger-output arg forces the plain polled variant. The observable provider subscribes
+		// only to the observable args; an all-constant expression yields no subscriptions and never fires. Both
+		// variants share the arg-marshalling + DynamicInvoke invoker built below.
 		private static IValueProvider<TReturn> BuildExpressionProvider<TReturn>(
 			ExpressionSource<TReturn> expressionSource,
 			ResolutionContext ctx)
@@ -81,9 +83,9 @@ namespace Assembler.Resolving
 
 			var invoker = BuildInvoker(expressionSource, @delegate, argProviders);
 
-			if (argProviders.All(a => a is IObservableValueProvider))
+			if (argProviders.All(a => a is IObservableValueProvider or IConstantValueProvider))
 			{
-				var observableArgs = argProviders.Cast<IObservableValueProvider>().ToArray();
+				var observableArgs = argProviders.OfType<IObservableValueProvider>().ToArray();
 				return new ObservableExpressionValueProvider<TReturn>(invoker, observableArgs);
 			}
 

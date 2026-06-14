@@ -9,12 +9,12 @@ namespace Assembler.Behaviours.Movement
 	/// <remarks>
 	/// Layers onto the shared-velocity system: it reads and rewrites the same <c>!var velocity</c> that an
 	/// <c>acceleration</c> feeds and a <c>velocity</c> integrator consumes. Clamping is frame-rate
-	/// independent, so it needs no clock; direction is preserved.
+	/// independent, so it ignores the clock's delta — but still pauses with the game; direction is preserved.
 	/// Properties:
 	///   Velocity [Vector3]: Writable shared velocity variable to clamp (required, e.g. !var velocity).
 	///   Max: Maximum allowed speed (magnitude) in units per second.
 	/// </remarks>
-	public class SpeedLimit : GameBehaviour<SpeedLimitData>
+	public class SpeedLimit : PerFrameBehaviour<SpeedLimitData>
 	{
 		protected override void OnInitialise(SpeedLimitData data)
 		{
@@ -25,9 +25,7 @@ namespace Assembler.Behaviours.Movement
 			}
 		}
 
-		private void Update() => Step();
-
-		internal void Step() =>
+		internal override void Step() =>
 			Data.Velocity.Set(Vector3.ClampMagnitude(Data.Velocity.Get(), Data.Max.Get()));
 	}
 }

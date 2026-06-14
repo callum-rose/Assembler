@@ -20,12 +20,17 @@ namespace Assembler.Resolving
 			_func = func;
 		}
 
-		/// <summary>Build a mapped provider that forwards the inner provider's observability when it has any,
-		/// falling back to the plain (polled) variant for a non-observable inner.</summary>
+		/// <summary>Build a mapped provider that preserves the inner provider's binding category: the map of a
+		/// constant is itself a constant (computed once), an observable inner forwards its observability, and a
+		/// plain inner falls back to the polled variant.</summary>
 		public static IValueProvider<TOutput> Create(IValueProvider<TInput> innerProvider, Func<TInput, TOutput> func) =>
-			innerProvider is IObservableValueProvider observable
-				? new ObservableMappedValueProvider<TInput, TOutput>(innerProvider, observable, func)
-				: new MappedValueProvider<TInput, TOutput>(innerProvider, func);
+			innerProvider switch
+			{
+				IConstantValueProvider => new ConstantValueProvider<TOutput>(func(innerProvider.Get())),
+				IObservableValueProvider observable =>
+					new ObservableMappedValueProvider<TInput, TOutput>(innerProvider, observable, func),
+				_ => new MappedValueProvider<TInput, TOutput>(innerProvider, func)
+			};
 
 		public TOutput Get(TriggerContext ctx) => _func(_innerProvider.Get(ctx));
 

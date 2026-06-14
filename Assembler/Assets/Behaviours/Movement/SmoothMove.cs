@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
@@ -13,19 +12,15 @@ namespace Assembler.Behaviours.Movement
 	///   Target: World-space position to ease toward.
 	///   SmoothTime: Approximate time (seconds) to reach the target; larger is slower and softer.
 	/// </remarks>
-	public class SmoothMove : GameBehaviour<SmoothMoveData>, INeedsGameClock
+	public class SmoothMove : PerFrameBehaviour<SmoothMoveData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
 		private Vector3 _velocity;
 
 		// Clear the carried SmoothDamp velocity so a pooled reuse eases out of rest rather than inheriting the
 		// previous life's momentum.
 		public override void OnReuse() => _velocity = Vector3.zero;
 
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			transform.position = Vector3.SmoothDamp(
 				transform.position, Data.Target.Get(), ref _velocity,

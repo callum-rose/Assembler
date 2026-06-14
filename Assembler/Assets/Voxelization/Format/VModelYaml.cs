@@ -31,8 +31,7 @@ namespace Assembler.Voxelization
 				Rigged = YamlNodes.GetBool(root, "rigged"),
 				Description = YamlNodes.GetString(root, "description"),
 				Symmetry = YamlNodes.GetString(root, "symmetry", "none"),
-				Unit = YamlNodes.GetFloat(root, "unit", 0.1f),
-				RealWorldHeight = YamlNodes.GetFloat(root, "real_world_height"),
+				TargetHeight = YamlNodes.GetInt(root, "target_height"),
 				TargetLength = YamlNodes.GetInt(root, "target_length"),
 				TargetWidth = YamlNodes.GetInt(root, "target_width"),
 				SizeTolerance = YamlNodes.GetInt(root, "size_tolerance", 1),
@@ -54,8 +53,7 @@ namespace Assembler.Voxelization
 				sb.Append("description: ").Append(YamlNodes.Quote(model.Description)).Append('\n');
 			}
 			sb.Append("symmetry: ").Append(model.Symmetry).Append('\n');
-			sb.Append("unit: ").Append(YamlNodes.Float(model.Unit)).Append('\n');
-			sb.Append("real_world_height: ").Append(YamlNodes.Float(model.RealWorldHeight)).Append('\n');
+			sb.Append("target_height: ").Append(model.TargetHeight).Append('\n');
 			if (model.TargetLength > 0)
 			{
 				sb.Append("target_length: ").Append(model.TargetLength).Append('\n');

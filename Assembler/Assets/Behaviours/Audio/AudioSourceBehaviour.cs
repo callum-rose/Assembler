@@ -13,7 +13,8 @@ namespace Assembler.Behaviours.Audio
 	/// </remarks>
 	public class AudioSourceBehaviour : GameBehaviour<AudioSourceData>, IAmExecutable
 	{
-		private AudioSource _audioSource;
+		// Assigned in OnInitialise before any Execute (AddComponent never returns null); never observed null.
+		private AudioSource _audioSource = null!;
 
 		protected override void OnInitialise(AudioSourceData data)
 		{

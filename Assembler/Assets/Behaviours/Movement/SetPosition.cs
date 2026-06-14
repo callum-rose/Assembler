@@ -11,7 +11,8 @@ namespace Assembler.Behaviours.Movement
 	/// </remarks>
 	public class SetPosition : GameBehaviour<SetPositionData>, IAmExecutable
 	{
-		private IValueProvider<Vector3> _position;
+		// Assigned in OnInitialise before any Execute; never observed null.
+		private IValueProvider<Vector3> _position = null!;
 
 		protected override void OnInitialise(SetPositionData behaviourInfo)
 		{

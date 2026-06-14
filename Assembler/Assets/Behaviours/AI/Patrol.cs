@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Assembler.Libraries;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.AI
@@ -28,10 +27,8 @@ namespace Assembler.Behaviours.AI
 	///   Output: Name of the vector variable to write the desired velocity into (omit to move the entity directly).
 	///   CurrentIndex: Name of an int variable to publish the current waypoint index into (omit to skip; for FSM/debug).
 	/// </remarks>
-	public sealed class Patrol : GameBehaviour<PatrolData>, INeedsGameClock
+	public sealed class Patrol : PerFrameBehaviour<PatrolData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
 		private int _index;
 		private int _direction = 1;
 
@@ -43,9 +40,7 @@ namespace Assembler.Behaviours.AI
 			_direction = 1;
 		}
 
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			var waypoints = Data.Waypoints.Get();
 

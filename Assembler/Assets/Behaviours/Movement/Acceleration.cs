@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
@@ -18,15 +17,11 @@ namespace Assembler.Behaviours.Movement
 	///   Velocity [Vector3]: Optional shared velocity variable to integrate into (e.g. !var velocity).
 	///     Omit for standalone mode where this behaviour also moves the entity.
 	/// </remarks>
-	public class Acceleration : GameBehaviour<AccelerationData>, INeedsGameClock
+	public class Acceleration : PerFrameBehaviour<AccelerationData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
 		private Vector3 _velocity;
 
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			var dt = Clock.DeltaTime;
 

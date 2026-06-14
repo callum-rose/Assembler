@@ -8,7 +8,7 @@ namespace Tests.Voxelization
 	/// <summary>
 	/// The hand-authored M0/M1 acceptance fixture: a 10-voxel-tall rigged
 	/// villager (legs + torso + head + mirrored arms + wave pose), fully
-	/// connected and exactly on scale at unit 0.18 / height 1.8m.
+	/// connected and exactly on scale (10 voxels tall).
 	/// </summary>
 	public static class VillagerFixture
 	{
@@ -84,8 +84,7 @@ namespace Tests.Voxelization
 				Id = "villager",
 				Rigged = true,
 				Symmetry = "bilateral",
-				Unit = 0.18f,
-				RealWorldHeight = 1.8f,
+				TargetHeight = 10,
 				Origin = "feet_center",
 				Palette = palette,
 				Parts = parts,

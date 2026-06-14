@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.AI
@@ -18,9 +17,8 @@ namespace Assembler.Behaviours.AI
 	///   Speed: Movement speed in units per second.
 	///   AgentRadius: Clearance used for walkability checks, in world units; omit to inherit the game-wide Navigation DefaultAgentRadius. Tile-locked movers usually leave this 0 (a one-cell agent).
 	/// </summary>
-	public sealed class GridMover : GameBehaviour<GridMoverData>, INeedsGameClock, INeedsNavigation
+	public sealed class GridMover : PerFrameBehaviour<GridMoverData>, INeedsNavigation
 	{
-		public IGameClock Clock { get; set; } = null!;
 		public NavGridService Nav { get; set; } = null!;
 
 		private bool _initialised;
@@ -35,7 +33,7 @@ namespace Assembler.Behaviours.AI
 			_heading = Vector3.zero;
 		}
 
-		private void Update()
+		internal override void Step()
 		{
 			var cellSize = Nav.CellSize;
 			// Unset AgentRadius falls back to the game-wide Navigation DefaultAgentRadius.

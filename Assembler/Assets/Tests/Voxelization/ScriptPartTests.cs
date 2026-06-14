@@ -35,8 +35,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "oak_tree",
-				Unit = 0.18f,
-				RealWorldHeight = 9f, // -> 50 voxels tall
+				TargetHeight = 50,
 				Palette = new[]
 				{
 					new PaletteEntry('T', new Color32(0x6b, 0x4a, 0x2b, 0xff)),
@@ -71,8 +70,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "broken",
-				Unit = 1f,
-				RealWorldHeight = 1f,
+				TargetHeight = 1,
 				Palette = new[] { new PaletteEntry('A', new Color32(255, 0, 0, 255)) },
 				Parts = new[]
 				{
