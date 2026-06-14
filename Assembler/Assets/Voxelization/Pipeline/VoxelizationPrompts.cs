@@ -423,6 +423,7 @@ namespace Assembler.Voxelization
 			"  box      KEY minX minY minZ sizeX sizeY sizeZ        (optional trailing: round R [faces/edges])\n" +
 			"  sphere   KEY cx cy cz r                              (optional trailing: half +y / -y / +x / -x / +z / -z)\n" +
 			"  cylinder KEY axis baseX baseY baseZ r h              (axis is x, y, or z; optional trailing half clip)\n" +
+			"  cut SHAPE ...                                        (carve voxels away: any shape above, but no KEY)\n" +
 			"Rules:\n" +
 			"- KEY is a declared palette key. Coordinates are GRID cells from [0,0,0] to size-1 — the grid is placed " +
 			"at the declared offset for you; do NOT add the offset yourself.\n" +
@@ -437,12 +438,22 @@ namespace Assembler.Voxelization
 			"and not all over.) This is rejected; round one edge, make it ≥3 thick, or leave it square.\n" +
 			"- `half` keeps only the named side of a sphere or cylinder (a dome is `sphere ... half +y`).\n" +
 			"- Later lines overwrite earlier ones where they overlap — build big solids first, then details on top.\n" +
+			"- `cut SHAPE ...` removes voxels in that shape instead of adding them: the same geometry args as the shape, " +
+			"but with NO palette KEY (e.g. `cut box 1 1 -1 3 3 7` bores a square tunnel, `cut sphere 4 4 4 3` hollows a " +
+			"shell). It carves whatever is present when the line runs, so order matters — fill a solid first, then cut " +
+			"openings/cavities; a later fill can refill a cut. Use it for hollows, windows, bores, sockets, and mouths.\n" +
 			"- Shapes are clipped to the declared size; geometry must still form ONE connected volume and fill the " +
 			"window's role in the model (no floating pieces).\n\n" +
 			"Example for a 5x3x5 base slab on a roller, palette G=grey, K=black:\n" +
 			"```primitives\n" +
 			"box G 0 1 0 5 2 5 round 1 +y\n" +
 			"cylinder K z 2 0.5 0 1.5 5\n" +
+			"```\n" +
+			"Example carving a hollow box with a doorway, palette W=white:\n" +
+			"```primitives\n" +
+			"box W 0 0 0 6 6 6\n" +
+			"cut box 1 1 1 4 4 4\n" +
+			"cut box 2 0 -1 2 3 8\n" +
 			"```\n" +
 			"Output ONLY the fenced block.";
 
