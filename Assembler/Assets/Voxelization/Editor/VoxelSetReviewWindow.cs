@@ -616,7 +616,6 @@ namespace Assembler.Voxelization.Editor
 
 			const float swatch = 14f;
 			const int perRow = 14;
-			EditorGUILayout.LabelField($"Palette — {palette.Count} colours", EditorStyles.miniLabel);
 			for (var start = 0; start < palette.Count; start += perRow)
 			{
 				EditorGUILayout.BeginHorizontal();
