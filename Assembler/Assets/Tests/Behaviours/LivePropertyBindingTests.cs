@@ -84,14 +84,40 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void Push_RegistersNoTick_ForConstant()
+		public void Constant_AppliesOnce_AndCreatesNoSink()
 		{
 			var (behaviour, updater) = NewBehaviour();
-			var constant = new ValueProvider<int>(7);
+			var constant = new ConstantValueProvider<int>(7);
+			var applied = new List<int>();
 
-			constant.BindLive(behaviour, _ => { }, fallback: -1);
+			constant.BindLive(behaviour, applied.Add, fallback: -1);
 
-			Assert.AreEqual(0, TickCount(updater), "a constant binds via push and must register no per-frame tick.");
+			CollectionAssert.AreEqual(new[] { 7 }, applied, "a constant should apply its value once.");
+			Assert.AreEqual(0, TickCount(updater), "a constant must register no per-frame tick.");
+			Assert.IsNull(behaviour.GetComponent<LivePropertyBindings>(),
+				"a constant binds nothing, so it must not create the cleanup sink.");
+		}
+
+		[Test]
+		public void Push_AppliesOnVariableArg_WhenExpressionMixesConstantAndVariable()
+		{
+			var (behaviour, _) = NewBehaviour();
+			var variable = new ValueProvider<int>(2);
+			// Mirrors ValueResolver building an observable expression over a mix of !var and literal args:
+			// only the variable is observable, but the expression still pushes.
+			var provider = new ObservableExpressionValueProvider<int>(
+				ctx => variable.Get(ctx) + 10,
+				new IObservableValueProvider[] { variable });
+			var applied = new List<int>();
+
+			provider.BindLive(behaviour, applied.Add, fallback: -1);
+
+			CollectionAssert.AreEqual(new[] { 12 }, applied);
+
+			variable.Set(5);
+
+			CollectionAssert.AreEqual(new[] { 12, 15 }, applied,
+				"a mixed constant/variable expression should still push on the variable arg's change.");
 		}
 
 		[Test]

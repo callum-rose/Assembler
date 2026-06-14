@@ -11,7 +11,7 @@ namespace Assembler.Resolving
 		{
 			return valueSource switch
 			{
-				ConstantSource<T> constant => new ValueProvider<T>(constant.Value),
+				ConstantSource<T> constant => new ConstantValueProvider<T>(constant.Value),
 				ValueReferenceSource<T> variableRef => ctx.Variables.Get<T>(variableRef.VariableId, ctx.Scope),
 				ExpressionSource<T> expressionRef => BuildExpressionProvider(expressionRef, ctx),
 				AssetSource<T> assetRef => new ValueProvider<T>(ctx.Assets.Get<T>(assetRef.AssetId)),
@@ -81,9 +81,12 @@ namespace Assembler.Resolving
 
 			var invoker = BuildInvoker(expressionSource, @delegate, argProviders);
 
-			if (argProviders.All(a => a is IObservableValueProvider))
+			// Push-capable when no arg forces polling: every arg is either observable (a !var, which pushes) or
+			// constant (no change point). Subscribe only to the observable args; an all-constant expression yields
+			// an empty subscription set and is observable-but-silent, exactly as before.
+			if (argProviders.All(a => a is IObservableValueProvider or IConstantValueProvider))
 			{
-				var observableArgs = argProviders.Cast<IObservableValueProvider>().ToArray();
+				var observableArgs = argProviders.OfType<IObservableValueProvider>().ToArray();
 				return new ObservableExpressionValueProvider<TReturn>(invoker, observableArgs);
 			}
 

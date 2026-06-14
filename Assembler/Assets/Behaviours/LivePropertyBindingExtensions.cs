@@ -14,9 +14,12 @@ namespace Assembler.Behaviours
 		/// <list type="bullet">
 		/// <item><b>None</b> — a <see cref="NullValueProvider{T}"/> (omitted optional) applies
 		/// <paramref name="fallback"/> once and binds nothing, preserving today's <c>ValueOr</c> default.</item>
-		/// <item><b>Push</b> — an observable provider (variable, constant, or an all-observable-arg expression)
-		/// applies the initial value then re-applies on each <see cref="IObservableValueProvider.Invalidated"/>
-		/// pulse. Constants/all-constant expressions subscribe but never fire, so they cost nothing per frame.</item>
+		/// <item><b>Constant</b> — an <see cref="IConstantValueProvider"/> (a literal) applies its value once and
+		/// binds nothing — no sink, no subscription. It can never change, so there is nothing to observe.</item>
+		/// <item><b>Push</b> — an observable provider (a variable, or an expression whose args are all
+		/// observable-or-constant) applies the initial value then re-applies on each
+		/// <see cref="IObservableValueProvider.Invalidated"/> pulse. An all-constant expression subscribes but
+		/// never fires, so it costs nothing per frame.</item>
 		/// <item><b>Poll</b> — any other provider (clock/query/transform/partial expression) re-reads each frame
 		/// via the shared <see cref="LivePropertyUpdater"/> and re-applies only when the value actually changed.</item>
 		/// </list>
@@ -33,6 +36,14 @@ namespace Assembler.Behaviours
 			}
 
 			void Apply() => apply(provider.Get());
+
+			// A plain immutable constant never changes: apply once and bind nothing — no sink, no subscription.
+			// (It is not observable, so without this branch it would fall onto the poll path — strictly worse.)
+			if (provider is IConstantValueProvider)
+			{
+				Apply();
+				return;
+			}
 
 			Apply();
 

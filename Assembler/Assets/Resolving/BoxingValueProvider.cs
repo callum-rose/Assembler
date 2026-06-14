@@ -17,12 +17,15 @@ namespace Assembler.Resolving
 			_innerProvider = innerProvider;
 		}
 
-		/// <summary>Build a boxing provider that forwards the inner provider's observability when it has any,
-		/// falling back to the plain (polled) variant for a non-observable inner.</summary>
+		/// <summary>Build a boxing provider that preserves the inner provider's binding class: a constant boxes to
+		/// a constant (boxing a fixed value leaves it fixed), an observable forwards its <c>Invalidated</c> pulse,
+		/// and any other inner falls back to the plain (polled) variant.</summary>
 		public static IValueProvider<object> Create(IValueProvider innerProvider) =>
-			innerProvider is IObservableValueProvider observable
-				? new ObservableBoxingValueProvider(innerProvider, observable)
-				: new BoxingValueProvider(innerProvider);
+			innerProvider is IConstantValueProvider
+				? new ConstantValueProvider<object>(innerProvider.Get(TriggerContext.Empty))
+				: innerProvider is IObservableValueProvider observable
+					? new ObservableBoxingValueProvider(innerProvider, observable)
+					: new BoxingValueProvider(innerProvider);
 
 		public object Get(TriggerContext ctx) => _innerProvider.Get(ctx);
 	}
