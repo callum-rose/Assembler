@@ -11,7 +11,8 @@ namespace Assembler.Behaviours.Rotation
 	/// </remarks>
 	public class SetRotation : GameBehaviour<SetRotationData>, IAmExecutable
 	{
-		private IValueProvider<Vector3> _rotation;
+		// Assigned in OnInitialise before any Execute; never observed null.
+		private IValueProvider<Vector3> _rotation = null!;
 
 		protected override void OnInitialise(SetRotationData behaviourInfo)
 		{
