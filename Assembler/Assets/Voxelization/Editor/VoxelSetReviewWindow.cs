@@ -553,6 +553,7 @@ namespace Assembler.Voxelization.Editor
 					$"{size.x} wide x {size.y} tall x {size.z} long — {assembled.Composed.Voxels.Count:n0} voxels — " +
 					$"{result.Model.Parts.Count} parts",
 					EditorStyles.miniLabel);
+				DrawPalette(assembled.Model.Palette);
 			}
 
 			if (_inFlight.TryGetValue(result.AssetId, out var activity))
@@ -599,6 +600,38 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.EndVertical();
 			EditorGUILayout.EndHorizontal();
 			EditorGUILayout.EndVertical();
+		}
+
+		/// <summary>
+		/// A row of colour swatches for the model's palette, under the voxel size
+		/// info. Each swatch carries its key + hex as a hover tooltip; the row wraps
+		/// once it fills the card so large palettes stay visible.
+		/// </summary>
+		private static void DrawPalette(IReadOnlyList<PaletteEntry> palette)
+		{
+			if (palette.Count == 0)
+			{
+				return;
+			}
+
+			const float swatch = 14f;
+			const int perRow = 14;
+			EditorGUILayout.LabelField($"Palette — {palette.Count} colours", EditorStyles.miniLabel);
+			for (var start = 0; start < palette.Count; start += perRow)
+			{
+				EditorGUILayout.BeginHorizontal();
+				for (var i = start; i < Math.Min(start + perRow, palette.Count); i++)
+				{
+					var entry = palette[i];
+					var rect = GUILayoutUtility.GetRect(swatch, swatch, GUILayout.Width(swatch), GUILayout.Height(swatch));
+					EditorGUI.DrawRect(rect, new Color(0f, 0f, 0f, 0.4f));
+					EditorGUI.DrawRect(new Rect(rect.x + 1, rect.y + 1, rect.width - 2, rect.height - 2), entry.Colour);
+					GUI.Label(rect, new GUIContent(string.Empty, $"{entry.Key}: {entry.ToHex()}"));
+				}
+
+				GUILayout.FlexibleSpace();
+				EditorGUILayout.EndHorizontal();
+			}
 		}
 
 		private void DrawResultInfo(ModelResult result)
