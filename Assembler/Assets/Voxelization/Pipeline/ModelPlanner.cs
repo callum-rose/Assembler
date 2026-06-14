@@ -36,21 +36,22 @@ namespace Assembler.Voxelization
 		public async Task<ModelPlan> PlanAsync(
 			SetManifest manifest,
 			ManifestAsset asset,
-			AnthropicImage referenceImage,
+			IReadOnlyList<AnthropicImage> referenceImages,
 			ReferenceBrief brief,
 			string refinementNote,
 			CancellationToken ct,
 			string previousModelYaml = "",
 			bool suppressPaletteGate = false)
 		{
-			var hasImage = !referenceImage.IsEmpty;
+			// All of the asset's labelled images go to the multimodal message for
+			// styling detail the brief doesn't capture.
+			var attachments = referenceImages.Where(i => !i.IsEmpty).ToArray();
+			var hasImage = attachments.Length > 0;
 			var userText = VoxelizationPrompts.PlanningUser(
 				manifest, asset, brief, hasImage, refinementNote, _config.StyleGuidance, previousModelYaml);
 			var messages = new List<AnthropicMessage>
 			{
-				hasImage
-					? new AnthropicMessage("user", userText, new[] { referenceImage })
-					: new AnthropicMessage("user", userText),
+				new("user", userText, attachments),
 			};
 
 			for (var attempt = 1; ; attempt++)

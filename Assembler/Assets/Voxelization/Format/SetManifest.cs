@@ -1,12 +1,27 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Assembler.Voxelization
 {
 	/// <summary>
-	/// One asset row in a set manifest. <see cref="Reference"/> names an
-	/// optional reference image (resolved via IReferenceImageSource); empty
+	/// One labelled reference image attached to an asset: a <see cref="File"/>
+	/// (resolved via IReferenceImageSource) and the <see cref="Face"/> it depicts
+	/// (one of <see cref="Faces"/>). The label removes the perspective-inference
+	/// ambiguity — the pipeline is told each image's face rather than guessing.
+	/// </summary>
+	public sealed record ReferenceImage(string File, string Face)
+	{
+		/// <summary>The six valid perspective labels, matching <see cref="SilhouetteSpec.Face"/> strings.</summary>
+		public static IReadOnlyList<string> Faces { get; } = new[] { "front", "back", "left", "right", "top", "bottom" };
+
+		public static bool IsValidFace(string face) => Faces.Contains(face.ToLowerInvariant());
+	}
+
+	/// <summary>
+	/// One asset row in a set manifest. <see cref="References"/> lists the
+	/// labelled reference images (resolved via IReferenceImageSource); empty
 	/// means none. <see cref="Symmetry"/> is a hint for the planner:
 	/// "bilateral", "radial:N", or "none".
 	/// </summary>
@@ -34,9 +49,9 @@ namespace Assembler.Voxelization
 
 		public string Symmetry { get; init; } = "none";
 		public bool Rig { get; init; }
-		public string Reference { get; init; } = string.Empty;
+		public IReadOnlyList<ReferenceImage> References { get; init; } = Array.Empty<ReferenceImage>();
 
-		public bool HasReference => Reference.Length > 0;
+		public bool HasReference => References.Count > 0;
 	}
 
 	/// <summary>

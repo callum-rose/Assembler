@@ -133,16 +133,42 @@ namespace Assembler.Voxelization
 		}
 
 		/// <summary>
-		/// Box-coverage feasibility against the reference silhouette: a part's
+		/// Box-coverage feasibility against the reference silhouettes: a part's
 		/// voxels can never leave its declared box, so any silhouette cell no box
 		/// reaches is unfillable by authoring — the plan's shape is wrong (stubby
-		/// limbs, too-narrow model) and must be re-planned, not re-authored.
-		/// Both masks are compared in the model's own voxel frame (height-anchored,
-		/// x centre-aligned, ground-aligned). Returns null when feasible.
+		/// limbs, too-narrow model) and must be re-planned, not re-authored. Only
+		/// the ground-anchored faces (front/back/left/right) are pre-checked here;
+		/// top/bottom have no height anchor and are enforced solely by the
+		/// validator's face-aware IoU gate one stage later. Fails on the first
+		/// infeasible face; returns null when every checked face is feasible.
 		/// </summary>
 		public static string? SilhouetteFeasibilityError(VoxelRigModel skeleton, ReferenceBrief brief, float coverageThreshold)
 		{
-			var spec = brief.Silhouette;
+			foreach (var spec in brief.Silhouettes)
+			{
+				if (!IsGroundAnchored(spec.Face))
+				{
+					continue;
+				}
+
+				var error = FeasibilityError(skeleton, spec, coverageThreshold);
+				if (error != null)
+				{
+					return error;
+				}
+			}
+
+			return null;
+		}
+
+		/// <summary>Front/back are anchored in y with the silhouette's u running along x; left/right run u along z. Top/bottom have no height anchor.</summary>
+		private static bool IsGroundAnchored(string face) => face is "front" or "back" or "left" or "right";
+
+		/// <summary>The model-space axis the silhouette's u (horizontal) maps to: x for front/back, z for left/right. v is always y.</summary>
+		private static int HorizontalAxis(string face) => face is "left" or "right" ? 2 : 0;
+
+		private static string? FeasibilityError(VoxelRigModel skeleton, SilhouetteSpec spec, float coverageThreshold)
+		{
 			if (spec.IsEmpty || spec.Size.x <= 0 || spec.Size.y <= 0)
 			{
 				return null;
@@ -154,39 +180,44 @@ namespace Assembler.Voxelization
 				return null;
 			}
 
+			// v is ground-aligned (y=0 at bottom); u is centre-aligned along the
+			// face's horizontal model axis. Coverage (hit/solid over overlaid grids)
+			// is invariant under a shared u-flip, so axis selection is all that
+			// matters here — true handedness lives in the validator's IoU path.
+			var uAxis = HorizontalAxis(spec.Face);
 			var height = skeleton.HeightInVoxels;
 			var width = Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
 
-			// The reference mask, resampled into the model's voxel frame ([x, y], y=0 bottom).
+			// The reference mask, resampled into the model's voxel frame ([u, v], v=0 bottom).
 			var target = new bool[width, height];
-			for (var x = 0; x < width; x++)
+			for (var u = 0; u < width; u++)
 			{
-				for (var y = 0; y < height; y++)
+				for (var v = 0; v < height; v++)
 				{
-					var u = Mathf.Clamp(Mathf.FloorToInt((x + 0.5f) * spec.Size.x / width), 0, spec.Size.x - 1);
-					var row = spec.Size.y - 1 - Mathf.Clamp(Mathf.FloorToInt((y + 0.5f) * spec.Size.y / height), 0, spec.Size.y - 1);
-					target[x, y] = row < spec.Rows.Count && u < spec.Rows[row].Length && SilhouetteSpec.IsSolid(spec.Rows[row][u]);
+					var su = Mathf.Clamp(Mathf.FloorToInt((u + 0.5f) * spec.Size.x / width), 0, spec.Size.x - 1);
+					var row = spec.Size.y - 1 - Mathf.Clamp(Mathf.FloorToInt((v + 0.5f) * spec.Size.y / height), 0, spec.Size.y - 1);
+					target[u, v] = row < spec.Rows.Count && su < spec.Rows[row].Length && SilhouetteSpec.IsSolid(spec.Rows[row][su]);
 				}
 			}
 
-			// The union of part boxes, centre-aligned in x and ground-aligned in y.
-			var minX = boxes.Min(b => b.Min.x);
-			var maxX = boxes.Max(b => b.Max.x);
+			// The union of part boxes, centre-aligned on the horizontal axis and ground-aligned in y.
+			var minU = boxes.Min(b => b.Min[uAxis]);
+			var maxU = boxes.Max(b => b.Max[uAxis]);
 			var minY = boxes.Min(b => b.Min.y);
-			var plannedWidth = maxX - minX + 1;
-			var dx = (width - plannedWidth) / 2 - minX;
+			var plannedWidth = maxU - minU + 1;
+			var du = (width - plannedWidth) / 2 - minU;
 			var covered = new bool[width, height];
 			foreach (var (boxMin, boxMax) in boxes)
 			{
-				for (var x = boxMin.x; x <= boxMax.x; x++)
+				for (var u = boxMin[uAxis]; u <= boxMax[uAxis]; u++)
 				{
 					for (var y = boxMin.y; y <= boxMax.y; y++)
 					{
-						var gx = x + dx;
-						var gy = y - minY;
-						if (gx >= 0 && gx < width && gy >= 0 && gy < height)
+						var gu = u + du;
+						var gv = y - minY;
+						if (gu >= 0 && gu < width && gv >= 0 && gv < height)
 						{
-							covered[gx, gy] = true;
+							covered[gu, gv] = true;
 						}
 					}
 				}
@@ -194,14 +225,14 @@ namespace Assembler.Voxelization
 
 			var solid = 0;
 			var hit = 0;
-			for (var x = 0; x < width; x++)
+			for (var u = 0; u < width; u++)
 			{
-				for (var y = 0; y < height; y++)
+				for (var v = 0; v < height; v++)
 				{
-					if (target[x, y])
+					if (target[u, v])
 					{
 						solid++;
-						hit += covered[x, y] ? 1 : 0;
+						hit += covered[u, v] ? 1 : 0;
 					}
 				}
 			}
@@ -219,20 +250,20 @@ namespace Assembler.Voxelization
 			var problems = string.Empty;
 			if (Mathf.Abs(plannedWidth - width) > 1)
 			{
-				problems += $"- The plan is {plannedWidth} voxels wide, but the reference proportions demand " +
-							$"~{width} wide at {height} tall.\n";
+				problems += $"- The plan spans {plannedWidth} voxels across the {spec.Face} view, but the reference " +
+							$"proportions demand ~{width} at {height} tall.\n";
 			}
 
 			if (coverage < coverageThreshold)
 			{
 				problems += $"- Even if every part completely fills its declared box, the plan covers only " +
-							$"{coverage:P0} of the reference front silhouette (needs {coverageThreshold:P0}) — " +
+							$"{coverage:P0} of the reference {spec.Face} silhouette (needs {coverageThreshold:P0}) — " +
 							"limbs too short, or parts misplaced.\n";
 			}
 
 			return problems.Length == 0
 				? null
-				: $"The planned shape cannot match the reference:\n{problems}" +
+				: $"The planned shape cannot match the reference {spec.Face} view:\n{problems}" +
 				  $"Compared at {width}x{height} (top row first):\n" +
 				  $"PLANNED BOX COVERAGE:\n{RenderMask(covered)}\nREFERENCE SILHOUETTE:\n{RenderMask(target)}\n" +
 				  "Resize or re-place parts so their boxes reach the silhouette.";

@@ -109,7 +109,18 @@ parts:
 				Unit = 0.18f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "villager", RealWorldHeight = 1.8f, Symmetry = "bilateral", Rig = true, Reference = "villager.png" },
+					new ManifestAsset
+					{
+						Id = "villager",
+						RealWorldHeight = 1.8f,
+						Symmetry = "bilateral",
+						Rig = true,
+						References = new[]
+						{
+							new ReferenceImage("villager_front.png", "front"),
+							new ReferenceImage("villager_right.png", "right"),
+						},
+					},
 					new ManifestAsset { Id = "oak_tree", RealWorldHeight = 9f, Symmetry = "none" },
 				},
 			};
@@ -119,33 +130,55 @@ parts:
 			Assert.That(read.Game, Is.EqualTo("medieval_village"));
 			Assert.That(read.Unit, Is.EqualTo(0.18f).Within(1e-5f));
 			Assert.That(read.Assets.Count, Is.EqualTo(2));
-			Assert.That(read.Assets[0].Reference, Is.EqualTo("villager.png"));
+			Assert.That(read.Assets[0].References.Select(r => r.File),
+				Is.EqualTo(new[] { "villager_front.png", "villager_right.png" }));
+			Assert.That(read.Assets[0].References.Select(r => r.Face), Is.EqualTo(new[] { "front", "right" }));
 			Assert.That(read.Assets[1].HasReference, Is.False);
 			Assert.That(read.HeightInVoxels(read.Assets[1]), Is.EqualTo(50));
 		}
 
 		[Test]
-		public void ReferenceBrief_RoundTrips()
+		public void Manifest_RejectsAnUnknownReferenceView()
+		{
+			const string yaml = @"game: g
+unit: 1
+assets:
+  - id: a
+    height: 10
+    references:
+      - file: a.png
+        view: diagonal
+";
+			Assert.That(() => ManifestYaml.Read(yaml), Throws.TypeOf<System.FormatException>());
+		}
+
+		[Test]
+		public void ReferenceBrief_RoundTripsMultipleSilhouettes()
 		{
 			var brief = new ReferenceBrief
 			{
-				Source = "car_side.jpg",
+				Source = "car",
 				RealWorldDims = new RealWorldDims(1.4f, 1.8f, 4.5f),
 				Palette = new[] { new PaletteEntry('R', new Color32(200, 30, 30, 255)) },
 				Proportions = new System.Collections.Generic.Dictionary<string, float> { ["cabin"] = 0.4f },
 				SignatureFeatures = new[] { "red body", "black wheels" },
-				Silhouette = new SilhouetteSpec("side", new Vector3Int(25, 8, 0), new[] { ".####....", "#########" }),
+				Silhouettes = new[]
+				{
+					new SilhouetteSpec("front", new Vector3Int(9, 2, 0), new[] { ".#######.", "#########" }),
+					new SilhouetteSpec("right", new Vector3Int(25, 8, 0), new[] { ".####....", "#########" }),
+				},
 			};
 
 			var read = ReferenceBriefYaml.Read(ReferenceBriefYaml.Write(brief));
 
-			Assert.That(read.Source, Is.EqualTo("car_side.jpg"));
+			Assert.That(read.Source, Is.EqualTo("car"));
 			Assert.That(read.RealWorldDims.Depth, Is.EqualTo(4.5f).Within(1e-5f));
 			Assert.That(read.Palette.Single().Key, Is.EqualTo('R'));
 			Assert.That(read.Proportions["cabin"], Is.EqualTo(0.4f).Within(1e-5f));
 			Assert.That(read.SignatureFeatures, Is.EqualTo(new[] { "red body", "black wheels" }));
-			Assert.That(read.Silhouette.Face, Is.EqualTo("side"));
-			Assert.That(read.Silhouette.Rows.Count, Is.EqualTo(2));
+			Assert.That(read.Silhouettes.Select(s => s.Face), Is.EqualTo(new[] { "front", "right" }));
+			Assert.That(read.Silhouettes[1].Rows.Count, Is.EqualTo(2));
+			Assert.That(read.PrimarySilhouette.Face, Is.EqualTo("front"));
 		}
 	}
 }

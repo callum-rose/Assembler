@@ -56,6 +56,19 @@ namespace Assembler.Voxelization.Editor
 
 		private readonly Dictionary<string, ModelResult> _results = new();
 		private readonly Dictionary<string, Texture2D> _previews = new();
+
+		// Reference-image assignment panel. The dropdown selections per file
+		// ((assetIndex, faceIndex), index 0 = none/unset) are the live editing
+		// state; the manifest yaml above is the source of truth they round-trip
+		// through. _referenceRowsSource is the manifest text the rows were last
+		// derived from, so an external manifest edit re-syncs them but our own
+		// re-serialisation does not clobber an in-progress (invalid) edit.
+		private readonly Dictionary<string, (int AssetIndex, int FaceIndex)> _referenceRows = new();
+		private readonly Dictionary<string, Texture2D?> _referenceThumbnails = new();
+		private string _referenceRowsSource = string.Empty;
+		private string _thumbnailFolder = string.Empty;
+		private string? _referenceAssignError;
+		private Vector2 _referenceScroll;
 		private readonly Dictionary<string, string> _refineNotes = new();
 		private readonly Dictionary<string, Vector2> _infoScrolls = new();
 		private readonly Dictionary<string, string> _inFlight = new();
@@ -126,6 +139,7 @@ namespace Assembler.Voxelization.Editor
 			EditorApplication.update -= OnEditorUpdate;
 			_cts?.Cancel();
 			_modelsCts?.Cancel();
+			DisposeThumbnails();
 			if (_settings != null)
 			{
 				AssetDatabase.SaveAssetIfDirty(_settings);
@@ -144,6 +158,8 @@ namespace Assembler.Voxelization.Editor
 			DrawSettings();
 			EditorGUILayout.Space();
 			DrawManifest();
+			EditorGUILayout.Space();
+			DrawReferenceImages();
 			EditorGUILayout.Space();
 			DrawRunControls();
 			EditorGUILayout.Space();
@@ -416,6 +432,282 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			EditorGUILayout.EndScrollView();
+		}
+
+		/// <summary>
+		/// Assigns the reference-image folder's files to manifest assets, one
+		/// (asset, face) per image. The manifest yaml is the source of truth
+		/// (decision #1): rows initialise from its <c>references:</c> and any edit
+		/// re-serialises the whole manifest back into the text buffer. Filenames are
+		/// usually opaque hashes, so each row shows a thumbnail to make ruling out
+		/// bad images usable; the perspective/asset are pre-filled from the filename
+		/// where unambiguous (suggest-only, never auto-committed).
+		/// </summary>
+		private void DrawReferenceImages()
+		{
+			EditorGUILayout.LabelField("Reference images (assign to assets)", EditorStyles.boldLabel);
+
+			if (string.IsNullOrWhiteSpace(_imageFolder) || !Directory.Exists(_imageFolder))
+			{
+				EditorGUILayout.HelpBox("Set a reference image folder above to assign images to assets.", MessageType.Info);
+				return;
+			}
+
+			SetManifest manifest;
+			try
+			{
+				manifest = ManifestYaml.Read(_manifestYaml);
+			}
+			catch (Exception ex)
+			{
+				EditorGUILayout.HelpBox(
+					$"Assigning references needs the manifest yaml to parse — fix it first: {ex.Message}", MessageType.Warning);
+				return;
+			}
+
+			var files = EnumerateImageFiles(_imageFolder);
+			if (files.Count == 0)
+			{
+				EditorGUILayout.HelpBox("No images (.png/.jpg/.jpeg/.gif/.webp) in the folder.", MessageType.Info);
+				return;
+			}
+
+			EditorGUILayout.HelpBox(
+				"Editing an assignment re-serialises the manifest yaml above, which normalises its formatting and drops " +
+				"comments. These manifests are tool-generated, so that's fine.", MessageType.None);
+
+			var assetIds = manifest.Assets.Select(a => a.Id).ToArray();
+			var assetOptions = new[] { "(none — exclude)" }.Concat(assetIds).ToArray();
+			var faceOptions = new[] { "(face?)" }.Concat(ReferenceImage.Faces).ToArray();
+			SyncReferenceRows(manifest, files, assetIds);
+
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_referenceScroll = EditorGUILayout.BeginScrollView(_referenceScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(320));
+				foreach (var file in files)
+				{
+					var name = Path.GetFileName(file);
+					var (assetIndex, faceIndex) = _referenceRows[name];
+
+					EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+					var thumb = ThumbnailFor(file);
+					GUILayout.Label(
+						thumb != null ? new GUIContent(thumb) : new GUIContent(name),
+						GUILayout.Width(64), GUILayout.Height(64));
+
+					EditorGUILayout.BeginVertical();
+					EditorGUILayout.LabelField(name, EditorStyles.miniLabel);
+					assetIndex = EditorGUILayout.Popup("Asset", Mathf.Clamp(assetIndex, 0, assetOptions.Length - 1), assetOptions);
+					faceIndex = EditorGUILayout.Popup("Perspective", Mathf.Clamp(faceIndex, 0, faceOptions.Length - 1), faceOptions);
+					EditorGUILayout.EndVertical();
+					EditorGUILayout.EndHorizontal();
+
+					_referenceRows[name] = (assetIndex, faceIndex);
+				}
+
+				EditorGUILayout.EndScrollView();
+
+				if (scope.changed)
+				{
+					CommitReferenceRows(manifest, assetIds);
+				}
+			}
+
+			if (_referenceAssignError != null)
+			{
+				EditorGUILayout.HelpBox(_referenceAssignError, MessageType.Error);
+			}
+		}
+
+		/// <summary>
+		/// Re-derives the per-file dropdown state from the manifest whenever the
+		/// manifest text changed externally (or a new file appeared). Existing
+		/// <c>references:</c> entries win; unassigned files fall back to a
+		/// suggest-only inference from the filename.
+		/// </summary>
+		private void SyncReferenceRows(SetManifest manifest, IReadOnlyList<string> files, string[] assetIds)
+		{
+			var names = files.Select(Path.GetFileName).ToList();
+			if (_referenceRowsSource == _manifestYaml && names.All(_referenceRows.ContainsKey))
+			{
+				return;
+			}
+
+			var assigned = new Dictionary<string, (string Asset, string Face)>(StringComparer.OrdinalIgnoreCase);
+			foreach (var asset in manifest.Assets)
+			{
+				foreach (var reference in asset.References)
+				{
+					assigned[reference.File] = (asset.Id, reference.Face);
+				}
+			}
+
+			_referenceRows.Clear();
+			foreach (var name in names)
+			{
+				if (assigned.TryGetValue(name, out var current))
+				{
+					var assetIndex = Array.IndexOf(assetIds, current.Asset);
+					var faceIndex = ReferenceImage.Faces.ToList().IndexOf(current.Face);
+					_referenceRows[name] = (assetIndex >= 0 ? assetIndex + 1 : 0, faceIndex >= 0 ? faceIndex + 1 : 0);
+				}
+				else
+				{
+					_referenceRows[name] = InferReferenceRow(name, assetIds);
+				}
+			}
+
+			_referenceRowsSource = _manifestYaml;
+		}
+
+		/// <summary>
+		/// Suggest-only pre-fill from a filename: a face token (front/back/left/
+		/// right/top/bottom, plus rear→back and underside→bottom) and a unique
+		/// asset-id token match. Ambiguous/hash-named files stay unset (index 0).
+		/// </summary>
+		private static (int AssetIndex, int FaceIndex) InferReferenceRow(string fileName, string[] assetIds)
+		{
+			var separators = new[] { '_', '-', '.', ' ', '/' };
+			var tokens = Path.GetFileNameWithoutExtension(fileName).ToLowerInvariant()
+				.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+			var faceIndex = 0;
+			foreach (var (token, face) in FaceTokens)
+			{
+				if (tokens.Contains(token))
+				{
+					faceIndex = ReferenceImage.Faces.ToList().IndexOf(face) + 1;
+					break;
+				}
+			}
+
+			var matches = assetIds.Where(id => MatchesAsset(tokens, id)).ToList();
+			var assetIndex = matches.Count == 1 ? Array.IndexOf(assetIds, matches[0]) + 1 : 0;
+			return (assetIndex, faceIndex);
+		}
+
+		private static readonly (string Token, string Face)[] FaceTokens =
+		{
+			("front", "front"), ("back", "back"), ("rear", "back"),
+			("left", "left"), ("right", "right"),
+			("top", "top"), ("bottom", "bottom"), ("underside", "bottom"),
+		};
+
+		private static bool MatchesAsset(string[] fileTokens, string assetId)
+		{
+			var idTokens = assetId.ToLowerInvariant().Split(new[] { '_', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			return idTokens.Length > 0 && idTokens.All(fileTokens.Contains);
+		}
+
+		/// <summary>
+		/// Writes the current row selections back into the manifest yaml, one
+		/// reference per (asset, face). A duplicate (asset, face) is an invalid
+		/// state: it is flagged and the manifest is left untouched rather than
+		/// silently replacing one image with another.
+		/// </summary>
+		private void CommitReferenceRows(SetManifest manifest, string[] assetIds)
+		{
+			var byAsset = new Dictionary<string, List<ReferenceImage>>();
+			var seen = new HashSet<(string Asset, string Face)>();
+			foreach (var entry in _referenceRows)
+			{
+				var (assetIndex, faceIndex) = entry.Value;
+				if (assetIndex <= 0 || faceIndex <= 0)
+				{
+					continue;
+				}
+
+				var assetId = assetIds[assetIndex - 1];
+				var face = ReferenceImage.Faces[faceIndex - 1];
+				if (!seen.Add((assetId, face)))
+				{
+					_referenceAssignError =
+						$"Two images both claim {assetId}'s {face} view. One image per (asset, face) — change one before it can be saved.";
+					return;
+				}
+
+				if (!byAsset.TryGetValue(assetId, out var list))
+				{
+					byAsset[assetId] = list = new List<ReferenceImage>();
+				}
+
+				list.Add(new ReferenceImage(entry.Key, face));
+			}
+
+			_referenceAssignError = null;
+			var updated = manifest with
+			{
+				Assets = manifest.Assets
+					.Select(a => a with
+					{
+						References = byAsset.TryGetValue(a.Id, out var refs)
+							? refs
+							: (IReadOnlyList<ReferenceImage>)Array.Empty<ReferenceImage>(),
+					})
+					.ToArray(),
+			};
+
+			_manifestYaml = ManifestYaml.Write(updated);
+			_referenceRowsSource = _manifestYaml;
+			EditorPrefs.SetString(ManifestPref, _manifestYaml);
+		}
+
+		private static IReadOnlyList<string> EnumerateImageFiles(string folder)
+		{
+			var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".webp" };
+			return Directory.GetFiles(folder)
+				.Where(f => extensions.Contains(Path.GetExtension(f)))
+				.OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+				.ToList();
+		}
+
+		/// <summary>Loads (and caches) a thumbnail for a reference file, rebuilding the cache when the folder changes.</summary>
+		private Texture2D? ThumbnailFor(string path)
+		{
+			if (_thumbnailFolder != _imageFolder)
+			{
+				DisposeThumbnails();
+				_thumbnailFolder = _imageFolder;
+			}
+
+			if (_referenceThumbnails.TryGetValue(path, out var cached))
+			{
+				return cached;
+			}
+
+			Texture2D? texture = null;
+			try
+			{
+				var candidate = new Texture2D(2, 2);
+				if (candidate.LoadImage(File.ReadAllBytes(path)))
+				{
+					texture = candidate;
+				}
+				else
+				{
+					DestroyImmediate(candidate);
+				}
+			}
+			catch (Exception)
+			{
+				texture = null;
+			}
+
+			_referenceThumbnails[path] = texture;
+			return texture;
+		}
+
+		private void DisposeThumbnails()
+		{
+			foreach (var texture in _referenceThumbnails.Values)
+			{
+				if (texture != null)
+				{
+					DestroyImmediate(texture);
+				}
+			}
+
+			_referenceThumbnails.Clear();
 		}
 
 		private void DrawRunControls()
@@ -777,7 +1069,7 @@ namespace Assembler.Voxelization.Editor
 				var manifest = await generator.GenerateAsync(_gameBrief, _cts!.Token);
 				_manifestYaml = ManifestYaml.Write(manifest);
 				EditorPrefs.SetString(ManifestPref, _manifestYaml);
-				Log("Manifest generated. Review it (attach 'reference:' entries if you have images), then run the batch.");
+				Log("Manifest generated. Review it, assign reference images below if you have them, then run the batch.");
 			}
 			catch (OperationCanceledException)
 			{
@@ -808,6 +1100,15 @@ namespace Assembler.Voxelization.Editor
 
 			try
 			{
+				// Up-front precheck: warn about any references: files that don't exist
+				// on disk before spending a run (mirrors the validate-* prechecks).
+				var missing = await SetOrchestrator.MissingReferencesAsync(manifest, BuildImageSource(), _cts!.Token);
+				if (missing.Count > 0)
+				{
+					Log("WARNING: these reference files are missing and will fail their assets:\n  " +
+						string.Join("\n  ", missing));
+				}
+
 				using var gateway = NewGateway();
 
 				// Name the run folder before any asset finishes — exports use
@@ -919,12 +1220,14 @@ namespace Assembler.Voxelization.Editor
 		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
 		{
 			var config = BuildConfig();
-			var images = string.IsNullOrWhiteSpace(_imageFolder)
-				? (IReferenceImageSource)NullReferenceImageSource.Instance
-				: new FileReferenceImageSource(_imageFolder);
 			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(config.ScriptLimits));
-			return new SetOrchestrator(gateway, config, images, runner, _usage);
+			return new SetOrchestrator(gateway, config, BuildImageSource(), runner, _usage);
 		}
+
+		private IReferenceImageSource BuildImageSource() =>
+			string.IsNullOrWhiteSpace(_imageFolder)
+				? NullReferenceImageSource.Instance
+				: new FileReferenceImageSource(_imageFolder);
 
 		private bool TryParseManifest(out SetManifest manifest)
 		{

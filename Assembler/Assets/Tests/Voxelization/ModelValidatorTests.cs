@@ -183,16 +183,38 @@ namespace Tests.Voxelization
 			var matching = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", "##" }),
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", "##" }) },
 			};
 			Assert.That(Validate(model, matching).Issues.Any(i => i.Code == IssueCode.SilhouetteMismatch), Is.False);
 
 			var mismatching = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "#.", ".." }),
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "#.", ".." }) },
 			};
 			Assert.That(Validate(model, mismatching).Issues.Any(i => i.Code == IssueCode.SilhouetteMismatch), Is.True);
+		}
+
+		[Test]
+		public void WrongTopView_IsReported_WhileFrontPasses()
+		{
+			// A 2x2x2 cube: its front projection is a full 2x2, but the top view here
+			// claims a single cell. Front passes; top is flagged — proving the
+			// validator gates each labelled face independently.
+			var model = SinglePartModel(new[] { "AA\nAA", "AA\nAA" }, new Vector3Int(2, 2, 2), realWorldHeight: 0.36f);
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[]
+				{
+					new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", "##" }),
+					new SilhouetteSpec("top", new Vector3Int(2, 2, 0), new[] { "#.", ".." }),
+				},
+			};
+
+			var mismatches = Validate(model, brief).Issues.Where(i => i.Code == IssueCode.SilhouetteMismatch).ToList();
+			Assert.That(mismatches.Count, Is.EqualTo(1));
+			Assert.That(mismatches.Single().Message, Does.Contain("top"));
 		}
 
 		[Test]
@@ -204,7 +226,7 @@ namespace Tests.Voxelization
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "WW", "WW" }),
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "WW", "WW" }) },
 			};
 
 			Assert.That(Validate(model, brief).Issues.Any(i => i.Code == IssueCode.SilhouetteMismatch), Is.False);

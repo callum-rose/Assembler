@@ -60,6 +60,29 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void Ascii_LeftRightBottom_MapTheExpectedAxes()
+		{
+			// A at low z (back), B at high z (front). Their z separation discriminates
+			// the z-y faces (right/left) and the x-z faces (top/bottom).
+			var model = LayersCodec.ToModel(new Dictionary<Vector3Int, byte>
+			{
+				[new Vector3Int(0, 0, 0)] = 1,
+				[new Vector3Int(0, 0, 2)] = 2,
+			}, Palette);
+
+			// Right (= Side): u = z, so the front voxel (high z) lands on the right.
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Right), Is.EqualTo("A.B"));
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Side), Is.EqualTo("A.B"));
+
+			// Left reverses z: the front voxel lands on the left.
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Left), Is.EqualTo("B.A"));
+
+			// Bottom mirrors Top about z (top row is low z when viewed from below).
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Top), Is.EqualTo("B\n.\nA"));
+			Assert.That(VoxelProjector.Ascii(model, Palette, ProjectionFace.Bottom), Is.EqualTo("A\n.\nB"));
+		}
+
+		[Test]
 		public void Ascii_EmptyModelSaysSo() =>
 			Assert.That(
 				VoxelProjector.Ascii(LayersCodec.ToModel(new Dictionary<Vector3Int, byte>(), Palette), Palette, ProjectionFace.Front),

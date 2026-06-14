@@ -5,4 +5,6 @@ assets:
     real_world_height: 1.8
     symmetry: bilateral
     rig: true
-    reference: man_reference.png
+    references:
+      - file: man_reference.png
+        view: front

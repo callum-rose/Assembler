@@ -9,16 +9,25 @@ namespace Assembler.Voxelization
 	public enum ProjectionFace
 	{
 		/// <summary>Viewer at +z looking along -z: u = x, v = y.</summary>
-		Front,
+		Front = 0,
 
-		/// <summary>Viewer at +x looking along -x: u = z, v = y.</summary>
-		Side,
+		/// <summary>Viewer at +x looking along -x: u = z, v = y. Alias of <see cref="Right"/>.</summary>
+		Side = 1,
 
 		/// <summary>Viewer above looking along -y: u = x, v = z.</summary>
-		Top,
+		Top = 2,
 
 		/// <summary>Viewer at -z looking along +z (behind the model): u = mirrored x, v = y.</summary>
-		Back,
+		Back = 3,
+
+		/// <summary>Viewer at -x looking along +x: u = mirrored z, v = y.</summary>
+		Left = 4,
+
+		/// <summary>Viewer below looking along +y: u = x, v = mirrored z.</summary>
+		Bottom = 5,
+
+		/// <summary>Viewer at +x looking along -x: u = z, v = y. Same projection as <see cref="Side"/>.</summary>
+		Right = Side,
 	}
 
 	/// <summary>
@@ -31,8 +40,10 @@ namespace Assembler.Voxelization
 	{
 		public static ProjectionFace ParseFace(string face) => face.ToLowerInvariant() switch
 		{
-			"side" => ProjectionFace.Side,
+			"side" or "right" => ProjectionFace.Right,
+			"left" => ProjectionFace.Left,
 			"top" => ProjectionFace.Top,
+			"bottom" => ProjectionFace.Bottom,
 			"back" => ProjectionFace.Back,
 			_ => ProjectionFace.Front,
 		};
@@ -134,16 +145,21 @@ namespace Assembler.Voxelization
 			return face switch
 			{
 				ProjectionFace.Front or ProjectionFace.Back => (Math.Max(1, size.x), Math.Max(1, size.y)),
-				ProjectionFace.Side => (Math.Max(1, size.z), Math.Max(1, size.y)),
+				ProjectionFace.Side or ProjectionFace.Left => (Math.Max(1, size.z), Math.Max(1, size.y)),
 				_ => (Math.Max(1, size.x), Math.Max(1, size.z)),
 			};
 		}
 
 		private static (int u, int v, int depth) MapToPlane(Vector3Int p, Vector3Int size, ProjectionFace face) => face switch
 		{
+			// Front/Back share the x-y plane; Right(=Side)/Left share z-y; Top/Bottom
+			// share x-z. The depth (nearest-wins) flips for each twin so each viewer
+			// sees the surface facing it.
 			ProjectionFace.Front => (p.x, p.y, p.z),
 			ProjectionFace.Back => (size.x - 1 - p.x, p.y, -p.z),
 			ProjectionFace.Side => (p.z, p.y, p.x),
+			ProjectionFace.Left => (size.z - 1 - p.z, p.y, -p.x),
+			ProjectionFace.Bottom => (p.x, size.z - 1 - p.z, -p.y),
 			_ => (p.x, p.z, p.y),
 		};
 	}

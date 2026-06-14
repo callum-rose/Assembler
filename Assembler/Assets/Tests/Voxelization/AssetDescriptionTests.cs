@@ -57,7 +57,7 @@ poses:
 ```");
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(manifest, manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(manifest, manifest.Assets[0], System.Array.Empty<AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(gateway.Calls[0].Messages[0].Content, Does.Contain(Description));

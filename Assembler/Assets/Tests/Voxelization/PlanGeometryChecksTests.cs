@@ -154,16 +154,58 @@ namespace Tests.Voxelization
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouette = new SilhouetteSpec("front", new Vector3Int(5, 4, 0), new[] { "#####", "#####", "#####", "#####" }),
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(5, 4, 0), new[] { "#####", "#####", "#####", "#####" }) },
 			};
 
 			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, brief, 0.8f), Is.Null);
 		}
 
+		[Test]
+		public void SilhouetteFeasibility_IsFaceAware_PassesFrontButFailsLeft()
+		{
+			// A thin slab spanning the full width (x) and height but only 1 deep (z).
+			// The front view (u=x) is fully covered; the left view (u=z) is a 1-wide
+			// column against a 3-deep solid reference, so left is infeasible.
+			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
+				with
+			{ RealWorldHeight = 4f };
+
+			var front = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(3, 4, 0), new[] { "###", "###", "###", "###" }) },
+			};
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, front, 0.9f), Is.Null);
+
+			var left = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("left", new Vector3Int(3, 4, 0), new[] { "###", "###", "###", "###" }) },
+			};
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, left, 0.9f), Does.Contain("left"));
+		}
+
+		[Test]
+		public void SilhouetteFeasibility_SkipsTopAndBottomFaces()
+		{
+			// Top/bottom have no height anchor — the plan-stage pre-check must ignore
+			// them (they are enforced solely by the validator's IoU gate).
+			var model = Model(Planned("slab", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 1), new Vector3Int(-1, 0, 0)))
+				with
+			{ RealWorldHeight = 4f };
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("top", new Vector3Int(9, 9, 0), new[] { "#########" }) },
+			};
+
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, brief, 0.9f), Is.Null);
+		}
+
 		private static ReferenceBrief FullSilhouetteBrief() => new()
 		{
 			Source = "ref.png",
-			Silhouette = new SilhouetteSpec("front", new Vector3Int(3, 4, 0), new[] { "###", "###", "###", "###" }),
+			Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(3, 4, 0), new[] { "###", "###", "###", "###" }) },
 		};
 
 		private static VoxelRigModel Model(params VoxelPart[] parts) => new()

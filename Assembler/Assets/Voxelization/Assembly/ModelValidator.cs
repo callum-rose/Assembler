@@ -240,20 +240,33 @@ namespace Assembler.Voxelization
 			}
 		}
 
+		/// <summary>
+		/// Face-aware IoU gate: every silhouette in the brief is checked against the
+		/// model's projection of that face, one issue per failing face. This is the
+		/// sole enforcement for top/bottom (which skip the plan-stage pre-check).
+		/// </summary>
 		private void CheckSilhouette(VoxelModel composed, ReferenceBrief brief, List<ValidationIssue> issues)
 		{
-			if (brief.Silhouette.IsEmpty || composed.Voxels.Count == 0)
+			if (composed.Voxels.Count == 0)
 			{
 				return;
 			}
 
-			var face = VoxelProjector.ParseFace(brief.Silhouette.Face);
-			var projection = VoxelProjector.Occupancy(composed, face);
-			var iou = SilhouetteMatcher.Iou(projection, brief.Silhouette);
-			if (iou < _silhouetteIouThreshold)
+			foreach (var silhouette in brief.Silhouettes)
 			{
-				issues.Add(new ValidationIssue(string.Empty, IssueCode.SilhouetteMismatch,
-					$"{brief.Silhouette.Face} silhouette IoU {iou:0.00} is below the {_silhouetteIouThreshold:0.00} threshold."));
+				if (silhouette.IsEmpty)
+				{
+					continue;
+				}
+
+				var face = VoxelProjector.ParseFace(silhouette.Face);
+				var projection = VoxelProjector.Occupancy(composed, face);
+				var iou = SilhouetteMatcher.Iou(projection, silhouette);
+				if (iou < _silhouetteIouThreshold)
+				{
+					issues.Add(new ValidationIssue(string.Empty, IssueCode.SilhouetteMismatch,
+						$"{silhouette.Face} silhouette IoU {iou:0.00} is below the {_silhouetteIouThreshold:0.00} threshold."));
+				}
 			}
 		}
 
