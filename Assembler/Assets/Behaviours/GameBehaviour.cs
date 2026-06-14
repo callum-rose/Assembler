@@ -22,7 +22,9 @@ namespace Assembler.Behaviours
 		/// without a <c>GetComponent</c> lookup.</summary>
 		protected GameEntity Entity { get; private set; } = null!;
 
-		protected string Id { get; private set; }
+		/// <summary>This behaviour's descriptor id. Wired by <see cref="SetBase"/> during the two-phase build
+		/// before any behaviour runs, so it is never observed null — hence the <c>null!</c>.</summary>
+		protected string Id { get; private set; } = null!;
 
 		private IReadOnlyList<Listener> _listeners = Array.Empty<Listener>();
 
@@ -37,7 +39,7 @@ namespace Assembler.Behaviours
 		/// <summary>The resolved listeners this behaviour notifies when it fires. Debug-only graph inspection.</summary>
 		public IReadOnlyList<Listener> DebugListeners => _listeners;
 
-		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours;
+		[ShowInInspector, ReadOnly] private IReadOnlyList<GameBehaviour> _listeningBehaviours = Array.Empty<GameBehaviour>();
 #endif
 
 		/// <summary>Wires the owning entity. Called once by the build pipeline before initialisation; the
@@ -73,7 +75,9 @@ namespace Assembler.Behaviours
 	/// <typeparam name="TData">The <see cref="BehaviourData"/> type carrying this behaviour's serialized configuration.</typeparam>
 	public abstract class GameBehaviour<TData> : GameBehaviour where TData : BehaviourData
 	{
-		protected TData Data { get; private set; }
+		/// <summary>The resolved configuration for this behaviour. Assigned by <see cref="Initialise"/> during the
+		/// two-phase build before any behaviour runs, so it is never observed null — hence the <c>null!</c>.</summary>
+		protected TData Data { get; private set; } = null!;
 
 		public void Initialise(TData data, IReadOnlyList<Listener> listeners)
 		{
