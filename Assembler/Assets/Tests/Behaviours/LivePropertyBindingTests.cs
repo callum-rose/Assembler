@@ -84,14 +84,40 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void Push_RegistersNoTick_ForConstant()
+		public void Constant_AppliesOnce_AndCreatesNoSink()
 		{
 			var (behaviour, updater) = NewBehaviour();
-			var constant = new ValueProvider<int>(7);
+			var constant = new ConstantValueProvider<int>(7);
+			var applied = new List<int>();
 
-			constant.BindLive(behaviour, _ => { }, fallback: -1);
+			constant.BindLive(behaviour, applied.Add, fallback: -1);
 
-			Assert.AreEqual(0, TickCount(updater), "a constant binds via push and must register no per-frame tick.");
+			CollectionAssert.AreEqual(new[] { 7 }, applied, "a constant should apply its value exactly once.");
+			Assert.AreEqual(0, TickCount(updater), "a constant must register no per-frame tick.");
+			Assert.IsNull(behaviour.GetComponent<LivePropertyBindings>(),
+				"a constant binding should not even create the sink.");
+		}
+
+		[Test]
+		public void MixedConstantAndVariableExpression_StaysPush()
+		{
+			var (behaviour, updater) = NewBehaviour();
+			var variable = new ValueProvider<int>(2);
+			// One observable (variable) arg; a constant arg contributes no subscription. ValueResolver builds
+			// this provider with only the observable args, exactly the shape it produces for a mixed !expr.
+			var provider = new ObservableExpressionValueProvider<int>(
+				ctx => variable.Get(ctx) * 10 + 1,
+				new IObservableValueProvider[] { variable });
+			var applied = new List<int>();
+
+			provider.BindLive(behaviour, applied.Add, fallback: -1);
+
+			CollectionAssert.AreEqual(new[] { 21 }, applied);
+			Assert.AreEqual(0, TickCount(updater), "a mixed const/var expression binds via push, not poll.");
+
+			variable.Set(3);
+
+			CollectionAssert.AreEqual(new[] { 21, 31 }, applied, "should re-apply when the variable arg changes.");
 		}
 
 		[Test]
