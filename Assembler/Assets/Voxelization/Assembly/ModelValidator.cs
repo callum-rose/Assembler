@@ -70,8 +70,8 @@ namespace Assembler.Voxelization
 
 			var model = assembled.Model;
 			var size = assembled.Composed.Size;
-			var tolerance = Mathf.Max(Mathf.Max(0, model.SizeTolerance), Mathf.RoundToInt(model.HeightInVoxels * 0.1f));
-			CheckExtent(size.y, model.HeightInVoxels, tolerance, "tall (y)", issues);
+			var tolerance = Mathf.Max(Mathf.Max(0, model.SizeTolerance), Mathf.RoundToInt(model.TargetHeight * 0.1f));
+			CheckExtent(size.y, model.TargetHeight, tolerance, "tall (y)", issues);
 			CheckExtent(size.z, model.TargetLength, Mathf.Max(0, model.SizeTolerance), "long (z, the forward axis)", issues);
 			CheckExtent(size.x, model.TargetWidth, Mathf.Max(0, model.SizeTolerance), "wide (x)", issues);
 		}

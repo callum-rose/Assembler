@@ -219,8 +219,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "cart",
-				Unit = 1f,
-				RealWorldHeight = 3f,
+				TargetHeight = 3,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -259,8 +258,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "slab",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -287,8 +285,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "broken",
-				Unit = 1f,
-				RealWorldHeight = 1f,
+				TargetHeight = 1,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -313,8 +310,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "cart",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = Palette,
 				Parts = new[]
 				{

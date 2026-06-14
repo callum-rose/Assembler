@@ -6,9 +6,9 @@ namespace Assembler.Voxelization
 {
 	/// <summary>
 	/// Runtime consumption of an assembled model: builds a GameObject tree with
-	/// each part's pivot as its Transform origin (local position = pivot ×
-	/// unit), attaches per-part meshes, and applies named poses as local euler
-	/// rotations. Unrigged models come out as a single static child.
+	/// each part's pivot as its Transform origin (local position = pivot, one
+	/// voxel per world unit), attaches per-part meshes, and applies named poses
+	/// as local euler rotations. Unrigged models come out as a single static child.
 	/// </summary>
 	public static class RigInstantiator
 	{
@@ -23,13 +23,13 @@ namespace Assembler.Voxelization
 				var go = new GameObject(part.Part.Id);
 				var parent = transforms.TryGetValue(part.Part.Parent, out var t) ? t : root.transform;
 				go.transform.SetParent(parent, worldPositionStays: false);
-				go.transform.localPosition = (Vector3)part.Part.Pivot * model.Unit;
+				go.transform.localPosition = part.Part.Pivot;
 				transforms[part.Part.Id] = go.transform;
 
 				if (part.Grid.Voxels.Count > 0)
 				{
 					var filter = go.AddComponent<MeshFilter>();
-					filter.sharedMesh = meshes.BuildMesh(part.Part.Id, part.Grid, model.Unit);
+					filter.sharedMesh = meshes.BuildMesh(part.Part.Id, part.Grid);
 					var renderer = go.AddComponent<MeshRenderer>();
 					if (material != null)
 					{

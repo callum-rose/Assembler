@@ -58,8 +58,7 @@ namespace Tests.Voxelization
 			var model = new VoxelRigModel
 			{
 				Id = "tower",
-				Unit = 1f,
-				RealWorldHeight = 4f,
+				TargetHeight = 4,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -84,8 +83,7 @@ namespace Tests.Voxelization
 			{
 				Id = "t",
 				Symmetry = "bilateral",
-				Unit = 1f,
-				RealWorldHeight = 2f,
+				TargetHeight = 2,
 				Palette = Palette,
 				Parts = new[]
 				{
@@ -116,8 +114,7 @@ namespace Tests.Voxelization
 		private static VoxelRigModel WheelModel() => new()
 		{
 			Id = "cart",
-			Unit = 1f,
-			RealWorldHeight = 1f,
+			TargetHeight = 1,
 			Palette = Palette,
 			Parts = new[]
 			{

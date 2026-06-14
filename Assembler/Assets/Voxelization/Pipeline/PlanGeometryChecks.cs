@@ -97,7 +97,7 @@ namespace Assembler.Voxelization
 			}
 
 			var tolerance = Mathf.Max(0, skeleton.SizeTolerance);
-			CheckExtent(boxes, 1, skeleton.HeightInVoxels, tolerance, "tall (y, up)", errors);
+			CheckExtent(boxes, 1, skeleton.TargetHeight, tolerance, "tall (y, up)", errors);
 			CheckExtent(boxes, 2, skeleton.TargetLength, tolerance, "long (z, the FORWARD axis, nose-to-tail)", errors);
 			CheckExtent(boxes, 0, skeleton.TargetWidth, tolerance, "wide (x, left-right)", errors);
 
@@ -154,7 +154,7 @@ namespace Assembler.Voxelization
 				return null;
 			}
 
-			var height = skeleton.HeightInVoxels;
+			var height = skeleton.TargetHeight;
 			var width = Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
 
 			// The reference mask, resampled into the model's voxel frame ([x, y], y=0 bottom).
