@@ -15,10 +15,6 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
-  player up key: "w"
-  player down key: "s"
-  player left key: "a"
-  player right key: "d"
   player speed: 4
   damage per hit: 1
   zero: 0
@@ -137,14 +133,14 @@ Templates:
         Type: velocity
         Properties: { Velocity: !var velocity }
       up press:
-        Type: key down trigger
-        Properties: { Key: !var player up key }
+        Type: input action
+        Properties: { Action: up }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go up
       up release:
-        Type: key up trigger
-        Properties: { Key: !var player up key }
+        Type: input action
+        Properties: { Action: up-release }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: stop
@@ -154,14 +150,14 @@ Templates:
           VariableId: !var velocity
           Value: !var player up vel
       down press:
-        Type: key down trigger
-        Properties: { Key: !var player down key }
+        Type: input action
+        Properties: { Action: down }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go down
       down release:
-        Type: key up trigger
-        Properties: { Key: !var player down key }
+        Type: input action
+        Properties: { Action: down-release }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: stop
@@ -171,14 +167,14 @@ Templates:
           VariableId: !var velocity
           Value: !var player down vel
       left press:
-        Type: key down trigger
-        Properties: { Key: !var player left key }
+        Type: input action
+        Properties: { Action: left }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go left
       left release:
-        Type: key up trigger
-        Properties: { Key: !var player left key }
+        Type: input action
+        Properties: { Action: left-release }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: stop
@@ -188,14 +184,14 @@ Templates:
           VariableId: !var velocity
           Value: !var player left vel
       right press:
-        Type: key down trigger
-        Properties: { Key: !var player right key }
+        Type: input action
+        Properties: { Action: right }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: go right
       right release:
-        Type: key up trigger
-        Properties: { Key: !var player right key }
+        Type: input action
+        Properties: { Action: right-release }
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: stop
@@ -216,6 +212,31 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
+# WASD movement as abstract actions: each direction is a button with both a
+# press (down) and a release (up) action, replacing the old per-key triggers.
+# Rebinding is now a binding change here, not a `player <dir> key` constant.
+Controls:
+  Actions:
+    up:            { Type: button, Phase: down }
+    up-release:    { Type: button, Phase: up }
+    down:          { Type: button, Phase: down }
+    down-release:  { Type: button, Phase: up }
+    left:          { Type: button, Phase: down }
+    left-release:  { Type: button, Phase: up }
+    right:         { Type: button, Phase: down }
+    right-release: { Type: button, Phase: up }
+
+  Bindings:
+    desktop:
+      up:            [ "<Keyboard>/w" ]
+      up-release:    [ "<Keyboard>/w" ]
+      down:          [ "<Keyboard>/s" ]
+      down-release:  [ "<Keyboard>/s" ]
+      left:          [ "<Keyboard>/a" ]
+      left-release:  [ "<Keyboard>/a" ]
+      right:         [ "<Keyboard>/d" ]
+      right-release: [ "<Keyboard>/d" ]
+
 Entities:
   # Game-over poll: every frame the gate checks the end condition; when it
   # holds, the gate fires !gameover, which ends and unloads the game.

@@ -18,6 +18,22 @@ Constants:
   step right: !vec { X: 0.14, Y: 0, Z: 0 }
   camera start: !vec { X: 0, Y: 8, Z: -16 }
 
+Controls:
+  Actions:
+    forward: { Type: button, Phase: hold }
+    back:    { Type: button, Phase: hold }
+    left:    { Type: button, Phase: hold }
+    right:   { Type: button, Phase: hold }
+    quit:    { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      forward: [ "<Keyboard>/w" ]
+      back:    [ "<Keyboard>/s" ]
+      left:    [ "<Keyboard>/a" ]
+      right:   [ "<Keyboard>/d" ]
+      quit:    [ "<Keyboard>/q" ]
+
 Entities:
   player:
     Tags: [ crowd ]
@@ -31,9 +47,9 @@ Entities:
           IsWire: false
           Colour: !colour green
       hold forward:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "w"
+          Action: forward
         Listeners:
           - EntityId: player
             BehaviourId: move forward
@@ -42,9 +58,9 @@ Entities:
         Properties:
           Displacement: !var step forward
       hold back:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "s"
+          Action: back
         Listeners:
           - EntityId: player
             BehaviourId: move back
@@ -53,9 +69,9 @@ Entities:
         Properties:
           Displacement: !var step back
       hold left:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "a"
+          Action: left
         Listeners:
           - EntityId: player
             BehaviourId: move left
@@ -64,9 +80,9 @@ Entities:
         Properties:
           Displacement: !var step left
       hold right:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "d"
+          Action: right
         Listeners:
           - EntityId: player
             BehaviourId: move right
@@ -75,9 +91,9 @@ Entities:
         Properties:
           Displacement: !var step right
       quit:
-        Type: key down trigger
+        Type: input action
         Properties:
-          Key: "q"
+          Action: quit
         Listeners: [ !gameover ]
 
   friend a:

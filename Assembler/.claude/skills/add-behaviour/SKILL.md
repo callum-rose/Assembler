@@ -354,23 +354,24 @@ namespace Assembler.Behaviours.Triggers.Physical
 
 ### Input trigger
 
+Most input flows through the `Controls` section and the existing `input action` behaviour
+(`InputActionTrigger`) — physical keys/mouse/gamepad are *bindings*, not bespoke triggers, so you
+rarely need a new input trigger. When you do, inherit `InputTrigger<TData>`, read the new Input
+System (`UnityEngine.InputSystem`), and notify from a Unity callback:
+
 ```csharp
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Assembler.Behaviours.Triggers.Input
 {
-	/// <summary>Fires every frame while the named key is held down.</summary>
-	/// <remarks>
-	/// Properties:
-	///   Key: One of "w", "a", "s", "d", "up", "down", "left", "right".
-	/// </remarks>
-	public class KeyHoldTrigger : InputTrigger<KeyHoldTriggerData>
+	/// <summary>Illustrative input trigger: fires every frame the bound device reports activity.</summary>
+	public class ExampleInputTrigger : InputTrigger<ExampleInputTriggerData>
 	{
 		private void Update()
 		{
-			if (UnityEngine.Input.GetKey(/* ...derived from Data.Key.Get()... */))
+			if (/* ...read UnityEngine.InputSystem, e.g. Gamepad.current?.aButton.isPressed... */ false)
 			{
 				NotifyListeners(TriggerContext.Empty);
 			}
@@ -419,7 +420,7 @@ namespace Assembler.Behaviours.Triggers.Input
 
 ### Rules
 
-- The dictionary key is the **YAML behaviour name** — lowercase, with spaces (e.g. `"timer trigger"`, `"key hold trigger"`).
+- The dictionary key is the **YAML behaviour name** — lowercase, with spaces (e.g. `"timer trigger"`, `"input action"`).
 - The value is the Info's static `Create` method reference. Property names and types come from reflecting the Info record at doc-gen time (see Step 1's `[YamlName]` rules).
 - The `BehaviourFactory` delegate signature is `(string id, IReadOnlyList<ListenerInfo> listeners, IReadOnlyDictionary<string, AssemblerValue> props, TransformContext ctx) → BehaviourInfo`, which matches your Info's `Create` method exactly.
 

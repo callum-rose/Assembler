@@ -101,6 +101,20 @@ Templates:
       remove self:
         Type: destroy
 
+Controls:
+  Actions:
+    left:   { Type: button, Phase: hold }
+    right:  { Type: button, Phase: hold }
+    up:     { Type: button, Phase: hold }
+    down:   { Type: button, Phase: hold }
+
+  Bindings:
+    desktop:
+      left:   [ "<Keyboard>/a" ]
+      right:  [ "<Keyboard>/d" ]
+      up:     [ "<Keyboard>/w" ]
+      down:   [ "<Keyboard>/s" ]
+
 Entities:
   player:
     Tags: [ player ]
@@ -122,10 +136,10 @@ Entities:
         Properties:
           UseGravity: false
 
-      # --- WASD movement: each key-hold trigger drives a translate while held. ---
+      # --- WASD movement: each input-action trigger drives a translate while held. ---
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: left }
         Listeners:
           - EntityId: player
             BehaviourId: move left
@@ -135,8 +149,8 @@ Entities:
           Displacement: !expr { Do: negate, With: [ !var step right ] }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: right }
         Listeners:
           - EntityId: player
             BehaviourId: move right
@@ -146,8 +160,8 @@ Entities:
           Displacement: !var step right
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: up }
         Listeners:
           - EntityId: player
             BehaviourId: move up
@@ -157,8 +171,8 @@ Entities:
           Displacement: !var step up
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: down }
         Listeners:
           - EntityId: player
             BehaviourId: move down

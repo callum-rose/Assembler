@@ -60,13 +60,21 @@ Placements:
       With: [ !var grid origin ]
       ArgumentTypes: [ vector ]
 
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+
 Entities:
   # The only thing ending this game: press Q to fire the framework's !gameover path.
   controller:
     Behaviours:
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover
 

@@ -8,16 +8,14 @@ Game:
 
     Steer the green cube to the gold goal. Two actions demonstrate the layer:
 
-      - `move`  — a VALUE (vector2) action. It emits axis/x/y every frame
-                  (exactly like the old `axis trigger`), so the same listener
-                  drives smooth analogue movement whether the value comes from
-                  a keyboard 2DVector composite or a gamepad stick.
-      - `quit`  — a BUTTON action on its `down` phase (≡ the old key-down
-                  trigger). Fires `!gameover` to give up.
+      - `move`  — a VALUE (vector2) action. It emits axis/x/y every frame, so the
+                  same listener drives smooth analogue movement whether the value
+                  comes from a keyboard 2DVector composite or a gamepad stick.
+      - `quit`  — a BUTTON action on its `down` phase: fires once on press.
+                  Fires `!gameover` to give up.
 
-    The `input action` trigger is a 1:1 drop-in for the old `key hold/down`
-    triggers — note the `Listeners:` still live on the behaviour, in the usual
-    place. Only the `Controls` block knows about physical inputs; swapping
+    The `input action` trigger carries its `Listeners:` on the behaviour, in the
+    usual place. Only the `Controls` block knows about physical inputs; swapping
     keyboard for gamepad is a binding change, not a gameplay change.
 
     To make the platform switch easy to feel without a controller, this demo

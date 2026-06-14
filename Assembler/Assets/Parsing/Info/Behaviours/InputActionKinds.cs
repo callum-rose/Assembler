@@ -17,13 +17,13 @@ namespace Assembler.Parsing.Info.Behaviours
 	/// <summary>When a <see cref="ActionKind.Button"/> action fires. Ignored for value actions.</summary>
 	public enum ButtonPhase
 	{
-		/// <summary>Fires every frame the control is held (≡ key hold trigger).</summary>
+		/// <summary>Fires every frame the control is held.</summary>
 		Hold,
 
-		/// <summary>Fires once on the frame the control is pressed (≡ key down trigger).</summary>
+		/// <summary>Fires once on the frame the control is pressed.</summary>
 		Down,
 
-		/// <summary>Fires once on the frame the control is released (≡ key up trigger).</summary>
+		/// <summary>Fires once on the frame the control is released.</summary>
 		Up
 	}
 }

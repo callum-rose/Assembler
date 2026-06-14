@@ -51,6 +51,28 @@ Expressions:
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "return new Vector3(pos.x, pos.y + yoffset, pos.z);"
 
+Controls:
+  Actions:
+    left:  { Type: button, Phase: down }
+    left-release:  { Type: button, Phase: up }
+    right:  { Type: button, Phase: down }
+    right-release:  { Type: button, Phase: up }
+    up:  { Type: button, Phase: down }
+    up-release:  { Type: button, Phase: up }
+    down:  { Type: button, Phase: down }
+    down-release:  { Type: button, Phase: up }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      left-release:  [ "<Keyboard>/a" ]
+      right:  [ "<Keyboard>/d" ]
+      right-release:  [ "<Keyboard>/d" ]
+      up:  [ "<Keyboard>/w" ]
+      up-release:  [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      down-release:  [ "<Keyboard>/s" ]
+
 Entities:
   # Declared BEFORE `leader` on purpose: proves declaration order is irrelevant
   # for `!entity` reads. Property resolution happens after every
@@ -98,14 +120,14 @@ Entities:
         Properties:
           Velocity: !var leader velocity
       press left:
-        Type: key down trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: left }
         Listeners:
           - EntityId: leader
             BehaviourId: go left
       release left:
-        Type: key up trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: left-release }
         Listeners:
           - EntityId: leader
             BehaviourId: stop
@@ -115,14 +137,14 @@ Entities:
           VariableId: !var leader velocity
           Value: !vec { X: -4, Y: 0, Z: 0 }
       press right:
-        Type: key down trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: right }
         Listeners:
           - EntityId: leader
             BehaviourId: go right
       release right:
-        Type: key up trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: right-release }
         Listeners:
           - EntityId: leader
             BehaviourId: stop
@@ -132,14 +154,14 @@ Entities:
           VariableId: !var leader velocity
           Value: !vec { X: 4, Y: 0, Z: 0 }
       press up:
-        Type: key down trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: up }
         Listeners:
           - EntityId: leader
             BehaviourId: go up
       release up:
-        Type: key up trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: up-release }
         Listeners:
           - EntityId: leader
             BehaviourId: stop
@@ -149,14 +171,14 @@ Entities:
           VariableId: !var leader velocity
           Value: !vec { X: 0, Y: 4, Z: 0 }
       press down:
-        Type: key down trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: down }
         Listeners:
           - EntityId: leader
             BehaviourId: go down
       release down:
-        Type: key up trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: down-release }
         Listeners:
           - EntityId: leader
             BehaviourId: stop

@@ -9,8 +9,8 @@ Game:
     Q to give up.
 
     Both endings are wired the same way: the trigger that detects the event
-    (`trigger enter trigger` for the mine, `key down trigger` for Q) lists a
-    single `- !gameover` listener. That tag targets the framework's implicit
+    (`trigger enter trigger` for the mine, the `quit` `input action` for Q) lists
+    a single `- !gameover` listener. That tag targets the framework's implicit
     end-game behaviour, which logs "Game Over" and destroys the whole game.
 
     The `!gameover` listeners are the only thing ending this game, satisfying
@@ -55,6 +55,24 @@ Templates:
           Size: !var mine size
           IsTrigger: true
 
+# Abstract input actions + the physical keys that feed them (desktop scheme).
+# Entities listen to the named actions via `input action`, never to raw keys.
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right: { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right: [ "<Keyboard>/d" ]
+      up:    [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+
 Entities:
   player:
     Tags: [ player ]
@@ -79,10 +97,10 @@ Entities:
         Properties:
           UseGravity: false
 
-      # --- WASD movement: each key-hold trigger drives a translate while held. ---
+      # --- WASD movement: each input action drives a translate while held. ---
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: left }
         Listeners:
           - EntityId: player
             BehaviourId: move left
@@ -92,8 +110,8 @@ Entities:
           Displacement: !vec { X: -0.12, Y: 0, Z: 0 }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: right }
         Listeners:
           - EntityId: player
             BehaviourId: move right
@@ -103,8 +121,8 @@ Entities:
           Displacement: !vec { X: 0.12, Y: 0, Z: 0 }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: up }
         Listeners:
           - EntityId: player
             BehaviourId: move up
@@ -114,8 +132,8 @@ Entities:
           Displacement: !vec { X: 0, Y: 0.12, Z: 0 }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: down }
         Listeners:
           - EntityId: player
             BehaviourId: move down
@@ -134,8 +152,8 @@ Entities:
 
       # --- The feature again: press Q to quit, the simplest possible wiring. ---
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover
 

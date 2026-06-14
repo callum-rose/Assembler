@@ -16,6 +16,20 @@ Constants:
   move step down: !vec { X: 0, Y: -0.12, Z: 0 }
   camera position: !vec { X: 0, Y: 0, Z: -10 }
 
+Controls:
+  Actions:
+    right: { Type: button, Phase: hold }
+    left:  { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+
+  Bindings:
+    desktop:
+      right: [ "<Keyboard>/rightArrow" ]
+      left:  [ "<Keyboard>/leftArrow" ]
+      up:    [ "<Keyboard>/upArrow" ]
+      down:  [ "<Keyboard>/downArrow" ]
+
 Entities:
   player:
     Tags: [ player ]
@@ -28,9 +42,9 @@ Entities:
           IsWire: false
           Colour: !colour green
       hold right:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "right"
+          Action: right
         Listeners:
           - EntityId: player
             BehaviourId: move right
@@ -39,9 +53,9 @@ Entities:
         Properties:
           Displacement: !var move step
       hold left:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "left"
+          Action: left
         Listeners:
           - EntityId: player
             BehaviourId: move left
@@ -50,9 +64,9 @@ Entities:
         Properties:
           Displacement: !var move step left
       hold up:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "up"
+          Action: up
         Listeners:
           - EntityId: player
             BehaviourId: move up
@@ -61,9 +75,9 @@ Entities:
         Properties:
           Displacement: !var move step up
       hold down:
-        Type: key hold trigger
+        Type: input action
         Properties:
-          Key: "down"
+          Action: down
         Listeners:
           - EntityId: player
             BehaviourId: move down

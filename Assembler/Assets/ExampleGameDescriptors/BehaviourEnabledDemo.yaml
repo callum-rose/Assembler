@@ -31,6 +31,18 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
+Controls:
+  Actions:
+    freeze: { Type: button, Phase: down }
+    resume: { Type: button, Phase: down }
+    quit:   { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      freeze: [ "<Keyboard>/f" ]
+      resume: [ "<Keyboard>/g" ]
+      quit:   [ "<Keyboard>/q" ]
+
 Entities:
   mover:
     Position: !vec { X: -4, Y: 0, Z: 0 }
@@ -68,8 +80,8 @@ Entities:
               BehaviourId: drift
 
       freeze key:
-        Type: key down trigger
-        Properties: { Key: "f" }
+        Type: input action
+        Properties: { Action: freeze }
         Listeners:
           - EntityId: controller
             BehaviourId: freeze
@@ -82,8 +94,8 @@ Entities:
               BehaviourId: drift
 
       resume key:
-        Type: key down trigger
-        Properties: { Key: "g" }
+        Type: input action
+        Properties: { Action: resume }
         Listeners:
           - EntityId: controller
             BehaviourId: resume
@@ -96,8 +108,8 @@ Entities:
               BehaviourId: drift
 
       quit:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   camera:
