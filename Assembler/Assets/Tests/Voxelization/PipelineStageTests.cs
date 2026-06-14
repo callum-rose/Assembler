@@ -54,8 +54,7 @@ namespace Tests.Voxelization
 model: crate
 version: 1
 rigged: false
-unit: 1
-real_world_height: 99
+target_height: 99
 origin: feet_center
 palette:
   _: none
@@ -73,17 +72,16 @@ poses:
 		private static readonly SetManifest Manifest = new()
 		{
 			Game = "test",
-			Unit = 1f,
 			Assets = new[]
 			{
-				new ManifestAsset { Id = "crate", RealWorldHeight = 2f },
+				new ManifestAsset { Id = "crate", Height = 2 },
 			},
 		};
 
 		[Test]
 		public void ManifestGenerator_ParsesFencedYaml()
 		{
-			var gateway = new FakeGateway().Enqueue("```yaml\ngame: g\nunit: 0.2\nassets:\n  - id: a\n    real_world_height: 1\n```");
+			var gateway = new FakeGateway().Enqueue("```yaml\ngame: g\nassets:\n  - id: a\n    height: 1\n```");
 			var manifest = new ManifestGenerator(gateway, VoxelizationConfig.Default)
 				.GenerateAsync("a game", CancellationToken.None).GetAwaiter().GetResult();
 
@@ -97,7 +95,7 @@ poses:
 		{
 			var gateway = new FakeGateway()
 				.Enqueue("no fence here")
-				.Enqueue("```yaml\ngame: g\nunit: 0.2\nassets:\n  - id: a\n    real_world_height: 1\n```");
+				.Enqueue("```yaml\ngame: g\nassets:\n  - id: a\n    height: 1\n```");
 
 			var manifest = new ManifestGenerator(gateway, VoxelizationConfig.Default)
 				.GenerateAsync("a game", CancellationToken.None).GetAwaiter().GetResult();
@@ -134,10 +132,9 @@ poses:
 				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
-			// The plan said real_world_height: 99; the manifest owns scale.
+			// The plan said target_height: 99; the manifest owns scale.
 			Assert.That(plan.Skeleton.Id, Is.EqualTo("crate"));
-			Assert.That(plan.Skeleton.Unit, Is.EqualTo(1f));
-			Assert.That(plan.Skeleton.RealWorldHeight, Is.EqualTo(2f));
+			Assert.That(plan.Skeleton.TargetHeight, Is.EqualTo(2));
 			Assert.That(plan.Brief.IsEmpty, Is.True);
 		}
 
@@ -163,10 +160,9 @@ poses:
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Symmetry = "bilateral" },
+					new ManifestAsset { Id = "crate", Height = 2, Symmetry = "bilateral" },
 				},
 			};
 			var gateway = new FakeGateway()
@@ -192,8 +188,7 @@ poses:
 model: crate
 version: 1
 rigged: false
-unit: 1
-real_world_height: 99
+target_height: 99
 origin: feet_center
 palette:
   _: none
@@ -227,10 +222,9 @@ poses:
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Symmetry = "bilateral", Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, Symmetry = "bilateral", Reference = "ref.png" },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```brief
@@ -259,10 +253,9 @@ reference_brief:
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, Reference = "ref.png" },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```brief
@@ -312,10 +305,9 @@ reference_brief:
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, Reference = "ref.png" },
 				},
 			};
 			var images = new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>
@@ -425,8 +417,7 @@ reference_brief:
 model: slab
 version: 1
 rigged: false
-unit: 1
-real_world_height: 2
+target_height: 2
 origin: feet_center
 palette:
   _: none
@@ -441,10 +432,9 @@ poses:
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "slab", RealWorldHeight = 2f, Symmetry = "bilateral" },
+					new ManifestAsset { Id = "slab", Height = 2, Symmetry = "bilateral" },
 				},
 			};
 			var gateway = new FakeGateway()
@@ -618,8 +608,7 @@ poses:
 		private static VoxelRigModel SkeletonModel(PlannedPartData planned) => new()
 		{
 			Id = "crate",
-			Unit = 1f,
-			RealWorldHeight = 2f,
+			TargetHeight = 2,
 			Palette = new[] { new PaletteEntry('W', new Color32(0xaa, 0x77, 0x33, 0xff)) },
 			Parts = new[]
 			{

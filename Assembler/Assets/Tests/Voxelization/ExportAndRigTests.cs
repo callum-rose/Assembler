@@ -77,11 +77,11 @@ namespace Tests.Voxelization
 			{
 				var torso = root.transform.Find("torso");
 				Assert.That(torso, Is.Not.Null);
-				Assert.That(torso!.localPosition.y, Is.EqualTo(4 * 0.18f).Within(1e-5f));
+				Assert.That(torso!.localPosition.y, Is.EqualTo(4f).Within(1e-5f));
 
 				var armR = torso.Find("arm.R");
 				Assert.That(armR, Is.Not.Null);
-				Assert.That(armR!.localPosition.x, Is.EqualTo(2 * 0.18f).Within(1e-5f));
+				Assert.That(armR!.localPosition.x, Is.EqualTo(2f).Within(1e-5f));
 				Assert.That(armR.GetComponent<MeshFilter>().sharedMesh.vertexCount, Is.GreaterThan(0));
 
 				RigInstantiator.ApplyPose(root, assembled.Model, "wave");
@@ -101,7 +101,7 @@ namespace Tests.Voxelization
 		{
 			var assembled = AssembleVillager();
 			var torso = assembled.FindPart("torso")!.Grid;
-			var mesh = new VoxelMeshBuilder().BuildMesh("torso", torso, 1f);
+			var mesh = new VoxelMeshBuilder().BuildMesh("torso", torso);
 
 			// A solid 3x4x2 box has 52 exposed faces (2*(3*4) + 2*(4*2) + 2*(3*2)),
 			// 4 vertices each — interior faces must not be emitted.

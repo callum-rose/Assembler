@@ -54,9 +54,8 @@ namespace Assembler.Voxelization
 
 		public bool IsBilateral => Symmetry == "bilateral";
 
-		/// <summary>Metres per voxel — the set-wide scale anchor.</summary>
-		public float Unit { get; init; } = 0.1f;
-		public float RealWorldHeight { get; init; }
+		/// <summary>Target bounding-box extent in voxels UP (y).</summary>
+		public int TargetHeight { get; init; }
 
 		/// <summary>Target bounding-box extent in voxels along z, the FORWARD axis (nose-to-tail). 0 = unconstrained.</summary>
 		public int TargetLength { get; init; }
@@ -73,8 +72,6 @@ namespace Assembler.Voxelization
 		public IReadOnlyList<PaletteEntry> Palette { get; init; } = Array.Empty<PaletteEntry>();
 		public IReadOnlyList<VoxelPart> Parts { get; init; } = Array.Empty<VoxelPart>();
 		public IReadOnlyList<Pose> Poses { get; init; } = Array.Empty<Pose>();
-
-		public int HeightInVoxels => Mathf.Max(1, Mathf.RoundToInt(RealWorldHeight / Mathf.Max(1e-6f, Unit)));
 
 		public VoxelPart? FindPart(string id) => Parts.FirstOrDefault(p => p.Id == id);
 

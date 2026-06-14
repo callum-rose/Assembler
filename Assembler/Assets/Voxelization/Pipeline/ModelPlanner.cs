@@ -14,7 +14,7 @@ namespace Assembler.Voxelization
 	/// brief arrives as locked INPUT (independently transcribed by
 	/// <see cref="BriefExtractor"/>), so the deterministic gates judge the plan
 	/// against ground truth the planner cannot bend to fit its own design. Code
-	/// re-anchors whatever came back to the manifest's unit/height and demotes
+	/// re-anchors whatever came back to the manifest's bounding box and demotes
 	/// over-budget layers parts to scripts.
 	/// </summary>
 	public sealed class ModelPlanner
@@ -162,10 +162,9 @@ namespace Assembler.Voxelization
 			{
 				Id = asset.Id,
 				Description = asset.Description,
-				Unit = manifest.Unit,
-				RealWorldHeight = asset.RealWorldHeight,
-				TargetLength = manifest.LengthInVoxels(asset),
-				TargetWidth = manifest.WidthInVoxels(asset),
+				TargetHeight = asset.Height,
+				TargetLength = asset.Length,
+				TargetWidth = asset.Width,
 				SizeTolerance = asset.Tolerance,
 				Rigged = asset.Rig,
 				Symmetry = asset.Symmetry,

@@ -22,7 +22,7 @@ namespace Assembler.Voxelization
 			"You are the art director for a voxel game asset set. Given a game brief, produce the set manifest " +
 			"(the 'scale bible') that keeps every asset's size consistent relative to the others.\n\n" +
 			"Rules:\n" +
-			"- `unit` is ALWAYS 1; all dimensions are IN VOXELS. Pick a keystone asset (usually a character) at a " +
+			"- ALL dimensions are IN VOXELS (whole numbers). Pick a keystone asset (usually a character) at a " +
 			"good voxel height — a person reads well at ~10-16 voxels — and size everything else relative to it. " +
 			"Small props still get enough voxels to read; nothing exceeds roughly 100 voxels on its longest axis.\n" +
 			"- Every asset gets its FULL BOUNDING BOX, in a fixed orientation shared by all models: `height` is the " +
@@ -45,7 +45,6 @@ namespace Assembler.Voxelization
 			"Output exactly one fenced block labelled `yaml` in this shape:\n" +
 			"```yaml\n" +
 			"game: medieval_village\n" +
-			"unit: 1\n" +
 			"assets:\n" +
 			"  - id: villager\n" +
 			"    description: \"peasant in a brown tunic and dark boots, tanned skin, simple low-detail style\"\n" +
@@ -139,8 +138,6 @@ namespace Assembler.Voxelization
 			"model: villager\n" +
 			"version: 1\n" +
 			"rigged: true\n" +
-			"unit: 0.18\n" +
-			"real_world_height: 1.8\n" +
 			"origin: feet_center\n" +
 			"palette:\n" +
 			"  _: none\n" +
@@ -186,13 +183,13 @@ namespace Assembler.Voxelization
 			}
 
 			sb.Append("Bounding box (each specified extent is enforced ±").Append(Mathf.Max(0, asset.Tolerance)).Append("):\n");
-			sb.Append("  height (y, up): ").Append(manifest.HeightInVoxels(asset)).Append(" voxels\n");
-			sb.Append("  length (z, FORWARD, nose-to-tail): ").Append(Extent(manifest.LengthInVoxels(asset))).Append('\n');
-			sb.Append("  width (x, left-right): ").Append(Extent(manifest.WidthInVoxels(asset))).Append('\n');
+			sb.Append("  height (y, up): ").Append(asset.Height).Append(" voxels\n");
+			sb.Append("  length (z, FORWARD, nose-to-tail): ").Append(Extent(asset.Length)).Append('\n');
+			sb.Append("  width (x, left-right): ").Append(Extent(asset.Width)).Append('\n');
 			sb.Append("Symmetry: ").Append(asset.Symmetry).Append('\n');
 			sb.Append("Rig: ").Append(asset.Rig ? "yes" : "no").Append('\n');
 
-			var others = manifest.Assets.Where(a => a.Id != asset.Id).Select(a => $"{a.Id} ({manifest.HeightInVoxels(a)} vox)");
+			var others = manifest.Assets.Where(a => a.Id != asset.Id).Select(a => $"{a.Id} ({a.Height} vox)");
 			sb.Append("Other assets in the set (for stylistic consistency): ")
 				.Append(string.Join(", ", others)).Append('\n');
 
@@ -241,7 +238,6 @@ namespace Assembler.Voxelization
 			"```brief\n" +
 			"reference_brief:\n" +
 			"  source: <reference name>\n" +
-			"  real_world_dims: { height: 1.8, width: 0.5, depth: 0.3 }\n" +
 			"  palette: { S: \"#e0b080\" }\n" +
 			"  proportions: { head: 0.13, torso: 0.4, legs: 0.47 }\n" +
 			"  signature_features: [\"blue shirt\", \"brown boots\", \"1-voxel gap between arms and torso\"]\n" +
@@ -268,7 +264,7 @@ namespace Assembler.Voxelization
 		public static string BriefUser(SetManifest manifest, ManifestAsset asset) =>
 			$"Reference: {asset.Reference}\n" +
 			$"Subject: {asset.Id}\n" +
-			$"Transcribe the silhouette at {manifest.HeightInVoxels(asset)} rows tall if the image's own grid allows.\n" +
+			$"Transcribe the silhouette at {asset.Height} rows tall if the image's own grid allows.\n" +
 			$"Symmetry: {asset.Symmetry}\n\n" +
 			"Transcribe the attached image into the brief.";
 
@@ -290,7 +286,7 @@ namespace Assembler.Voxelization
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
-				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall, ")
+				.Append(" (").Append(model.TargetHeight).Append(" voxels tall, ")
 				.Append(model.Parts.Count).Append(" parts)\n");
 			if (model.Description.Length > 0)
 			{
@@ -355,7 +351,7 @@ namespace Assembler.Voxelization
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
-				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall, ")
+				.Append(" (").Append(model.TargetHeight).Append(" voxels tall, ")
 				.Append(model.Parts.Count).Append(" parts)\n");
 			if (model.Description.Length > 0)
 			{
@@ -487,7 +483,7 @@ namespace Assembler.Voxelization
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
-				.Append(" (").Append(model.HeightInVoxels).Append(" voxels tall overall)\n");
+				.Append(" (").Append(model.TargetHeight).Append(" voxels tall overall)\n");
 			if (model.Description.Length > 0)
 			{
 				sb.Append("Description (BINDING — match it): ").Append(model.Description).Append('\n');

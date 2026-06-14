@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -21,13 +20,14 @@ namespace Assembler.Voxelization
 		/// </summary>
 		public string Description { get; init; } = string.Empty;
 
-		public float RealWorldHeight { get; init; }
+		/// <summary>Bounding-box extent UP (y), in voxels.</summary>
+		public int Height { get; init; }
 
-		/// <summary>Bounding-box extent along z, the model's FORWARD axis (a car's nose-to-tail length). 0 = unconstrained.</summary>
-		public float Length { get; init; }
+		/// <summary>Bounding-box extent along z, the model's FORWARD axis (a car's nose-to-tail length), in voxels. 0 = unconstrained.</summary>
+		public int Length { get; init; }
 
-		/// <summary>Bounding-box extent along x, the model's left-right axis (a car's track width). 0 = unconstrained.</summary>
-		public float Width { get; init; }
+		/// <summary>Bounding-box extent along x, the model's left-right axis (a car's track width), in voxels. 0 = unconstrained.</summary>
+		public int Width { get; init; }
 
 		/// <summary>How strictly the bounding box is enforced: each specified extent must match within ± this many voxels.</summary>
 		public int Tolerance { get; init; } = 1;
@@ -41,28 +41,12 @@ namespace Assembler.Voxelization
 
 	/// <summary>
 	/// The set manifest / scale bible (*.manifest.yaml): the assets to generate,
-	/// each anchored to a height so scale consistency across the set is
-	/// automatic. Generated manifests always use unit 1 with heights expressed
-	/// directly in voxels (only relative scale matters); a hand-written
-	/// metres-style manifest (unit 0.18, height 1.8) still resolves to the same
-	/// voxel counts through <see cref="HeightInVoxels"/>.
+	/// each anchored to a bounding box (height/length/width in voxels) so scale
+	/// consistency across the set is automatic — only relative scale matters.
 	/// </summary>
 	public sealed record SetManifest
 	{
 		public string Game { get; init; } = string.Empty;
-		public float Unit { get; init; } = 1f;
 		public IReadOnlyList<ManifestAsset> Assets { get; init; } = Array.Empty<ManifestAsset>();
-
-		public int HeightInVoxels(ManifestAsset asset) =>
-			Mathf.Max(1, Mathf.RoundToInt(asset.RealWorldHeight / Mathf.Max(1e-6f, Unit)));
-
-		/// <summary>Target length in voxels (z, forward); 0 = unconstrained.</summary>
-		public int LengthInVoxels(ManifestAsset asset) => OptionalVoxels(asset.Length);
-
-		/// <summary>Target width in voxels (x, left-right); 0 = unconstrained.</summary>
-		public int WidthInVoxels(ManifestAsset asset) => OptionalVoxels(asset.Width);
-
-		private int OptionalVoxels(float extent) =>
-			extent <= 0f ? 0 : Mathf.Max(1, Mathf.RoundToInt(extent / Mathf.Max(1e-6f, Unit)));
 	}
 }

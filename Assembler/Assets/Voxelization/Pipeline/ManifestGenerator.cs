@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
-using UnityEngine;
 
 namespace Assembler.Voxelization
 {
@@ -47,7 +45,7 @@ namespace Assembler.Voxelization
 						throw new FormatException("Manifest contained no assets.");
 					}
 
-					return NormalizeUnit(manifest);
+					return manifest;
 				}
 				catch (FormatException ex) when (attempt == 0)
 				{
@@ -61,27 +59,5 @@ namespace Assembler.Voxelization
 				}
 			}
 		}
-
-		/// <summary>
-		/// Generated manifests always use unit 1 with heights expressed directly
-		/// in voxels — only the relative scales matter. A metres-style manifest
-		/// (unit 0.18, height 1.8) is converted, preserving every asset's voxel
-		/// height, so the convention holds whatever the model emitted.
-		/// </summary>
-		private static SetManifest NormalizeUnit(SetManifest manifest) =>
-			Mathf.Approximately(manifest.Unit, 1f)
-				? manifest
-				: manifest with
-				{
-					Unit = 1f,
-					Assets = manifest.Assets
-						.Select(a => a with
-						{
-							RealWorldHeight = manifest.HeightInVoxels(a),
-							Length = manifest.LengthInVoxels(a),
-							Width = manifest.WidthInVoxels(a),
-						})
-						.ToList(),
-				};
 	}
 }

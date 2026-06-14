@@ -16,10 +16,9 @@ namespace Tests.Voxelization
 			var manifest = ManifestYaml.Read(ManifestYaml.Write(new SetManifest
 			{
 				Game = "g",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "car", Description = Description, RealWorldHeight = 6f },
+					new ManifestAsset { Id = "car", Description = Description, Height = 6 },
 				},
 			}));
 
@@ -32,18 +31,16 @@ namespace Tests.Voxelization
 			var manifest = new SetManifest
 			{
 				Game = "test",
-				Unit = 1f,
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", Description = Description, RealWorldHeight = 2f },
+					new ManifestAsset { Id = "crate", Description = Description, Height = 2 },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```vmodel
 model: crate
 version: 1
 rigged: false
-unit: 1
-real_world_height: 99
+target_height: 99
 origin: feet_center
 palette:
   _: none
@@ -71,8 +68,7 @@ poses:
 			{
 				Id = "car",
 				Description = Description,
-				Unit = 1f,
-				RealWorldHeight = 6f,
+				TargetHeight = 6,
 				Palette = new[] { new PaletteEntry('A', new UnityEngine.Color32(255, 0, 0, 255)) },
 			};
 
