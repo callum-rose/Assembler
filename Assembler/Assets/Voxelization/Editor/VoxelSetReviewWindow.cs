@@ -40,7 +40,10 @@ namespace Assembler.Voxelization.Editor
 
 		private string[] _modelOptions = Array.Empty<string>();
 		private bool _modelsLoading;
-		private string? _modelsError;
+		// Derived UI state must not survive a domain reload: Unity's assembly-reload
+		// serialisation backs up private fields too, so a null error would come back as
+		// "" (a non-null empty box) unless it's explicitly excluded.
+		[NonSerialized] private string? _modelsError;
 		private CancellationTokenSource? _modelsCts;
 
 		private string _apiKey = string.Empty;
@@ -67,7 +70,9 @@ namespace Assembler.Voxelization.Editor
 		private readonly Dictionary<string, Texture2D?> _referenceThumbnails = new();
 		private string _referenceRowsSource = string.Empty;
 		private string _thumbnailFolder = string.Empty;
-		private string? _referenceAssignError;
+		// Transient validation error — kept out of reload serialisation so a cleared
+		// (null) error doesn't return as "" and render a blank error box after a recompile.
+		[NonSerialized] private string? _referenceAssignError;
 		private Vector2 _referenceScroll;
 
 		// DrawReferenceImages runs every OnGUI event, so the manifest parse and the
@@ -75,11 +80,18 @@ namespace Assembler.Voxelization.Editor
 		// changes, the file list re-scanned only when the folder changes (or on
 		// OnFocus, so images added on disk still appear). The "\0" sentinels force
 		// the first draw to populate both.
-		private SetManifest? _cachedReferenceManifest;
-		private string _cachedReferenceManifestSource = "\0";
-		private string? _cachedReferenceManifestError;
-		private IReadOnlyList<string> _cachedImageFiles = Array.Empty<string>();
-		private string _cachedImageFilesFolder = "\0";
+		//
+		// These are [NonSerialized] so a domain reload (script recompile) resets them
+		// to their initialisers. Unity's assembly-reload serialisation otherwise backs
+		// up private fields, which restores _cachedReferenceManifestSource to the live
+		// manifest text while the parsed _cachedReferenceManifest (a plain record, not
+		// Unity-serialisable) returns null — leaving the cache "valid but empty" and
+		// wrongly showing the "fix the manifest yaml" warning until the text is edited.
+		[NonSerialized] private SetManifest? _cachedReferenceManifest;
+		[NonSerialized] private string _cachedReferenceManifestSource = "\0";
+		[NonSerialized] private string? _cachedReferenceManifestError;
+		[NonSerialized] private IReadOnlyList<string> _cachedImageFiles = Array.Empty<string>();
+		[NonSerialized] private string _cachedImageFilesFolder = "\0";
 		private readonly Dictionary<string, string> _refineNotes = new();
 		private readonly Dictionary<string, Vector2> _infoScrolls = new();
 		private readonly Dictionary<string, string> _inFlight = new();
