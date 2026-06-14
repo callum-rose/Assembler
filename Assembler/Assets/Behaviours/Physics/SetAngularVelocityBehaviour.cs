@@ -9,26 +9,9 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   AngularVelocity: World-space angular velocity in radians per second around each axis.
 	/// </remarks>
-	public sealed class SetAngularVelocityBehaviour : GameBehaviour<SetAngularVelocityData>, IAmExecutable
+	public sealed class SetAngularVelocityBehaviour : RigidbodyGameBehaviour<SetAngularVelocityData>
 	{
-		private Rigidbody _rigidbody;
-
-		protected override void OnInitialise(SetAngularVelocityData data)
-		{
-			_rigidbody = GetComponent<Rigidbody>();
-		}
-
-		public void Execute(TriggerContext ctx)
-		{
-			if (_rigidbody == null)
-			{
-				_rigidbody = GetComponent<Rigidbody>();
-			}
-
-			if (_rigidbody != null)
-			{
-				_rigidbody.angularVelocity = Data.AngularVelocity.Get(ctx);
-			}
-		}
+		protected override void Apply(Rigidbody rigidbody, TriggerContext ctx) =>
+			rigidbody.angularVelocity = Data.AngularVelocity.Get(ctx);
 	}
 }
