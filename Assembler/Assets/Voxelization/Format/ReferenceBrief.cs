@@ -23,6 +23,14 @@ namespace Assembler.Voxelization
 		/// colour-keyed transcription cannot silently zero out every check.
 		/// </summary>
 		public static bool IsSolid(char cell) => cell is not ('.' or ' ' or '_');
+
+		/// <summary>
+		/// Renders the occupancy as colour-square emojis (🟩 solid, ⬜ empty), one
+		/// glyph per cell, so the expected shape is legible at a glance in the run
+		/// log — the '#'/'.' rows are hard to read as a shape when sizes get large.
+		/// </summary>
+		public string ToEmoji() =>
+			string.Join("\n", Rows.Select(row => string.Concat(row.Select(c => IsSolid(c) ? "🟩" : "⬜"))));
 	}
 
 	/// <summary>

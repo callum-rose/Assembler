@@ -123,7 +123,7 @@ namespace Assembler.Voxelization
 					progress?.Report($"{asset.Id}: transcribing {references.Count} reference image(s)...");
 					brief = await _briefer.ExtractAsync(manifest, asset, references, ct);
 					progress?.Report($"{asset.Id}: reference brief — {brief.Palette.Count} colours, " +
-									 $"{brief.Silhouettes.Count} silhouette(s)");
+									 $"{brief.Silhouettes.Count} silhouette(s)" + RenderSilhouettes(brief));
 				}
 
 				var note = refinementNote;
@@ -431,6 +431,23 @@ namespace Assembler.Voxelization
 
 			return $"{skeleton.Parts.Count} parts: {string.Join(", ", parts)}; " +
 				   $"{skeleton.Palette.Count} colours; {skeleton.Poses.Count} pose(s); target {skeleton.TargetHeight} voxels tall";
+		}
+
+		/// <summary>
+		/// The brief's expected silhouettes drawn as colour-square emojis (🟩 solid,
+		/// ⬜ empty), one block per face, so the operator can eyeball the shapes the
+		/// extractor read straight from the run log. Empty when there are none.
+		/// </summary>
+		private static string RenderSilhouettes(ReferenceBrief brief)
+		{
+			var sb = new StringBuilder();
+			foreach (var silhouette in brief.Silhouettes.Where(s => !s.IsEmpty))
+			{
+				sb.Append($"\n{silhouette.Face} ({silhouette.Size.x}x{silhouette.Size.y}):\n");
+				sb.Append(silhouette.ToEmoji());
+			}
+
+			return sb.ToString();
 		}
 
 		/// <summary>
