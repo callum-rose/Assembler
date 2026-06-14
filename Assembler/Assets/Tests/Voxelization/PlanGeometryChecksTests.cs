@@ -186,6 +186,26 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void SilhouetteFeasibility_DoesNotRejectAManifestPinnedAxisForADifferingSilhouetteAspect()
+		{
+			// The vision model read a side view 12 cells long, but the manifest pins
+			// the length to 6 voxels (TargetLength). With the axis constrained, the
+			// overall span is the bounding-box checks' job — feasibility must judge
+			// SHAPE in the plan's own frame, not reject the proportion mismatch (this
+			// is the dog-side-view failure: a 22-cell read against a 16-voxel length).
+			var model = Model(Planned("body", "root", new Vector3Int(0, 0, 0), new Vector3Int(3, 4, 6), new Vector3Int(-1, 0, 0)))
+				with
+			{ RealWorldHeight = 4f, TargetLength = 6 };
+			var left = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("left", new Vector3Int(12, 4, 0), new[] { "############", "############", "############", "############" }) },
+			};
+
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, left, 0.9f), Is.Null);
+		}
+
+		[Test]
 		public void SilhouetteFeasibility_SkipsTopAndBottomFaces()
 		{
 			// Top/bottom have no height anchor — the plan-stage pre-check must ignore

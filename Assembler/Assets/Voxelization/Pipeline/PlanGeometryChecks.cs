@@ -180,9 +180,29 @@ namespace Assembler.Voxelization
 			// matters here — true handedness lives in the validator's IoU path.
 			var uAxis = ProjectionFaceInfo.HorizontalAxis(spec.Face);
 			var height = skeleton.HeightInVoxels;
-			var width = Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
 
-			// The reference mask, resampled into the model's voxel frame ([u, v], v=0 bottom).
+			// The union of part boxes, centre-aligned on the horizontal axis and ground-aligned in y.
+			var minU = boxes.Min(b => b.Min[uAxis]);
+			var maxU = boxes.Max(b => b.Max[uAxis]);
+			var minY = boxes.Min(b => b.Min.y);
+			var plannedWidth = maxU - minU + 1;
+
+			// When the manifest pins this face's horizontal axis (TargetWidth for
+			// front/back's x, TargetLength for left/right's z), the overall span is
+			// already enforced by the bounding-box checks, so compare SHAPES in the
+			// plan's own frame and drop the redundant width sub-check. The vision
+			// model's raw cell count rarely equals the manifest's voxel budget, so
+			// resampling to the silhouette's own aspect would make that mismatch
+			// (e.g. a 22-cell side read vs a 16-voxel length) unsatisfiable. Only an
+			// UNCONSTRAINED axis falls back to the silhouette's aspect, where the
+			// width sub-check is the sole proportion signal.
+			var uTarget = uAxis == 2 ? skeleton.TargetLength : skeleton.TargetWidth;
+			var axisConstrained = uTarget > 0;
+			var width = axisConstrained
+				? Mathf.Max(1, plannedWidth)
+				: Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
+
+			// The reference mask, resampled into the comparison frame ([u, v], v=0 bottom).
 			var target = new bool[width, height];
 			for (var u = 0; u < width; u++)
 			{
@@ -194,11 +214,6 @@ namespace Assembler.Voxelization
 				}
 			}
 
-			// The union of part boxes, centre-aligned on the horizontal axis and ground-aligned in y.
-			var minU = boxes.Min(b => b.Min[uAxis]);
-			var maxU = boxes.Max(b => b.Max[uAxis]);
-			var minY = boxes.Min(b => b.Min.y);
-			var plannedWidth = maxU - minU + 1;
 			var du = (width - plannedWidth) / 2 - minU;
 			var covered = new bool[width, height];
 			foreach (var (boxMin, boxMax) in boxes)
@@ -239,10 +254,11 @@ namespace Assembler.Voxelization
 			// The silhouette is a vision-model guess, so coverage tolerates blob
 			// noise (gaps read as solid). Width is robust to that noise: blobbing
 			// doesn't move a silhouette's bounds, so a wrong overall width is a
-			// reliable doomed-plan signal on its own.
+			// reliable doomed-plan signal — but only when the manifest leaves that
+			// axis free; when it pins it, the bounding-box checks own the dimension.
 			var coverage = (float)hit / solid;
 			var problems = string.Empty;
-			if (Mathf.Abs(plannedWidth - width) > 1)
+			if (!axisConstrained && Mathf.Abs(plannedWidth - width) > 1)
 			{
 				problems += $"- The plan spans {plannedWidth} voxels across the {spec.Face} view, but the reference " +
 							$"proportions demand ~{width} at {height} tall.\n";
