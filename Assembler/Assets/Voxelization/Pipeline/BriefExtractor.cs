@@ -31,17 +31,23 @@ namespace Assembler.Voxelization
 		public async Task<ReferenceBrief> ExtractAsync(
 			SetManifest manifest,
 			ManifestAsset asset,
-			AnthropicImage image,
+			IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> images,
 			CancellationToken ct)
 		{
-			if (image.IsEmpty)
+			if (images.Count == 0)
 			{
 				return ReferenceBrief.None;
 			}
 
+			// One silhouette per axis (co-axial dedup); but EVERY image is still
+			// attached so the shared palette and surface-colour read see all faces.
+			var requestedFaces = DedupedFaces(images.Select(i => i.Label.Face));
+			var labels = images.Select(i => i.Label).ToList();
+			var attachments = images.Select(i => i.Image).ToArray();
+
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.BriefUser(manifest, asset), new[] { image }),
+				new("user", VoxelizationPrompts.BriefUser(asset, labels, requestedFaces), attachments),
 			};
 
 			for (var attempt = 1; ; attempt++)
@@ -53,12 +59,16 @@ namespace Assembler.Voxelization
 				{
 					var yaml = FencedBlockExtractor.Extract(response, "brief")
 							   ?? throw new FormatException("Response contained no ```brief fenced block.");
-					var brief = TrimSilhouette(ReferenceBriefYaml.Read(yaml) with { Source = asset.Reference });
-					return asset.Symmetry == "bilateral" ? SymmetrizeSilhouette(brief) : brief;
+					var brief = ReferenceBriefYaml.Read(yaml) with { Source = asset.Id };
+					var silhouettes = brief.Silhouettes
+						.Select(TrimSilhouette)
+						.Select(s => asset.Symmetry == "bilateral" ? SymmetrizeIfXHorizontal(s) : s)
+						.ToList();
+					return brief with { Silhouettes = silhouettes };
 				}
 				catch (FormatException ex)
 				{
-					if (attempt >= 2)
+					if (attempt >= 3)
 					{
 						throw new VoxelizationException(
 							$"Extracting the reference brief for '{asset.Id}' failed: {ex.Message}", ex);
@@ -72,17 +82,39 @@ namespace Assembler.Voxelization
 		}
 
 		/// <summary>
+		/// One face per supplied axis: the canonical face if an image labels it,
+		/// otherwise its twin. Keeps the silhouette set to ≤3 (one per axis).
+		/// </summary>
+		private static IReadOnlyList<string> DedupedFaces(IEnumerable<string> faces)
+		{
+			var supplied = new HashSet<string>(faces.Select(f => f.ToLowerInvariant()));
+			var result = new List<string>();
+			foreach (var (canonical, twin) in ProjectionFaceInfo.CoAxialPairs)
+			{
+				if (supplied.Contains(canonical))
+				{
+					result.Add(canonical);
+				}
+				else if (supplied.Contains(twin))
+				{
+					result.Add(twin);
+				}
+			}
+
+			return result;
+		}
+
+		/// <summary>
 		/// Drops fully-empty margin rows/columns and re-anchors the declared size
 		/// to the trimmed grid. Vision reads often pad the subject with empty
 		/// margin, which inflates the silhouette width and then poisons every
 		/// width-anchored check downstream.
 		/// </summary>
-		private static ReferenceBrief TrimSilhouette(ReferenceBrief brief)
+		private static SilhouetteSpec TrimSilhouette(SilhouetteSpec silhouette)
 		{
-			var silhouette = brief.Silhouette;
 			if (silhouette.IsEmpty)
 			{
-				return brief;
+				return silhouette;
 			}
 
 			static bool RowEmpty(string row) => row.All(c => !SilhouetteSpec.IsSolid(c));
@@ -102,7 +134,7 @@ namespace Assembler.Voxelization
 
 			if (top > bottom)
 			{
-				return brief;
+				return silhouette;
 			}
 
 			var width = rows.Max(r => r.Length);
@@ -111,13 +143,10 @@ namespace Assembler.Voxelization
 			var right = slice.Max(r => LastSolid(r));
 			var trimmed = slice.Select(r => r.Substring(left, right - left + 1)).ToArray();
 
-			return brief with
+			return silhouette with
 			{
-				Silhouette = silhouette with
-				{
-					Rows = trimmed,
-					Size = new UnityEngine.Vector3Int(right - left + 1, trimmed.Length, 0),
-				},
+				Rows = trimmed,
+				Size = new UnityEngine.Vector3Int(right - left + 1, trimmed.Length, 0),
 			};
 
 			static int FirstSolid(string row)
@@ -151,22 +180,24 @@ namespace Assembler.Voxelization
 		/// A lopsided vision read of a bilateral subject would poison both the
 		/// authoring guidance and the validation oracles, so the silhouette is
 		/// forced symmetric in code: each row becomes the union of itself and its
-		/// reflection.
+		/// reflection. ONLY applies to faces whose horizontal axis is x (front,
+		/// back, top, bottom — width runs along x). Left/right are front-back in z
+		/// and must NOT be x-mirrored, which would corrupt them.
 		/// </summary>
-		private static ReferenceBrief SymmetrizeSilhouette(ReferenceBrief brief)
+		private static SilhouetteSpec SymmetrizeIfXHorizontal(SilhouetteSpec silhouette)
 		{
-			if (brief.Silhouette.IsEmpty)
+			if (silhouette.IsEmpty || !ProjectionFaceInfo.IsXHorizontal(silhouette.Face))
 			{
-				return brief;
+				return silhouette;
 			}
 
-			var rows = brief.Silhouette.Rows
+			var rows = silhouette.Rows
 				.Select(row => new string(Enumerable.Range(0, row.Length)
 					.Select(i => row[i] == '#' || row[row.Length - 1 - i] == '#' ? '#' : '.')
 					.ToArray()))
 				.ToArray();
 
-			return brief with { Silhouette = brief.Silhouette with { Rows = rows } };
+			return silhouette with { Rows = rows };
 		}
 	}
 }

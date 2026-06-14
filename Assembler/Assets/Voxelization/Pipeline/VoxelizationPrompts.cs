@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -230,43 +231,69 @@ namespace Assembler.Voxelization
 		// ---- Stage 1a: reference brief extraction -----------------------------
 
 		public const string BriefSystem =
-			"You transcribe ONE reference image into a structured brief for a voxel-model pipeline. You do NOT plan, " +
-			"design, or improve anything — you only record what the image shows, as precisely as a scanner.\n\n" +
-			"The image typically shows a voxel/pixel-art style subject on a plain background: identify the underlying " +
-			"cell grid and read it cell by cell. For other art, judge the cells at the requested resolution.\n\n" +
+			"You transcribe one or more labelled reference images of ONE subject into a structured brief for a " +
+			"voxel-model pipeline. You do NOT plan, design, or improve anything — you only record what the images " +
+			"show, as precisely as a scanner.\n\n" +
+			"Each attached image is labelled in the user message with the perspective it shows (front, back, left, " +
+			"right, top, or bottom). The images typically show a voxel/pixel-art style subject on a plain background: " +
+			"identify the underlying cell grid and read it cell by cell. For other art, judge the cells at the " +
+			"requested resolution.\n\n" +
 			"Output exactly one fenced block labelled `brief`:\n" +
 			"```brief\n" +
 			"reference_brief:\n" +
-			"  source: <reference name>\n" +
+			"  source: <subject>\n" +
 			"  palette: { S: \"#e0b080\" }\n" +
 			"  proportions: { head: 0.13, torso: 0.4, legs: 0.47 }\n" +
 			"  signature_features: [\"blue shirt\", \"brown boots\", \"1-voxel gap between arms and torso\"]\n" +
-			"  silhouette:\n" +
-			"    face: front\n" +
-			"    size: [<width in cells>, <height in cells>]\n" +
-			"    rows:\n" +
-			"      - \"..##..\"\n" +
+			"  silhouettes:\n" +
+			"    - face: front\n" +
+			"      size: [<width in cells>, <height in cells>]\n" +
+			"      rows:\n" +
+			"        - \"..##..\"\n" +
+			"    - face: right\n" +
+			"      size: [<width in cells>, <height in cells>]\n" +
+			"      rows:\n" +
+			"        - \"..##..\"\n" +
 			"```\n" +
 			"Rules:\n" +
-			"- Palette: at most 12 colours, single-character keys, hex values read from the image. Include EVERY " +
-			"distinct colour, even 1-2 cell details (eyes, buttons, trim) — downstream stages are locked to this " +
-			"palette and cannot add colours you missed.\n" +
+			"- ONE shared `palette` read across ALL images: at most 12 colours, single-character keys, hex values. " +
+			"Include EVERY distinct colour from every image, even 1-2 cell details (eyes, buttons, trim) — downstream " +
+			"stages are locked to this palette and cannot add colours you missed.\n" +
+			"- Emit ONE `silhouettes` block per face the user asks for, reading each from the image labelled with that " +
+			"face. Do NOT invent a silhouette for a face the user did not request.\n" +
 			"- Silhouette rows use ONLY two characters: '#' (solid) and '.' (empty) — NEVER palette letters or any " +
 			"other symbol. One character per cell, top row first.\n" +
-			"- COUNT CAREFULLY: the silhouette width and height must match the subject's actual cell counts. Trace " +
+			"- COUNT CAREFULLY: each silhouette's width and height must match that view's actual cell counts. Trace " +
 			"each row of the image before writing it. Do not add empty margin rows or columns — the grid hugs the " +
 			"subject's bounding box exactly.\n" +
 			"- Mark gaps between limbs and the body (and between legs) as '.' — never blob separate shapes into one " +
 			"solid mass; gaps are signature features and belong in signature_features too.\n" +
-			"- For bilateral subjects the rows must be exactly left-right symmetric (prefer an odd width).\n" +
+			"- For bilateral subjects the front/back/top rows must be exactly left-right symmetric (prefer an odd " +
+			"width).\n" +
 			"- proportions are fractions of total height per region, summing to ~1.";
 
-		public static string BriefUser(SetManifest manifest, ManifestAsset asset) =>
-			$"Reference: {asset.Reference}\n" +
-			$"Subject: {asset.Id}\n" +
-			$"Transcribe the silhouette at {asset.Height} rows tall if the image's own grid allows.\n" +
-			$"Symmetry: {asset.Symmetry}\n\n" +
-			"Transcribe the attached image into the brief.";
+		public static string BriefUser(
+			ManifestAsset asset,
+			IReadOnlyList<ReferenceImage> images,
+			IReadOnlyList<string> requestedFaces)
+		{
+			var sb = new StringBuilder();
+			sb.Append("Subject: ").Append(asset.Id).Append('\n');
+			sb.Append("Attached images, each labelled with the perspective it shows:\n");
+			for (var i = 0; i < images.Count; i++)
+			{
+				sb.Append("  Image ").Append(i + 1).Append(" = ").Append(images[i].Face).Append(" view\n");
+			}
+
+			sb.Append("Transcribe each silhouette at ").Append(asset.Height)
+				.Append(" rows tall if the image's own grid allows.\n");
+			sb.Append("Symmetry: ").Append(asset.Symmetry).Append('\n');
+			sb.Append("Read ONE shared palette across all images, and transcribe a silhouette for EACH of these faces: ")
+				.Append(string.Join(", ", requestedFaces)).Append(".\n\n");
+			sb.Append("Transcribe the attached images into the brief.");
+			return sb.ToString();
+		}
+
 
 		// ---- Stage 3: review -------------------------------------------------
 
@@ -556,11 +583,13 @@ namespace Assembler.Voxelization
 					sb.Append("  proportion ").Append(kv.Key).Append(": ").Append(YamlNodes.Float(kv.Value)).Append('\n');
 				}
 
-				if (!brief.Silhouette.IsEmpty)
+				var primary = brief.PrimarySilhouette;
+				if (!primary.IsEmpty)
 				{
-					sb.Append("  front silhouette of the WHOLE model (top row first, '#' solid) — author your part so ")
+					sb.Append("  ").Append(primary.Face)
+						.Append(" silhouette of the WHOLE model (top row first, '#' solid) — author your part so ")
 						.Append("the cells it occupies match it:\n");
-					foreach (var row in brief.Silhouette.Rows)
+					foreach (var row in primary.Rows)
 					{
 						sb.Append("    ").Append(row).Append('\n');
 					}

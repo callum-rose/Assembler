@@ -104,9 +104,10 @@ namespace Assembler.Voxelization
 
 			try
 			{
-				var image = asset.HasReference
-					? await _images.LoadAsync(asset.Reference, ct)
-					: AnthropicImage.None;
+				// A reference assigned to an asset whose file is missing fails the
+				// asset — the manifest is treated as a fully-resolved document.
+				var references = await LoadReferenceImagesAsync(asset, ct);
+				var attachments = references.Select(r => r.Image).ToArray();
 
 				// On a re-run seeded by a previous result, reuse its accepted brief:
 				// re-transcribing the reference is non-deterministic and would shift
@@ -115,12 +116,12 @@ namespace Assembler.Voxelization
 				{
 					brief = previousResult.Brief;
 				}
-				else if (!image.IsEmpty)
+				else if (references.Count > 0)
 				{
-					progress?.Report($"{asset.Id}: transcribing the reference image...");
-					brief = await _briefer.ExtractAsync(manifest, asset, image, ct);
+					progress?.Report($"{asset.Id}: transcribing {references.Count} reference image(s)...");
+					brief = await _briefer.ExtractAsync(manifest, asset, references, ct);
 					progress?.Report($"{asset.Id}: reference brief — {brief.Palette.Count} colours, " +
-									 $"silhouette {brief.Silhouette.Size.x}x{brief.Silhouette.Size.y}");
+									 $"{brief.Silhouettes.Count} silhouette(s)");
 				}
 
 				var note = refinementNote;
@@ -133,7 +134,7 @@ namespace Assembler.Voxelization
 					{
 						progress?.Report($"{asset.Id}: planning...");
 						var plan = await _planner.PlanAsync(
-							manifest, asset, image, brief, note, ct, previousModelYaml, suppressPaletteGate);
+							manifest, asset, attachments, brief, note, ct, previousModelYaml, suppressPaletteGate);
 						brief = plan.Brief;
 						progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
 
@@ -161,7 +162,7 @@ namespace Assembler.Voxelization
 						}
 
 						progress?.Report($"{asset.Id}: reviewing the result against the reference...");
-						var corrections = await ReviewAsync(image, model, assembled, brief, ct);
+						var corrections = await ReviewAsync(attachments, model, assembled, brief, ct);
 						if (corrections.Length == 0)
 						{
 							progress?.Report($"{asset.Id}: review — looks faithful");
@@ -456,10 +457,15 @@ namespace Assembler.Voxelization
 					.Append(VoxelProjector.Ascii(assembled.Composed, palette, ProjectionFace.Back)).Append('\n');
 			}
 
-			if (!brief.Silhouette.IsEmpty)
+			foreach (var silhouette in brief.Silhouettes)
 			{
-				sb.Append("Reference front silhouette the FRONT view must match ('#' solid):\n");
-				foreach (var row in brief.Silhouette.Rows)
+				if (silhouette.IsEmpty)
+				{
+					continue;
+				}
+
+				sb.Append($"Reference {silhouette.Face} silhouette the {silhouette.Face.ToUpperInvariant()} view must match ('#' solid):\n");
+				foreach (var row in silhouette.Rows)
 				{
 					sb.Append(row).Append('\n');
 				}
@@ -519,23 +525,72 @@ namespace Assembler.Voxelization
 		/// problems live in part sizes and pivots that re-authoring cannot touch.
 		/// </summary>
 		private async Task<string> ReviewAsync(
-			AnthropicImage image,
+			IReadOnlyList<AnthropicImage> images,
 			VoxelRigModel model,
 			AssembledModel assembled,
 			ReferenceBrief brief,
 			CancellationToken ct)
 		{
-			var user = VoxelizationPrompts.ReviewUser(model, RenderedViews(assembled, brief), !image.IsEmpty, _config.StyleGuidance);
+			var attachments = images.Where(i => !i.IsEmpty).ToArray();
+			var user = VoxelizationPrompts.ReviewUser(model, RenderedViews(assembled, brief), attachments.Length > 0, _config.StyleGuidance);
 			var messages = new List<AnthropicMessage>
 			{
-				image.IsEmpty
-					? new AnthropicMessage("user", user)
-					: new AnthropicMessage("user", user, new[] { image }),
+				new("user", user, attachments),
 			};
 
 			var response = await _gateway.SendAsync(
 				ReviewStage, _config.PlanningModel, VoxelizationPrompts.ReviewSystem, messages, ct);
 			return IsApproval(response) ? string.Empty : response.Trim();
+		}
+
+		/// <summary>
+		/// Loads every reference image for an asset, throwing if any assigned file
+		/// cannot be resolved — a reference in the manifest whose file is missing
+		/// fails the asset rather than silently degrading (decision #6).
+		/// </summary>
+		private async Task<IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)>> LoadReferenceImagesAsync(
+			ManifestAsset asset, CancellationToken ct)
+		{
+			var loaded = new List<(ReferenceImage, AnthropicImage)>();
+			foreach (var reference in asset.References)
+			{
+				var image = await _images.LoadAsync(reference.File, ct);
+				if (image.IsEmpty)
+				{
+					throw new VoxelizationException(
+						$"Reference image '{reference.File}' ({reference.Face} view) for asset '{asset.Id}' could not be " +
+						"loaded — the manifest must reference files that exist.");
+				}
+
+				loaded.Add((reference, image));
+			}
+
+			return loaded;
+		}
+
+		/// <summary>
+		/// Pre-run precheck shared by the editor and any headless caller: returns a
+		/// human-readable "(asset / face: file)" line for every <c>references:</c>
+		/// file that does not resolve under the image source, so missing files are
+		/// surfaced up front rather than only when an asset runs.
+		/// </summary>
+		public static async Task<IReadOnlyList<string>> MissingReferencesAsync(
+			SetManifest manifest, IReferenceImageSource images, CancellationToken ct)
+		{
+			var missing = new List<string>();
+			foreach (var asset in manifest.Assets)
+			{
+				foreach (var reference in asset.References)
+				{
+					var image = await images.LoadAsync(reference.File, ct);
+					if (image.IsEmpty)
+					{
+						missing.Add($"{asset.Id} / {reference.Face}: {reference.File}");
+					}
+				}
+			}
+
+			return missing;
 		}
 
 		private static bool IsApproval(string response)

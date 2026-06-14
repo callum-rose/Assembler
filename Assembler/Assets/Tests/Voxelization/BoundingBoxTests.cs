@@ -131,7 +131,7 @@ poses:
 ```");
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(manifest, manifest.Assets[0], Assembler.Anthropic.AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(manifest, manifest.Assets[0], System.Array.Empty<Assembler.Anthropic.AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(plan.Skeleton.TargetLength, Is.EqualTo(1));

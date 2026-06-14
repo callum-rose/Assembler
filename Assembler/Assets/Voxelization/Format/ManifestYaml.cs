@@ -44,7 +44,7 @@ namespace Assembler.Voxelization
 						Tolerance = YamlNodes.GetInt(assetMap, "tolerance", 1),
 						Symmetry = YamlNodes.GetString(assetMap, "symmetry", "none"),
 						Rig = YamlNodes.GetBool(assetMap, "rig"),
-						Reference = YamlNodes.GetString(assetMap, "reference"),
+						References = ReadReferences(assetMap),
 					});
 				}
 			}
@@ -54,6 +54,45 @@ namespace Assembler.Voxelization
 				Game = YamlNodes.GetString(root, "game"),
 				Assets = assets,
 			};
+		}
+
+		/// <summary>
+		/// Parses the per-asset <c>references:</c> sequence of <c>{ file, view }</c>
+		/// maps. The legacy scalar <c>reference:</c> key is no longer read — the
+		/// manifest is the single source of truth and must use the list form.
+		/// </summary>
+		private static IReadOnlyList<ReferenceImage> ReadReferences(YamlMappingNode assetMap)
+		{
+			var references = new List<ReferenceImage>();
+			if (YamlNodes.Find(assetMap, "references") is not YamlSequenceNode seq)
+			{
+				return references;
+			}
+
+			foreach (var node in seq.Children)
+			{
+				if (node is not YamlMappingNode map)
+				{
+					throw new FormatException("Each entry under 'references' must be a mapping with 'file' and 'view'.");
+				}
+
+				var file = YamlNodes.GetString(map, "file");
+				var view = YamlNodes.GetString(map, "view");
+				if (file.Length == 0 || view.Length == 0)
+				{
+					throw new FormatException("Each 'references' entry needs both a 'file' and a 'view'.");
+				}
+
+				if (!ReferenceImage.IsValidFace(view))
+				{
+					throw new FormatException(
+						$"Reference view '{view}' is not one of: {string.Join(", ", ReferenceImage.Faces)}.");
+				}
+
+				references.Add(new ReferenceImage(file, view.ToLowerInvariant()));
+			}
+
+			return references;
 		}
 
 		public static string Write(SetManifest manifest)
@@ -89,7 +128,12 @@ namespace Assembler.Voxelization
 				sb.Append("    rig: ").Append(asset.Rig ? "true" : "false").Append('\n');
 				if (asset.HasReference)
 				{
-					sb.Append("    reference: ").Append(asset.Reference).Append('\n');
+					sb.Append("    references:\n");
+					foreach (var reference in asset.References)
+					{
+						sb.Append("      - file: ").Append(YamlNodes.Quote(reference.File))
+							.Append('\n').Append("        view: ").Append(reference.Face).Append('\n');
+					}
 				}
 			}
 

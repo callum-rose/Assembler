@@ -129,7 +129,7 @@ poses:
 		{
 			var gateway = new FakeGateway().Enqueue(PlanResponse);
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], Array.Empty<AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			// The plan said target_height: 99; the manifest owns scale.
@@ -144,7 +144,7 @@ poses:
 			var config = VoxelizationConfig.Default with { PartVoxelBudget = 3 };
 			var gateway = new FakeGateway().Enqueue(PlanResponse);
 			var plan = new ModelPlanner(gateway, config)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], Array.Empty<AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			var planned = (PlannedPartData)plan.Skeleton.Parts.Single().Data;
@@ -170,7 +170,7 @@ poses:
 				.Enqueue(PlanResponse.Replace("size: [2, 2, 1]", "size: [3, 2, 1]"));
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(manifest, manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(manifest, manifest.Assets[0], Array.Empty<AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
@@ -208,7 +208,7 @@ poses:
 			var gateway = new FakeGateway().Enqueue(inlineAuthored).Enqueue(PlanResponse);
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, ReferenceBrief.None, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], Array.Empty<AnthropicImage>(), ReferenceBrief.None, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
@@ -224,26 +224,26 @@ poses:
 				Game = "test",
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", Height = 2, Symmetry = "bilateral", Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, Symmetry = "bilateral", References = new[] { new ReferenceImage("ref.png", "front") } },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```brief
 reference_brief:
-  source: ref.png
-  silhouette:
-    face: front
-    size: [3, 2]
-    rows:
-      - ""#..""
-      - ""#.#""
+  source: crate
+  silhouettes:
+    - face: front
+      size: [3, 2]
+      rows:
+        - ""#..""
+        - ""#.#""
 ```");
 
 			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
-				.ExtractAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }), CancellationToken.None)
+				.ExtractAsync(manifest, manifest.Assets[0], Images(manifest.Assets[0]), CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			// Each row is unioned with its own reflection.
-			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "#.#", "#.#" }));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "#.#", "#.#" }));
 			Assert.That(gateway.Calls.Single().Stage, Is.EqualTo(BriefExtractor.Stage));
 		}
 
@@ -255,27 +255,27 @@ reference_brief:
 				Game = "test",
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", Height = 2, Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, References = new[] { new ReferenceImage("ref.png", "front") } },
 				},
 			};
 			var gateway = new FakeGateway().Enqueue(@"```brief
 reference_brief:
-  source: ref.png
-  silhouette:
-    face: front
-    size: [5, 3]
-    rows:
-      - "".....""
-      - "".###.""
-      - "".#.#.""
+  source: crate
+  silhouettes:
+    - face: front
+      size: [5, 3]
+      rows:
+        - "".....""
+        - "".###.""
+        - "".#.#.""
 ```");
 
 			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
-				.ExtractAsync(manifest, manifest.Assets[0], new AnthropicImage("image/png", new byte[] { 1 }), CancellationToken.None)
+				.ExtractAsync(manifest, manifest.Assets[0], Images(manifest.Assets[0]), CancellationToken.None)
 				.GetAwaiter().GetResult();
 
-			Assert.That(brief.Silhouette.Rows, Is.EqualTo(new[] { "###", "#.#" }));
-			Assert.That(brief.Silhouette.Size, Is.EqualTo(new Vector3Int(3, 2, 0)));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "###", "#.#" }));
+			Assert.That(brief.PrimarySilhouette.Size, Is.EqualTo(new Vector3Int(3, 2, 0)));
 		}
 
 		[Test]
@@ -291,7 +291,7 @@ reference_brief:
 				.Enqueue(PlanResponse.Replace("#aa7733", "#112233"));
 
 			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
-				.PlanAsync(Manifest, Manifest.Assets[0], AnthropicImage.None, brief, string.Empty, CancellationToken.None)
+				.PlanAsync(Manifest, Manifest.Assets[0], Array.Empty<AnthropicImage>(), brief, string.Empty, CancellationToken.None)
 				.GetAwaiter().GetResult();
 
 			Assert.That(gateway.Calls.Count, Is.EqualTo(2));
@@ -307,7 +307,7 @@ reference_brief:
 				Game = "test",
 				Assets = new[]
 				{
-					new ManifestAsset { Id = "crate", Height = 2, Reference = "ref.png" },
+					new ManifestAsset { Id = "crate", Height = 2, References = new[] { new ReferenceImage("ref.png", "front") } },
 				},
 			};
 			var images = new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>
@@ -317,13 +317,13 @@ reference_brief:
 			var gateway = new FakeGateway()
 				.Enqueue(@"```brief
 reference_brief:
-  source: ref.png
-  silhouette:
-    face: front
-    size: [2, 2]
-    rows:
-      - ""##""
-      - ""##""
+  source: crate
+  silhouettes:
+    - face: front
+      size: [2, 2]
+      rows:
+        - ""##""
+        - ""##""
 ```")
 				.Enqueue(PlanResponse)
 				.Enqueue(LayersResponse)
@@ -346,7 +346,7 @@ reference_brief:
 
 			// The planner received the transcribed silhouette as locked input.
 			Assert.That(gateway.Calls[1].Messages[0].Content, Does.Contain("Reference brief (authoritative"));
-			Assert.That(result.Brief.Silhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
+			Assert.That(result.Brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
 		}
 
 		[Test]
@@ -397,7 +397,7 @@ reference_brief:
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouette = new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", ".#" }),
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", ".#" }) },
 			};
 
 			var prompt = VoxelizationPrompts.PartUser(model, brief, model.Parts[0], planned, string.Empty);
@@ -589,7 +589,14 @@ poses:
 		[Test]
 		public void SetOrchestrator_FailedPlanBecomesFailedResult()
 		{
-			var gateway = new FakeGateway().Enqueue("nothing useful").Enqueue("still nothing").Enqueue("and again");
+			// Every planning attempt returns garbage, so the planner exhausts its
+			// retries and the asset fails. Enqueue one bad response per attempt.
+			var gateway = new FakeGateway();
+			for (var attempt = 0; attempt < ModelPlanner.MaxAttempts; attempt++)
+			{
+				gateway.Enqueue("nothing useful");
+			}
+
 			var orchestrator = new SetOrchestrator(
 				gateway,
 				VoxelizationConfig.Default,
@@ -604,6 +611,158 @@ poses:
 			Assert.That(result.Status, Is.EqualTo(ModelStatus.Failed));
 			Assert.That(result.Error, Does.Contain("vmodel"));
 		}
+
+		[Test]
+		public void BriefExtractor_RetriesWhenTheModelEmitsMalformedYaml()
+		{
+			// A vision model occasionally returns mis-indented / unterminated YAML in
+			// the brief block. YamlDotNet throws its own exception, which used to
+			// escape the FormatException-only retry and hard-fail the asset. It must
+			// now be normalised and retried with the parser's message as feedback.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", Height = 2, References = new[] { new ReferenceImage("ref.png", "front") } },
+				},
+			};
+			var gateway = new FakeGateway()
+				.Enqueue("```brief\nreference_brief:\n  source: crate\n  palette: { S: \"#ffffff\"\n```") // unterminated flow map
+				.Enqueue(@"```brief
+reference_brief:
+  source: crate
+  silhouettes:
+    - face: front
+      size: [2, 2]
+      rows:
+        - ""##""
+        - ""##""
+```");
+
+			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
+				.ExtractAsync(manifest, manifest.Assets[0], Images(manifest.Assets[0]), CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2), "the malformed first response should trigger one retry");
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
+
+			// The retry message carried the YAML parser's complaint back to the model.
+			Assert.That(gateway.Calls[1].Messages.Last().Content, Does.Contain("could not be parsed"));
+		}
+
+		[Test]
+		public void BriefExtractor_CoAxialDedup_KeepsOneSilhouettePerAxis()
+		{
+			// Front and back are co-axial (x-y plane), so only one silhouette is
+			// requested — the canonical front — even though both images are attached.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[]
+				{
+					new ManifestAsset
+					{
+						Id = "crate",
+						Height = 2,
+						References = new[]
+						{
+							new ReferenceImage("front.png", "front"),
+							new ReferenceImage("back.png", "back"),
+						},
+					},
+				},
+			};
+			var gateway = new FakeGateway().Enqueue(@"```brief
+reference_brief:
+  source: crate
+  silhouettes:
+    - face: front
+      size: [2, 2]
+      rows:
+        - ""##""
+        - ""##""
+```");
+
+			var asset = manifest.Assets[0];
+			var images = asset.References.Select(r => (r, new AnthropicImage("image/png", new byte[] { 1 }))).ToList();
+			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
+				.ExtractAsync(manifest, asset, images, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(brief.Silhouettes.Count, Is.EqualTo(1));
+			Assert.That(brief.Silhouettes.Single().Face, Is.EqualTo("front"));
+
+			// Both images are still attached for the palette/surface read.
+			Assert.That(gateway.Calls.Single().Messages[0].Images.Count, Is.EqualTo(2));
+
+			// The prompt requests only the deduped face but labels both images.
+			var prompt = gateway.Calls.Single().Messages[0].Content;
+			Assert.That(prompt, Does.Contain("Image 1 = front"));
+			Assert.That(prompt, Does.Contain("Image 2 = back"));
+		}
+
+		[Test]
+		public void MissingReferencesPrecheck_ReportsAbsentFiles()
+		{
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[]
+				{
+					new ManifestAsset
+					{
+						Id = "crate",
+						Height = 2,
+						References = new[] { new ReferenceImage("absent.png", "front") },
+					},
+				},
+			};
+			var images = new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>());
+
+			var missing = SetOrchestrator.MissingReferencesAsync(manifest, images, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(missing.Count, Is.EqualTo(1));
+			Assert.That(missing.Single(), Does.Contain("crate").And.Contain("front").And.Contain("absent.png"));
+		}
+
+		[Test]
+		public void SetOrchestrator_MissingReferenceFile_FailsTheAsset()
+		{
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[]
+				{
+					new ManifestAsset
+					{
+						Id = "crate",
+						Height = 2,
+						References = new[] { new ReferenceImage("absent.png", "front") },
+					},
+				},
+			};
+			var gateway = new FakeGateway();
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default,
+				new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>()),
+				StubScriptRunner.Failing("unused"),
+				new TokenUsageTracker());
+
+			var result = orchestrator
+				.RunAssetAsync(manifest, manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(result.Status, Is.EqualTo(ModelStatus.Failed));
+			Assert.That(result.Error, Does.Contain("absent.png"));
+			Assert.That(gateway.Calls, Is.Empty, "a missing reference must fail before any model call");
+		}
+
+		/// <summary>One in-memory attachment per labelled reference of an asset, for the brief extractor.</summary>
+		private static IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> Images(ManifestAsset asset, byte[]? data = null) =>
+			asset.References.Select(r => (r, new AnthropicImage("image/png", data ?? new byte[] { 1 }))).ToList();
 
 		private static VoxelRigModel SkeletonModel(PlannedPartData planned) => new()
 		{

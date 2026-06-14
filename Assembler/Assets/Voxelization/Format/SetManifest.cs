@@ -1,11 +1,32 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assembler.Voxelization
 {
 	/// <summary>
-	/// One asset row in a set manifest. <see cref="Reference"/> names an
-	/// optional reference image (resolved via IReferenceImageSource); empty
+	/// One labelled reference image attached to an asset: a <see cref="File"/>
+	/// (resolved via IReferenceImageSource) and the <see cref="Face"/> it depicts
+	/// (one of <see cref="Faces"/>). The label removes the perspective-inference
+	/// ambiguity — the pipeline is told each image's face rather than guessing.
+	/// </summary>
+	public sealed record ReferenceImage(string File, string Face)
+	{
+		/// <summary>The six valid perspective labels, matching <see cref="SilhouetteSpec.Face"/> strings.</summary>
+		public static IReadOnlyList<string> Faces { get; } = new[] { "front", "back", "left", "right", "top", "bottom" };
+
+		private static readonly Dictionary<string, int> FaceIndices =
+			Faces.Select((face, index) => (face, index)).ToDictionary(t => t.face, t => t.index);
+
+		public static bool IsValidFace(string face) => FaceIndices.ContainsKey(face.ToLowerInvariant());
+
+		/// <summary>Position of a face within <see cref="Faces"/> in constant time, or -1 if not a valid face.</summary>
+		public static int FaceIndex(string face) => FaceIndices.TryGetValue(face, out var index) ? index : -1;
+	}
+
+	/// <summary>
+	/// One asset row in a set manifest. <see cref="References"/> lists the
+	/// labelled reference images (resolved via IReferenceImageSource); empty
 	/// means none. <see cref="Symmetry"/> is a hint for the planner:
 	/// "bilateral", "radial:N", or "none".
 	/// </summary>
@@ -34,9 +55,9 @@ namespace Assembler.Voxelization
 
 		public string Symmetry { get; init; } = "none";
 		public bool Rig { get; init; }
-		public string Reference { get; init; } = string.Empty;
+		public IReadOnlyList<ReferenceImage> References { get; init; } = Array.Empty<ReferenceImage>();
 
-		public bool HasReference => Reference.Length > 0;
+		public bool HasReference => References.Count > 0;
 	}
 
 	/// <summary>

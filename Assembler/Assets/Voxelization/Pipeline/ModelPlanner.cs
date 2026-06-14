@@ -21,8 +21,13 @@ namespace Assembler.Voxelization
 	{
 		public const string Stage = "1-planning";
 
-		/// <summary>Total planning calls per asset: the first plan plus feedback rounds for parse/geometry failures.</summary>
-		public const int MaxAttempts = 3;
+		/// <summary>
+		/// Total planning calls per asset: the first plan plus feedback rounds for
+		/// parse/geometry failures. Tight-budget assets (a standing quadruped fitting
+		/// feet+legs+torso+head into a short height) need several correction rounds to
+		/// converge on the bounding box, so this is deliberately generous.
+		/// </summary>
+		public const int MaxAttempts = 5;
 
 		private readonly IAnthropicGateway _gateway;
 		private readonly VoxelizationConfig _config;
@@ -36,21 +41,22 @@ namespace Assembler.Voxelization
 		public async Task<ModelPlan> PlanAsync(
 			SetManifest manifest,
 			ManifestAsset asset,
-			AnthropicImage referenceImage,
+			IReadOnlyList<AnthropicImage> referenceImages,
 			ReferenceBrief brief,
 			string refinementNote,
 			CancellationToken ct,
 			string previousModelYaml = "",
 			bool suppressPaletteGate = false)
 		{
-			var hasImage = !referenceImage.IsEmpty;
+			// All of the asset's labelled images go to the multimodal message for
+			// styling detail the brief doesn't capture.
+			var attachments = referenceImages.Where(i => !i.IsEmpty).ToArray();
+			var hasImage = attachments.Length > 0;
 			var userText = VoxelizationPrompts.PlanningUser(
 				manifest, asset, brief, hasImage, refinementNote, _config.StyleGuidance, previousModelYaml);
 			var messages = new List<AnthropicMessage>
 			{
-				hasImage
-					? new AnthropicMessage("user", userText, new[] { referenceImage })
-					: new AnthropicMessage("user", userText),
+				new("user", userText, attachments),
 			};
 
 			for (var attempt = 1; ; attempt++)
