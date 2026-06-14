@@ -28,19 +28,6 @@ namespace Assembler.Voxelization
 			_config = config;
 		}
 
-		/// <summary>
-		/// The three projection axes and the face preferred when both twins are
-		/// supplied: front/back share x-y, right/left share z-y, top/bottom share
-		/// x-z. Co-axial twins encode the same silhouette constraint, so only the
-		/// canonical (or its twin when only that exists) is transcribed.
-		/// </summary>
-		private static readonly (string Canonical, string Twin)[] Axes =
-		{
-			("front", "back"),
-			("right", "left"),
-			("top", "bottom"),
-		};
-
 		public async Task<ReferenceBrief> ExtractAsync(
 			SetManifest manifest,
 			ManifestAsset asset,
@@ -102,7 +89,7 @@ namespace Assembler.Voxelization
 		{
 			var supplied = new HashSet<string>(faces.Select(f => f.ToLowerInvariant()));
 			var result = new List<string>();
-			foreach (var (canonical, twin) in Axes)
+			foreach (var (canonical, twin) in ProjectionFaceInfo.CoAxialPairs)
 			{
 				if (supplied.Contains(canonical))
 				{
@@ -193,13 +180,13 @@ namespace Assembler.Voxelization
 		/// A lopsided vision read of a bilateral subject would poison both the
 		/// authoring guidance and the validation oracles, so the silhouette is
 		/// forced symmetric in code: each row becomes the union of itself and its
-		/// reflection. ONLY applies to faces whose horizontal axis is x — front,
-		/// back, and top (width runs along x). Left/right are front-back in z and
-		/// must NOT be x-mirrored, which would corrupt them.
+		/// reflection. ONLY applies to faces whose horizontal axis is x (front,
+		/// back, top, bottom — width runs along x). Left/right are front-back in z
+		/// and must NOT be x-mirrored, which would corrupt them.
 		/// </summary>
 		private static SilhouetteSpec SymmetrizeIfXHorizontal(SilhouetteSpec silhouette)
 		{
-			if (silhouette.IsEmpty || silhouette.Face is not ("front" or "back" or "top"))
+			if (silhouette.IsEmpty || !ProjectionFaceInfo.IsXHorizontal(silhouette.Face))
 			{
 				return silhouette;
 			}

@@ -146,7 +146,7 @@ namespace Assembler.Voxelization
 		{
 			foreach (var spec in brief.Silhouettes)
 			{
-				if (!IsGroundAnchored(spec.Face))
+				if (!ProjectionFaceInfo.IsGroundAnchored(spec.Face))
 				{
 					continue;
 				}
@@ -160,12 +160,6 @@ namespace Assembler.Voxelization
 
 			return null;
 		}
-
-		/// <summary>Front/back are anchored in y with the silhouette's u running along x; left/right run u along z. Top/bottom have no height anchor.</summary>
-		private static bool IsGroundAnchored(string face) => face is "front" or "back" or "left" or "right";
-
-		/// <summary>The model-space axis the silhouette's u (horizontal) maps to: x for front/back, z for left/right. v is always y.</summary>
-		private static int HorizontalAxis(string face) => face is "left" or "right" ? 2 : 0;
 
 		private static string? FeasibilityError(VoxelRigModel skeleton, SilhouetteSpec spec, float coverageThreshold)
 		{
@@ -184,7 +178,7 @@ namespace Assembler.Voxelization
 			// face's horizontal model axis. Coverage (hit/solid over overlaid grids)
 			// is invariant under a shared u-flip, so axis selection is all that
 			// matters here — true handedness lives in the validator's IoU path.
-			var uAxis = HorizontalAxis(spec.Face);
+			var uAxis = ProjectionFaceInfo.HorizontalAxis(spec.Face);
 			var height = skeleton.HeightInVoxels;
 			var width = Mathf.Max(1, Mathf.RoundToInt((float)spec.Size.x * height / spec.Size.y));
 

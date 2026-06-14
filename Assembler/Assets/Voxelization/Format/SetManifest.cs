@@ -16,7 +16,13 @@ namespace Assembler.Voxelization
 		/// <summary>The six valid perspective labels, matching <see cref="SilhouetteSpec.Face"/> strings.</summary>
 		public static IReadOnlyList<string> Faces { get; } = new[] { "front", "back", "left", "right", "top", "bottom" };
 
-		public static bool IsValidFace(string face) => Faces.Contains(face.ToLowerInvariant());
+		private static readonly Dictionary<string, int> FaceIndices =
+			Faces.Select((face, index) => (face, index)).ToDictionary(t => t.face, t => t.index);
+
+		public static bool IsValidFace(string face) => FaceIndices.ContainsKey(face.ToLowerInvariant());
+
+		/// <summary>Position of a face within <see cref="Faces"/> in constant time, or -1 if not a valid face.</summary>
+		public static int FaceIndex(string face) => FaceIndices.TryGetValue(face, out var index) ? index : -1;
 	}
 
 	/// <summary>

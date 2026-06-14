@@ -69,6 +69,17 @@ namespace Assembler.Voxelization.Editor
 		private string _thumbnailFolder = string.Empty;
 		private string? _referenceAssignError;
 		private Vector2 _referenceScroll;
+
+		// DrawReferenceImages runs every OnGUI event, so the manifest parse and the
+		// folder scan are cached: the manifest is re-parsed only when its text
+		// changes, the file list re-scanned only when the folder changes (or on
+		// OnFocus, so images added on disk still appear). The "\0" sentinels force
+		// the first draw to populate both.
+		private SetManifest? _cachedReferenceManifest;
+		private string _cachedReferenceManifestSource = "\0";
+		private string? _cachedReferenceManifestError;
+		private IReadOnlyList<string> _cachedImageFiles = Array.Empty<string>();
+		private string _cachedImageFilesFolder = "\0";
 		private readonly Dictionary<string, string> _refineNotes = new();
 		private readonly Dictionary<string, Vector2> _infoScrolls = new();
 		private readonly Dictionary<string, string> _inFlight = new();
@@ -132,6 +143,14 @@ namespace Assembler.Voxelization.Editor
 			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
 			RefreshModels();
+		}
+
+		private void OnFocus()
+		{
+			// Re-scan the reference folder when the window regains focus, so images
+			// added on disk appear without paying a per-frame directory scan.
+			_cachedImageFilesFolder = "\0";
+			_thumbnailFolder = "\0";
 		}
 
 		private void OnDisable()
@@ -453,19 +472,15 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			SetManifest manifest;
-			try
-			{
-				manifest = ManifestYaml.Read(_manifestYaml);
-			}
-			catch (Exception ex)
+			if (!TryGetCachedReferenceManifest(out var manifest))
 			{
 				EditorGUILayout.HelpBox(
-					$"Assigning references needs the manifest yaml to parse — fix it first: {ex.Message}", MessageType.Warning);
+					$"Assigning references needs the manifest yaml to parse — fix it first: {_cachedReferenceManifestError}",
+					MessageType.Warning);
 				return;
 			}
 
-			var files = EnumerateImageFiles(_imageFolder);
+			var files = CachedImageFiles();
 			if (files.Count == 0)
 			{
 				EditorGUILayout.HelpBox("No images (.png/.jpg/.jpeg/.gif/.webp) in the folder.", MessageType.Info);
@@ -527,8 +542,8 @@ namespace Assembler.Voxelization.Editor
 		/// </summary>
 		private void SyncReferenceRows(SetManifest manifest, IReadOnlyList<string> files, string[] assetIds)
 		{
-			var names = files.Select(Path.GetFileName).ToList();
-			if (_referenceRowsSource == _manifestYaml && names.All(_referenceRows.ContainsKey))
+			if (_referenceRowsSource == _manifestYaml &&
+				files.All(f => _referenceRows.ContainsKey(Path.GetFileName(f))))
 			{
 				return;
 			}
@@ -543,12 +558,13 @@ namespace Assembler.Voxelization.Editor
 			}
 
 			_referenceRows.Clear();
-			foreach (var name in names)
+			foreach (var file in files)
 			{
+				var name = Path.GetFileName(file);
 				if (assigned.TryGetValue(name, out var current))
 				{
 					var assetIndex = Array.IndexOf(assetIds, current.Asset);
-					var faceIndex = ReferenceImage.Faces.ToList().IndexOf(current.Face);
+					var faceIndex = ReferenceImage.FaceIndex(current.Face);
 					_referenceRows[name] = (assetIndex >= 0 ? assetIndex + 1 : 0, faceIndex >= 0 ? faceIndex + 1 : 0);
 				}
 				else
@@ -576,7 +592,7 @@ namespace Assembler.Voxelization.Editor
 			{
 				if (tokens.Contains(token))
 				{
-					faceIndex = ReferenceImage.Faces.ToList().IndexOf(face) + 1;
+					faceIndex = ReferenceImage.FaceIndex(face) + 1;
 					break;
 				}
 			}
@@ -650,6 +666,44 @@ namespace Assembler.Voxelization.Editor
 			_manifestYaml = ManifestYaml.Write(updated);
 			_referenceRowsSource = _manifestYaml;
 			EditorPrefs.SetString(ManifestPref, _manifestYaml);
+		}
+
+		/// <summary>
+		/// Parses the manifest yaml at most once per edit (DrawReferenceImages runs
+		/// every OnGUI event). Returns false with <see cref="_cachedReferenceManifestError"/>
+		/// set when the text doesn't parse.
+		/// </summary>
+		private bool TryGetCachedReferenceManifest(out SetManifest manifest)
+		{
+			if (_cachedReferenceManifestSource != _manifestYaml)
+			{
+				_cachedReferenceManifestSource = _manifestYaml;
+				try
+				{
+					_cachedReferenceManifest = ManifestYaml.Read(_manifestYaml);
+					_cachedReferenceManifestError = null;
+				}
+				catch (Exception ex)
+				{
+					_cachedReferenceManifest = null;
+					_cachedReferenceManifestError = ex.Message;
+				}
+			}
+
+			manifest = _cachedReferenceManifest ?? new SetManifest();
+			return _cachedReferenceManifest != null;
+		}
+
+		/// <summary>Scans the image folder at most once per folder change (or per OnFocus); avoids per-frame disk I/O.</summary>
+		private IReadOnlyList<string> CachedImageFiles()
+		{
+			if (_cachedImageFilesFolder != _imageFolder)
+			{
+				_cachedImageFilesFolder = _imageFolder;
+				_cachedImageFiles = EnumerateImageFiles(_imageFolder);
+			}
+
+			return _cachedImageFiles;
 		}
 
 		private static IReadOnlyList<string> EnumerateImageFiles(string folder)
