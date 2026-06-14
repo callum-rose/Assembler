@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Rotation
@@ -10,13 +9,9 @@ namespace Assembler.Behaviours.Rotation
 	/// Properties:
 	///   AngularVelocity: World-space angular velocity in degrees per second (Euler per axis).
 	/// </remarks>
-	public class AngularVelocity : GameBehaviour<AngularVelocityData>, INeedsGameClock
+	public class AngularVelocity : PerFrameBehaviour<AngularVelocityData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
-		private void Update() => Step();
-
-		internal void Step() =>
+		internal override void Step() =>
 			transform.Rotate(Data.AngularVelocity.Get() * Clock.DeltaTime, Space.World);
 	}
 }
