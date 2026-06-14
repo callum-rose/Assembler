@@ -21,11 +21,12 @@ namespace Assembler.Resolving
 		/// of a constant is itself a constant, an observable inner forwards its observability, and a plain inner
 		/// falls back to the polled variant.</summary>
 		public static IValueProvider<object> Create(IValueProvider innerProvider) =>
-			innerProvider is IConstantValueProvider
-				? new ConstantValueProvider<object>(innerProvider.Get(TriggerContext.Empty))
-				: innerProvider is IObservableValueProvider observable
-					? new ObservableBoxingValueProvider(innerProvider, observable)
-					: new BoxingValueProvider(innerProvider);
+			innerProvider switch
+			{
+				IConstantValueProvider => new ConstantValueProvider<object>(innerProvider.Get(TriggerContext.Empty)),
+				IObservableValueProvider observable => new ObservableBoxingValueProvider(innerProvider, observable),
+				_ => new BoxingValueProvider(innerProvider)
+			};
 
 		public object Get(TriggerContext ctx) => _innerProvider.Get(ctx);
 	}

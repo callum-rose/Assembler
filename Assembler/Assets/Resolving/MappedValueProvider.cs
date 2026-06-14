@@ -24,11 +24,13 @@ namespace Assembler.Resolving
 		/// constant is itself a constant (computed once), an observable inner forwards its observability, and a
 		/// plain inner falls back to the polled variant.</summary>
 		public static IValueProvider<TOutput> Create(IValueProvider<TInput> innerProvider, Func<TInput, TOutput> func) =>
-			innerProvider is IConstantValueProvider
-				? new ConstantValueProvider<TOutput>(func(innerProvider.Get()))
-				: innerProvider is IObservableValueProvider observable
-					? new ObservableMappedValueProvider<TInput, TOutput>(innerProvider, observable, func)
-					: new MappedValueProvider<TInput, TOutput>(innerProvider, func);
+			innerProvider switch
+			{
+				IConstantValueProvider => new ConstantValueProvider<TOutput>(func(innerProvider.Get())),
+				IObservableValueProvider observable =>
+					new ObservableMappedValueProvider<TInput, TOutput>(innerProvider, observable, func),
+				_ => new MappedValueProvider<TInput, TOutput>(innerProvider, func)
+			};
 
 		public TOutput Get(TriggerContext ctx) => _func(_innerProvider.Get(ctx));
 
