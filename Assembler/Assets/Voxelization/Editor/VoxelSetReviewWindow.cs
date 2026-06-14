@@ -302,6 +302,8 @@ namespace Assembler.Voxelization.Editor
 			var serialized = new SerializedObject(_settings);
 			using (new EditorGUI.IndentLevelScope())
 			{
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.DeterministicBrief), "Deterministic brief (pixel silhouette + palette)");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.ExtractSemanticBriefFields), "Extract semantic brief fields (vision call)");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxPartAttempts), "Max part attempts");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxValidationRounds), "Max validation rounds");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxReviewRounds), "Max review rounds");
@@ -324,6 +326,8 @@ namespace Assembler.Voxelization.Editor
 		private static void ResetAdvancedToDefaults(SerializedObject serialized)
 		{
 			var defaults = VoxelizationConfig.Default;
+			serialized.FindProperty(nameof(VoxelizationSettings.DeterministicBrief)).boolValue = defaults.DeterministicBrief;
+			serialized.FindProperty(nameof(VoxelizationSettings.ExtractSemanticBriefFields)).boolValue = defaults.ExtractSemanticBriefFields;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxPartAttempts)).intValue = defaults.MaxPartAttempts;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxValidationRounds)).intValue = defaults.MaxValidationRounds;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxReviewRounds)).intValue = defaults.MaxReviewRounds;

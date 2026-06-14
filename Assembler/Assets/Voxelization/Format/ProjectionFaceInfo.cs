@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Assembler.Voxelization
 {
@@ -24,6 +25,31 @@ namespace Assembler.Voxelization
 			("right", "left"),
 			("top", "bottom"),
 		};
+
+		/// <summary>
+		/// One face per supplied projection plane: the canonical face when an image
+		/// labels it, otherwise its co-axial twin. Co-axial twins (front/back,
+		/// right/left, top/bottom) encode the same silhouette constraint, so keeping
+		/// both would just duplicate work — this collapses the request to ≤3 faces.
+		/// </summary>
+		public static IReadOnlyList<string> DedupeFaces(IEnumerable<string> faces)
+		{
+			var supplied = new HashSet<string>(faces.Select(f => f.ToLowerInvariant()));
+			var result = new List<string>();
+			foreach (var (canonical, twin) in CoAxialPairs)
+			{
+				if (supplied.Contains(canonical))
+				{
+					result.Add(canonical);
+				}
+				else if (supplied.Contains(twin))
+				{
+					result.Add(twin);
+				}
+			}
+
+			return result;
+		}
 
 		/// <summary>The model-space axis a face's silhouette horizontal (u) maps to: 0 = x (front/back/top/bottom), 2 = z (left/right).</summary>
 		public static int HorizontalAxis(string face) => face is "left" or "right" ? 2 : 0;

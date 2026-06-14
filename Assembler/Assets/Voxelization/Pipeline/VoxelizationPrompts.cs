@@ -294,6 +294,41 @@ namespace Assembler.Voxelization
 			return sb.ToString();
 		}
 
+		// ---- Stage 1a (deterministic path): advisory semantic fields ---------
+
+		public const string BriefSemanticSystem =
+			"You describe one or more labelled reference images of ONE subject for a voxel-model pipeline. The " +
+			"silhouette and palette are measured separately from the pixels — do NOT report them. Report ONLY the two " +
+			"advisory semantic fields below.\n\n" +
+			"Output exactly one fenced block labelled `brief`:\n" +
+			"```brief\n" +
+			"reference_brief:\n" +
+			"  proportions: { head: 0.13, torso: 0.4, legs: 0.47 }\n" +
+			"  signature_features: [\"blue shirt\", \"brown boots\", \"gap between arms and torso\"]\n" +
+			"```\n" +
+			"Rules:\n" +
+			"- proportions are fractions of total height per vertical region, summing to ~1.\n" +
+			"- signature_features are short natural-language notes on distinguishing visual traits.\n" +
+			"- No preamble; emit only the fenced block.";
+
+		public static string BriefSemanticUser(ManifestAsset asset, IReadOnlyList<ReferenceImage> images)
+		{
+			var sb = new StringBuilder();
+			sb.Append("Subject: ").Append(asset.Id).Append('\n');
+			if (asset.Description.Length > 0)
+			{
+				sb.Append("Description: ").Append(asset.Description).Append('\n');
+			}
+
+			sb.Append("Attached images, each labelled with the perspective it shows:\n");
+			for (var i = 0; i < images.Count; i++)
+			{
+				sb.Append("  Image ").Append(i + 1).Append(" = ").Append(images[i].Face).Append(" view\n");
+			}
+
+			sb.Append("\nReport the proportions and signature_features for this subject.");
+			return sb.ToString();
+		}
 
 		// ---- Stage 3: review -------------------------------------------------
 

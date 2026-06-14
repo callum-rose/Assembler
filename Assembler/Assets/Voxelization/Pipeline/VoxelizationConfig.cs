@@ -33,6 +33,37 @@ namespace Assembler.Voxelization
 		/// <summary>Declared-volume cap above which a planned layers part is demoted to a script part.</summary>
 		public int PartVoxelBudget { get; init; } = 4000;
 
+		/// <summary>
+		/// Read the authoritative brief fields (silhouette occupancy + palette)
+		/// deterministically from the reference pixels rather than via a vision
+		/// call. Default on: reference images are plain-background flat-colour art,
+		/// for which thresholding + quantization is reproducible, free, and pixel-
+		/// exact, where the vision read needed retry/symmetrise/trim scaffolding.
+		/// </summary>
+		public bool DeterministicBrief { get; init; } = true;
+
+		/// <summary>
+		/// When <see cref="DeterministicBrief"/> is on, additionally make one slim
+		/// vision call for the advisory semantic fields (proportions, signature
+		/// features). Off by default — those fields are guidance only and the
+		/// pipeline treats their absence gracefully, so the call is pure cost.
+		/// </summary>
+		public bool ExtractSemanticBriefFields { get; init; }
+
+		/// <summary>
+		/// Cell solid when more than this fraction of its pixels are foreground.
+		/// Per-cell area coverage (vs single-sample) anti-aliases edges cleanly.
+		/// </summary>
+		public float SilhouetteCellCoverage { get; init; } = 0.5f;
+
+		/// <summary>
+		/// Normalised RGB distance from the corner-sampled background colour beyond
+		/// which an opaque-image pixel counts as foreground. Tolerance, not exact
+		/// match, so a gradient/noisy "plain" background still keys. Ignored when
+		/// the image carries real transparency (the alpha channel keys it exactly).
+		/// </summary>
+		public float BackgroundColourTolerance { get; init; } = 0.12f;
+
 		public float SilhouetteIouThreshold { get; init; } = 0.75f;
 
 		/// <summary>

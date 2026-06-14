@@ -25,6 +25,13 @@ namespace Assembler.Voxelization.Editor
 		[TextArea(3, 8)]
 		public string StyleGuidance = string.Empty;
 
+		[Header("Reference brief extraction")]
+		[Tooltip("Read the silhouette + palette deterministically from the reference pixels instead of via a vision call.")]
+		public bool DeterministicBrief = VoxelizationConfig.Default.DeterministicBrief;
+
+		[Tooltip("When deterministic, also make one slim vision call for the advisory proportions / signature features.")]
+		public bool ExtractSemanticBriefFields = VoxelizationConfig.Default.ExtractSemanticBriefFields;
+
 		[Header("Retry / budget knobs")]
 		[Tooltip("Attempts per part inside one authoring call (initial + parse-failure retries).")]
 		[Min(1)]
@@ -76,6 +83,8 @@ namespace Assembler.Voxelization.Editor
 			PlanningModel = PlanningModel,
 			AuthoringModel = AuthoringModel,
 			StyleGuidance = StyleGuidance.Trim(),
+			DeterministicBrief = DeterministicBrief,
+			ExtractSemanticBriefFields = ExtractSemanticBriefFields,
 			MaxPartAttempts = MaxPartAttempts,
 			MaxValidationRounds = MaxValidationRounds,
 			MaxReviewRounds = MaxReviewRounds,

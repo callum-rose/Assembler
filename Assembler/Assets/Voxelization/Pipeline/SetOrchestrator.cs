@@ -50,7 +50,7 @@ namespace Assembler.Voxelization
 		private readonly VoxelizationConfig _config;
 		private readonly IReferenceImageSource _images;
 		private readonly TokenUsageTracker _usage;
-		private readonly BriefExtractor _briefer;
+		private readonly IBriefExtractor _briefer;
 		private readonly ModelPlanner _planner;
 		private readonly ModelRefiner _refiner;
 		private readonly PartAuthor _author;
@@ -66,7 +66,9 @@ namespace Assembler.Voxelization
 		{
 			_gateway = gateway;
 			_config = config;
-			_briefer = new BriefExtractor(gateway, config);
+			_briefer = config.DeterministicBrief
+				? new DeterministicBriefExtractor(gateway, config)
+				: new BriefExtractor(gateway, config);
 			_images = images;
 			_usage = usage;
 			_planner = new ModelPlanner(gateway, config);

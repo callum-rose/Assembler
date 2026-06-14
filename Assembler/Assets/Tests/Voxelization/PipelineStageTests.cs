@@ -330,7 +330,9 @@ reference_brief:
 				.Enqueue("OK");
 			var orchestrator = new SetOrchestrator(
 				gateway,
-				VoxelizationConfig.Default,
+				// This test exercises the vision brief path; the byte[]{1} reference is
+				// not a real image, so the deterministic path could not decode it.
+				VoxelizationConfig.Default with { DeterministicBrief = false },
 				images,
 				StubScriptRunner.Failing("no scripts"),
 				new TokenUsageTracker());
