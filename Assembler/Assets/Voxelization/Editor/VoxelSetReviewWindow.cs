@@ -65,15 +65,22 @@ namespace Assembler.Voxelization.Editor
 		// to its base manifest asset so a revision can itself be re-refined; original
 		// slots aren't listed here and resolve to themselves.
 		private readonly Dictionary<string, string> _baseAssetId = new();
+		// Two parallel streams captured every run: _log is the headline narrative;
+		// _verboseLog is that same narrative with every LLM call's full
+		// prompt/response/tool-use/usage interleaved in. Both are always recorded, so
+		// the sidebar's Verbose toggle switches which one is shown after the fact
+		// rather than having to be armed before the run.
 		private readonly StringBuilder _log = new();
+		private readonly StringBuilder _verboseLog = new();
 
 		// Rebuilding the log string and recomputing its height every OnGUI is O(log
 		// size) per frame — fine when the log was headlines, costly now that verbose
-		// mode pours full prompts/responses into it. Cache both, invalidated on append.
+		// mode pours full prompts/responses into it. Cache both, invalidated on append
+		// or when the toggle flips the active stream.
 		private string _logText = string.Empty;
 		private float _logHeight;
 		private bool _logDirty = true;
-		private bool _verboseLog;
+		private bool _showVerbose;
 		private TokenUsageTracker _usage = new();
 
 		private readonly System.Diagnostics.Stopwatch _runTimer = new();
@@ -108,7 +115,7 @@ namespace Assembler.Voxelization.Editor
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
 			_showAdvanced = EditorPrefs.GetBool(AdvancedFoldoutPref, false);
-			_verboseLog = EditorPrefs.GetBool(VerboseLogPref, true);
+			_showVerbose = EditorPrefs.GetBool(VerboseLogPref, true);
 			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
 			RefreshModels();
@@ -672,42 +679,51 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawLog()
 		{
+			var active = _showVerbose ? _verboseLog : _log;
+
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Log", EditorStyles.boldLabel);
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_verboseLog = GUILayout.Toggle(_verboseLog, new GUIContent(
+				_showVerbose = GUILayout.Toggle(_showVerbose, new GUIContent(
 					"Verbose",
-					"Log the full prompt, response, tool calls and token usage of every LLM call in the pipeline. " +
-					"Applies to the next run."), GUILayout.Width(70));
+					"Show every LLM call's full prompt, response, tool calls and token usage interleaved " +
+					"with the headlines. Both streams are recorded on every run, so this switches the view " +
+					"after the fact — no need to arm it beforehand."), GUILayout.Width(70));
 				if (scope.changed)
 				{
-					EditorPrefs.SetBool(VerboseLogPref, _verboseLog);
+					EditorPrefs.SetBool(VerboseLogPref, _showVerbose);
+					// The two streams differ in length, so the cached text/height must
+					// be rebuilt for whichever one is now showing.
+					_logDirty = true;
 				}
 			}
 
-			using (new EditorGUI.DisabledScope(_log.Length == 0))
+			using (new EditorGUI.DisabledScope(_log.Length == 0 && _verboseLog.Length == 0))
 			{
 				if (GUILayout.Button("Clear", GUILayout.Width(50)))
 				{
 					_log.Clear();
+					_verboseLog.Clear();
 					_logDirty = true;
 				}
 			}
 
 			EditorGUILayout.EndHorizontal();
-			if (_log.Length == 0)
+			if (active.Length == 0)
 			{
 				return;
 			}
 
 			_logStyle ??= new GUIStyle(EditorStyles.label) { wordWrap = true, fontSize = 10 };
 
-			// Only rebuild the string and re-measure when the log actually changed —
-			// otherwise this runs every repaint, and verbose logs make that O(MB).
+			// Only rebuild the string and re-measure when the active log actually
+			// changed — otherwise this runs every repaint, and verbose logs make that
+			// O(MB). Invalidated on append (Log/LogTranscript) and when the toggle
+			// flips which stream is shown.
 			if (_logDirty)
 			{
-				_logText = _log.ToString();
+				_logText = active.ToString();
 				_logHeight = _logStyle.CalcHeight(new GUIContent(_logText), SidebarWidth - 40f);
 				_logDirty = false;
 			}
@@ -893,11 +909,12 @@ namespace Assembler.Voxelization.Editor
 		private AnthropicGateway NewGateway() =>
 			new(_apiKey, _usage,
 				onActivity: status => _statusLine = status,
-				// When verbose, every call's full prompt/response/tool-use/usage lands
-				// in the log. Progress<string> marshals it to the main thread, so the
-				// _log StringBuilder is only ever touched there even though assets run
+				// Every call's full prompt/response/tool-use/usage is always captured
+				// into the verbose stream (the operator decides later whether to view
+				// it). Progress<string> marshals each transcript to the main thread, so
+				// the StringBuilders are only ever touched there even though assets run
 				// concurrently on background threads.
-				onTranscript: _verboseLog ? new Progress<string>(Log) : null);
+				onTranscript: new Progress<string>(LogTranscript));
 
 		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
 		{
@@ -1026,6 +1043,7 @@ namespace Assembler.Voxelization.Editor
 			if (clearResults)
 			{
 				_log.Clear();
+				_verboseLog.Clear();
 				_logDirty = true;
 			}
 
@@ -1082,22 +1100,47 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
+			// Both streams are persisted: session.log is the headline narrative,
+			// session.verbose.log adds every full LLM transcript inline.
 			Directory.CreateDirectory(_runFolder);
 			File.WriteAllText(Path.Combine(_runFolder, "session.log"), _log.ToString());
+			File.WriteAllText(Path.Combine(_runFolder, "session.verbose.log"), _verboseLog.ToString());
 			AssetDatabase.Refresh();
 		}
 
+		/// <summary>A headline: written to both the regular and the verbose stream so
+		/// the verbose view stays a superset of the regular one.</summary>
 		private void Log(string message)
 		{
-			// Each entry opens with a bullet + run timestamp so entries are easy
-			// to tell apart in the stream.
-			_log.Append("• ");
+			var entry = FormatEntry(message);
+			_log.Append(entry);
+			_verboseLog.Append(entry);
+			AfterAppend();
+		}
+
+		/// <summary>A full LLM transcript: written only to the verbose stream, so the
+		/// regular view stays a readable headline narrative.</summary>
+		private void LogTranscript(string message)
+		{
+			_verboseLog.Append(FormatEntry(message));
+			AfterAppend();
+		}
+
+		// Each entry opens with a bullet + run timestamp so entries are easy to tell
+		// apart in the stream.
+		private string FormatEntry(string message)
+		{
+			var builder = new StringBuilder("• ");
 			if (_runTimer.IsRunning)
 			{
-				_log.Append('[').Append(_runTimer.Elapsed.ToString(@"mm\:ss")).Append("] ");
+				builder.Append('[').Append(_runTimer.Elapsed.ToString(@"mm\:ss")).Append("] ");
 			}
 
-			_log.AppendLine(message);
+			return builder.AppendLine(message).ToString();
+		}
+
+		private void AfterAppend()
+		{
 			_logDirty = true;
 			_logScroll.y = float.MaxValue;
 			Repaint();
