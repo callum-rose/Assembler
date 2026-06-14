@@ -23,22 +23,31 @@ namespace Assembler.Behaviours.Visual
 	{
 		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
+		private Light _light;
+
 		protected override void OnInitialise(LightData data)
 		{
-			var light = gameObject.AddComponent<Light>();
+			// Create the light once and reuse it across pooled lives: OnInitialise re-runs on every reuse, so a
+			// guard keeps the single Light (the live bindings below re-bind into the despawn-cleared
+			// LivePropertyBindings sink, re-driving this same light). A guard rather than Awake because Awake does
+			// not run in edit mode (the sandbox validator / EditMode tests build via OnInitialise).
+			if (_light == null)
+			{
+				_light = gameObject.AddComponent<Light>();
+			}
 
 			// BindLive drives each property live when bound to a !var/!expr/!clock and keeps today's
 			// init-once behaviour (apply the Unity-default fallback) when the property is a constant or omitted.
-			data.Type.BindLive(this, kind => light.type = kind switch
+			data.Type.BindLive(this, kind => _light.type = kind switch
 			{
 				LightKind.Point => LightType.Point,
 				LightKind.Spot => LightType.Spot,
 				_ => LightType.Directional
 			}, LightKind.Directional);
-			data.Colour.BindLive(this, c => light.color = c, Color.white);
-			data.Intensity.BindLive(this, i => light.intensity = i, 1f);
-			data.Range.BindLive(this, r => light.range = r, 10f);
-			data.SpotAngle.BindLive(this, a => light.spotAngle = a, 30f);
+			data.Colour.BindLive(this, c => _light.color = c, Color.white);
+			data.Intensity.BindLive(this, i => _light.intensity = i, 1f);
+			data.Range.BindLive(this, r => _light.range = r, 10f);
+			data.SpotAngle.BindLive(this, a => _light.spotAngle = a, 30f);
 		}
 	}
 }

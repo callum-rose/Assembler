@@ -17,7 +17,14 @@ namespace Assembler.Behaviours.Audio
 
 		protected override void OnInitialise(AudioSourceData data)
 		{
-			_audioSource = gameObject.AddComponent<AudioSource>();
+			// Create the source once and reuse it across pooled lives (OnInitialise re-runs on every reuse, so a
+			// guard keeps the single AudioSource rather than stacking a second). A guard rather than Awake because
+			// Awake does not run in edit mode (the sandbox validator / EditMode tests build via OnInitialise).
+			if (_audioSource == null)
+			{
+				_audioSource = gameObject.AddComponent<AudioSource>();
+			}
+
 			_audioSource.clip = data.Clip.Get();
 			_audioSource.loop = data.Loop.Get();
 

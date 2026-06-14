@@ -16,6 +16,10 @@ namespace Assembler.Behaviours.Gating
 
 		private double _lastTriggerTime = double.NegativeInfinity;
 
+		// Forget the previous life's last-trigger time so a pooled reuse forwards its first trigger immediately
+		// rather than throttling against a stale timestamp.
+		public override void OnReuse() => _lastTriggerTime = double.NegativeInfinity;
+
 		public void Execute(TriggerContext ctx)
 		{
 			var rate = Data.Rate.Get(ctx);

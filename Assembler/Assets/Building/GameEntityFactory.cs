@@ -16,9 +16,13 @@ using UnityEngine.InputSystem;
 
 namespace Assembler.Building
 {
-	public class GameEntityFactory : IEntitySpawner
+	public class GameEntityFactory : IEntitySpawner, IEntitySink
 	{
 		private const string SpawnedIdPrefix = "$spawn$";
+
+		// Recycled shells keyed by template id. Populated lazily by Despawn; drained by Spawn. Empty until
+		// something is despawned, so games that never destroy keep the pre-pooling behaviour and pay nothing.
+		private readonly EntityPool _pool = new();
 
 		private readonly VariableRegistry _variables;
 		private readonly CompiledExpressionsRegistry _expressions;
@@ -90,60 +94,92 @@ namespace Assembler.Building
 
 		public EntityBuildResult Create(ConcreteEntityInfo entityInfo) => Create(entityInfo, _root);
 
-		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent, int? siblingIndex = null)
+		public EntityBuildResult Create(ConcreteEntityInfo entityInfo, Transform? parent, int? siblingIndex = null) =>
+			Build(entityInfo, parent, siblingIndex, templateId: null, reuseShell: null);
+
+		/// <summary>
+		/// The single entity builder behind both fresh creation and pooled reuse. <paramref name="reuseShell"/>
+		/// is a recycled GameObject to rebuild onto — a pooled respawn, or (recursively) a pooled tree's existing
+		/// child — and is <c>null</c> for a fresh build. <paramref name="templateId"/> is stamped on the root
+		/// entity only on a pooled spawn; it gates the entity's return to the pool on despawn and is left
+		/// <c>null</c> on children (they pool as part of the root, never independently).
+		///
+		/// Reuse keeps every component alive and only re-applies state: the scope and resolved providers are
+		/// rebuilt each spawn (a disposed scope cannot be reused, and resolved <c>Data</c> bakes in this spawn's
+		/// parameters), the existing behaviour components are re-initialised in place, and their transient runtime
+		/// state is reset via <c>OnReuse</c> after initialisation (see <see cref="Spawn"/>).
+		/// </summary>
+		private EntityBuildResult Build(ConcreteEntityInfo entityInfo, Transform? parent, int? siblingIndex,
+			string? templateId, GameObject? reuseShell)
 		{
 			var scope = EntityVariableScope.Create(entityInfo.Variables);
 
 			var context = _baseContext with { Scope = scope };
 
-			var gameObject = new GameObject(entityInfo.Id)
-			{
-				transform =
-				{
-					position = entityInfo.InitialPosition.Resolve(context).ValueOr(Vector3.zero),
-					rotation = entityInfo.InitialRotation.Resolve(context).ValueOr(Vector3.zero).FromEuler()
-				}
-			};
+			var position = entityInfo.InitialPosition.Resolve(context).ValueOr(Vector3.zero);
+			var rotation = entityInfo.InitialRotation.Resolve(context).ValueOr(Vector3.zero).FromEuler();
 
-			// Configure GameEntity while inactive so its Awake (which self-registers into the query index) runs
-			// only once Tags/Query are set, when we activate below.
+			var reused = reuseShell != null;
+			var gameObject = reuseShell ?? new GameObject(entityInfo.Id);
+
+			// Configure while inactive so behaviours' Awake (which creates their Unity sub-components) and the
+			// entity's query self-register fire against fully-set Tags/Query/Id. A reused shell is already inactive.
 			gameObject.SetActive(false);
+
+			if (reused)
+			{
+				gameObject.name = entityInfo.Id;
+			}
 
 			if (parent != null)
 			{
 				gameObject.transform.SetParent(parent, worldPositionStays: false);
+			}
 
-				// Pin sibling order to the descriptor's child order so layout groups (which arrange by
-				// sibling index) are deterministic regardless of when children are instantiated.
-				if (siblingIndex.HasValue)
-				{
-					gameObject.transform.SetSiblingIndex(siblingIndex.Value);
-				}
+			// Setting local pos/rot under the parent matches the fresh path's "stamp the unparented transform,
+			// then SetParent(worldPositionStays:false)" — both leave the entity at these values local to its parent.
+			gameObject.transform.localPosition = position;
+			gameObject.transform.localRotation = rotation;
+
+			// Pin sibling order to the descriptor's child order so layout groups (which arrange by sibling index)
+			// are deterministic regardless of when children are instantiated.
+			if (parent != null && siblingIndex.HasValue)
+			{
+				gameObject.transform.SetSiblingIndex(siblingIndex.Value);
 			}
 
 			_entityTransforms.Register(entityInfo.Id, gameObject.transform);
 
-			var gameEntity = gameObject.AddComponent<GameEntity>();
+			var gameEntity = reused ? gameObject.GetComponent<GameEntity>() : gameObject.AddComponent<GameEntity>();
 			gameEntity.Id = entityInfo.Id;
 			gameEntity.Tags = entityInfo.Tags.ToArray();
 			gameEntity.VariableScope = scope;
 			gameEntity.Query = _entityQuery;
+			gameEntity.TemplateId = templateId;
 
-			// On destruction the entity self-evicts from every runtime index it was registered in. The deregistrations
+			// On teardown the entity self-evicts from every runtime index it was registered in. The deregistrations
 			// hang off one event rather than separate registry refs on the entity; each captures the id it needs.
+			// Re-subscribed every life because Recycle clears them on despawn.
 			var entityId = entityInfo.Id;
 			gameEntity.Destroying += () => _entityQuery.Unregister(entityId);
 			gameEntity.Destroying += () => _entityTransforms.Unregister(entityId);
 			gameEntity.Destroying += () => _behaviourRegistry.DeregisterEntity(entityId);
 
-			// Activate now that GameEntity is configured: its Awake self-registers into the query index.
+			// Activate now that GameEntity is configured, then explicitly register it into the query index. The
+			// self-register lives in Activate (not GameEntity.Awake) because Awake runs only once per component
+			// lifetime: a reused shell keeps its GameEntity, so Awake would not re-fire and the entity would
+			// silently never re-register. Behaviour sub-components are created in their OnInitialise (the init pass
+			// below), not Awake — Awake does not run in edit mode (the sandbox validator), and OnInitialise is the
+			// only build step guaranteed to run in both edit and play mode.
 			gameObject.SetActive(true);
+			gameEntity.Activate();
 
 			var behaviours = new List<(BehaviourDescriptor Descriptor, GameBehaviour Behaviour, IReadOnlyList<string> BehaviourTags)>();
 			var initialisations = new List<InitialiseBehaviourEvent>();
 
 			var buildContext = new BehaviourBuildContext(
 				context,
+				this,
 				this,
 				_exclusiveGroups,
 				_controls,
@@ -155,18 +191,36 @@ namespace Assembler.Building
 				_nav,
 				_liveProperties);
 
+			// A reused shell carries its behaviour components in their original add order, which is the template's
+			// behaviour-list order — identical across instances of a template id — so index i lines up with
+			// entityInfo.Behaviours[i]. Pass each existing component so the factory re-uses it instead of adding a
+			// duplicate (a second component has its own null sub-component field, so its OnInitialise would create
+			// a second Rigidbody/SpriteRenderer/collider alongside the original).
+			var existingBehaviours = reused ? gameObject.GetComponents<GameBehaviour>() : null;
+
+			var behaviourIndex = 0;
+
 			foreach (var behaviourInfo in entityInfo.Behaviours)
 			{
-				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject, behaviourInfo, buildContext);
+				var existing = existingBehaviours?[behaviourIndex];
+
+				var (gameBehaviour, initialise) = GameBehaviourFactory.Create(gameObject, behaviourInfo, buildContext, existing);
 
 				gameBehaviour.SetEntity(gameEntity);
 				gameBehaviour.Tags = behaviourInfo.Tags.ToArray();
 
 				behaviours.Add((new BehaviourDescriptor(entityInfo.Id, behaviourInfo.Id), gameBehaviour, behaviourInfo.Tags));
 				initialisations.Add(initialise);
+				behaviourIndex++;
 			}
 
+			// A reused tree already carries its child entity GameObjects (told apart from behaviour-spawned helper
+			// GameObjects like "Sprite" by their GameEntity component), so rebuild onto them in descriptor order
+			// rather than creating duplicates.
+			var existingChildren = reused ? ExistingChildEntities(gameObject.transform) : null;
+
 			var childSiblingIndex = 0;
+			var childIndex = 0;
 
 			foreach (var child in entityInfo.Children)
 			{
@@ -199,13 +253,35 @@ namespace Assembler.Building
 					child.Variables,
 					child.Children);
 
-				var childResult = Create(resolvedChild, gameObject.transform, childSiblingIndex++);
+				var childShell = existingChildren?[childIndex].gameObject;
+
+				var childResult = Build(resolvedChild, gameObject.transform, childSiblingIndex++,
+					templateId: null, reuseShell: childShell);
 
 				behaviours.AddRange(childResult.Behaviours);
 				initialisations.AddRange(childResult.Initialisations);
+				childIndex++;
 			}
 
 			return new EntityBuildResult(behaviours, initialisations);
+		}
+
+		// The entity children of a pooled shell, in descriptor (sibling) order. Filters out behaviour-spawned
+		// helper GameObjects (Sprite/VoxelMesh/Primitive children), which carry no GameEntity; the entity children
+		// were pinned to sibling indices 0..n-1 on the previous build, so transform child order matches.
+		private static IReadOnlyList<GameEntity> ExistingChildEntities(Transform parent)
+		{
+			var children = new List<GameEntity>();
+
+			for (var i = 0; i < parent.childCount; i++)
+			{
+				if (parent.GetChild(i).TryGetComponent<GameEntity>(out var childEntity))
+				{
+					children.Add(childEntity);
+				}
+			}
+
+			return children;
 		}
 
 		/// <summary>
@@ -261,6 +337,8 @@ namespace Assembler.Building
 				throw new InvalidOperationException($"No template registered with id '{templateId}'");
 			}
 
+			// A fresh spawn id each life (even on reuse) keeps listener descriptors consistent with today and
+			// avoids a recycled shell answering to its previous life's id.
 			var newId = $"{SpawnedIdPrefix}{templateId}_{_spawnCounter++}";
 
 			var entity = TemplateInstantiator.Instantiate(
@@ -272,13 +350,67 @@ namespace Assembler.Building
 				parameters: new Dictionary<string, AssemblerValue>(),
 				runtimeParameters: parameters);
 
-			var result = Create(entity);
+			var reused = _pool.TryRent(templateId, out var shell);
+
+			var result = Build(entity, _root, siblingIndex: null, templateId: templateId, reuseShell: reused ? shell : null);
 			_behaviourRegistry.Register(result);
 
 			foreach (var init in result.Initialisations)
 			{
 				init(_behaviourRegistry);
 			}
+
+			// Reset transient state and re-arm Start-style logic AFTER initialisation, so each behaviour sees this
+			// spawn's Data. Only on reuse: a fresh component's Awake/Initialise/Start already run clean.
+			if (reused)
+			{
+				foreach (var (_, behaviour, _) in result.Behaviours)
+				{
+					behaviour.OnReuse();
+				}
+			}
+		}
+
+		/// <summary>
+		/// The despawn seam (<see cref="IEntitySink"/>) that <c>DestroyBehaviour</c> routes through. A non-pooled
+		/// entity — anything not produced by <see cref="Spawn"/>, so <c>TemplateId</c> is null: hand-authored,
+		/// placement, game-controller entities — is really destroyed, exactly as before pooling existed. A pooled
+		/// entity's whole tree is torn down from the runtime indexes and its live bindings cleared (so the dormant
+		/// shell neither ticks nor stacks duplicate bindings next life), then the shell is parked inactive under
+		/// the game root and returned to its template's pool for the next <see cref="Spawn"/> to rebuild.
+		/// </summary>
+		public void Despawn(GameEntity entity)
+		{
+			if (entity == null)
+			{
+				return;
+			}
+
+			var gameObject = entity.gameObject;
+
+			if (entity.TemplateId is not { } templateId)
+			{
+				UnityEngine.Object.Destroy(gameObject);
+				return;
+			}
+
+			// Clear live-property bindings across the tree first: their teardown unsubscribes from game-global
+			// variables and disposes expression providers before Recycle disposes the entity scopes those read.
+			foreach (var bindings in gameObject.GetComponentsInChildren<LivePropertyBindings>(includeInactive: true))
+			{
+				bindings.ResetBindings();
+			}
+
+			// Recycle (not destroy) every entity in the tree — root and children — so each deregisters from the
+			// query/transform/behaviour indexes and disposes its scope, while the GameObjects survive for reuse.
+			foreach (var treeEntity in gameObject.GetComponentsInChildren<GameEntity>(includeInactive: true))
+			{
+				treeEntity.Recycle();
+			}
+
+			gameObject.transform.SetParent(_root, worldPositionStays: false);
+			gameObject.SetActive(false);
+			_pool.Return(templateId, gameObject);
 		}
 	}
 }

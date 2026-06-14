@@ -19,6 +19,10 @@ namespace Assembler.Behaviours.Movement
 
 		private Vector3 _velocity;
 
+		// Clear the carried SmoothDamp velocity so a pooled reuse eases out of rest rather than inheriting the
+		// previous life's momentum.
+		public override void OnReuse() => _velocity = Vector3.zero;
+
 		private void Update() => Step();
 
 		internal void Step()

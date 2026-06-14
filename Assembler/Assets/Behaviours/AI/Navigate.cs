@@ -33,6 +33,15 @@ namespace Assembler.Behaviours.AI
 		private IReadOnlyList<Vector3> _path = Array.Empty<Vector3>();
 		private int _pathIndex;
 
+		// Discard the cached route so a pooled reuse recomputes a fresh path from its new position next frame
+		// rather than steering along the previous life's stale waypoints.
+		public override void OnReuse()
+		{
+			_path = Array.Empty<Vector3>();
+			_pathIndex = 0;
+			_sinceRecompute = 0f;
+		}
+
 		private void Update() => Step();
 
 		internal void Step()

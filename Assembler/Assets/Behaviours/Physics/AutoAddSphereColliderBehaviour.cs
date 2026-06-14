@@ -15,11 +15,9 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddSphereColliderBehaviour : AddColliderBehaviour<SphereColliderData>
 	{
-		protected override Collider CreateCollider(SphereColliderData data)
-		{
-			var collider = gameObject.AddComponent<SphereCollider>();
-			data.Radius.UseIfValueExists(v => collider.radius = v);
-			return collider;
-		}
+		protected override Collider CreateCollider() => gameObject.AddComponent<SphereCollider>();
+
+		protected override void ApplyShape(Collider collider, SphereColliderData data) =>
+			data.Radius.UseIfValueExists(v => ((SphereCollider)collider).radius = v);
 	}
 }

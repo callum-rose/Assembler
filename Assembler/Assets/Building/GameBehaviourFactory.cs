@@ -40,10 +40,15 @@ namespace Assembler.Building
 
 	public static class GameBehaviourFactory
 	{
+		// `existing` is non-null only on the pooled-reuse path: the shell already carries this behaviour
+		// component (added in its first life), so the builder reuses it instead of AddComponent-ing a second
+		// one. A second component would re-fire creation logic (each heavy behaviour creates its Unity
+		// sub-component in Awake) and stack duplicates. On the fresh path `existing` is null and the builder adds.
 		private delegate (GameBehaviour, InitialiseBehaviourEvent) BehaviourBuilder(
 			GameObject go,
 			BehaviourInfo info,
-			BehaviourBuildContext ctx);
+			BehaviourBuildContext ctx,
+			GameBehaviour? existing);
 
 		private sealed record BuilderEntry(Type MonoBehaviourType, BehaviourBuilder Build);
 
@@ -58,18 +63,24 @@ namespace Assembler.Building
 		public static (GameBehaviour, InitialiseBehaviourEvent) Create(
 			GameObject gameObject,
 			BehaviourInfo behaviourInfo,
-			BehaviourBuildContext ctx)
+			BehaviourBuildContext ctx,
+			GameBehaviour? existing = null)
 		{
 			if (!Builders.TryGetValue(behaviourInfo.GetType(), out var entry))
 			{
 				throw new ArgumentException($"Unsupported behaviour info type '{behaviourInfo.GetType()}'");
 			}
 
-			var (behaviour, initialise) = entry.Build(gameObject, behaviourInfo, ctx);
+			var (behaviour, initialise) = entry.Build(gameObject, behaviourInfo, ctx, existing);
 
 			if (behaviour is INeedsSpawner needsSpawner)
 			{
 				needsSpawner.Spawner = ctx.Spawner;
+			}
+
+			if (behaviour is INeedsEntitySink needsSink)
+			{
+				needsSink.Sink = ctx.Sink;
 			}
 
 			if (behaviour is INeedsGameClock needsClock)
@@ -216,14 +227,14 @@ namespace Assembler.Building
 					(i, ctx) => new LookAtData(i.Id,
 						i.Target.Resolve(ctx.Resolution),
 						i.TurnRate.Resolve(ctx.Resolution))),
-				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
+				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx, existing) =>
+					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx, existing,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(ScaleAnimationInfo)] = new(typeof(ScaleAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<ScaleAnimationInfo, ScaleAnimation>(go, (ScaleAnimationInfo)info, ctx,
+				[typeof(ScaleAnimationInfo)] = new(typeof(ScaleAnimation), (go, info, ctx, existing) =>
+					BuildTransformAnimation<ScaleAnimationInfo, ScaleAnimation>(go, (ScaleAnimationInfo)info, ctx, existing,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(RotateAnimationInfo)] = new(typeof(RotateAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<RotateAnimationInfo, RotateAnimation>(go, (RotateAnimationInfo)info, ctx,
+				[typeof(RotateAnimationInfo)] = new(typeof(RotateAnimation), (go, info, ctx, existing) =>
+					BuildTransformAnimation<RotateAnimationInfo, RotateAnimation>(go, (RotateAnimationInfo)info, ctx, existing,
 						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
 				[typeof(SetPositionInfo)] = Entry<SetPositionInfo, SetPosition, SetPositionData>(
 					(i, ctx) => new SetPositionData(i.Id,
@@ -253,10 +264,10 @@ namespace Assembler.Building
 					(i, ctx) => new AxisTriggerData(i.Id,
 						i.XAxis.Resolve(ctx.Resolution),
 						i.YAxis.Resolve(ctx.Resolution))),
-				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx) =>
+				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx, existing) =>
 				{
 					var i = (InputActionTriggerInfo)info;
-					var b = go.AddComponent<InputActionTrigger>();
+					var b = existing as InputActionTrigger ?? go.AddComponent<InputActionTrigger>();
 
 					var actionName = i.Action.Resolve(ctx.Resolution).Get();
 
@@ -352,10 +363,10 @@ namespace Assembler.Building
 				[typeof(InverseConditionGateInfo)] = Entry<InverseConditionGateInfo, InverseConditionGate, ConditionGateData>(
 					(i, ctx) => new ConditionGateData(i.Id,
 						i.Condition.Resolve(ctx.Resolution))),
-				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx) =>
+				[typeof(ExclusiveTriggerInfo)] = new(typeof(ExclusiveTrigger), (go, info, ctx, existing) =>
 				{
 					var i = (ExclusiveTriggerInfo)info;
-					var b = go.AddComponent<ExclusiveTrigger>();
+					var b = existing as ExclusiveTrigger ?? go.AddComponent<ExclusiveTrigger>();
 					b.Registry = ctx.ExclusiveGroups;
 					return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
 						i.Group.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
@@ -365,10 +376,10 @@ namespace Assembler.Building
 						i.View.Resolve(ctx.Resolution),
 						i.Size.Resolve(ctx.Resolution),
 						i.DefaultBlend.Resolve(ctx.Resolution))),
-				[typeof(CameraFollowInfo)] = new(typeof(CameraFollow), (go, info, ctx) =>
+				[typeof(CameraFollowInfo)] = new(typeof(CameraFollow), (go, info, ctx, existing) =>
 				{
 					var i = (CameraFollowInfo)info;
-					var b = go.AddComponent<CameraFollow>();
+					var b = existing as CameraFollow ?? go.AddComponent<CameraFollow>();
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
@@ -408,10 +419,10 @@ namespace Assembler.Building
 						i.Damping.Resolve(ctx.Resolution),
 						i.MinFOV.Resolve(ctx.Resolution),
 						i.MaxFOV.Resolve(ctx.Resolution))),
-				[typeof(CameraOrbitInfo)] = new(typeof(CameraOrbit), (go, info, ctx) =>
+				[typeof(CameraOrbitInfo)] = new(typeof(CameraOrbit), (go, info, ctx, existing) =>
 				{
 					var i = (CameraOrbitInfo)info;
-					var b = go.AddComponent<CameraOrbit>();
+					var b = existing as CameraOrbit ?? go.AddComponent<CameraOrbit>();
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
@@ -430,10 +441,10 @@ namespace Assembler.Building
 					}
 					);
 				}),
-				[typeof(CameraConfinerInfo)] = new(typeof(CameraConfiner), (go, info, ctx) =>
+				[typeof(CameraConfinerInfo)] = new(typeof(CameraConfiner), (go, info, ctx, existing) =>
 				{
 					var i = (CameraConfinerInfo)info;
-					var b = go.AddComponent<CameraConfiner>();
+					var b = existing as CameraConfiner ?? go.AddComponent<CameraConfiner>();
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
@@ -449,10 +460,10 @@ namespace Assembler.Building
 					}
 					);
 				}),
-				[typeof(CameraGroupInfo)] = new(typeof(CameraGroup), (go, info, ctx) =>
+				[typeof(CameraGroupInfo)] = new(typeof(CameraGroup), (go, info, ctx, existing) =>
 				{
 					var i = (CameraGroupInfo)info;
-					var b = go.AddComponent<CameraGroup>();
+					var b = existing as CameraGroup ?? go.AddComponent<CameraGroup>();
 					return (b, lr =>
 					{
 						var res = ctx.Resolution;
@@ -506,20 +517,20 @@ namespace Assembler.Building
 				[typeof(SetActiveInfo)] = Entry<SetActiveInfo, SetActive, SetActiveData>(
 					(i, ctx) => new SetActiveData(i.Id,
 						i.Active.Resolve(ctx.Resolution))),
-				[typeof(SetBehaviourEnabledInfo)] = new(typeof(SetBehaviourEnabled), (go, info, ctx) =>
+				[typeof(SetBehaviourEnabledInfo)] = new(typeof(SetBehaviourEnabled), (go, info, ctx, existing) =>
 				{
 					var i = (SetBehaviourEnabledInfo)info;
-					var b = go.AddComponent<SetBehaviourEnabled>();
+					var b = existing as SetBehaviourEnabled ?? go.AddComponent<SetBehaviourEnabled>();
 					return (b, lr => b.Initialise(
 						new SetBehaviourEnabledData(i.Id,
 							ResolveBehaviourTargets(i.Targets, lr, ctx.Resolution),
 							i.Enabled.Resolve(ctx.Resolution)),
 						i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(ToggleBehaviourEnabledInfo)] = new(typeof(ToggleBehaviourEnabled), (go, info, ctx) =>
+				[typeof(ToggleBehaviourEnabledInfo)] = new(typeof(ToggleBehaviourEnabled), (go, info, ctx, existing) =>
 				{
 					var i = (ToggleBehaviourEnabledInfo)info;
-					var b = go.AddComponent<ToggleBehaviourEnabled>();
+					var b = existing as ToggleBehaviourEnabled ?? go.AddComponent<ToggleBehaviourEnabled>();
 					return (b, lr => b.Initialise(
 						new ToggleBehaviourEnabledData(i.Id,
 							ResolveBehaviourTargets(i.Targets, lr, ctx.Resolution)),
@@ -561,10 +572,10 @@ namespace Assembler.Building
 						i.Padding.Resolve(ctx.Resolution),
 						i.ChildAlignment.Resolve(ctx.Resolution),
 						i.FitContent.Resolve(ctx.Resolution))),
-				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx) =>
+				[typeof(TextLabelInfo)] = new(typeof(TextLabel), (go, info, ctx, existing) =>
 				{
 					var i = (TextLabelInfo)info;
-					var b = go.AddComponent<TextLabel>();
+					var b = existing as TextLabel ?? go.AddComponent<TextLabel>();
 					var prefab = RequireUiPrefab(ctx, lib => lib.LabelPrefab, "text label");
 					return (b, lr => b.Initialise(new TextLabelData(i.Id,
 						i.Text.Resolve(ctx.Resolution),
@@ -573,10 +584,10 @@ namespace Assembler.Building
 						i.PreferredHeight.Resolve(ctx.Resolution),
 						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(UIButtonInfo)] = new(typeof(UIButton), (go, info, ctx) =>
+				[typeof(UIButtonInfo)] = new(typeof(UIButton), (go, info, ctx, existing) =>
 				{
 					var i = (UIButtonInfo)info;
-					var b = go.AddComponent<UIButton>();
+					var b = existing as UIButton ?? go.AddComponent<UIButton>();
 					var prefab = RequireUiPrefab(ctx, lib => lib.ButtonPrefab, "ui button");
 					return (b, lr => b.Initialise(new UIButtonData(i.Id,
 						i.Label.Resolve(ctx.Resolution),
@@ -584,10 +595,10 @@ namespace Assembler.Building
 						i.PreferredHeight.Resolve(ctx.Resolution),
 						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx) =>
+				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx, existing) =>
 				{
 					var i = (UISliderInfo)info;
-					var b = go.AddComponent<UISlider>();
+					var b = existing as UISlider ?? go.AddComponent<UISlider>();
 					var prefab = RequireUiPrefab(ctx, lib => lib.SliderPrefab, "ui slider");
 					return (b, lr => b.Initialise(new UISliderData(i.Id,
 						i.InitialValue.Resolve(ctx.Resolution),
@@ -597,10 +608,10 @@ namespace Assembler.Building
 						i.PreferredHeight.Resolve(ctx.Resolution),
 						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(StateMachineInfo)] = new(typeof(StateMachine), (go, info, ctx) =>
+				[typeof(StateMachineInfo)] = new(typeof(StateMachine), (go, info, ctx, existing) =>
 				{
 					var i = (StateMachineInfo)info;
-					var b = go.AddComponent<StateMachine>();
+					var b = existing as StateMachine ?? go.AddComponent<StateMachine>();
 
 					// Declare the state variable up-front (Create phase) so other behaviours referencing it
 					// via !var resolve regardless of initialisation order. Seeded to the initial state;
@@ -719,10 +730,10 @@ namespace Assembler.Building
 			where TInfo : BehaviourInfo
 			where TBehaviour : GameBehaviour<TData>
 			where TData : BehaviourData
-			=> new(typeof(TBehaviour), (go, info, ctx) =>
+			=> new(typeof(TBehaviour), (go, info, ctx, existing) =>
 			{
 				var i = (TInfo)info;
-				var b = go.AddComponent<TBehaviour>();
+				var b = existing as TBehaviour ?? go.AddComponent<TBehaviour>();
 				return (b, lr => b.Initialise(makeData(i, ctx),
 					i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
@@ -731,6 +742,7 @@ namespace Assembler.Building
 			GameObject go,
 			TInfo info,
 			BehaviourBuildContext ctx,
+			GameBehaviour? existing,
 			Func<TInfo, ValueSource<Vector3>> start,
 			Func<TInfo, ValueSource<Vector3>> end,
 			Func<TInfo, ValueSource<float>> duration,
@@ -738,7 +750,7 @@ namespace Assembler.Building
 			where TInfo : BehaviourInfo
 			where TBehaviour : GameBehaviour<TransformAnimationData>
 		{
-			var b = go.AddComponent<TBehaviour>();
+			var b = existing as TBehaviour ?? go.AddComponent<TBehaviour>();
 			return (b, lr => b.Initialise(new TransformAnimationData(info.Id,
 				start(info).Resolve(ctx.Resolution),
 				end(info).Resolve(ctx.Resolution),
@@ -749,10 +761,10 @@ namespace Assembler.Building
 		private static void RegisterVariableSetter<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
 			where TBehaviour : GameBehaviour<VariableSetterData<T>>
 		{
-			map[typeof(VariableSetterInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx) =>
+			map[typeof(VariableSetterInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx, existing) =>
 			{
 				var i = (VariableSetterInfo<T>)info;
-				var b = go.AddComponent<TBehaviour>();
+				var b = existing as TBehaviour ?? go.AddComponent<TBehaviour>();
 				return (b, lr => b.Initialise(new VariableSetterData<T>(i.Id,
 					i.ValueToSet.ResolveWritable(ctx.Resolution),
 					i.ValueToGet.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
@@ -762,7 +774,7 @@ namespace Assembler.Building
 		private static void RegisterVariableChangedTrigger<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
 			where TBehaviour : GameBehaviour<VariableChangedTriggerData<T>>
 		{
-			map[typeof(VariableChangedTriggerInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx) =>
+			map[typeof(VariableChangedTriggerInfo<T>)] = new(typeof(TBehaviour), (go, info, ctx, existing) =>
 			{
 				var i = (VariableChangedTriggerInfo<T>)info;
 
@@ -775,7 +787,7 @@ namespace Assembler.Building
 						$"'{i.Id}': a variable changed trigger's VariableId must be a !var reference to a writable variable.");
 				}
 
-				var b = go.AddComponent<TBehaviour>();
+				var b = existing as TBehaviour ?? go.AddComponent<TBehaviour>();
 				return (b, lr =>
 				{
 					var provider = i.VariableId.Resolve(ctx.Resolution);
@@ -806,75 +818,75 @@ namespace Assembler.Building
 			where TClear : GameBehaviour<ListClearData<T>>
 			where TLoop : GameBehaviour<ListLoopTriggerData<T>>
 		{
-			map[typeof(ListLoopTriggerInfo<T>)] = new(typeof(TLoop), (go, info, ctx) =>
+			map[typeof(ListLoopTriggerInfo<T>)] = new(typeof(TLoop), (go, info, ctx, existing) =>
 			{
 				var i = (ListLoopTriggerInfo<T>)info;
-				var b = go.AddComponent<TLoop>();
+				var b = existing as TLoop ?? go.AddComponent<TLoop>();
 				return (b, lr => b.Initialise(new ListLoopTriggerData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListAddInfo<T>)] = new(typeof(TAdd), (go, info, ctx) =>
+			map[typeof(ListAddInfo<T>)] = new(typeof(TAdd), (go, info, ctx, existing) =>
 			{
 				var i = (ListAddInfo<T>)info;
-				var b = go.AddComponent<TAdd>();
+				var b = existing as TAdd ?? go.AddComponent<TAdd>();
 				return (b, lr => b.Initialise(new ListAddData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListInsertInfo<T>)] = new(typeof(TInsert), (go, info, ctx) =>
+			map[typeof(ListInsertInfo<T>)] = new(typeof(TInsert), (go, info, ctx, existing) =>
 			{
 				var i = (ListInsertInfo<T>)info;
-				var b = go.AddComponent<TInsert>();
+				var b = existing as TInsert ?? go.AddComponent<TInsert>();
 				return (b, lr => b.Initialise(new ListInsertData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListRemoveAtInfo<T>)] = new(typeof(TRemoveAt), (go, info, ctx) =>
+			map[typeof(ListRemoveAtInfo<T>)] = new(typeof(TRemoveAt), (go, info, ctx, existing) =>
 			{
 				var i = (ListRemoveAtInfo<T>)info;
-				var b = go.AddComponent<TRemoveAt>();
+				var b = existing as TRemoveAt ?? go.AddComponent<TRemoveAt>();
 				return (b, lr => b.Initialise(new ListRemoveAtData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListRemoveInfo<T>)] = new(typeof(TRemove), (go, info, ctx) =>
+			map[typeof(ListRemoveInfo<T>)] = new(typeof(TRemove), (go, info, ctx, existing) =>
 			{
 				var i = (ListRemoveInfo<T>)info;
-				var b = go.AddComponent<TRemove>();
+				var b = existing as TRemove ?? go.AddComponent<TRemove>();
 				return (b, lr => b.Initialise(new ListRemoveData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListSetAtInfo<T>)] = new(typeof(TSetAt), (go, info, ctx) =>
+			map[typeof(ListSetAtInfo<T>)] = new(typeof(TSetAt), (go, info, ctx, existing) =>
 			{
 				var i = (ListSetAtInfo<T>)info;
-				var b = go.AddComponent<TSetAt>();
+				var b = existing as TSetAt ?? go.AddComponent<TSetAt>();
 				return (b, lr => b.Initialise(new ListSetAtData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Index.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListSetInfo<T>)] = new(typeof(TSet), (go, info, ctx) =>
+			map[typeof(ListSetInfo<T>)] = new(typeof(TSet), (go, info, ctx, existing) =>
 			{
 				var i = (ListSetInfo<T>)info;
-				var b = go.AddComponent<TSet>();
+				var b = existing as TSet ?? go.AddComponent<TSet>();
 				return (b, lr => b.Initialise(new ListSetData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Value.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListAddRangeInfo<T>)] = new(typeof(TAddRange), (go, info, ctx) =>
+			map[typeof(ListAddRangeInfo<T>)] = new(typeof(TAddRange), (go, info, ctx, existing) =>
 			{
 				var i = (ListAddRangeInfo<T>)info;
-				var b = go.AddComponent<TAddRange>();
+				var b = existing as TAddRange ?? go.AddComponent<TAddRange>();
 				return (b, lr => b.Initialise(new ListAddRangeData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution),
 					i.Other.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-			map[typeof(ListClearInfo<T>)] = new(typeof(TClear), (go, info, ctx) =>
+			map[typeof(ListClearInfo<T>)] = new(typeof(TClear), (go, info, ctx, existing) =>
 			{
 				var i = (ListClearInfo<T>)info;
-				var b = go.AddComponent<TClear>();
+				var b = existing as TClear ?? go.AddComponent<TClear>();
 				return (b, lr => b.Initialise(new ListClearData<T>(i.Id,
 					i.List.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});

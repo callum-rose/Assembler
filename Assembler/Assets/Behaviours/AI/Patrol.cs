@@ -35,6 +35,14 @@ namespace Assembler.Behaviours.AI
 		private int _index;
 		private int _direction = 1;
 
+		// Restart the patrol at the first waypoint, heading forward, so a pooled reuse doesn't resume part-way
+		// through the previous life's route.
+		public override void OnReuse()
+		{
+			_index = 0;
+			_direction = 1;
+		}
+
 		private void Update() => Step();
 
 		internal void Step()

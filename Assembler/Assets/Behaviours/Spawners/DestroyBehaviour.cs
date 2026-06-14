@@ -3,15 +3,18 @@ using Assembler.Resolving.Behaviours;
 
 namespace Assembler.Behaviours.Spawners
 {
-	/// <summary>Destroys the entity's GameObject when Executed and notifies any listeners.</summary>
+	/// <summary>Despatches the entity when Executed (returning it to the pool if it was spawned, else destroying
+	/// its GameObject) and notifies any listeners.</summary>
 	/// <remarks>
 	/// Properties:
 	/// </remarks>
-	public class DestroyBehaviour : GameBehaviour<DestroyData>, IAmExecutable
+	public class DestroyBehaviour : GameBehaviour<DestroyData>, INeedsEntitySink, IAmExecutable
 	{
+		public IEntitySink Sink { get; set; } = null!;
+
 		public void Execute(TriggerContext ctx)
 		{
-			Destroy(gameObject);
+			Sink.Despawn(Entity);
 			NotifyListeners(ctx);
 		}
 	}

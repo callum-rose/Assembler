@@ -23,6 +23,9 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 		private Vector3 _startPosition;
 		private bool _resolved;
 
+		// Clear the in-progress press so a pooled reuse doesn't carry a stale gesture into its next life.
+		public override void OnReuse() => _pressed = false;
+
 		private void Update()
 		{
 			var pressed = Pointer.IsPressed;

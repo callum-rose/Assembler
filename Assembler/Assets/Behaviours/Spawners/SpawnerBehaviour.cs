@@ -28,6 +28,10 @@ namespace Assembler.Behaviours.Spawners
 
 		private int _sequentialIndex;
 
+		// Restart sequential selection from the first template so a pooled reuse doesn't resume the round-robin
+		// part-way through the previous life's cycle.
+		public override void OnReuse() => _sequentialIndex = 0;
+
 		public void Execute(TriggerContext ctx)
 		{
 			Spawner.Spawn(PickTemplateId(ctx),

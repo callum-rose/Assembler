@@ -26,6 +26,14 @@ namespace Assembler.Behaviours.Animations
 
 		protected abstract Vector3 Current { get; set; }
 
+		// Kill any tween left running from the previous life so a pooled reuse doesn't keep animating against this
+		// spawn's transform (Execute also kills before starting, but a reused entity may never be re-triggered).
+		public override void OnReuse()
+		{
+			_activeTween?.Kill();
+			_activeTween = null;
+		}
+
 		public void Execute(TriggerContext ctx)
 		{
 			_activeTween?.Kill();

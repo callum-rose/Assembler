@@ -27,6 +27,14 @@ namespace Assembler.Behaviours.AI
 		private Vector3 _target;
 		private Vector3 _heading = Vector3.zero;
 
+		// Re-anchor to the spawn cell and drop the carried heading so a pooled reuse starts from its new position
+		// rather than steering toward the previous life's target cell.
+		public override void OnReuse()
+		{
+			_initialised = false;
+			_heading = Vector3.zero;
+		}
+
 		private void Update()
 		{
 			var cellSize = Nav.CellSize;

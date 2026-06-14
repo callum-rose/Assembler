@@ -12,6 +12,7 @@ namespace Assembler.Building
 	public sealed record BehaviourBuildContext(
 		ResolutionContext Resolution,
 		IEntitySpawner Spawner,
+		IEntitySink Sink,
 		ExclusiveGroupRegistry ExclusiveGroups,
 		ControlsInfo Controls,
 		InputActionAsset ControlsAsset,

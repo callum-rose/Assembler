@@ -21,6 +21,10 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 		private float _lastDistance;
 		private float _lastAngle;
 
+		// Drop the two-finger tracking baseline so a pooled reuse re-establishes it on the next pinch rather than
+		// finite-differencing against the previous life's last frame.
+		public override void OnReuse() => _tracking = false;
+
 		private void Update()
 		{
 			if (Pointer.Count < 2)

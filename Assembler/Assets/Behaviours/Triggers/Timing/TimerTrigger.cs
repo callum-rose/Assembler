@@ -24,6 +24,15 @@ namespace Assembler.Behaviours.Triggers.Timing
 				Execute(TriggerContext.Empty);
 		}
 
+		// The previous life's coroutine was stopped when the shell deactivated; drop the stale handle, then
+		// re-arm AutoStart — Unity's once-per-lifetime Start does not re-run on a reused component.
+		public override void OnReuse()
+		{
+			_currentCoroutine = null;
+			if (Data.AutoStart.Get(TriggerContext.Empty))
+				Execute(TriggerContext.Empty);
+		}
+
 		public void Execute(TriggerContext ctx)
 		{
 			if (_currentCoroutine is not null)

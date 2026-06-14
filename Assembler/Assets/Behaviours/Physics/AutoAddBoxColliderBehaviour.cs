@@ -15,11 +15,9 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddBoxColliderBehaviour : AddColliderBehaviour<BoxColliderData>
 	{
-		protected override Collider CreateCollider(BoxColliderData data)
-		{
-			var collider = gameObject.AddComponent<BoxCollider>();
-			data.Size.UseIfValueExists(v => collider.size = v);
-			return collider;
-		}
+		protected override Collider CreateCollider() => gameObject.AddComponent<BoxCollider>();
+
+		protected override void ApplyShape(Collider collider, BoxColliderData data) =>
+			data.Size.UseIfValueExists(v => ((BoxCollider)collider).size = v);
 	}
 }
