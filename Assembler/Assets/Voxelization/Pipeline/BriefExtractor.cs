@@ -68,7 +68,7 @@ namespace Assembler.Voxelization
 				}
 				catch (FormatException ex)
 				{
-					if (attempt >= 2)
+					if (attempt >= 3)
 					{
 						throw new VoxelizationException(
 							$"Extracting the reference brief for '{asset.Id}' failed: {ex.Message}", ex);

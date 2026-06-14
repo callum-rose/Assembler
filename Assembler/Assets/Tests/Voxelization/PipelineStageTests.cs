@@ -616,6 +616,46 @@ poses:
 		}
 
 		[Test]
+		public void BriefExtractor_RetriesWhenTheModelEmitsMalformedYaml()
+		{
+			// A vision model occasionally returns mis-indented / unterminated YAML in
+			// the brief block. YamlDotNet throws its own exception, which used to
+			// escape the FormatException-only retry and hard-fail the asset. It must
+			// now be normalised and retried with the parser's message as feedback.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Unit = 1f,
+				Assets = new[]
+				{
+					new ManifestAsset { Id = "crate", RealWorldHeight = 2f, References = new[] { new ReferenceImage("ref.png", "front") } },
+				},
+			};
+			var gateway = new FakeGateway()
+				.Enqueue("```brief\nreference_brief:\n  source: crate\n  palette: { S: \"#ffffff\"\n```") // unterminated flow map
+				.Enqueue(@"```brief
+reference_brief:
+  source: crate
+  silhouettes:
+    - face: front
+      size: [2, 2]
+      rows:
+        - ""##""
+        - ""##""
+```");
+
+			var brief = new BriefExtractor(gateway, VoxelizationConfig.Default)
+				.ExtractAsync(manifest, manifest.Assets[0], Images(manifest.Assets[0]), CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(2), "the malformed first response should trigger one retry");
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
+
+			// The retry message carried the YAML parser's complaint back to the model.
+			Assert.That(gateway.Calls[1].Messages.Last().Content, Does.Contain("could not be parsed"));
+		}
+
+		[Test]
 		public void BriefExtractor_CoAxialDedup_KeepsOneSilhouettePerAxis()
 		{
 			// Front and back are co-axial (x-y plane), so only one silhouette is

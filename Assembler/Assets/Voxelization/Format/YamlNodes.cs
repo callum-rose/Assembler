@@ -19,7 +19,22 @@ namespace Assembler.Voxelization
 		public static YamlMappingNode ParseRoot(string text)
 		{
 			var stream = new YamlStream();
-			stream.Load(new StringReader(text));
+
+			// YamlDotNet throws its own SyntaxErrorException/SemanticErrorException
+			// (YamlException) for malformed input. The hand-mapped readers — and the
+			// retry-with-feedback loops above them (brief/plan extraction) — only
+			// recognise FormatException, so an LLM that emits mis-indented YAML would
+			// otherwise hard-fail with no correction round. Normalise it here at the
+			// single parse boundary so every caller's existing handling applies.
+			try
+			{
+				stream.Load(new StringReader(text));
+			}
+			catch (YamlDotNet.Core.YamlException ex)
+			{
+				throw new FormatException($"Malformed YAML: {ex.Message}", ex);
+			}
+
 			if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode map)
 			{
 				throw new FormatException("Expected a YAML mapping at the document root.");
