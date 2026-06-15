@@ -58,7 +58,7 @@ namespace VoxelSpike.Editor
         BoxFit _boxFit = BoxFit.Shrinkwrap;
         float _fitPercentile = 0.9f;
         string _partBoxesJson =
-            "{\n  \"parts\": [\n    { \"name\": \"example\", \"anchor\": [0.5, 0.5, 0.5] }\n  ]\n}";
+            "{\n  \"parts\": [\n    { \"name\": \"example\", \"anchor\": [6, 10, 10] }\n  ]\n}";
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -137,11 +137,11 @@ namespace VoxelSpike.Editor
             }
             else if (_outputMode == OutputMode.PartBoxes)
             {
-                EditorGUILayout.HelpBox("Per-part JSON in normalized model space (X 0=left..1=right, " +
-                    "Y 0=bottom..1=top, Z 0=front..1=back). Give each part an \"anchor\":[x,y,z] it must " +
-                    "contain (used by Shrinkwrap) and/or a \"min\"/\"max\" box (used by Grow/Utilise). " +
-                    "Shrinkwrap grows/shrinks each cube from its anchor to cover every voxel with minimal " +
-                    "total cube volume.", MessageType.None);
+                EditorGUILayout.HelpBox("Per-part JSON in voxel coordinates, Goxel [X, Y, Z] order (the " +
+                    "numbers shown in Goxel / the exported .txt). Give each part an \"anchor\":[x,y,z] voxel " +
+                    "it must contain (used by Shrinkwrap) and/or a \"min\"/\"max\" voxel box (used by " +
+                    "Grow/Utilise). Shrinkwrap grows/shrinks each cube from its anchor to cover every voxel " +
+                    "with minimal total cube volume.", MessageType.None);
                 _boxIterations = EditorGUILayout.IntSlider("Iterations", _boxIterations, 0, 20);
                 _boxFit = (BoxFit)EditorGUILayout.EnumPopup("Fit mode", _boxFit);
                 using (new EditorGUI.DisabledScope(_boxFit != BoxFit.Utilise))
@@ -311,10 +311,10 @@ namespace VoxelSpike.Editor
             List<PartBox> partBoxes = null;
             if (boxMode)
             {
-                partBoxes = ParsePartBoxes(_partBoxesJson);
+                partBoxes = ParsePartBoxes(_partBoxesJson, W, H, L);
                 if (partBoxes == null || partBoxes.Count == 0)
                 {
-                    _status = "Could not parse part boxes. Expected { \"parts\": [ { \"name\", \"min\":[x,y,z], \"max\":[x,y,z] } ] }.";
+                    _status = "Could not parse parts. Expected { \"parts\": [ { \"name\", \"anchor\":[x,y,z] } ] } in voxel coords.";
                     return;
                 }
             }
@@ -551,7 +551,9 @@ namespace VoxelSpike.Editor
         [System.Serializable] class PartBoxDto { public string name; public float[] min; public float[] max; public float[] anchor; }
         [System.Serializable] class PartBoxListDto { public PartBoxDto[] parts; }
 
-        static List<PartBox> ParsePartBoxes(string json)
+        // Inputs are voxel coordinates in Goxel [X, Y, Z] order (as shown in Goxel / the exported .txt).
+        // Goxel (X, Y, Z) = world (i = width, k = depth, j = height); we store normalized model space.
+        static List<PartBox> ParsePartBoxes(string json, int W, int H, int L)
         {
             PartBoxListDto dto;
             try { dto = JsonUtility.FromJson<PartBoxListDto>(json); }
@@ -566,12 +568,14 @@ namespace VoxelSpike.Editor
                 bool hasAnchor = p.anchor != null && p.anchor.Length >= 3;
                 if (!hasBox && !hasAnchor) continue;
 
-                Vector3 anchor = hasAnchor ? new Vector3(p.anchor[0], p.anchor[1], p.anchor[2]) : Vector3.zero;
+                Vector3 anchor = hasAnchor ? VoxelToNorm(p.anchor[0], p.anchor[1], p.anchor[2], W, H, L) : Vector3.zero;
                 Vector3 min, max;
                 if (hasBox)
                 {
-                    min = new Vector3(Mathf.Min(p.min[0], p.max[0]), Mathf.Min(p.min[1], p.max[1]), Mathf.Min(p.min[2], p.max[2]));
-                    max = new Vector3(Mathf.Max(p.min[0], p.max[0]), Mathf.Max(p.min[1], p.max[1]), Mathf.Max(p.min[2], p.max[2]));
+                    Vector3 a = VoxelToNorm(p.min[0], p.min[1], p.min[2], W, H, L);
+                    Vector3 b = VoxelToNorm(p.max[0], p.max[1], p.max[2], W, H, L);
+                    min = Vector3.Min(a, b);
+                    max = Vector3.Max(a, b);
                     if (!hasAnchor) anchor = (min + max) * 0.5f;
                 }
                 else
@@ -590,6 +594,10 @@ namespace VoxelSpike.Editor
             }
             return boxes;
         }
+
+        // Goxel voxel coord [X, Y, Z] -> normalized model space (x = width, y = height, z = depth).
+        static Vector3 VoxelToNorm(float gx, float gy, float gz, int W, int H, int L) =>
+            new Vector3(gx / W, gz / H, gy / L);
 
         // Assign each solid voxel to a part from the box priors, then return a distinct display colour
         // per part (partOf holds the per-voxel part index). Two strategies:
