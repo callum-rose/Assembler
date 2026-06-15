@@ -118,7 +118,13 @@ namespace Assembler.Voxelization
 			var slice = rows.Skip(top).Take(bottom - top + 1).Select(r => r.PadRight(width, '_')).ToList();
 			var left = slice.Min(r => FirstSolid(r));
 			var right = slice.Max(r => LastSolid(r));
-			var trimmed = slice.Select(r => r.Substring(left, right - left + 1)).ToArray();
+			// Canonicalise empty cells to '_': vision reads transcribe interior gaps as '.',
+			// but the silhouette display convention is '#' solid / '_' empty (solid cells,
+			// including palette-keyed ones, are preserved as-is).
+			var trimmed = slice
+				.Select(r => r.Substring(left, right - left + 1))
+				.Select(r => new string(r.Select(c => SilhouetteSpec.IsSolid(c) ? c : '_').ToArray()))
+				.ToArray();
 
 			return silhouette with
 			{
