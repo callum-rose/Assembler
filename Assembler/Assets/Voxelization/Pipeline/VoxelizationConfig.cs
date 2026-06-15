@@ -64,6 +64,15 @@ namespace Assembler.Voxelization
 		/// </summary>
 		public float BackgroundColourTolerance { get; init; } = 0.12f;
 
+		/// <summary>
+		/// How far a manifest-pinned axis may disagree with a reference silhouette's
+		/// own aspect (as a fraction of the pinned extent) before the asset is failed
+		/// up front as an inconsistent input, rather than squashing the silhouette
+		/// into the box and failing the coverage gate later. 0 = exact; a large value
+		/// effectively disables the pre-check.
+		/// </summary>
+		public float ReferenceAspectTolerance { get; init; } = 0.15f;
+
 		public float SilhouetteIouThreshold { get; init; } = 0.75f;
 
 		/// <summary>

@@ -236,24 +236,26 @@ namespace Assembler.Voxelization
 				}
 			}
 
-			var solid = 0;
-			var hit = 0;
-			for (var u = 0; u < width; u++)
-			{
-				for (var v = 0; v < height; v++)
-				{
-					if (target[u, v])
-					{
-						solid++;
-						hit += covered[u, v] ? 1 : 0;
-					}
-				}
-			}
-
+			var solid = CountSolid(target);
 			if (solid == 0)
 			{
 				return null;
 			}
+
+			// Coverage is evaluated for BOTH horizontal orientations of the reference,
+			// and the better one taken. The plan's box layout is built in raw axis
+			// order (u = z for a left/right face), whereas the silhouette follows the
+			// projection's handedness convention (u = mirrored z for left/right) — so a
+			// perfectly buildable plan can come out the mirror of the silhouette here.
+			// True handedness is enforced later by the validator's IoU gate against the
+			// correctly oriented projection, so this necessary-condition pre-check must
+			// not reject a plan that merely faces the other way along the axis (which
+			// would otherwise bounce an asymmetric subject — a dog's nose-vs-tail
+			// profile — back and forth between feasibility and the IoU gate forever).
+			var mirrored = MirrorU(target, width, height);
+			var directHits = CountHits(covered, target, width, height);
+			var mirroredHits = CountHits(covered, mirrored, width, height);
+			var (hit, comparedTarget) = mirroredHits > directHits ? (mirroredHits, mirrored) : (directHits, target);
 
 			// The silhouette is a vision-model guess, so coverage tolerates blob
 			// noise (gaps read as solid). Width is robust to that noise: blobbing
@@ -279,8 +281,51 @@ namespace Assembler.Voxelization
 				? null
 				: $"The planned shape cannot match the reference {spec.Face} view:\n{problems}" +
 				  $"Compared at {width}x{height} (top row first):\n" +
-				  $"PLANNED BOX COVERAGE:\n{RenderMask(covered)}\nREFERENCE SILHOUETTE:\n{RenderMask(target)}\n" +
+				  $"PLANNED BOX COVERAGE:\n{RenderMask(covered)}\nREFERENCE SILHOUETTE:\n{RenderMask(comparedTarget)}\n" +
 				  "Resize or re-place parts so their boxes reach the silhouette.";
+		}
+
+		private static int CountSolid(bool[,] mask)
+		{
+			var solid = 0;
+			foreach (var cell in mask)
+			{
+				solid += cell ? 1 : 0;
+			}
+
+			return solid;
+		}
+
+		private static int CountHits(bool[,] covered, bool[,] target, int width, int height)
+		{
+			var hit = 0;
+			for (var u = 0; u < width; u++)
+			{
+				for (var v = 0; v < height; v++)
+				{
+					if (target[u, v] && covered[u, v])
+					{
+						hit++;
+					}
+				}
+			}
+
+			return hit;
+		}
+
+		/// <summary>Mirrors a [u, v] occupancy grid along its horizontal (u) axis.</summary>
+		private static bool[,] MirrorU(bool[,] mask, int width, int height)
+		{
+			var mirrored = new bool[width, height];
+			for (var u = 0; u < width; u++)
+			{
+				for (var v = 0; v < height; v++)
+				{
+					mirrored[u, v] = mask[width - 1 - u, v];
+				}
+			}
+
+			return mirrored;
 		}
 
 		/// <summary>Pivot accumulated up the parent chain (the part's local origin in model space).</summary>
