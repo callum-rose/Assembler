@@ -91,6 +91,35 @@ Templates:
       expire:
         Type: destroy
 
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right: { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right: [ "<Keyboard>/d" ]
+      up:    [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      right: [ "<Gamepad>/dpad/right" ]
+      up:    [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
   wall a:
     Position: !vec { X: -1.5, Y: 1.5, Z: 0 }
@@ -235,40 +264,40 @@ Entities:
         Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
 
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
+        Type: input action
+        Properties: { Action: left }
         Listeners: [ { EntityId: player, BehaviourId: move left } ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.04, Y: 0, Z: 0 } }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
+        Type: input action
+        Properties: { Action: right }
         Listeners: [ { EntityId: player, BehaviourId: move right } ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.04, Y: 0, Z: 0 } }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
+        Type: input action
+        Properties: { Action: up }
         Listeners: [ { EntityId: player, BehaviourId: move up } ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.04, Z: 0 } }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
+        Type: input action
+        Properties: { Action: down }
         Listeners: [ { EntityId: player, BehaviourId: move down } ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.04, Z: 0 } }
 
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   camera:

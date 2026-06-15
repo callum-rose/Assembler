@@ -22,6 +22,19 @@ Expressions:
     ReturnType: int
     Expression: "return n + 1;"
 
+Controls:
+  Actions:
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit:  [ "<Keyboard>/space" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
   player:
     Position: !vec { X: 0, Y: 0 }
@@ -43,8 +56,8 @@ Entities:
           IsKinematic: true
           UseGravity: false
       quit:
-        Type: key down trigger
-        Properties: { Key: "space" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover
       overlap:
