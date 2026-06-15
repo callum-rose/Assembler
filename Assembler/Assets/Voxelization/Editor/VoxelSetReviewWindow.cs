@@ -123,7 +123,7 @@ namespace Assembler.Voxelization.Editor
 		// or when the toggle flips the active stream.
 		private string _logText = string.Empty;
 		private float _logHeight;
-		private float _logMeasuredWidth = -1f;
+		private float _logContentWidth;
 		private bool _logDirty = true;
 		private bool _showVerbose;
 		private TokenUsageTracker _usage = new();
@@ -1166,7 +1166,13 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			_logStyle ??= new GUIStyle(EditorStyles.label) { wordWrap = true, fontSize = 10 };
+			if (_logStyle == null)
+			{
+				_logStyle = new GUIStyle(EditorStyles.label) { wordWrap = false, fontSize = 10 };
+			}
+			// Sync text colour every frame — the ??= pattern can capture the wrong
+			// colour if EditorStyles isn't fully initialised on the first repaint.
+			_logStyle.normal.textColor = EditorStyles.label.normal.textColor;
 
 			// Only rebuild the string when the active log actually changed —
 			// otherwise this runs every repaint, and verbose logs make that O(MB).
@@ -1176,20 +1182,15 @@ namespace Assembler.Voxelization.Editor
 			{
 				_logText = active.ToString();
 				_logDirty = false;
-				_logMeasuredWidth = -1f;
-			}
-
-			// Re-measure (but don't rebuild the text) when the sidebar is dragged, so
-			// the wrapped height tracks the new width without clipping. CalcHeight is
-			// far cheaper than the ToString above, so this is fine per drag frame.
-			if (!Mathf.Approximately(_logMeasuredWidth, _sidebarWidth))
-			{
-				_logHeight = _logStyle.CalcHeight(new GUIContent(_logText), _sidebarWidth - 40f);
-				_logMeasuredWidth = _sidebarWidth;
+				// Without word-wrap the content size is independent of the sidebar
+				// width, so measure once per text change rather than per drag frame.
+				var contentSize = _logStyle.CalcSize(new GUIContent(_logText));
+				_logHeight = contentSize.y;
+				_logContentWidth = contentSize.x + 10f;
 			}
 
 			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.ExpandHeight(true));
-			EditorGUILayout.SelectableLabel(_logText, _logStyle, GUILayout.Height(Mathf.Max(_logHeight, 60f)), GUILayout.ExpandWidth(true));
+			EditorGUILayout.SelectableLabel(_logText, _logStyle, GUILayout.MinWidth(_logContentWidth), GUILayout.Height(Mathf.Max(_logHeight, 60f)));
 			EditorGUILayout.EndScrollView();
 		}
 
