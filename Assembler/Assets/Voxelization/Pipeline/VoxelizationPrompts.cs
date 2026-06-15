@@ -156,14 +156,20 @@ namespace Assembler.Voxelization
 			"  idle: {}\n" +
 			"```\n\n" +
 			"A REFERENCE BRIEF may be provided in the user message. It was transcribed from the reference image by a " +
-			"separate, independent pass and is AUTHORITATIVE — you cannot reinterpret it to fit your design:\n" +
-			"- Lock the palette to the brief's colours exactly.\n" +
+			"separate, independent pass. Its SILHOUETTE AND PROPORTIONS are AUTHORITATIVE — you cannot reinterpret " +
+			"them to fit your design:\n" +
 			"- Plan part sizes DIRECTLY from the silhouette rows ('#' = solid, '.' = empty, top row first). Read limb " +
 			"thickness from its columns: a 1-cell-wide arm in the silhouette is a 1-voxel-thick part, never wider. " +
 			"Preserve its gaps (e.g. between arms and torso) — never fill them with part volume.\n" +
 			"- These are CHECKED DETERMINISTICALLY and the plan is rejected otherwise: the model's overall width must " +
 			"match the silhouette width (within 1 voxel), and every silhouette cell must fall inside some part's box.\n" +
-			"If the reference image is also attached, use it only for styling detail the brief doesn't capture.";
+			"- COLOUR AND GENERAL STYLE, by contrast, are governed by the MANIFEST DESCRIPTION, not the reference. " +
+			"Wherever the reference image or its brief disagrees with the manifest on a colour or on the overall " +
+			"style, DEFER TO THE MANIFEST: build the palette from the manifest's stated colours, and adopt a brief " +
+			"colour only where the manifest is silent on it. The brief's palette is a fallback for detail the " +
+			"manifest doesn't pin down, never an override of what it does.\n" +
+			"If the reference image is also attached, use it only for styling detail neither the manifest nor the " +
+			"brief captures — and there too, defer to the manifest on any colour or style conflict.";
 
 		public static string PlanningUser(
 			SetManifest manifest,
@@ -196,13 +202,15 @@ namespace Assembler.Voxelization
 
 			if (!brief.IsEmpty)
 			{
-				sb.Append("\nReference brief (authoritative — plan part boxes to match its silhouette exactly):\n");
+				sb.Append("\nReference brief (silhouette authoritative — plan part boxes to match it exactly; " +
+					"for colour and style defer to the Description above on any conflict):\n");
 				sb.Append(ReferenceBriefYaml.Write(brief));
 			}
 
 			if (hasImage)
 			{
-				sb.Append("\nThe reference image is attached for styling detail.\n");
+				sb.Append("\nThe reference image is attached for styling detail; defer to the Description above " +
+					"wherever the image disagrees on a colour or on the overall style.\n");
 			}
 
 			if (styleGuidance.Length > 0)
@@ -364,7 +372,10 @@ namespace Assembler.Voxelization
 
 			sb.Append('\n').Append(views).Append('\n');
 			sb.Append(hasImage
-				? "\nThe original reference image is attached — it is the ground truth. Compare the built views against it.\n"
+				? "\nThe original reference image is attached — it is the ground truth for FORM (proportions, " +
+				  "silhouette, part placement). Compare the built views against it. For COLOUR and general STYLE, " +
+				  "the Description above governs: do NOT flag a colour or style choice that matches the Description " +
+				  "merely because the image differs from it.\n"
 				: "\nNo reference image: judge against the model's name and sane anatomy/structure.\n");
 			if (styleGuidance.Length > 0)
 			{
@@ -607,7 +618,8 @@ namespace Assembler.Voxelization
 
 			if (!brief.IsEmpty)
 			{
-				sb.Append("\nReference brief (authoritative):\n");
+				sb.Append("\nReference brief (authoritative for form; on any colour or style conflict, " +
+					"defer to the Description above and to the palette):\n");
 				if (brief.SignatureFeatures.Count > 0)
 				{
 					sb.Append("  signature features: ").Append(string.Join(", ", brief.SignatureFeatures)).Append('\n');
