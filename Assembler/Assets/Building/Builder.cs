@@ -24,12 +24,21 @@ namespace Assembler.Building
 	public static class Builder
 	{
 		public static void Build(string yamlPath, InputPlatform? overridePlatform = null)
+			=> BuildFromYaml(File.ReadAllText(yamlPath), overridePlatform);
+
+		/// <summary>
+		/// Build a game directly from a descriptor's YAML <em>content</em> (e.g. a descriptor downloaded from the
+		/// remote store), without it having to exist as a file first. Returns the root "Game" GameObject so the
+		/// caller can detect teardown (destroying the root unloads the whole game). Named distinctly because a
+		/// <c>Build(string)</c> overload would be ambiguous with <see cref="Build(string, InputPlatform?)"/>,
+		/// whose string is a file path.
+		/// </summary>
+		public static GameObject BuildFromYaml(string yaml, InputPlatform? overridePlatform = null)
 		{
-			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			Build(gameInfo, controls, overridePlatform);
+			return gameInfo.Resolve(controls, overridePlatform).Instantiate();
 		}
 
 		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);

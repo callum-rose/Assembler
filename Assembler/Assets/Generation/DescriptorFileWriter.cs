@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text;
+using Assembler.Extensions;
 using UnityEngine;
 
 namespace Assembler.Generation
@@ -43,36 +43,10 @@ namespace Assembler.Generation
 			return sanitised + ".yaml";
 		}
 
-		public static string Sanitise(string? title)
-		{
-			if (string.IsNullOrWhiteSpace(title))
-			{
-				return string.Empty;
-			}
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var sb = new StringBuilder(title.Length);
-			var prevWasSeparator = false;
-
-			foreach (var c in title)
-			{
-				if (Array.IndexOf(invalid, c) >= 0 || c == '/' || c == '\\' || c == ':' || char.IsWhiteSpace(c))
-				{
-					if (!prevWasSeparator && sb.Length > 0)
-					{
-						sb.Append('-');
-						prevWasSeparator = true;
-					}
-
-					continue;
-				}
-
-				sb.Append(c);
-				prevWasSeparator = false;
-			}
-
-			var result = sb.ToString().Trim('-', '.', ' ');
-			return result;
-		}
+		/// <summary>
+		/// Delegates to <see cref="FileNameSanitiser.Sanitise"/>. Kept as a public passthrough so existing
+		/// callers (e.g. AssetManifestExtractor) don't need to take a dependency on Assembler.Extensions.
+		/// </summary>
+		public static string Sanitise(string? title) => FileNameSanitiser.Sanitise(title);
 	}
 }
