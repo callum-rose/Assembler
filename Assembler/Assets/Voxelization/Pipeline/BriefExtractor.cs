@@ -32,7 +32,8 @@ namespace Assembler.Voxelization
 			SetManifest manifest,
 			ManifestAsset asset,
 			IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> images,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			if (images.Count == 0)
 			{
@@ -70,10 +71,12 @@ namespace Assembler.Voxelization
 				{
 					if (attempt >= 3)
 					{
+						progress?.Report($"{asset.Id}: brief extraction failed after {attempt} attempt(s) — {ex.Message}");
 						throw new VoxelizationException(
 							$"Extracting the reference brief for '{asset.Id}' failed: {ex.Message}", ex);
 					}
 
+					progress?.Report($"{asset.Id}: brief extraction attempt {attempt}/3 rejected, retrying — {ex.Message}");
 					messages.Add(new AnthropicMessage("assistant", response));
 					messages.Add(new AnthropicMessage("user",
 						$"That brief could not be parsed: {ex.Message}\nEmit the corrected ```brief block."));

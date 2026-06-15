@@ -46,7 +46,8 @@ namespace Assembler.Voxelization
 			string refinementNote,
 			CancellationToken ct,
 			string previousModelYaml = "",
-			bool suppressPaletteGate = false)
+			bool suppressPaletteGate = false,
+			IProgress<string>? progress = null)
 		{
 			// All of the asset's labelled images go to the multimodal message for
 			// styling detail the brief doesn't capture.
@@ -69,6 +70,14 @@ namespace Assembler.Voxelization
 				{
 					return plan;
 				}
+
+				// Surface why this attempt's skeleton was rejected (parse, geometry,
+				// palette or silhouette-feasibility gate) — otherwise the log shows N
+				// planning calls then a bare "failed" with no reason. The final
+				// attempt's reason is also folded into the thrown message below, since
+				// it is never fed back as a follow-up turn.
+				progress?.Report(
+					$"{asset.Id}: planning attempt {attempt}/{MaxAttempts} rejected — {feedback}");
 
 				if (attempt >= MaxAttempts)
 				{

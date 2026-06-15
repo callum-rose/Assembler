@@ -38,13 +38,14 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			return planned.PlannedEncoding switch
 			{
-				PartEncoding.Script => AuthorScriptAsync(model, brief, part, planned, feedback, ct),
-				PartEncoding.Primitives => AuthorPrimitivesAsync(model, brief, part, planned, feedback, ct),
-				_ => AuthorLayersAsync(model, brief, part, planned, feedback, ct),
+				PartEncoding.Script => AuthorScriptAsync(model, brief, part, planned, feedback, ct, progress),
+				PartEncoding.Primitives => AuthorPrimitivesAsync(model, brief, part, planned, feedback, ct, progress),
+				_ => AuthorLayersAsync(model, brief, part, planned, feedback, ct, progress),
 			};
 		}
 
@@ -54,7 +55,8 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -79,12 +81,16 @@ namespace Assembler.Voxelization
 				}
 				catch (FormatException ex) when (attempt < _config.MaxPartAttempts)
 				{
+					progress?.Report(
+						$"{model.Id}/{part.Id}: authoring (layers) attempt {attempt}/{_config.MaxPartAttempts} rejected, retrying — {ex.Message}");
 					messages.Add(new AnthropicMessage("assistant", response));
 					messages.Add(new AnthropicMessage("user",
 						$"Those layers are invalid: {ex.Message}\nEmit the corrected ```layers block only."));
 				}
 				catch (FormatException ex)
 				{
+					progress?.Report(
+						$"{model.Id}/{part.Id}: authoring (layers) failed after {attempt} attempt(s) — {ex.Message}");
 					throw new VoxelizationException($"Authoring layers for '{part.Id}' failed: {ex.Message}", ex);
 				}
 			}
@@ -96,7 +102,8 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -124,12 +131,16 @@ namespace Assembler.Voxelization
 				}
 				catch (FormatException ex) when (attempt < _config.MaxPartAttempts)
 				{
+					progress?.Report(
+						$"{model.Id}/{part.Id}: authoring (primitives) attempt {attempt}/{_config.MaxPartAttempts} rejected, retrying — {ex.Message}");
 					messages.Add(new AnthropicMessage("assistant", response));
 					messages.Add(new AnthropicMessage("user",
 						$"Those shapes are invalid: {ex.Message}\nEmit the corrected ```primitives block only."));
 				}
 				catch (FormatException ex)
 				{
+					progress?.Report(
+						$"{model.Id}/{part.Id}: authoring (primitives) failed after {attempt} attempt(s) — {ex.Message}");
 					throw new VoxelizationException($"Authoring primitives for '{part.Id}' failed: {ex.Message}", ex);
 				}
 			}
@@ -141,7 +152,8 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -172,10 +184,14 @@ namespace Assembler.Voxelization
 
 				if (attempt >= _config.MaxPartAttempts)
 				{
+					progress?.Report(
+						$"{model.Id}/{part.Id}: authoring (script) failed after {attempt} attempt(s) — no run_voxel_script call built successfully.");
 					throw new VoxelizationException(
 						$"Authoring script for '{part.Id}' failed after {_config.MaxPartAttempts} attempts: no run_voxel_script call succeeded.");
 				}
 
+				progress?.Report(
+					$"{model.Id}/{part.Id}: authoring (script) attempt {attempt}/{_config.MaxPartAttempts} produced no working script, retrying.");
 				messages.Add(new AnthropicMessage("assistant", "(no run_voxel_script call built successfully)"));
 				messages.Add(new AnthropicMessage("user",
 					"Your script never built — call run_voxel_script with a corrected script that ends in `return b.Build();`."));

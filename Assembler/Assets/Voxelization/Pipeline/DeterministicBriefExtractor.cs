@@ -39,7 +39,8 @@ namespace Assembler.Voxelization
 			SetManifest manifest,
 			ManifestAsset asset,
 			IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> images,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			if (images.Count == 0)
 			{
@@ -77,7 +78,7 @@ namespace Assembler.Voxelization
 
 			return _config.ExtractSemanticBriefFields
 				? await AddSemanticFieldsAsync(brief, asset, decoded.Select(d => d.Label).ToList(),
-					images.Select(i => i.Image).ToArray(), ct).ConfigureAwait(false)
+					images.Select(i => i.Image).ToArray(), ct, progress).ConfigureAwait(false)
 				: brief;
 		}
 
@@ -92,7 +93,8 @@ namespace Assembler.Voxelization
 			ManifestAsset asset,
 			IReadOnlyList<ReferenceImage> labels,
 			AnthropicImage[] attachments,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -106,6 +108,8 @@ namespace Assembler.Voxelization
 			var yaml = FencedBlockExtractor.Extract(response, "brief");
 			if (yaml == null)
 			{
+				progress?.Report(
+					$"{asset.Id}: semantic brief fields unavailable (reply had no ```brief block) — proceeding with silhouette + palette only.");
 				return brief;
 			}
 
@@ -118,8 +122,10 @@ namespace Assembler.Voxelization
 					SignatureFeatures = semantic.SignatureFeatures,
 				};
 			}
-			catch (FormatException)
+			catch (FormatException ex)
 			{
+				progress?.Report(
+					$"{asset.Id}: semantic brief fields dropped (```brief block didn't parse: {ex.Message}) — proceeding with silhouette + palette only.");
 				return brief;
 			}
 		}
