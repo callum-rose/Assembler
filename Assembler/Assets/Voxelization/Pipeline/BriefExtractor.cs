@@ -15,7 +15,7 @@ namespace Assembler.Voxelization
 	/// then validated the plan against its own hallucination. The extractor has
 	/// no plan to defend, so the brief stays an honest read of the image.
 	/// </summary>
-	public sealed class BriefExtractor
+	public sealed class BriefExtractor : IBriefExtractor
 	{
 		public const string Stage = "1-brief";
 
@@ -41,7 +41,7 @@ namespace Assembler.Voxelization
 
 			// One silhouette per axis (co-axial dedup); but EVERY image is still
 			// attached so the shared palette and surface-colour read see all faces.
-			var requestedFaces = DedupedFaces(images.Select(i => i.Label.Face));
+			var requestedFaces = ProjectionFaceInfo.DedupeFaces(images.Select(i => i.Label.Face));
 			var labels = images.Select(i => i.Label).ToList();
 			var attachments = images.Select(i => i.Image).ToArray();
 
@@ -79,29 +79,6 @@ namespace Assembler.Voxelization
 						$"That brief could not be parsed: {ex.Message}\nEmit the corrected ```brief block."));
 				}
 			}
-		}
-
-		/// <summary>
-		/// One face per supplied axis: the canonical face if an image labels it,
-		/// otherwise its twin. Keeps the silhouette set to ≤3 (one per axis).
-		/// </summary>
-		private static IReadOnlyList<string> DedupedFaces(IEnumerable<string> faces)
-		{
-			var supplied = new HashSet<string>(faces.Select(f => f.ToLowerInvariant()));
-			var result = new List<string>();
-			foreach (var (canonical, twin) in ProjectionFaceInfo.CoAxialPairs)
-			{
-				if (supplied.Contains(canonical))
-				{
-					result.Add(canonical);
-				}
-				else if (supplied.Contains(twin))
-				{
-					result.Add(twin);
-				}
-			}
-
-			return result;
 		}
 
 		/// <summary>

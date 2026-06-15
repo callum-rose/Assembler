@@ -330,7 +330,9 @@ reference_brief:
 				.Enqueue("OK");
 			var orchestrator = new SetOrchestrator(
 				gateway,
-				VoxelizationConfig.Default,
+				// This test exercises the vision brief path; the byte[]{1} reference is
+				// not a real image, so the deterministic path could not decode it.
+				VoxelizationConfig.Default with { DeterministicBrief = false },
 				images,
 				StubScriptRunner.Failing("no scripts"),
 				new TokenUsageTracker());
@@ -347,6 +349,46 @@ reference_brief:
 			// The planner received the transcribed silhouette as locked input.
 			Assert.That(gateway.Calls[1].Messages[0].Content, Does.Contain("Reference brief (authoritative"));
 			Assert.That(result.Brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
+		}
+
+		[Test]
+		public void SetOrchestrator_FailsFast_WhenAReferenceAspectConflictsWithThePinnedBoundingBox()
+		{
+			// A left view read 9x5 implies length ~9 at height 5, but the manifest pins
+			// length 4. The asset must fail immediately after the brief — before any
+			// planning spend — with the proportion-conflict message.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[]
+				{
+					new ManifestAsset
+					{
+						Id = "dog", Height = 5, Length = 4,
+						References = new[] { new ReferenceImage("left.png", "left") },
+					},
+				},
+			};
+			var images = new BytesReferenceImageSource(new Dictionary<string, AnthropicImage>
+			{
+				["left.png"] = new("image/png", new byte[] { 1 }),
+			});
+			var rows = string.Join("\n", Enumerable.Repeat("        - \"#########\"", 5));
+			var gateway = new FakeGateway().Enqueue($"```brief\nreference_brief:\n  source: dog\n  silhouettes:\n    - face: left\n      size: [9, 5]\n      rows:\n{rows}\n```");
+			var orchestrator = new SetOrchestrator(
+				gateway,
+				VoxelizationConfig.Default with { DeterministicBrief = false },
+				images,
+				StubScriptRunner.Failing("no scripts"),
+				new TokenUsageTracker());
+
+			var result = orchestrator
+				.RunAssetAsync(manifest, manifest.Assets[0], string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(result.Status, Is.EqualTo(ModelStatus.Failed));
+			Assert.That(result.Error, Does.Contain("disagree on proportions"));
+			Assert.That(gateway.Calls, Has.Count.EqualTo(1), "must fail after the brief, before any planning call");
 		}
 
 		[Test]

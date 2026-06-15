@@ -28,8 +28,16 @@ namespace Assembler.Voxelization.Editor
 		private const string ImageFolderPref = "Assembler.Voxelization.ImageFolder";
 		private const string AdvancedFoldoutPref = "Assembler.Voxelization.ShowAdvanced";
 		private const string VerboseLogPref = "Assembler.Voxelization.VerboseLog";
+		private const string SidebarWidthPref = "Assembler.Voxelization.SidebarWidth";
 		private const float PreviewSize = 200f;
-		private const float SidebarWidth = 360f;
+		private const float DefaultSidebarWidth = 360f;
+		private const float MinSidebarWidth = 240f;
+		private const float SplitterWidth = 6f;
+
+		// The log/sidebar pane width is operator-draggable (the silhouette emoji
+		// grids wrap when it is too narrow), persisted so it survives restarts.
+		private float _sidebarWidth = DefaultSidebarWidth;
+		private bool _draggingSidebar;
 
 		// Fetched from the Anthropic models API on startup (newest first) rather
 		// than hardcoded, so the picker stays current as new models ship. Models
@@ -115,6 +123,7 @@ namespace Assembler.Voxelization.Editor
 		// or when the toggle flips the active stream.
 		private string _logText = string.Empty;
 		private float _logHeight;
+		private float _logMeasuredWidth = -1f;
 		private bool _logDirty = true;
 		private bool _showVerbose;
 		private TokenUsageTracker _usage = new();
@@ -152,6 +161,7 @@ namespace Assembler.Voxelization.Editor
 			_imageFolder = EditorPrefs.GetString(ImageFolderPref, string.Empty);
 			_showAdvanced = EditorPrefs.GetBool(AdvancedFoldoutPref, false);
 			_showVerbose = EditorPrefs.GetBool(VerboseLogPref, true);
+			_sidebarWidth = EditorPrefs.GetFloat(SidebarWidthPref, DefaultSidebarWidth);
 			_settings = VoxelizationSettings.LoadOrCreate();
 			EditorApplication.update += OnEditorUpdate;
 			RefreshModels();
@@ -198,12 +208,62 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.EndScrollView();
 			EditorGUILayout.EndVertical();
 
-			EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(SidebarWidth));
+			DrawSidebarSplitter();
+
+			EditorGUILayout.BeginVertical(EditorStyles.helpBox, GUILayout.Width(_sidebarWidth));
 			DrawSidebar();
 			EditorGUILayout.EndVertical();
 
 			EditorGUILayout.EndHorizontal();
 		}
+
+		/// <summary>
+		/// A draggable handle between the main content and the log sidebar. Dragging
+		/// it left widens the sidebar so a silhouette emoji grid that would otherwise
+		/// wrap fits on one line; the chosen width is clamped to the window and
+		/// persisted. Double-click resets it to the default.
+		/// </summary>
+		private void DrawSidebarSplitter()
+		{
+			var handle = GUILayoutUtility.GetRect(SplitterWidth, SplitterWidth, GUILayout.ExpandHeight(true), GUILayout.Width(SplitterWidth));
+			EditorGUIUtility.AddCursorRect(handle, MouseCursor.ResizeHorizontal);
+
+			// A thin grab line so the handle is discoverable rather than invisible.
+			var line = new Rect(handle.x + handle.width / 2f - 0.5f, handle.y, 1f, handle.height);
+			EditorGUI.DrawRect(line, new Color(0f, 0f, 0f, 0.25f));
+
+			var e = Event.current;
+			if (e.type == EventType.MouseDown && e.button == 0 && handle.Contains(e.mousePosition))
+			{
+				if (e.clickCount == 2)
+				{
+					SetSidebarWidth(DefaultSidebarWidth);
+					EditorPrefs.SetFloat(SidebarWidthPref, _sidebarWidth);
+				}
+				else
+				{
+					_draggingSidebar = true;
+				}
+
+				e.Use();
+			}
+			else if (_draggingSidebar && e.type == EventType.MouseDrag)
+			{
+				// The sidebar hugs the right edge, so its width grows as the pointer moves left.
+				SetSidebarWidth(position.width - e.mousePosition.x - SplitterWidth / 2f);
+				Repaint();
+				e.Use();
+			}
+			else if (e.type == EventType.MouseUp && _draggingSidebar)
+			{
+				_draggingSidebar = false;
+				EditorPrefs.SetFloat(SidebarWidthPref, _sidebarWidth);
+				e.Use();
+			}
+		}
+
+		private void SetSidebarWidth(float width) =>
+			_sidebarWidth = Mathf.Clamp(width, MinSidebarWidth, Mathf.Max(MinSidebarWidth, position.width - 200f));
 
 		private void OnEditorUpdate()
 		{
@@ -314,6 +374,8 @@ namespace Assembler.Voxelization.Editor
 			var serialized = new SerializedObject(_settings);
 			using (new EditorGUI.IndentLevelScope())
 			{
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.DeterministicBrief), "Deterministic brief (pixel silhouette + palette)");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.ExtractSemanticBriefFields), "Extract semantic brief fields (vision call)");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxPartAttempts), "Max part attempts");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxValidationRounds), "Max validation rounds");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.MaxReviewRounds), "Max review rounds");
@@ -336,6 +398,8 @@ namespace Assembler.Voxelization.Editor
 		private static void ResetAdvancedToDefaults(SerializedObject serialized)
 		{
 			var defaults = VoxelizationConfig.Default;
+			serialized.FindProperty(nameof(VoxelizationSettings.DeterministicBrief)).boolValue = defaults.DeterministicBrief;
+			serialized.FindProperty(nameof(VoxelizationSettings.ExtractSemanticBriefFields)).boolValue = defaults.ExtractSemanticBriefFields;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxPartAttempts)).intValue = defaults.MaxPartAttempts;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxValidationRounds)).intValue = defaults.MaxValidationRounds;
 			serialized.FindProperty(nameof(VoxelizationSettings.MaxReviewRounds)).intValue = defaults.MaxReviewRounds;
@@ -1107,15 +1171,24 @@ namespace Assembler.Voxelization.Editor
 
 			_logStyle ??= new GUIStyle(EditorStyles.label) { wordWrap = true, fontSize = 10 };
 
-			// Only rebuild the string and re-measure when the active log actually
-			// changed — otherwise this runs every repaint, and verbose logs make that
-			// O(MB). Invalidated on append (Log/LogTranscript) and when the toggle
-			// flips which stream is shown.
+			// Only rebuild the string when the active log actually changed —
+			// otherwise this runs every repaint, and verbose logs make that O(MB).
+			// Invalidated on append (Log/LogTranscript) and when the toggle flips
+			// which stream is shown.
 			if (_logDirty)
 			{
 				_logText = active.ToString();
-				_logHeight = _logStyle.CalcHeight(new GUIContent(_logText), SidebarWidth - 40f);
 				_logDirty = false;
+				_logMeasuredWidth = -1f;
+			}
+
+			// Re-measure (but don't rebuild the text) when the sidebar is dragged, so
+			// the wrapped height tracks the new width without clipping. CalcHeight is
+			// far cheaper than the ToString above, so this is fine per drag frame.
+			if (!Mathf.Approximately(_logMeasuredWidth, _sidebarWidth))
+			{
+				_logHeight = _logStyle.CalcHeight(new GUIContent(_logText), _sidebarWidth - 40f);
+				_logMeasuredWidth = _sidebarWidth;
 			}
 
 			_logScroll = EditorGUILayout.BeginScrollView(_logScroll, GUILayout.ExpandHeight(true));

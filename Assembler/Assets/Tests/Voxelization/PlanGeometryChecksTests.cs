@@ -206,6 +206,30 @@ namespace Tests.Voxelization
 		}
 
 		[Test]
+		public void SilhouetteFeasibility_IsFlipAgnostic_AcceptsAPlanThatIsTheMirrorOfAnAsymmetricReference()
+		{
+			// The dog-side-view failure: a front-back-asymmetric (nose != tail) left
+			// silhouette, and a plan whose box coverage is the exact z-mirror of it.
+			// The plan's boxes are laid out in raw z order while the silhouette follows
+			// the projection's mirrored-z convention, so they come out mirrored — but
+			// the plan is perfectly buildable (handedness is the IoU gate's job), so
+			// feasibility must NOT reject it. Direct overlap is only 2/3; the mirror is
+			// a perfect 3/3, so the flip-agnostic check passes.
+			var model = Model(
+					Planned("front", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 2, 1), new Vector3Int(0, 0, 0)),
+					Planned("back", "root", new Vector3Int(0, 0, 0), new Vector3Int(1, 1, 1), new Vector3Int(0, 0, 1)))
+				with
+			{ TargetHeight = 2, TargetLength = 2 };
+			var left = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("left", new Vector3Int(2, 2, 0), new[] { ".#", "##" }) },
+			};
+
+			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, left, 0.9f), Is.Null);
+		}
+
+		[Test]
 		public void SilhouetteFeasibility_SkipsTopAndBottomFaces()
 		{
 			// Top/bottom have no height anchor — the plan-stage pre-check must ignore
