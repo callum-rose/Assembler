@@ -20,7 +20,7 @@ namespace VoxelSpike.Editor
     /// </summary>
     public class VoxelSpikeWindow : EditorWindow
     {
-        enum ColourMode { MeanForeground, FrontPriority, MostSaturated }
+        enum ColourMode { VisibleViews, FlatMean }
 
         // --- inputs ---
         Texture2D _front;
@@ -34,7 +34,10 @@ namespace VoxelSpike.Editor
         float _solidFraction = 0.5f;   // fraction of sub-samples that must pass to keep the voxel
         int _dilate = 0;               // silhouette dilation in source pixels (forgiveness for view disagreement)
         Vector3 _offset = Vector3.zero; // sub-voxel grid offset, in voxel units
-        ColourMode _colourMode = ColourMode.MeanForeground;
+        ColourMode _colourMode = ColourMode.VisibleViews;
+
+        // --- per-view "opposite side is a mirror" (lets a view colour its far shell too) ---
+        bool _frontMirror, _rightMirror, _topMirror;
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -81,6 +84,15 @@ namespace VoxelSpike.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Colour", EditorStyles.boldLabel);
             _colourMode = (ColourMode)EditorGUILayout.EnumPopup("Colour mode", _colourMode);
+            using (new EditorGUI.DisabledScope(_colourMode != ColourMode.VisibleViews))
+            {
+                EditorGUILayout.LabelField("Opposite side is a mirror (borrow this view's colour):");
+                EditorGUILayout.BeginHorizontal();
+                _frontMirror = GUILayout.Toggle(_frontMirror, "front↔back");
+                _rightMirror = GUILayout.Toggle(_rightMirror, "right↔left");
+                _topMirror = GUILayout.Toggle(_topMirror, "top↔bottom");
+                EditorGUILayout.EndHorizontal();
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Orientation flips (fix handedness)", EditorStyles.boldLabel);
@@ -158,61 +170,116 @@ namespace VoxelSpike.Editor
             int W = Mathf.Max(1, Mathf.RoundToInt(H * (front.W / (float)front.H)));
             int L = Mathf.Max(1, Mathf.RoundToInt(H * (right.W / (float)right.H)));
 
+            // --- Pass 1: occupancy (supersampled silhouette AND + majority vote) ---
             int S = Mathf.Max(1, _supersample);
             int total = S * S * S;
             float voteNeeded = total * _solidFraction;
 
+            bool[] solid = new bool[W * H * L];
+            for (int j = 0; j < H; j++)        // Y / up
+            for (int k = 0; k < L; k++)        // Z / depth
+            for (int i = 0; i < W; i++)        // X / right
+            {
+                int hits = 0;
+                for (int sy = 0; sy < S; sy++)
+                for (int sz = 0; sz < S; sz++)
+                for (int sx = 0; sx < S; sx++)
+                {
+                    float x01 = (i + (sx + 0.5f) / S + _offset.x) / W;
+                    float y01 = (j + (sy + 0.5f) / S + _offset.y) / H;
+                    float z01 = (k + (sz + 0.5f) / S + _offset.z) / L;
+                    if (x01 < 0f || x01 > 1f || y01 < 0f || y01 > 1f || z01 < 0f || z01 > 1f)
+                        continue;
+                    if (front.Foreground(x01, y01) && right.Foreground(z01, y01) && top.Foreground(x01, z01))
+                        hits++;
+                }
+                if (hits >= voteNeeded)
+                    solid[i + W * (j + H * k)] = true;
+            }
+
+            // --- Pass 2: per-column first-hit extents (occlusion-correct visibility) ---
+            // Each ortho camera sees only the first solid voxel along its axis in a given column:
+            //   front camera (low Z) -> smallest-Z solid per (x,y); back -> largest-Z;
+            //   right camera (high X) -> largest-X per (y,z); left -> smallest-X;
+            //   top camera (high Y) -> largest-Y per (x,z); bottom -> smallest-Y.
+            int[] frontMinZ = Filled(W * H, int.MaxValue);   // column (x,y): index i + W*j
+            int[] backMaxZ = Filled(W * H, -1);
+            int[] rightMaxX = Filled(H * L, -1);             // column (y,z): index j + H*k
+            int[] leftMinX = Filled(H * L, int.MaxValue);
+            int[] topMaxY = Filled(W * L, -1);               // column (x,z): index i + W*k
+            int[] botMinY = Filled(W * L, int.MaxValue);
+
+            for (int j = 0; j < H; j++)
+            for (int k = 0; k < L; k++)
+            for (int i = 0; i < W; i++)
+            {
+                if (!solid[i + W * (j + H * k)]) continue;
+                int zc = i + W * j;
+                if (k < frontMinZ[zc]) frontMinZ[zc] = k;
+                if (k > backMaxZ[zc]) backMaxZ[zc] = k;
+                int xc = j + H * k;
+                if (i > rightMaxX[xc]) rightMaxX[xc] = i;
+                if (i < leftMinX[xc]) leftMinX[xc] = i;
+                int yc = i + W * k;
+                if (j > topMaxY[yc]) topMaxY[yc] = j;
+                if (j < botMinY[yc]) botMinY[yc] = j;
+            }
+
+            // --- Pass 3: colour each surviving voxel from the view(s) that can see it ---
             var sb = new StringBuilder();
             sb.Append("# Goxel 0.10.0\n");
             sb.Append("# One line per voxel\n");
             sb.Append("# X Y Z RRGGBB\n");
 
             int voxelCount = 0;
-            for (int j = 0; j < H; j++)        // Y / up
-            for (int k = 0; k < L; k++)        // Z / depth
-            for (int i = 0; i < W; i++)        // X / right
+            for (int j = 0; j < H; j++)
+            for (int k = 0; k < L; k++)
+            for (int i = 0; i < W; i++)
             {
-                int solid = 0;
-                float cr = 0f, cg = 0f, cb = 0f;
-                int colN = 0;
+                if (!solid[i + W * (j + H * k)]) continue;
 
-                for (int sy = 0; sy < S; sy++)
-                for (int sz = 0; sz < S; sz++)
-                for (int sx = 0; sx < S; sx++)
+                float x01 = (i + 0.5f) / W;
+                float y01 = (j + 0.5f) / H;
+                float z01 = (k + 0.5f) / L;
+
+                Color col;
+                if (_colourMode == ColourMode.FlatMean)
                 {
-                    float fx = i + (sx + 0.5f) / S + _offset.x;
-                    float fy = j + (sy + 0.5f) / S + _offset.y;
-                    float fz = k + (sz + 0.5f) / S + _offset.z;
+                    col = FlatMean(front, right, top, x01, y01, z01);
+                }
+                else
+                {
+                    int zc = i + W * j, xc = j + H * k, yc = i + W * k;
+                    bool seeFront = k == frontMinZ[zc];
+                    bool seeBack = _frontMirror && k == backMaxZ[zc];
+                    bool seeRight = i == rightMaxX[xc];
+                    bool seeLeft = _rightMirror && i == leftMinX[xc];
+                    bool seeTop = j == topMaxY[yc];
+                    bool seeBottom = _topMirror && j == botMinY[yc];
 
-                    float x01 = fx / W;
-                    float y01 = fy / H;
-                    float z01 = fz / L;
-                    if (x01 < 0f || x01 > 1f || y01 < 0f || y01 > 1f || z01 < 0f || z01 > 1f)
-                        continue;
+                    // One colour per contributing view; average when several see this voxel.
+                    Color sum = Color.clear;
+                    int n = 0;
+                    if (seeFront || seeBack) { sum += front.SampleColour(x01, y01); n++; }
+                    if (seeRight || seeLeft) { sum += right.SampleColour(z01, y01); n++; }
+                    if (seeTop || seeBottom) { sum += top.SampleColour(x01, z01); n++; }
 
-                    bool occ = front.Foreground(x01, y01)
-                            && right.Foreground(z01, y01)
-                            && top.Foreground(x01, z01);
-                    if (!occ) continue;
-
-                    solid++;
-                    Color c = SampleColour(front, right, top, x01, y01, z01);
-                    cr += c.r; cg += c.g; cb += c.b; colN++;
+                    // No view sees it (interior, or an unseen far/concave face with mirror off):
+                    // fall back to the flat mean so there are no colour holes.
+                    col = n > 0 ? sum * (1f / n) : FlatMean(front, right, top, x01, y01, z01);
                 }
 
-                if (solid < voteNeeded || colN == 0) continue;
-
-                Color32 col = new Color32(
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(cr / colN * 255f), 0, 255),
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(cg / colN * 255f), 0, 255),
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(cb / colN * 255f), 0, 255),
+                Color32 c32 = new Color32(
+                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.r * 255f), 0, 255),
+                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.g * 255f), 0, 255),
+                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.b * 255f), 0, 255),
                     255);
 
                 // Remap to Goxel Z-up: Goxel(x, y, z) = world(X, Z, Y).
                 sb.Append(i).Append(' ').Append(k).Append(' ').Append(j).Append(' ')
-                  .Append(col.r.ToString("X2", CultureInfo.InvariantCulture))
-                  .Append(col.g.ToString("X2", CultureInfo.InvariantCulture))
-                  .Append(col.b.ToString("X2", CultureInfo.InvariantCulture))
+                  .Append(c32.r.ToString("X2", CultureInfo.InvariantCulture))
+                  .Append(c32.g.ToString("X2", CultureInfo.InvariantCulture))
+                  .Append(c32.b.ToString("X2", CultureInfo.InvariantCulture))
                   .Append('\n');
                 voxelCount++;
             }
@@ -230,47 +297,23 @@ namespace VoxelSpike.Editor
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
-        Color SampleColour(View front, View right, View top, float x01, float y01, float z01)
+        // Whole-column mean of the views whose silhouette covers this point. Used as the
+        // FlatMean colour mode and as the fallback for voxels no view can see directly.
+        static Color FlatMean(View front, View right, View top, float x01, float y01, float z01)
         {
-            bool ff = front.Foreground(x01, y01);
-            bool rf = right.Foreground(z01, y01);
-            bool tf = top.Foreground(x01, z01);
-            Color cf = ff ? front.SampleColour(x01, y01) : Color.clear;
-            Color cr = rf ? right.SampleColour(z01, y01) : Color.clear;
-            Color ct = tf ? top.SampleColour(x01, z01) : Color.clear;
-
-            switch (_colourMode)
-            {
-                case ColourMode.FrontPriority:
-                    return ff ? cf : (rf ? cr : ct);
-
-                case ColourMode.MostSaturated:
-                {
-                    Color best = Color.magenta;
-                    float bestS = -1f;
-                    if (ff) ConsiderSaturation(cf, ref best, ref bestS);
-                    if (rf) ConsiderSaturation(cr, ref best, ref bestS);
-                    if (tf) ConsiderSaturation(ct, ref best, ref bestS);
-                    return best;
-                }
-
-                default: // MeanForeground
-                {
-                    Color sum = Color.clear;
-                    int n = 0;
-                    if (ff) { sum += cf; n++; }
-                    if (rf) { sum += cr; n++; }
-                    if (tf) { sum += ct; n++; }
-                    return n > 0 ? sum * (1f / n) : Color.magenta;
-                }
-            }
+            Color sum = Color.clear;
+            int n = 0;
+            if (front.Foreground(x01, y01)) { sum += front.SampleColour(x01, y01); n++; }
+            if (right.Foreground(z01, y01)) { sum += right.SampleColour(z01, y01); n++; }
+            if (top.Foreground(x01, z01)) { sum += top.SampleColour(x01, z01); n++; }
+            return n > 0 ? sum * (1f / n) : Color.magenta;
         }
 
-        static void ConsiderSaturation(Color c, ref Color best, ref float bestS)
+        static int[] Filled(int n, int value)
         {
-            float h, s, v;
-            Color.RGBToHSV(c, out h, out s, out v);
-            if (s > bestS) { bestS = s; best = c; }
+            var a = new int[n];
+            for (int i = 0; i < n; i++) a[i] = value;
+            return a;
         }
 
         static string ResolvePath(string path)
