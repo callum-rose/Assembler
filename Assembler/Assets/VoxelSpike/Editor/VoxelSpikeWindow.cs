@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -38,6 +40,10 @@ namespace VoxelSpike.Editor
 
         // --- per-view "opposite side is a mirror" (lets a view colour its far shell too) ---
         bool _frontMirror, _rightMirror, _topMirror;
+
+        // --- palette quantisation: snap voxels to the N most popular (modal) colours ---
+        bool _quantise = true;
+        int _paletteSize = 16;
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -93,6 +99,9 @@ namespace VoxelSpike.Editor
                 _topMirror = GUILayout.Toggle(_topMirror, "top↔bottom");
                 EditorGUILayout.EndHorizontal();
             }
+            _quantise = EditorGUILayout.Toggle("Quantise palette", _quantise);
+            using (new EditorGUI.DisabledScope(!_quantise))
+                _paletteSize = EditorGUILayout.IntSlider("Palette colours (N)", _paletteSize, 1, 64);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Orientation flips (fix handedness)", EditorStyles.boldLabel);
@@ -226,12 +235,12 @@ namespace VoxelSpike.Editor
             }
 
             // --- Pass 3: colour each surviving voxel from the view(s) that can see it ---
-            var sb = new StringBuilder();
-            sb.Append("# Goxel 0.10.0\n");
-            sb.Append("# One line per voxel\n");
-            sb.Append("# X Y Z RRGGBB\n");
+            // Remap to Goxel Z-up as we go: Goxel(x, y, z) = world(X, Z, Y).
+            var gx = new List<int>();
+            var gy = new List<int>();
+            var gz = new List<int>();
+            var cols = new List<Color>();
 
-            int voxelCount = 0;
             for (int j = 0; j < H; j++)
             for (int k = 0; k < L; k++)
             for (int i = 0; i < W; i++)
@@ -269,19 +278,38 @@ namespace VoxelSpike.Editor
                     col = n > 0 ? sum * (1f / n) : FlatMean(front, right, top, x01, y01, z01);
                 }
 
-                Color32 c32 = new Color32(
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.r * 255f), 0, 255),
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.g * 255f), 0, 255),
-                    (byte)Mathf.Clamp(Mathf.RoundToInt(col.b * 255f), 0, 255),
-                    255);
+                gx.Add(i); gy.Add(k); gz.Add(j);
+                cols.Add(col);
+            }
 
-                // Remap to Goxel Z-up: Goxel(x, y, z) = world(X, Z, Y).
-                sb.Append(i).Append(' ').Append(k).Append(' ').Append(j).Append(' ')
-                  .Append(c32.r.ToString("X2", CultureInfo.InvariantCulture))
-                  .Append(c32.g.ToString("X2", CultureInfo.InvariantCulture))
-                  .Append(c32.b.ToString("X2", CultureInfo.InvariantCulture))
+            int voxelCount = cols.Count;
+
+            // --- Pass 4: quantise to the N most popular (modal) colours and snap voxels ---
+            int paletteUsed = 0;
+            if (_quantise && voxelCount > 0)
+            {
+                Color[] palette = BuildModalPalette(cols, Mathf.Max(1, _paletteSize));
+                paletteUsed = palette.Length;
+                for (int v = 0; v < cols.Count; v++)
+                    cols[v] = Nearest(palette, cols[v]);
+            }
+
+            // --- Write Goxel text ---
+            var sb = new StringBuilder();
+            sb.Append("# Goxel 0.10.0\n");
+            sb.Append("# One line per voxel\n");
+            sb.Append("# X Y Z RRGGBB\n");
+            for (int v = 0; v < voxelCount; v++)
+            {
+                Color c = cols[v];
+                int r = Mathf.Clamp(Mathf.RoundToInt(c.r * 255f), 0, 255);
+                int g = Mathf.Clamp(Mathf.RoundToInt(c.g * 255f), 0, 255);
+                int b = Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255);
+                sb.Append(gx[v]).Append(' ').Append(gy[v]).Append(' ').Append(gz[v]).Append(' ')
+                  .Append(r.ToString("X2", CultureInfo.InvariantCulture))
+                  .Append(g.ToString("X2", CultureInfo.InvariantCulture))
+                  .Append(b.ToString("X2", CultureInfo.InvariantCulture))
                   .Append('\n');
-                voxelCount++;
             }
 
             string fullPath = ResolvePath(_outputPath);
@@ -293,7 +321,8 @@ namespace VoxelSpike.Editor
             _rightMask = right.BuildMaskPreview();
             _topMask = top.BuildMaskPreview();
 
-            _status = $"Grid {W} x {H} x {L} (X*Y*Z). Wrote {voxelCount} voxels to:\n{fullPath}";
+            string quant = _quantise ? $", {paletteUsed}-colour palette" : "";
+            _status = $"Grid {W} x {H} x {L} (X*Y*Z). Wrote {voxelCount} voxels{quant} to:\n{fullPath}";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
@@ -314,6 +343,57 @@ namespace VoxelSpike.Editor
             var a = new int[n];
             for (int i = 0; i < n; i++) a[i] = value;
             return a;
+        }
+
+        // Build an N-colour palette by popularity: coarse-bin the voxel colours into an RGB
+        // histogram (4 bits/channel), take the N most-populated bins, and use each bin's mean
+        // colour as the palette entry. These are the "modal" colours of the model.
+        static Color[] BuildModalPalette(List<Color> colours, int n)
+        {
+            const int levels = 16; // 4 bits per channel -> 16^3 = 4096 bins
+            var count = new Dictionary<int, int>();
+            var sumR = new Dictionary<int, float>();
+            var sumG = new Dictionary<int, float>();
+            var sumB = new Dictionary<int, float>();
+
+            foreach (Color c in colours)
+            {
+                int r = Mathf.Clamp((int)(c.r * (levels - 1) + 0.5f), 0, levels - 1);
+                int g = Mathf.Clamp((int)(c.g * (levels - 1) + 0.5f), 0, levels - 1);
+                int b = Mathf.Clamp((int)(c.b * (levels - 1) + 0.5f), 0, levels - 1);
+                int key = (r * levels + g) * levels + b;
+                count.TryGetValue(key, out int prev);
+                count[key] = prev + 1;
+                sumR.TryGetValue(key, out float sr);
+                sumG.TryGetValue(key, out float sg);
+                sumB.TryGetValue(key, out float sb);
+                sumR[key] = sr + c.r;
+                sumG[key] = sg + c.g;
+                sumB[key] = sb + c.b;
+            }
+
+            var top = count.OrderByDescending(kv => kv.Value).Take(n).ToList();
+            var palette = new Color[top.Count];
+            for (int idx = 0; idx < top.Count; idx++)
+            {
+                int key = top[idx].Key;
+                float inv = 1f / count[key];
+                palette[idx] = new Color(sumR[key] * inv, sumG[key] * inv, sumB[key] * inv, 1f);
+            }
+            return palette;
+        }
+
+        static Color Nearest(Color[] palette, Color c)
+        {
+            Color best = c;
+            float bestD = float.MaxValue;
+            for (int i = 0; i < palette.Length; i++)
+            {
+                float dr = palette[i].r - c.r, dg = palette[i].g - c.g, db = palette[i].b - c.b;
+                float d = dr * dr + dg * dg + db * db;
+                if (d < bestD) { bestD = d; best = palette[i]; }
+            }
+            return best;
         }
 
         static string ResolvePath(string path)
