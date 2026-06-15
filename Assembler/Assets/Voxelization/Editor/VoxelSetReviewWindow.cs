@@ -1146,6 +1146,7 @@ namespace Assembler.Voxelization.Editor
 					// The two streams differ in length, so the cached text/height must
 					// be rebuilt for whichever one is now showing.
 					_logDirty = true;
+					Repaint();
 				}
 			}
 
