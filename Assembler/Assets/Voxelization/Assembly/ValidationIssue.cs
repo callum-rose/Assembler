@@ -21,6 +21,12 @@ namespace Assembler.Voxelization
 		PaletteMismatch,
 		SilhouetteMismatch,
 		Asymmetric,
+
+		/// <summary>Hull clip trimmed a part to the silhouette; reposition/resize it to fit (drives a targeted re-author).</summary>
+		PartClippedModerate,
+
+		/// <summary>Hull clip refused (too much removed / full removal / disconnection); part kept as-authored, re-plan requested.</summary>
+		PartClippedSevere,
 	}
 
 	/// <summary>

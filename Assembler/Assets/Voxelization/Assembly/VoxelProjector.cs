@@ -139,18 +139,27 @@ namespace Assembler.Voxelization
 			return sb.ToString();
 		}
 
-		private static (int width, int height) Dimensions(VoxelModel model, ProjectionFace face)
-		{
-			var size = model.Size;
-			return face switch
-			{
-				ProjectionFace.Front or ProjectionFace.Back => (Math.Max(1, size.x), Math.Max(1, size.y)),
-				ProjectionFace.Side or ProjectionFace.Left => (Math.Max(1, size.z), Math.Max(1, size.y)),
-				_ => (Math.Max(1, size.x), Math.Max(1, size.z)),
-			};
-		}
+		private static (int width, int height) Dimensions(VoxelModel model, ProjectionFace face) =>
+			Dimensions(model.Size, face);
 
-		private static (int u, int v, int depth) MapToPlane(Vector3Int p, Vector3Int size, ProjectionFace face) => face switch
+		/// <summary>
+		/// Projection-plane extent for a given volume size, exposed so the hull clip
+		/// classifies voxels against the exact same plane the occupancy/IoU gate uses.
+		/// </summary>
+		public static (int width, int height) Dimensions(Vector3Int size, ProjectionFace face) => face switch
+		{
+			ProjectionFace.Front or ProjectionFace.Back => (Math.Max(1, size.x), Math.Max(1, size.y)),
+			ProjectionFace.Side or ProjectionFace.Left => (Math.Max(1, size.z), Math.Max(1, size.y)),
+			_ => (Math.Max(1, size.x), Math.Max(1, size.z)),
+		};
+
+		/// <summary>
+		/// Maps a volume-local point (already offset by the model's min) to its
+		/// projection cell <c>(u, v)</c> and nearest-wins <c>depth</c> for a face.
+		/// Public so the hull clip shares the one projection convention rather than
+		/// re-deriving the v-flip / twin-mirror rules.
+		/// </summary>
+		public static (int u, int v, int depth) MapToPlane(Vector3Int p, Vector3Int size, ProjectionFace face) => face switch
 		{
 			// Front/Back share the x-y plane; Right(=Side)/Left share z-y; Top/Bottom
 			// share x-z. The depth (nearest-wins) flips for each twin so each viewer

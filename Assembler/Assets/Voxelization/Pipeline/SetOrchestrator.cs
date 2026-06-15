@@ -171,19 +171,29 @@ namespace Assembler.Voxelization
 
 						if (review >= _config.MaxReviewRounds)
 						{
+							// Exhausted: ship what we have. Severe-clipped parts kept their
+							// authored geometry (the clip never applied), and the residual
+							// IoU/clip mismatch is already recorded for operator visibility.
 							break;
 						}
 
+						// A refused hull clip is a re-plan signal in its own right (the part
+						// box is wrong for the silhouette), folded in alongside the vision
+						// review so both drive the same re-plan round.
+						var severeNote = SevereClipNote(report);
 						progress?.Report($"{asset.Id}: reviewing the result against the reference...");
 						var corrections = await ReviewAsync(attachments, model, assembled, brief, ct);
-						if (corrections.Length == 0)
+						var feedback = severeNote.Length > 0
+							? (corrections.Length > 0 ? $"{severeNote}\n{corrections}" : severeNote)
+							: corrections;
+						if (feedback.Length == 0)
 						{
 							progress?.Report($"{asset.Id}: review — looks faithful");
 							break;
 						}
 
-						progress?.Report($"{asset.Id}: review requested corrections — re-planning:\n{corrections}");
-						note = refinementNote.Length > 0 ? $"{refinementNote}\n{corrections}" : corrections;
+						progress?.Report($"{asset.Id}: re-planning:\n{feedback}");
+						note = refinementNote.Length > 0 ? $"{refinementNote}\n{feedback}" : feedback;
 						previousModelYaml = VModelYaml.Write(model);
 					}
 					catch (VoxelizationException ex) when (assembled != null)
@@ -296,13 +306,17 @@ namespace Assembler.Voxelization
 			IProgress<string>? progress)
 		{
 			progress?.Report($"{assetId}: assembling...");
-			var assembled = await _assembler.AssembleAsync(model, ct);
-			var report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, brief, checkBriefPalette));
-			ReportOutcome(assetId, assembled, report, progress);
+			var (assembled, report) = await AssembleClipValidateAsync(model, brief, checkBriefPalette, assetId, ct, progress);
 
 			for (var round = 1; round <= _config.MaxValidationRounds && !report.IsValid; round++)
 			{
-				var failing = report.FailingPartIds.Where(reauthorable.ContainsKey).ToList();
+				// Severe hull clips need a re-plan, not a re-author — the part box
+				// itself is wrong — so they're handled by the outer review loop, not
+				// here. Everything else re-authors as before.
+				var severe = SeverelyClippedPartIds(report);
+				var failing = report.FailingPartIds
+					.Where(id => reauthorable.ContainsKey(id) && !severe.Contains(id))
+					.ToList();
 				if (failing.Count == 0)
 				{
 					break;
@@ -327,14 +341,109 @@ namespace Assembler.Voxelization
 					break;
 				}
 
-				assembled = await _assembler.AssembleAsync(model, ct);
-				report = assembled.AssemblyIssues.Merge(_validator.Validate(assembled, brief, checkBriefPalette));
-				ReportOutcome(assetId, assembled, report, progress);
+				(assembled, report) = await AssembleClipValidateAsync(model, brief, checkBriefPalette, assetId, ct, progress);
 			}
 
 			// assembled.Model is the model that produced this composition; returning
 			// it keeps model/assembled consistent even after a mid-round degrade.
 			return (assembled.Model, assembled, report);
+		}
+
+		/// <summary>
+		/// Assemble, then — when enabled and the brief carries silhouettes — clip the
+		/// resolved parts to the silhouette envelope before validating. A discarded
+		/// hull (too inconsistent) falls back to the unclipped geometry so a bad
+		/// reference never beats no reference; otherwise the clipped composition is
+		/// what the IoU gate and every downstream stage see, and the clip's per-part
+		/// outcomes ride the normal issue set (moderate → re-author, severe → re-plan).
+		/// </summary>
+		private async Task<(AssembledModel Assembled, ValidationReport Report)> AssembleClipValidateAsync(
+			VoxelRigModel model,
+			ReferenceBrief brief,
+			bool checkBriefPalette,
+			string assetId,
+			CancellationToken ct,
+			IProgress<string>? progress)
+		{
+			var assembled = await _assembler.AssembleAsync(model, ct);
+			var clipReport = ValidationReport.Clean;
+
+			if (_config.EnableHullClip && brief.Silhouettes.Any(s => !s.IsEmpty))
+			{
+				var clip = HullClip.Apply(assembled.Parts, brief, _config.HullClipSettings);
+				if (clip.HullDiscarded)
+				{
+					progress?.Report($"{assetId}: hull clip discarded — would remove {clip.RemovedFraction:P0} " +
+									 $"(> {_config.HullClipGlobalFloor:P0} floor); proceeding with free authoring");
+				}
+				else
+				{
+					if (!ReferenceEquals(clip.Parts, assembled.Parts))
+					{
+						assembled = assembled with
+						{
+							Parts = clip.Parts,
+							Composed = ModelAssembler.Compose(assembled.Model, clip.Parts),
+						};
+					}
+
+					if (clip.Issues.Count > 0)
+					{
+						clipReport = new ValidationReport(clip.Issues.Select(ToValidationIssue).ToList());
+						progress?.Report($"{assetId}: hull clip — {DescribeClip(clip)}");
+					}
+					else if (clip.RemovedFraction > 0f)
+					{
+						progress?.Report($"{assetId}: hull clip — trimmed {clip.RemovedFraction:P0} of overhang (light)");
+					}
+				}
+			}
+
+			var report = assembled.AssemblyIssues
+				.Merge(clipReport)
+				.Merge(_validator.Validate(assembled, brief, checkBriefPalette));
+			ReportOutcome(assetId, assembled, report, progress);
+			return (assembled, report);
+		}
+
+		private static ValidationIssue ToValidationIssue(ClipIssue issue) => issue.Tier == ClipTier.Severe
+			? new ValidationIssue(issue.PartId, IssueCode.PartClippedSevere,
+				$"Hull clip refused ({issue.Ratio:P0} outside the reference silhouette): {SevereReasonText(issue)}. " +
+				"Kept the authored geometry; the part's box is wrong for the silhouette — re-plan its size/position.")
+			: new ValidationIssue(issue.PartId, IssueCode.PartClippedModerate,
+				$"Hull clip trimmed {issue.Ratio:P0} of the part where it overhung the reference silhouette. " +
+				"Reposition or resize it to sit inside the envelope.");
+
+		private static string SevereReasonText(ClipIssue issue) => issue.Reason switch
+		{
+			ClipSevereReason.FullRemoval => "the part lies entirely outside the silhouette",
+			ClipSevereReason.Disconnection => "clipping would split the part into disconnected chunks",
+			_ => "too much of the part lies outside the silhouette",
+		};
+
+		private static string DescribeClip(ClipResult clip)
+		{
+			var moderate = clip.Issues.Count(i => i.Tier == ClipTier.Moderate);
+			var severe = clip.Issues.Count(i => i.Tier == ClipTier.Severe);
+			return $"removed {clip.RemovedFraction:P0} overall; {moderate} part(s) trimmed (moderate), {severe} refused (severe)";
+		}
+
+		private static HashSet<string> SeverelyClippedPartIds(ValidationReport report) =>
+			new(report.Issues.Where(i => i.Code == IssueCode.PartClippedSevere).Select(i => i.PartId));
+
+		/// <summary>
+		/// Re-plan feedback for parts the hull clip refused: their authored boxes sit
+		/// outside the silhouette, which only a re-plan (not a re-author) can fix.
+		/// Empty when nothing was refused.
+		/// </summary>
+		private static string SevereClipNote(ValidationReport report)
+		{
+			var severe = report.Issues.Where(i => i.Code == IssueCode.PartClippedSevere).ToList();
+			return severe.Count == 0
+				? string.Empty
+				: "The hull clip refused these parts because their authored boxes fall outside the reference " +
+				  "silhouette — re-plan their size and position to fit the envelope:\n" +
+				  string.Join("\n", severe.Select(i => $"- {i.PartId}: {i.Message}"));
 		}
 
 		private static ModelResult ExportResult(

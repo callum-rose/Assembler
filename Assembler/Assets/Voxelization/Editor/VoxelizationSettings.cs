@@ -57,6 +57,26 @@ namespace Assembler.Voxelization.Editor
 		[Range(0f, 1f)]
 		public float SilhouetteCoverageThreshold = VoxelizationConfig.Default.SilhouetteCoverageThreshold;
 
+		[Header("Reference hull clip")]
+		[Tooltip("Trim authored geometry that overhangs the reference silhouette before composition (per-run A/B).")]
+		public bool EnableHullClip = VoxelizationConfig.Default.EnableHullClip;
+
+		[Tooltip("Silhouette-mask dilation in cells; matches the ±1 planner width slack.")]
+		[Min(0)]
+		public int HullClipDilation = VoxelizationConfig.Default.HullClipDilation;
+
+		[Tooltip("Per-part removed fraction at/above which a clip is a moderate trim (suggests a reposition).")]
+		[Range(0f, 1f)]
+		public float HullClipModerateRatio = VoxelizationConfig.Default.HullClipModerateRatio;
+
+		[Tooltip("Per-part removed fraction at/above which a clip is refused (severe — keep authored, re-plan).")]
+		[Range(0f, 1f)]
+		public float HullClipSevereRatio = VoxelizationConfig.Default.HullClipSevereRatio;
+
+		[Tooltip("Discard the whole hull when the aggregate removed-mass fraction exceeds this (bad reference).")]
+		[Range(0f, 1f)]
+		public float HullClipGlobalFloor = VoxelizationConfig.Default.HullClipGlobalFloor;
+
 		/// <summary>
 		/// Loads the shared settings asset, creating it (and migrating any values
 		/// previously kept in EditorPrefs) the first time the window runs.
@@ -91,6 +111,11 @@ namespace Assembler.Voxelization.Editor
 			PartVoxelBudget = PartVoxelBudget,
 			SilhouetteIouThreshold = SilhouetteIouThreshold,
 			SilhouetteCoverageThreshold = SilhouetteCoverageThreshold,
+			EnableHullClip = EnableHullClip,
+			HullClipDilation = HullClipDilation,
+			HullClipModerateRatio = HullClipModerateRatio,
+			HullClipSevereRatio = HullClipSevereRatio,
+			HullClipGlobalFloor = HullClipGlobalFloor,
 		};
 
 		// One-time carry-over so an operator who tuned the old EditorPrefs-backed

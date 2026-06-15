@@ -382,6 +382,11 @@ namespace Assembler.Voxelization.Editor
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.PartVoxelBudget), "Part voxel budget");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.SilhouetteIouThreshold), "Silhouette IoU threshold");
 				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.SilhouetteCoverageThreshold), "Silhouette coverage threshold");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.EnableHullClip), "Enable hull clip");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.HullClipDilation), "Hull clip dilation (cells)");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.HullClipModerateRatio), "Hull clip moderate ratio");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.HullClipSevereRatio), "Hull clip severe ratio");
+				DrawSettingsProperty(serialized, nameof(VoxelizationSettings.HullClipGlobalFloor), "Hull clip global floor");
 
 				if (GUILayout.Button("Reset to defaults", GUILayout.Width(160)))
 				{
@@ -406,6 +411,11 @@ namespace Assembler.Voxelization.Editor
 			serialized.FindProperty(nameof(VoxelizationSettings.PartVoxelBudget)).intValue = defaults.PartVoxelBudget;
 			serialized.FindProperty(nameof(VoxelizationSettings.SilhouetteIouThreshold)).floatValue = defaults.SilhouetteIouThreshold;
 			serialized.FindProperty(nameof(VoxelizationSettings.SilhouetteCoverageThreshold)).floatValue = defaults.SilhouetteCoverageThreshold;
+			serialized.FindProperty(nameof(VoxelizationSettings.EnableHullClip)).boolValue = defaults.EnableHullClip;
+			serialized.FindProperty(nameof(VoxelizationSettings.HullClipDilation)).intValue = defaults.HullClipDilation;
+			serialized.FindProperty(nameof(VoxelizationSettings.HullClipModerateRatio)).floatValue = defaults.HullClipModerateRatio;
+			serialized.FindProperty(nameof(VoxelizationSettings.HullClipSevereRatio)).floatValue = defaults.HullClipSevereRatio;
+			serialized.FindProperty(nameof(VoxelizationSettings.HullClipGlobalFloor)).floatValue = defaults.HullClipGlobalFloor;
 		}
 
 		private string DrawModelPopup(string label, string current)

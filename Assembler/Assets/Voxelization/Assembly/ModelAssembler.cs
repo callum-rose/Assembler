@@ -263,7 +263,12 @@ namespace Assembler.Voxelization
 			return assembled;
 		}
 
-		private static VoxelModel Compose(VoxelRigModel model, IReadOnlyList<AssembledPart> parts)
+		/// <summary>
+		/// Unions the resolved parts into one volume, declaration order winning ties.
+		/// Public and pure so the hull clip can recompose a clipped part list without
+		/// re-resolving every grid.
+		/// </summary>
+		public static VoxelModel Compose(VoxelRigModel model, IReadOnlyList<AssembledPart> parts)
 		{
 			// Declaration order wins ties: a later part overwrites where volumes overlap.
 			var voxels = new Dictionary<Vector3Int, byte>();

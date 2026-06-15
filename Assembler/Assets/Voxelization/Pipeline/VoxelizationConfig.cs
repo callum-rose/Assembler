@@ -85,6 +85,30 @@ namespace Assembler.Voxelization
 		public float SilhouetteCoverageThreshold { get; init; } = 0.8f;
 
 		/// <summary>
+		/// Master toggle for the reference hull clip (per-run A/B). When on and the
+		/// asset has a brief with silhouettes, authored geometry overhanging the
+		/// envelope is deterministically trimmed before composition; off restores
+		/// today's free-authoring + IoU-gate behaviour.
+		/// </summary>
+		public bool EnableHullClip { get; init; } = true;
+
+		/// <summary>Silhouette-mask dilation in cells; matches the ±1 planner width slack so an on-edge voxel survives.</summary>
+		public int HullClipDilation { get; init; } = 1;
+
+		/// <summary>Per-part removed-fraction at/above which a clip is a moderate trim (suggests a reposition).</summary>
+		public float HullClipModerateRatio { get; init; } = 0.20f;
+
+		/// <summary>Per-part removed-fraction at/above which a clip is refused (severe — keep authored, re-plan).</summary>
+		public float HullClipSevereRatio { get; init; } = 0.50f;
+
+		/// <summary>Discard the whole hull when the aggregate removed-mass fraction exceeds this (bad reference).</summary>
+		public float HullClipGlobalFloor { get; init; } = 0.30f;
+
+		/// <summary>The hull-clip thresholds projected onto the pure clip's settings.</summary>
+		public HullClipSettings HullClipSettings =>
+			new(HullClipDilation, HullClipModerateRatio, HullClipSevereRatio, HullClipGlobalFloor);
+
+		/// <summary>
 		/// Operator-supplied set-wide style guidance ("prefer simplicity, rounded
 		/// boxes where possible, only as many parts as needed"), injected into the
 		/// planning, authoring, and review prompts. Empty = none.
