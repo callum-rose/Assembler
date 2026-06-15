@@ -85,7 +85,28 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # Game-over poll: every frame the gate checks whether enough bubbles have been
   # popped; once they have, the gate fires !gameover, which ends the game.
   game over:

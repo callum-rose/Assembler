@@ -18,11 +18,13 @@ Game:
     on screen. The blended, speed-clamped result is written to the `velocity` variable,
     which a `velocity` integrator applies to move the boid.
 
-    Move the mouse through the flock and the boids scatter away from the cursor: a `cursor`
-    entity publishes the pointer's world position into `mouse world`, and each boid adds a
-    strongly-weighted Flee force that kicks in within `mouse avoid radius`.
+    Move the mouse — or drag a finger on mobile — through the flock and the boids scatter
+    away from the pointer: a `cursor` entity publishes the pointer's world position into
+    `mouse world`, and each boid adds a strongly-weighted Flee force that kicks in within
+    `mouse avoid radius`. The same `cursor` action binds to the mouse on desktop and the
+    touchscreen on mobile, so the boid entities are identical on both platforms.
 
-    Press Q to quit.
+    Press Q — or tap the on-screen Quit button on mobile — to quit.
 
 World:
   Dimensionality: 2
@@ -209,20 +211,53 @@ Placements:
       Do: 'GridPositions(6, 4, 1.1f, arg0)'
       With: [ !var flock origin ]
 
+# Abstract input actions + the physical inputs that feed them, per platform.
+# `cursor` is a value action that emits axis/x/y every frame (the pointer's
+# screen-space position, z = 0). The boids flee that point.
+Controls:
+  Actions:
+    quit:   { Type: button, Phase: down }
+    cursor: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    # Desktop: the mouse repels the flock; Q quits.
+    desktop:
+      quit:   [ "<Keyboard>/q" ]
+      cursor: [ "<Mouse>/position" ]
+    # Mobile: the primary finger repels the flock — drag it through the boids.
+    # The entities are identical; only the binding changes (mouse → touchscreen).
+    # The touch position holds its last value after you lift, so the flock keeps
+    # fleeing the point you last touched. `quit` is driven by the on-screen
+    # button below, which synthesises the action's mobile path when tapped.
+    mobile:
+      quit:   [ "<Keyboard>/escape" ]
+      cursor: [ "<Touchscreen>/position" ]
+
+  # On-screen touch widgets, rendered only when the active platform is Mobile
+  # (choose it in the Game Launcher's Platform dropdown).
+  OnScreen:
+    - Type: button
+      Action: quit
+      Anchor: upper-right
+      Offset: { X: 120, Y: 120 }
+      Size: { X: 220, Y: 220 }
+      Label: "Quit"
+
 Entities:
   controls:
     Behaviours:
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   # Tracks the mouse and publishes its world position into the global `mouse world` variable each
-  # frame it moves, which every boid's `avoid mouse` steering force reads to flee the cursor.
+  # frame, which every boid's `avoid mouse` steering force reads to flee the cursor.
   cursor:
     Behaviours:
       track mouse:
-        Type: mouse position trigger
+        Type: input action
+        Properties: { Action: cursor }
         Listeners:
           - { EntityId: cursor, BehaviourId: store mouse }
       store mouse:
@@ -232,7 +267,7 @@ Entities:
           Value: !expr
             Do: screen to world
             With:
-              - !output mouse_position
+              - !output axis
               - !var camera position
               - !var camera size
 

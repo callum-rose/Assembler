@@ -9,9 +9,10 @@ namespace Assembler.Behaviours.Triggers.Input
 {
 	/// <summary>
 	/// Relays an abstract input action (declared in the descriptor's <c>Controls</c> section and bound to a
-	/// physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action
-	/// behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis
-	/// trigger, emitting axis/x/y every frame.
+	/// physical input per platform) to listeners. This is the single input-event source for gameplay: a button
+	/// action fires on its phase (hold ⇒ every frame held, down ⇒ on press, up ⇒ on release), and a value action
+	/// emits axis/x/y every frame. Physical keys, mouse buttons, mouse position/scroll, and gamepad controls are
+	/// all expressed as bindings on the action rather than as separate trigger types.
 	/// </summary>
 	/// <remarks>
 	/// Properties:
@@ -91,7 +92,7 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			// Button + hold: fire every frame the control is pressed (≡ KeyHoldTrigger). Down/up are event-driven.
+			// Button + hold: fire every frame the control is pressed. Down/up are event-driven (see Wire).
 			if (Data.Phase is ButtonPhase.Hold && action.IsPressed())
 			{
 				NotifyListeners(TriggerContext.Empty);
@@ -99,7 +100,7 @@ namespace Assembler.Behaviours.Triggers.Input
 		}
 
 		// Exposed for unit testing: live device polling is impractical to drive in a unit test, so the
-		// value-forwarding shape (axis/x/y, mirroring AxisTrigger) is verified through this seam.
+		// value-forwarding shape (axis/x/y) is verified through this seam.
 		// The action reads a Vector2 from its binding; it widens to a Vector3 (z = 0) here.
 		internal void Emit(Vector3 value) => NotifyListeners(BuildValueContext(value));
 

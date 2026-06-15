@@ -385,14 +385,11 @@ entity id:
 
 ## Input — Controls and actions
 
-There are **two ways** to read input, both valid. Prefer the **action layer** for anything beyond a
-throwaway demo, because it keeps gameplay independent of physical bindings and supports multiple
-platforms.
-
-### 1. The action layer (`Controls:` + `input action`) — recommended
-
-Declare abstract **actions** and bind physical inputs to them **per platform** in the top-level
-`Controls:` block, then listen to an action with the `input action` behaviour.
+All input is read through the **action layer**: declare abstract **actions** and bind physical inputs
+to them **per platform** in the top-level `Controls:` block, then listen to an action with the
+`input action` behaviour. This keeps gameplay independent of physical bindings and supports multiple
+platforms. There are no raw `key`/`mouse`/`axis`/`gamepad` triggers — a key, mouse button, mouse
+position, scroll wheel, or gamepad control is just a binding on an action.
 
 ```yaml
 Controls:
@@ -417,10 +414,10 @@ Controls:
       move: [ "<Gamepad>/leftStick" ]
 ```
 
-- **Action `Type: button`** with `Phase: down | up | hold` behaves exactly like the raw
-  `key down / key up / key hold` triggers.
-- **Action `Type: value`** (e.g. `ValueType: vector2`) behaves like the `axis trigger`, emitting the
-  outputs `axis` (`Vector3`), `x` (`float`), `y` (`float`) every frame.
+- **Action `Type: button`** with `Phase: down | up | hold` fires once on press (`down`), once on
+  release (`up`), or every frame held (`hold`).
+- **Action `Type: value`** (e.g. `ValueType: vector2`) emits the outputs `axis` (`Vector3`),
+  `x` (`float`), `y` (`float`) every frame.
 
 The `input action` behaviour is a trigger — wire its `Listeners:` like any other trigger:
 
@@ -439,28 +436,27 @@ apply move:
       With: [ !output x, !output y, !var move step ]
 ```
 
-`InputActionDemo.yaml` is the canonical worked example.
+`InputActionDemo.yaml` is the canonical worked example; `GameOverDemo.yaml` shows the simplest
+button-action wiring.
 
-### 2. Raw key triggers — simplest, keyboard-only
+### Mouse, scroll and gamepad
 
-`key hold trigger` / `key down trigger` / `key up trigger` take a `Key` property and fire directly —
-no `Controls:` block needed. Fine for quick demos:
+These are bindings too — no special trigger types:
 
-```yaml
-hold left:
-  Type: key hold trigger
-  Properties: { Key: "a" }
-  Listeners:
-    - EntityId: player
-      BehaviourId: move left
-```
+- **Mouse buttons** → button actions bound to `<Mouse>/leftButton` / `rightButton` / `middleButton`.
+- **Mouse position / movement** → a `value` action (`ValueType: vector2`) bound to `<Mouse>/position`
+  (absolute, screen space) or `<Mouse>/delta` (per-frame movement). It emits `axis`/`x`/`y` every
+  frame. `FlockingDemo.yaml` reads the cursor this way.
+- **Scroll wheel** → a `value` action bound to `<Mouse>/scroll` (the `y` output is vertical scroll).
+- **Gamepad** → bind controls like `<Gamepad>/buttonSouth`, `<Gamepad>/leftStick` under a `gamepad`
+  scheme, as in the example above.
 
-Use `key hold trigger` for continuous actions (movement), `key down trigger` for discrete ones (jump,
-fire). `GameOverDemo.yaml` and `UiShowcase.yaml` use this form.
+### Touch gestures
 
-The catalogue also has pointer/touch/gesture triggers (`mouse button trigger`, `mouse position
-trigger`, `tap trigger`, `swipe trigger`, `drag trigger`, `pinch and rotate trigger`, …) and
-`gamepad button trigger` — see `Behaviours.md`.
+Higher-level gesture **recognizers** (`tap trigger`, `swipe trigger`, `drag trigger`,
+`pinch and rotate trigger`, `long press trigger`, `double tap trigger`) are separate trigger
+behaviours, not `Controls` bindings — see `Behaviours.md`. On-screen touch widgets (joystick / dpad /
+button) are declared under `Controls.OnScreen` and drive existing actions.
 
 ---
 
@@ -755,10 +751,10 @@ list. Match the surrounding examples in the catalogue's `* list *` behaviours.
 
 These are conventions, not rules. Reach for them when they fit.
 
-- **Action/trigger → setter or motion** for input-driven movement. An `input action` (or
-  `key hold trigger`) fires; its listener targets a `velocity`/`translate` behaviour to drive motion.
-- **`input action` button on `Phase: down`** (or `key down trigger`) for discrete actions (jump,
-  fire, change direction). Use `hold` for continuous actions.
+- **Action → setter or motion** for input-driven movement. An `input action` fires; its listener
+  targets a `velocity`/`translate` behaviour to drive motion.
+- **`input action` button on `Phase: down`** for discrete actions (jump, fire, change direction).
+  Use `hold` for continuous actions.
 - **`on start trigger`** to seed initial state (spawn first food, fire first asteroid, play a start
   sound).
 - **`interval trigger`** for ticking gameplay (asteroid spawn, score-per-second, periodic checks).

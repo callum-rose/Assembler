@@ -29,7 +29,29 @@ Constants:
   camera view: "orthographic"
   camera size: 6
 
+# This demo has no gameplay input; the only control is a quit/back affordance.
+# Desktop presses Q; on mobile the on-screen Quit button drives the same action.
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   falling box:
     Position: !vec { X: -4, Y: 4, Z: 0 }
     Variables:
