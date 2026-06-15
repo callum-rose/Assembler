@@ -1,0 +1,17 @@
+{
+    "name": "Assembler.Style",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
