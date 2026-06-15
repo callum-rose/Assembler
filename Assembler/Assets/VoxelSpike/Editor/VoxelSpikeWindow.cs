@@ -25,6 +25,7 @@ namespace VoxelSpike.Editor
         enum ColourMode { VisibleViews, FlatMean }
         enum PaletteMode { Curated, Variety, Modal }
         enum CuratedPalette { Endesga32, DawnBringer32, DawnBringer16, Pico8 }
+        enum OutputMode { Colour, Parts }
 
         // --- inputs ---
         Texture2D _front;
@@ -48,6 +49,10 @@ namespace VoxelSpike.Editor
         int _paletteSize = 16;
         PaletteMode _paletteMode = PaletteMode.Curated;
         CuratedPalette _curatedPalette = CuratedPalette.Endesga32;
+
+        // --- part decomposition: back-project flat label maps into per-voxel part ids ---
+        OutputMode _outputMode = OutputMode.Colour;
+        Texture2D _frontLabel, _rightLabel, _topLabel;
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -110,6 +115,19 @@ namespace VoxelSpike.Editor
                 if (_paletteMode == PaletteMode.Curated)
                     _curatedPalette = (CuratedPalette)EditorGUILayout.EnumPopup("Curated palette", _curatedPalette);
                 _paletteSize = EditorGUILayout.IntSlider("Max colours (N)", _paletteSize, 1, 64);
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Part decomposition", EditorStyles.boldLabel);
+            _outputMode = (OutputMode)EditorGUILayout.EnumPopup("Output", _outputMode);
+            if (_outputMode == OutputMode.Parts)
+            {
+                EditorGUILayout.HelpBox("Flat colour-coded part maps (one colour per part) matching each " +
+                    "view's silhouette. Shape still comes from the source images; each voxel is coloured by " +
+                    "its back-projected part. Per-view flips below apply to these too.", MessageType.None);
+                _frontLabel = (Texture2D)EditorGUILayout.ObjectField("Front labels", _frontLabel, typeof(Texture2D), false);
+                _rightLabel = (Texture2D)EditorGUILayout.ObjectField("Right labels", _rightLabel, typeof(Texture2D), false);
+                _topLabel = (Texture2D)EditorGUILayout.ObjectField("Top labels", _topLabel, typeof(Texture2D), false);
             }
 
             EditorGUILayout.Space();
@@ -243,6 +261,31 @@ namespace VoxelSpike.Editor
                 if (j < botMinY[yc]) botMinY[yc] = j;
             }
 
+            // --- Optional part labels: build label views and the discrete part palette ---
+            bool partsMode = _outputMode == OutputMode.Parts;
+            View frontLab = null, rightLab = null, topLab = null;
+            Color[] labelColours = null;
+            Vector3[] labelLab = null;
+            if (partsMode)
+            {
+                if (!(_frontLabel && _rightLabel && _topLabel))
+                {
+                    _status = "Parts mode needs all three label maps (front/right/top).";
+                    return;
+                }
+                frontLab = View.Build(_frontLabel, _bgThreshold, _dilate, _frontFlipU, _frontFlipV);
+                rightLab = View.Build(_rightLabel, _bgThreshold, _dilate, _rightFlipU, _rightFlipV);
+                topLab = View.Build(_topLabel, _bgThreshold, _dilate, _topFlipU, _topFlipV);
+                if (frontLab == null || rightLab == null || topLab == null)
+                {
+                    _status = "Label maps have no foreground. Check the BG threshold.";
+                    return;
+                }
+                labelColours = BuildLabelPalette(frontLab, rightLab, topLab);
+                labelLab = new Vector3[labelColours.Length];
+                for (int i = 0; i < labelColours.Length; i++) labelLab[i] = RgbToLab(labelColours[i]);
+            }
+
             // --- Pass 3: colour each surviving voxel from the view(s) that can see it ---
             // Remap to Goxel Z-up as we go: Goxel(x, y, z) = world(X, Z, Y).
             var gx = new List<int>();
@@ -265,7 +308,27 @@ namespace VoxelSpike.Editor
 
                 Color col;
                 bool isSeen;
-                if (_colourMode == ColourMode.FlatMean)
+                if (partsMode)
+                {
+                    int zc = i + W * j, xc = j + H * k, yc = i + W * k;
+                    bool seeFront = k == frontMinZ[zc] || (_frontMirror && k == backMaxZ[zc]);
+                    bool seeRight = i == rightMaxX[xc] || (_rightMirror && i == leftMinX[xc]);
+                    bool seeTop = j == topMaxY[yc] || (_topMirror && j == botMinY[yc]);
+
+                    // Each view that sees this voxel votes a part id (nearest label colour in Lab);
+                    // skip a view whose label sample is background. Majority wins (front > right > top).
+                    int idF = seeFront && frontLab.Foreground(x01, y01)
+                        ? NearestLabIndex(labelLab, RgbToLab(frontLab.SampleNearest(x01, y01))) : -1;
+                    int idR = seeRight && rightLab.Foreground(z01, y01)
+                        ? NearestLabIndex(labelLab, RgbToLab(rightLab.SampleNearest(z01, y01))) : -1;
+                    int idT = seeTop && topLab.Foreground(x01, z01)
+                        ? NearestLabIndex(labelLab, RgbToLab(topLab.SampleNearest(x01, z01))) : -1;
+
+                    int part = Mode3(idF, idR, idT);
+                    isSeen = part >= 0;
+                    col = isSeen ? labelColours[part] : Color.clear; // unseen -> filled in pass 5
+                }
+                else if (_colourMode == ColourMode.FlatMean)
                 {
                     col = FlatMean(front, right, top, x01, y01, z01);
                     isSeen = true;
@@ -301,7 +364,7 @@ namespace VoxelSpike.Editor
 
             // --- Pass 4: quantise (palette built only from voxels a view actually saw) ---
             int paletteUsed = 0;
-            if (_quantise && voxelCount > 0)
+            if (_quantise && voxelCount > 0 && !partsMode)
             {
                 int n = Mathf.Max(1, _paletteSize);
                 Color[] palette;
@@ -355,8 +418,10 @@ namespace VoxelSpike.Editor
             _rightMask = right.BuildMaskPreview();
             _topMask = top.BuildMaskPreview();
 
-            string quant = _quantise ? $", {paletteUsed}-colour palette" : "";
-            _status = $"Grid {W} x {H} x {L} (X*Y*Z). Wrote {voxelCount} voxels{quant} to:\n{fullPath}";
+            string detail = partsMode
+                ? $", {labelColours.Length} parts"
+                : _quantise ? $", {paletteUsed}-colour palette" : "";
+            _status = $"Grid {W} x {H} x {L} (X*Y*Z). Wrote {voxelCount} voxels{detail} to:\n{fullPath}";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
@@ -377,6 +442,48 @@ namespace VoxelSpike.Editor
             var a = new int[n];
             for (int i = 0; i < n; i++) a[i] = value;
             return a;
+        }
+
+        // The discrete set of part colours across the three label maps: histogram the foreground
+        // label pixels (binning merges antialiasing), then keep bins with enough population to be a
+        // real region rather than an edge blend. Each kept colour is one part.
+        static Color[] BuildLabelPalette(View a, View b, View c)
+        {
+            var all = new List<Color>();
+            a.AccumulateForeground(all);
+            b.AccumulateForeground(all);
+            c.AccumulateForeground(all);
+
+            BuildHistogram(all, out var means, out var counts);
+            if (means.Count == 0) return new[] { Color.magenta };
+
+            int totalPixels = 0;
+            foreach (int cnt in counts) totalPixels += cnt;
+            float threshold = Mathf.Max(4f, totalPixels * 0.004f); // drop boundary-blend bins
+
+            var parts = new List<Color>();
+            for (int i = 0; i < means.Count; i++)
+                if (counts[i] >= threshold) parts.Add(means[i]);
+
+            return parts.Count > 0 ? parts.ToArray() : new[] { means[0] };
+        }
+
+        // Most frequent non-negative id among three votes, ties broken by argument order (front first).
+        static int Mode3(int a, int b, int c)
+        {
+            int best = -1, bestCount = 0;
+            best = Vote(a, a, b, c, best, ref bestCount);
+            best = Vote(b, a, b, c, best, ref bestCount);
+            best = Vote(c, a, b, c, best, ref bestCount);
+            return best;
+        }
+
+        static int Vote(int x, int a, int b, int c, int best, ref int bestCount)
+        {
+            if (x < 0) return best;
+            int cnt = (a == x ? 1 : 0) + (b == x ? 1 : 0) + (c == x ? 1 : 0);
+            if (cnt > bestCount) { bestCount = cnt; return x; }
+            return best;
         }
 
         // Flood unseen voxels with their nearest seen voxel's colour. Multi-source BFS over the
@@ -756,6 +863,22 @@ namespace VoxelSpike.Editor
                 Color c01 = _col[y1 * W + x0];
                 Color c11 = _col[y1 * W + x1];
                 return Color.Lerp(Color.Lerp(c00, c10, tx), Color.Lerp(c01, c11, tx), ty);
+            }
+
+            // Nearest-pixel colour — used for label maps so region boundaries stay hard (no blending).
+            public Color SampleNearest(float u, float v)
+            {
+                if (_flipU) u = 1f - u;
+                if (_flipV) v = 1f - v;
+                int x = Mathf.Clamp(Mathf.RoundToInt(u * (W - 1)), 0, W - 1);
+                int y = Mathf.Clamp(Mathf.RoundToInt(v * (H - 1)), 0, H - 1);
+                return _col[y * W + x];
+            }
+
+            public void AccumulateForeground(List<Color> sink)
+            {
+                for (int i = 0; i < _fg.Length; i++)
+                    if (_fg[i]) sink.Add(_col[i]);
             }
 
             public Texture2D BuildMaskPreview()
