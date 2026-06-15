@@ -300,6 +300,50 @@ reference_brief:
 		}
 
 		[Test]
+		public void Plan_DerivesUnconstrainedLengthFromTheSilhouette()
+		{
+			// Manifest pins only height; the left-view silhouette (u = z) is 9 long, so
+			// the planner should pin TargetLength = 9 and leave the un-silhouetted width
+			// free — giving the bounding-box check a concrete length target instead of
+			// relying on the coverage gate alone.
+			var manifest = new SetManifest
+			{
+				Game = "test",
+				Assets = new[] { new ManifestAsset { Id = "dog", Height = 5 } },
+			};
+			var brief = new ReferenceBrief
+			{
+				Source = "ref",
+				Silhouettes = new[]
+				{
+					new SilhouetteSpec("left", new Vector3Int(9, 5, 0), Enumerable.Repeat("#########", 5).ToArray()),
+				},
+			};
+			var gateway = new FakeGateway().Enqueue(@"```vmodel
+model: dog
+version: 1
+palette:
+  _: none
+  W: ""#aabbcc""
+parts:
+  - id: body
+    parent: root
+    pivot: [0, 0, 0]
+    data: { encoding: planned, planned: layers, size: [3, 5, 9], offset: [0, 0, 0], note: ""body"" }
+poses:
+  idle: {}
+```");
+
+			var plan = new ModelPlanner(gateway, VoxelizationConfig.Default)
+				.PlanAsync(manifest, manifest.Assets[0], Array.Empty<AnthropicImage>(), brief, string.Empty, CancellationToken.None)
+				.GetAwaiter().GetResult();
+
+			Assert.That(gateway.Calls.Count, Is.EqualTo(1), "a length-correct plan must pass on the first attempt");
+			Assert.That(plan.Skeleton.TargetLength, Is.EqualTo(9), "length is derived from the silhouette's z extent");
+			Assert.That(plan.Skeleton.TargetWidth, Is.EqualTo(0), "width has no silhouette to derive from and stays free");
+		}
+
+		[Test]
 		public void SetOrchestrator_ExtractsTheBriefBeforePlanning_WhenAReferenceImageExists()
 		{
 			var manifest = new SetManifest

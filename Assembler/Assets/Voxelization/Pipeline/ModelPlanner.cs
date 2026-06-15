@@ -114,8 +114,12 @@ namespace Assembler.Voxelization
 			var geometryErrors = PlanGeometryChecks.Errors(plan.Skeleton);
 			if (geometryErrors.Count > 0)
 			{
+				// These cover declaration order, the bounding-box extents, AND (for
+				// bilateral models) symmetry — so the header stays neutral rather than
+				// blaming symmetry on a symmetry:none asset whose real fault is height.
 				return (null,
-					"That skeleton can never assemble bilaterally symmetric — these were rejected by deterministic geometry checks:\n- " +
+					"That skeleton was rejected by deterministic geometry checks — none of these are fixable by " +
+					"re-authoring, so the skeleton itself must change:\n- " +
 					string.Join("\n- ", geometryErrors) +
 					"\nFix the skeleton and emit the corrected ```vmodel block.");
 			}
@@ -163,14 +167,16 @@ namespace Assembler.Voxelization
 				throw new FormatException("The plan declared no palette.");
 			}
 
-			// The manifest, not the plan, owns identity, scale, and symmetry.
+			// The manifest, not the plan, owns identity, scale, and symmetry. Length
+			// and width fall back to the authoritative silhouette's own span when the
+			// manifest leaves them unconstrained (see ResolveExtent).
 			skeleton = skeleton with
 			{
 				Id = asset.Id,
 				Description = asset.Description,
 				TargetHeight = asset.Height,
-				TargetLength = asset.Length,
-				TargetWidth = asset.Width,
+				TargetLength = ResolveExtent(asset.Length, brief, horizontalAxis: 2),
+				TargetWidth = ResolveExtent(asset.Width, brief, horizontalAxis: 0),
 				SizeTolerance = asset.Tolerance,
 				Rigged = asset.Rig,
 				Symmetry = asset.Symmetry,
@@ -178,6 +184,28 @@ namespace Assembler.Voxelization
 			};
 
 			return new ModelPlan(skeleton, brief);
+		}
+
+		/// <summary>
+		/// The bounding-box target for a horizontal axis (z = length, x = width). When
+		/// the manifest pins it, that wins. Otherwise it falls back to the matching
+		/// ground-anchored silhouette's own extent on that axis — the silhouette is
+		/// already scaled to the target height, so its width is in voxel units. This
+		/// turns the silhouette's implied span into a concrete bounding-box target the
+		/// planner is checked against, instead of leaving it to infer the span from the
+		/// coverage gate alone — the failure mode where a long quadruped's plan
+		/// oscillates between too-short and too-long and never converges.
+		/// </summary>
+		private static int ResolveExtent(int manifestValue, ReferenceBrief brief, int horizontalAxis)
+		{
+			if (manifestValue > 0)
+			{
+				return manifestValue;
+			}
+
+			var silhouette = brief.Silhouettes.FirstOrDefault(s =>
+				!s.IsEmpty && s.Size.x > 0 && ProjectionFaceInfo.HorizontalAxis(s.Face) == horizontalAxis);
+			return silhouette != null ? silhouette.Size.x : manifestValue;
 		}
 
 		private VoxelPart EnforceBudget(VoxelPart part)

@@ -52,11 +52,16 @@ namespace Assembler.Voxelization
 				.Select(i => (i.Label, Pixels: Decode(i.Image, asset.Id, i.Label.Face)))
 				.ToList();
 
+			// Soft-shaded 3D-block renders give one logical colour several lit/shadowed
+			// shades; 0.10 (≈26/255 RGB) collapses those near-duplicates into one entry
+			// while keeping genuinely distinct fills (white vs tan vs brown vs black)
+			// apart — merging only ever folds a close shade into a kept one, so it can
+			// never drop a small but distinct colour like a 1-voxel black nose.
 			var palette = ReferenceImageAnalysis.Palette(
 				decoded.Select(d => d.Pixels),
 				_maxPaletteColours,
 				_config.BackgroundColourTolerance,
-				mergeDistance: 0.06f);
+				mergeDistance: 0.10f);
 
 			var rows = Mathf.Max(1, asset.Height);
 			var silhouettes = ProjectionFaceInfo.DedupeFaces(decoded.Select(d => d.Label.Face))
