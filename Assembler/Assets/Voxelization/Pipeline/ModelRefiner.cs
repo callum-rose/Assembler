@@ -36,7 +36,8 @@ namespace Assembler.Voxelization
 			VoxelRigModel model,
 			ReferenceBrief brief,
 			string note,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -53,6 +54,12 @@ namespace Assembler.Voxelization
 				{
 					return ops;
 				}
+
+				// Why this proposal was bounced (no edits block, unparseable, or a
+				// dry-run apply failure) so a refine that gives up still says what went
+				// wrong rather than ending on a bare "failed".
+				progress?.Report(
+					$"{model.Id}: refine attempt {attempt}/{MaxAttempts} rejected — {feedback}");
 
 				if (attempt >= MaxAttempts)
 				{

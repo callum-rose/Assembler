@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace Assembler.Voxelization
 			SetManifest manifest,
 			ManifestAsset asset,
 			IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> images,
-			CancellationToken ct);
+			CancellationToken ct,
+			IProgress<string>? progress = null);
 	}
 }
