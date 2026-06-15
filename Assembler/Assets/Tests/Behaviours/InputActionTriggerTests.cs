@@ -13,8 +13,8 @@ namespace Tests.Behaviours
 {
 	/// <summary>
 	/// Live device polling is impractical to drive in a unit test, so this locks in the value-forwarding shape of
-	/// the <c>input action</c> relay: a value action emits axis/x/y into the trigger context exactly like the
-	/// legacy AxisTrigger, so downstream gameplay stays binding-agnostic.
+	/// the <c>input action</c> relay: a value action emits axis/x/y into the trigger context every frame, so
+	/// downstream gameplay stays binding-agnostic.
 	/// </summary>
 	public class InputActionTriggerTests
 	{
@@ -64,7 +64,7 @@ namespace Tests.Behaviours
 		}
 
 		[Test]
-		public void BuildValueContext_MirrorsAxisTriggerOutputs()
+		public void BuildValueContext_EmitsAxisXyOutputs()
 		{
 			var ctx = InputActionTrigger.BuildValueContext(new Vector3(1f, 2f, 0f));
 

@@ -26,6 +26,11 @@ Controls:
     desktop:
       quit:
         - "<Keyboard>/escape"
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   # 1) Intensity + Colour driven by plain variables (observable → push).

@@ -44,6 +44,19 @@ Constants:
 Variables:
   leader big: false                     # toggled each pulse to alternate grow/shrink
 
+Controls:
+  Actions:
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit:  [ "<Keyboard>/escape" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
 
   # ---- The leader: drives its own position, rotation, and scale ----
@@ -185,7 +198,7 @@ Entities:
   end game:
     Behaviours:
       quit:
-        Type: key down trigger
-        Properties: { Key: "escape" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover

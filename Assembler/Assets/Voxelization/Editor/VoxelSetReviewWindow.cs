@@ -22,6 +22,7 @@ namespace Assembler.Voxelization.Editor
 	public sealed class VoxelSetReviewWindow : EditorWindow
 	{
 		private const string ApiKeyPref = "Assembler.Generation.ApiKey";
+		private const string UsePlanPref = "Assembler.Voxelization.UseClaudeCodePlan";
 		private const string ManifestPref = "Assembler.Voxelization.Manifest";
 		private const string BriefPref = "Assembler.Voxelization.GameBrief";
 		private const string OutputFolderPref = "Assembler.Voxelization.OutputFolder";
@@ -55,6 +56,16 @@ namespace Assembler.Voxelization.Editor
 		private CancellationTokenSource? _modelsCts;
 
 		private string _apiKey = string.Empty;
+
+		// When on, every LLM call routes through the `claude -p` CLI (the operator's
+		// Claude subscription / plan) instead of the API, so a run bills the plan and
+		// needs no API key. Backed by EditorPrefs so it survives restarts.
+		private bool _usePlan;
+
+		// The fixed CLI model aliases shown in place of the API-backed model list when
+		// running on the plan — the CLI maps these (or a full model id) onto a model.
+		private static readonly string[] PlanModelAliases = { "opus", "sonnet", "haiku" };
+
 		private string _gameBrief = string.Empty;
 		private string _manifestYaml = string.Empty;
 		private string _outputFolder = "Assets/Resources/Voxels/Sets/";
@@ -155,6 +166,7 @@ namespace Assembler.Voxelization.Editor
 		private void OnEnable()
 		{
 			_apiKey = EditorPrefs.GetString(ApiKeyPref, string.Empty);
+			_usePlan = EditorPrefs.GetBool(UsePlanPref, false);
 			_gameBrief = EditorPrefs.GetString(BriefPref, string.Empty);
 			_manifestYaml = EditorPrefs.GetString(ManifestPref, string.Empty);
 			_outputFolder = EditorPrefs.GetString(OutputFolderPref, _outputFolder);
@@ -278,13 +290,37 @@ namespace Assembler.Voxelization.Editor
 
 		private void DrawSettings()
 		{
-			EditorGUILayout.LabelField("API key (shared with descriptor window)", EditorStyles.boldLabel);
 			using (var scope = new EditorGUI.ChangeCheckScope())
 			{
-				_apiKey = EditorGUILayout.PasswordField(_apiKey);
+				_usePlan = EditorGUILayout.ToggleLeft(
+					new GUIContent("Use Claude Code plan (no API key)",
+						"Route every pipeline call through the `claude -p` CLI so the run bills your Claude " +
+						"subscription instead of API credits. Requires the claude CLI on PATH (or CLAUDE_CLI_PATH set)."),
+					_usePlan);
 				if (scope.changed)
 				{
-					EditorPrefs.SetString(ApiKeyPref, _apiKey);
+					EditorPrefs.SetBool(UsePlanPref, _usePlan);
+				}
+			}
+
+			if (_usePlan)
+			{
+				EditorGUILayout.HelpBox(
+					"Running on the Claude plan via the claude CLI — no API key needed. Stage models use the fixed " +
+					"opus/sonnet/haiku aliases below, and the cost panel shows the API-equivalent spend you saved.",
+					MessageType.Info);
+			}
+
+			using (new EditorGUI.DisabledScope(_usePlan))
+			{
+				EditorGUILayout.LabelField("API key (shared with descriptor window)", EditorStyles.boldLabel);
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_apiKey = EditorGUILayout.PasswordField(_apiKey);
+					if (scope.changed)
+					{
+						EditorPrefs.SetString(ApiKeyPref, _apiKey);
+					}
 				}
 			}
 
@@ -322,11 +358,15 @@ namespace Assembler.Voxelization.Editor
 			EditorGUILayout.BeginHorizontal();
 			EditorGUILayout.LabelField("Stage models", EditorStyles.boldLabel);
 			GUILayout.FlexibleSpace();
-			using (new EditorGUI.DisabledScope(_modelsLoading || string.IsNullOrWhiteSpace(_apiKey)))
+			// The API models list is irrelevant on the plan — the CLI takes fixed aliases.
+			if (!_usePlan)
 			{
-				if (GUILayout.Button(_modelsLoading ? "Loading..." : "Refresh", GUILayout.Width(80)))
+				using (new EditorGUI.DisabledScope(_modelsLoading || string.IsNullOrWhiteSpace(_apiKey)))
 				{
-					RefreshModels();
+					if (GUILayout.Button(_modelsLoading ? "Loading..." : "Refresh", GUILayout.Width(80)))
+					{
+						RefreshModels();
+					}
 				}
 			}
 
@@ -343,7 +383,7 @@ namespace Assembler.Voxelization.Editor
 				}
 			}
 
-			if (_modelsError != null)
+			if (!_usePlan && _modelsError != null)
 			{
 				EditorGUILayout.HelpBox($"Couldn't load model list: {_modelsError}", MessageType.Warning);
 			}
@@ -410,11 +450,13 @@ namespace Assembler.Voxelization.Editor
 
 		private string DrawModelPopup(string label, string current)
 		{
-			// Always keep the saved selection in the list so the popup can show it
-			// before the models load (or if it names one the API no longer lists).
-			var options = string.IsNullOrEmpty(current) || _modelOptions.Contains(current)
-				? _modelOptions
-				: _modelOptions.Append(current).ToArray();
+			// On the plan the CLI takes a fixed alias list; off it, the API-fetched
+			// model ids. Either way keep the saved selection in the list so the popup
+			// can show it before the models load (or if it names one not in the list).
+			var source = _usePlan ? PlanModelAliases : _modelOptions;
+			var options = string.IsNullOrEmpty(current) || source.Contains(current)
+				? source
+				: source.Append(current).ToArray();
 
 			if (options.Length == 0)
 			{
@@ -494,7 +536,7 @@ namespace Assembler.Voxelization.Editor
 
 			EditorGUILayout.EndScrollView();
 
-			using (new EditorGUI.DisabledScope(_isRunning || string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_gameBrief)))
+			using (new EditorGUI.DisabledScope(_isRunning || (!_usePlan && string.IsNullOrWhiteSpace(_apiKey)) || string.IsNullOrWhiteSpace(_gameBrief)))
 			{
 				if (GUILayout.Button("Generate manifest from brief"))
 				{
@@ -839,7 +881,7 @@ namespace Assembler.Voxelization.Editor
 		private void DrawRunControls()
 		{
 			EditorGUILayout.BeginHorizontal();
-			using (new EditorGUI.DisabledScope(_isRunning || string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_manifestYaml)))
+			using (new EditorGUI.DisabledScope(_isRunning || (!_usePlan && string.IsNullOrWhiteSpace(_apiKey)) || string.IsNullOrWhiteSpace(_manifestYaml)))
 			{
 				if (GUILayout.Button(_isRunning ? "Running..." : "Run batch (assets in parallel)"))
 				{
@@ -1124,7 +1166,11 @@ namespace Assembler.Voxelization.Editor
 					EditorStyles.miniLabel);
 			}
 
-			EditorGUILayout.LabelField($"Estimated spend: ~${totalUsd:0.000}", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(
+				_usePlan
+					? $"API-equivalent cost saved (billed to plan): ~${totalUsd:0.000}"
+					: $"Estimated spend: ~${totalUsd:0.000}",
+				EditorStyles.boldLabel);
 		}
 
 		private void DrawLog()
@@ -1376,17 +1422,22 @@ namespace Assembler.Voxelization.Editor
 			}
 		}
 
-		private AnthropicGateway NewGateway() =>
-			new(_apiKey, _usage,
-				onActivity: status => _statusLine = status,
-				// Every call's full prompt/response/tool-use/usage is always captured
-				// into the verbose stream (the operator decides later whether to view
-				// it). Progress<string> marshals each transcript to the main thread, so
-				// the StringBuilders are only ever touched there even though assets run
-				// concurrently on background threads.
-				onTranscript: new Progress<string>(LogTranscript));
+		// Every call's full prompt/response/tool-use/usage is always captured into the
+		// verbose stream (the operator decides later whether to view it). Progress<string>
+		// marshals each transcript to the main thread, so the StringBuilders are only ever
+		// touched there even though assets run concurrently on background threads. On the
+		// plan the same transport seam is the CLI gateway, which bills the subscription and
+		// needs no API key; otherwise the API-backed gateway as before.
+		private IAnthropicGateway NewGateway() =>
+			_usePlan
+				? new ClaudeCliGateway(_usage,
+					onActivity: status => _statusLine = status,
+					onTranscript: new Progress<string>(LogTranscript))
+				: new AnthropicGateway(_apiKey, _usage,
+					onActivity: status => _statusLine = status,
+					onTranscript: new Progress<string>(LogTranscript));
 
-		private SetOrchestrator NewOrchestrator(AnthropicGateway gateway)
+		private SetOrchestrator NewOrchestrator(IAnthropicGateway gateway)
 		{
 			var config = BuildConfig();
 			var runner = new ExecutorPartScriptRunner(new VoxelScriptExecutor(config.ScriptLimits));
@@ -1480,7 +1531,7 @@ namespace Assembler.Voxelization.Editor
 		/// a naming failure leaves the timestamp fallback in place rather than
 		/// aborting the batch; cancellation propagates so a cancelled run stops here.
 		/// </summary>
-		private async Task NameRunFolderAsync(AnthropicGateway gateway, SetManifest manifest)
+		private async Task NameRunFolderAsync(IAnthropicGateway gateway, SetManifest manifest)
 		{
 			if (_runTimestamp.Length == 0)
 			{

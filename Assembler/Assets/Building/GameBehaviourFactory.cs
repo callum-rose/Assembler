@@ -228,31 +228,10 @@ namespace Assembler.Building
 				[typeof(SetPositionInfo)] = Entry<SetPositionInfo, SetPosition, SetPositionData>(
 					(i, ctx) => new SetPositionData(i.Id,
 						i.ValueExpression.Resolve(ctx.Resolution))),
-				[typeof(KeyHoldTriggerInfo)] = Entry<KeyHoldTriggerInfo, KeyHoldTrigger, KeyHoldTriggerData>(
-					(i, ctx) => new KeyHoldTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(KeyDownTriggerInfo)] = Entry<KeyDownTriggerInfo, KeyDownTrigger, KeyDownTriggerData>(
-					(i, ctx) => new KeyDownTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(KeyUpTriggerInfo)] = Entry<KeyUpTriggerInfo, KeyUpTrigger, KeyUpTriggerData>(
-					(i, ctx) => new KeyUpTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(MouseButtonTriggerInfo)] = Entry<MouseButtonTriggerInfo, MouseButtonTrigger, MouseButtonTriggerData>(
-					(i, ctx) => new MouseButtonTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution),
-						i.Phase.Resolve(ctx.Resolution))),
-				[typeof(MousePositionTriggerInfo)] = Entry<MousePositionTriggerInfo, MousePositionTrigger, MousePositionTriggerData>(
-					(i, ctx) => new MousePositionTriggerData(i.Id)),
 				[typeof(CursorLockInfo)] = Entry<CursorLockInfo, CursorLock, CursorLockData>(
 					(i, ctx) => new CursorLockData(i.Id,
 						i.Locked.Resolve(ctx.Resolution),
 						i.Visible.Resolve(ctx.Resolution))),
-				[typeof(ScrollWheelTriggerInfo)] = Entry<ScrollWheelTriggerInfo, ScrollWheelTrigger, ScrollWheelTriggerData>(
-					(i, ctx) => new ScrollWheelTriggerData(i.Id)),
-				[typeof(AxisTriggerInfo)] = Entry<AxisTriggerInfo, AxisTrigger, AxisTriggerData>(
-					(i, ctx) => new AxisTriggerData(i.Id,
-						i.XAxis.Resolve(ctx.Resolution),
-						i.YAxis.Resolve(ctx.Resolution))),
 				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx) =>
 				{
 					var i = (InputActionTriggerInfo)info;
@@ -276,10 +255,6 @@ namespace Assembler.Building
 						actionInfo.Phase,
 						liveAction), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(GamepadButtonTriggerInfo)] = Entry<GamepadButtonTriggerInfo, GamepadButtonTrigger, GamepadButtonTriggerData>(
-					(i, ctx) => new GamepadButtonTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution),
-						i.Mode.Resolve(ctx.Resolution))),
 				[typeof(TapTriggerInfo)] = Entry<TapTriggerInfo, Tap, TapTriggerData>(
 					(i, ctx) => new TapTriggerData(i.Id,
 						i.MaxDuration.Resolve(ctx.Resolution),
