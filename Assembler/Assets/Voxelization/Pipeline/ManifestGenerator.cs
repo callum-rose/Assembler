@@ -27,7 +27,7 @@ namespace Assembler.Voxelization
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.ManifestUser(gameBrief)),
+				new("user", VoxelizationPrompts.ManifestUser(gameBrief, _config.StyleGuidance)),
 			};
 
 			for (var attempt = 0; ; attempt++)

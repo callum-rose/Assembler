@@ -23,9 +23,10 @@ namespace Assembler.Voxelization
 			"You are the art director for a voxel game asset set. Given a game brief, produce the set manifest " +
 			"(the 'scale bible') that keeps every asset's size consistent relative to the others.\n\n" +
 			"Rules:\n" +
-			"- ALL dimensions are IN VOXELS (whole numbers). Pick a keystone asset (usually a character) at a " +
-			"good voxel height — a person reads well at ~10-16 voxels — and size everything else relative to it. " +
-			"Small props still get enough voxels to read; nothing exceeds roughly 100 voxels on its longest axis.\n" +
+			"- ALL dimensions are IN VOXELS (whole numbers). Size every asset from its real-world dimensions and keep " +
+			"the whole set to ONE consistent scale, so assets sized together keep their true relative proportions (a " +
+			"car dwarfs a person, a mug is tiny beside a door). The operator's style guidance — supplied in the user " +
+			"message — is the authority on scale: follow whatever voxel-to-real-world ratio and sizing rules it states.\n" +
 			"- Every asset gets its FULL BOUNDING BOX, in a fixed orientation shared by all models: `height` is the " +
 			"extent UP (y), `length` is the extent along the asset's FORWARD axis (z — a car's nose-to-tail length, " +
 			"an animal's head-to-tail), `width` is the extent LEFT-RIGHT (x — a car's track, a person's shoulder " +
@@ -63,8 +64,19 @@ namespace Assembler.Voxelization
 			"    rig: false\n" +
 			"```";
 
-		public static string ManifestUser(string gameBrief) =>
-			"Game brief:\n" + gameBrief + "\n\nProduce the set manifest.";
+		public static string ManifestUser(string gameBrief, string styleGuidance = "")
+		{
+			var sb = new StringBuilder();
+			sb.Append("Game brief:\n").Append(gameBrief).Append('\n');
+			if (styleGuidance.Length > 0)
+			{
+				sb.Append("\nStyle guidance from the operator (authority on scale and style — follow it):\n")
+					.Append(styleGuidance).Append('\n');
+			}
+
+			sb.Append("\nProduce the set manifest.");
+			return sb.ToString();
+		}
 
 		// ---- Run folder naming ----------------------------------------------
 
