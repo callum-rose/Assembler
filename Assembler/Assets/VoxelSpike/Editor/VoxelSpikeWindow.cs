@@ -23,6 +23,7 @@ namespace VoxelSpike.Editor
     public class VoxelSpikeWindow : EditorWindow
     {
         enum ColourMode { VisibleViews, FlatMean }
+        enum PaletteMode { Variety, Modal }
 
         // --- inputs ---
         Texture2D _front;
@@ -41,9 +42,10 @@ namespace VoxelSpike.Editor
         // --- per-view "opposite side is a mirror" (lets a view colour its far shell too) ---
         bool _frontMirror, _rightMirror, _topMirror;
 
-        // --- palette quantisation: snap voxels to the N most popular (modal) colours ---
+        // --- palette quantisation: snap voxels to N representative colours ---
         bool _quantise = true;
         int _paletteSize = 16;
+        PaletteMode _paletteMode = PaletteMode.Variety;
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -101,7 +103,10 @@ namespace VoxelSpike.Editor
             }
             _quantise = EditorGUILayout.Toggle("Quantise palette", _quantise);
             using (new EditorGUI.DisabledScope(!_quantise))
+            {
                 _paletteSize = EditorGUILayout.IntSlider("Palette colours (N)", _paletteSize, 1, 64);
+                _paletteMode = (PaletteMode)EditorGUILayout.EnumPopup("Palette selection", _paletteMode);
+            }
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Orientation flips (fix handedness)", EditorStyles.boldLabel);
@@ -288,7 +293,10 @@ namespace VoxelSpike.Editor
             int paletteUsed = 0;
             if (_quantise && voxelCount > 0)
             {
-                Color[] palette = BuildModalPalette(cols, Mathf.Max(1, _paletteSize));
+                int n = Mathf.Max(1, _paletteSize);
+                Color[] palette = _paletteMode == PaletteMode.Variety
+                    ? BuildVarietyPalette(cols, n)
+                    : BuildModalPalette(cols, n);
                 paletteUsed = palette.Length;
                 for (int v = 0; v < cols.Count; v++)
                     cols[v] = Nearest(palette, cols[v]);
@@ -345,10 +353,10 @@ namespace VoxelSpike.Editor
             return a;
         }
 
-        // Build an N-colour palette by popularity: coarse-bin the voxel colours into an RGB
-        // histogram (4 bits/channel), take the N most-populated bins, and use each bin's mean
-        // colour as the palette entry. These are the "modal" colours of the model.
-        static Color[] BuildModalPalette(List<Color> colours, int n)
+        // Coarse-bin the voxel colours into an RGB histogram (4 bits/channel) and return one
+        // candidate per occupied bin: its mean colour and population. Binning merges near-
+        // identical colours so both palette strategies work on distinct colours, not raw noise.
+        static void BuildHistogram(List<Color> colours, out List<Color> means, out List<int> counts)
         {
             const int levels = 16; // 4 bits per channel -> 16^3 = 4096 bins
             var count = new Dictionary<int, int>();
@@ -372,15 +380,68 @@ namespace VoxelSpike.Editor
                 sumB[key] = sb + c.b;
             }
 
-            var top = count.OrderByDescending(kv => kv.Value).Take(n).ToList();
-            var palette = new Color[top.Count];
-            for (int idx = 0; idx < top.Count; idx++)
+            means = new List<Color>(count.Count);
+            counts = new List<int>(count.Count);
+            foreach (var kv in count)
             {
-                int key = top[idx].Key;
-                float inv = 1f / count[key];
-                palette[idx] = new Color(sumR[key] * inv, sumG[key] * inv, sumB[key] * inv, 1f);
+                float inv = 1f / kv.Value;
+                means.Add(new Color(sumR[kv.Key] * inv, sumG[kv.Key] * inv, sumB[kv.Key] * inv, 1f));
+                counts.Add(kv.Value);
             }
-            return palette;
+        }
+
+        // Popularity ("modal"): the N most-populated bins. Biased toward large flat regions —
+        // small distinct features (a single-voxel eye) get dropped.
+        static Color[] BuildModalPalette(List<Color> colours, int n)
+        {
+            BuildHistogram(colours, out var means, out var counts);
+            return Enumerable.Range(0, means.Count)
+                .OrderByDescending(i => counts[i])
+                .Take(n)
+                .Select(i => means[i])
+                .ToArray();
+        }
+
+        // Variety (farthest-point / max-min): seed with the most populous bin, then repeatedly
+        // add the candidate colour furthest from everything already chosen. Captures the colour
+        // diversity of the model, so chromatically distinct outliers (the eye) survive even when
+        // they cover very few voxels. Near-duplicates are already merged by the histogram.
+        static Color[] BuildVarietyPalette(List<Color> colours, int n)
+        {
+            BuildHistogram(colours, out var means, out var counts);
+            int m = means.Count;
+            if (m <= n) return means.ToArray();
+
+            int seed = 0;
+            for (int i = 1; i < m; i++)
+                if (counts[i] > counts[seed]) seed = i;
+
+            var chosen = new List<int>(n) { seed };
+            var minDist = new float[m];
+            for (int i = 0; i < m; i++) minDist[i] = SqrDist(means[i], means[seed]);
+
+            while (chosen.Count < n)
+            {
+                int far = 0;
+                for (int i = 1; i < m; i++)
+                    if (minDist[i] > minDist[far]) far = i;
+                if (minDist[far] <= 0f) break; // remaining candidates duplicate the chosen set
+
+                chosen.Add(far);
+                for (int i = 0; i < m; i++)
+                {
+                    float d = SqrDist(means[i], means[far]);
+                    if (d < minDist[i]) minDist[i] = d;
+                }
+            }
+
+            return chosen.Select(i => means[i]).ToArray();
+        }
+
+        static float SqrDist(Color a, Color b)
+        {
+            float dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
+            return dr * dr + dg * dg + db * db;
         }
 
         static Color Nearest(Color[] palette, Color c)
