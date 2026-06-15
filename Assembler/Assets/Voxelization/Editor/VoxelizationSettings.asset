@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: VoxelizationSettings
   m_EditorClassIdentifier: Assembler.Voxelization.Editor::Assembler.Voxelization.Editor.VoxelizationSettings
   ManifestModel: claude-sonnet-4-6
-  PlanningModel: claude-opus-4-8
-  AuthoringModel: claude-opus-4-8
+  PlanningModel: claude-sonnet-4-6
+  AuthoringModel: claude-sonnet-4-6
   StyleGuidance: 'Prefer fewer parts per asset where possible.
 
     Prefer simplicity
@@ -41,6 +41,8 @@ MonoBehaviour:
 
     Organic
     structures should de-prioritise symmetry.'
+  DeterministicBrief: 1
+  ExtractSemanticBriefFields: 0
   MaxPartAttempts: 3
   MaxValidationRounds: 2
   MaxReviewRounds: 1
