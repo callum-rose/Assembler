@@ -22,12 +22,13 @@ namespace Assembler.Voxelization
 		public const string Stage = "1-planning";
 
 		/// <summary>
-		/// Total planning calls per asset: the first plan plus feedback rounds for
-		/// parse/geometry failures. Tight-budget assets (a standing quadruped fitting
-		/// feet+legs+torso+head into a short height) need several correction rounds to
-		/// converge on the bounding box, so this is deliberately generous.
+		/// Total planning calls per asset: the first plan plus feedback rounds. Tight
+		/// assets (a standing quadruped fitting feet+legs+torso+head into a fixed
+		/// bounding box while matching multiple silhouettes) need several correction
+		/// rounds to converge on size AND shape together, so this is deliberately
+		/// generous now that every round reports all gates at once (see TryParse).
 		/// </summary>
-		public const int MaxAttempts = 5;
+		public const int MaxAttempts = 8;
 
 		private readonly IAnthropicGateway _gateway;
 		private readonly VoxelizationConfig _config;
@@ -111,42 +112,66 @@ namespace Assembler.Voxelization
 					"stage.\nEmit the corrected ```vmodel block.");
 			}
 
+			// Gather ALL deterministic problems — geometry/bounding-box, palette lock,
+			// and silhouette coverage — into one round of feedback rather than
+			// returning on the first failing category. Surfacing them sequentially
+			// forces the planner to converge one gate at a time (nail the height, then
+			// the length, then discover coverage was wrong all along), which burns the
+			// attempt budget; shown together it can fix size and shape in one revision.
+			var sections = new List<string>();
+
+			// Geometry covers declaration order, the bounding-box extents, AND (for
+			// bilateral models) symmetry — keep the header neutral rather than blaming
+			// symmetry on a symmetry:none asset whose real fault is height.
 			var geometryErrors = PlanGeometryChecks.Errors(plan.Skeleton);
 			if (geometryErrors.Count > 0)
 			{
-				// These cover declaration order, the bounding-box extents, AND (for
-				// bilateral models) symmetry — so the header stays neutral rather than
-				// blaming symmetry on a symmetry:none asset whose real fault is height.
-				return (null,
-					"That skeleton was rejected by deterministic geometry checks — none of these are fixable by " +
-					"re-authoring, so the skeleton itself must change:\n- " +
-					string.Join("\n- ", geometryErrors) +
-					"\nFix the skeleton and emit the corrected ```vmodel block.");
+				sections.Add("Geometry / bounding box:\n- " + string.Join("\n- ", geometryErrors));
 			}
 
-			// A noted refine lets the operator introduce colours the locked brief
-			// palette never had ("make the car red") — the note outranks the brief.
-			if (brief.Palette.Count > 0 && !suppressPaletteGate)
+			var paletteError = PaletteError(plan.Skeleton, brief, suppressPaletteGate);
+			if (paletteError != null)
 			{
-				var allowed = new HashSet<int>(brief.Palette.Select(ColourKey));
-				var rogue = plan.Skeleton.Palette
-					.Where(e => !allowed.Contains(ColourKey(e)))
-					.Select(e => e.ToHex())
-					.ToList();
-				if (rogue.Count > 0)
-				{
-					return (null,
-						$"The plan's palette contains colours not in the locked reference palette: {string.Join(", ", rogue)}. " +
-						$"Use ONLY the brief's colours, hex-exact: {string.Join(", ", brief.Palette.Select(e => e.ToHex()))}.\n" +
-						"Emit the corrected ```vmodel block.");
-				}
+				sections.Add(paletteError);
 			}
 
-			var feasibility = PlanGeometryChecks.SilhouetteFeasibilityError(
+			var coverageError = PlanGeometryChecks.SilhouetteFeasibilityError(
 				plan.Skeleton, brief, _config.SilhouetteCoverageThreshold);
-			return feasibility == null
+			if (coverageError != null)
+			{
+				sections.Add(coverageError);
+			}
+
+			return sections.Count == 0
 				? (plan, string.Empty)
-				: (null, feasibility + "\nEmit the corrected ```vmodel block.");
+				: (null,
+					"The plan was rejected by deterministic checks. Fix EVERY issue below in one revision — " +
+					"and make sure a fix for one axis does not break another (re-check all three bounding-box " +
+					"extents and every silhouette together) — then emit the corrected ```vmodel block:\n\n" +
+					string.Join("\n\n", sections));
+		}
+
+		/// <summary>
+		/// Palette-lock feedback: the plan may only use colours from the locked
+		/// reference brief, hex-exact. Null when the gate passes (or is suppressed by
+		/// an operator note, which outranks the brief — "make the car red").
+		/// </summary>
+		private static string? PaletteError(VoxelRigModel skeleton, ReferenceBrief brief, bool suppressPaletteGate)
+		{
+			if (brief.Palette.Count == 0 || suppressPaletteGate)
+			{
+				return null;
+			}
+
+			var allowed = new HashSet<int>(brief.Palette.Select(ColourKey));
+			var rogue = skeleton.Palette
+				.Where(e => !allowed.Contains(ColourKey(e)))
+				.Select(e => e.ToHex())
+				.ToList();
+			return rogue.Count == 0
+				? null
+				: $"Palette:\n- The plan uses colours not in the locked reference palette: {string.Join(", ", rogue)}. " +
+				  $"Use ONLY the brief's colours, hex-exact: {string.Join(", ", brief.Palette.Select(e => e.ToHex()))}.";
 		}
 
 		private static int ColourKey(PaletteEntry entry) =>
