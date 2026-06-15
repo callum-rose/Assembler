@@ -25,7 +25,7 @@ namespace VoxelSpike.Editor
         enum ColourMode { VisibleViews, FlatMean }
         enum PaletteMode { Curated, Variety, Modal }
         enum CuratedPalette { Endesga32, DawnBringer32, DawnBringer16, Pico8 }
-        enum OutputMode { Colour, Parts }
+        enum OutputMode { Colour, PartLabels, PartBoxes }
 
         // --- inputs ---
         Texture2D _front;
@@ -53,6 +53,9 @@ namespace VoxelSpike.Editor
         // --- part decomposition: back-project flat label maps into per-voxel part ids ---
         OutputMode _outputMode = OutputMode.Colour;
         Texture2D _frontLabel, _rightLabel, _topLabel;
+        int _boxIterations = 2;
+        string _partBoxesJson =
+            "{\n  \"parts\": [\n    { \"name\": \"example\", \"min\": [0.0, 0.0, 0.0], \"max\": [1.0, 1.0, 1.0] }\n  ]\n}";
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -120,7 +123,7 @@ namespace VoxelSpike.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Part decomposition", EditorStyles.boldLabel);
             _outputMode = (OutputMode)EditorGUILayout.EnumPopup("Output", _outputMode);
-            if (_outputMode == OutputMode.Parts)
+            if (_outputMode == OutputMode.PartLabels)
             {
                 EditorGUILayout.HelpBox("Flat colour-coded part maps (one colour per part) matching each " +
                     "view's silhouette. Shape still comes from the source images; each voxel is coloured by " +
@@ -128,6 +131,16 @@ namespace VoxelSpike.Editor
                 _frontLabel = (Texture2D)EditorGUILayout.ObjectField("Front labels", _frontLabel, typeof(Texture2D), false);
                 _rightLabel = (Texture2D)EditorGUILayout.ObjectField("Right labels", _rightLabel, typeof(Texture2D), false);
                 _topLabel = (Texture2D)EditorGUILayout.ObjectField("Top labels", _topLabel, typeof(Texture2D), false);
+            }
+            else if (_outputMode == OutputMode.PartBoxes)
+            {
+                EditorGUILayout.HelpBox("Paste per-part 3D boxes as JSON in normalized model space: " +
+                    "X 0=left..1=right, Y 0=bottom..1=top, Z 0=front..1=back. Voxels inside exactly one box " +
+                    "seed that part; competitive growth assigns the rest (boundaries settle at constrictions). " +
+                    "Boxes refit to their voxels over the iterations below.", MessageType.None);
+                _boxIterations = EditorGUILayout.IntSlider("Refit iterations", _boxIterations, 0, 10);
+                EditorGUILayout.LabelField("Part boxes (JSON)");
+                _partBoxesJson = EditorGUILayout.TextArea(_partBoxesJson, GUILayout.MinHeight(120));
             }
 
             EditorGUILayout.Space();
@@ -261,16 +274,18 @@ namespace VoxelSpike.Editor
                 if (j < botMinY[yc]) botMinY[yc] = j;
             }
 
-            // --- Optional part labels: build label views and the discrete part palette ---
-            bool partsMode = _outputMode == OutputMode.Parts;
+            // --- Optional part decomposition setup ---
+            bool labelMode = _outputMode == OutputMode.PartLabels;
+            bool boxMode = _outputMode == OutputMode.PartBoxes;
+
             View frontLab = null, rightLab = null, topLab = null;
             Color[] labelColours = null;
             Vector3[] labelLab = null;
-            if (partsMode)
+            if (labelMode)
             {
                 if (!(_frontLabel && _rightLabel && _topLabel))
                 {
-                    _status = "Parts mode needs all three label maps (front/right/top).";
+                    _status = "Part-labels mode needs all three label maps (front/right/top).";
                     return;
                 }
                 frontLab = View.Build(_frontLabel, _bgThreshold, _dilate, _frontFlipU, _frontFlipV);
@@ -284,6 +299,17 @@ namespace VoxelSpike.Editor
                 labelColours = BuildLabelPalette(frontLab, rightLab, topLab);
                 labelLab = new Vector3[labelColours.Length];
                 for (int i = 0; i < labelColours.Length; i++) labelLab[i] = RgbToLab(labelColours[i]);
+            }
+
+            List<PartBox> partBoxes = null;
+            if (boxMode)
+            {
+                partBoxes = ParsePartBoxes(_partBoxesJson);
+                if (partBoxes == null || partBoxes.Count == 0)
+                {
+                    _status = "Could not parse part boxes. Expected { \"parts\": [ { \"name\", \"min\":[x,y,z], \"max\":[x,y,z] } ] }.";
+                    return;
+                }
             }
 
             // --- Pass 3: colour each surviving voxel from the view(s) that can see it ---
@@ -308,7 +334,12 @@ namespace VoxelSpike.Editor
 
                 Color col;
                 bool isSeen;
-                if (partsMode)
+                if (boxMode)
+                {
+                    col = Color.clear;   // real colour assigned in pass 3b after segmentation
+                    isSeen = true;
+                }
+                else if (labelMode)
                 {
                     int zc = i + W * j, xc = j + H * k, yc = i + W * k;
                     bool seeFront = k == frontMinZ[zc] || (_frontMirror && k == backMaxZ[zc]);
@@ -362,9 +393,23 @@ namespace VoxelSpike.Editor
 
             int voxelCount = cols.Count;
 
+            // --- Pass 3b: box-seeded competitive part segmentation ---
+            if (boxMode)
+            {
+                Color[] partColours = SegmentByBoxes(gx, gy, gz, gridToVoxel, W, H, L, partBoxes, _boxIterations, out int[] partOf);
+                for (int v = 0; v < voxelCount; v++)
+                    cols[v] = partOf[v] >= 0 ? partColours[partOf[v]] : Color.gray;
+
+                var legend = new StringBuilder("[VoxelSpike] Part colours: ");
+                for (int p = 0; p < partBoxes.Count; p++)
+                    legend.Append(partBoxes[p].Name).Append('=').Append('#')
+                          .Append(ColorUtility.ToHtmlStringRGB(partColours[p])).Append("  ");
+                Debug.Log(legend.ToString());
+            }
+
             // --- Pass 4: quantise (palette built only from voxels a view actually saw) ---
             int paletteUsed = 0;
-            if (_quantise && voxelCount > 0 && !partsMode)
+            if (_quantise && voxelCount > 0 && _outputMode == OutputMode.Colour)
             {
                 int n = Mathf.Max(1, _paletteSize);
                 Color[] palette;
@@ -389,7 +434,9 @@ namespace VoxelSpike.Editor
 
             // --- Pass 5: voxels no view saw inherit their nearest seen neighbour's (already
             // quantised) colour, via a multi-source BFS over the solid grid (6-connected). ---
-            FillUnseen(cols, seen, gridToVoxel, gx, gy, gz, W, H, L);
+            // (Box mode already assigns every voxel, so skip.)
+            if (!boxMode)
+                FillUnseen(cols, seen, gridToVoxel, gx, gy, gz, W, H, L);
 
             // --- Write Goxel text ---
             var sb = new StringBuilder();
@@ -418,8 +465,8 @@ namespace VoxelSpike.Editor
             _rightMask = right.BuildMaskPreview();
             _topMask = top.BuildMaskPreview();
 
-            string detail = partsMode
-                ? $", {labelColours.Length} parts"
+            string detail = labelMode ? $", {labelColours.Length} parts"
+                : boxMode ? $", {partBoxes.Count} part boxes"
                 : _quantise ? $", {paletteUsed}-colour palette" : "";
             _status = $"Grid {W} x {H} x {L} (X*Y*Z). Wrote {voxelCount} voxels{detail} to:\n{fullPath}";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
@@ -485,6 +532,154 @@ namespace VoxelSpike.Editor
             if (cnt > bestCount) { bestCount = cnt; return x; }
             return best;
         }
+
+        class PartBox
+        {
+            public string Name;
+            public Vector3 Min;
+            public Vector3 Max;
+        }
+
+        [System.Serializable] class PartBoxDto { public string name; public float[] min; public float[] max; }
+        [System.Serializable] class PartBoxListDto { public PartBoxDto[] parts; }
+
+        static List<PartBox> ParsePartBoxes(string json)
+        {
+            PartBoxListDto dto;
+            try { dto = JsonUtility.FromJson<PartBoxListDto>(json); }
+            catch { return null; }
+            if (dto == null || dto.parts == null) return null;
+
+            var boxes = new List<PartBox>();
+            foreach (var p in dto.parts)
+            {
+                if (p == null || p.min == null || p.max == null || p.min.Length < 3 || p.max.Length < 3) continue;
+                var min = new Vector3(Mathf.Min(p.min[0], p.max[0]), Mathf.Min(p.min[1], p.max[1]), Mathf.Min(p.min[2], p.max[2]));
+                var max = new Vector3(Mathf.Max(p.min[0], p.max[0]), Mathf.Max(p.min[1], p.max[1]), Mathf.Max(p.min[2], p.max[2]));
+                boxes.Add(new PartBox { Name = string.IsNullOrEmpty(p.name) ? $"part{boxes.Count}" : p.name, Min = min, Max = max });
+            }
+            return boxes;
+        }
+
+        // Assign each solid voxel to a part. Voxels inside exactly one box seed that part; a competitive
+        // multi-source BFS over the solid grid grows the seeds (geodesic nearest core wins, so boundaries
+        // settle at constrictions). Boxes refit to their assigned voxels each iteration. Returns a distinct
+        // display colour per part; partOf holds the per-voxel part index.
+        static Color[] SegmentByBoxes(List<int> gx, List<int> gy, List<int> gz, int[] gridToVoxel,
+            int W, int H, int L, List<PartBox> parts, int iterations, out int[] partOf)
+        {
+            int count = gx.Count;
+            int pn = parts.Count;
+            partOf = new int[count];
+
+            var cx = new float[count];
+            var cy = new float[count];
+            var cz = new float[count];
+            for (int v = 0; v < count; v++)
+            {
+                cx[v] = (gx[v] + 0.5f) / W;        // gx = world i (X)
+                cy[v] = (gz[v] + 0.5f) / H;        // gz = world j (Y)
+                cz[v] = (gy[v] + 0.5f) / L;        // gy = world k (Z)
+            }
+
+            var min = new Vector3[pn];
+            var max = new Vector3[pn];
+            for (int p = 0; p < pn; p++) { min[p] = parts[p].Min; max[p] = parts[p].Max; }
+
+            int[] di = { 1, -1, 0, 0, 0, 0 };
+            int[] dj = { 0, 0, 1, -1, 0, 0 };
+            int[] dk = { 0, 0, 0, 0, 1, -1 };
+
+            for (int iter = 0; iter <= iterations; iter++)
+            {
+                for (int v = 0; v < count; v++) partOf[v] = -1;
+
+                // exclusive-core seeding: a voxel inside exactly one box seeds that part
+                for (int v = 0; v < count; v++)
+                {
+                    int inBox = -1, hits = 0;
+                    for (int p = 0; p < pn; p++)
+                        if (Inside(cx[v], cy[v], cz[v], min[p], max[p])) { inBox = p; if (++hits > 1) break; }
+                    if (hits == 1) partOf[v] = inBox;
+                }
+
+                // guarantee every part has at least one seed (closest voxel to its box centre)
+                var hasSeed = new bool[pn];
+                for (int v = 0; v < count; v++) if (partOf[v] >= 0) hasSeed[partOf[v]] = true;
+                for (int p = 0; p < pn; p++)
+                {
+                    if (hasSeed[p]) continue;
+                    Vector3 c = (min[p] + max[p]) * 0.5f;
+                    int bestV = -1;
+                    float bestD = float.MaxValue;
+                    for (int v = 0; v < count; v++)
+                    {
+                        float d = (new Vector3(cx[v], cy[v], cz[v]) - c).sqrMagnitude;
+                        if (d < bestD) { bestD = d; bestV = v; }
+                    }
+                    if (bestV >= 0) partOf[bestV] = p;
+                }
+
+                // competitive BFS: geodesic nearest seed wins
+                var queue = new Queue<int>();
+                for (int v = 0; v < count; v++) if (partOf[v] >= 0) queue.Enqueue(v);
+                while (queue.Count > 0)
+                {
+                    int v = queue.Dequeue();
+                    int i = gx[v], k = gy[v], j = gz[v];
+                    int part = partOf[v];
+                    for (int d = 0; d < 6; d++)
+                    {
+                        int ni = i + di[d], nj = j + dj[d], nk = k + dk[d];
+                        if (ni < 0 || ni >= W || nj < 0 || nj >= H || nk < 0 || nk >= L) continue;
+                        int nv = gridToVoxel[ni + W * (nj + H * nk)];
+                        if (nv < 0 || partOf[nv] >= 0) continue;
+                        partOf[nv] = part;
+                        queue.Enqueue(nv);
+                    }
+                }
+
+                // fallback for voxels in components with no seed: nearest box centre
+                for (int v = 0; v < count; v++)
+                {
+                    if (partOf[v] >= 0) continue;
+                    int best = 0;
+                    float bestD = float.MaxValue;
+                    var c = new Vector3(cx[v], cy[v], cz[v]);
+                    for (int p = 0; p < pn; p++)
+                    {
+                        float d = (c - (min[p] + max[p]) * 0.5f).sqrMagnitude;
+                        if (d < bestD) { bestD = d; best = p; }
+                    }
+                    partOf[v] = best;
+                }
+
+                // refit boxes to their assigned voxels for the next iteration
+                if (iter < iterations)
+                {
+                    var nmin = new Vector3[pn];
+                    var nmax = new Vector3[pn];
+                    var any = new bool[pn];
+                    for (int v = 0; v < count; v++)
+                    {
+                        int p = partOf[v];
+                        var c = new Vector3(cx[v], cy[v], cz[v]);
+                        if (!any[p]) { nmin[p] = c; nmax[p] = c; any[p] = true; }
+                        else { nmin[p] = Vector3.Min(nmin[p], c); nmax[p] = Vector3.Max(nmax[p], c); }
+                    }
+                    for (int p = 0; p < pn; p++)
+                        if (any[p]) { min[p] = nmin[p]; max[p] = nmax[p]; }
+                }
+            }
+
+            var colours = new Color[pn];
+            for (int p = 0; p < pn; p++)
+                colours[p] = Color.HSVToRGB(pn <= 1 ? 0f : (float)p / pn, 0.7f, 0.95f);
+            return colours;
+        }
+
+        static bool Inside(float x, float y, float z, Vector3 min, Vector3 max) =>
+            x >= min.x && x <= max.x && y >= min.y && y <= max.y && z >= min.z && z <= max.z;
 
         // Flood unseen voxels with their nearest seen voxel's colour. Multi-source BFS over the
         // solid grid (6-connected) seeded from every seen voxel, so each unseen voxel takes the
