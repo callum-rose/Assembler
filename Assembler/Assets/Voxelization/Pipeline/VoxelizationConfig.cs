@@ -87,7 +87,8 @@ namespace Assembler.Voxelization
 		/// <summary>
 		/// Operator-supplied set-wide style guidance ("prefer simplicity, rounded
 		/// boxes where possible, only as many parts as needed"), injected into the
-		/// planning, authoring, and review prompts. Empty = none.
+		/// manifest, planning, authoring, and review prompts. It is also the
+		/// authority on scale at the manifest stage. Empty = none.
 		/// </summary>
 		public string StyleGuidance { get; init; } = string.Empty;
 
