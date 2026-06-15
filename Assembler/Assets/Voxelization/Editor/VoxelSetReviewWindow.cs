@@ -1571,11 +1571,9 @@ namespace Assembler.Voxelization.Editor
 				_runTimestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
 				_runFolder = Path.Combine(_outputFolder, $"run-{_runTimestamp}");
 			}
-			else
-			{
-				_runTimestamp = string.Empty;
-				_runFolder = string.Empty;
-			}
+			// Otherwise keep the existing run folder so a single-asset refine/regenerate
+			// exports its revision next to the original (in the same set folder) rather
+			// than landing in a brand-new directory.
 			_runTimer.Restart();
 			if (clearResults)
 			{
