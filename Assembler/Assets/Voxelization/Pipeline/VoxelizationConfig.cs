@@ -85,12 +85,29 @@ namespace Assembler.Voxelization
 		public float SilhouetteCoverageThreshold { get; init; } = 0.8f;
 
 		/// <summary>
-		/// Master toggle for the reference hull clip (per-run A/B). When on and the
-		/// asset has a brief with silhouettes, authored geometry overhanging the
-		/// envelope is deterministically trimmed before composition; off restores
-		/// today's free-authoring + IoU-gate behaviour.
+		/// Forward per-part hull bound (B2, default on): when the asset has a brief
+		/// with silhouettes, each part is born inside the reference envelope — its
+		/// authoring prompt carries the part's slice of the hull as a hard mask, and
+		/// a deterministic per-part cap clips any overhang in the assemble path
+		/// before composition. Non-destructive and reproducible from the exported
+		/// model + brief; off restores free-authoring + the IoU gate alone.
 		/// </summary>
-		public bool EnableHullClip { get; init; } = true;
+		public bool EnableForwardHullBound { get; init; } = true;
+
+		/// <summary>
+		/// Pre-authoring feasibility floor: a non-loose planned part whose box has
+		/// less than this fraction inside the reference silhouette is bounced back to
+		/// the planner (its box sits largely outside the envelope) before any
+		/// authoring spend. Loose parts (foliage/scatter) are exempt.
+		/// </summary>
+		public float HullPartSolidFloor { get; init; } = 0.10f;
+
+		/// <summary>
+		/// Master toggle for the B1 post-compose hull clip, retained as a config-gated
+		/// backstop. Default OFF now that the forward bound (B2) authors in-envelope;
+		/// flip on for a per-run A/B against the old whole-model post-compose trim.
+		/// </summary>
+		public bool EnableHullClip { get; init; }
 
 		/// <summary>Silhouette-mask dilation in cells; matches the ±1 planner width slack so an on-edge voxel survives.</summary>
 		public int HullClipDilation { get; init; } = 1;

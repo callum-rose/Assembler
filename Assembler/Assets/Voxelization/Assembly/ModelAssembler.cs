@@ -36,10 +36,32 @@ namespace Assembler.Voxelization
 	public sealed class ModelAssembler
 	{
 		private readonly IPartScriptRunner _scriptRunner;
+		private readonly HullClipSettings _hullSettings;
+		private readonly bool _enableForwardHullBound;
 
-		public ModelAssembler(IPartScriptRunner scriptRunner) => _scriptRunner = scriptRunner;
+		public ModelAssembler(
+			IPartScriptRunner scriptRunner,
+			HullClipSettings? hullSettings = null,
+			bool enableForwardHullBound = false)
+		{
+			_scriptRunner = scriptRunner;
+			_hullSettings = hullSettings ?? HullClipSettings.Default;
+			_enableForwardHullBound = enableForwardHullBound;
+		}
 
-		public async Task<AssembledModel> AssembleAsync(VoxelRigModel model, CancellationToken ct)
+		public Task<AssembledModel> AssembleAsync(VoxelRigModel model, CancellationToken ct) =>
+			AssembleAsync(model, ReferenceBrief.None, ct);
+
+		/// <summary>
+		/// Resolves and composes the model, applying the forward per-part hull bound
+		/// (decision 4) when enabled and the brief carries silhouettes: each resolved
+		/// part is clipped to the reference envelope in the target frame before
+		/// composition, so geometry is born in-envelope and the clip is reproducible
+		/// from the exported <c>vmodel.yaml + reference_brief.yaml</c>. Its per-part
+		/// outcomes fold into the assembly report (moderate → re-author, severe →
+		/// re-plan); a hull discarded by the global floor leaves geometry untouched.
+		/// </summary>
+		public async Task<AssembledModel> AssembleAsync(VoxelRigModel model, ReferenceBrief brief, CancellationToken ct)
 		{
 			var issues = new List<ValidationIssue>();
 			var grids = new Dictionary<string, VoxelModel>();
@@ -52,6 +74,20 @@ namespace Assembler.Voxelization
 			}
 
 			var assembled = ResolveWorldPivots(model, grids, issues);
+
+			if (_enableForwardHullBound && brief.Silhouettes.Any(s => !s.IsEmpty))
+			{
+				var bound = ForwardHullBound.Apply(assembled, model, brief, _hullSettings);
+				if (!bound.HullDiscarded)
+				{
+					assembled = bound.Parts;
+					foreach (var issue in bound.Issues)
+					{
+						issues.Add(ClipIssues.ToValidationIssue(issue));
+					}
+				}
+			}
+
 			var composed = Compose(model, assembled);
 			return new AssembledModel(model, assembled, composed, new ValidationReport(issues));
 		}

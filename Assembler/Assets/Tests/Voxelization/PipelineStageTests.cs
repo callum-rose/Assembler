@@ -450,6 +450,29 @@ reference_brief:
 		}
 
 		[Test]
+		public void PartUser_RendersHullEnvelopeBlock_OnlyWhenMaskSupplied()
+		{
+			var planned = new PlannedPartData(PartEncoding.Layers, new Vector3Int(2, 2, 1), new Vector3Int(-1, 0, 0), "crate");
+			var model = SkeletonModel(planned);
+			var brief = new ReferenceBrief
+			{
+				Source = "ref.png",
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", "##" }) },
+			};
+			var hull = SilhouetteHull.Build(brief, 0);
+			var (frameMin, frameSize) = PlanGeometryChecks.TargetFrame(model);
+			var mask = PartHullMask.For(model, model.Parts[0], planned.Offset, planned.Size, hull, frameMin, frameSize);
+
+			var withMask = VoxelizationPrompts.PartUser(model, brief, model.Parts[0], planned, string.Empty, string.Empty, mask);
+			var withoutMask = VoxelizationPrompts.PartUser(model, brief, model.Parts[0], planned, string.Empty);
+
+			Assert.That(withMask, Does.Contain("HULL ENVELOPE"));
+			Assert.That(withMask, Does.Not.Contain("WHOLE model"), "the mask replaces the whole-model silhouette");
+			Assert.That(withoutMask, Does.Contain("WHOLE model"));
+			Assert.That(withoutMask, Does.Not.Contain("HULL ENVELOPE"));
+		}
+
+		[Test]
 		public void SetOrchestrator_ReauthorFeedbackShowsAsciiViewsOfWhatWasBuilt()
 		{
 			// One bilateral slab: the first authoring is lopsided (attributed

@@ -40,12 +40,38 @@ namespace Assembler.Voxelization
 			string feedback,
 			CancellationToken ct)
 		{
+			var hullMask = HullMaskFor(model, brief, part, planned);
 			return planned.PlannedEncoding switch
 			{
-				PartEncoding.Script => AuthorScriptAsync(model, brief, part, planned, feedback, ct),
-				PartEncoding.Primitives => AuthorPrimitivesAsync(model, brief, part, planned, feedback, ct),
-				_ => AuthorLayersAsync(model, brief, part, planned, feedback, ct),
+				PartEncoding.Script => AuthorScriptAsync(model, brief, part, planned, feedback, hullMask, ct),
+				PartEncoding.Primitives => AuthorPrimitivesAsync(model, brief, part, planned, feedback, hullMask, ct),
+				_ => AuthorLayersAsync(model, brief, part, planned, feedback, hullMask, ct),
 			};
+		}
+
+		/// <summary>
+		/// The part's slice of the reference hull, threaded into the authoring prompt
+		/// as a hard mask (forward bound). Null when the forward bound is off or the
+		/// brief carries no silhouettes — the prompt then falls back to the
+		/// whole-model silhouette.
+		/// </summary>
+		private PartHullMask? HullMaskFor(VoxelRigModel model, ReferenceBrief brief, VoxelPart part, PlannedPartData planned)
+		{
+			if (!_config.EnableForwardHullBound || brief.IsEmpty || !brief.Silhouettes.Any(s => !s.IsEmpty))
+			{
+				return null;
+			}
+
+			var hull = SilhouetteHull.Build(brief, _config.HullClipDilation);
+			if (hull.IsEmpty)
+			{
+				return null;
+			}
+
+			var (frameMin, frameSize) = PlanGeometryChecks.TargetFrame(model);
+			return frameSize == Vector3Int.zero
+				? null
+				: PartHullMask.For(model, part, planned.Offset, planned.Size, hull, frameMin, frameSize);
 		}
 
 		private async Task<PartData> AuthorLayersAsync(
@@ -54,11 +80,12 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
+			PartHullMask? hullMask,
 			CancellationToken ct)
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance, hullMask)),
 			};
 
 			for (var attempt = 1; ; attempt++)
@@ -96,11 +123,12 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
+			PartHullMask? hullMask,
 			CancellationToken ct)
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance, hullMask)),
 			};
 
 			for (var attempt = 1; ; attempt++)
@@ -141,11 +169,12 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
+			PartHullMask? hullMask,
 			CancellationToken ct)
 		{
 			var messages = new List<AnthropicMessage>
 			{
-				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance)),
+				new("user", VoxelizationPrompts.PartUser(model, brief, part, planned, feedback, _config.StyleGuidance, hullMask)),
 			};
 
 			// Like the layers/primitives encoders, a script that never builds gets a

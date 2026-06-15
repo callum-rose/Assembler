@@ -74,7 +74,7 @@ namespace Assembler.Voxelization
 			_planner = new ModelPlanner(gateway, config);
 			_refiner = new ModelRefiner(gateway, config);
 			_author = new PartAuthor(gateway, config);
-			_assembler = new ModelAssembler(scriptRunner);
+			_assembler = new ModelAssembler(scriptRunner, config.HullClipSettings, config.EnableForwardHullBound);
 			_validator = new ModelValidator(config.SilhouetteIouThreshold);
 		}
 
@@ -155,6 +155,19 @@ namespace Assembler.Voxelization
 						var plannedById = model.Parts
 							.Where(p => p.Data is PlannedPartData)
 							.ToDictionary(p => p.Id, p => (PlannedPartData)p.Data);
+
+						// Forward bound, pre-authoring: a planned box that sits largely
+						// outside the silhouette envelope can only be clipped away, so
+						// re-plan it before spending an authoring call (severe → re-plan
+						// channel), unless we have exhausted the re-plan budget.
+						var infeasible = ForwardHullFeasibilityNote(model, brief, plannedById);
+						if (infeasible.Length > 0 && review < _config.MaxReviewRounds)
+						{
+							progress?.Report($"{asset.Id}: re-planning before authoring:\n{infeasible}");
+							note = refinementNote.Length > 0 ? $"{refinementNote}\n{infeasible}" : infeasible;
+							previousModelYaml = VModelYaml.Write(model);
+							continue;
+						}
 
 						foreach (var partId in plannedById.Keys)
 						{
@@ -365,7 +378,7 @@ namespace Assembler.Voxelization
 			CancellationToken ct,
 			IProgress<string>? progress)
 		{
-			var assembled = await _assembler.AssembleAsync(model, ct);
+			var assembled = await _assembler.AssembleAsync(model, brief, ct);
 			var clipReport = ValidationReport.Clean;
 
 			if (_config.EnableHullClip && brief.Silhouettes.Any(s => !s.IsEmpty))
@@ -389,7 +402,7 @@ namespace Assembler.Voxelization
 
 					if (clip.Issues.Count > 0)
 					{
-						clipReport = new ValidationReport(clip.Issues.Select(ToValidationIssue).ToList());
+						clipReport = new ValidationReport(clip.Issues.Select(ClipIssues.ToValidationIssue).ToList());
 						progress?.Report($"{assetId}: hull clip — {DescribeClip(clip)}");
 					}
 					else if (clip.RemovedFraction > 0f)
@@ -405,21 +418,6 @@ namespace Assembler.Voxelization
 			ReportOutcome(assetId, assembled, report, progress);
 			return (assembled, report);
 		}
-
-		private static ValidationIssue ToValidationIssue(ClipIssue issue) => issue.Tier == ClipTier.Severe
-			? new ValidationIssue(issue.PartId, IssueCode.PartClippedSevere,
-				$"Hull clip refused ({issue.Ratio:P0} outside the reference silhouette): {SevereReasonText(issue)}. " +
-				"Kept the authored geometry; the part's box is wrong for the silhouette — re-plan its size/position.")
-			: new ValidationIssue(issue.PartId, IssueCode.PartClippedModerate,
-				$"Hull clip trimmed {issue.Ratio:P0} of the part where it overhung the reference silhouette. " +
-				"Reposition or resize it to sit inside the envelope.");
-
-		private static string SevereReasonText(ClipIssue issue) => issue.Reason switch
-		{
-			ClipSevereReason.FullRemoval => "the part lies entirely outside the silhouette",
-			ClipSevereReason.Disconnection => "clipping would split the part into disconnected chunks",
-			_ => "too much of the part lies outside the silhouette",
-		};
 
 		private static string DescribeClip(ClipResult clip)
 		{
@@ -444,6 +442,57 @@ namespace Assembler.Voxelization
 				: "The hull clip refused these parts because their authored boxes fall outside the reference " +
 				  "silhouette — re-plan their size and position to fit the envelope:\n" +
 				  string.Join("\n", severe.Select(i => $"- {i.PartId}: {i.Message}"));
+		}
+
+		/// <summary>
+		/// Pre-authoring feasibility (decision 6): for each non-loose planned part,
+		/// the fraction of its declared box that lies inside the reference hull. A
+		/// part below <see cref="VoxelizationConfig.HullPartSolidFloor"/> has a box
+		/// sitting largely outside the envelope — authoring it would just be clipped
+		/// away — so it is folded into the re-plan feedback. Empty when the forward
+		/// bound is off, the brief has no silhouettes, or every part is feasible.
+		/// </summary>
+		private string ForwardHullFeasibilityNote(
+			VoxelRigModel model, ReferenceBrief brief, IReadOnlyDictionary<string, PlannedPartData> plannedById)
+		{
+			if (!_config.EnableForwardHullBound || !brief.Silhouettes.Any(s => !s.IsEmpty))
+			{
+				return string.Empty;
+			}
+
+			var hull = SilhouetteHull.Build(brief, _config.HullClipDilation);
+			if (hull.IsEmpty)
+			{
+				return string.Empty;
+			}
+
+			var (frameMin, frameSize) = PlanGeometryChecks.TargetFrame(model);
+			if (frameSize == Vector3Int.zero)
+			{
+				return string.Empty;
+			}
+
+			var lines = new List<string>();
+			foreach (var (partId, planned) in plannedById)
+			{
+				var part = model.FindPart(partId);
+				if (part == null || part.Loose)
+				{
+					continue;
+				}
+
+				var mask = PartHullMask.For(model, part, planned.Offset, planned.Size, hull, frameMin, frameSize);
+				if (mask.InHullFraction < _config.HullPartSolidFloor)
+				{
+					lines.Add($"- {partId}: only {mask.InHullFraction:P0} of its planned box lies inside the reference " +
+							  $"silhouette (needs {_config.HullPartSolidFloor:P0}) — its box sits outside the envelope.");
+				}
+			}
+
+			return lines.Count == 0
+				? string.Empty
+				: "Some planned part boxes fall outside the reference silhouette, so authoring them would just be " +
+				  "clipped away — re-plan their size and position to fit the envelope:\n" + string.Join("\n", lines);
 		}
 
 		private static ModelResult ExportResult(

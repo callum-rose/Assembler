@@ -564,7 +564,8 @@ namespace Assembler.Voxelization
 			VoxelPart part,
 			PlannedPartData planned,
 			string feedback,
-			string styleGuidance = "")
+			string styleGuidance = "",
+			PartHullMask? hullMask = null)
 		{
 			var sb = new StringBuilder();
 			sb.Append("Model: ").Append(model.Id)
@@ -642,15 +643,37 @@ namespace Assembler.Voxelization
 					sb.Append("  proportion ").Append(kv.Key).Append(": ").Append(YamlNodes.Float(kv.Value)).Append('\n');
 				}
 
-				var primary = brief.PrimarySilhouette;
-				if (!primary.IsEmpty)
+				if (hullMask is { IsEmpty: false })
 				{
-					sb.Append("  ").Append(primary.Face)
-						.Append(" silhouette of the WHOLE model (top row first, '#' solid, '_' empty) — author your part so ")
-						.Append("the cells it occupies match it:\n");
-					foreach (var row in primary.Rows)
+					// The part's own slice of the reference hull, in the same layered
+					// form it authors. This is a HARD cap, so it replaces the whole-model
+					// silhouette (which it can't act on cell-for-cell anyway).
+					sb.Append("\nHULL ENVELOPE (hard cap — author ONLY inside '#'; '.' cells fall outside the reference ")
+						.Append("silhouette and WILL be deleted). Layers bottom-to-top (y); each layer is ")
+						.Append(planned.Size.z).Append(" rows (row 0 = front, z=0) of ").Append(planned.Size.x)
+						.Append(" chars:\n");
+					var layers = hullMask.ToAsciiLayers();
+					for (var y = 0; y < layers.Count; y++)
 					{
-						sb.Append("    ").Append(row).Append('\n');
+						sb.Append("  layer y=").Append(planned.Offset.y + y).Append(":\n");
+						foreach (var row in layers[y].Split('\n'))
+						{
+							sb.Append("    ").Append(row).Append('\n');
+						}
+					}
+				}
+				else
+				{
+					var primary = brief.PrimarySilhouette;
+					if (!primary.IsEmpty)
+					{
+						sb.Append("  ").Append(primary.Face)
+							.Append(" silhouette of the WHOLE model (top row first, '#' solid, '_' empty) — author your part so ")
+							.Append("the cells it occupies match it:\n");
+						foreach (var row in primary.Rows)
+						{
+							sb.Append("    ").Append(row).Append('\n');
+						}
 					}
 				}
 			}

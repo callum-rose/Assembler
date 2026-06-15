@@ -328,6 +328,33 @@ namespace Assembler.Voxelization
 			return mirrored;
 		}
 
+		/// <summary>
+		/// The model's target bounding box in world cells: the union of every part's
+		/// declared world box. This is the frame the forward hull bound and the
+		/// authoring mask project through — it is fixed by the plan (re-authoring
+		/// does not move boxes), so it stays stable across rounds and matches the
+		/// frame the plan-time coverage gate already validates the silhouettes
+		/// against. Zero size when the model has no boxes.
+		/// </summary>
+		public static (Vector3Int Min, Vector3Int Size) TargetFrame(VoxelRigModel model)
+		{
+			var boxes = PartBoxes(model);
+			if (boxes.Count == 0)
+			{
+				return (Vector3Int.zero, Vector3Int.zero);
+			}
+
+			var min = new Vector3Int(int.MaxValue, int.MaxValue, int.MaxValue);
+			var max = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+			foreach (var (boxMin, boxMax) in boxes)
+			{
+				min = Vector3Int.Min(min, boxMin);
+				max = Vector3Int.Max(max, boxMax);
+			}
+
+			return (min, max - min + Vector3Int.one);
+		}
+
 		/// <summary>Pivot accumulated up the parent chain (the part's local origin in model space).</summary>
 		public static Vector3Int WorldPivot(VoxelRigModel model, VoxelPart part)
 		{
