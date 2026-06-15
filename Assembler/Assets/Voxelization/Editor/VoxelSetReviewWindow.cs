@@ -563,10 +563,6 @@ namespace Assembler.Voxelization.Editor
 				return;
 			}
 
-			EditorGUILayout.HelpBox(
-				"Editing an assignment re-serialises the manifest yaml above, which normalises its formatting and drops " +
-				"comments. These manifests are tool-generated, so that's fine.", MessageType.None);
-
 			var assetIds = manifest.Assets.Select(a => a.Id).ToArray();
 			var assetOptions = new[] { "(none — exclude)" }.Concat(assetIds).ToArray();
 			var faceOptions = new[] { "(face?)" }.Concat(ReferenceImage.Faces).ToArray();
