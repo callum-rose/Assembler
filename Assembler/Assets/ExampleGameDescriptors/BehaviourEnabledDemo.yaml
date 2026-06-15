@@ -42,6 +42,15 @@ Controls:
       freeze: [ "<Keyboard>/f" ]
       resume: [ "<Keyboard>/g" ]
       quit:   [ "<Keyboard>/q" ]
+    mobile:
+      freeze: [ "<Gamepad>/buttonWest" ]
+      resume: [ "<Gamepad>/buttonEast" ]
+      quit:   [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: freeze, Label: "Freeze", Anchor: lower-right, Offset: { X: 200, Y: 440 }, Size: { X: 260, Y: 200 } }
+    - { Type: button, Action: resume, Label: "Resume", Anchor: lower-right, Offset: { X: 200, Y: 200 }, Size: { X: 260, Y: 200 } }
+    - { Type: button, Action: quit,   Label: "Quit",   Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   mover:

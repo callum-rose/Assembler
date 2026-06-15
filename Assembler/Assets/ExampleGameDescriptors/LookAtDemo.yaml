@@ -38,6 +38,19 @@ Controls:
       left:  [ "<Keyboard>/a" ]
       right:  [ "<Keyboard>/d" ]
       quit:  [ "<Keyboard>/q" ]
+    mobile:
+      forward:  [ "<Gamepad>/dpad/up" ]
+      back:  [ "<Gamepad>/dpad/down" ]
+      left:  [ "<Gamepad>/dpad/left" ]
+      right:  [ "<Gamepad>/dpad/right" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: forward, Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: back,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   player:

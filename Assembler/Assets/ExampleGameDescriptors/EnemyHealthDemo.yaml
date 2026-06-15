@@ -225,6 +225,7 @@ Controls:
     left-release:  { Type: button, Phase: up }
     right:         { Type: button, Phase: down }
     right-release: { Type: button, Phase: up }
+    quit:          { Type: button, Phase: down }
 
   Bindings:
     desktop:
@@ -236,8 +237,33 @@ Controls:
       left-release:  [ "<Keyboard>/a" ]
       right:         [ "<Keyboard>/d" ]
       right-release: [ "<Keyboard>/d" ]
+      quit:          [ "<Keyboard>/q" ]
+    mobile:
+      up:            [ "<Gamepad>/dpad/up" ]
+      up-release:    [ "<Gamepad>/dpad/up" ]
+      down:          [ "<Gamepad>/dpad/down" ]
+      down-release:  [ "<Gamepad>/dpad/down" ]
+      left:          [ "<Gamepad>/dpad/left" ]
+      left-release:  [ "<Gamepad>/dpad/left" ]
+      right:         [ "<Gamepad>/dpad/right" ]
+      right-release: [ "<Gamepad>/dpad/right" ]
+      quit:          [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left, Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left, Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,  Label: "◀", Anchor: lower-left, Offset: { X: 80, Y: 235 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right, Label: "▶", Anchor: lower-left, Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit",  Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # Game-over poll: every frame the gate checks the end condition; when it
   # holds, the gate fires !gameover, which ends and unloads the game.
   game over:

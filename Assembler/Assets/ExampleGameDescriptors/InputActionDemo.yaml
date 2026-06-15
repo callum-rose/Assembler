@@ -83,6 +83,13 @@ Controls:
           Right: "<Keyboard>/rightArrow"
       quit:
         - "<Keyboard>/backspace"
+    mobile:
+      move: [ "<Gamepad>/dpad" ]
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: dpad,   Action: move, Anchor: lower-left,  Offset: { X: 280, Y: 280 }, Size: { X: 380, Y: 380 } }
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   player:

@@ -67,6 +67,11 @@ Controls:
   Bindings:
     desktop:
       quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   # The only thing ending this game: press Q to fire the framework's !gameover path.

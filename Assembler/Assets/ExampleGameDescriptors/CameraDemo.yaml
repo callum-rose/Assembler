@@ -22,6 +22,7 @@ Controls:
     left:  { Type: button, Phase: hold }
     up:    { Type: button, Phase: hold }
     down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
 
   Bindings:
     desktop:
@@ -29,8 +30,29 @@ Controls:
       left:  [ "<Keyboard>/leftArrow" ]
       up:    [ "<Keyboard>/upArrow" ]
       down:  [ "<Keyboard>/downArrow" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      right: [ "<Gamepad>/dpad/right" ]
+      left:  [ "<Gamepad>/dpad/left" ]
+      up:    [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,  Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right, Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   player:
     Tags: [ player ]
     Position: !vec { X: 0, Y: 0, Z: 0 }

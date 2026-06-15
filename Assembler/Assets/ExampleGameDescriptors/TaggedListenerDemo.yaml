@@ -92,13 +92,31 @@ Controls:
   Actions:
     fire:  { Type: button, Phase: down }
     score: { Type: button, Phase: down }
+    quit:  { Type: button, Phase: down }
 
   Bindings:
     desktop:
       fire:  [ "<Keyboard>/space" ]
       score: [ "<Keyboard>/f" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      fire:  [ "<Gamepad>/buttonSouth" ]
+      score: [ "<Gamepad>/buttonWest" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: fire,  Label: "Fire",  Anchor: lower-right, Offset: { X: 200, Y: 440 }, Size: { X: 240, Y: 200 } }
+    - { Type: button, Action: score, Label: "Score", Anchor: lower-right, Offset: { X: 200, Y: 200 }, Size: { X: 240, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit",  Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   enemy spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
