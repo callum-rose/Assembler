@@ -245,21 +245,26 @@ namespace VoxelSpike.Editor
             var gy = new List<int>();
             var gz = new List<int>();
             var cols = new List<Color>();
+            var seen = new List<bool>();                 // did any view actually colour this voxel?
+            int[] gridToVoxel = Filled(W * H * L, -1);    // grid cell -> index into the lists above
 
             for (int j = 0; j < H; j++)
             for (int k = 0; k < L; k++)
             for (int i = 0; i < W; i++)
             {
-                if (!solid[i + W * (j + H * k)]) continue;
+                int cell = i + W * (j + H * k);
+                if (!solid[cell]) continue;
 
                 float x01 = (i + 0.5f) / W;
                 float y01 = (j + 0.5f) / H;
                 float z01 = (k + 0.5f) / L;
 
                 Color col;
+                bool isSeen;
                 if (_colourMode == ColourMode.FlatMean)
                 {
                     col = FlatMean(front, right, top, x01, y01, z01);
+                    isSeen = true;
                 }
                 else
                 {
@@ -278,29 +283,39 @@ namespace VoxelSpike.Editor
                     if (seeRight || seeLeft) { sum += right.SampleColour(z01, y01); n++; }
                     if (seeTop || seeBottom) { sum += top.SampleColour(x01, z01); n++; }
 
-                    // No view sees it (interior, or an unseen far/concave face with mirror off):
-                    // fall back to the flat mean so there are no colour holes.
-                    col = n > 0 ? sum * (1f / n) : FlatMean(front, right, top, x01, y01, z01);
+                    isSeen = n > 0;
+                    col = isSeen ? sum * (1f / n) : Color.clear; // unseen -> filled in pass 5
                 }
 
+                gridToVoxel[cell] = cols.Count;
                 gx.Add(i); gy.Add(k); gz.Add(j);
                 cols.Add(col);
+                seen.Add(isSeen);
             }
 
             int voxelCount = cols.Count;
 
-            // --- Pass 4: quantise to the N most popular (modal) colours and snap voxels ---
+            // --- Pass 4: quantise (palette built only from voxels a view actually saw) ---
             int paletteUsed = 0;
             if (_quantise && voxelCount > 0)
             {
+                var seenCols = new List<Color>();
+                for (int v = 0; v < voxelCount; v++)
+                    if (seen[v]) seenCols.Add(cols[v]);
+                if (seenCols.Count == 0) seenCols = cols; // degenerate: nothing seen
+
                 int n = Mathf.Max(1, _paletteSize);
                 Color[] palette = _paletteMode == PaletteMode.Variety
-                    ? BuildVarietyPalette(cols, n)
-                    : BuildModalPalette(cols, n);
+                    ? BuildVarietyPalette(seenCols, n)
+                    : BuildModalPalette(seenCols, n);
                 paletteUsed = palette.Length;
-                for (int v = 0; v < cols.Count; v++)
-                    cols[v] = Nearest(palette, cols[v]);
+                for (int v = 0; v < voxelCount; v++)
+                    if (seen[v]) cols[v] = Nearest(palette, cols[v]);
             }
+
+            // --- Pass 5: voxels no view saw inherit their nearest seen neighbour's (already
+            // quantised) colour, via a multi-source BFS over the solid grid (6-connected). ---
+            FillUnseen(cols, seen, gridToVoxel, gx, gy, gz, W, H, L);
 
             // --- Write Goxel text ---
             var sb = new StringBuilder();
@@ -351,6 +366,41 @@ namespace VoxelSpike.Editor
             var a = new int[n];
             for (int i = 0; i < n; i++) a[i] = value;
             return a;
+        }
+
+        // Flood unseen voxels with their nearest seen voxel's colour. Multi-source BFS over the
+        // solid grid (6-connected) seeded from every seen voxel, so each unseen voxel takes the
+        // colour of the closest seen voxel by geodesic (within-object) distance.
+        static void FillUnseen(List<Color> cols, List<bool> seen, int[] gridToVoxel,
+                               List<int> gx, List<int> gy, List<int> gz, int W, int H, int L)
+        {
+            int count = cols.Count;
+            var filled = new bool[count];
+            var queue = new Queue<int>();
+            for (int v = 0; v < count; v++)
+                if (seen[v]) { filled[v] = true; queue.Enqueue(v); }
+
+            if (queue.Count == 0 || queue.Count == count) return; // nothing seen, or nothing to fill
+
+            int[] di = { 1, -1, 0, 0, 0, 0 };
+            int[] dj = { 0, 0, 1, -1, 0, 0 };
+            int[] dk = { 0, 0, 0, 0, 1, -1 };
+
+            while (queue.Count > 0)
+            {
+                int v = queue.Dequeue();
+                int i = gx[v], k = gy[v], j = gz[v]; // gx/gy/gz hold Goxel (X, Z, Y) = world (i, k, j)
+                for (int d = 0; d < 6; d++)
+                {
+                    int ni = i + di[d], nj = j + dj[d], nk = k + dk[d];
+                    if (ni < 0 || ni >= W || nj < 0 || nj >= H || nk < 0 || nk >= L) continue;
+                    int nv = gridToVoxel[ni + W * (nj + H * nk)];
+                    if (nv < 0 || filled[nv]) continue;
+                    cols[nv] = cols[v];
+                    filled[nv] = true;
+                    queue.Enqueue(nv);
+                }
+            }
         }
 
         // Coarse-bin the voxel colours into an RGB histogram (4 bits/channel) and return one
