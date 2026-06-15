@@ -16,13 +16,25 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public abstract class AddColliderBehaviour<TData> : GameBehaviour<TData> where TData : ColliderData
 	{
+		private Collider _collider;
 		private PhysicsMaterial? _physicsMaterial;
 
 		protected sealed override void OnInitialise(TData data)
 		{
-			var collider = CreateCollider(data);
-			data.IsTrigger.UseIfValueExists(v => collider.isTrigger = v);
-			_physicsMaterial = ApplyMaterial(data, collider);
+			// Create the collider once and reuse it across pooled lives: OnInitialise re-runs on every reuse, so a
+			// guard keeps the entity's single collider rather than stacking a second one — re-adding/removing
+			// colliders also forces a PhysX recompute, exactly the native churn pooling exists to avoid. A guard
+			// rather than Awake because Awake does not run in edit mode (the sandbox validator / EditMode tests
+			// build via OnInitialise). The collider TYPE is fixed per behaviour; its shape and material come from
+			// Data and are (re)applied each life below.
+			if (_collider == null)
+			{
+				_collider = CreateCollider();
+			}
+
+			ApplyShape(_collider, data);
+			data.IsTrigger.UseIfValueExists(v => _collider.isTrigger = v);
+			ApplyMaterial(data);
 		}
 
 		private void OnDestroy()
@@ -43,26 +55,31 @@ namespace Assembler.Behaviours.Physics
 			}
 		}
 
-		/// <summary>Adds the concrete collider component and applies its shape-specific properties.</summary>
-		protected abstract Collider CreateCollider(TData data);
+		/// <summary>Adds the concrete collider component (type only — shape properties are applied in
+		/// <see cref="ApplyShape"/>, which has the resolved <typeparamref name="TData"/>).</summary>
+		protected abstract Collider CreateCollider();
 
-		// Builds a PhysicsMaterial from the set properties and assigns it, returning it so OnDestroy can free
-		// it. Returns null (touching nothing) when no property is set, so the collider keeps the default material.
-		private static PhysicsMaterial? ApplyMaterial(ColliderData data, Collider collider)
+		/// <summary>Applies this collider's shape-specific properties (size/radius/height/convex) from the
+		/// resolved data. Re-run on every reuse to pick up this spawn's parameters.</summary>
+		protected abstract void ApplyShape(Collider collider, TData data);
+
+		// Builds (once) and reuses a PhysicsMaterial from the set properties and assigns it. Touches nothing when
+		// no property is set, so the collider keeps the default material. The material is reused across pooled
+		// lives — a per-template id, so the "material needed?" decision is stable — and freed in OnDestroy.
+		private void ApplyMaterial(ColliderData data)
 		{
 			if (data.Bounciness is NullValueProvider<float>
 				&& data.DynamicFriction is NullValueProvider<float>
 				&& data.StaticFriction is NullValueProvider<float>)
 			{
-				return null;
+				return;
 			}
 
-			var material = new PhysicsMaterial { hideFlags = HideFlags.DontSave };
-			data.Bounciness.UseIfValueExists(v => material.bounciness = v);
-			data.DynamicFriction.UseIfValueExists(v => material.dynamicFriction = v);
-			data.StaticFriction.UseIfValueExists(v => material.staticFriction = v);
-			collider.sharedMaterial = material;
-			return material;
+			_physicsMaterial ??= new PhysicsMaterial { hideFlags = HideFlags.DontSave };
+			data.Bounciness.UseIfValueExists(v => _physicsMaterial.bounciness = v);
+			data.DynamicFriction.UseIfValueExists(v => _physicsMaterial.dynamicFriction = v);
+			data.StaticFriction.UseIfValueExists(v => _physicsMaterial.staticFriction = v);
+			_collider.sharedMaterial = _physicsMaterial;
 		}
 	}
 }

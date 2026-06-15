@@ -17,13 +17,14 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddCapsuleColliderBehaviour : AddColliderBehaviour<CapsuleColliderData>
 	{
-		protected override Collider CreateCollider(CapsuleColliderData data)
+		protected override Collider CreateCollider() => gameObject.AddComponent<CapsuleCollider>();
+
+		protected override void ApplyShape(Collider collider, CapsuleColliderData data)
 		{
-			var collider = gameObject.AddComponent<CapsuleCollider>();
-			data.Radius.UseIfValueExists(v => collider.radius = v);
-			data.Height.UseIfValueExists(v => collider.height = v);
-			data.Direction.UseIfValueExists(v => collider.direction = v);
-			return collider;
+			var capsule = (CapsuleCollider)collider;
+			data.Radius.UseIfValueExists(v => capsule.radius = v);
+			data.Height.UseIfValueExists(v => capsule.height = v);
+			data.Direction.UseIfValueExists(v => capsule.direction = v);
 		}
 	}
 }

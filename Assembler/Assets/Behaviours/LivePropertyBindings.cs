@@ -15,7 +15,12 @@ namespace Assembler.Behaviours
 	{
 		private readonly List<IDisposable> _bindings = new();
 
-		private void OnDestroy()
+		private void OnDestroy() => ResetBindings();
+
+		/// <summary>Tears down every binding held here, leaving the sink empty and reusable. Called on destruction,
+		/// and by the factory when a pooled entity is despawned — the dormant shell must stop ticking / observing,
+		/// and its next life's <c>OnInitialise</c> re-binds into this now-empty sink rather than stacking duplicates.</summary>
+		public void ResetBindings()
 		{
 			foreach (var binding in _bindings)
 			{

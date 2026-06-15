@@ -15,12 +15,11 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddMeshColliderBehaviour : AddColliderBehaviour<MeshColliderData>
 	{
-		protected override Collider CreateCollider(MeshColliderData data)
-		{
-			var collider = gameObject.AddComponent<MeshCollider>();
-			// Convex must be set before the base applies IsTrigger — a mesh trigger requires a convex hull.
-			data.Convex.UseIfValueExists(v => collider.convex = v);
-			return collider;
-		}
+		protected override Collider CreateCollider() => gameObject.AddComponent<MeshCollider>();
+
+		// Convex must be set before the base applies IsTrigger — a mesh trigger requires a convex hull. ApplyShape
+		// runs before the IsTrigger assignment in the base OnInitialise, so that ordering holds.
+		protected override void ApplyShape(Collider collider, MeshColliderData data) =>
+			data.Convex.UseIfValueExists(v => ((MeshCollider)collider).convex = v);
 	}
 }

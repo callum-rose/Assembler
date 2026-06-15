@@ -52,6 +52,17 @@ namespace Assembler.Behaviours.AI
 
 		private void Start() => StartCoroutine(ScanLoop());
 
+		// Clear the finite-difference baseline and restart the scan loop on a pooled reuse: the velocity baselines
+		// must not carry the previous life's neighbours, and Unity's once-per-lifetime Start does not re-launch
+		// the scan coroutine on a reused component.
+		public override void OnReuse()
+		{
+			_previousPositions.Clear();
+			_sampledPositions.Clear();
+			_lastSampleTime = 0d;
+			StartCoroutine(ScanLoop());
+		}
+
 		public void Execute(TriggerContext ctx) => Scan();
 
 		private IEnumerator ScanLoop()

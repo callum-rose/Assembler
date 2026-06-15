@@ -39,6 +39,10 @@ namespace Assembler.Behaviours.AI
 
 		private void Start() => StartCoroutine(ScanLoop());
 
+		// Unity's once-per-lifetime Start does not re-launch the scan coroutine on a reused component, so restart
+		// it on a pooled respawn (the coroutine was stopped when the shell deactivated).
+		public override void OnReuse() => StartCoroutine(ScanLoop());
+
 		public void Execute(TriggerContext ctx) => Scan();
 
 		private IEnumerator ScanLoop()

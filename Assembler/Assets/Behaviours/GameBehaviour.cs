@@ -46,6 +46,18 @@ namespace Assembler.Behaviours
 		/// private property setter keeps <see cref="Entity"/> read-only to subclasses.</summary>
 		public void SetEntity(GameEntity entity) => Entity = entity;
 
+		/// <summary>Reset transient runtime state so a pooled component is clean for reuse. Called by the build
+		/// pipeline on respawn, <em>after</em> the component has been re-initialised (so <c>Data</c> reflects this
+		/// spawn) — the point that mirrors Unity's <c>Start</c>, which does NOT re-fire on a reused component.
+		/// Default is a no-op: stateless behaviours need nothing. Override to (a) clear private mutable state
+		/// (counters, debounce timestamps, gesture fields, cached physics) that would otherwise leak from the
+		/// previous life, and (b) re-arm any one-shot <c>Start</c> logic (auto-start timers, scan coroutines,
+		/// initial state-machine hooks). Teardown of something <c>OnInitialise</c> itself re-creates (a live
+		/// subscription, input wiring) belongs in <c>OnInitialise</c> made idempotent, not here, since this runs
+		/// after it. Public (not protected) because the cross-assembly factory drives it, mirroring
+		/// <c>Initialise</c>.</summary>
+		public virtual void OnReuse() { }
+
 		protected void SetBase(BehaviourData behaviourData, IReadOnlyList<Listener> listeners)
 		{
 			Id = behaviourData.Id;

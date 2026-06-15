@@ -18,7 +18,14 @@ namespace Assembler.Behaviours.AI
 	/// </remarks>
 	public class StateMachine : PerFrameBehaviour<StateMachineData>
 	{
-		private void Start()
+		private void Start() => EnterInitialState();
+
+		// Unity's once-per-lifetime Start does not re-run on a reused component, so re-enter the initial state on
+		// a pooled respawn. The state variable is re-seeded to Initial in this spawn's fresh scope (the builder's
+		// Create phase), so CurrentState reads Initial here, and listeners are re-resolved by the time OnReuse runs.
+		public override void OnReuse() => EnterInitialState();
+
+		private void EnterInitialState()
 		{
 			// Fire the initial state's OnEnter once, after all behaviours have been initialised so that
 			// listener targets are registered.

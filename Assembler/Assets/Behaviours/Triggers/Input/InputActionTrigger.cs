@@ -25,6 +25,10 @@ namespace Assembler.Behaviours.Triggers.Input
 	{
 		protected override void OnInitialise(InputActionTriggerData data)
 		{
+			// Idempotent so a pooled reuse (which re-runs OnInitialise) re-wires cleanly: Unwire removes the
+			// previous life's subscription (a no-op on a fresh build, where nothing is wired yet) before Wire
+			// re-subscribes, rather than stacking a duplicate that would double-fire.
+			Unwire();
 			Wire();
 		}
 

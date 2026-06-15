@@ -29,6 +29,13 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 		private double _firstTapTime;
 		private Vector3 _firstTapPosition;
 
+		// Drop any in-progress press and the buffered first tap so a pooled reuse starts gesture detection clean.
+		public override void OnReuse()
+		{
+			_pressed = false;
+			_hasFirstTap = false;
+		}
+
 		private void Update()
 		{
 			var pressed = Pointer.IsPressed;

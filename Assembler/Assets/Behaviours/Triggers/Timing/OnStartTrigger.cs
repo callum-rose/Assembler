@@ -14,5 +14,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 		{
 			NotifyListeners(TriggerContext.Empty);
 		}
+
+		// Unity's once-per-lifetime Start does not re-run on a reused component, so re-fire the "on start" event
+		// when a pooled entity is respawned — its listeners are re-resolved by the time OnReuse runs.
+		public override void OnReuse() => NotifyListeners(TriggerContext.Empty);
 	}
 }

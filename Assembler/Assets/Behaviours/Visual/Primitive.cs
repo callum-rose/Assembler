@@ -24,44 +24,55 @@ namespace Assembler.Behaviours.Visual
 
 		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
+		// The primitive child is created lazily and only once: unlike the other heavy behaviours its mesh shape
+		// comes from Data (unavailable in Awake), so creation can't move to Awake — but a per-template shape is
+		// constant, so guarding on a null field gives the same "build once, reuse across pooled lives" effect.
+		// OnInitialise re-binds the live scale and re-applies the colour to the persisted child each spawn.
+		private GameObject? _primitive;
+		private MeshRenderer _renderer = null!;
+
 		protected override void OnInitialise(PrimitiveData data)
 		{
-			var shape = data.Shape.ValueOr(PrimitiveType.Cube);
-			var primitive = GameObject.CreatePrimitive(shape);
-			primitive.name = shape.ToString();
-			primitive.transform.SetParent(transform, false);
-
-			primitive.GetComponent<MeshRenderer>().sharedMaterial = Resources.Load<Material>("Materials/Primitive");
-
-			// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
-			// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without
-			// entering play mode) can strip it too — plain Destroy throws in edit mode.
-			if (primitive.TryGetComponent<Collider>(out var collider))
+			if (_primitive == null)
 			{
-#if UNITY_EDITOR
-				if (Application.isPlaying)
+				var shape = data.Shape.ValueOr(PrimitiveType.Cube);
+				_primitive = GameObject.CreatePrimitive(shape);
+				_primitive.name = shape.ToString();
+				_primitive.transform.SetParent(transform, false);
+
+				_renderer = _primitive.GetComponent<MeshRenderer>();
+				_renderer.sharedMaterial = Resources.Load<Material>("Materials/Primitive");
+
+				// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
+				// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without
+				// entering play mode) can strip it too — plain Destroy throws in edit mode.
+				if (_primitive.TryGetComponent<Collider>(out var collider))
 				{
-#endif
-					Destroy(collider);
 #if UNITY_EDITOR
-				}
-				else
-				{
-					DestroyImmediate(collider);
-				}
+					if (Application.isPlaying)
+					{
 #endif
+						Destroy(collider);
+#if UNITY_EDITOR
+					}
+					else
+					{
+						DestroyImmediate(collider);
+					}
+#endif
+				}
 			}
 
 			// Live-bind the scale so a !var/!expr/!clock animates the primitive's size; an omitted Size falls
 			// back to Vector3.one, matching the transform's default (so the no-Size case is unchanged).
-			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
+			data.Size.BindLive(this, size => _primitive.transform.localScale = size, Vector3.one);
 
 			data.Colour.UseIfValueExists(colour =>
 			{
 				var block = new MaterialPropertyBlock();
 				block.SetColor(BaseColorId, colour);
 				block.SetColor(ColorId, colour);
-				primitive.GetComponent<MeshRenderer>().SetPropertyBlock(block);
+				_renderer.SetPropertyBlock(block);
 			});
 		}
 	}

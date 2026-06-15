@@ -23,7 +23,15 @@ namespace Assembler.Behaviours.Physics
 
 		protected override void OnInitialise(RigidbodyData data)
 		{
-			_rigidbody = gameObject.AddComponent<Rigidbody>();
+			// Create the body once and reuse it across pooled lives: OnInitialise re-runs on every reuse, so a
+			// guard (not an unconditional AddComponent) keeps the entity's single Rigidbody rather than stacking a
+			// second one. A guard rather than Awake because Awake does not run in edit mode (the sandbox validator
+			// and EditMode tests build via OnInitialise without entering play mode).
+			if (_rigidbody == null)
+			{
+				_rigidbody = gameObject.AddComponent<Rigidbody>();
+			}
+
 			data.IsKinematic.UseIfValueExists(v => _rigidbody.isKinematic = v);
 			data.UseGravity.UseIfValueExists(v => _rigidbody.useGravity = v);
 			data.Mass.UseIfValueExists(v => _rigidbody.mass = v);
@@ -32,6 +40,19 @@ namespace Assembler.Behaviours.Physics
 			data.FreezePosition.UseIfValueExists(v => _rigidbody.constraints = ApplyPositionFreeze(_rigidbody.constraints, v));
 			data.FreezeRotation.UseIfValueExists(v => _rigidbody.constraints = ApplyRotationFreeze(_rigidbody.constraints, v));
 			data.CentreOfMass.UseIfValueExists(v => _rigidbody.centerOfMass = v);
+		}
+
+		// A pooled body carries its previous life's momentum; a respawned entity must start at rest. Kinematic
+		// bodies hold no solver velocity, so leave them untouched (writing velocity on one is meaningless).
+		public override void OnReuse()
+		{
+			if (_rigidbody.isKinematic)
+			{
+				return;
+			}
+
+			_rigidbody.linearVelocity = Vector3.zero;
+			_rigidbody.angularVelocity = Vector3.zero;
 		}
 
 		private static RigidbodyConstraints ApplyPositionFreeze(RigidbodyConstraints current, Vector3 freeze)

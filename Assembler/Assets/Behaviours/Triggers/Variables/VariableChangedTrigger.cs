@@ -19,6 +19,15 @@ namespace Assembler.Behaviours.Triggers.Variables
 
 		protected override void OnInitialise(VariableChangedTriggerData<T> data)
 		{
+			// Unsubscribe the previous life's variable before subscribing this one: on a pooled reuse OnInitialise
+			// re-runs against a fresh scope's variable, so leaving the old subscription would leak it and double-
+			// fire. A no-op on a fresh build (nothing subscribed yet). Idempotent here rather than in OnReuse,
+			// which runs AFTER re-initialisation and so would unsubscribe the just-subscribed new variable.
+			if (_observable != null)
+			{
+				_observable.Changed -= OnVariableChanged;
+			}
+
 			_observable = (IObservableValueProvider<T>)data.Variable;
 			_observable.Changed += OnVariableChanged;
 		}

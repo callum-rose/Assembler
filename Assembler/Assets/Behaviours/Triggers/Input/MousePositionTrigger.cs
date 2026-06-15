@@ -16,6 +16,10 @@ namespace Assembler.Behaviours.Triggers.Input
 		private Vector3 _lastPosition;
 		private bool _hasLast;
 
+		// Drop the cached mouse position so a pooled reuse reports a zero delta on its first frame rather than
+		// finite-differencing against the previous life's last sample.
+		public override void OnReuse() => _hasLast = false;
+
 		private void Update()
 		{
 			var current = UnityEngine.Input.mousePosition;

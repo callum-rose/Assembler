@@ -20,6 +20,13 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 		private Vector3 _startPosition;
 		private Vector3 _lastPosition;
 
+		// Clear the in-progress drag so a pooled reuse doesn't resume a gesture from its previous life.
+		public override void OnReuse()
+		{
+			_pressed = false;
+			_dragging = false;
+		}
+
 		private void Update()
 		{
 			var pressed = Pointer.IsPressed;

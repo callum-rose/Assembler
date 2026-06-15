@@ -13,6 +13,13 @@ namespace Assembler.Behaviours
 		/// entity id read it here rather than relying on <c>gameObject.name</c>.</summary>
 		public string Id { get; set; } = string.Empty;
 
+		/// <summary>The template this entity was spawned from, or <c>null</c> for hand-authored / placement /
+		/// game-controller entities that never came through <c>Spawn</c>. Stamped only on pooled spawns; it is the
+		/// key the entity is returned to the pool under, and the flag that distinguishes a pool-return from a real
+		/// destroy (see <c>GameEntityFactory.Despawn</c>). Child entities of a pooled tree stay <c>null</c> — they
+		/// are pooled as part of the root, never independently.</summary>
+		public string? TemplateId { get; set; }
+
 		public string[] Tags
 		{
 			get => tags;
@@ -21,7 +28,7 @@ namespace Assembler.Behaviours
 
 		public EntityVariableScope? VariableScope { get; set; }
 
-		/// <summary>The spatial-query index this entity self-registers into on <see cref="Awake"/>.</summary>
+		/// <summary>The spatial-query index this entity self-registers into on <see cref="Activate"/>.</summary>
 		public EntityQueryService? Query { get; set; }
 
 		/// <summary>Raised from <see cref="OnDestroy"/>. The factory subscribes each runtime index's deregistration
@@ -30,15 +37,24 @@ namespace Assembler.Behaviours
 		/// <c>BehaviourRegistry</c> that this type can't reference directly. Subscribers capture the entity id they need.</summary>
 		public event Action? Destroying;
 
-		// Self-registers into the spatial-query index here so the index's lifetime is owned by the entity rather than
-		// the factory. The factory configures Query/Tags/Id while the GameObject is inactive, then activates it, so all
-		// are set by the time Awake runs.
-		private void Awake()
+		// Self-registers into the spatial-query index. Called explicitly by the factory after the entity is
+		// configured and its GameObject activated — NOT from Awake, because Awake runs only once per component
+		// lifetime: a pooled shell keeps its GameEntity, so its Awake would not re-fire on reuse and the entity
+		// would silently never re-register. Activate is re-run on every (re)build, so reuse re-registers correctly.
+		public void Activate()
 		{
 			Query?.Register(Id, transform, tags);
 		}
 
-		private void OnDestroy()
+		/// <summary>Runs the destruction teardown — fire <see cref="Destroying"/> so the entity self-evicts from every
+		/// runtime index — WITHOUT destroying the GameObject, so the shell can be returned to the pool and rebuilt.
+		/// Called by <c>GameEntityFactory.Despawn</c> for a pooled entity; the next build re-subscribes
+		/// <see cref="Destroying"/> and installs a fresh scope.</summary>
+		public void Recycle() => TearDown();
+
+		private void OnDestroy() => TearDown();
+
+		private void TearDown()
 		{
 			Destroying?.Invoke();
 			Destroying = null;

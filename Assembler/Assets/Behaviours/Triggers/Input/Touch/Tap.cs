@@ -22,6 +22,10 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 		private Vector3 _startPosition;
 		private float _maxMoveSqr;
 
+		// Clear the in-progress press so a pooled reuse doesn't carry a stale "pressed" state into its next life
+		// (which would mis-read the first release as a tap). The press-start fields are re-seeded on the next press.
+		public override void OnReuse() => _pressed = false;
+
 		private void Update()
 		{
 			var pressed = Pointer.IsPressed;
