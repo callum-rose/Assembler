@@ -38,7 +38,7 @@ namespace Tests.Voxelization
 
 			var spec = ReferenceImageAnalysis.Silhouette("front", pixels, rows: 3, cellCoverage: 0.5f, bgTolerance: 0.12f);
 
-			Assert.That(spec.Rows, Is.EqualTo(new[] { "####", "#..#", "####" }));
+			Assert.That(spec.Rows, Is.EqualTo(new[] { "####", "#__#", "####" }));
 			Assert.That(spec.Size, Is.EqualTo(new Vector3Int(4, 3, 0)));
 		}
 
@@ -78,7 +78,7 @@ namespace Tests.Voxelization
 			Assert.That(spec.Rows, Is.EqualTo(new[] { "####", "####" }));
 		}
 
-		[TestCase(0.5f, "#.")]
+		[TestCase(0.5f, "#_")]
 		[TestCase(0.4f, "##")]
 		public void Silhouette_UsesPerCellAreaCoverage_NotSingleSample(float coverage, string expected)
 		{
@@ -112,7 +112,7 @@ namespace Tests.Voxelization
 
 			var spec = ReferenceImageAnalysis.Silhouette("front", pixels, rows: 2, cellCoverage: 0.5f, bgTolerance: 0.12f);
 
-			Assert.That(spec.Rows, Is.EqualTo(new[] { ".##.", "####" }));
+			Assert.That(spec.Rows, Is.EqualTo(new[] { "_##_", "####" }));
 		}
 
 		[Test]
@@ -234,7 +234,7 @@ namespace Tests.Voxelization
 			var brief = Extract(asset, Extractor(out _), (asset.References[0], image));
 
 			Assert.That(brief.Source, Is.EqualTo("crate"));
-			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "####", "#..#", "####" }));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "####", "#__#", "####" }));
 			Assert.That(brief.Palette.Select(e => e.ToHex()).Single(), Is.EqualTo(new PaletteEntry('x', Red).ToHex()));
 		}
 
@@ -257,7 +257,7 @@ namespace Tests.Voxelization
 
 			var brief = Extract(asset, Extractor(out _), (asset.References[0], image));
 
-			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { ".##.", "####" }));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "_##_", "####" }));
 			Assert.That(brief.Palette.Select(e => e.ToHex()).Single(), Is.EqualTo(new PaletteEntry('x', Blue).ToHex()));
 		}
 

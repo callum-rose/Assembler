@@ -9,7 +9,7 @@ namespace Assembler.Voxelization
 	/// An orthographic occupancy mask used as the automated validation oracle.
 	/// <see cref="Face"/> names the projection (front = looking along -z,
 	/// side = looking along -x, top = looking down -y). Rows are listed
-	/// image-style, top row first; '#' is solid, '.' is empty.
+	/// image-style, top row first; '#' is solid, '_' is empty.
 	/// </summary>
 	public sealed record SilhouetteSpec(string Face, Vector3Int Size, IReadOnlyList<string> Rows)
 	{
@@ -25,12 +25,12 @@ namespace Assembler.Voxelization
 		public static bool IsSolid(char cell) => cell is not ('.' or ' ' or '_');
 
 		/// <summary>
-		/// Renders the occupancy as colour-square emojis (🟩 solid, ⬜ empty), one
-		/// glyph per cell, so the expected shape is legible at a glance in the run
-		/// log — the '#'/'.' rows are hard to read as a shape when sizes get large.
+		/// Renders the occupancy as ASCII characters ('#' solid, '_' empty), one
+		/// character per cell, so the expected shape is legible at a glance in the
+		/// run log.
 		/// </summary>
-		public string ToEmoji() =>
-			string.Join("\n", Rows.Select(row => string.Concat(row.Select(c => IsSolid(c) ? "🟩" : "⬜"))));
+		public string ToAscii() =>
+			string.Join("\n", Rows.Select(row => string.Concat(row.Select(c => IsSolid(c) ? "#" : "_"))));
 	}
 
 	/// <summary>

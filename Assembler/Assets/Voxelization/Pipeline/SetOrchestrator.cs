@@ -445,9 +445,9 @@ namespace Assembler.Voxelization
 		}
 
 		/// <summary>
-		/// The brief's expected silhouettes drawn as colour-square emojis (🟩 solid,
-		/// ⬜ empty), one block per face, so the operator can eyeball the shapes the
-		/// extractor read straight from the run log. Empty when there are none.
+		/// The brief's expected silhouettes drawn as ASCII ('#' solid, '_' empty),
+		/// one block per face, so the operator can eyeball the shapes the extractor
+		/// read straight from the run log. Empty when there are none.
 		/// </summary>
 		private static string RenderSilhouettes(ReferenceBrief brief)
 		{
@@ -455,7 +455,7 @@ namespace Assembler.Voxelization
 			foreach (var silhouette in brief.Silhouettes.Where(s => !s.IsEmpty))
 			{
 				sb.Append($"\n{silhouette.Face} ({silhouette.Size.x}x{silhouette.Size.y}):\n");
-				sb.Append(silhouette.ToEmoji());
+				sb.Append(silhouette.ToAscii());
 			}
 
 			return sb.ToString();
@@ -494,7 +494,7 @@ namespace Assembler.Voxelization
 					continue;
 				}
 
-				sb.Append($"Reference {silhouette.Face} silhouette the {silhouette.Face.ToUpperInvariant()} view must match ('#' solid):\n");
+				sb.Append($"Reference {silhouette.Face} silhouette the {silhouette.Face.ToUpperInvariant()} view must match ('#' solid, '_' empty):\n");
 				foreach (var row in silhouette.Rows)
 				{
 					sb.Append(row).Append('\n');

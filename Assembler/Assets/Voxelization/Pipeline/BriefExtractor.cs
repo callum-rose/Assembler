@@ -115,7 +115,7 @@ namespace Assembler.Voxelization
 			}
 
 			var width = rows.Max(r => r.Length);
-			var slice = rows.Skip(top).Take(bottom - top + 1).Select(r => r.PadRight(width, '.')).ToList();
+			var slice = rows.Skip(top).Take(bottom - top + 1).Select(r => r.PadRight(width, '_')).ToList();
 			var left = slice.Min(r => FirstSolid(r));
 			var right = slice.Max(r => LastSolid(r));
 			var trimmed = slice.Select(r => r.Substring(left, right - left + 1)).ToArray();
@@ -170,7 +170,7 @@ namespace Assembler.Voxelization
 
 			var rows = silhouette.Rows
 				.Select(row => new string(Enumerable.Range(0, row.Length)
-					.Select(i => row[i] == '#' || row[row.Length - 1 - i] == '#' ? '#' : '.')
+					.Select(i => row[i] == '#' || row[row.Length - 1 - i] == '#' ? '#' : '_')
 					.ToArray()))
 				.ToArray();
 

@@ -158,7 +158,7 @@ namespace Assembler.Voxelization
 			"A REFERENCE BRIEF may be provided in the user message. It was transcribed from the reference image by a " +
 			"separate, independent pass and is AUTHORITATIVE — you cannot reinterpret it to fit your design:\n" +
 			"- Lock the palette to the brief's colours exactly.\n" +
-			"- Plan part sizes DIRECTLY from the silhouette rows ('#' = solid, '.' = empty, top row first). Read limb " +
+			"- Plan part sizes DIRECTLY from the silhouette rows ('#' = solid, '_' = empty, top row first). Read limb " +
 			"thickness from its columns: a 1-cell-wide arm in the silhouette is a 1-voxel-thick part, never wider. " +
 			"Preserve its gaps (e.g. between arms and torso) — never fill them with part volume.\n" +
 			"- These are CHECKED DETERMINISTICALLY and the plan is rejected otherwise: the model's overall width must " +
@@ -261,12 +261,12 @@ namespace Assembler.Voxelization
 			"stages are locked to this palette and cannot add colours you missed.\n" +
 			"- Emit ONE `silhouettes` block per face the user asks for, reading each from the image labelled with that " +
 			"face. Do NOT invent a silhouette for a face the user did not request.\n" +
-			"- Silhouette rows use ONLY two characters: '#' (solid) and '.' (empty) — NEVER palette letters or any " +
+			"- Silhouette rows use ONLY two characters: '#' (solid) and '_' (empty) — NEVER palette letters or any " +
 			"other symbol. One character per cell, top row first.\n" +
 			"- COUNT CAREFULLY: each silhouette's width and height must match that view's actual cell counts. Trace " +
 			"each row of the image before writing it. Do not add empty margin rows or columns — the grid hugs the " +
 			"subject's bounding box exactly.\n" +
-			"- Mark gaps between limbs and the body (and between legs) as '.' — never blob separate shapes into one " +
+			"- Mark gaps between limbs and the body (and between legs) as '_' — never blob separate shapes into one " +
 			"solid mass; gaps are signature features and belong in signature_features too.\n" +
 			"- For bilateral subjects the front/back/top rows must be exactly left-right symmetric (prefer an odd " +
 			"width).\n" +
@@ -622,7 +622,7 @@ namespace Assembler.Voxelization
 				if (!primary.IsEmpty)
 				{
 					sb.Append("  ").Append(primary.Face)
-						.Append(" silhouette of the WHOLE model (top row first, '#' solid) — author your part so ")
+						.Append(" silhouette of the WHOLE model (top row first, '#' solid, '_' empty) — author your part so ")
 						.Append("the cells it occupies match it:\n");
 					foreach (var row in primary.Rows)
 					{

@@ -111,7 +111,7 @@ namespace Assembler.Voxelization
 				for (var col = 0; col < colCount; col++)
 				{
 					var solid = total[col, row] > 0 && (float)foreground[col, row] / total[col, row] > cellCoverage;
-					chars[col] = solid ? '#' : '.';
+					chars[col] = solid ? '#' : '_';
 				}
 
 				rowsOut[row] = new string(chars);
