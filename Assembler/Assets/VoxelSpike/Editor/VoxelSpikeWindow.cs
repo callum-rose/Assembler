@@ -26,7 +26,7 @@ namespace VoxelSpike.Editor
         enum PaletteMode { Curated, Variety, Modal }
         enum CuratedPalette { Endesga32, DawnBringer32, DawnBringer16, Pico8 }
         enum OutputMode { Colour, PartLabels, PartBoxes }
-        enum BoxFit { Utilise, Grow }
+        enum BoxFit { Shrinkwrap, Utilise, Grow }
 
         // --- inputs ---
         Texture2D _front;
@@ -55,10 +55,10 @@ namespace VoxelSpike.Editor
         OutputMode _outputMode = OutputMode.Colour;
         Texture2D _frontLabel, _rightLabel, _topLabel;
         int _boxIterations = 2;
-        BoxFit _boxFit = BoxFit.Utilise;
+        BoxFit _boxFit = BoxFit.Shrinkwrap;
         float _fitPercentile = 0.9f;
         string _partBoxesJson =
-            "{\n  \"parts\": [\n    { \"name\": \"example\", \"min\": [0.0, 0.0, 0.0], \"max\": [1.0, 1.0, 1.0] }\n  ]\n}";
+            "{\n  \"parts\": [\n    { \"name\": \"example\", \"anchor\": [0.5, 0.5, 0.5] }\n  ]\n}";
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -137,15 +137,16 @@ namespace VoxelSpike.Editor
             }
             else if (_outputMode == OutputMode.PartBoxes)
             {
-                EditorGUILayout.HelpBox("Paste per-part 3D boxes as JSON in normalized model space: " +
-                    "X 0=left..1=right, Y 0=bottom..1=top, Z 0=front..1=back. Voxels inside exactly one box " +
-                    "seed that part; competitive growth assigns the rest (boundaries settle at constrictions). " +
-                    "Boxes refit to their voxels over the iterations below.", MessageType.None);
-                _boxIterations = EditorGUILayout.IntSlider("Refit iterations", _boxIterations, 0, 10);
+                EditorGUILayout.HelpBox("Per-part JSON in normalized model space (X 0=left..1=right, " +
+                    "Y 0=bottom..1=top, Z 0=front..1=back). Give each part an \"anchor\":[x,y,z] it must " +
+                    "contain (used by Shrinkwrap) and/or a \"min\"/\"max\" box (used by Grow/Utilise). " +
+                    "Shrinkwrap grows/shrinks each cube from its anchor to cover every voxel with minimal " +
+                    "total cube volume.", MessageType.None);
+                _boxIterations = EditorGUILayout.IntSlider("Iterations", _boxIterations, 0, 20);
                 _boxFit = (BoxFit)EditorGUILayout.EnumPopup("Fit mode", _boxFit);
                 using (new EditorGUI.DisabledScope(_boxFit != BoxFit.Utilise))
                     _fitPercentile = EditorGUILayout.Slider("Box coverage (pct)", _fitPercentile, 0.5f, 1f);
-                EditorGUILayout.LabelField("Part boxes (JSON)");
+                EditorGUILayout.LabelField("Parts (JSON)");
                 _partBoxesJson = EditorGUILayout.TextArea(_partBoxesJson, GUILayout.MinHeight(120));
             }
 
@@ -542,11 +543,12 @@ namespace VoxelSpike.Editor
         class PartBox
         {
             public string Name;
-            public Vector3 Min;
+            public Vector3 Anchor;  // a point the cube must always contain
+            public Vector3 Min;     // seed extent (= anchor when only an anchor is given)
             public Vector3 Max;
         }
 
-        [System.Serializable] class PartBoxDto { public string name; public float[] min; public float[] max; }
+        [System.Serializable] class PartBoxDto { public string name; public float[] min; public float[] max; public float[] anchor; }
         [System.Serializable] class PartBoxListDto { public PartBoxDto[] parts; }
 
         static List<PartBox> ParsePartBoxes(string json)
@@ -559,10 +561,32 @@ namespace VoxelSpike.Editor
             var boxes = new List<PartBox>();
             foreach (var p in dto.parts)
             {
-                if (p == null || p.min == null || p.max == null || p.min.Length < 3 || p.max.Length < 3) continue;
-                var min = new Vector3(Mathf.Min(p.min[0], p.max[0]), Mathf.Min(p.min[1], p.max[1]), Mathf.Min(p.min[2], p.max[2]));
-                var max = new Vector3(Mathf.Max(p.min[0], p.max[0]), Mathf.Max(p.min[1], p.max[1]), Mathf.Max(p.min[2], p.max[2]));
-                boxes.Add(new PartBox { Name = string.IsNullOrEmpty(p.name) ? $"part{boxes.Count}" : p.name, Min = min, Max = max });
+                if (p == null) continue;
+                bool hasBox = p.min != null && p.max != null && p.min.Length >= 3 && p.max.Length >= 3;
+                bool hasAnchor = p.anchor != null && p.anchor.Length >= 3;
+                if (!hasBox && !hasAnchor) continue;
+
+                Vector3 anchor = hasAnchor ? new Vector3(p.anchor[0], p.anchor[1], p.anchor[2]) : Vector3.zero;
+                Vector3 min, max;
+                if (hasBox)
+                {
+                    min = new Vector3(Mathf.Min(p.min[0], p.max[0]), Mathf.Min(p.min[1], p.max[1]), Mathf.Min(p.min[2], p.max[2]));
+                    max = new Vector3(Mathf.Max(p.min[0], p.max[0]), Mathf.Max(p.min[1], p.max[1]), Mathf.Max(p.min[2], p.max[2]));
+                    if (!hasAnchor) anchor = (min + max) * 0.5f;
+                }
+                else
+                {
+                    min = anchor;
+                    max = anchor;
+                }
+                min = Vector3.Min(min, anchor); // the cube must contain the anchor
+                max = Vector3.Max(max, anchor);
+
+                boxes.Add(new PartBox
+                {
+                    Name = string.IsNullOrEmpty(p.name) ? $"part{boxes.Count}" : p.name,
+                    Anchor = anchor, Min = min, Max = max
+                });
             }
             return boxes;
         }
@@ -589,7 +613,9 @@ namespace VoxelSpike.Editor
                 cz[v] = (gy[v] + 0.5f) / L;        // gy = world k (Z)
             }
 
-            if (fit == BoxFit.Utilise)
+            if (fit == BoxFit.Shrinkwrap)
+                ShrinkwrapAssign(gx, gy, gz, W, H, L, parts, iterations, partOf);
+            else if (fit == BoxFit.Utilise)
                 UtiliseAssign(cx, cy, cz, parts, iterations, percentile, partOf);
             else
                 GrowAssign(gx, gy, gz, gridToVoxel, W, H, L, parts, iterations, cx, cy, cz, partOf);
@@ -766,6 +792,89 @@ namespace VoxelSpike.Editor
                 }
             }
         }
+
+        // Minimal-volume shrinkwrap. Each cube must contain its anchor and may grow/shrink in every
+        // direction; together the cubes must cover every voxel while minimising total cube volume.
+        // Coordinate descent: assign each voxel to the cube whose AABB expands by the least volume to
+        // include it, then refit every cube to the tight AABB of its anchor plus assigned voxels. The
+        // lowest-total-volume assignment seen across iterations is returned.
+        static void ShrinkwrapAssign(List<int> gx, List<int> gy, List<int> gz,
+            int W, int H, int L, List<PartBox> parts, int iterations, int[] partOf)
+        {
+            int count = partOf.Length;
+            int pn = parts.Count;
+
+            var ax = new int[pn]; var ay = new int[pn]; var az = new int[pn];
+            var xmin = new int[pn]; var xmax = new int[pn];
+            var ymin = new int[pn]; var ymax = new int[pn];
+            var zmin = new int[pn]; var zmax = new int[pn];
+            for (int p = 0; p < pn; p++)
+            {
+                ax[p] = Mathf.Clamp(Mathf.RoundToInt(parts[p].Anchor.x * W), 0, W - 1);
+                ay[p] = Mathf.Clamp(Mathf.RoundToInt(parts[p].Anchor.y * H), 0, H - 1);
+                az[p] = Mathf.Clamp(Mathf.RoundToInt(parts[p].Anchor.z * L), 0, L - 1);
+                // seed extent from any provided box, always containing the anchor
+                int sxmin = Mathf.RoundToInt(parts[p].Min.x * W), sxmax = Mathf.RoundToInt(parts[p].Max.x * W);
+                int symin = Mathf.RoundToInt(parts[p].Min.y * H), symax = Mathf.RoundToInt(parts[p].Max.y * H);
+                int szmin = Mathf.RoundToInt(parts[p].Min.z * L), szmax = Mathf.RoundToInt(parts[p].Max.z * L);
+                xmin[p] = Mathf.Min(sxmin, ax[p]); xmax[p] = Mathf.Max(sxmax, ax[p]);
+                ymin[p] = Mathf.Min(symin, ay[p]); ymax[p] = Mathf.Max(symax, ay[p]);
+                zmin[p] = Mathf.Min(szmin, az[p]); zmax[p] = Mathf.Max(szmax, az[p]);
+            }
+
+            long bestVol = long.MaxValue;
+            var best = new int[count];
+
+            for (int iter = 0; iter <= iterations; iter++)
+            {
+                // assign each voxel to the cube it expands by the least volume
+                for (int v = 0; v < count; v++)
+                {
+                    int vi = gx[v], vj = gz[v], vk = gy[v]; // gx=i(X), gz=j(Y), gy=k(Z)
+                    int bestP = 0;
+                    long bestCost = long.MaxValue;
+                    for (int p = 0; p < pn; p++)
+                    {
+                        long cur = Vol(xmax[p] - xmin[p], ymax[p] - ymin[p], zmax[p] - zmin[p]);
+                        int dxr = Mathf.Max(xmax[p], vi) - Mathf.Min(xmin[p], vi);
+                        int dyr = Mathf.Max(ymax[p], vj) - Mathf.Min(ymin[p], vj);
+                        int dzr = Mathf.Max(zmax[p], vk) - Mathf.Min(zmin[p], vk);
+                        long cost = Vol(dxr, dyr, dzr) - cur;
+                        if (cost < bestCost) { bestCost = cost; bestP = p; }
+                    }
+                    partOf[v] = bestP;
+                }
+
+                // refit every cube to the tight AABB of its anchor + assigned voxels
+                for (int p = 0; p < pn; p++)
+                {
+                    xmin[p] = ax[p]; xmax[p] = ax[p];
+                    ymin[p] = ay[p]; ymax[p] = ay[p];
+                    zmin[p] = az[p]; zmax[p] = az[p];
+                }
+                for (int v = 0; v < count; v++)
+                {
+                    int p = partOf[v];
+                    int vi = gx[v], vj = gz[v], vk = gy[v];
+                    if (vi < xmin[p]) xmin[p] = vi; else if (vi > xmax[p]) xmax[p] = vi;
+                    if (vj < ymin[p]) ymin[p] = vj; else if (vj > ymax[p]) ymax[p] = vj;
+                    if (vk < zmin[p]) zmin[p] = vk; else if (vk > zmax[p]) zmax[p] = vk;
+                }
+
+                long total = 0;
+                for (int p = 0; p < pn; p++)
+                    total += Vol(xmax[p] - xmin[p], ymax[p] - ymin[p], zmax[p] - zmin[p]);
+                if (total < bestVol)
+                {
+                    bestVol = total;
+                    for (int v = 0; v < count; v++) best[v] = partOf[v];
+                }
+            }
+
+            for (int v = 0; v < count; v++) partOf[v] = best[v];
+        }
+
+        static long Vol(int dx, int dy, int dz) => (long)(dx + 1) * (dy + 1) * (dz + 1);
 
         static float NormChebyshev(float x, float y, float z, Vector3 c, Vector3 h) =>
             Mathf.Max(Mathf.Abs(x - c.x) / h.x, Mathf.Max(Mathf.Abs(y - c.y) / h.y, Mathf.Abs(z - c.z) / h.z));
