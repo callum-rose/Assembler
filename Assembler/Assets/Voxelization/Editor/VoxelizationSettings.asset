@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd841a9b37cf64657a5ec72f52363ee1, type: 3}
   m_Name: VoxelizationSettings
   m_EditorClassIdentifier: Assembler.Voxelization.Editor::Assembler.Voxelization.Editor.VoxelizationSettings
-  ManifestModel: claude-sonnet-4-6
-  PlanningModel: claude-sonnet-4-6
-  AuthoringModel: claude-sonnet-4-6
+  ManifestModel: sonnet
+  PlanningModel: sonnet
+  AuthoringModel: sonnet
   StyleGuidance: 'Prefer fewer parts per asset where possible.
 
     Prefer simplicity
