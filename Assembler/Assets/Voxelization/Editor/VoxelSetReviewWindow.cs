@@ -303,14 +303,6 @@ namespace Assembler.Voxelization.Editor
 				}
 			}
 
-			if (_usePlan)
-			{
-				EditorGUILayout.HelpBox(
-					"Running on the Claude plan via the claude CLI — no API key needed. Stage models use the fixed " +
-					"opus/sonnet/haiku aliases below, and the cost panel shows the API-equivalent spend you saved.",
-					MessageType.Info);
-			}
-
 			using (new EditorGUI.DisabledScope(_usePlan))
 			{
 				EditorGUILayout.LabelField("API key (shared with descriptor window)", EditorStyles.boldLabel);
