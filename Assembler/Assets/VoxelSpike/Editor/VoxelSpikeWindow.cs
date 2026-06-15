@@ -109,8 +109,7 @@ namespace VoxelSpike.Editor
                 _paletteMode = (PaletteMode)EditorGUILayout.EnumPopup("Palette selection", _paletteMode);
                 if (_paletteMode == PaletteMode.Curated)
                     _curatedPalette = (CuratedPalette)EditorGUILayout.EnumPopup("Curated palette", _curatedPalette);
-                else
-                    _paletteSize = EditorGUILayout.IntSlider("Palette colours (N)", _paletteSize, 1, 64);
+                _paletteSize = EditorGUILayout.IntSlider("Max colours (N)", _paletteSize, 1, 64);
             }
 
             EditorGUILayout.Space();
@@ -304,6 +303,7 @@ namespace VoxelSpike.Editor
             int paletteUsed = 0;
             if (_quantise && voxelCount > 0)
             {
+                int n = Mathf.Max(1, _paletteSize);
                 Color[] palette;
                 if (_paletteMode == PaletteMode.Curated)
                 {
@@ -316,14 +316,12 @@ namespace VoxelSpike.Editor
                         if (seen[v]) seenCols.Add(cols[v]);
                     if (seenCols.Count == 0) seenCols = cols; // degenerate: nothing seen
 
-                    int n = Mathf.Max(1, _paletteSize);
                     palette = _paletteMode == PaletteMode.Variety
                         ? BuildVarietyPalette(seenCols, n)
                         : BuildModalPalette(seenCols, n);
                 }
-                paletteUsed = palette.Length;
-                for (int v = 0; v < voxelCount; v++)
-                    if (seen[v]) cols[v] = Nearest(palette, cols[v]);
+                // Snap seen voxels to the palette in Lab, then cap the object to N colours.
+                SnapAndLimit(cols, seen, palette, n, out paletteUsed);
             }
 
             // --- Pass 5: voxels no view saw inherit their nearest seen neighbour's (already
@@ -507,18 +505,120 @@ namespace VoxelSpike.Editor
             return dr * dr + dg * dg + db * db;
         }
 
-        static Color Nearest(Color[] palette, Color c)
+        // Snap every seen voxel to its nearest palette colour in CIELAB (perceptual), then cap
+        // the object to maxColours: if more than that many palette entries end up used, keep a
+        // variety-spread subset (farthest-point in Lab, seeded by the most populous used entry)
+        // and remap the rest to their nearest kept colour. usedCount = distinct colours used.
+        static void SnapAndLimit(List<Color> cols, List<bool> seen, Color[] palette, int maxColours, out int usedCount)
         {
-            Color best = c;
-            float bestD = float.MaxValue;
-            for (int i = 0; i < palette.Length; i++)
+            int p = palette.Length;
+            var pLab = new Vector3[p];
+            for (int i = 0; i < p; i++) pLab[i] = RgbToLab(palette[i]);
+
+            int count = cols.Count;
+            var idx = new int[count];
+            var pop = new int[p];
+            for (int v = 0; v < count; v++)
             {
-                float dr = palette[i].r - c.r, dg = palette[i].g - c.g, db = palette[i].b - c.b;
-                float d = dr * dr + dg * dg + db * db;
-                if (d < bestD) { bestD = d; best = palette[i]; }
+                if (!seen[v]) { idx[v] = -1; continue; }
+                int best = NearestLabIndex(pLab, RgbToLab(cols[v]));
+                idx[v] = best;
+                pop[best]++;
+            }
+
+            var used = new List<int>();
+            for (int i = 0; i < p; i++)
+                if (pop[i] > 0) used.Add(i);
+
+            if (used.Count > maxColours)
+            {
+                HashSet<int> keep = SelectByVariety(used, pLab, pop, maxColours);
+                var keptList = keep.ToList();
+                var remap = new int[p];
+                foreach (int u in used)
+                {
+                    if (keep.Contains(u)) { remap[u] = u; continue; }
+                    int bestKept = keptList[0];
+                    float bestD = float.MaxValue;
+                    foreach (int kpt in keptList)
+                    {
+                        float d = (pLab[u] - pLab[kpt]).sqrMagnitude;
+                        if (d < bestD) { bestD = d; bestKept = kpt; }
+                    }
+                    remap[u] = bestKept;
+                }
+                for (int v = 0; v < count; v++)
+                    if (idx[v] >= 0) idx[v] = remap[idx[v]];
+            }
+
+            var finalUsed = new HashSet<int>();
+            for (int v = 0; v < count; v++)
+            {
+                if (idx[v] < 0) continue;
+                cols[v] = palette[idx[v]];
+                finalUsed.Add(idx[v]);
+            }
+            usedCount = finalUsed.Count;
+        }
+
+        // Farthest-point (max-min) selection of k entries from candidates, in Lab, seeded by the
+        // most populous candidate. Keeps chromatically distinct colours when capping the count.
+        static HashSet<int> SelectByVariety(List<int> candidates, Vector3[] lab, int[] pop, int k)
+        {
+            int seed = candidates[0];
+            foreach (int c in candidates)
+                if (pop[c] > pop[seed]) seed = c;
+
+            var chosen = new HashSet<int> { seed };
+            var minD = new Dictionary<int, float>();
+            foreach (int c in candidates) minD[c] = (lab[c] - lab[seed]).sqrMagnitude;
+
+            while (chosen.Count < k)
+            {
+                int far = -1;
+                float farD = -1f;
+                foreach (int c in candidates)
+                    if (!chosen.Contains(c) && minD[c] > farD) { farD = minD[c]; far = c; }
+                if (far < 0 || farD <= 0f) break;
+
+                chosen.Add(far);
+                foreach (int c in candidates)
+                {
+                    float d = (lab[c] - lab[far]).sqrMagnitude;
+                    if (d < minD[c]) minD[c] = d;
+                }
+            }
+            return chosen;
+        }
+
+        static int NearestLabIndex(Vector3[] paletteLab, Vector3 lab)
+        {
+            int best = 0;
+            float bestD = float.MaxValue;
+            for (int i = 0; i < paletteLab.Length; i++)
+            {
+                float d = (paletteLab[i] - lab).sqrMagnitude;
+                if (d < bestD) { bestD = d; best = i; }
             }
             return best;
         }
+
+        // sRGB Color -> CIELAB (D65). Linearises sRGB, converts to XYZ, then to Lab.
+        static Vector3 RgbToLab(Color c)
+        {
+            float r = SrgbToLinear(c.r), g = SrgbToLinear(c.g), b = SrgbToLinear(c.b);
+            float x = (r * 0.4124564f + g * 0.3575761f + b * 0.1804375f) / 0.95047f;
+            float y = r * 0.2126729f + g * 0.7151522f + b * 0.0721750f;
+            float z = (r * 0.0193339f + g * 0.1191920f + b * 0.9503041f) / 1.08883f;
+            float fx = LabF(x), fy = LabF(y), fz = LabF(z);
+            return new Vector3(116f * fy - 16f, 500f * (fx - fy), 200f * (fy - fz));
+        }
+
+        static float SrgbToLinear(float u) =>
+            u <= 0.04045f ? u / 12.92f : Mathf.Pow((u + 0.055f) / 1.055f, 2.4f);
+
+        static float LabF(float t) =>
+            t > 0.008856f ? Mathf.Pow(t, 1f / 3f) : 7.787f * t + 16f / 116f;
 
         static Color[] CuratedColours(CuratedPalette p)
         {
