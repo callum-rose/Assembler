@@ -23,7 +23,8 @@ namespace VoxelSpike.Editor
     public class VoxelSpikeWindow : EditorWindow
     {
         enum ColourMode { VisibleViews, FlatMean }
-        enum PaletteMode { Variety, Modal }
+        enum PaletteMode { Curated, Variety, Modal }
+        enum CuratedPalette { Endesga32, DawnBringer32, DawnBringer16, Pico8 }
 
         // --- inputs ---
         Texture2D _front;
@@ -45,7 +46,8 @@ namespace VoxelSpike.Editor
         // --- palette quantisation: snap voxels to N representative colours ---
         bool _quantise = true;
         int _paletteSize = 16;
-        PaletteMode _paletteMode = PaletteMode.Variety;
+        PaletteMode _paletteMode = PaletteMode.Curated;
+        CuratedPalette _curatedPalette = CuratedPalette.Endesga32;
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -104,8 +106,11 @@ namespace VoxelSpike.Editor
             _quantise = EditorGUILayout.Toggle("Quantise palette", _quantise);
             using (new EditorGUI.DisabledScope(!_quantise))
             {
-                _paletteSize = EditorGUILayout.IntSlider("Palette colours (N)", _paletteSize, 1, 64);
                 _paletteMode = (PaletteMode)EditorGUILayout.EnumPopup("Palette selection", _paletteMode);
+                if (_paletteMode == PaletteMode.Curated)
+                    _curatedPalette = (CuratedPalette)EditorGUILayout.EnumPopup("Curated palette", _curatedPalette);
+                else
+                    _paletteSize = EditorGUILayout.IntSlider("Palette colours (N)", _paletteSize, 1, 64);
             }
 
             EditorGUILayout.Space();
@@ -299,15 +304,23 @@ namespace VoxelSpike.Editor
             int paletteUsed = 0;
             if (_quantise && voxelCount > 0)
             {
-                var seenCols = new List<Color>();
-                for (int v = 0; v < voxelCount; v++)
-                    if (seen[v]) seenCols.Add(cols[v]);
-                if (seenCols.Count == 0) seenCols = cols; // degenerate: nothing seen
+                Color[] palette;
+                if (_paletteMode == PaletteMode.Curated)
+                {
+                    palette = CuratedColours(_curatedPalette);
+                }
+                else
+                {
+                    var seenCols = new List<Color>();
+                    for (int v = 0; v < voxelCount; v++)
+                        if (seen[v]) seenCols.Add(cols[v]);
+                    if (seenCols.Count == 0) seenCols = cols; // degenerate: nothing seen
 
-                int n = Mathf.Max(1, _paletteSize);
-                Color[] palette = _paletteMode == PaletteMode.Variety
-                    ? BuildVarietyPalette(seenCols, n)
-                    : BuildModalPalette(seenCols, n);
+                    int n = Mathf.Max(1, _paletteSize);
+                    palette = _paletteMode == PaletteMode.Variety
+                        ? BuildVarietyPalette(seenCols, n)
+                        : BuildModalPalette(seenCols, n);
+                }
                 paletteUsed = palette.Length;
                 for (int v = 0; v < voxelCount; v++)
                     if (seen[v]) cols[v] = Nearest(palette, cols[v]);
@@ -506,6 +519,60 @@ namespace VoxelSpike.Editor
             }
             return best;
         }
+
+        static Color[] CuratedColours(CuratedPalette p)
+        {
+            string[] hex = p switch
+            {
+                CuratedPalette.Pico8 => Pico8,
+                CuratedPalette.DawnBringer16 => DawnBringer16,
+                CuratedPalette.DawnBringer32 => DawnBringer32,
+                _ => Endesga32,
+            };
+            var c = new Color[hex.Length];
+            for (int i = 0; i < hex.Length; i++) c[i] = Hex(hex[i]);
+            return c;
+        }
+
+        static Color Hex(string s)
+        {
+            int r = int.Parse(s.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            int g = int.Parse(s.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            int b = int.Parse(s.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            return new Color(r / 255f, g / 255f, b / 255f, 1f);
+        }
+
+        // Endesga 32 (EDG32) by Endesga — versatile modern game-art palette.
+        static readonly string[] Endesga32 =
+        {
+            "be4a2f", "d77643", "ead4aa", "e4a672", "b86f50", "733e39", "3e2731", "a22633",
+            "e43b44", "f77622", "feae34", "fee761", "63c74d", "3e8948", "265c42", "193c3e",
+            "124e89", "0099db", "2ce8f5", "ffffff", "c0cbdc", "8b9bb4", "5a6988", "3a4466",
+            "262b44", "181425", "ff0044", "68386c", "b55088", "f6757a", "e8b796", "c28569",
+        };
+
+        // DawnBringer 32 (DB32) — classic balanced 32-colour palette.
+        static readonly string[] DawnBringer32 =
+        {
+            "000000", "222034", "45283c", "663931", "8f563b", "df7126", "d9a066", "eec39a",
+            "fbf236", "99e550", "6abe30", "37946e", "4b692f", "524b24", "323c39", "3f3f74",
+            "306082", "5b6ee1", "639bff", "5fcde4", "cbdbfc", "ffffff", "9badb7", "847e87",
+            "696a6a", "595652", "76428a", "ac3232", "d95763", "d77bba", "8f974a", "8a6f30",
+        };
+
+        // DawnBringer 16 (DB16) — the original tight 16-colour palette.
+        static readonly string[] DawnBringer16 =
+        {
+            "140c1c", "442434", "30346d", "4e4a4e", "854c30", "346524", "d04648", "757161",
+            "597dce", "d27d2c", "8595a1", "6daa2c", "d2aa99", "6dc2ca", "dad45e", "deeed6",
+        };
+
+        // PICO-8 fantasy-console palette (16 colours).
+        static readonly string[] Pico8 =
+        {
+            "000000", "1d2b53", "7e2553", "008751", "ab5236", "5f574f", "c2c3c7", "fff1e8",
+            "ff004d", "ffa300", "ffec27", "00e436", "29adff", "83769c", "ff77a8", "ffccaa",
+        };
 
         static string ResolvePath(string path)
         {
