@@ -26,6 +26,7 @@ namespace VoxelSpike.Editor
         enum PaletteMode { Curated, Variety, Modal }
         enum CuratedPalette { Endesga32, DawnBringer32, DawnBringer16, Pico8 }
         enum OutputMode { Colour, PartLabels, PartBoxes }
+        enum BoxFit { Utilise, Grow }
 
         // --- inputs ---
         Texture2D _front;
@@ -54,6 +55,8 @@ namespace VoxelSpike.Editor
         OutputMode _outputMode = OutputMode.Colour;
         Texture2D _frontLabel, _rightLabel, _topLabel;
         int _boxIterations = 2;
+        BoxFit _boxFit = BoxFit.Utilise;
+        float _fitPercentile = 0.9f;
         string _partBoxesJson =
             "{\n  \"parts\": [\n    { \"name\": \"example\", \"min\": [0.0, 0.0, 0.0], \"max\": [1.0, 1.0, 1.0] }\n  ]\n}";
 
@@ -139,6 +142,9 @@ namespace VoxelSpike.Editor
                     "seed that part; competitive growth assigns the rest (boundaries settle at constrictions). " +
                     "Boxes refit to their voxels over the iterations below.", MessageType.None);
                 _boxIterations = EditorGUILayout.IntSlider("Refit iterations", _boxIterations, 0, 10);
+                _boxFit = (BoxFit)EditorGUILayout.EnumPopup("Fit mode", _boxFit);
+                using (new EditorGUI.DisabledScope(_boxFit != BoxFit.Utilise))
+                    _fitPercentile = EditorGUILayout.Slider("Box coverage (pct)", _fitPercentile, 0.5f, 1f);
                 EditorGUILayout.LabelField("Part boxes (JSON)");
                 _partBoxesJson = EditorGUILayout.TextArea(_partBoxesJson, GUILayout.MinHeight(120));
             }
@@ -396,7 +402,7 @@ namespace VoxelSpike.Editor
             // --- Pass 3b: box-seeded competitive part segmentation ---
             if (boxMode)
             {
-                Color[] partColours = SegmentByBoxes(gx, gy, gz, gridToVoxel, W, H, L, partBoxes, _boxIterations, out int[] partOf);
+                Color[] partColours = SegmentByBoxes(gx, gy, gz, gridToVoxel, W, H, L, partBoxes, _boxIterations, _boxFit, _fitPercentile, out int[] partOf);
                 for (int v = 0; v < voxelCount; v++)
                     cols[v] = partOf[v] >= 0 ? partColours[partOf[v]] : Color.gray;
 
@@ -561,12 +567,13 @@ namespace VoxelSpike.Editor
             return boxes;
         }
 
-        // Assign each solid voxel to a part. Voxels inside exactly one box seed that part; a competitive
-        // multi-source BFS over the solid grid grows the seeds (geodesic nearest core wins, so boundaries
-        // settle at constrictions). Boxes refit to their assigned voxels each iteration. Returns a distinct
-        // display colour per part; partOf holds the per-voxel part index.
+        // Assign each solid voxel to a part from the box priors, then return a distinct display colour
+        // per part (partOf holds the per-voxel part index). Two strategies:
+        //   Grow    - competitive geodesic BFS from box cores; boxes refit to the full AABB (greedy).
+        //   Utilise - each voxel joins the box it fits best relative to that box's size, and boxes refit
+        //             to hug their dense bulk, so a part can't sprawl into a neighbour it would barely fill.
         static Color[] SegmentByBoxes(List<int> gx, List<int> gy, List<int> gz, int[] gridToVoxel,
-            int W, int H, int L, List<PartBox> parts, int iterations, out int[] partOf)
+            int W, int H, int L, List<PartBox> parts, int iterations, BoxFit fit, float percentile, out int[] partOf)
         {
             int count = gx.Count;
             int pn = parts.Count;
@@ -581,6 +588,93 @@ namespace VoxelSpike.Editor
                 cy[v] = (gz[v] + 0.5f) / H;        // gz = world j (Y)
                 cz[v] = (gy[v] + 0.5f) / L;        // gy = world k (Z)
             }
+
+            if (fit == BoxFit.Utilise)
+                UtiliseAssign(cx, cy, cz, parts, iterations, percentile, partOf);
+            else
+                GrowAssign(gx, gy, gz, gridToVoxel, W, H, L, parts, iterations, cx, cy, cz, partOf);
+
+            var colours = new Color[pn];
+            for (int p = 0; p < pn; p++)
+                colours[p] = Color.HSVToRGB(pn <= 1 ? 0f : (float)p / pn, 0.7f, 0.95f);
+            return colours;
+        }
+
+        // Volume-utilisation fit: a voxel joins the box with the smallest box-normalized (Chebyshev)
+        // distance to centre, i.e. the box it sits most snugly inside relative to that box's size. So a
+        // belly voxel near the top edge of the short leg box loses to the body box it sits well within.
+        // Boxes then refit to the percentile spread of their voxels (hug the bulk, drop sprawl outliers),
+        // which removes the AABB ballooning that lets a winning box keep grabbing its neighbour.
+        static void UtiliseAssign(float[] cx, float[] cy, float[] cz, List<PartBox> parts,
+            int iterations, float percentile, int[] partOf)
+        {
+            int count = partOf.Length;
+            int pn = parts.Count;
+            const float floor = 0.03f; // min normalized half-extent (~1 voxel) so boxes never collapse
+
+            var cen = new Vector3[pn];
+            var hlf = new Vector3[pn];
+            for (int p = 0; p < pn; p++)
+            {
+                cen[p] = (parts[p].Min + parts[p].Max) * 0.5f;
+                Vector3 h = (parts[p].Max - parts[p].Min) * 0.5f;
+                hlf[p] = new Vector3(Mathf.Max(floor, h.x), Mathf.Max(floor, h.y), Mathf.Max(floor, h.z));
+            }
+
+            for (int iter = 0; iter <= iterations; iter++)
+            {
+                for (int v = 0; v < count; v++)
+                {
+                    int best = 0;
+                    float bestS = float.MaxValue;
+                    for (int p = 0; p < pn; p++)
+                    {
+                        float s = NormChebyshev(cx[v], cy[v], cz[v], cen[p], hlf[p]);
+                        if (s < bestS) { bestS = s; best = p; }
+                    }
+                    partOf[v] = best;
+                }
+
+                if (iter >= iterations) break;
+
+                var cnt = new int[pn];
+                var sx = new float[pn];
+                var sy = new float[pn];
+                var sz = new float[pn];
+                for (int v = 0; v < count; v++)
+                {
+                    int p = partOf[v];
+                    cnt[p]++; sx[p] += cx[v]; sy[p] += cy[v]; sz[p] += cz[v];
+                }
+                for (int p = 0; p < pn; p++)
+                    if (cnt[p] > 0) cen[p] = new Vector3(sx[p] / cnt[p], sy[p] / cnt[p], sz[p] / cnt[p]);
+
+                var dx = new List<float>[pn];
+                var dy = new List<float>[pn];
+                var dz = new List<float>[pn];
+                for (int p = 0; p < pn; p++) { dx[p] = new List<float>(); dy[p] = new List<float>(); dz[p] = new List<float>(); }
+                for (int v = 0; v < count; v++)
+                {
+                    int p = partOf[v];
+                    dx[p].Add(Mathf.Abs(cx[v] - cen[p].x));
+                    dy[p].Add(Mathf.Abs(cy[v] - cen[p].y));
+                    dz[p].Add(Mathf.Abs(cz[v] - cen[p].z));
+                }
+                for (int p = 0; p < pn; p++)
+                    hlf[p] = new Vector3(
+                        Mathf.Max(floor, Percentile(dx[p], percentile)),
+                        Mathf.Max(floor, Percentile(dy[p], percentile)),
+                        Mathf.Max(floor, Percentile(dz[p], percentile)));
+            }
+        }
+
+        // Competitive geodesic growth from box cores (the original strategy; greedy AABB refit).
+        static void GrowAssign(List<int> gx, List<int> gy, List<int> gz, int[] gridToVoxel,
+            int W, int H, int L, List<PartBox> parts, int iterations,
+            float[] cx, float[] cy, float[] cz, int[] partOf)
+        {
+            int count = partOf.Length;
+            int pn = parts.Count;
 
             var min = new Vector3[pn];
             var max = new Vector3[pn];
@@ -671,11 +765,17 @@ namespace VoxelSpike.Editor
                         if (any[p]) { min[p] = nmin[p]; max[p] = nmax[p]; }
                 }
             }
+        }
 
-            var colours = new Color[pn];
-            for (int p = 0; p < pn; p++)
-                colours[p] = Color.HSVToRGB(pn <= 1 ? 0f : (float)p / pn, 0.7f, 0.95f);
-            return colours;
+        static float NormChebyshev(float x, float y, float z, Vector3 c, Vector3 h) =>
+            Mathf.Max(Mathf.Abs(x - c.x) / h.x, Mathf.Max(Mathf.Abs(y - c.y) / h.y, Mathf.Abs(z - c.z) / h.z));
+
+        static float Percentile(List<float> values, float q)
+        {
+            if (values.Count == 0) return 0f;
+            values.Sort();
+            int idx = Mathf.Clamp(Mathf.RoundToInt(q * (values.Count - 1)), 0, values.Count - 1);
+            return values[idx];
         }
 
         static bool Inside(float x, float y, float z, Vector3 min, Vector3 max) =>
