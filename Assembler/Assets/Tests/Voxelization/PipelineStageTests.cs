@@ -243,7 +243,7 @@ reference_brief:
 				.GetAwaiter().GetResult();
 
 			// Each row is unioned with its own reflection.
-			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "#.#", "#.#" }));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "#_#", "#_#" }));
 			Assert.That(gateway.Calls.Single().Stage, Is.EqualTo(BriefExtractor.Stage));
 		}
 
@@ -274,7 +274,7 @@ reference_brief:
 				.ExtractAsync(manifest, manifest.Assets[0], Images(manifest.Assets[0]), CancellationToken.None)
 				.GetAwaiter().GetResult();
 
-			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "###", "#.#" }));
+			Assert.That(brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "###", "#_#" }));
 			Assert.That(brief.PrimarySilhouette.Size, Is.EqualTo(new Vector3Int(3, 2, 0)));
 		}
 
@@ -439,14 +439,14 @@ reference_brief:
 			var brief = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", ".#" }) },
+				Silhouettes = new[] { new SilhouetteSpec("front", new Vector3Int(2, 2, 0), new[] { "##", "_#" }) },
 			};
 
 			var prompt = VoxelizationPrompts.PartUser(model, brief, model.Parts[0], planned, string.Empty);
 
 			Assert.That(prompt, Does.Contain("occupies world cells: x -1..0, y 0..1, z 0..0"));
 			Assert.That(prompt, Does.Contain("front silhouette of the WHOLE model"));
-			Assert.That(prompt, Does.Contain(".#"));
+			Assert.That(prompt, Does.Contain("_#"));
 		}
 
 		[Test]

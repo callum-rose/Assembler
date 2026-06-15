@@ -351,7 +351,7 @@ namespace Assembler.Voxelization
 			{
 				for (var x = 0; x < width; x++)
 				{
-					sb.Append(mask[x, y] ? '#' : '.');
+					sb.Append(mask[x, y] ? '#' : '_');
 				}
 
 				if (y > 0)

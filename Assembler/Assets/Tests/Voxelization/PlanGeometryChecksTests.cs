@@ -223,7 +223,7 @@ namespace Tests.Voxelization
 			var left = new ReferenceBrief
 			{
 				Source = "ref.png",
-				Silhouettes = new[] { new SilhouetteSpec("left", new Vector3Int(2, 2, 0), new[] { ".#", "##" }) },
+				Silhouettes = new[] { new SilhouetteSpec("left", new Vector3Int(2, 2, 0), new[] { "_#", "##" }) },
 			};
 
 			Assert.That(PlanGeometryChecks.SilhouetteFeasibilityError(model, left, 0.9f), Is.Null);

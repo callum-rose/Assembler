@@ -34,7 +34,7 @@ namespace Assembler.Voxelization.Editor
 		private const float MinSidebarWidth = 240f;
 		private const float SplitterWidth = 6f;
 
-		// The log/sidebar pane width is operator-draggable (the silhouette emoji
+		// The log/sidebar pane width is operator-draggable (the silhouette ASCII
 		// grids wrap when it is too narrow), persisted so it survives restarts.
 		private float _sidebarWidth = DefaultSidebarWidth;
 		private bool _draggingSidebar;
@@ -219,7 +219,7 @@ namespace Assembler.Voxelization.Editor
 
 		/// <summary>
 		/// A draggable handle between the main content and the log sidebar. Dragging
-		/// it left widens the sidebar so a silhouette emoji grid that would otherwise
+		/// it left widens the sidebar so a silhouette ASCII grid that would otherwise
 		/// wrap fits on one line; the chosen width is clamped to the window and
 		/// persisted. Double-click resets it to the default.
 		/// </summary>
