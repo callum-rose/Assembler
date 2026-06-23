@@ -5,14 +5,33 @@ A Unity 6 framework for defining and running games **declaratively from YAML**. 
 ```yaml
 Game:
   Title: Simple Pong Game
-World:
-  Dimensionality: 2
+Variables:                       # runtime-mutable named values: read with !var, written by setter behaviours
+  ball velocity: !vec { X: 3, Y: 3 }
+  ball radius:   0.2
+  paddle spin:   1.5
 Entities:
   ball:
+    Tags: [ ball ]
     Behaviours:
-      circle gizmo: { Properties: { Radius: !var ball radius, Colour: !colour white } }
-      velocity:    { Properties: { Velocity: !var ball velocity } }
-      # ...colliders, triggers, score listeners
+      sphere gizmo: { Properties: { Radius: !var ball radius, Colour: !colour white } }
+      velocity:     { Properties: { Velocity: !var ball velocity } }
+  left paddle:
+    Behaviours:
+      hit trigger:               # a trigger fires; its Listeners name the behaviour that runs in response
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ ball ] }
+        Listeners:
+          - { EntityId: left paddle, BehaviourId: bounce ball }
+      bounce ball:               # the listener: writes a new ball velocity computed by an expression
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ball velocity
+          Value: !expr           # reflect horizontally, add spin, clamp the vertical speed
+            Do: 'new Vector3(-arg0.x * 1.05f, Clamp(arg0.y + arg1, -8f, 8f), 0f)'
+            ArgumentTypes: [ vector, float ]
+            RegisterTypes:  [ UnityEngine.Vector3 ]
+            With: [ !var ball velocity, !var paddle spin ]
+      # ...colliders, walls, score listeners
 ```
 
 A descriptor declares metadata, world/physics settings, assets, constants, variables, templates, and **entities** (each a bag of behaviours). Behaviours talk to each other through a trigger/listener pattern. See [`Assembler/Assets/ExampleGameDescriptors/`](Assembler/Assets/ExampleGameDescriptors/) for ~40 working games (Pong, Snake, Asteroids, Tetris, Pacman, Flappy Bird, 3D demos, UI showcases…).
