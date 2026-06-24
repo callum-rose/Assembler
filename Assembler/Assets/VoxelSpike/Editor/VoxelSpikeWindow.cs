@@ -59,6 +59,7 @@ namespace VoxelSpike.Editor
         bool _sideGuidesOnly;          // only draw side-view (depth) feature guides, not front-view (width)
         bool _depthArcs = true;        // transfer side->top depth via quarter arcs (else miter L-paths)
         bool _landingTicks = true;     // mark where each projector lands on the top view
+        Color _guideColor = new Color(168f / 255f, 178f / 255f, 196f / 255f, 1f); // datum / projector lines
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -136,6 +137,7 @@ namespace VoxelSpike.Editor
             _sideGuidesOnly = EditorGUILayout.Toggle("Side-view guides only", _sideGuidesOnly);
             _depthArcs = EditorGUILayout.Toggle("Depth via arcs", _depthArcs);
             _landingTicks = EditorGUILayout.Toggle("Landing ticks", _landingTicks);
+            _guideColor = EditorGUILayout.ColorField("Guide colour", _guideColor);
 
             EditorGUILayout.Space();
             _topGuessPath = EditorGUILayout.TextField("Top guess (.png)", _topGuessPath);
@@ -215,7 +217,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks, _guideColor);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -430,7 +432,6 @@ namespace VoxelSpike.Editor
 
         static readonly Color32 Neutral = new Color32(225, 228, 232, 255); // flat background
         static readonly Color32 Unknown = new Color32(188, 192, 198, 255); // solid but uncertain colour → AI fills
-        static readonly Color32 Guide = new Color32(168, 178, 196, 255);   // datum / projection lines
         static readonly Color32 Miter = new Color32(206, 120, 80, 255);    // 45° reflection diagonal
 
         // Integer upscale so the larger XZ side lands near 256 px (crisp nearest-neighbour pixels).
@@ -481,7 +482,7 @@ namespace VoxelSpike.Editor
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
         static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides,
-            bool sideGuidesOnly, bool depthArcs, bool landingTicks)
+            bool sideGuidesOnly, bool depthArcs, bool landingTicks, Color32 guideCol)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -506,8 +507,8 @@ namespace VoxelSpike.Editor
             // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
             int cornerX = m + Wp, cornerY = m + Hp;
             int thick = Mathf.Max(1, s / 6); // halved vs the resolution bump → finer datum/miter lines
-            DrawVLine(img, cw, ch, cornerX, m, m + Hp + g + Lp, Guide, thick);
-            DrawHLine(img, cw, ch, cornerY, m, m + Wp + g + Lp, Guide, thick);
+            DrawVLine(img, cw, ch, cornerX, m, m + Hp + g + Lp, guideCol, thick);
+            DrawHLine(img, cw, ch, cornerY, m, m + Wp + g + Lp, guideCol, thick);
             DrawDiag(img, cw, ch, cornerX, cornerY, g + Lp, Miter, thick);
 
             int tick = Mathf.Max(3, s / 2);
@@ -518,7 +519,7 @@ namespace VoxelSpike.Editor
             foreach (int idx in FeatureLandmarks(front, featureGuides))
             {
                 int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
-                DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, Guide, 1);
+                DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, guideCol, 1);
                 if (landingTicks) DrawTick(img, cw, ch, m + wx, m + Hp + g, tick, Miter);
             }
 
@@ -531,14 +532,14 @@ namespace VoxelSpike.Editor
                 int landY = m + Hp + g + dz; // this depth's row in the top view
                 if (depthArcs)
                 {
-                    DrawVLine(img, cw, ch, featX, m, cornerY, Guide, 1);       // mark the feature in the side view
-                    DrawArc(img, cw, ch, cornerX, cornerY, g + dz, Guide, 1);  // swing the depth up to the datum
-                    DrawHLine(img, cw, ch, landY, m, cornerX, Guide, 1);       // into the top view
+                    DrawVLine(img, cw, ch, featX, m, cornerY, guideCol, 1);       // mark the feature in the side view
+                    DrawArc(img, cw, ch, cornerX, cornerY, g + dz, guideCol, 1);  // swing the depth up to the datum
+                    DrawHLine(img, cw, ch, landY, m, cornerX, guideCol, 1);       // into the top view
                 }
                 else
                 {
-                    DrawVLine(img, cw, ch, featX, m, landY, Guide, 1);         // side feature up to the miter
-                    DrawHLine(img, cw, ch, landY, m, featX, Guide, 1);         // miter across into the top
+                    DrawVLine(img, cw, ch, featX, m, landY, guideCol, 1);         // side feature up to the miter
+                    DrawHLine(img, cw, ch, landY, m, featX, guideCol, 1);         // miter across into the top
                 }
                 if (landingTicks) DrawTick(img, cw, ch, cornerX, landY, tick, Miter);
             }
