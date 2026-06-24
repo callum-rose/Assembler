@@ -296,6 +296,7 @@ namespace VoxelSpike.Editor
             public List<int> gx, gy, gz; // Goxel coords: (X=i, Y=k depth, Z=j height)
             public List<Color> cols;
             public List<int> seenCount; // number of views that sampled this voxel's colour (0 = nearest-fill)
+            public List<bool> edgeSeen; // a sampling view saw this voxel at its silhouette edge (next to empty)
         }
 
         // Supersampled silhouette intersection + occlusion-correct colour back-projection. When `top`
@@ -362,6 +363,7 @@ namespace VoxelSpike.Editor
             var cols = new List<Color>();
             var seen = new List<bool>();
             var seenN = new List<int>();    // distinct views that coloured each voxel (for top-render certainty)
+            var edgeSeen = new List<bool>(); // sampled at a view's silhouette edge (next to empty space)
             int[] gridToVoxel = Filled(W * H * L, -1);
 
             for (int j = 0; j < H; j++)
@@ -385,9 +387,10 @@ namespace VoxelSpike.Editor
 
                 Color sum = Color.clear;
                 int n = 0;
-                if (seeFront || seeBack) { sum += front.SampleColour(x01, y01); n++; }
-                if (seeRight || seeLeft) { sum += right.SampleColour(z01, y01); n++; }
-                if (seeTop || seeBottom) { sum += top.SampleColour(x01, z01); n++; }
+                bool edge = false; // sampled where the seeing view's silhouette borders empty space
+                if (seeFront || seeBack) { sum += front.SampleColour(x01, y01); n++; edge |= front.OnEdge(x01, y01, 1f / W, 1f / H); }
+                if (seeRight || seeLeft) { sum += right.SampleColour(z01, y01); n++; edge |= right.OnEdge(z01, y01, 1f / L, 1f / H); }
+                if (seeTop || seeBottom) { sum += top.SampleColour(x01, z01); n++; edge |= top.OnEdge(x01, z01, 1f / W, 1f / L); }
 
                 bool isSeen = n > 0;
                 gridToVoxel[cell] = cols.Count;
@@ -395,6 +398,7 @@ namespace VoxelSpike.Editor
                 cols.Add(isSeen ? sum * (1f / n) : Color.clear); // unseen -> filled in pass 5
                 seen.Add(isSeen);
                 seenN.Add(n);
+                edgeSeen.Add(edge);
             }
 
             int voxelCount = cols.Count;
@@ -428,7 +432,7 @@ namespace VoxelSpike.Editor
             return new Hull
             {
                 W = W, H = H, L = L, solid = solid, gridToVoxel = gridToVoxel,
-                gx = gx, gy = gy, gz = gz, cols = cols, seenCount = seenN
+                gx = gx, gy = gy, gz = gz, cols = cols, seenCount = seenN, edgeSeen = edgeSeen
             };
         }
 
@@ -455,9 +459,9 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it AND it's a vertical-surface voxel
-                    // (borders empty space horizontally) — so it survives the not-yet-done top carve.
-                    bool certain = h.seenCount[vox] == 1 && HorizEdge(h, i, j, k);
+                    // Certain only when exactly one view saw it AND that view saw it at its silhouette
+                    // edge (next to empty space) — so the voxel is real, not over-fill the top carve removes.
+                    bool certain = h.seenCount[vox] == 1 && h.edgeSeen[vox];
                     col[k * W + i] = certain ? h.cols[vox] : (Color)Unknown;
                     occ[k * W + i] = true;
                     break;
@@ -567,16 +571,6 @@ namespace VoxelSpike.Editor
             return t;
         }
 
-        // True when voxel (i, j, k) borders empty space in the horizontal plane (±X or ±Z) — i.e. it's
-        // on the object's vertical surface, so its (X, Z) column is real and won't vanish in the top
-        // carve. Out-of-bounds counts as empty.
-        static bool HorizEdge(Hull h, int i, int j, int k)
-        {
-            int W = h.W, H = h.H, L = h.L;
-            bool Solid(int x, int z) => x >= 0 && x < W && z >= 0 && z < L && h.solid[x + W * (j + H * z)];
-            return !Solid(i - 1, k) || !Solid(i + 1, k) || !Solid(i, k - 1) || !Solid(i, k + 1);
-        }
-
         // Raw top-down render (no margin) at `s` pixels per voxel: topmost voxel colour, front (z=0) at
         // the bottom row, on the flat background.
         static Texture2D RenderTopRaw(Hull h, int s, bool colourTop)
@@ -594,9 +588,9 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it AND it's a vertical-surface voxel
-                    // (borders empty space horizontally) — so it survives the not-yet-done top carve.
-                    bool certain = colourTop && h.seenCount[vox] == 1 && HorizEdge(h, i, j, k);
+                    // Certain only when exactly one view saw it AND that view saw it at its silhouette
+                    // edge (next to empty space) — so the voxel is real, not over-fill the top carve removes.
+                    bool certain = colourTop && h.seenCount[vox] == 1 && h.edgeSeen[vox];
                     c = certain ? h.cols[vox] : (Color)Unknown;
                     occ = true;
                     break;
@@ -1306,6 +1300,16 @@ namespace VoxelSpike.Editor
                 int y = Mathf.Clamp(Mathf.RoundToInt(v * (H - 1)), 0, H - 1);
                 return _fg[y * W + x];
             }
+
+            // True when (u, v) is foreground but a neighbour one step (du, dv) away is empty — i.e. this
+            // sample sits on the silhouette's edge. Outside [0, 1] (beyond the cropped silhouette) is empty.
+            public bool OnEdge(float u, float v, float du, float dv)
+            {
+                if (!Foreground(u, v)) return false;
+                return Empty(u - du, v) || Empty(u + du, v) || Empty(u, v - dv) || Empty(u, v + dv);
+            }
+
+            bool Empty(float u, float v) => u < 0f || u > 1f || v < 0f || v > 1f || !Foreground(u, v);
 
             public Color SampleColour(float u, float v)
             {
