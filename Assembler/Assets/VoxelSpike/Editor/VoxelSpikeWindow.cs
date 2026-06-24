@@ -61,6 +61,7 @@ namespace VoxelSpike.Editor
 
         // --- output paths ---
         string _topGuessPath = "Assets/VoxelSpike/top_guess.png";
+        string _hullPath = "Assets/VoxelSpike/hull.txt";   // stage-1 carved hull, as-is (high res)
         string _outputPath = "Assets/VoxelSpike/output.txt";
 
         // --- last-run state / preview ---
@@ -124,6 +125,7 @@ namespace VoxelSpike.Editor
 
             EditorGUILayout.Space();
             _topGuessPath = EditorGUILayout.TextField("Top guess (.png)", _topGuessPath);
+            _hullPath = EditorGUILayout.TextField("Hull (.txt)", _hullPath);
             _outputPath = EditorGUILayout.TextField("Output (.txt)", _outputPath);
 
             EditorGUILayout.Space();
@@ -193,9 +195,13 @@ namespace VoxelSpike.Editor
             Hull h = Carve(_carveHeight, fr[0], fr[1], null);
 
             Texture2D top = RenderTop(h, TopScale(h.W, h.L));
-            string path = ResolvePath(_topGuessPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllBytes(path, top.EncodeToPNG());
+            string topPath = ResolvePath(_topGuessPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(topPath));
+            File.WriteAllBytes(topPath, top.EncodeToPNG());
+
+            string hullPath = ResolvePath(_hullPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(hullPath));
+            File.WriteAllText(hullPath, BuildGoxel(h.gx, h.gy, h.gz, h.cols));
             AssetDatabase.Refresh();
 
             _topGuessPreview = top;
@@ -203,7 +209,8 @@ namespace VoxelSpike.Editor
             _rightMask = fr[1].BuildMaskPreview();
             _topMask = null;
             _status = $"Stage 1: carved {h.cols.Count} F+R voxels at {h.W} x {h.H} x {h.L}.\n" +
-                      $"Top guess -> {path}\nRefine it with the AI, load it as 'AI top', then run stage 2.";
+                      $"Hull -> {hullPath}\nTop guess -> {topPath}\n" +
+                      $"Refine the top with the AI, load it as 'AI top', then run stage 2.";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
