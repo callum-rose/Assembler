@@ -235,22 +235,22 @@ Templates:
         Properties:
           VariableId: !var health
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'health - 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var health
+              health: !var health
 
       # When this NPC's own health hits zero: tally the kill and self-destruct.
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0'
+            Do: 'health <= 0'
             ArgumentTypes: [ int ]
             ReturnType: bool
             With:
-              - !var health
+              health: !var health
         Listeners:
           - EntityId: scoreboard
             BehaviourId: add kill
@@ -353,9 +353,9 @@ Entities:
           Velocity: !expr
             Do: facing velocity
             With:
-              - !output axis
-              - !entity { Id: player, Property: Rotation }
-              - !var move speed
+              input: !output axis
+              euler: !entity { Id: player, Property: Rotation }
+              speed: !var move speed
 
       # --- Look: lock the cursor so raw mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
       # Locks (and hides) the OS pointer on start so the `look` value action (bound to <Mouse>/delta)
@@ -373,12 +373,12 @@ Entities:
         Type: rotate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(0f, arg0.x * arg1, 0f)'
+            Do: 'new UnityEngine.Vector3(0f, axis.x * sensitivity, 0f)'
             ArgumentTypes: [ vector, float ]
             ReturnType: vector
             With:
-              - !output axis
-              - !var mouse sensitivity
+              axis: !output axis
+              sensitivity: !var mouse sensitivity
       turn left key:
         Type: input action
         Properties: { Action: turn-left }
@@ -412,14 +412,14 @@ Entities:
           Position: !expr
             Do: muzzle position
             With:
-              - !entity { Id: player, Property: Position }
-              - !entity { Id: player, Property: Rotation }
+              pos: !entity { Id: player, Property: Position }
+              euler: !entity { Id: player, Property: Rotation }
           Parameters:
             initial_velocity: !expr
               Do: forward velocity
               With:
-                - !entity { Id: player, Property: Rotation }
-                - !var bullet speed
+                euler: !entity { Id: player, Property: Rotation }
+                speed: !var bullet speed
 
       quit action:
         Type: input action
@@ -470,31 +470,31 @@ Entities:
         Properties:
           VariableId: !var kills
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'kills + 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var kills
+              kills: !var kills
       dec alive:
         Type: int variable setter
         Properties:
           VariableId: !var enemies in maze
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'count - 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var enemies in maze
+              count: !var enemies in maze
       inc alive:
         Type: int variable setter
         Properties:
           VariableId: !var enemies in maze
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'count + 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var enemies in maze
+              count: !var enemies in maze
 
   # --- Wave 1: 3 NPCs from the south-east corner, starting at t = 1s. ---
   wave 1:
@@ -519,10 +519,10 @@ Entities:
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner se
+              corner: !var corner se
           Parameters:
             initial_health: 2
 
@@ -549,10 +549,10 @@ Entities:
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner ne
+              corner: !var corner ne
           Parameters:
             initial_health: 3
 
@@ -579,10 +579,10 @@ Entities:
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner nw
+              corner: !var corner nw
           Parameters:
             initial_health: 3
 
@@ -599,12 +599,12 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'kills >= target'
             ArgumentTypes: [ int, int ]
             ReturnType: bool
             With:
-              - !var kills
-              - !var total to kill
+              kills: !var kills
+              target: !var total to kill
         Listeners:
           - !gameover
 

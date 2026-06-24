@@ -90,10 +90,10 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'score + one'
             With:
-              - !var score
-              - !var one
+              score: !var score
+              one: !var one
       self destruct:
         Type: destroy
 
@@ -141,10 +141,10 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'score >= total_coins'
             With:
-              - !var score
-              - !var total coins
+              score: !var score
+              total_coins: !var total coins
         Listeners:
           - !gameover
 

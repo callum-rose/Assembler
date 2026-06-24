@@ -121,11 +121,11 @@ Templates:
         Properties:
           VariableId: !parameter score_var
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'current_score + increment'
             ArgumentTypes: [ int, int ]
             With:
-              - !parameter score_var
-              - !var score per goal
+              current_score: !parameter score_var
+              increment: !var score per goal
 
   ball_template:
     Tags: [ ball ]
@@ -167,10 +167,10 @@ Templates:
           Value: !expr
             Do: paddle bounce
             With:
-              - !var ball velocity
-              - !output hit_point
-              - !output paddle_position
-              - !var paddle bounce factor
+              ball_vel: !var ball velocity
+              hit_point: !output hit_point
+              paddle_pos: !output paddle_position
+              factor: !var paddle bounce factor
       wall collision trigger:
         Type: collision enter trigger
         Properties:
@@ -184,10 +184,10 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x * arg1.x, arg0.y * arg1.y, arg0.z * arg1.z)'
+            Do: 'new UnityEngine.Vector3(velocity.x * flip.x, velocity.y * flip.y, velocity.z * flip.z)'
             With:
-              - !var ball velocity
-              - !vec { X: 1, Y: -1 }
+              velocity: !var ball velocity
+              flip: !vec { X: 1, Y: -1 }
       goal detector:
         Type: trigger enter trigger
         Properties:
@@ -283,11 +283,11 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg2 || arg1 >= arg2'
+            Do: 'left >= target || right >= target'
             With:
-              - !var left score
-              - !var right score
-              - !var score to win
+              left: !var left score
+              right: !var right score
+              target: !var score to win
         Listeners:
           - !gameover
 
@@ -345,16 +345,16 @@ Entities:
           Condition: !expr
             Do: int greater or equal
             With:
-              - !var left score
-              - !var score to win
+              a: !var left score
+              b: !var score to win
       right score win condition gate:
         Type: condition gate
         Properties:
           Condition: !expr
             Do: int greater or equal
             With:
-              - !var right score
-              - !var score to win
+              a: !var right score
+              b: !var score to win
   ball spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
@@ -376,9 +376,9 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"P1: " + arg0'
+            Do: '"P1: " + score'
             With:
-              - !var left score
+              score: !var left score
           FontSize: 32
           Rect:
             Anchor: top-left
@@ -394,9 +394,9 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"P2: " + arg0'
+            Do: '"P2: " + score'
             With:
-              - !var right score
+              score: !var right score
           FontSize: 32
           Rect:
             Anchor: top-right

@@ -74,8 +74,8 @@ Templates:
           Value: !expr
             Do: int add
             With:
-              - !var bubbles popped
-              - !var one
+              a: !var bubbles popped
+              b: !var one
       self destruct:
         Type: destroy
 
@@ -121,10 +121,10 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'bubbles_popped >= bubbles_to_pop'
             With:
-              - !var bubbles popped
-              - !var bubbles to pop
+              bubbles_popped: !var bubbles popped
+              bubbles_to_pop: !var bubbles to pop
         Listeners:
           - !gameover
 
@@ -148,8 +148,8 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var bubbles spawned
-              - !var one
+              a: !var bubbles spawned
+              b: !var one
       spawn bubble:
         Type: spawner
         Properties:

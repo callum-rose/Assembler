@@ -129,11 +129,11 @@ Entities:
           # x/y come from the move action's TriggerContext; the expression scales
           # them into this frame's displacement.
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       # --- BUTTON action (down phase): give up. ---
       quit action:

@@ -13,11 +13,14 @@ namespace Assembler.Parsing
 		/// <summary>
 		/// Routes a <c>!expr { Do, With }</c> call site to an <see cref="ExpressionSource{T}"/>.
 		/// If <c>Do</c> names a declared expression (by id or <c>CallableAs</c> alias) it's a named
-		/// call against that expression's id; otherwise <c>Do</c> is compiled as an anonymous inline
-		/// C# body whose params <c>arg0</c>, <c>arg1</c>, … bind positionally to <c>With</c>.
+		/// call against that expression's id and the <c>With</c> map keys match its declared argument
+		/// names; otherwise <c>Do</c> is compiled as an anonymous inline C# body whose parameters are
+		/// the <c>With</c> map keys, referenced by name in the body.
 		/// </summary>
 		public static ValueSource<T> CreateExpressionSource<T>(TransformContext ctx, ExprRef exprRef)
 		{
+			EnsureNoDuplicateOperandNames(exprRef);
+
 			if (TryResolveNamedExpression(ctx, exprRef.Do, out var named))
 			{
 				WarnIfInlineHintsIgnored(exprRef, named.Id);
@@ -25,6 +28,21 @@ namespace Assembler.Parsing
 			}
 
 			return CreateInlineExpressionSource<T>(ctx, exprRef);
+		}
+
+		// Two operands sharing a name would collide on the parameter name (named call) or produce two
+		// compiler params with the same name (inline body); reject it up front with a clear message.
+		private static void EnsureNoDuplicateOperandNames(ExprRef exprRef)
+		{
+			var seen = new HashSet<string>();
+			foreach (var arg in exprRef.With)
+			{
+				if (!seen.Add(arg.Name))
+				{
+					throw new ParsingException(
+						$"!expr 'Do: {exprRef.Do}' supplies operand '{arg.Name}' more than once in With.");
+				}
+			}
 		}
 
 		// Resolves a `Do` value to a declared expression by its id first, then by CallableAs alias.
@@ -48,6 +66,8 @@ namespace Assembler.Parsing
 			return false;
 		}
 
+		// Binds a named call's With map to the declared expression's arguments by name (order in the
+		// descriptor is irrelevant); the resulting operand list follows the declared argument order.
 		private static IReadOnlyList<IValueSourceArg> BuildNamedExpressionArguments(TransformContext ctx,
 			ExprRef exprRef,
 			ExpressionInfo info)
@@ -56,27 +76,36 @@ namespace Assembler.Parsing
 			{
 				throw new ParsingException(
 					$"Expression '{exprRef.Do}' expects {info.Arguments.Count} arguments " +
+					$"({string.Join(", ", info.Arguments.Select(a => a.name))}) " +
 					$"but {exprRef.With.Count} were supplied.");
 			}
 
-			if (exprRef.With.Count == 0)
+			if (info.Arguments.Count == 0)
 			{
 				return Array.Empty<IValueSourceArg>();
 			}
 
-			var args = new IValueSourceArg[exprRef.With.Count];
+			var operandsByName = exprRef.With.ToDictionary(a => a.Name, a => a.Value);
+			var args = new IValueSourceArg[info.Arguments.Count];
 
-			for (int i = 0; i < exprRef.With.Count; i++)
+			for (int i = 0; i < info.Arguments.Count; i++)
 			{
-				var typeName = info.Arguments[i].type;
+				var (typeName, argName) = info.Arguments[i];
+
+				if (!operandsByName.TryGetValue(argName, out var operand))
+				{
+					throw new ParsingException(
+						$"Expression '{exprRef.Do}' has no operand named '{argName}' in With " +
+						$"(declared arguments: {string.Join(", ", info.Arguments.Select(a => a.name))}).");
+				}
 
 				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
-						$"Expression '{exprRef.Do}' argument {i} has unknown type '{typeName}'.");
+						$"Expression '{exprRef.Do}' argument '{argName}' has unknown type '{typeName}'.");
 				}
 
-				args[i] = ValueSourceFactory.BuildArg(ctx, argType, exprRef.With[i]);
+				args[i] = ValueSourceFactory.BuildArg(ctx, argType, operand);
 			}
 
 			return args;
@@ -97,11 +126,12 @@ namespace Assembler.Parsing
 		}
 
 		// Synthesises an anonymous ExpressionInfo for an inline `Do: '<C# body>'` and accumulates it on
-		// the context. Operand (arg0, arg1, …) types are taken from an explicit ArgumentTypes hint when
-		// given, otherwise inferred from `With`; the return type is an explicit ReturnType hint when
-		// given, otherwise the use-site T (falling back to the first operand). Any RegisterTypes /
-		// RegisterTypeStatics hints flow onto the synthesised expression so the body can use them. The
-		// body itself is handed verbatim to the compiler, which binds argN to the synthesised params and
+		// the context. Each operand's parameter name is the `With` map key (referenced by name in the
+		// body); operand types are taken from an explicit ArgumentTypes hint when given (positional to
+		// the With declaration order), otherwise inferred from `With`. The return type is an explicit
+		// ReturnType hint when given, otherwise the use-site T (falling back to the first operand). Any
+		// RegisterTypes / RegisterTypeStatics hints flow onto the synthesised expression so the body can
+		// use them. The body itself is handed verbatim to the compiler, which binds each named param and
 		// resolves any other identifier (method, `new`, registered expression) as in any declared body.
 		private static ValueSource<T> CreateInlineExpressionSource<T>(TransformContext ctx, ExprRef exprRef)
 		{
@@ -119,16 +149,17 @@ namespace Assembler.Parsing
 
 			for (int i = 0; i < exprRef.With.Count; i++)
 			{
-				var typeName = explicitArgTypes != null ? explicitArgTypes[i] : InferTypeName(ctx, exprRef.With[i]);
+				var operand = exprRef.With[i];
+				var typeName = explicitArgTypes != null ? explicitArgTypes[i] : InferTypeName(ctx, operand.Value);
 
 				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
-						$"Inline expression '{exprRef.Do}' could not resolve a type for argument {i} " +
-						$"('{typeName}').");
+						$"Inline expression '{exprRef.Do}' could not resolve a type for argument " +
+						$"'{operand.Name}' ('{typeName}').");
 				}
 
-				argInfos[i] = (typeName, $"arg{i}");
+				argInfos[i] = (typeName, operand.Name);
 				argTypes[i] = argType;
 			}
 
@@ -152,7 +183,7 @@ namespace Assembler.Parsing
 
 			for (int i = 0; i < exprRef.With.Count; i++)
 			{
-				args[i] = ValueSourceFactory.BuildArg(ctx, argTypes[i], exprRef.With[i]);
+				args[i] = ValueSourceFactory.BuildArg(ctx, argTypes[i], exprRef.With[i].Value);
 			}
 
 			return new ExpressionSource<T>(id, args);
@@ -200,7 +231,7 @@ namespace Assembler.Parsing
 				"Use a named expression with a declared ReturnType instead.");
 		}
 
-		// Inline bodies are written as terse expressions (`-arg0`, `arg0 * 2`). The compiler parses a
+		// Inline bodies are written as terse expressions (`-velocity`, `score * 2`). The compiler parses a
 		// method body of statements, so a bare expression needs an explicit `return … ;`. A body that
 		// already contains a statement separator (`;`) is treated as hand-written statements and passed
 		// through unchanged (it may use `return`, locals, etc., exactly like a declared expression body).

@@ -16,7 +16,7 @@ namespace Assembler.Deserialisation
 			parser.Consume<MappingStart>();
 
 			string? @do = null;
-			object[]? with = null;
+			IReadOnlyList<ExprArgDto>? with = null;
 			string? returnType = null;
 			string[]? argumentTypes = null;
 			string[]? registerTypes = null;
@@ -31,7 +31,7 @@ namespace Assembler.Deserialisation
 						@do = parser.Consume<Scalar>().Value;
 						break;
 					case "With":
-						with = (rootDeserializer(typeof(List<object>)) as List<object>)?.ToArray();
+						with = ReadWithMap(parser, rootDeserializer);
 						break;
 					case "ReturnType":
 						returnType = parser.Consume<Scalar>().Value;
@@ -65,6 +65,31 @@ namespace Assembler.Deserialisation
 				RegisterTypes = registerTypes,
 				RegisterTypeStatics = registerTypeStatics
 			};
+		}
+
+		// `With` is a map of `name: value` operands. Each value resolves through the same root
+		// deserializer used for any nested value, so tags (!var, !clock, nested !expr, …) are honoured.
+		// Declaration order is preserved so positional hints like ArgumentTypes still line up.
+		private static IReadOnlyList<ExprArgDto> ReadWithMap(IParser parser, ObjectDeserializer rootDeserializer)
+		{
+			if (parser.Current is SequenceStart)
+			{
+				throw new YamlException(
+					"!expr 'With' must be a map of 'name: value' operands (e.g. With: { velocity: !var bird velocity }), " +
+					"not a sequence. The positional arg0/arg1 form has been removed.");
+			}
+
+			parser.Consume<MappingStart>();
+
+			var args = new List<ExprArgDto>();
+			while (!parser.TryConsume<MappingEnd>(out _))
+			{
+				var name = parser.Consume<Scalar>().Value;
+				var value = rootDeserializer(typeof(object));
+				args.Add(new ExprArgDto(name, value));
+			}
+
+			return args;
 		}
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>

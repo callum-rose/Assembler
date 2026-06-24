@@ -123,8 +123,8 @@ Entities:
           Position: !expr
             Do: shift y
             With:
-              - !entity { Id: leader, Property: Position }
-              - !var follower above offset y
+              pos: !entity { Id: leader, Property: Position }
+              yoffset: !var follower above offset y
 
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -239,8 +239,8 @@ Entities:
           Position: !expr
             Do: shift y
             With:
-              - !entity { Id: leader, Property: Position }
-              - !var follower below offset y
+              pos: !entity { Id: leader, Property: Position }
+              yoffset: !var follower below offset y
 
   camera:
     Position: !var camera position

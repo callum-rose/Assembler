@@ -150,9 +150,9 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0'
+            Do: 'is_dead'
             With:
-              - !var is dead
+              is_dead: !var is dead
         Listeners:
           - !gameover
 
@@ -191,11 +191,11 @@ Entities:
         Properties:
           VariableId: !var bird velocity
           Value: !expr
-            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
+            Do: 'IntegratePosition(velocity, new UnityEngine.Vector3(0f, -gravity, 0f), dt)'
             With:
-              - !var bird velocity
-              - !var bird gravity
-              - !clock deltaTime
+              velocity: !var bird velocity
+              gravity: !var bird gravity
+              dt: !clock deltaTime
 
       jump key:
         Type: input action
@@ -274,22 +274,22 @@ Entities:
         Properties:
           VariableId: !var current gap y
           Value: !expr
-            Do: 'RandomFloat(arg0, arg1)'
+            Do: 'RandomFloat(min, max)'
             With:
-              - !var gap y min
-              - !var gap y max
+              min: !var gap y min
+              max: !var gap y max
 
       spawn top pipe:
         Type: spawner
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0, arg1 + arg2 + arg3, 0f)'
+            Do: 'new UnityEngine.Vector3(spawn_x, gap_y + gap_half + pipe_half, 0f)'
             With:
-              - !var pipe spawn x
-              - !var current gap y
-              - !var gap half height
-              - !var pipe half height
+              spawn_x: !var pipe spawn x
+              gap_y: !var current gap y
+              gap_half: !var gap half height
+              pipe_half: !var pipe half height
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
 
       spawn bottom pipe:
@@ -297,12 +297,12 @@ Entities:
         Properties:
           TemplateId: pipe_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0, arg1 - arg2 - arg3, 0f)'
+            Do: 'new UnityEngine.Vector3(spawn_x, gap_y - gap_half - pipe_half, 0f)'
             With:
-              - !var pipe spawn x
-              - !var current gap y
-              - !var gap half height
-              - !var pipe half height
+              spawn_x: !var pipe spawn x
+              gap_y: !var current gap y
+              gap_half: !var gap half height
+              pipe_half: !var pipe half height
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
 
       spawn score zone:
@@ -310,10 +310,10 @@ Entities:
         Properties:
           TemplateId: score_zone_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0, arg1, 0f)'
+            Do: 'new UnityEngine.Vector3(spawn_x, gap_y, 0f)'
             With:
-              - !var pipe spawn x
-              - !var current gap y
+              spawn_x: !var pipe spawn x
+              gap_y: !var current gap y
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
 
   # --- Score tracker ---
@@ -325,10 +325,10 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'current_score + increment'
             With:
-              - !var score
-              - !var score per pipe
+              current_score: !var score
+              increment: !var score per pipe
 
   # --- Camera ---
   camera:
@@ -349,9 +349,9 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"Score: " + arg0'
+            Do: '"Score: " + score'
             With:
-              - !var score
+              score: !var score
           FontSize: 32
           Rect:
             Anchor: top-center

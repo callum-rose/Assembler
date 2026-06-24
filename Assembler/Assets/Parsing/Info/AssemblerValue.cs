@@ -86,14 +86,19 @@ namespace Assembler.Parsing.Info
 
 	public sealed record ParamRef(string Id) : AssemblerRef(Id);
 
+	/// <summary>A single named operand of an <see cref="ExprRef"/>'s <c>With</c> map: the parameter
+	/// <see cref="Name"/> and its operand <see cref="Value"/>.</summary>
+	public sealed record ExprArg(string Name, AssemblerValue Value);
+
 	/// <summary>A <c>!expr { Do, With }</c> call site. <see cref="Do"/> is either a declared
 	/// expression's name/alias (a named call) or an anonymous inline C# body; <see cref="With"/>
-	/// carries the operands. The remaining fields are optional hints for an inline body
-	/// (return type, per-operand types, and extra types / static-method sources); they are
-	/// ignored on a named call.</summary>
+	/// is a map of named operands (each key is the parameter name in the body, or one of the
+	/// named expression's declared argument names). The remaining fields are optional hints for an
+	/// inline body (return type, per-operand types, and extra types / static-method sources); they
+	/// are ignored on a named call.</summary>
 	public sealed record ExprRef(
 		string Do,
-		IReadOnlyList<AssemblerValue> With,
+		IReadOnlyList<ExprArg> With,
 		string? ReturnType = null,
 		IReadOnlyList<string>? ArgumentTypes = null,
 		IReadOnlyList<string>? RegisterTypes = null,

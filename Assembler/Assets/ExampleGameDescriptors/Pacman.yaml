@@ -219,8 +219,8 @@ Templates:
           Radius: 0.4
           IsWire: false
           Colour: !expr
-            Do: 'arg0 ? arg1 : arg2'
-            With: [ !var frightened, !var fright colour, !var ghost colour ]
+            Do: 'frightened ? fright_colour : ghost_colour'
+            With: { frightened: !var frightened, fright_colour: !var fright colour, ghost_colour: !var ghost colour }
             ArgumentTypes: [ bool, colour, colour ]
             ReturnType: colour
       collider:
@@ -232,8 +232,8 @@ Templates:
         Type: navigate
         Properties:
           Target: !expr
-            Do: 'arg0 ? fleeTarget(arg1) : arg1'
-            With: [ !var frightened, !entity { Id: pacman, Property: Position } ]
+            Do: 'frightened ? fleeTarget(pacman_position) : pacman_position'
+            With: { frightened: !var frightened, pacman_position: !entity { Id: pacman, Property: Position } }
             ArgumentTypes: [ bool, vector ]
             ReturnType: vector
           Speed: !var ghost speed
@@ -409,9 +409,9 @@ Entities:
           Value: !expr
             Do: snap dir
             With:
-              - !output axis
-              - !var pac dir
-              - !var move cell
+              input: !output axis
+              current: !var pac dir
+              cell: !var move cell
 
       # The tunnel sensors warp Pacman across; the grid mover re-anchors after the jump.
       to right side:
@@ -450,31 +450,31 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var score
-          Value: !expr { Do: 'arg0 + 10', With: [ !var score ], ArgumentTypes: [ int ] }
+          Value: !expr { Do: 'score + 10', With: { score: !var score }, ArgumentTypes: [ int ] }
       add dot count:
         Type: int variable setter
         Properties:
           VariableId: !var dots eaten
-          Value: !expr { Do: 'arg0 + 1', With: [ !var dots eaten ], ArgumentTypes: [ int ] }
+          Value: !expr { Do: 'dots_eaten + 1', With: { dots_eaten: !var dots eaten }, ArgumentTypes: [ int ] }
       add power score:
         Type: int variable setter
         Properties:
           VariableId: !var score
-          Value: !expr { Do: 'arg0 + 50', With: [ !var score ], ArgumentTypes: [ int ] }
+          Value: !expr { Do: 'score + 50', With: { score: !var score }, ArgumentTypes: [ int ] }
       arm fright:
         Type: float variable setter
         Properties:
           VariableId: !var fright until
           Value: !expr
-            Do: 'arg0 + arg1'
-            With: [ !clock time, !var fright duration ]
+            Do: 'time + fright_duration'
+            With: { time: !clock time, fright_duration: !var fright duration }
             ArgumentTypes: [ float, float ]
             ReturnType: float
       add ghost score:
         Type: int variable setter
         Properties:
           VariableId: !var score
-          Value: !expr { Do: 'arg0 + 200', With: [ !var score ], ArgumentTypes: [ int ] }
+          Value: !expr { Do: 'score + 200', With: { score: !var score }, ArgumentTypes: [ int ] }
 
   # --- Game logic: capture the dot total, keep `frightened` in sync, end on a clear. ---
   logic:
@@ -495,8 +495,8 @@ Entities:
         Properties:
           VariableId: !var frightened
           Value: !expr
-            Do: 'arg0 < arg1'
-            With: [ !clock time, !var fright until ]
+            Do: 'time < fright_until'
+            With: { time: !clock time, fright_until: !var fright until }
             ArgumentTypes: [ float, float ]
             ReturnType: bool
       win tick:
@@ -506,8 +506,8 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 > 0 && arg1 >= arg0'
-            With: [ !var dots total, !var dots eaten ]
+            Do: 'dots_total > 0 && dots_eaten >= dots_total'
+            With: { dots_total: !var dots total, dots_eaten: !var dots eaten }
             ArgumentTypes: [ int, int ]
         Listeners: [ !gameover ]
 
