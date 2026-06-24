@@ -59,6 +59,7 @@ namespace VoxelSpike.Editor
         bool _sideGuidesOnly;          // only draw side-view (depth) feature guides, not front-view (width)
         bool _depthArcs = true;        // transfer side->top depth via quarter arcs (else miter L-paths)
         bool _landingTicks = true;     // mark where each projector lands on the top view
+        bool _topGridOnly;             // top view: no colour guess, just a reference grid over the footprint
         Color _guideColor = new Color(168f / 255f, 178f / 255f, 196f / 255f, 1f); // datum / projector lines
 
         // --- orientation flips (handedness ambiguity per view) ---
@@ -137,6 +138,7 @@ namespace VoxelSpike.Editor
             _sideGuidesOnly = EditorGUILayout.Toggle("Side-view guides only", _sideGuidesOnly);
             _depthArcs = EditorGUILayout.Toggle("Depth via arcs", _depthArcs);
             _landingTicks = EditorGUILayout.Toggle("Landing ticks", _landingTicks);
+            _topGridOnly = EditorGUILayout.Toggle("Top: grid, no colour", _topGridOnly);
             _guideColor = EditorGUILayout.ColorField("Guide colour", _guideColor);
 
             EditorGUILayout.Space();
@@ -217,7 +219,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks, _guideColor);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks, _topGridOnly, _guideColor);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -485,7 +487,7 @@ namespace VoxelSpike.Editor
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
         static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides,
-            bool sideGuidesOnly, bool depthArcs, bool landingTicks, Color32 guideCol)
+            bool sideGuidesOnly, bool depthArcs, bool landingTicks, bool topGridOnly, Color32 guideCol)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -501,11 +503,21 @@ namespace VoxelSpike.Editor
             // panels, all at the same pixels-per-voxel scale so widths/heights/depths line up
             Color32[] frontPx = ScaleNearest(front.BuildColourPreview(), Wp, Hp).GetPixels32();
             Color32[] sidePx = ScaleNearest(side.BuildColourPreview(), Lp, Hp).GetPixels32();
-            Color32[] topPx = RenderTopRaw(h, s).GetPixels32();
+            Color32[] topPx = RenderTopRaw(h, s, !topGridOnly).GetPixels32();
 
             Blit(img, cw, frontPx, Wp, Hp, m, m);                 // front: lower-left
             Blit(img, cw, sidePx, Lp, Hp, m + Wp + g, m);         // side: right of front (shares height)
             Blit(img, cw, topPx, Wp, Lp, m, m + Hp + g);          // top: above front (shares width)
+
+            // Top reference grid (no colour mode): evenly spaced lines over the top footprint so the AI
+            // has spatial cells to fill. Drawn first so the feature projectors/ticks sit on top.
+            if (topGridOnly)
+            {
+                int topY = m + Hp + g;
+                int step = Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(Wp, Lp) / 12f));
+                for (int x = m; x <= m + Wp; x += step) DrawVLine(img, cw, ch, x, topY, topY + Lp, guideCol, 1);
+                for (int y = topY; y <= topY + Lp; y += step) DrawHLine(img, cw, ch, y, m, m + Wp, guideCol, 1);
+            }
 
             // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
             int cornerX = m + Wp, cornerY = m + Hp;
@@ -555,7 +567,7 @@ namespace VoxelSpike.Editor
 
         // Raw top-down render (no margin) at `s` pixels per voxel: topmost voxel colour, front (z=0) at
         // the bottom row, on the flat background.
-        static Texture2D RenderTopRaw(Hull h, int s)
+        static Texture2D RenderTopRaw(Hull h, int s, bool colourTop)
         {
             int W = h.W, H = h.H, L = h.L;
             int sw = W * s, sl = L * s;
@@ -571,7 +583,7 @@ namespace VoxelSpike.Editor
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
                     // Certain only when exactly one view saw it; both-view (edge) voxels are ambiguous.
-                    c = h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
+                    c = colourTop && h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
                     occ = true;
                     break;
                 }
