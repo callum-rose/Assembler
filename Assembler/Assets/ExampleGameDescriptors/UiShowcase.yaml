@@ -168,7 +168,7 @@ Entities:
       move left:
         Type: translate
         Properties:
-          Displacement: !expr { Do: negate, With: [ !var step right ] }
+          Displacement: !expr { Do: negate, With: { v: !var step right } }
 
       hold right:
         Type: input action
@@ -201,7 +201,7 @@ Entities:
       move down:
         Type: translate
         Properties:
-          Displacement: !expr { Do: negate, With: [ !var step up ] }
+          Displacement: !expr { Do: negate, With: { v: !var step up } }
 
   # Spawns an orb on start and then every `spawn interval` seconds.
   orb spawner:
@@ -234,10 +234,10 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'score + points'
             With:
-              - !var score
-              - !var points per pickup
+              score: !var score
+              points: !var points per pickup
       reset score:
         Type: float variable setter
         Properties:

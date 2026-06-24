@@ -74,17 +74,17 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var health
-              - !var damage per hit
+              a: !var health
+              b: !var damage per hit
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= arg1'
+            Do: 'health <= zero'
             ArgumentTypes: [ int, int ]
             With:
-              - !var health
-              - !var zero
+              health: !var health
+              zero: !var zero
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: on death decrement counter
@@ -97,8 +97,8 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var enemies remaining
-              - !var damage per hit
+              a: !var enemies remaining
+              b: !var damage per hit
       self destruct:
         Type: destroy
 
@@ -278,9 +278,9 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0'
+            Do: 'enemies_remaining <= 0'
             With:
-              - !var enemies remaining
+              enemies_remaining: !var enemies remaining
         Listeners:
           - !gameover
 

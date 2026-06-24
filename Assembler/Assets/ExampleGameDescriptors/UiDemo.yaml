@@ -114,6 +114,6 @@ Entities:
                 Properties:
                   VariableId: !var clicks
                   Value: !expr
-                    Do: 'arg0 + 1'
+                    Do: 'clicks + 1'
                     With:
-                      - !var clicks
+                      clicks: !var clicks

@@ -183,9 +183,9 @@ Entities:
           Value: !expr
             Do: pick goal
             With:
-              - !var drive_mode
-              - !var target_position
-              - !entity { Id: driver, Property: Position }
+              mode: !var drive_mode
+              target_pos: !var target_position
+              self_pos: !entity { Id: driver, Property: Position }
 
       # --- Machine 1: movement. Drives the grid navigation. ---
       movement:
@@ -202,7 +202,7 @@ Entities:
             - { from: idle, to: pursue, when: !var has_target }
             - from: pursue
               to: idle
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
       set idle:
         Type: int variable setter
         Properties: { VariableId: !var drive_mode, Value: 0 }
@@ -231,7 +231,7 @@ Entities:
             - { from: hold, to: engage, when: !var has_target }
             - from: engage
               to: hold
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
       fire clock:
         Type: interval trigger
         Properties: { Interval: 0.4, AutoStart: true }
@@ -239,7 +239,7 @@ Entities:
       fire gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: is engaged, With: [ !var combat_state ] }
+          Condition: !expr { Do: is engaged, With: { state: !var combat_state } }
         Listeners: [ { EntityId: driver, BehaviourId: fire } ]
       fire:
         Type: spawner
@@ -251,9 +251,9 @@ Entities:
               Do: bullet velocity
               ReturnType: vector
               With:
-                - !entity { Id: driver, Property: Position }
-                - !var target_position
-                - !var bullet speed
+                from: !entity { Id: driver, Property: Position }
+                to: !var target_position
+                speed: !var bullet speed
 
   player:
     Position: !vec { X: 7, Y: 0, Z: 0 }

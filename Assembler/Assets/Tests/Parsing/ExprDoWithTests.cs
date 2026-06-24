@@ -13,7 +13,9 @@ namespace Tests.Parsing
 {
 	// Covers the consolidated `!expr { Do, With }` call site: a named call (Do matches a declared
 	// expression by id or alias) versus an anonymous inline body (Do is compiled C#), plus operand
-	// type inference, nesting, dispatch and the missing-Do error.
+	// type inference, nesting, dispatch and the missing-Do error. `With` is a map of `name: value`
+	// operands — bound by name to the declared arguments (named call) or used as the body's parameter
+	// names (inline body); the positional arg0/arg1 form has been removed.
 	public class ExprDoWithTests
 	{
 		private static GameInfo Parse(string yaml) =>
@@ -36,7 +38,7 @@ Entities:
 		public void NamedDoCallTargetsDeclaredExpressionById()
 		{
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: [ !var v ] }",
+				"!expr { Do: shift up, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
   shift up:
@@ -59,7 +61,7 @@ Expressions:
 		public void NamedDoCallResolvesByCallableAlias()
 		{
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: up, With: [ !var v ] }",
+				"!expr { Do: up, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
   shift up:
@@ -77,9 +79,56 @@ Expressions:
 		}
 
 		[Test]
+		public void NamedCallBindsOperandsByNameRegardlessOfOrder()
+		{
+			// Declared order is (base: vector, lift: float); the call site lists them reversed. Binding
+			// by position would put the float operand into the vector slot and fail — binding by name
+			// pairs each operand with its declared argument, so this parses and targets the declared id.
+			GameInfo info = null!;
+			Assert.DoesNotThrow(() => info = Parse(EntityWithPositionExpr(
+				"!expr { Do: lift, With: { lift: 1.0, base: !var v } }",
+				extraTop: @"
+Expressions:
+  lift:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ base, lift ]
+    ReturnType: vector
+    Expression: 'return base + new UnityEngine.Vector3(0f, lift, 0f);'")));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			Assert.AreEqual("lift", source.ExpressionId);
+			Assert.AreEqual(2, source.Arguments.Count);
+		}
+
+		[Test]
+		public void NamedCallMissingOperandNameThrows()
+		{
+			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!expr { Do: shift up, With: { wrong: !var v } }",
+				extraTop: @"
+Expressions:
+  shift up:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    Expression: 'return a + new UnityEngine.Vector3(0, 1, 0);'")));
+
+			Assert.That(ex!.Message, Does.Contain("a"));
+		}
+
+		[Test]
+		public void DuplicateOperandNameThrows()
+		{
+			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!expr { Do: 'a + a', With: { a: !var v, a: 2 } }")));
+
+			Assert.That(ex!.Message, Does.Contain("more than once"));
+		}
+
+		[Test]
 		public void InlineDoBodySynthesisesAnonymousExpression()
 		{
-			var info = Parse(EntityWithPositionExpr("!expr { Do: '-arg0', With: [ !var v ] }"));
+			var info = Parse(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v } }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
@@ -89,14 +138,14 @@ Expressions:
 			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
 			Assert.AreEqual("vector", synthesised.ReturnType);
 			Assert.AreEqual(1, synthesised.Arguments.Count);
-			Assert.AreEqual(("vector", "arg0"), synthesised.Arguments[0]);
+			Assert.AreEqual(("vector", "a"), synthesised.Arguments[0]);
 		}
 
 		[Test]
 		public void InlineBodyInfersOperandTypesFromConstantsAndVars()
 		{
-			// arg0 is a vector (from !var v), arg1 is an int literal.
-			var info = Parse(EntityWithPositionExpr("!expr { Do: 'arg0 * arg1', With: [ !var v, 2 ] }"));
+			// scale is a vector (from !var v), factor is an int literal.
+			var info = Parse(EntityWithPositionExpr("!expr { Do: 'scale * factor', With: { scale: !var v, factor: 2 } }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
@@ -109,10 +158,10 @@ Expressions:
 		[Test]
 		public void DoNameWinsOverInlineInterpretation()
 		{
-			// "double" is also a C# keyword-ish identifier, but because it's a declared expression
-			// the registry-membership check routes it as a named call, not an inline body.
+			// "scale" is also a plausible inline identifier, but because it's a declared expression the
+			// registry-membership check routes it as a named call, not an inline body.
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: scale, With: [ !var v ] }",
+				"!expr { Do: scale, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
   scale:
@@ -131,7 +180,7 @@ Expressions:
 		public void NestedInlineInsideNamedCallResolves()
 		{
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: [ !expr { Do: '-arg0', With: [ !var v ] } ] }",
+				"!expr { Do: shift up, With: { a: !expr { Do: '-x', With: { x: !var v } } } }",
 				extraTop: @"
 Expressions:
   shift up:
@@ -150,7 +199,7 @@ Expressions:
 		[Test]
 		public void MissingDoThrows()
 		{
-			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { With: [ !var v ] }")));
+			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { With: { a: !var v } }")));
 
 			Assert.That(ex!.ToString(), Does.Contain("Do"));
 		}
@@ -158,13 +207,22 @@ Expressions:
 		[Test]
 		public void EmptyDoThrows()
 		{
-			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '', With: [ !var v ] }")));
+			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '', With: { a: !var v } }")));
 
 			Assert.That(ex!.ToString(), Does.Contain("Do"));
 		}
 
-		// End-to-end: YAML -> ExpressionSource -> compiled delegate -> value, for inline `-arg0`
-		// and `arg0 * 2` plus a named call, confirming the whole pipeline agrees on types/results.
+		[Test]
+		public void SequenceFormWithThrows()
+		{
+			// The positional list form is no longer accepted; it must be a map.
+			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '-a', With: [ !var v ] }")));
+
+			Assert.That(ex!.ToString(), Does.Contain("map"));
+		}
+
+		// End-to-end: YAML -> ExpressionSource -> compiled delegate -> value, for inline `-a`
+		// and `a * 2` plus a named call, confirming the whole pipeline agrees on types/results.
 		[Test]
 		public void InlineAndNamedExpressionsCompileAndEvaluate()
 		{
@@ -179,13 +237,13 @@ Expressions:
     Expression: 'return a + new UnityEngine.Vector3(0, 1, 0);'
 Entities:
   negate:
-    Position: !expr {{ Do: '-arg0', With: [ !var v ] }}
+    Position: !expr {{ Do: '-a', With: {{ a: !var v }} }}
     Behaviours: {{}}
   scale:
-    Position: !expr {{ Do: 'arg0 * 2', With: [ !var v ] }}
+    Position: !expr {{ Do: 'a * 2', With: {{ a: !var v }} }}
     Behaviours: {{}}
   named:
-    Position: !expr {{ Do: shift up, With: [ !var v ] }}
+    Position: !expr {{ Do: shift up, With: {{ a: !var v }} }}
     Behaviours: {{}}
 ");
 
@@ -230,34 +288,34 @@ Entities:
 		[Test]
 		public void InlineArgumentTypesHintOverridesInference()
 		{
-			// With: [1, 2] would infer int operands; the explicit hint forces float.
+			// With { a: 1, b: 2 } would infer int operands; the explicit hint forces float.
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: 'arg0 + arg1', With: [ 1, 2 ], ArgumentTypes: [ float, float ] }"));
+				"!expr { Do: 'a + b', With: { a: 1, b: 2 }, ArgumentTypes: [ float, float ] }"));
 
 			var synthesised = info.Expressions.Single(e => e.Id.StartsWith("__inline_"));
 
-			Assert.AreEqual(("float", "arg0"), synthesised.Arguments[0]);
-			Assert.AreEqual(("float", "arg1"), synthesised.Arguments[1]);
+			Assert.AreEqual(("float", "a"), synthesised.Arguments[0]);
+			Assert.AreEqual(("float", "b"), synthesised.Arguments[1]);
 		}
 
 		[Test]
 		public void InlineArgumentTypesCountMismatchThrows()
 		{
 			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
-				"!expr { Do: 'arg0 + arg1', With: [ !var v ], ArgumentTypes: [ vector, vector ] }")));
+				"!expr { Do: 'a + b', With: { a: !var v }, ArgumentTypes: [ vector, vector ] }")));
 		}
 
 		[Test]
 		public void InlineUnknownReturnTypeThrows()
 		{
 			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
-				"!expr { Do: '-arg0', With: [ !var v ], ReturnType: nonsense }")));
+				"!expr { Do: '-a', With: { a: !var v }, ReturnType: nonsense }")));
 		}
 
 		[Test]
 		public void InlineReturnTypeHintFlowsToSynthesisedExpression()
 		{
-			var info = Parse(EntityWithPositionExpr("!expr { Do: '-arg0', With: [ !var v ], ReturnType: vector }"));
+			var info = Parse(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v }, ReturnType: vector }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
@@ -339,7 +397,7 @@ Entities:
 			// ReturnType on a named call is ignored (logged); the source still targets the named id
 			// and no inline expression is synthesised.
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: [ !var v ], ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
+				"!expr { Do: shift up, With: { a: !var v }, ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
 				extraTop: @"
 Expressions:
   shift up:

@@ -92,7 +92,7 @@ namespace Assembler.Parsing
 				// nested-listener parser can rebuild a GameOverListenerInfo.
 				(GameOverListenerDto, { ResolvedValues: null }) => new GameOverMarker(),
 				(ExprRefDto v, { ResolvedValues: null }) => new ExprRef(v.Do ?? string.Empty,
-					v.With.EmptyIfNull().Select(ToAssemblerValue).ToArray(),
+					v.With.EmptyIfNull().Select(a => new ExprArg(a.Name, ToAssemblerValue(a.Value))).ToArray(),
 					v.ReturnType,
 					v.ArgumentTypes,
 					v.RegisterTypes,

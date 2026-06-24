@@ -71,7 +71,7 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var overlap frames
-          Value: !expr { Do: increment, With: [ !var overlap frames ] }
+          Value: !expr { Do: increment, With: { n: !var overlap frames } }
 
   zone:
     Tags: [ zone ]

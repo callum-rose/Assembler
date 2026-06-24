@@ -226,20 +226,20 @@ Templates:
         Properties:
           VariableId: !var health          # per-entity health (shadows global)
           Value: !expr
-            Do: 'arg0 - arg1'
+            Do: 'health - damage'
             ArgumentTypes: [ int, int ]    # health is a per-entity !parameter; type can't be inferred
             With:
-              - !var health
-              - !var damage per hit
+              health: !var health
+              damage: !var damage per hit
       shot death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0 && !arg1'        # dead-once guard
+            Do: 'health <= 0 && !dead'        # dead-once guard
             ArgumentTypes: [ int, bool ]    # per-entity health + dead; not statically inferable
             With:
-              - !var health
-              - !var dead
+              health: !var health
+              dead: !var dead
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: award score
@@ -254,10 +254,10 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'score + points'
             With:
-              - !var score
-              - !var points per kill
+              score: !var score
+              points: !var points per kill
 
       # ---- Death path 2: reached the defender's line ----
       floor detector:
@@ -271,10 +271,10 @@ Templates:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: '!arg0'                      # dead-once guard
+            Do: '!dead'                      # dead-once guard
             ArgumentTypes: [ bool ]          # per-entity dead flag; not statically inferable
             With:
-              - !var dead
+              dead: !var dead
         Listeners:
           - EntityId: !parameter self_id
             BehaviourId: lose life
@@ -289,10 +289,10 @@ Templates:
         Properties:
           VariableId: !var lives
           Value: !expr
-            Do: 'arg0 - arg1'
+            Do: 'lives - damage'
             With:
-              - !var lives
-              - !var damage per hit
+              lives: !var lives
+              damage: !var damage per hit
 
       # ---- Shared death effects ----
       mark dead:
@@ -305,9 +305,9 @@ Templates:
         Properties:
           VariableId: !var enemies alive    # global wave counter
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'enemies_alive - 1'
             With:
-              - !var enemies alive
+              enemies_alive: !var enemies alive
       self destruct:
         Type: destroy
 
@@ -330,12 +330,12 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0 && arg1 <= 0 && arg2 <= arg3'
+            Do: 'enemies_to_spawn <= 0 && enemies_alive <= 0 && wave <= max_wave'
             With:
-              - !var enemies to spawn
-              - !var enemies alive
-              - !var wave
-              - !var max wave
+              enemies_to_spawn: !var enemies to spawn
+              enemies_alive: !var enemies alive
+              wave: !var wave
+              max_wave: !var max wave
         Listeners:
           - EntityId: wave manager
             BehaviourId: next wave
@@ -346,9 +346,9 @@ Entities:
         Properties:
           VariableId: !var wave
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'wave + 1'
             With:
-              - !var wave
+              wave: !var wave
       refill spawn budget:
         # Reads the already-incremented `wave`. Past the last wave the budget is
         # 0 so nothing more spawns; the game-over poll then declares a win.
@@ -356,12 +356,12 @@ Entities:
         Properties:
           VariableId: !var enemies to spawn
           Value: !expr
-            Do: 'arg0 <= arg1 ? arg2 + (arg0 - 1) * arg3 : 0'
+            Do: 'wave <= max_wave ? base_enemies + (wave - 1) * growth : 0'
             With:
-              - !var wave
-              - !var max wave
-              - !var base enemies per wave
-              - !var enemies per wave growth
+              wave: !var wave
+              max_wave: !var max wave
+              base_enemies: !var base enemies per wave
+              growth: !var enemies per wave growth
 
   # =========================================================================
   # SPAWNER — drips one enemy per interval while the wave's spawn budget lasts,
@@ -381,9 +381,9 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 > 0'
+            Do: 'enemies_to_spawn > 0'
             With:
-              - !var enemies to spawn
+              enemies_to_spawn: !var enemies to spawn
         Listeners:
           - EntityId: spawner
             BehaviourId: spawn enemy
@@ -396,46 +396,46 @@ Entities:
         Properties:
           TemplateId: enemy_template
           Position: !expr
-            Do: 'new Vector3(RandomFloat(0f - arg0, arg0), arg1, 0f)'
+            Do: 'new Vector3(RandomFloat(0f - spawn_x_half, spawn_x_half), spawn_top_y, 0f)'
             ReturnType: vector
             RegisterTypes: [ UnityEngine.Vector3 ]
             With:
-              - !var spawn x half
-              - !var spawn top y
+              spawn_x_half: !var spawn x half
+              spawn_top_y: !var spawn top y
           Parameters:
             # Tougher every couple of waves: 1,1,2,2,3 hits.
             initial_health: !expr
-              Do: 'arg0 + (arg1 - 1) / arg2'
+              Do: 'base_health + (wave - 1) / health_step'
               ReturnType: int
               With:
-                - !var base enemy health
-                - !var wave
-                - !var health step
+                base_health: !var base enemy health
+                wave: !var wave
+                health_step: !var health step
             # Faster every wave; descends straight down.
             initial_velocity: !expr
-              Do: 'new Vector3(0f, 0f - (arg0 + (arg1 - 1) * arg2), 0f)'
+              Do: 'new Vector3(0f, 0f - (base_speed + (wave - 1) * speed_growth), 0f)'
               ReturnType: vector
               RegisterTypes: [ UnityEngine.Vector3 ]
               With:
-                - !var base enemy speed
-                - !var wave
-                - !var enemy speed growth
+                base_speed: !var base enemy speed
+                wave: !var wave
+                speed_growth: !var enemy speed growth
       decrement budget:
         Type: int variable setter
         Properties:
           VariableId: !var enemies to spawn
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'enemies_to_spawn - 1'
             With:
-              - !var enemies to spawn
+              enemies_to_spawn: !var enemies to spawn
       increment alive:
         Type: int variable setter
         Properties:
           VariableId: !var enemies alive
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'enemies_alive + 1'
             With:
-              - !var enemies alive
+              enemies_alive: !var enemies alive
 
   # =========================================================================
   # PLAYER — green defender. A/D edges set/clear a velocity variable (a single
@@ -475,13 +475,13 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg1, 0f, 0f)'
+            Do: 'new UnityEngine.Vector3(axis_x * speed, 0f, 0f)'
             ArgumentTypes: [ float, float ]
             ReturnType: vector
             RegisterTypes: [ UnityEngine.Vector3 ]
             With:
-              - !output x
-              - !var player speed
+              axis_x: !output x
+              speed: !var player speed
 
       # --- Fire (Space / on-screen Fire button) ---
       fire key:
@@ -530,11 +530,11 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0 || arg1 > arg2'
+            Do: 'lives <= 0 || wave > max_wave'
             With:
-              - !var lives
-              - !var wave
-              - !var max wave
+              lives: !var lives
+              wave: !var wave
+              max_wave: !var max wave
         Listeners:
           - !gameover
 
@@ -624,11 +624,11 @@ Entities:
                     Key: hud.remaining
                     Arguments:
                       - !expr
-                          Do: 'arg0 + arg1'
+                          Do: 'enemies_alive + enemies_to_spawn'
                           ReturnType: int
                           With:
-                            - !var enemies alive
-                            - !var enemies to spawn
+                            enemies_alive: !var enemies alive
+                            enemies_to_spawn: !var enemies to spawn
                   FontSize: 26
                   PreferredWidth: 420
                   PreferredHeight: 38
