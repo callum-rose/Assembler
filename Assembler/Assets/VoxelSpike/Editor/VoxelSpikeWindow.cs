@@ -465,7 +465,7 @@ namespace VoxelSpike.Editor
         static Texture2D BuildProjectionSheet(Hull h, View front, View side)
         {
             int W = h.W, H = h.H, L = h.L;
-            int s = Mathf.Max(2, Mathf.RoundToInt(220f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel
+            int s = Mathf.Max(4, Mathf.RoundToInt(440f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (2x res)
             int Wp = W * s, Hp = H * s, Lp = L * s;
             int g = Mathf.Max(12, s * 6);   // gutter, equal in both directions
             int m = Mathf.Max(10, s * 3);   // outer margin
@@ -502,7 +502,7 @@ namespace VoxelSpike.Editor
 
             // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
             int cornerX = m + Wp, cornerY = m + Hp;
-            int thick = Mathf.Max(1, s / 3);
+            int thick = Mathf.Max(1, s / 6); // halved vs the resolution bump → finer datum/miter lines
             DrawVLine(img, cw, ch, cornerX, m, m + Hp + g + Lp, Guide, thick);
             DrawHLine(img, cw, ch, cornerY, m, m + Wp + g + Lp, Guide, thick);
             DrawDiag(img, cw, ch, cornerX, cornerY, g + Lp, Miter, thick);
