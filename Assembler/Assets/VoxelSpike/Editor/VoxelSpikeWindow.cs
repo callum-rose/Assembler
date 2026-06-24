@@ -35,7 +35,7 @@ namespace VoxelSpike.Editor
 
         // --- knobs ---
         int _heightVoxels = 32;        // voxel count along Y (height). Width/Length derived from aspect.
-        float _bgThreshold = 0.9f;     // luminance >= this => background (near-white)
+        float _bgThreshold = 0.2f;     // foreground if RGB distance from perimeter-average background exceeds this
         int _supersample = 3;          // samples per voxel per axis (S => S^3 samples)
         float _solidFraction = 0.5f;   // fraction of sub-samples that must pass to keep the voxel
         int _dilate = 0;               // silhouette dilation in source pixels (forgiveness for view disagreement)
@@ -99,7 +99,7 @@ namespace VoxelSpike.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Segmentation", EditorStyles.boldLabel);
-            _bgThreshold = EditorGUILayout.Slider("BG luminance threshold", _bgThreshold, 0.5f, 1f);
+            _bgThreshold = EditorGUILayout.Slider("BG colour tolerance", _bgThreshold, 0.02f, 0.8f);
             _dilate = EditorGUILayout.IntSlider("Silhouette dilate (px)", _dilate, 0, 8);
 
             EditorGUILayout.Space();
@@ -1215,14 +1215,36 @@ namespace VoxelSpike.Editor
                 int tw, th;
                 Color32[] px = ReadPixels(tex, out tw, out th);
 
+                // Background colour = average of the perimeter (border-ring) pixels, so the
+                // segmentation works on any flat background, not just white.
+                float bgR = 0f, bgG = 0f, bgB = 0f;
+                int bn = 0;
+                for (int x = 0; x < tw; x++)
+                {
+                    Color32 b0 = px[x];                       // bottom row (y = 0)
+                    Color32 b1 = px[(th - 1) * tw + x];       // top row
+                    bgR += b0.r + b1.r; bgG += b0.g + b1.g; bgB += b0.b + b1.b; bn += 2;
+                }
+                for (int y = 1; y < th - 1; y++)
+                {
+                    Color32 l = px[y * tw];                   // left column
+                    Color32 r = px[y * tw + tw - 1];          // right column
+                    bgR += l.r + r.r; bgG += l.g + r.g; bgB += l.b + r.b; bn += 2;
+                }
+                float inv = bn > 0 ? 1f / (bn * 255f) : 0f;
+                bgR *= inv; bgG *= inv; bgB *= inv;           // 0..1
+
+                // A pixel is foreground when its colour is far enough from the background, where
+                // `threshold` is a normalized RGB distance (0..~1.7).
                 bool[] fgFull = new bool[tw * th];
                 int minX = tw, minY = th, maxX = -1, maxY = -1;
                 for (int y = 0; y < th; y++)
                 for (int x = 0; x < tw; x++)
                 {
                     Color32 c = px[y * tw + x];
-                    float lum = (0.299f * c.r + 0.587f * c.g + 0.114f * c.b) / 255f;
-                    bool fg = c.a > 127 && lum < threshold;
+                    float dr = c.r / 255f - bgR, dg = c.g / 255f - bgG, db = c.b / 255f - bgB;
+                    float dist = Mathf.Sqrt(dr * dr + dg * dg + db * db);
+                    bool fg = c.a > 127 && dist > threshold;
                     fgFull[y * tw + x] = fg;
                     if (fg)
                     {
