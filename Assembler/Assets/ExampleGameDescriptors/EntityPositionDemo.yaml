@@ -114,9 +114,7 @@ Entities:
           Colour: !var follower colour
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: follower above
-            BehaviourId: track
+        Listeners: [ track ]
       track:
         Type: position setter
         Properties:
@@ -148,15 +146,11 @@ Entities:
       press left:
         Type: input action
         Properties: { Action: left }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go left
+        Listeners: [ go left ]
       release left:
         Type: input action
         Properties: { Action: left-release }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Listeners: [ stop ]
       go left:
         Type: vector variable setter
         Properties:
@@ -165,15 +159,11 @@ Entities:
       press right:
         Type: input action
         Properties: { Action: right }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go right
+        Listeners: [ go right ]
       release right:
         Type: input action
         Properties: { Action: right-release }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Listeners: [ stop ]
       go right:
         Type: vector variable setter
         Properties:
@@ -182,15 +172,11 @@ Entities:
       press up:
         Type: input action
         Properties: { Action: up }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go up
+        Listeners: [ go up ]
       release up:
         Type: input action
         Properties: { Action: up-release }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Listeners: [ stop ]
       go up:
         Type: vector variable setter
         Properties:
@@ -199,15 +185,11 @@ Entities:
       press down:
         Type: input action
         Properties: { Action: down }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go down
+        Listeners: [ go down ]
       release down:
         Type: input action
         Properties: { Action: down-release }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Listeners: [ stop ]
       go down:
         Type: vector variable setter
         Properties:
@@ -230,9 +212,7 @@ Entities:
           Colour: !var follower colour
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: follower below
-            BehaviourId: track
+        Listeners: [ track ]
       track:
         Type: position setter
         Properties:

@@ -165,16 +165,12 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ enemy ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var bullet lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -216,11 +212,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ bullet ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: take damage
-          - EntityId: !parameter self_id
-            BehaviourId: shot death check
+        Listeners: [ take damage, shot death check ]
       take damage:
         Type: int variable setter
         Properties:
@@ -240,15 +232,7 @@ Templates:
             With:
               - !var health
               - !var dead
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: award score
-          - EntityId: !parameter self_id
-            BehaviourId: mark dead
-          - EntityId: !parameter self_id
-            BehaviourId: decrement alive
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ award score, mark dead, decrement alive, self destruct ]
       award score:
         Type: int variable setter
         Properties:
@@ -264,9 +248,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ floor ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: floor death check
+        Listeners: [ floor death check ]
       floor death check:
         Type: condition gate
         Properties:
@@ -275,15 +257,7 @@ Templates:
             ArgumentTypes: [ bool ]          # per-entity dead flag; not statically inferable
             With:
               - !var dead
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: lose life
-          - EntityId: !parameter self_id
-            BehaviourId: mark dead
-          - EntityId: !parameter self_id
-            BehaviourId: decrement alive
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ lose life, mark dead, decrement alive, self destruct ]
       lose life:
         Type: int variable setter
         Properties:
@@ -323,9 +297,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: wave manager
-            BehaviourId: advance gate
+        Listeners: [ advance gate ]
       advance gate:
         Type: condition gate
         Properties:
@@ -336,11 +308,7 @@ Entities:
               - !var enemies alive
               - !var wave
               - !var max wave
-        Listeners:
-          - EntityId: wave manager
-            BehaviourId: next wave
-          - EntityId: wave manager
-            BehaviourId: refill spawn budget
+        Listeners: [ next wave, refill spawn budget ]
       next wave:
         Type: int variable setter
         Properties:
@@ -374,9 +342,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: spawner
-            BehaviourId: spawn gate
+        Listeners: [ spawn gate ]
       spawn gate:
         Type: condition gate
         Properties:
@@ -384,13 +350,7 @@ Entities:
             Do: 'arg0 > 0'
             With:
               - !var enemies to spawn
-        Listeners:
-          - EntityId: spawner
-            BehaviourId: spawn enemy
-          - EntityId: spawner
-            BehaviourId: decrement budget
-          - EntityId: spawner
-            BehaviourId: increment alive
+        Listeners: [ spawn enemy, decrement budget, increment alive ]
       spawn enemy:
         Type: spawner
         Properties:
@@ -467,9 +427,7 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: vector variable setter
         Properties:
@@ -487,9 +445,7 @@ Entities:
       fire key:
         Type: input action
         Properties: { Action: fire }
-        Listeners:
-          - EntityId: player
-            BehaviourId: fire bullet
+        Listeners: [ fire bullet ]
       fire bullet:
         Type: spawner
         Properties:
@@ -523,9 +479,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:

@@ -75,9 +75,7 @@ Entities:
           AngularVelocity: !var spin speed
       orbit tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: leader
-            BehaviourId: orbit move
+        Listeners: [ orbit move ]
       orbit move:                       # teleport onto the orbit each frame
         Type: position setter
         Properties:
@@ -91,11 +89,7 @@ Entities:
       pulse:                            # once a second: flip the target, retween scale
         Type: interval trigger
         Properties: { Interval: 1.0, AutoStart: true }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: flip size
-          - EntityId: leader
-            BehaviourId: resize
+        Listeners: [ flip size, resize ]
       flip size:
         Type: bool variable setter
         Properties:
@@ -126,9 +120,7 @@ Entities:
           Size: !var unit size
       track tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: position mirror
-            BehaviourId: copy position
+        Listeners: [ copy position ]
       copy position:
         Type: position setter
         Properties:
@@ -152,9 +144,7 @@ Entities:
           Size: !var unit size
       track tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: rotation mirror
-            BehaviourId: copy rotation
+        Listeners: [ copy rotation ]
       copy rotation:                    # direct !entity read — no expression needed
         Type: rotation setter
         Properties:
@@ -172,9 +162,7 @@ Entities:
           Size: !var unit size
       track tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: scale mirror
-            BehaviourId: bob with scale
+        Listeners: [ bob with scale ]
       bob with scale:
         Type: position setter
         Properties:

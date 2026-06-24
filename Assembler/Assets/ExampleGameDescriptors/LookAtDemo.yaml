@@ -67,9 +67,7 @@ Entities:
         Type: input action
         Properties:
           Action: forward
-        Listeners:
-          - EntityId: player
-            BehaviourId: move forward
+        Listeners: [ move forward ]
       move forward:
         Type: translate
         Properties:
@@ -78,9 +76,7 @@ Entities:
         Type: input action
         Properties:
           Action: back
-        Listeners:
-          - EntityId: player
-            BehaviourId: move back
+        Listeners: [ move back ]
       move back:
         Type: translate
         Properties:
@@ -89,9 +85,7 @@ Entities:
         Type: input action
         Properties:
           Action: left
-        Listeners:
-          - EntityId: player
-            BehaviourId: move left
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties:
@@ -100,9 +94,7 @@ Entities:
         Type: input action
         Properties:
           Action: right
-        Listeners:
-          - EntityId: player
-            BehaviourId: move right
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties:

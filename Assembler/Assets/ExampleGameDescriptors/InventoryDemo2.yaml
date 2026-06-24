@@ -171,8 +171,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add coin
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - remove self
       remove self:
         Type: destroy
 
@@ -197,8 +196,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add key
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - remove self
       remove self:
         Type: destroy
 
@@ -227,9 +225,7 @@ Entities:
         Type: input action
         Properties:
           Action: move
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: translate
         Properties:
@@ -275,11 +271,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr { Do: has potion, With: [ !var inventory ] }
-        Listeners:
-          - EntityId: inventory
-            BehaviourId: consume potion
-          - EntityId: inventory
-            BehaviourId: gain health
+        Listeners: [ consume potion, gain health ]
       # The consume expression mutates the first in-stock potion in the list in place (count - 1,
       # durability - 0.1) and returns it; the setter parks that record in `last potion`. Because a
       # record is a reference type, the mutation is visible in the inventory list too.
@@ -300,9 +292,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: win check
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:

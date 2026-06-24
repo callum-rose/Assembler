@@ -335,11 +335,7 @@ Entities:
       drive input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: car
-            BehaviourId: apply steer
-          - EntityId: car
-            BehaviourId: apply drive
+        Listeners: [ apply steer, apply drive ]
       apply drive:
         Type: set velocity
         Properties:
@@ -444,9 +440,7 @@ Entities:
       # order the player relies on for the rear-axle carve.
       control:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: rival 1, BehaviourId: apply steer }
-          - { EntityId: rival 1, BehaviourId: apply drive }
+        Listeners: [ apply steer, apply drive ]
       apply steer:
         Type: set angular velocity
         Properties:
@@ -487,7 +481,7 @@ Entities:
               - !clock deltaTime
       corner clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 1, BehaviourId: corner gate } ]
+        Listeners: [ corner gate ]
       corner gate:
         Type: condition gate
         Properties:
@@ -498,7 +492,7 @@ Entities:
               - !entity { Id: rival 1, Property: Position }
               - !expr { Do: corner at, With: [ !var wp ] }
               - !var rival reach
-        Listeners: [ { EntityId: rival 1, BehaviourId: advance } ]
+        Listeners: [ advance ]
       advance:
         Type: int variable setter
         Properties:
@@ -560,9 +554,7 @@ Entities:
           Output: !var nav dir
       control:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: rival 2, BehaviourId: apply steer }
-          - { EntityId: rival 2, BehaviourId: apply drive }
+        Listeners: [ apply steer, apply drive ]
       apply steer:
         Type: set angular velocity
         Properties:
@@ -603,7 +595,7 @@ Entities:
               - !clock deltaTime
       corner clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 2, BehaviourId: corner gate } ]
+        Listeners: [ corner gate ]
       corner gate:
         Type: condition gate
         Properties:
@@ -614,7 +606,7 @@ Entities:
               - !entity { Id: rival 2, Property: Position }
               - !expr { Do: corner at, With: [ !var wp ] }
               - !var rival reach
-        Listeners: [ { EntityId: rival 2, BehaviourId: advance } ]
+        Listeners: [ advance ]
       advance:
         Type: int variable setter
         Properties:
@@ -676,9 +668,7 @@ Entities:
           Output: !var nav dir
       control:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: rival 3, BehaviourId: apply steer }
-          - { EntityId: rival 3, BehaviourId: apply drive }
+        Listeners: [ apply steer, apply drive ]
       apply steer:
         Type: set angular velocity
         Properties:
@@ -719,7 +709,7 @@ Entities:
               - !clock deltaTime
       corner clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: rival 3, BehaviourId: corner gate } ]
+        Listeners: [ corner gate ]
       corner gate:
         Type: condition gate
         Properties:
@@ -730,7 +720,7 @@ Entities:
               - !entity { Id: rival 3, Property: Position }
               - !expr { Do: corner at, With: [ !var wp ] }
               - !var rival reach
-        Listeners: [ { EntityId: rival 3, BehaviourId: advance } ]
+        Listeners: [ advance ]
       advance:
         Type: int variable setter
         Properties:
@@ -902,11 +892,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !var lap armed
-        Listeners:
-          - EntityId: race
-            BehaviourId: add lap
-          - EntityId: race
-            BehaviourId: disarm lap
+        Listeners: [ add lap, disarm lap ]
       add lap:
         Type: int variable setter
         Properties:
@@ -922,9 +908,7 @@ Entities:
           Value: false
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: race
-            BehaviourId: win gate
+        Listeners: [ win gate ]
       win gate:
         Type: condition gate
         Properties:

@@ -53,9 +53,7 @@ Entities:
 
       start:
         Type: on start trigger
-        Listeners:
-          - EntityId: logo
-            BehaviourId: pop in
+        Listeners: [ pop in ]
 
       pop in:
         Type: scale animation
@@ -64,9 +62,7 @@ Entities:
           End: !vec { X: 1, Y: 1, Z: 1 }
           Duration: 0.5
           Easing: OutBack
-        Listeners:
-          - EntityId: logo
-            BehaviourId: drift up
+        Listeners: [ drift up ]
 
       drift up:
         Type: move animation
@@ -74,9 +70,7 @@ Entities:
           End: !vec { X: 0, Y: 2, Z: 0 }
           Duration: 1.5
           Easing: InOutSine
-        Listeners:
-          - EntityId: logo
-            BehaviourId: spin
+        Listeners: [ spin ]
 
       spin:
         Type: rotate animation

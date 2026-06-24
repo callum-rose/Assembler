@@ -327,7 +327,7 @@ forms — pick exactly one shape per list entry:
 ```yaml
 Listeners:
   # 1. Direct — a named behaviour on a named entity
-  - EntityId: ball spawner            # entity id (or !parameter self_id inside a template)
+  - EntityId: ball spawner            # entity id; OMIT to target this listener's OWN entity
     BehaviourId: spawn ball           # a behaviour id on that entity
     Outputs:                          # optional — bind this trigger's named outputs to local names
       contact_point: hit_point        # <output name from Behaviours.md>: <local name read via !output>
@@ -343,7 +343,21 @@ Listeners:
   - !gameover
 ```
 
-`ListenerDto` fields: `EntityId` (value), `BehaviourId` (string), `EntityTag` (value),
+**Defaulting & shorthand (direct form only).** `EntityId` defaults to the listener's **own enclosing
+entity** when omitted — so a behaviour wiring to another behaviour on the same entity drops it entirely
+(and templates no longer need `EntityId: !parameter self_id`). A direct listener can also be written as
+a bare scalar instead of the four-line map:
+
+```yaml
+Listeners: [ spawn ball ]                          # behaviour on THIS entity (EntityId defaults to self)
+Listeners: [ "score tracker / increment score" ]   # explicit `entity / behaviour` (split on the last `/`)
+```
+
+Use the scalar `entity / behaviour` form for a one-target listener with no `Outputs`; the split is on
+the last `/`, so a child-entity path (`panel/score`) works as the entity part. Anything needing
+`Outputs`, an `EntityTag`/`BehaviourTag`, or `!gameover` still uses the map / tag forms above.
+
+`ListenerDto` fields: `EntityId` (value, defaults to self), `BehaviourId` (string), `EntityTag` (value),
 `BehaviourTag` (value), `Outputs` (map `outputName → localName`). The `!gameover` tag deserialises to
 a distinct `GameOverListenerDto` marker.
 

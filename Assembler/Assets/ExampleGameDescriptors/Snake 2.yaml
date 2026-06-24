@@ -243,8 +243,7 @@ Templates:
           # currently expiring), then destroy the GameObject.
           - EntityId: segment manager
             BehaviourId: untrack oldest segment
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       self destruct:
         Type: destroy
 
@@ -282,8 +281,7 @@ Templates:
             BehaviourId: increment score
           - EntityId: segment manager
             BehaviourId: grow snake
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       self destruct:
         Type: destroy
 
@@ -295,9 +293,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -360,12 +356,9 @@ Entities:
         Properties:
           Interval: !var step interval
         Listeners:
-          - EntityId: snake head
-            BehaviourId: record prev pos
-          - EntityId: snake head
-            BehaviourId: advance head pos
-          - EntityId: snake head
-            BehaviourId: step move
+          - record prev pos
+          - advance head pos
+          - step move
           - EntityId: segment manager
             BehaviourId: spawn segment
           # After spawning the visible segment, record its position so the
@@ -400,9 +393,7 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: snake head
-            BehaviourId: apply dir
+        Listeners: [ apply dir ]
       apply dir:
         Type: vector variable setter
         Properties:
@@ -491,9 +482,7 @@ Entities:
     Behaviours:
       on start:
         Type: on start trigger
-        Listeners:
-          - EntityId: food manager
-            BehaviourId: spawn next food
+        Listeners: [ spawn next food ]
 
       spawn next food:
         Type: spawner

@@ -175,8 +175,7 @@ Templates:
             BehaviourId: add dot score
           - EntityId: trackers
             BehaviourId: add dot count
-          - EntityId: !parameter self_id
-            BehaviourId: remove
+          - remove
       remove:
         Type: destroy
 
@@ -197,8 +196,7 @@ Templates:
             BehaviourId: add power score
           - EntityId: trackers
             BehaviourId: arm fright
-          - EntityId: !parameter self_id
-            BehaviourId: remove
+          - remove
       remove:
         Type: destroy
 
@@ -250,11 +248,7 @@ Templates:
       catch:
         Type: trigger enter trigger
         Properties: { TagsToDetect: [ pacman ] }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: lose gate
-          - EntityId: !parameter self_id
-            BehaviourId: eat gate
+        Listeners: [ lose gate, eat gate ]
       # Not frightened -> the catch ends the game.
       lose gate:
         Type: inverse condition gate
@@ -266,8 +260,7 @@ Templates:
         Type: condition gate
         Properties: { Condition: !var frightened }
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go home
+          - go home
           - EntityId: trackers
             BehaviourId: add ghost score
       go home:
@@ -401,7 +394,7 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners: [ { EntityId: pacman, BehaviourId: apply dir } ]
+        Listeners: [ apply dir ]
       apply dir:
         Type: vector variable setter
         Properties:
@@ -481,7 +474,7 @@ Entities:
     Behaviours:
       setup:
         Type: on start trigger
-        Listeners: [ { EntityId: logic, BehaviourId: set total } ]
+        Listeners: [ set total ]
       set total:
         Type: int variable setter
         Properties:
@@ -489,7 +482,7 @@ Entities:
           Value: !expr { Do: pill count }
       fright tick:
         Type: every frame trigger
-        Listeners: [ { EntityId: logic, BehaviourId: update fright } ]
+        Listeners: [ update fright ]
       update fright:
         Type: bool variable setter
         Properties:
@@ -501,7 +494,7 @@ Entities:
             ReturnType: bool
       win tick:
         Type: every frame trigger
-        Listeners: [ { EntityId: logic, BehaviourId: win gate } ]
+        Listeners: [ win gate ]
       win gate:
         Type: condition gate
         Properties:

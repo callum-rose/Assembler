@@ -137,8 +137,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add coin
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - BehaviourId: remove self
       remove self:
         Type: destroy
 
@@ -163,8 +162,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add potion
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - BehaviourId: remove self
       remove self:
         Type: destroy
 
@@ -189,8 +187,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add key
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - BehaviourId: remove self
       remove self:
         Type: destroy
 
@@ -220,9 +217,7 @@ Entities:
         Type: input action
         Properties:
           Action: move
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: translate
         Properties:
@@ -275,11 +270,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr { Do: 'arg0 > 0', With: [ !var potions ] }
-        Listeners:
-          - EntityId: inventory
-            BehaviourId: spend potion
-          - EntityId: inventory
-            BehaviourId: gain health
+        Listeners: [ spend potion, gain health ]
       spend potion:
         Type: int variable setter
         Properties:
@@ -297,9 +288,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: win check
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:

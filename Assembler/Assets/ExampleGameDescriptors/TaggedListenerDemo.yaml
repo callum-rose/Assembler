@@ -124,11 +124,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: enemy spawner
-            BehaviourId: count spawn
-          - EntityId: enemy spawner
-            BehaviourId: spawn enemy
+        Listeners: [ count spawn, spawn enemy ]
       count spawn:
         Type: int variable setter
         Properties:
@@ -155,8 +151,7 @@ Entities:
         Type: input action
         Properties: { Action: fire }
         Listeners:
-          - EntityId: zapper
-            BehaviourId: count zap
+          - count zap
           - EntityTag: !var target tag
             BehaviourId: count as destroyed
           - EntityTag: !var target tag

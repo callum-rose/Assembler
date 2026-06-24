@@ -225,11 +225,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ bullet ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: take damage
-          - EntityId: !parameter self_id
-            BehaviourId: death check
+        Listeners: [ take damage, death check ]
       take damage:
         Type: int variable setter
         Properties:
@@ -256,8 +252,7 @@ Templates:
             BehaviourId: add kill
           - EntityId: scoreboard
             BehaviourId: dec alive
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       self destruct:
         Type: destroy
 
@@ -290,15 +285,11 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ enemy, wall ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       life:
         Type: timer trigger
         Properties: { Delay: !var bullet life }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       expire:
         Type: destroy
 
@@ -344,9 +335,7 @@ Entities:
       move action:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: set velocity
         Properties:
@@ -366,9 +355,7 @@ Entities:
       mouse look:
         Type: input action
         Properties: { Action: look }
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply yaw
+        Listeners: [ apply yaw ]
       apply yaw:
         Type: rotate
         Properties:
@@ -382,18 +369,14 @@ Entities:
       turn left key:
         Type: input action
         Properties: { Action: turn-left }
-        Listeners:
-          - EntityId: player
-            BehaviourId: turn left
+        Listeners: [ turn left ]
       turn left:
         Type: rotate
         Properties: { Displacement: !var arrow turn back }
       turn right key:
         Type: input action
         Properties: { Action: turn-right }
-        Listeners:
-          - EntityId: player
-            BehaviourId: turn right
+        Listeners: [ turn right ]
       turn right:
         Type: rotate
         Properties: { Displacement: !var arrow turn }
@@ -402,9 +385,7 @@ Entities:
       shoot action:
         Type: input action
         Properties: { Action: shoot }
-        Listeners:
-          - EntityId: player
-            BehaviourId: fire
+        Listeners: [ fire ]
       fire:
         Type: spawner
         Properties:
@@ -503,17 +484,14 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 1.0 }
-        Listeners:
-          - EntityId: wave 1
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.5, Count: 3, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 1
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
@@ -533,17 +511,14 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 14.0 }
-        Listeners:
-          - EntityId: wave 2
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.3, Count: 4, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 2
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
@@ -563,17 +538,14 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 30.0 }
-        Listeners:
-          - EntityId: wave 3
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.2, Count: 5, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 3
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
@@ -592,9 +564,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: victory
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:

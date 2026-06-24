@@ -77,9 +77,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var pulse interval
-        Listeners:
-          - EntityId: controller
-            BehaviourId: flip drift
+        Listeners: [ flip drift ]
       # Flips the cube's drift on/off relative to its current state.
       flip drift:
         Type: toggle behaviour enabled
@@ -91,9 +89,7 @@ Entities:
       freeze key:
         Type: input action
         Properties: { Action: freeze }
-        Listeners:
-          - EntityId: controller
-            BehaviourId: freeze
+        Listeners: [ freeze ]
       freeze:
         Type: set behaviour enabled
         Properties:
@@ -105,9 +101,7 @@ Entities:
       resume key:
         Type: input action
         Properties: { Action: resume }
-        Listeners:
-          - EntityId: controller
-            BehaviourId: resume
+        Listeners: [ resume ]
       resume:
         Type: set behaviour enabled
         Properties:

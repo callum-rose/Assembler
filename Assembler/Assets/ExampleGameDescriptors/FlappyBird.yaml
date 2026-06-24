@@ -98,9 +98,7 @@ Templates:
         Type: timer trigger
         Properties:
           Delay: !var pipe lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -123,15 +121,12 @@ Templates:
         Listeners:
           - EntityId: score tracker
             BehaviourId: increment score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var pipe lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -143,9 +138,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -183,9 +176,7 @@ Entities:
 
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: bird
-            BehaviourId: apply gravity
+        Listeners: [ apply gravity ]
       apply gravity:
         Type: vector variable setter
         Properties:
@@ -200,9 +191,7 @@ Entities:
       jump key:
         Type: input action
         Properties: { Action: flap }
-        Listeners:
-          - EntityId: bird
-            BehaviourId: jump
+        Listeners: [ jump ]
       jump:
         Type: vector variable setter
         Properties:
@@ -213,9 +202,7 @@ Entities:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ pipe, wall ]
-        Listeners:
-          - EntityId: bird
-            BehaviourId: die
+        Listeners: [ die ]
       die:
         Type: bool variable setter
         Properties:
@@ -260,14 +247,10 @@ Entities:
           Count: 0
           AutoStart: true
         Listeners:
-          - EntityId: pipe spawner
-            BehaviourId: randomize gap
-          - EntityId: pipe spawner
-            BehaviourId: spawn top pipe
-          - EntityId: pipe spawner
-            BehaviourId: spawn bottom pipe
-          - EntityId: pipe spawner
-            BehaviourId: spawn score zone
+          - randomize gap
+          - spawn top pipe
+          - spawn bottom pipe
+          - spawn score zone
 
       randomize gap:
         Type: float variable setter

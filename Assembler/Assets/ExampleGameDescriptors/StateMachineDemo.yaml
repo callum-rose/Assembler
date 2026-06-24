@@ -148,8 +148,7 @@ Entities:
       # so a fleeing guard can be cornered against a wall instead of escaping off-screen.
       keep in bounds:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: guard, BehaviourId: clamp position }
+        Listeners: [ clamp position ]
       clamp position:
         Type: position setter
         Properties:
@@ -252,8 +251,7 @@ Entities:
       hold left:
         Type: input action
         Properties: { Action: left }
-        Listeners:
-          - { EntityId: player, BehaviourId: move left }
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.024, Y: 0, Z: 0 } }
@@ -261,8 +259,7 @@ Entities:
       hold right:
         Type: input action
         Properties: { Action: right }
-        Listeners:
-          - { EntityId: player, BehaviourId: move right }
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.024, Y: 0, Z: 0 } }
@@ -270,8 +267,7 @@ Entities:
       hold up:
         Type: input action
         Properties: { Action: up }
-        Listeners:
-          - { EntityId: player, BehaviourId: move up }
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.024, Z: 0 } }
@@ -279,8 +275,7 @@ Entities:
       hold down:
         Type: input action
         Properties: { Action: down }
-        Listeners:
-          - { EntityId: player, BehaviourId: move down }
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.024, Z: 0 } }

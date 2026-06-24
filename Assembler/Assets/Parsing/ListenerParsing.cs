@@ -54,9 +54,13 @@ namespace Assembler.Parsing
 
 					var entityId = l.EntityId switch
 					{
+						// An omitted EntityId defaults to the listener's own enclosing entity (resolved at
+						// instantiation). This is the common case — a behaviour wiring to another behaviour on
+						// the same entity — and lets templates drop the `!parameter self_id` boilerplate.
+						null => SelfEntityId.Instance,
 						ParamRefDto paramRefDto => new ParameterEntityId(paramRefDto.Id ?? string.Empty).Resolve(ctx.Parameters),
 						VarRefDto varRefDto => new LiteralEntityId(varRefDto.ResolveValue<string>(ctx.Values)),
-						string behaviourId => new LiteralEntityId(behaviourId),
+						string entityIdString => new LiteralEntityId(entityIdString),
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
 					};
 

@@ -166,9 +166,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var drone spawn interval
-        Listeners:
-          - EntityId: drone spawner
-            BehaviourId: spawn
+        Listeners: [ spawn ]
       spawn:
         Type: spawner
         Properties:

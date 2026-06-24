@@ -85,9 +85,7 @@ Templates:
       life:
         Type: timer trigger
         Properties: { Delay: 2.0 }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       expire:
         Type: destroy
 
@@ -175,7 +173,7 @@ Entities:
       # --- Shared blackboard plumbing: pick the nav goal from drive_mode each frame. ---
       goal clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: driver, BehaviourId: update goal } ]
+        Listeners: [ update goal ]
       update goal:
         Type: vector variable setter
         Properties:
@@ -235,12 +233,12 @@ Entities:
       fire clock:
         Type: interval trigger
         Properties: { Interval: 0.4, AutoStart: true }
-        Listeners: [ { EntityId: driver, BehaviourId: fire gate } ]
+        Listeners: [ fire gate ]
       fire gate:
         Type: condition gate
         Properties:
           Condition: !expr { Do: is engaged, With: [ !var combat_state ] }
-        Listeners: [ { EntityId: driver, BehaviourId: fire } ]
+        Listeners: [ fire ]
       fire:
         Type: spawner
         Properties:
@@ -266,7 +264,7 @@ Entities:
       hold left:
         Type: input action
         Properties: { Action: left }
-        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.04, Y: 0, Z: 0 } }
@@ -274,7 +272,7 @@ Entities:
       hold right:
         Type: input action
         Properties: { Action: right }
-        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.04, Y: 0, Z: 0 } }
@@ -282,7 +280,7 @@ Entities:
       hold up:
         Type: input action
         Properties: { Action: up }
-        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.04, Z: 0 } }
@@ -290,7 +288,7 @@ Entities:
       hold down:
         Type: input action
         Properties: { Action: down }
-        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.04, Z: 0 } }

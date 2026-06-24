@@ -80,11 +80,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ player ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: add score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ add score, self destruct ]
       add score:
         Type: int variable setter
         Properties:
@@ -134,9 +130,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -175,9 +169,7 @@ Entities:
       hold left:
         Type: input action
         Properties: { Action: left }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move left
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties:
@@ -186,9 +178,7 @@ Entities:
       hold right:
         Type: input action
         Properties: { Action: right }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move right
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties:
@@ -197,9 +187,7 @@ Entities:
       hold up:
         Type: input action
         Properties: { Action: up }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move up
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties:
@@ -208,9 +196,7 @@ Entities:
       hold down:
         Type: input action
         Properties: { Action: down }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move down
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties:
