@@ -55,7 +55,7 @@ namespace VoxelSpike.Editor
         CuratedPalette _curatedPalette = CuratedPalette.Endesga32;
 
         // --- reference sheet ---
-        int _featureGuides = 2;        // interior feature projectors per view (0 = silhouette box only)
+        float _guideSensitivity = 0.8f; // colour-change threshold for feature guides (0 = box only, 1 = subtlest)
         bool _sideGuidesOnly;          // only draw side-view (depth) feature guides, not front-view (width)
         bool _depthArcs = true;        // transfer side->top depth via quarter arcs (else miter L-paths)
         bool _landingTicks = true;     // mark where each projector lands on the top view
@@ -134,7 +134,7 @@ namespace VoxelSpike.Editor
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Reference sheet", EditorStyles.boldLabel);
-            _featureGuides = EditorGUILayout.IntSlider("Feature guides / view", _featureGuides, 0, 6);
+            _guideSensitivity = EditorGUILayout.Slider("Guide sensitivity", _guideSensitivity, 0f, 1f);
             _sideGuidesOnly = EditorGUILayout.Toggle("Side-view guides only", _sideGuidesOnly);
             _depthArcs = EditorGUILayout.Toggle("Depth via arcs", _depthArcs);
             _landingTicks = EditorGUILayout.Toggle("Landing ticks", _landingTicks);
@@ -219,7 +219,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks, _topGridOnly, _guideColor);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _guideSensitivity, _sideGuidesOnly, _depthArcs, _landingTicks, _topGridOnly, _guideColor);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -492,7 +492,7 @@ namespace VoxelSpike.Editor
         // its right, and the rough TOP guess directly above it. The vertical gutter (front->top) equals
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
-        static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides,
+        static Texture2D BuildProjectionSheet(Hull h, View front, View side, float guideSensitivity,
             bool sideGuidesOnly, bool depthArcs, bool landingTicks, bool topGridOnly, Color32 guideCol)
         {
             int W = h.W, H = h.H, L = h.L;
@@ -537,7 +537,7 @@ namespace VoxelSpike.Editor
             // WIDTH landmarks (silhouette extents + strongest front-view boundaries) rise straight up
             // from the front view into the top. Skipped when only side-view guides are wanted.
             if (!sideGuidesOnly)
-            foreach (int idx in FeatureLandmarks(front, featureGuides))
+            foreach (int idx in FeatureLandmarks(front, guideSensitivity))
             {
                 int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
                 DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, guideCol, 1);
@@ -546,7 +546,7 @@ namespace VoxelSpike.Editor
 
             // DEPTH landmarks transfer from the side view to the top: either a quarter arc swung about
             // the shared corner, or the classic reflect-off-the-45°-miter L-path.
-            foreach (int idx in FeatureLandmarks(side, featureGuides))
+            foreach (int idx in FeatureLandmarks(side, guideSensitivity))
             {
                 int dz = Mathf.RoundToInt(idx / (float)Mathf.Max(1, side.W - 1) * Lp);
                 int featX = m + Wp + g + dz; // this depth's column in the side view
@@ -646,11 +646,14 @@ namespace VoxelSpike.Editor
             }
         }
 
-        // Column indices to project: always the silhouette extents (0 and W-1, i.e. overall size),
-        // plus up to maxPeaks strongest interior colour/feature boundaries.
-        static List<int> FeatureLandmarks(View v, int maxPeaks)
+        // Column indices to project: always the silhouette extents (0 and W-1, i.e. overall size), plus a
+        // guide at every clear colour/feature boundary — all local maxima of the edge strength above a
+        // sensitivity-driven threshold (sensitivity 0 => box only; 1 => even subtle changes). Spacing only
+        // suppresses duplicate lines on a single edge, so the count scales with how busy the view is.
+        static List<int> FeatureLandmarks(View v, float sensitivity)
         {
-            var marks = PickPeaks(v.VerticalEdgeStrength(), maxPeaks, Mathf.Max(2, v.W / 8), 0.30f);
+            float relThresh = Mathf.Lerp(1.1f, 0.04f, Mathf.Clamp01(sensitivity));
+            var marks = PickPeaks(v.VerticalEdgeStrength(), 96, Mathf.Max(2, v.W / 100), relThresh);
             if (!marks.Contains(0)) marks.Add(0);
             if (!marks.Contains(v.W - 1)) marks.Add(v.W - 1);
             marks.Sort();
