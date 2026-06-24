@@ -289,6 +289,7 @@ namespace VoxelSpike.Editor
             public int[] gridToVoxel;   // grid cell -> index into the lists below (-1 if empty)
             public List<int> gx, gy, gz; // Goxel coords: (X=i, Y=k depth, Z=j height)
             public List<Color> cols;
+            public List<bool> seen;     // true if a view sampled this voxel's colour (vs nearest-fill)
         }
 
         // Supersampled silhouette intersection + occlusion-correct colour back-projection. When `top`
@@ -419,13 +420,14 @@ namespace VoxelSpike.Editor
             return new Hull
             {
                 W = W, H = H, L = L, solid = solid, gridToVoxel = gridToVoxel,
-                gx = gx, gy = gy, gz = gz, cols = cols
+                gx = gx, gy = gy, gz = gz, cols = cols, seen = seen
             };
         }
 
         // ---------------------------------------------------------------- top render
 
         static readonly Color32 Neutral = new Color32(225, 228, 232, 255); // flat background
+        static readonly Color32 Unknown = new Color32(188, 192, 198, 255); // solid but uncertain colour → AI fills
         static readonly Color32 Guide = new Color32(168, 178, 196, 255);   // datum / projection lines
         static readonly Color32 Miter = new Color32(206, 120, 80, 255);    // 45° reflection diagonal
 
@@ -445,7 +447,10 @@ namespace VoxelSpike.Editor
                 for (int j = H - 1; j >= 0; j--)
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
-                    if (vox >= 0) { col[k * W + i] = h.cols[vox]; occ[k * W + i] = true; break; }
+                    if (vox < 0) continue;
+                    col[k * W + i] = h.seen[vox] ? h.cols[vox] : (Color)Unknown; // certain colour, else placeholder
+                    occ[k * W + i] = true;
+                    break;
                 }
             }
 
@@ -557,7 +562,10 @@ namespace VoxelSpike.Editor
                 for (int j = H - 1; j >= 0; j--)
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
-                    if (vox >= 0) { c = h.cols[vox]; occ = true; break; }
+                    if (vox < 0) continue;
+                    c = h.seen[vox] ? h.cols[vox] : (Color)Unknown; // certain colour, else placeholder
+                    occ = true;
+                    break;
                 }
                 if (!occ) continue;
                 for (int yy = 0; yy < s; yy++)
