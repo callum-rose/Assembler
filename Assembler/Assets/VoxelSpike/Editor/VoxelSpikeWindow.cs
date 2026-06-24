@@ -465,7 +465,7 @@ namespace VoxelSpike.Editor
         static Texture2D BuildProjectionSheet(Hull h, View front, View side)
         {
             int W = h.W, H = h.H, L = h.L;
-            int s = Mathf.Max(4, Mathf.RoundToInt(440f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (2x res)
+            int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
             int Wp = W * s, Hp = H * s, Lp = L * s;
             int g = Mathf.Max(12, s * 6);   // gutter, equal in both directions
             int m = Mathf.Max(10, s * 3);   // outer margin
