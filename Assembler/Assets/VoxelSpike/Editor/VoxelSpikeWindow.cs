@@ -56,6 +56,8 @@ namespace VoxelSpike.Editor
 
         // --- reference sheet ---
         int _featureGuides = 2;        // interior feature projectors per view (0 = silhouette box only)
+        bool _depthArcs = true;        // transfer side->top depth via quarter arcs (else miter L-paths)
+        bool _landingTicks = true;     // mark where each projector lands on the top view
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -130,6 +132,8 @@ namespace VoxelSpike.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Reference sheet", EditorStyles.boldLabel);
             _featureGuides = EditorGUILayout.IntSlider("Feature guides / view", _featureGuides, 0, 6);
+            _depthArcs = EditorGUILayout.Toggle("Depth via arcs", _depthArcs);
+            _landingTicks = EditorGUILayout.Toggle("Landing ticks", _landingTicks);
 
             EditorGUILayout.Space();
             _topGuessPath = EditorGUILayout.TextField("Top guess (.png)", _topGuessPath);
@@ -209,7 +213,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _depthArcs, _landingTicks);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -469,7 +473,8 @@ namespace VoxelSpike.Editor
         // its right, and the rough TOP guess directly above it. The vertical gutter (front->top) equals
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
-        static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides)
+        static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides,
+            bool depthArcs, bool landingTicks)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -491,28 +496,44 @@ namespace VoxelSpike.Editor
             Blit(img, cw, sidePx, Lp, Hp, m + Wp + g, m);         // side: right of front (shares height)
             Blit(img, cw, topPx, Wp, Lp, m, m + Hp + g);          // top: above front (shares width)
 
-            // Pre-drawn feature projectors at the silhouette extents + strongest colour/feature
-            // boundaries. WIDTH landmarks rise straight up from the front view into the top; DEPTH
-            // landmarks run up from the side view to the 45° miter, then reflect across into the top.
-            foreach (int idx in FeatureLandmarks(front, featureGuides))
-            {
-                int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
-                DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, Guide, 1);
-            }
-            foreach (int idx in FeatureLandmarks(side, featureGuides))
-            {
-                int dz = Mathf.RoundToInt(idx / (float)Mathf.Max(1, side.W - 1) * Lp);
-                int mx = m + Wp + g + dz, my = m + Hp + g + dz;
-                DrawVLine(img, cw, ch, mx, m, my, Guide, 1);      // side feature up to the miter
-                DrawHLine(img, cw, ch, my, m, mx, Guide, 1);      // miter across into the top
-            }
-
             // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
             int cornerX = m + Wp, cornerY = m + Hp;
             int thick = Mathf.Max(1, s / 6); // halved vs the resolution bump → finer datum/miter lines
             DrawVLine(img, cw, ch, cornerX, m, m + Hp + g + Lp, Guide, thick);
             DrawHLine(img, cw, ch, cornerY, m, m + Wp + g + Lp, Guide, thick);
             DrawDiag(img, cw, ch, cornerX, cornerY, g + Lp, Miter, thick);
+
+            int tick = Mathf.Max(3, s / 2);
+
+            // WIDTH landmarks (silhouette extents + strongest front-view boundaries) rise straight up
+            // from the front view into the top.
+            foreach (int idx in FeatureLandmarks(front, featureGuides))
+            {
+                int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
+                DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, Guide, 1);
+                if (landingTicks) DrawTick(img, cw, ch, m + wx, m + Hp + g, tick, Miter);
+            }
+
+            // DEPTH landmarks transfer from the side view to the top: either a quarter arc swung about
+            // the shared corner, or the classic reflect-off-the-45°-miter L-path.
+            foreach (int idx in FeatureLandmarks(side, featureGuides))
+            {
+                int dz = Mathf.RoundToInt(idx / (float)Mathf.Max(1, side.W - 1) * Lp);
+                int featX = m + Wp + g + dz; // this depth's column in the side view
+                int landY = m + Hp + g + dz; // this depth's row in the top view
+                if (depthArcs)
+                {
+                    DrawVLine(img, cw, ch, featX, m, cornerY, Guide, 1);       // mark the feature in the side view
+                    DrawArc(img, cw, ch, cornerX, cornerY, g + dz, Guide, 1);  // swing the depth up to the datum
+                    DrawHLine(img, cw, ch, landY, m, cornerX, Guide, 1);       // into the top view
+                }
+                else
+                {
+                    DrawVLine(img, cw, ch, featX, m, landY, Guide, 1);         // side feature up to the miter
+                    DrawHLine(img, cw, ch, landY, m, featX, Guide, 1);         // miter across into the top
+                }
+                if (landingTicks) DrawTick(img, cw, ch, cornerX, landY, tick, Miter);
+            }
 
             var t = new Texture2D(cw, ch, TextureFormat.RGBA32, false);
             t.SetPixels32(img);
@@ -625,6 +646,38 @@ namespace VoxelSpike.Editor
                 if (ok) chosen.Add(c);
             }
             return chosen;
+        }
+
+        // Quarter arc (upper-right quadrant) centred at (x0, y0), radius r: sweeps from the horizontal
+        // (east) to the vertical (north) datum, rotating a depth dimension 90° from the side to the top.
+        static void DrawArc(Color32[] img, int w, int h, int x0, int y0, int r, Color32 c, int thick)
+        {
+            if (r <= 0) return;
+            int steps = Mathf.Max(16, r * 2);
+            for (int i = 0; i <= steps; i++)
+            {
+                float a = (Mathf.PI / 2f) * i / steps;
+                int x = x0 + Mathf.RoundToInt(r * Mathf.Cos(a));
+                int y = y0 + Mathf.RoundToInt(r * Mathf.Sin(a));
+                for (int dy = -thick; dy <= thick; dy++)
+                for (int dx = -thick; dx <= thick; dx++)
+                {
+                    int xx = x + dx, yy = y + dy;
+                    if (xx >= 0 && xx < w && yy >= 0 && yy < h) img[yy * w + xx] = c;
+                }
+            }
+        }
+
+        // Small filled square marking where a projector lands.
+        static void DrawTick(Color32[] img, int w, int h, int x, int y, int size, Color32 c)
+        {
+            int half = Mathf.Max(1, size / 2);
+            for (int dy = -half; dy <= half; dy++)
+            for (int dx = -half; dx <= half; dx++)
+            {
+                int xx = x + dx, yy = y + dy;
+                if (xx >= 0 && xx < w && yy >= 0 && yy < h) img[yy * w + xx] = c;
+            }
         }
 
         static Texture2D ScaleNearest(Texture2D src, int dw, int dh)
