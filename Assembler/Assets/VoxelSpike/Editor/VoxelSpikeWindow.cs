@@ -196,16 +196,13 @@ namespace VoxelSpike.Editor
 
             Hull h = Carve(_carveHeight, fr[0], fr[1], null);
 
-            int scale = TopScale(h.W, h.L);
-            Texture2D topClean = RenderTop(h, scale, false); // pristine refine target (re-imported in stage 2)
-            Texture2D topAnno = RenderTop(h, scale, true);   // annotated (outline + front arrow) for context only
+            Texture2D topClean = RenderTop(h, TopScale(h.W, h.L)); // pristine refine target (re-imported in stage 2)
 
             string topPath = ResolvePath(_topGuessPath);
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = ComposeHorizontal(
-                new[] { fr[0].BuildColourPreview(), fr[1].BuildColourPreview(), topAnno }, 256, 16);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1]);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -215,15 +212,15 @@ namespace VoxelSpike.Editor
             File.WriteAllText(hullPath, BuildGoxel(h.gx, h.gy, h.gz, h.cols));
             AssetDatabase.Refresh();
 
-            _topGuessPreview = topAnno;
+            _topGuessPreview = sheet;
             _frontMask = fr[0].BuildMaskPreview();
             _rightMask = fr[1].BuildMaskPreview();
             _topMask = null;
             _status = $"Stage 1: carved {h.cols.Count} F+R voxels at {h.W} x {h.H} x {h.L}.\n" +
-                      $"Hull -> {hullPath}\nTop guess -> {topPath}\nReference sheet -> {sheetPath}\n" +
-                      "Give the AI the reference sheet (left=front, middle=right, right=rough top; arrow = " +
-                      "nose/front edge) and ask for a clean, flat-coloured top-down in the same orientation. " +
-                      "Save its output as 'AI top', then run stage 2.";
+                      $"Hull -> {hullPath}\nTop guess -> {topPath}\nProjection sheet -> {sheetPath}\n" +
+                      "Sheet is a third-angle projection (front lower-left, side right, rough top above " +
+                      "front; equal gutters, 45° miter for depth reflection). Ask the AI to redraw the top " +
+                      "view using the projectors, then crop it out and load as 'AI top' for stage 2.";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
@@ -418,16 +415,15 @@ namespace VoxelSpike.Editor
         // ---------------------------------------------------------------- top render
 
         static readonly Color32 Neutral = new Color32(225, 228, 232, 255); // flat background
-        static readonly Color32 Ink = new Color32(40, 44, 52, 255);        // outline / marker
+        static readonly Color32 Guide = new Color32(168, 178, 196, 255);   // datum / projection lines
+        static readonly Color32 Miter = new Color32(206, 120, 80, 255);    // 45° reflection diagonal
 
         // Integer upscale so the larger XZ side lands near 256 px (crisp nearest-neighbour pixels).
         static int TopScale(int w, int l) => Mathf.Max(1, Mathf.RoundToInt(256f / Mathf.Max(w, l)));
 
         // Orthographic top-down render on a flat neutral background: each (x, z) column shows its
         // topmost voxel's colour. Row 0 (bottom) = z = 0 = the front edge, so re-import re-registers.
-        // With `annotate`, adds a dark silhouette outline and a front-edge arrow — context only; the
-        // pristine (annotate=false) version is what stage 2 re-imports.
-        static Texture2D RenderTop(Hull h, int scale, bool annotate)
+        static Texture2D RenderTop(Hull h, int scale)
         {
             int W = h.W, H = h.H, L = h.L;
             var col = new Color[W * L];
@@ -446,7 +442,6 @@ namespace VoxelSpike.Editor
             int sw = W * scale, sl = L * scale;
             int tw = sw + 2 * m, tht = sl + 2 * m;
             var img = new Color32[tw * tht];
-            var solidPx = new bool[tw * tht];
             for (int p = 0; p < img.Length; p++) img[p] = Neutral;
 
             for (int y = 0; y < sl; y++)
@@ -454,15 +449,7 @@ namespace VoxelSpike.Editor
             {
                 int i = x / scale, k = y / scale;
                 if (!occ[k * W + i]) continue;
-                int p = (y + m) * tw + (x + m);
-                img[p] = col[k * W + i];
-                solidPx[p] = true;
-            }
-
-            if (annotate)
-            {
-                DrawOutline(img, solidPx, tw, tht, Mathf.Max(2, scale / 2));
-                DrawFrontArrow(img, tw, tht, m + sw / 2, m, scale);
+                img[(y + m) * tw + (x + m)] = col[k * W + i];
             }
 
             var t = new Texture2D(tw, tht, TextureFormat.RGBA32, false);
@@ -471,70 +458,112 @@ namespace VoxelSpike.Editor
             return t;
         }
 
-        // Dark border just outside the silhouette: any background pixel within `width` of a solid pixel.
-        static void DrawOutline(Color32[] img, bool[] solid, int w, int h, int width)
+        // Engineering-style projection sheet for the AI: the FRONT view (lower-left), the SIDE view to
+        // its right, and the rough TOP guess directly above it. The vertical gutter (front->top) equals
+        // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
+        // through which a 45° miter line is drawn so depth reflects from the side view into the top.
+        static Texture2D BuildProjectionSheet(Hull h, View front, View side)
         {
-            var edge = new bool[img.Length];
-            for (int y = 0; y < h; y++)
-            for (int x = 0; x < w; x++)
-            {
-                if (solid[y * w + x]) continue;
-                bool near = false;
-                for (int dy = -width; dy <= width && !near; dy++)
-                for (int dx = -width; dx <= width; dx++)
-                {
-                    int nx = x + dx, ny = y + dy;
-                    if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-                    if (solid[ny * w + nx]) { near = true; break; }
-                }
-                if (near) edge[y * w + x] = true;
-            }
-            for (int p = 0; p < img.Length; p++) if (edge[p]) img[p] = Ink;
-        }
+            int W = h.W, H = h.H, L = h.L;
+            int s = Mathf.Max(2, Mathf.RoundToInt(220f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel
+            int Wp = W * s, Hp = H * s, Lp = L * s;
+            int g = Mathf.Max(12, s * 6);   // gutter, equal in both directions
+            int m = Mathf.Max(10, s * 3);   // outer margin
 
-        // Filled triangle in the bottom margin pointing up at the silhouette's front (z = 0) edge.
-        static void DrawFrontArrow(Color32[] img, int w, int h, int cx, int marginTopY, int scale)
-        {
-            int apexY = marginTopY - 1;
-            int baseY = Mathf.Max(1, marginTopY - Mathf.Max(4, scale * 2));
-            int half = Mathf.Max(3, scale);
-            for (int y = baseY; y <= apexY; y++)
-            {
-                float t = apexY == baseY ? 1f : (y - baseY) / (float)(apexY - baseY);
-                int hw = Mathf.RoundToInt(half * (1f - t));
-                for (int x = cx - hw; x <= cx + hw; x++)
-                    if (x >= 0 && x < w && y >= 0 && y < h) img[y * w + x] = Ink;
-            }
-        }
-
-        // Lay images out left-to-right at a common height on a flat background (the AI's context sheet).
-        static Texture2D ComposeHorizontal(Texture2D[] imgs, int targetH, int pad)
-        {
-            var scaled = new Texture2D[imgs.Length];
-            int totalW = pad;
-            for (int i = 0; i < imgs.Length; i++)
-            {
-                int dw = Mathf.Max(1, Mathf.RoundToInt(imgs[i].width * targetH / (float)imgs[i].height));
-                scaled[i] = ScaleNearest(imgs[i], dw, targetH);
-                totalW += dw + pad;
-            }
-            int tht = targetH + 2 * pad;
-            var img = new Color32[totalW * tht];
+            int cw = 2 * m + Wp + g + Lp;
+            int ch = 2 * m + Hp + g + Lp;
+            var img = new Color32[cw * ch];
             for (int p = 0; p < img.Length; p++) img[p] = Neutral;
 
-            int x0 = pad;
-            foreach (var s in scaled)
-            {
-                var sp = s.GetPixels32();
-                for (int y = 0; y < s.height; y++)
-                for (int x = 0; x < s.width; x++)
-                    img[(y + pad) * totalW + (x0 + x)] = sp[y * s.width + x];
-                x0 += s.width + pad;
-            }
-            var t = new Texture2D(totalW, tht, TextureFormat.RGBA32, false);
+            // panels, all at the same pixels-per-voxel scale so widths/heights/depths line up
+            Color32[] frontPx = ScaleNearest(front.BuildColourPreview(), Wp, Hp).GetPixels32();
+            Color32[] sidePx = ScaleNearest(side.BuildColourPreview(), Lp, Hp).GetPixels32();
+            Color32[] topPx = RenderTopRaw(h, s).GetPixels32();
+
+            Blit(img, cw, frontPx, Wp, Hp, m, m);                 // front: lower-left
+            Blit(img, cw, sidePx, Lp, Hp, m + Wp + g, m);         // side: right of front (shares height)
+            Blit(img, cw, topPx, Wp, Lp, m, m + Hp + g);          // top: above front (shares width)
+
+            // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
+            int cornerX = m + Wp, cornerY = m + Hp;
+            int thick = Mathf.Max(1, s / 3);
+            DrawVLine(img, cw, ch, cornerX, m, m + Hp + g + Lp, Guide, thick);
+            DrawHLine(img, cw, ch, cornerY, m, m + Wp + g + Lp, Guide, thick);
+            DrawDiag(img, cw, ch, cornerX, cornerY, g + Lp, Miter, thick);
+
+            var t = new Texture2D(cw, ch, TextureFormat.RGBA32, false);
             t.SetPixels32(img);
             t.Apply();
             return t;
+        }
+
+        // Raw top-down render (no margin) at `s` pixels per voxel: topmost voxel colour, front (z=0) at
+        // the bottom row, on the flat background.
+        static Texture2D RenderTopRaw(Hull h, int s)
+        {
+            int W = h.W, H = h.H, L = h.L;
+            int sw = W * s, sl = L * s;
+            var px = new Color32[sw * sl];
+            for (int p = 0; p < px.Length; p++) px[p] = Neutral;
+            for (int k = 0; k < L; k++)
+            for (int i = 0; i < W; i++)
+            {
+                Color c = Neutral;
+                bool occ = false;
+                for (int j = H - 1; j >= 0; j--)
+                {
+                    int vox = h.gridToVoxel[i + W * (j + H * k)];
+                    if (vox >= 0) { c = h.cols[vox]; occ = true; break; }
+                }
+                if (!occ) continue;
+                for (int yy = 0; yy < s; yy++)
+                for (int xx = 0; xx < s; xx++)
+                    px[(k * s + yy) * sw + (i * s + xx)] = c;
+            }
+            var t = new Texture2D(sw, sl, TextureFormat.RGBA32, false);
+            t.SetPixels32(px);
+            t.Apply();
+            return t;
+        }
+
+        static void Blit(Color32[] dst, int dstW, Color32[] src, int sw, int sh, int ox, int oy)
+        {
+            for (int y = 0; y < sh; y++)
+            for (int x = 0; x < sw; x++)
+                dst[(oy + y) * dstW + (ox + x)] = src[y * sw + x];
+        }
+
+        static void DrawVLine(Color32[] img, int w, int h, int x, int y0, int y1, Color32 c, int thick)
+        {
+            for (int y = Mathf.Max(0, y0); y <= Mathf.Min(h - 1, y1); y++)
+            for (int t = -thick; t <= thick; t++)
+            {
+                int xx = x + t;
+                if (xx >= 0 && xx < w) img[y * w + xx] = c;
+            }
+        }
+
+        static void DrawHLine(Color32[] img, int w, int h, int y, int x0, int x1, Color32 c, int thick)
+        {
+            for (int x = Mathf.Max(0, x0); x <= Mathf.Min(w - 1, x1); x++)
+            for (int t = -thick; t <= thick; t++)
+            {
+                int yy = y + t;
+                if (yy >= 0 && yy < h) img[yy * w + x] = c;
+            }
+        }
+
+        static void DrawDiag(Color32[] img, int w, int h, int x0, int y0, int len, Color32 c, int thick)
+        {
+            for (int d = 0; d <= len; d++)
+            {
+                int x = x0 + d, y = y0 + d;
+                for (int t = -thick; t <= thick; t++)
+                {
+                    int xx = x + t;
+                    if (xx >= 0 && xx < w && y >= 0 && y < h) img[y * w + xx] = c;
+                }
+            }
         }
 
         static Texture2D ScaleNearest(Texture2D src, int dw, int dh)
