@@ -455,8 +455,10 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it; both-view (edge) voxels are ambiguous.
-                    col[k * W + i] = h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
+                    // Certain only when exactly one view saw it AND it's a vertical-surface voxel
+                    // (borders empty space horizontally) — so it survives the not-yet-done top carve.
+                    bool certain = h.seenCount[vox] == 1 && HorizEdge(h, i, j, k);
+                    col[k * W + i] = certain ? h.cols[vox] : (Color)Unknown;
                     occ[k * W + i] = true;
                     break;
                 }
@@ -565,6 +567,16 @@ namespace VoxelSpike.Editor
             return t;
         }
 
+        // True when voxel (i, j, k) borders empty space in the horizontal plane (±X or ±Z) — i.e. it's
+        // on the object's vertical surface, so its (X, Z) column is real and won't vanish in the top
+        // carve. Out-of-bounds counts as empty.
+        static bool HorizEdge(Hull h, int i, int j, int k)
+        {
+            int W = h.W, H = h.H, L = h.L;
+            bool Solid(int x, int z) => x >= 0 && x < W && z >= 0 && z < L && h.solid[x + W * (j + H * z)];
+            return !Solid(i - 1, k) || !Solid(i + 1, k) || !Solid(i, k - 1) || !Solid(i, k + 1);
+        }
+
         // Raw top-down render (no margin) at `s` pixels per voxel: topmost voxel colour, front (z=0) at
         // the bottom row, on the flat background.
         static Texture2D RenderTopRaw(Hull h, int s, bool colourTop)
@@ -582,8 +594,10 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it; both-view (edge) voxels are ambiguous.
-                    c = colourTop && h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
+                    // Certain only when exactly one view saw it AND it's a vertical-surface voxel
+                    // (borders empty space horizontally) — so it survives the not-yet-done top carve.
+                    bool certain = colourTop && h.seenCount[vox] == 1 && HorizEdge(h, i, j, k);
+                    c = certain ? h.cols[vox] : (Color)Unknown;
                     occ = true;
                     break;
                 }
