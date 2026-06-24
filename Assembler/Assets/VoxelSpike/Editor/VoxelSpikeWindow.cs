@@ -484,6 +484,22 @@ namespace VoxelSpike.Editor
             Blit(img, cw, sidePx, Lp, Hp, m + Wp + g, m);         // side: right of front (shares height)
             Blit(img, cw, topPx, Wp, Lp, m, m + Hp + g);          // top: above front (shares width)
 
+            // Pre-drawn feature projectors at the silhouette extents + strongest colour/feature
+            // boundaries. WIDTH landmarks rise straight up from the front view into the top; DEPTH
+            // landmarks run up from the side view to the 45° miter, then reflect across into the top.
+            foreach (int idx in FeatureLandmarks(front, 5))
+            {
+                int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
+                DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, Guide, 1);
+            }
+            foreach (int idx in FeatureLandmarks(side, 5))
+            {
+                int dz = Mathf.RoundToInt(idx / (float)Mathf.Max(1, side.W - 1) * Lp);
+                int mx = m + Wp + g + dz, my = m + Hp + g + dz;
+                DrawVLine(img, cw, ch, mx, m, my, Guide, 1);      // side feature up to the miter
+                DrawHLine(img, cw, ch, my, m, mx, Guide, 1);      // miter across into the top
+            }
+
             // shared corner = front view's top-right; datum lines along its right/top edges + 45° miter
             int cornerX = m + Wp, cornerY = m + Hp;
             int thick = Mathf.Max(1, s / 3);
@@ -564,6 +580,44 @@ namespace VoxelSpike.Editor
                     if (xx >= 0 && xx < w && y >= 0 && y < h) img[y * w + xx] = c;
                 }
             }
+        }
+
+        // Column indices to project: always the silhouette extents (0 and W-1, i.e. overall size),
+        // plus up to maxPeaks strongest interior colour/feature boundaries.
+        static List<int> FeatureLandmarks(View v, int maxPeaks)
+        {
+            var marks = PickPeaks(v.VerticalEdgeStrength(), maxPeaks, Mathf.Max(2, v.W / 16), 0.18f);
+            if (!marks.Contains(0)) marks.Add(0);
+            if (!marks.Contains(v.W - 1)) marks.Add(v.W - 1);
+            marks.Sort();
+            return marks;
+        }
+
+        // Local maxima of `e` above relThresh*max, taken strongest-first with a minimum spacing.
+        static List<int> PickPeaks(float[] e, int maxCount, int minSpacing, float relThresh)
+        {
+            var chosen = new List<int>();
+            int n = e.Length;
+            if (n < 3) return chosen;
+
+            float mx = 0f;
+            for (int i = 0; i < n; i++) if (e[i] > mx) mx = e[i];
+            if (mx <= 0f) return chosen;
+            float th = relThresh * mx;
+
+            var cands = new List<int>();
+            for (int i = 1; i < n - 1; i++)
+                if (e[i] >= th && e[i] >= e[i - 1] && e[i] >= e[i + 1]) cands.Add(i);
+            cands.Sort((a, b) => e[b].CompareTo(e[a]));
+
+            foreach (int c in cands)
+            {
+                if (chosen.Count >= maxCount) break;
+                bool ok = true;
+                foreach (int ch in chosen) if (Mathf.Abs(ch - c) < minSpacing) { ok = false; break; }
+                if (ok) chosen.Add(c);
+            }
+            return chosen;
         }
 
         static Texture2D ScaleNearest(Texture2D src, int dw, int dh)
@@ -1178,6 +1232,27 @@ namespace VoxelSpike.Editor
                 t.SetPixels32(px);
                 t.Apply();
                 return t;
+            }
+
+            // Per-column "vertical edge" strength: how much this column differs from the one to its
+            // left, summed over rows. Silhouette boundaries (fg/bg flips) and colour boundaries (Lab
+            // distance) both count, so peaks mark key feature/colour transitions along the width axis.
+            public float[] VerticalEdgeStrength()
+            {
+                var e = new float[W];
+                for (int x = 1; x < W; x++)
+                {
+                    float sum = 0f;
+                    for (int y = 0; y < H; y++)
+                    {
+                        bool a = _fg[y * W + x], b = _fg[y * W + x - 1];
+                        if (!a && !b) continue;
+                        if (a != b) { sum += 25f; continue; } // silhouette edge ~ a moderate Lab jump
+                        sum += (RgbToLab(_col[y * W + x]) - RgbToLab(_col[y * W + x - 1])).magnitude;
+                    }
+                    e[x] = sum / Mathf.Max(1, H);
+                }
+                return e;
             }
 
             // The cropped view colours with the background knocked out flat — a reference-sheet panel.
