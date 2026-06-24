@@ -56,6 +56,7 @@ namespace VoxelSpike.Editor
 
         // --- reference sheet ---
         int _featureGuides = 2;        // interior feature projectors per view (0 = silhouette box only)
+        bool _sideGuidesOnly;          // only draw side-view (depth) feature guides, not front-view (width)
         bool _depthArcs = true;        // transfer side->top depth via quarter arcs (else miter L-paths)
         bool _landingTicks = true;     // mark where each projector lands on the top view
 
@@ -132,6 +133,7 @@ namespace VoxelSpike.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Reference sheet", EditorStyles.boldLabel);
             _featureGuides = EditorGUILayout.IntSlider("Feature guides / view", _featureGuides, 0, 6);
+            _sideGuidesOnly = EditorGUILayout.Toggle("Side-view guides only", _sideGuidesOnly);
             _depthArcs = EditorGUILayout.Toggle("Depth via arcs", _depthArcs);
             _landingTicks = EditorGUILayout.Toggle("Landing ticks", _landingTicks);
 
@@ -213,7 +215,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _depthArcs, _landingTicks);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides, _sideGuidesOnly, _depthArcs, _landingTicks);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -479,7 +481,7 @@ namespace VoxelSpike.Editor
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
         static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides,
-            bool depthArcs, bool landingTicks)
+            bool sideGuidesOnly, bool depthArcs, bool landingTicks)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -511,7 +513,8 @@ namespace VoxelSpike.Editor
             int tick = Mathf.Max(3, s / 2);
 
             // WIDTH landmarks (silhouette extents + strongest front-view boundaries) rise straight up
-            // from the front view into the top.
+            // from the front view into the top. Skipped when only side-view guides are wanted.
+            if (!sideGuidesOnly)
             foreach (int idx in FeatureLandmarks(front, featureGuides))
             {
                 int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
