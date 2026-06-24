@@ -293,7 +293,7 @@ namespace VoxelSpike.Editor
             public int[] gridToVoxel;   // grid cell -> index into the lists below (-1 if empty)
             public List<int> gx, gy, gz; // Goxel coords: (X=i, Y=k depth, Z=j height)
             public List<Color> cols;
-            public List<bool> seen;     // true if a view sampled this voxel's colour (vs nearest-fill)
+            public List<int> seenCount; // number of views that sampled this voxel's colour (0 = nearest-fill)
         }
 
         // Supersampled silhouette intersection + occlusion-correct colour back-projection. When `top`
@@ -359,6 +359,7 @@ namespace VoxelSpike.Editor
             var gz = new List<int>();
             var cols = new List<Color>();
             var seen = new List<bool>();
+            var seenN = new List<int>();    // distinct views that coloured each voxel (for top-render certainty)
             int[] gridToVoxel = Filled(W * H * L, -1);
 
             for (int j = 0; j < H; j++)
@@ -391,6 +392,7 @@ namespace VoxelSpike.Editor
                 gx.Add(i); gy.Add(k); gz.Add(j);
                 cols.Add(isSeen ? sum * (1f / n) : Color.clear); // unseen -> filled in pass 5
                 seen.Add(isSeen);
+                seenN.Add(n);
             }
 
             int voxelCount = cols.Count;
@@ -424,7 +426,7 @@ namespace VoxelSpike.Editor
             return new Hull
             {
                 W = W, H = H, L = L, solid = solid, gridToVoxel = gridToVoxel,
-                gx = gx, gy = gy, gz = gz, cols = cols, seen = seen
+                gx = gx, gy = gy, gz = gz, cols = cols, seenCount = seenN
             };
         }
 
@@ -451,7 +453,8 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    col[k * W + i] = h.seen[vox] ? h.cols[vox] : (Color)Unknown; // certain colour, else placeholder
+                    // Certain only when exactly one view saw it; both-view (edge) voxels are ambiguous.
+                    col[k * W + i] = h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
                     occ[k * W + i] = true;
                     break;
                 }
@@ -567,7 +570,8 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    c = h.seen[vox] ? h.cols[vox] : (Color)Unknown; // certain colour, else placeholder
+                    // Certain only when exactly one view saw it; both-view (edge) voxels are ambiguous.
+                    c = h.seenCount[vox] == 1 ? h.cols[vox] : (Color)Unknown;
                     occ = true;
                     break;
                 }
