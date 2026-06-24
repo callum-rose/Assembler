@@ -60,8 +60,9 @@ namespace VoxelSpike.Editor
         bool _topFlipU, _topFlipV;
 
         // --- output paths ---
-        string _topGuessPath = "Assets/VoxelSpike/top_guess.png";
-        string _hullPath = "Assets/VoxelSpike/hull.txt";   // stage-1 carved hull, as-is (high res)
+        string _topGuessPath = "Assets/VoxelSpike/top_guess.png";       // pristine refine target
+        string _refSheetPath = "Assets/VoxelSpike/reference_sheet.png"; // front|right|top context for the AI
+        string _hullPath = "Assets/VoxelSpike/hull.txt";                // stage-1 carved hull, as-is (high res)
         string _outputPath = "Assets/VoxelSpike/output.txt";
 
         // --- last-run state / preview ---
@@ -125,6 +126,7 @@ namespace VoxelSpike.Editor
 
             EditorGUILayout.Space();
             _topGuessPath = EditorGUILayout.TextField("Top guess (.png)", _topGuessPath);
+            _refSheetPath = EditorGUILayout.TextField("Reference sheet (.png)", _refSheetPath);
             _hullPath = EditorGUILayout.TextField("Hull (.txt)", _hullPath);
             _outputPath = EditorGUILayout.TextField("Output (.txt)", _outputPath);
 
@@ -194,23 +196,34 @@ namespace VoxelSpike.Editor
 
             Hull h = Carve(_carveHeight, fr[0], fr[1], null);
 
-            Texture2D top = RenderTop(h, TopScale(h.W, h.L));
+            int scale = TopScale(h.W, h.L);
+            Texture2D topClean = RenderTop(h, scale, false); // pristine refine target (re-imported in stage 2)
+            Texture2D topAnno = RenderTop(h, scale, true);   // annotated (outline + front arrow) for context only
+
             string topPath = ResolvePath(_topGuessPath);
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
-            File.WriteAllBytes(topPath, top.EncodeToPNG());
+            File.WriteAllBytes(topPath, topClean.EncodeToPNG());
+
+            Texture2D sheet = ComposeHorizontal(
+                new[] { fr[0].BuildColourPreview(), fr[1].BuildColourPreview(), topAnno }, 256, 16);
+            string sheetPath = ResolvePath(_refSheetPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
+            File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
 
             string hullPath = ResolvePath(_hullPath);
             Directory.CreateDirectory(Path.GetDirectoryName(hullPath));
             File.WriteAllText(hullPath, BuildGoxel(h.gx, h.gy, h.gz, h.cols));
             AssetDatabase.Refresh();
 
-            _topGuessPreview = top;
+            _topGuessPreview = topAnno;
             _frontMask = fr[0].BuildMaskPreview();
             _rightMask = fr[1].BuildMaskPreview();
             _topMask = null;
             _status = $"Stage 1: carved {h.cols.Count} F+R voxels at {h.W} x {h.H} x {h.L}.\n" +
-                      $"Hull -> {hullPath}\nTop guess -> {topPath}\n" +
-                      $"Refine the top with the AI, load it as 'AI top', then run stage 2.";
+                      $"Hull -> {hullPath}\nTop guess -> {topPath}\nReference sheet -> {sheetPath}\n" +
+                      "Give the AI the reference sheet (left=front, middle=right, right=rough top; arrow = " +
+                      "nose/front edge) and ask for a clean, flat-coloured top-down in the same orientation. " +
+                      "Save its output as 'AI top', then run stage 2.";
             Debug.Log("[VoxelSpike] " + _status.Replace("\n", " "));
         }
 
@@ -223,7 +236,8 @@ namespace VoxelSpike.Editor
             View top = null;
             if (_topEdited != null)
             {
-                top = View.Build(_topEdited, _bgThreshold, _dilate, _topFlipU, _topFlipV);
+                // Largest component only, so a stray mark/annotation the AI leaves doesn't skew registration.
+                top = View.BuildLargest(_topEdited, _bgThreshold, _dilate, _topFlipU, _topFlipV);
                 if (top == null) { _status = "AI top image has no foreground. Adjust BG tolerance."; return; }
             }
 
@@ -403,35 +417,139 @@ namespace VoxelSpike.Editor
 
         // ---------------------------------------------------------------- top render
 
+        static readonly Color32 Neutral = new Color32(225, 228, 232, 255); // flat background
+        static readonly Color32 Ink = new Color32(40, 44, 52, 255);        // outline / marker
+
         // Integer upscale so the larger XZ side lands near 256 px (crisp nearest-neighbour pixels).
         static int TopScale(int w, int l) => Mathf.Max(1, Mathf.RoundToInt(256f / Mathf.Max(w, l)));
 
-        // Orthographic top-down render: each (x, z) column shows its topmost voxel's colour; empty
-        // columns are transparent. Row 0 (bottom) = z = 0 = the front edge, so re-import re-registers.
-        static Texture2D RenderTop(Hull h, int scale)
+        // Orthographic top-down render on a flat neutral background: each (x, z) column shows its
+        // topmost voxel's colour. Row 0 (bottom) = z = 0 = the front edge, so re-import re-registers.
+        // With `annotate`, adds a dark silhouette outline and a front-edge arrow — context only; the
+        // pristine (annotate=false) version is what stage 2 re-imports.
+        static Texture2D RenderTop(Hull h, int scale, bool annotate)
         {
             int W = h.W, H = h.H, L = h.L;
-            var native = new Color32[W * L];
+            var col = new Color[W * L];
+            var occ = new bool[W * L];
             for (int k = 0; k < L; k++)
             for (int i = 0; i < W; i++)
             {
-                var c = new Color32(0, 0, 0, 0);
                 for (int j = H - 1; j >= 0; j--)
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
-                    if (vox >= 0) { c = h.cols[vox]; break; }
+                    if (vox >= 0) { col[k * W + i] = h.cols[vox]; occ[k * W + i] = true; break; }
                 }
-                native[k * W + i] = c;
             }
 
+            int m = Mathf.Max(6, scale * 2);
             int sw = W * scale, sl = L * scale;
-            var big = new Color32[sw * sl];
+            int tw = sw + 2 * m, tht = sl + 2 * m;
+            var img = new Color32[tw * tht];
+            var solidPx = new bool[tw * tht];
+            for (int p = 0; p < img.Length; p++) img[p] = Neutral;
+
             for (int y = 0; y < sl; y++)
             for (int x = 0; x < sw; x++)
-                big[y * sw + x] = native[(y / scale) * W + (x / scale)];
+            {
+                int i = x / scale, k = y / scale;
+                if (!occ[k * W + i]) continue;
+                int p = (y + m) * tw + (x + m);
+                img[p] = col[k * W + i];
+                solidPx[p] = true;
+            }
 
-            var t = new Texture2D(sw, sl, TextureFormat.RGBA32, false);
-            t.SetPixels32(big);
+            if (annotate)
+            {
+                DrawOutline(img, solidPx, tw, tht, Mathf.Max(2, scale / 2));
+                DrawFrontArrow(img, tw, tht, m + sw / 2, m, scale);
+            }
+
+            var t = new Texture2D(tw, tht, TextureFormat.RGBA32, false);
+            t.SetPixels32(img);
+            t.Apply();
+            return t;
+        }
+
+        // Dark border just outside the silhouette: any background pixel within `width` of a solid pixel.
+        static void DrawOutline(Color32[] img, bool[] solid, int w, int h, int width)
+        {
+            var edge = new bool[img.Length];
+            for (int y = 0; y < h; y++)
+            for (int x = 0; x < w; x++)
+            {
+                if (solid[y * w + x]) continue;
+                bool near = false;
+                for (int dy = -width; dy <= width && !near; dy++)
+                for (int dx = -width; dx <= width; dx++)
+                {
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                    if (solid[ny * w + nx]) { near = true; break; }
+                }
+                if (near) edge[y * w + x] = true;
+            }
+            for (int p = 0; p < img.Length; p++) if (edge[p]) img[p] = Ink;
+        }
+
+        // Filled triangle in the bottom margin pointing up at the silhouette's front (z = 0) edge.
+        static void DrawFrontArrow(Color32[] img, int w, int h, int cx, int marginTopY, int scale)
+        {
+            int apexY = marginTopY - 1;
+            int baseY = Mathf.Max(1, marginTopY - Mathf.Max(4, scale * 2));
+            int half = Mathf.Max(3, scale);
+            for (int y = baseY; y <= apexY; y++)
+            {
+                float t = apexY == baseY ? 1f : (y - baseY) / (float)(apexY - baseY);
+                int hw = Mathf.RoundToInt(half * (1f - t));
+                for (int x = cx - hw; x <= cx + hw; x++)
+                    if (x >= 0 && x < w && y >= 0 && y < h) img[y * w + x] = Ink;
+            }
+        }
+
+        // Lay images out left-to-right at a common height on a flat background (the AI's context sheet).
+        static Texture2D ComposeHorizontal(Texture2D[] imgs, int targetH, int pad)
+        {
+            var scaled = new Texture2D[imgs.Length];
+            int totalW = pad;
+            for (int i = 0; i < imgs.Length; i++)
+            {
+                int dw = Mathf.Max(1, Mathf.RoundToInt(imgs[i].width * targetH / (float)imgs[i].height));
+                scaled[i] = ScaleNearest(imgs[i], dw, targetH);
+                totalW += dw + pad;
+            }
+            int tht = targetH + 2 * pad;
+            var img = new Color32[totalW * tht];
+            for (int p = 0; p < img.Length; p++) img[p] = Neutral;
+
+            int x0 = pad;
+            foreach (var s in scaled)
+            {
+                var sp = s.GetPixels32();
+                for (int y = 0; y < s.height; y++)
+                for (int x = 0; x < s.width; x++)
+                    img[(y + pad) * totalW + (x0 + x)] = sp[y * s.width + x];
+                x0 += s.width + pad;
+            }
+            var t = new Texture2D(totalW, tht, TextureFormat.RGBA32, false);
+            t.SetPixels32(img);
+            t.Apply();
+            return t;
+        }
+
+        static Texture2D ScaleNearest(Texture2D src, int dw, int dh)
+        {
+            var sp = src.GetPixels32();
+            var dp = new Color32[dw * dh];
+            for (int y = 0; y < dh; y++)
+            for (int x = 0; x < dw; x++)
+            {
+                int sx = Mathf.Min(src.width - 1, x * src.width / dw);
+                int sy = Mathf.Min(src.height - 1, y * src.height / dh);
+                dp[y * dw + x] = sp[sy * src.width + sx];
+            }
+            var t = new Texture2D(dw, dh, TextureFormat.RGBA32, false);
+            t.SetPixels32(dp);
             t.Apply();
             return t;
         }
@@ -880,6 +998,26 @@ namespace VoxelSpike.Editor
                 return swap ? new[] { right, left } : new[] { left, right };
             }
 
+            // Single-object image, keeping only the largest connected component (drops speckle and any
+            // stray annotation the AI left). Used to re-import the refined top in stage 2.
+            public static View BuildLargest(Texture2D tex, float threshold, int dilate, bool flipU, bool flipV)
+            {
+                Color32[] px = ReadPixels(tex, out int tw, out int th);
+                ComputeBackground(px, tw, th, out float bgR, out float bgG, out float bgB);
+
+                bool[] fg = new bool[tw * th];
+                for (int i = 0; i < fg.Length; i++)
+                    fg[i] = IsForeground(px[i], bgR, bgG, bgB, threshold);
+
+                List<Comp> comps = ConnectedComponents(fg, tw, th, out int[] label);
+                if (comps.Count == 0) return null;
+                Comp big = comps[0];
+                foreach (var c in comps) if (c.Count > big.Count) big = c;
+
+                return Crop(px, tw, big.MinX, big.MinY, big.MaxX, big.MaxY,
+                    (sx, sy) => label[sy * tw + sx] == big.Id, dilate, flipU, flipV);
+            }
+
             static View Crop(Color32[] src, int srcW, int minX, int minY, int maxX, int maxY,
                 System.Func<int, int, bool> isFg, int dilate, bool flipU, bool flipV)
             {
@@ -1008,6 +1146,18 @@ namespace VoxelSpike.Editor
                 var px = new Color32[W * H];
                 for (int i = 0; i < px.Length; i++)
                     px[i] = _fg[i] ? new Color32(255, 255, 255, 255) : new Color32(40, 40, 40, 255);
+                t.SetPixels32(px);
+                t.Apply();
+                return t;
+            }
+
+            // The cropped view colours with the background knocked out flat — a reference-sheet panel.
+            public Texture2D BuildColourPreview()
+            {
+                var t = new Texture2D(W, H, TextureFormat.RGBA32, false);
+                var px = new Color32[W * H];
+                for (int i = 0; i < px.Length; i++)
+                    px[i] = _fg[i] ? _col[i] : Neutral;
                 t.SetPixels32(px);
                 t.Apply();
                 return t;
