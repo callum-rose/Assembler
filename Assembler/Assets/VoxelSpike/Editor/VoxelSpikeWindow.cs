@@ -54,6 +54,9 @@ namespace VoxelSpike.Editor
         PaletteMode _paletteMode = PaletteMode.Curated;
         CuratedPalette _curatedPalette = CuratedPalette.Endesga32;
 
+        // --- reference sheet ---
+        int _featureGuides = 2;        // interior feature projectors per view (0 = silhouette box only)
+
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
         bool _rightFlipU, _rightFlipV;
@@ -123,6 +126,10 @@ namespace VoxelSpike.Editor
             DrawFlips("Front", ref _frontFlipU, ref _frontFlipV);
             DrawFlips("Right", ref _rightFlipU, ref _rightFlipV);
             DrawFlips("Top", ref _topFlipU, ref _topFlipV);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Reference sheet", EditorStyles.boldLabel);
+            _featureGuides = EditorGUILayout.IntSlider("Feature guides / view", _featureGuides, 0, 6);
 
             EditorGUILayout.Space();
             _topGuessPath = EditorGUILayout.TextField("Top guess (.png)", _topGuessPath);
@@ -202,7 +209,7 @@ namespace VoxelSpike.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1]);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _featureGuides);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -462,7 +469,7 @@ namespace VoxelSpike.Editor
         // its right, and the rough TOP guess directly above it. The vertical gutter (front->top) equals
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
-        static Texture2D BuildProjectionSheet(Hull h, View front, View side)
+        static Texture2D BuildProjectionSheet(Hull h, View front, View side, int featureGuides)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -487,12 +494,12 @@ namespace VoxelSpike.Editor
             // Pre-drawn feature projectors at the silhouette extents + strongest colour/feature
             // boundaries. WIDTH landmarks rise straight up from the front view into the top; DEPTH
             // landmarks run up from the side view to the 45° miter, then reflect across into the top.
-            foreach (int idx in FeatureLandmarks(front, 5))
+            foreach (int idx in FeatureLandmarks(front, featureGuides))
             {
                 int wx = Mathf.RoundToInt(idx / (float)Mathf.Max(1, front.W - 1) * Wp);
                 DrawVLine(img, cw, ch, m + wx, m, m + Hp + g + Lp, Guide, 1);
             }
-            foreach (int idx in FeatureLandmarks(side, 5))
+            foreach (int idx in FeatureLandmarks(side, featureGuides))
             {
                 int dz = Mathf.RoundToInt(idx / (float)Mathf.Max(1, side.W - 1) * Lp);
                 int mx = m + Wp + g + dz, my = m + Hp + g + dz;
@@ -586,7 +593,7 @@ namespace VoxelSpike.Editor
         // plus up to maxPeaks strongest interior colour/feature boundaries.
         static List<int> FeatureLandmarks(View v, int maxPeaks)
         {
-            var marks = PickPeaks(v.VerticalEdgeStrength(), maxPeaks, Mathf.Max(2, v.W / 16), 0.18f);
+            var marks = PickPeaks(v.VerticalEdgeStrength(), maxPeaks, Mathf.Max(2, v.W / 8), 0.30f);
             if (!marks.Contains(0)) marks.Add(0);
             if (!marks.Contains(v.W - 1)) marks.Add(v.W - 1);
             marks.Sort();
