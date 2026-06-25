@@ -61,6 +61,7 @@ namespace VoxelSpike.Editor
         bool _landingTicks = true;     // mark where each projector lands on the top view
         bool _topGridOnly;             // top view: no colour guess, just a reference grid over the footprint
         Color _guideColor = new Color(168f / 255f, 178f / 255f, 196f / 255f, 1f); // datum / projector lines
+        float _colorAgreeTolerance = 0.10f; // top guess: colour a multi-view voxel as certain when its views agree within this normalised-RGB distance (0 = exact / single-view only)
 
         // --- orientation flips (handedness ambiguity per view) ---
         bool _frontFlipU, _frontFlipV;
@@ -131,6 +132,10 @@ namespace VoxelSpike.Editor
             DrawFlips("Front", ref _frontFlipU, ref _frontFlipV);
             DrawFlips("Right", ref _rightFlipU, ref _rightFlipV);
             DrawFlips("Top", ref _topFlipU, ref _topFlipV);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Top guess colouring", EditorStyles.boldLabel);
+            _colorAgreeTolerance = EditorGUILayout.Slider("Colour agree tolerance", _colorAgreeTolerance, 0f, 1f);
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Reference sheet", EditorStyles.boldLabel);
@@ -213,13 +218,13 @@ namespace VoxelSpike.Editor
 
             Hull h = Carve(_carveHeight, fr[0], fr[1], null);
 
-            Texture2D topClean = RenderTop(h, TopScale(h.W, h.L)); // pristine refine target (re-imported in stage 2)
+            Texture2D topClean = RenderTop(h, TopScale(h.W, h.L), _colorAgreeTolerance); // pristine refine target (re-imported in stage 2)
 
             string topPath = ResolvePath(_topGuessPath);
             Directory.CreateDirectory(Path.GetDirectoryName(topPath));
             File.WriteAllBytes(topPath, topClean.EncodeToPNG());
 
-            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _guideSensitivity, _sideGuidesOnly, _depthArcs, _landingTicks, _topGridOnly, _guideColor);
+            Texture2D sheet = BuildProjectionSheet(h, fr[0], fr[1], _guideSensitivity, _sideGuidesOnly, _depthArcs, _landingTicks, _topGridOnly, _guideColor, _colorAgreeTolerance);
             string sheetPath = ResolvePath(_refSheetPath);
             Directory.CreateDirectory(Path.GetDirectoryName(sheetPath));
             File.WriteAllBytes(sheetPath, sheet.EncodeToPNG());
@@ -295,7 +300,7 @@ namespace VoxelSpike.Editor
             public int[] gridToVoxel;   // grid cell -> index into the lists below (-1 if empty)
             public List<int> gx, gy, gz; // Goxel coords: (X=i, Y=k depth, Z=j height)
             public List<Color> cols;
-            public List<int> seenCount; // number of views that sampled this voxel's colour (0 = nearest-fill)
+            public List<float> agreeDist; // max pairwise normalised-RGB distance among the views that coloured this voxel (0 = single view, or perfect agreement)
             public List<bool> edgeSeen; // a sampling view saw this voxel at its silhouette edge (next to empty)
         }
 
@@ -362,7 +367,7 @@ namespace VoxelSpike.Editor
             var gz = new List<int>();
             var cols = new List<Color>();
             var seen = new List<bool>();
-            var seenN = new List<int>();    // distinct views that coloured each voxel (for top-render certainty)
+            var agree = new List<float>();   // max pairwise sample distance among colouring views (for top-render certainty)
             var edgeSeen = new List<bool>(); // sampled at a view's silhouette edge (next to empty space)
             int[] gridToVoxel = Filled(W * H * L, -1);
 
@@ -388,16 +393,22 @@ namespace VoxelSpike.Editor
                 Color sum = Color.clear;
                 int n = 0;
                 bool edge = false; // sampled where the seeing view's silhouette borders empty space
-                if (seeFront || seeBack) { sum += front.SampleColour(x01, y01); n++; edge |= front.OnEdge(x01, y01, 1f / W, 1f / H); }
-                if (seeRight || seeLeft) { sum += right.SampleColour(z01, y01); n++; edge |= right.OnEdge(z01, y01, 1f / L, 1f / H); }
-                if (seeTop || seeBottom) { sum += top.SampleColour(x01, z01); n++; edge |= top.OnEdge(x01, z01, 1f / W, 1f / L); }
+                Color s0 = default, s1 = default, s2 = default; // per-axis samples, for the agreement test
+                if (seeFront || seeBack) { s0 = front.SampleColour(x01, y01); sum += s0; n++; edge |= front.OnEdge(x01, y01, 1f / W, 1f / H); }
+                if (seeRight || seeLeft) { Color c = right.SampleColour(z01, y01); if (n == 0) s0 = c; else s1 = c; sum += c; n++; edge |= right.OnEdge(z01, y01, 1f / L, 1f / H); }
+                if (seeTop || seeBottom) { Color c = top.SampleColour(x01, z01); if (n == 0) s0 = c; else if (n == 1) s1 = c; else s2 = c; sum += c; n++; edge |= top.OnEdge(x01, z01, 1f / W, 1f / L); }
+
+                // Max pairwise colour distance among the axes that saw this voxel (single axis -> 0).
+                float agreeDist = 0f;
+                if (n >= 2) agreeDist = Mathf.Max(agreeDist, ColourDist(s0, s1));
+                if (n >= 3) agreeDist = Mathf.Max(agreeDist, Mathf.Max(ColourDist(s0, s2), ColourDist(s1, s2)));
 
                 bool isSeen = n > 0;
                 gridToVoxel[cell] = cols.Count;
                 gx.Add(i); gy.Add(k); gz.Add(j);
                 cols.Add(isSeen ? sum * (1f / n) : Color.clear); // unseen -> filled in pass 5
                 seen.Add(isSeen);
-                seenN.Add(n);
+                agree.Add(agreeDist);
                 edgeSeen.Add(edge);
             }
 
@@ -432,7 +443,7 @@ namespace VoxelSpike.Editor
             return new Hull
             {
                 W = W, H = H, L = L, solid = solid, gridToVoxel = gridToVoxel,
-                gx = gx, gy = gy, gz = gz, cols = cols, seenCount = seenN, edgeSeen = edgeSeen
+                gx = gx, gy = gy, gz = gz, cols = cols, agreeDist = agree, edgeSeen = edgeSeen
             };
         }
 
@@ -445,9 +456,16 @@ namespace VoxelSpike.Editor
         // Integer upscale so the larger XZ side lands near 256 px (crisp nearest-neighbour pixels).
         static int TopScale(int w, int l) => Mathf.Max(1, Mathf.RoundToInt(256f / Mathf.Max(w, l)));
 
+        // Normalised RGB distance (0..sqrt(3)), same metric as foreground segmentation.
+        static float ColourDist(Color a, Color b)
+        {
+            float dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
+            return Mathf.Sqrt(dr * dr + dg * dg + db * db);
+        }
+
         // Orthographic top-down render on a flat neutral background: each (x, z) column shows its
         // topmost voxel's colour. Row 0 (bottom) = z = 0 = the front edge, so re-import re-registers.
-        static Texture2D RenderTop(Hull h, int scale)
+        static Texture2D RenderTop(Hull h, int scale, float agreeTol)
         {
             int W = h.W, H = h.H, L = h.L;
             var col = new Color[W * L];
@@ -459,9 +477,10 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it AND that view saw it at its silhouette
-                    // edge (next to empty space) — so the voxel is real, not over-fill the top carve removes.
-                    bool certain = h.seenCount[vox] == 1 && h.edgeSeen[vox];
+                    // Certain when a colouring view saw it at its silhouette edge (a real-surface proxy)
+                    // AND the views that saw it agree on colour within tolerance — single-view voxels have
+                    // distance 0, so they always pass the agreement half; agreeing two-view corners now qualify too.
+                    bool certain = h.edgeSeen[vox] && h.agreeDist[vox] <= agreeTol;
                     col[k * W + i] = certain ? h.cols[vox] : (Color)Unknown;
                     occ[k * W + i] = true;
                     break;
@@ -493,7 +512,7 @@ namespace VoxelSpike.Editor
         // the horizontal gutter (front->side); all three views meet at the front view's top-right corner,
         // through which a 45° miter line is drawn so depth reflects from the side view into the top.
         static Texture2D BuildProjectionSheet(Hull h, View front, View side, float guideSensitivity,
-            bool sideGuidesOnly, bool depthArcs, bool landingTicks, bool topGridOnly, Color32 guideCol)
+            bool sideGuidesOnly, bool depthArcs, bool landingTicks, bool topGridOnly, Color32 guideCol, float agreeTol)
         {
             int W = h.W, H = h.H, L = h.L;
             int s = Mathf.Max(8, Mathf.RoundToInt(880f / Mathf.Max(Mathf.Max(W, H), L))); // pixels / voxel (4x res)
@@ -509,7 +528,7 @@ namespace VoxelSpike.Editor
             // panels, all at the same pixels-per-voxel scale so widths/heights/depths line up
             Color32[] frontPx = ScaleNearest(front.BuildColourPreview(), Wp, Hp).GetPixels32();
             Color32[] sidePx = ScaleNearest(side.BuildColourPreview(), Lp, Hp).GetPixels32();
-            Color32[] topPx = RenderTopRaw(h, s, !topGridOnly).GetPixels32();
+            Color32[] topPx = RenderTopRaw(h, s, !topGridOnly, agreeTol).GetPixels32();
 
             Blit(img, cw, frontPx, Wp, Hp, m, m);                 // front: lower-left
             Blit(img, cw, sidePx, Lp, Hp, m + Wp + g, m);         // side: right of front (shares height)
@@ -573,7 +592,7 @@ namespace VoxelSpike.Editor
 
         // Raw top-down render (no margin) at `s` pixels per voxel: topmost voxel colour, front (z=0) at
         // the bottom row, on the flat background.
-        static Texture2D RenderTopRaw(Hull h, int s, bool colourTop)
+        static Texture2D RenderTopRaw(Hull h, int s, bool colourTop, float agreeTol)
         {
             int W = h.W, H = h.H, L = h.L;
             int sw = W * s, sl = L * s;
@@ -588,9 +607,10 @@ namespace VoxelSpike.Editor
                 {
                     int vox = h.gridToVoxel[i + W * (j + H * k)];
                     if (vox < 0) continue;
-                    // Certain only when exactly one view saw it AND that view saw it at its silhouette
-                    // edge (next to empty space) — so the voxel is real, not over-fill the top carve removes.
-                    bool certain = colourTop && h.seenCount[vox] == 1 && h.edgeSeen[vox];
+                    // Certain when a colouring view saw it at its silhouette edge (a real-surface proxy)
+                    // AND the views that saw it agree on colour within tolerance — single-view voxels have
+                    // distance 0, so they always pass; agreeing two-view corners now qualify too.
+                    bool certain = colourTop && h.edgeSeen[vox] && h.agreeDist[vox] <= agreeTol;
                     c = certain ? h.cols[vox] : (Color)Unknown;
                     occ = true;
                     break;
