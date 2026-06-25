@@ -61,9 +61,7 @@ Templates:
         Type: input action
         Properties:
           Action: !parameter up_action
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: move up
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties:
@@ -75,9 +73,7 @@ Templates:
         Type: input action
         Properties:
           Action: !parameter down_action
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: move down
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties:
@@ -113,9 +109,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ ball ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: score incrementer
+        Listeners: [ score incrementer ]
       score incrementer:
         Type: int variable setter
         Properties:
@@ -155,8 +149,7 @@ Templates:
             - left paddle
             - right paddle
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: paddle bounce velocity setter
+          - BehaviourId: paddle bounce velocity setter
             Outputs:
               contact_point: hit_point
               other_position: paddle_position
@@ -176,9 +169,7 @@ Templates:
         Properties:
           TagsToDetect:
             - wall
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: wall bounce velocity setter
+        Listeners: [ wall bounce velocity setter ]
       wall bounce velocity setter:
         Type: vector variable setter
         Properties:
@@ -194,8 +185,7 @@ Templates:
           TagsToDetect:
             - goal
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destructor
+          - self destructor
           - EntityId: ball spawner
             BehaviourId: spawn ball
       self destructor:
@@ -276,9 +266,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -360,9 +348,7 @@ Entities:
     Behaviours:
       initial spawn trigger:
         Type: on start trigger
-        Listeners:
-          - EntityId: ball spawner
-            BehaviourId: spawn ball
+        Listeners: [ spawn ball ]
       spawn ball:
         Type: spawner
         Properties:

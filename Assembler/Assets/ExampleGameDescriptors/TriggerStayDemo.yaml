@@ -64,9 +64,7 @@ Entities:
         Type: trigger stay trigger
         Properties:
           TagsToDetect: [ zone ]
-        Listeners:
-          - EntityId: player
-            BehaviourId: count overlap
+        Listeners: [ count overlap ]
       count overlap:
         Type: int variable setter
         Properties:

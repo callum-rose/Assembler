@@ -96,8 +96,7 @@ Templates:
         Listeners:
           - EntityId: scorer
             BehaviourId: add point
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - BehaviourId: remove self
       remove self:
         Type: destroy
 
@@ -162,9 +161,7 @@ Entities:
       hold left:
         Type: input action
         Properties: { Action: left }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move left
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties:
@@ -173,9 +170,7 @@ Entities:
       hold right:
         Type: input action
         Properties: { Action: right }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move right
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties:
@@ -184,9 +179,7 @@ Entities:
       hold up:
         Type: input action
         Properties: { Action: up }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move up
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties:
@@ -195,9 +188,7 @@ Entities:
       hold down:
         Type: input action
         Properties: { Action: down }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move down
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties:
@@ -209,16 +200,12 @@ Entities:
     Behaviours:
       spawn first:
         Type: on start trigger
-        Listeners:
-          - EntityId: orb spawner
-            BehaviourId: spawn orb
+        Listeners: [ spawn orb ]
       tick:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: orb spawner
-            BehaviourId: spawn orb
+        Listeners: [ spawn orb ]
       spawn orb:
         Type: spawner
         Properties:

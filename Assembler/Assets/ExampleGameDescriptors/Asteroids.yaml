@@ -132,16 +132,12 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ asteroid ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var bullet lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -175,8 +171,7 @@ Templates:
         Listeners:
           - EntityId: score tracker
             BehaviourId: increment score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       ship hit:
         Type: trigger enter trigger
         Properties:
@@ -184,15 +179,12 @@ Templates:
         Listeners:
           - EntityId: life tracker
             BehaviourId: decrement lives
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var asteroid lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -228,8 +220,7 @@ Templates:
         Listeners:
           - EntityId: score tracker
             BehaviourId: increment score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       ship hit:
         Type: trigger enter trigger
         Properties:
@@ -237,15 +228,12 @@ Templates:
         Listeners:
           - EntityId: life tracker
             BehaviourId: decrement lives
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var asteroid lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -257,9 +245,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -308,9 +294,7 @@ Entities:
       # --- Per-frame position tracking (for bullet spawn position) ---
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: ship
-            BehaviourId: track position
+        Listeners: [ track position ]
       track position:
         Type: vector variable setter
         Properties:
@@ -328,11 +312,7 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: apply steer
-          - EntityId: ship
-            BehaviourId: apply thrust
+        Listeners: [ apply steer, apply thrust ]
       apply steer:
         Type: vector variable setter
         Properties:
@@ -363,9 +343,7 @@ Entities:
       brake key:
         Type: input action
         Properties: { Action: brake }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: brake
+        Listeners: [ brake ]
       brake:
         Type: vector variable setter
         Properties:
@@ -376,9 +354,7 @@ Entities:
       fire key:
         Type: input action
         Properties: { Action: fire }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: fire bullet
+        Listeners: [ fire bullet ]
       fire bullet:
         Type: spawner
         Properties:
@@ -427,9 +403,7 @@ Entities:
             With:
               lives: !var lives
               floor: !var zero int
-        Listeners:
-          - EntityId: life tracker
-            BehaviourId: set dead
+        Listeners: [ set dead ]
       set dead:
         Type: bool variable setter
         Properties:
@@ -444,9 +418,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var asteroid spawn interval
-        Listeners:
-          - EntityId: asteroid spawner
-            BehaviourId: spawn asteroid
+        Listeners: [ spawn asteroid ]
       spawn asteroid:
         Type: spawner
         Properties:

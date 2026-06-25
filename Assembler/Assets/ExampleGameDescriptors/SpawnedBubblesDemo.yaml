@@ -61,11 +61,7 @@ Templates:
         Type: timer trigger
         Properties:
           Delay: !var lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: increment pop counter
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ increment pop counter, self destruct ]
       # Local `lifetime` is read here, global `bubbles popped` is written.
       increment pop counter:
         Type: int variable setter
@@ -114,9 +110,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -136,11 +130,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: bubble spawner
-            BehaviourId: increment spawn counter
-          - EntityId: bubble spawner
-            BehaviourId: spawn bubble
+        Listeners: [ increment spawn counter, spawn bubble ]
       increment spawn counter:
         Type: int variable setter
         Properties:

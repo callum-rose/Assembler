@@ -129,7 +129,7 @@ Entities:
       # Win when the agent reaches the goal: each frame, test the distance and end the game.
       arrival clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: agent, BehaviourId: arrival check } ]
+        Listeners: [ arrival check ]
       arrival check:
         Type: condition gate
         Properties:

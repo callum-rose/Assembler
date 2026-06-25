@@ -169,7 +169,7 @@ Entities:
       # Win when the large agent (longest path) reaches the goal.
       arrival clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: large agent, BehaviourId: arrival check } ]
+        Listeners: [ arrival check ]
       arrival check:
         Type: condition gate
         Properties:

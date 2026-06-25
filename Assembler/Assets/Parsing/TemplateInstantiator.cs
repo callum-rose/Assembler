@@ -38,7 +38,14 @@ namespace Assembler.Parsing
 
 			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, instanceCtx));
 
-			var behaviours = inheritedBehaviours.Concat(additionalBehaviours.EmptyIfNull()).ToArray();
+			// Resolve self-targeting listeners (SelfEntityId) to this entity's concrete id. This is the single
+			// point where every entity gets its final id, so it covers hand-authored, templated, child, placed
+			// and spawned entities alike. Children keep their own SelfEntityId until their own Instantiate runs
+			// (additionalBehaviours flow straight through SubstituteChild, which leaves the sentinel intact).
+			var behaviours = inheritedBehaviours
+				.Concat(additionalBehaviours.EmptyIfNull())
+				.Select(b => ResolveSelfListeners(b, entityId))
+				.ToArray();
 
 			// Tags override (not merge): an entity that declares its own Tags replaces the
 			// template's, mirroring how an explicit Position overrides the template's. An entity
@@ -139,6 +146,25 @@ namespace Assembler.Parsing
 		// resolved stages reject them. Thin wrapper over the unified converter.
 		private static AssemblerValue AdaptRuntimeParameter(string key, object? value) =>
 			AssemblerValueConverter.ToAssemblerValue(value, new ValueConversion { AllowRuntimeTypes = true, Name = key });
+
+		// Rewrites a behaviour's self-targeting listeners (SelfEntityId) to a literal of the enclosing
+		// entity's id. Nested listeners (OnEnter/OnExit, Targets) are unaffected — they still require an
+		// explicit target.
+		private static BehaviourInfo ResolveSelfListeners(BehaviourInfo info, string entityId)
+		{
+			if (info.Listeners.All(l => l is not DirectListenerInfo { EntityId: SelfEntityId }))
+			{
+				return info;
+			}
+
+			var resolved = info.Listeners
+				.Select(l => l is DirectListenerInfo { EntityId: SelfEntityId } direct
+					? direct with { EntityId = new LiteralEntityId(entityId) }
+					: l)
+				.ToArray();
+
+			return info with { Listeners = resolved };
+		}
 
 		private static BehaviourInfo SubstituteBehaviour(BehaviourInfo info, TransformContext ctx)
 		{

@@ -310,9 +310,7 @@ Templates:
       # ---- spawn-time game-over check ----
       on spawn:
         Type: on start trigger
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: spawn check
+        Listeners: [ spawn check ]
       spawn check:
         Type: condition gate
         Properties:
@@ -334,11 +332,7 @@ Templates:
           Interval: !var fall interval
           Count: 0
           AutoStart: true
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: fall ok gate
-          - EntityId: !parameter self_id
-            BehaviourId: fall blocked gate
+        Listeners: [ fall ok gate, fall blocked gate ]
       fall ok gate:
         Type: condition gate
         Properties:
@@ -351,11 +345,7 @@ Templates:
               occupied: !var occupied
               dx: 0
               dy: -1
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: apply fall
-          - EntityId: !parameter self_id
-            BehaviourId: reposition
+        Listeners: [ apply fall, reposition ]
       apply fall:
         Type: vector variable setter
         Properties:
@@ -380,9 +370,7 @@ Templates:
       left key:
         Type: input action
         Properties: { Action: move-left }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: left gate
+        Listeners: [ left gate ]
       left gate:
         Type: condition gate
         Properties:
@@ -395,11 +383,7 @@ Templates:
               occupied: !var occupied
               dx: -1
               dy: 0
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: apply left
-          - EntityId: !parameter self_id
-            BehaviourId: reposition
+        Listeners: [ apply left, reposition ]
       apply left:
         Type: vector variable setter
         Properties:
@@ -413,9 +397,7 @@ Templates:
       right key:
         Type: input action
         Properties: { Action: move-right }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: right gate
+        Listeners: [ right gate ]
       right gate:
         Type: condition gate
         Properties:
@@ -428,11 +410,7 @@ Templates:
               occupied: !var occupied
               dx: 1
               dy: 0
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: apply right
-          - EntityId: !parameter self_id
-            BehaviourId: reposition
+        Listeners: [ apply right, reposition ]
       apply right:
         Type: vector variable setter
         Properties:
@@ -448,9 +426,7 @@ Templates:
       rotate key:
         Type: input action
         Properties: { Action: rotate-piece }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: rotate gate
+        Listeners: [ rotate gate ]
       rotate gate:
         Type: condition gate
         Properties:
@@ -461,11 +437,7 @@ Templates:
               s: !parameter shape
               rot: !var rot
               occupied: !var occupied
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: apply rotate state
-          - EntityId: !parameter self_id
-            BehaviourId: apply rotate transform
+        Listeners: [ apply rotate state, apply rotate transform ]
       apply rotate state:
         Type: int variable setter
         Properties:
@@ -489,15 +461,11 @@ Templates:
       soft press:
         Type: input action
         Properties: { Action: soft-press }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: set soft on
+        Listeners: [ set soft on ]
       soft release:
         Type: input action
         Properties: { Action: soft-release }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: set soft off
+        Listeners: [ set soft off ]
       set soft on:
         Type: bool variable setter
         Properties: { VariableId: !var soft dropping, Value: true }
@@ -507,51 +475,34 @@ Templates:
       soft tick:
         Type: interval trigger
         Properties: { Interval: !var soft interval, Count: 0, AutoStart: true }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: soft gate
+        Listeners: [ soft gate ]
       soft gate:
         Type: condition gate
         Properties: { Condition: !var soft dropping }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: fall ok gate
-          - EntityId: !parameter self_id
-            BehaviourId: fall blocked gate
+        Listeners: [ fall ok gate, fall blocked gate ]
 
       # ---- hard drop (teleport to landing, then lock) ----
       hard drop key:
         Type: input action
         Properties: { Action: hard-drop }
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: apply hard drop
-          - EntityId: !parameter self_id
-            BehaviourId: reposition
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 0
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 1
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 2
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 3
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 0
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 1
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 2
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 3
+          - apply hard drop
+          - reposition
+          - lock add 0
+          - lock add 1
+          - lock add 2
+          - lock add 3
+          - spawn block 0
+          - spawn block 1
+          - spawn block 2
+          - spawn block 3
           - EntityId: well manager
             BehaviourId: begin resolve
           - EntityId: piece factory
             BehaviourId: roll shape
           - EntityId: piece factory
             BehaviourId: spawn piece
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       apply hard drop:
         Type: vector variable setter
         Properties:
@@ -576,30 +527,21 @@ Templates:
               rot: !var rot
               occupied: !var occupied
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 0
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 1
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 2
-          - EntityId: !parameter self_id
-            BehaviourId: lock add 3
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 0
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 1
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 2
-          - EntityId: !parameter self_id
-            BehaviourId: spawn block 3
+          - lock add 0
+          - lock add 1
+          - lock add 2
+          - lock add 3
+          - spawn block 0
+          - spawn block 1
+          - spawn block 2
+          - spawn block 3
           - EntityId: well manager
             BehaviourId: begin resolve
           - EntityId: piece factory
             BehaviourId: roll shape
           - EntityId: piece factory
             BehaviourId: spawn piece
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
 
       lock add 0:
         Type: vector list add
@@ -720,21 +662,13 @@ Templates:
         Tags: [ clear-apply ]
         Properties:
           Condition: !var pendingClear
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: mark dead
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ mark dead, self destruct ]
       shift gate:
         Type: condition gate
         Tags: [ clear-apply ]
         Properties:
           Condition: !expr { Do: '(!pendingClear) && dropBy > 0', With: { pendingClear: !var pendingClear, dropBy: !var dropBy }, ArgumentTypes: [ bool, int ] }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: do shift
-          - EntityId: !parameter self_id
-            BehaviourId: reposition
+        Listeners: [ do shift, reposition ]
       mark dead:
         Type: bool variable setter
         Properties: { VariableId: !var dead, Value: true }
@@ -756,9 +690,7 @@ Templates:
         Tags: [ clear-rebuild ]
         Properties:
           Condition: !expr { Do: '(!dead) && (!pendingClear)', With: { dead: !var dead, pendingClear: !var pendingClear }, ArgumentTypes: [ bool, bool ] }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: re-add
+        Listeners: [ re-add ]
       re-add:
         Type: vector list add
         Properties:
@@ -772,9 +704,7 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
@@ -794,14 +724,10 @@ Entities:
           Delay: 0.03
         Listeners:
           - BehaviourTag: clear-snapshot
-          - EntityId: well manager
-            BehaviourId: set lines now
-          - EntityId: well manager
-            BehaviourId: add score
-          - EntityId: well manager
-            BehaviourId: add lines total
-          - EntityId: well manager
-            BehaviourId: clear occupied
+          - set lines now
+          - add score
+          - add lines total
+          - clear occupied
           - BehaviourTag: clear-apply
           - BehaviourTag: clear-rebuild
 
@@ -835,11 +761,7 @@ Entities:
     Behaviours:
       on start:
         Type: on start trigger
-        Listeners:
-          - EntityId: piece factory
-            BehaviourId: roll shape
-          - EntityId: piece factory
-            BehaviourId: spawn piece
+        Listeners: [ roll shape, spawn piece ]
       roll shape:
         Type: int variable setter
         Properties:

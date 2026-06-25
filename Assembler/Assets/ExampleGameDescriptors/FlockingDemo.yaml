@@ -258,8 +258,7 @@ Entities:
       track mouse:
         Type: input action
         Properties: { Action: cursor }
-        Listeners:
-          - { EntityId: cursor, BehaviourId: store mouse }
+        Listeners: [ store mouse ]
       store mouse:
         Type: vector variable setter
         Properties:

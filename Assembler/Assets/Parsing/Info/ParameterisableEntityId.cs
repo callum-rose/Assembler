@@ -43,4 +43,25 @@ namespace Assembler.Parsing.Info
 				? new LiteralEntityId(sv.Value)
 				: this;
 	}
+
+	/// <summary>
+	/// A sentinel id meaning "the listener's own enclosing entity" — produced when a listener omits
+	/// <c>EntityId</c> (or uses the bare-behaviour scalar shorthand). Unlike <see cref="ParameterEntityId"/>
+	/// it is not a template parameter, so it survives parameter substitution untouched; it is resolved to a
+	/// <see cref="LiteralEntityId"/> of the concrete entity id in <c>TemplateInstantiator.Instantiate</c>,
+	/// the single point where every entity — hand-authored, templated, child, placed or spawned — receives
+	/// its final id.
+	/// </summary>
+	public sealed record SelfEntityId : ParameterisableEntityId
+	{
+		public static readonly SelfEntityId Instance = new();
+
+		private SelfEntityId() : base(string.Empty)
+		{
+		}
+
+		public override string? PendingParameter => null;
+
+		public override ParameterisableEntityId Resolve(IReadOnlyDictionary<string, AssemblerValue> parameters) => this;
+	}
 }
