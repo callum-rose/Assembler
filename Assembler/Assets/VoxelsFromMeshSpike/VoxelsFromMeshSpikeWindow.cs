@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -15,6 +16,11 @@ namespace VoxelsFromMeshSpike
         private string _objPath = "";
         private string _voxPath = "";
         private int _maxDimVoxels = 32;
+
+        private bool _quantise = true;
+        private int _maxColors = 16;
+        private float _similarity = 0.12f;
+        private float _minRegionPercent = 1.0f;
 
         [MenuItem("Window/Voxels/OBJ → VOX (Spike)")]
         private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("OBJ → VOX (Spike)");
@@ -65,6 +71,30 @@ namespace VoxelsFromMeshSpike
 
             EditorGUILayout.Space();
 
+            // Colour quantisation.
+            _quantise = EditorGUILayout.ToggleLeft(
+                new GUIContent("Quantise colours",
+                    "Extract the model's basic colours, snap noisy colours to the nearest one, " +
+                    "and turn soft gradients at boundaries into hard colour steps."),
+                _quantise);
+            if (_quantise)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _maxColors = EditorGUILayout.IntSlider(
+                        new GUIContent("Max basic colours", "Upper bound on the extracted palette size."),
+                        _maxColors, 1, 64);
+                    _similarity = EditorGUILayout.Slider(
+                        new GUIContent("Merge similarity", "Colours closer than this (0..1) are merged into one basic colour. Higher = fewer, blockier colours."),
+                        _similarity, 0f, 0.5f);
+                    _minRegionPercent = EditorGUILayout.Slider(
+                        new GUIContent("Min region %", "A colour must cover at least this % of voxels to count as basic — filters thin gradient/noise bands."),
+                        _minRegionPercent, 0f, 10f);
+                }
+            }
+
+            EditorGUILayout.Space();
+
             // Output.
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -109,6 +139,15 @@ namespace VoxelsFromMeshSpike
 
                 VoxResult result = ObjToVoxConverter.Convert(_objPath, _maxDimVoxels, reporter);
 
+                if (_quantise)
+                {
+                    EditorUtility.DisplayProgressBar("OBJ → VOX", "Quantising colours…", 0.99f);
+                    var options = new ColorQuantizer.Options(_maxColors, _similarity, _minRegionPercent / 100f);
+                    result = ColorQuantizer.Quantise(result, options);
+                }
+
+                int colorCount = CountDistinctColors(result);
+
                 string? dir = Path.GetDirectoryName(_voxPath);
                 if (!string.IsNullOrEmpty(dir))
                 {
@@ -123,7 +162,8 @@ namespace VoxelsFromMeshSpike
 
                 EditorUtility.DisplayDialog(
                     "OBJ → VOX",
-                    $"Wrote {result.Cells.Count:N0} voxels ({result.GridX}×{result.GridY}×{result.GridZ}) to:\n{_voxPath}",
+                    $"Wrote {result.Cells.Count:N0} voxels ({result.GridX}×{result.GridY}×{result.GridZ}), " +
+                    $"{colorCount:N0} colour(s) to:\n{_voxPath}",
                     "OK");
             }
             catch (OperationCanceledException)
@@ -143,6 +183,16 @@ namespace VoxelsFromMeshSpike
 
         private static string DefaultVoxPath(string objPath) =>
             Path.Combine(Application.dataPath, Path.GetFileNameWithoutExtension(objPath) + ".vox");
+
+        private static int CountDistinctColors(VoxResult result)
+        {
+            var seen = new HashSet<int>();
+            foreach (VoxCell cell in result.Cells)
+            {
+                seen.Add((cell.Color.r << 16) | (cell.Color.g << 8) | cell.Color.b);
+            }
+            return seen.Count;
+        }
 
         private sealed class EditorProgressReporter : IProgressReporter
         {

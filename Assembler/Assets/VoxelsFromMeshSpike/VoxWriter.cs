@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -8,8 +9,10 @@ namespace VoxelsFromMeshSpike
     /// Minimal MagicaVoxel <c>.vox</c> (version 150) binary writer.
     ///
     /// Takes filled cells produced in the mesh's Y-up grid space, remaps them to
-    /// MagicaVoxel's Z-up space, quantises their colours to a fixed 3-3-2 palette
-    /// and writes a single-model VOX file (MAIN → SIZE, XYZI, RGBA).
+    /// MagicaVoxel's Z-up space and writes a single-model VOX file
+    /// (MAIN → SIZE, XYZI, RGBA). When the model uses ≤255 distinct colours (e.g.
+    /// after quantisation) those colours are written verbatim into the palette;
+    /// otherwise it falls back to a fixed 3-3-2 palette.
     ///
     /// Spec reference: https://github.com/ephtracy/voxel-model/blob/master/MagicaVoxel-file-format-vox.txt
     /// </summary>
@@ -20,7 +23,21 @@ namespace VoxelsFromMeshSpike
 
         public static void Write(string path, VoxResult result)
         {
-            byte[] palette = BuildPalette332();
+            // Prefer an exact palette so distinct (quantised) colours survive unaltered;
+            // fall back to 3-3-2 only when the model has more than 255 distinct colours.
+            byte[] palette;
+            Func<Color32, byte> colorIndexOf;
+            var exactPalette = new byte[256 * 4];
+            if (TryBuildExactPalette(result.Cells, out Dictionary<int, byte> exactSlots, exactPalette))
+            {
+                palette = exactPalette;
+                colorIndexOf = c => exactSlots[ColorKey(c)];
+            }
+            else
+            {
+                palette = BuildPalette332();
+                colorIndexOf = ColorIndex332;
+            }
 
             // Remap mesh-grid cells (gx, gy=up, gz) → MagicaVoxel (vx, vy, vz=up).
             //
@@ -46,7 +63,7 @@ namespace VoxelsFromMeshSpike
                 byte vx = (byte)cell.X;
                 byte vy = (byte)(gridZ - 1 - cell.Z);
                 byte vz = (byte)cell.Y;
-                voxels.Add((vx, vy, vz, ColorIndex332(cell.Color)));
+                voxels.Add((vx, vy, vz, colorIndexOf(cell.Color)));
             }
 
             using var stream = new FileStream(path, FileMode.Create, FileAccess.Write);
@@ -82,6 +99,40 @@ namespace VoxelsFromMeshSpike
             writer.Write(sizeChunk);
             writer.Write(xyziChunk);
             writer.Write(rgbaChunk);
+        }
+
+        private static int ColorKey(Color32 c) => (c.r << 16) | (c.g << 8) | c.b;
+
+        /// <summary>
+        /// Assigns each distinct voxel colour a palette slot (1..255) and fills the
+        /// RGBA table with those exact colours. Returns false (leaving outputs to be
+        /// discarded) if the model has more than 255 distinct colours.
+        /// </summary>
+        private static bool TryBuildExactPalette(
+            IReadOnlyList<VoxCell> cells, out Dictionary<int, byte> slotByColor, byte[] paletteOut)
+        {
+            slotByColor = new Dictionary<int, byte>();
+            foreach (VoxCell cell in cells)
+            {
+                int key = ColorKey(cell.Color);
+                if (slotByColor.ContainsKey(key))
+                {
+                    continue;
+                }
+                if (slotByColor.Count >= MaxColorIndex)
+                {
+                    return false; // > 255 distinct colours — caller uses 3-3-2 instead.
+                }
+
+                int slot = slotByColor.Count + 1; // 1..255
+                slotByColor[key] = (byte)slot;
+                int offset = (slot - 1) * 4;
+                paletteOut[offset + 0] = cell.Color.r;
+                paletteOut[offset + 1] = cell.Color.g;
+                paletteOut[offset + 2] = cell.Color.b;
+                paletteOut[offset + 3] = 255;
+            }
+            return true;
         }
 
         // 3-3-2 RGB quantisation: 3 bits red, 3 bits green, 2 bits blue → code 0..255.
