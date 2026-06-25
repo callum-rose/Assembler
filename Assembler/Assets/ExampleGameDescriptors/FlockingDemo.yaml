@@ -154,46 +154,46 @@ Templates:
             - Force: !expr
                 Do: separation force
                 With:
-                  - !entity { Id: !parameter self_id, Property: Position }
-                  - !var neighbours
-                  - !var separation radius
-                  - !var max speed
+                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  neighbours: !var neighbours
+                  radius: !var separation radius
+                  max: !var max speed
               Weight: !var separation weight
             - Force: !expr
                 Do: cohesion force
                 With:
-                  - !entity { Id: !parameter self_id, Property: Position }
-                  - !var neighbours
-                  - !var max speed
+                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  neighbours: !var neighbours
+                  max: !var max speed
               Weight: !var cohesion weight
             - Force: !expr
                 Do: alignment force
                 With:
-                  - !var velocity
-                  - !var neighbour vels
-                  - !var max speed
+                  vel: !var velocity
+                  neighbour_vels: !var neighbour vels
+                  max: !var max speed
               Weight: !var alignment weight
             - Force: !expr
                 Do: wander force
                 With:
-                  - !var velocity
-                  - !var max speed
-                  - 25
+                  vel: !var velocity
+                  max: !var max speed
+                  jitter: 25
               Weight: !var wander weight
             - Force: !expr
                 Do: seek centre
                 With:
-                  - !entity { Id: !parameter self_id, Property: Position }
-                  - !vec { X: 0, Y: 0, Z: 0 }
-                  - !var max speed
+                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  target: !vec { X: 0, Y: 0, Z: 0 }
+                  max: !var max speed
               Weight: !var containment weight
             - Force: !expr
                 Do: avoid mouse
                 With:
-                  - !entity { Id: !parameter self_id, Property: Position }
-                  - !var mouse world
-                  - !var mouse avoid radius
-                  - !var max speed
+                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  mouse: !var mouse world
+                  radius: !var mouse avoid radius
+                  max: !var max speed
               Weight: !var mouse avoid weight
 
       # Integrate the blended velocity into motion.
@@ -208,8 +208,8 @@ Placements:
     # A 6x4 grid that immediately coalesces into a flock under the steering rules.
     At: !expr
       ReturnType: vector list
-      Do: 'GridPositions(6, 4, 1.1f, arg0)'
-      With: [ !var flock origin ]
+      Do: 'GridPositions(6, 4, 1.1f, origin)'
+      With: { origin: !var flock origin }
 
 # Abstract input actions + the physical inputs that feed them, per platform.
 # `cursor` is a value action that emits axis/x/y every frame (the pointer's
@@ -266,9 +266,9 @@ Entities:
           Value: !expr
             Do: screen to world
             With:
-              - !output axis
-              - !var camera position
-              - !var camera size
+              screen_pos: !output axis
+              cam_pos: !var camera position
+              ortho_size: !var camera size
 
   camera:
     Position: !var camera position

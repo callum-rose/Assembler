@@ -153,12 +153,12 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg3 || (arg0.y < (arg1 - arg2))'
+            Do: 'is_dead || (player_pos.y < (max_h - game_over_dist))'
             With:
-              - !var player position
-              - !var max height
-              - !var game over distance
-              - !var is dead
+              player_pos: !var player position
+              max_h: !var max height
+              game_over_dist: !var game over distance
+              is_dead: !var is dead
         Listeners:
           - !gameover
 
@@ -198,11 +198,11 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: 'IntegratePosition(arg0, new UnityEngine.Vector3(0f, -arg1, 0f), arg2)'
+            Do: 'IntegratePosition(velocity, new UnityEngine.Vector3(0f, -gravity, 0f), dt)'
             With:
-              - !var player velocity
-              - !var player gravity
-              - !clock deltaTime
+              velocity: !var player velocity
+              gravity: !var player gravity
+              dt: !clock deltaTime
 
       apply input:
         Type: vector variable setter
@@ -211,9 +211,9 @@ Entities:
           Value: !expr
             Do: apply input
             With:
-              - !var player velocity
-              - !var move x
-              - !var player move speed
+              vel: !var player velocity
+              moveX: !var move x
+              speed: !var player move speed
 
       integrate position:
         Type: vector variable setter
@@ -222,10 +222,10 @@ Entities:
           Value: !expr
             Do: integrate position
             With:
-              - !var player position
-              - !var player velocity
-              - !var world half width
-              - !clock deltaTime
+              pos: !var player position
+              vel: !var player velocity
+              halfW: !var world half width
+              dt: !clock deltaTime
 
       write position:
         Type: position setter
@@ -237,14 +237,14 @@ Entities:
         Properties:
           VariableId: !var max height
           Value: !expr
-            Do: 'Max(arg0, arg1)'
+            Do: 'Max(max_h, current_y)'
             ArgumentTypes: [ float, float ]
             With:
-              - !var max height
-              - !expr
-                  Do: 'arg0.y'
+              max_h: !var max height
+              current_y: !expr
+                  Do: 'player_pos.y'
                   With:
-                    - !var player position
+                    player_pos: !var player position
 
       # ---- Input: the `move` action (A/D + arrows on desktop, on-screen joystick
       #      on mobile) writes its x into `move x` each frame; the tick's
@@ -258,11 +258,11 @@ Entities:
         Properties:
           VariableId: !var move x
           Value: !expr
-            Do: 'arg0'
+            Do: 'axis_x'
             ArgumentTypes: [ float ]
             ReturnType: float
             With:
-              - !output x
+              axis_x: !output x
 
       # ---- Bouncing on platforms (only when falling) ----
       land on platform:
@@ -274,19 +274,19 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0.y < 0f'
+            Do: 'velocity.y < 0f'
             With:
-              - !var player velocity
+              velocity: !var player velocity
         Listeners: [ bounce ]
       bounce:
         Type: vector variable setter
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x, arg1, 0f)'
+            Do: 'new UnityEngine.Vector3(velocity.x, jump_speed, 0f)'
             With:
-              - !var player velocity
-              - !var player jump speed
+              velocity: !var player velocity
+              jump_speed: !var player jump speed
 
   # --- Starter platform so the player has something under it at game start ---
   starter platform:
@@ -317,11 +317,11 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 < arg1 + arg2'
+            Do: 'next_y < max_h + lookahead'
             With:
-              - !var next platform y
-              - !var max height
-              - !var spawn lookahead
+              next_y: !var next platform y
+              max_h: !var max height
+              lookahead: !var spawn lookahead
         Listeners: [ spawn platform, advance next y ]
 
       spawn platform:
@@ -331,8 +331,8 @@ Entities:
           Position: !expr
             Do: random platform position
             With:
-              - !var next platform y
-              - !var world half width
+              y: !var next platform y
+              halfW: !var world half width
           Rotation: !vec { X: 0, Y: 0, Z: 0 }
 
       advance next y:
@@ -340,10 +340,10 @@ Entities:
         Properties:
           VariableId: !var next platform y
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'next_y + spacing'
             With:
-              - !var next platform y
-              - !var platform spacing
+              next_y: !var next platform y
+              spacing: !var platform spacing
 
   # --- Camera follows the player's max height ---
   camera:
@@ -362,10 +362,10 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: 'new UnityEngine.Vector3(0f, arg0, arg1)'
+            Do: 'new UnityEngine.Vector3(0f, max_h, camera_z)'
             With:
-              - !var max height
-              - !var camera z
+              max_h: !var max height
+              camera_z: !var camera z
 
   # --- HUD ---
   score display:
@@ -377,7 +377,7 @@ Entities:
           Text: !expr
             Do: format score
             With:
-              - !var max height
+              y: !var max height
           FontSize: 32
           Rect:
             Anchor: top-left

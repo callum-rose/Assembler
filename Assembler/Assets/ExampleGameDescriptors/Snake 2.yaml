@@ -300,9 +300,9 @@ Entities:
           Condition: !expr
             Do: is game over
             With:
-              - !var score
-              - !var score to win
-              - !var is dead
+              score: !var score
+              target: !var score to win
+              dead: !var is dead
         Listeners:
           - !gameover
 
@@ -379,8 +379,8 @@ Entities:
           Value: !expr
             Do: vec add
             With:
-              - !var head pos
-              - !var direction
+              a: !var head pos
+              b: !var direction
 
       step move:
         Type: translate
@@ -401,9 +401,9 @@ Entities:
           Value: !expr
             Do: snap dir
             With:
-              - !output axis
-              - !var direction
-              - !var cell size
+              input: !output axis
+              current: !var direction
+              cell: !var cell size
 
       # Death triggers — wall collision (solid) or tail trigger sets is dead.
       wall hit:
@@ -457,8 +457,8 @@ Entities:
           Value: !expr
             Do: float add
             With:
-              - !var segment lifetime
-              - !var step interval
+              a: !var segment lifetime
+              b: !var step interval
 
   # --- Score Tracker ---
   score tracker:
@@ -471,8 +471,8 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var score
-              - !var score per food
+              a: !var score
+              b: !var score per food
 
   # --- Food Manager ---
   # Spawns first food on start, then a new piece each time the current one
@@ -491,7 +491,7 @@ Entities:
           Position: !expr
             Do: next food position
             With:
-              - !var segment positions
+              taken: !var segment positions
 
   # --- Game Manager ---
   game manager:
@@ -513,7 +513,7 @@ Entities:
           Text: !expr
             Do: format score
             With:
-              - !var score
+              s: !var score
           FontSize: 32
           Rect:
             Anchor: top-left

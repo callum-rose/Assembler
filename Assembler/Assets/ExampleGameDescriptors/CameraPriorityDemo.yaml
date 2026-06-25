@@ -113,10 +113,10 @@ Entities:
         Properties:
           VariableId: !var active camera
           Value: !expr
-            Do: '(arg0 + 1) % 2'
+            Do: '(current + 1) % 2'
             ArgumentTypes: [ int ]
             With:
-              - !var active camera
+              current: !var active camera
       # Press Q to quit — the simplest game-over path.
       quit key:
         Type: input action
@@ -170,10 +170,10 @@ Entities:
           Target: { Tag: player }
           Mode: "2d"
           Priority: !expr
-            Do: 'arg0 == 0 ? 20 : 0'
+            Do: 'active == 0 ? 20 : 0'
             ArgumentTypes: [ int ]
             With:
-              - !var active camera
+              active: !var active camera
           Lens: 4
           Damping: 0.6
           DeadZone: 0.1
@@ -191,10 +191,10 @@ Entities:
           Target: { Tag: player }
           Mode: "2d"
           Priority: !expr
-            Do: 'arg0 == 1 ? 20 : 0'
+            Do: 'active == 1 ? 20 : 0'
             ArgumentTypes: [ int ]
             With:
-              - !var active camera
+              active: !var active camera
           Lens: 12
           Damping: 0.9
           DeadZone: 0.0

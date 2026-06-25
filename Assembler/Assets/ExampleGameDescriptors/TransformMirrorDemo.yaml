@@ -80,9 +80,9 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: 'Rotate2D(new Vector3(3f, 0f, 0f), arg0 * 50f)'
+            Do: 'Rotate2D(new Vector3(3f, 0f, 0f), time * 50f)'
             With:
-              - !clock time
+              time: !clock time
             ArgumentTypes: [ float ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             ReturnType: vector
@@ -94,16 +94,16 @@ Entities:
         Type: bool variable setter
         Properties:
           VariableId: !var leader big
-          Value: !expr { Do: '!arg0', With: [ !var leader big ], ArgumentTypes: [ bool ], ReturnType: bool }
+          Value: !expr { Do: '!big', With: { big: !var leader big }, ArgumentTypes: [ bool ], ReturnType: bool }
       resize:
         Type: scale animation
         Properties:
           End: !expr
-            Do: 'arg0 ? arg1 : arg2'
+            Do: 'leader_big ? big_scale : small_scale'
             With:
-              - !var leader big
-              - !var big scale
-              - !var small scale
+              leader_big: !var leader big
+              big_scale: !var big scale
+              small_scale: !var small scale
             ArgumentTypes: [ bool, vector, vector ]
             ReturnType: vector
           Duration: 1.0
@@ -125,9 +125,9 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: 'arg0 + new Vector3(0f, -4f, 0f)'
+            Do: 'leader_pos + new Vector3(0f, -4f, 0f)'
             With:
-              - !entity { Id: leader, Property: Position }
+              leader_pos: !entity { Id: leader, Property: Position }
             ArgumentTypes: [ vector ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             ReturnType: vector
@@ -167,9 +167,9 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: 'new Vector3(6f, (arg0.y - 1f) * 5f, 0f)'
+            Do: 'new Vector3(6f, (leader_scale.y - 1f) * 5f, 0f)'
             With:
-              - !entity { Id: leader, Property: Scale }
+              leader_scale: !entity { Id: leader, Property: Scale }
             ArgumentTypes: [ vector ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             ReturnType: vector

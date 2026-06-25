@@ -222,11 +222,11 @@ Entities:
         Type: translate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       # Keep the player on screen.
       keep in bounds:
@@ -252,35 +252,35 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var coins
-          Value: !expr { Do: 'arg0 + 1', With: [ !var coins ] }
+          Value: !expr { Do: 'coins + 1', With: { coins: !var coins } }
       add potion:
         Type: int variable setter
         Properties:
           VariableId: !var potions
-          Value: !expr { Do: 'arg0 + 1', With: [ !var potions ] }
+          Value: !expr { Do: 'potions + 1', With: { potions: !var potions } }
       add key:
         Type: int variable setter
         Properties:
           VariableId: !var keys
-          Value: !expr { Do: 'arg0 + 1', With: [ !var keys ] }
+          Value: !expr { Do: 'keys + 1', With: { keys: !var keys } }
 
       # "Use Potion": the button fires this gate, which forwards only while a
       # potion is in stock; the two listeners then consume one and add health.
       use potion gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: 'arg0 > 0', With: [ !var potions ] }
+          Condition: !expr { Do: 'potions > 0', With: { potions: !var potions } }
         Listeners: [ spend potion, gain health ]
       spend potion:
         Type: int variable setter
         Properties:
           VariableId: !var potions
-          Value: !expr { Do: 'arg0 - 1', With: [ !var potions ] }
+          Value: !expr { Do: 'potions - 1', With: { potions: !var potions } }
       gain health:
         Type: int variable setter
         Properties:
           VariableId: !var health
-          Value: !expr { Do: 'arg0 + 1', With: [ !var health ] }
+          Value: !expr { Do: 'health + 1', With: { health: !var health } }
 
   # Polls the win condition every frame: collecting all the keys ends the game.
   win check:
@@ -293,10 +293,10 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'keys >= keys_to_win'
             With:
-              - !var keys
-              - !var keys to win
+              keys: !var keys
+              keys_to_win: !var keys to win
         Listeners:
           - !gameover
 

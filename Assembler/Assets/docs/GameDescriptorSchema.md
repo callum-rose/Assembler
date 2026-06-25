@@ -168,7 +168,8 @@ scalar).
 
 ### `Expressions` — map `id → ExpressionDto`
 
-Named, reusable code snippets called via `!expr { Do: <id>, With: [...] }`. The `Expression:` body is
+Named, reusable code snippets called via `!expr { Do: <id>, With: { name: value, … } }` (the `With`
+keys match the declared `ArgumentNames`). The `Expression:` body is
 **code, not YAML** — a strict procedural C# subset; author it with the `unity-expression-compiler`
 skill. Prefer the global helpers in [`Libraries.md`](Libraries.md) over registering statics.
 
@@ -366,7 +367,7 @@ a distinct `GameOverListenerDto` marker.
   `Listeners` contains `- !gameover`.
 - Only triggers with declared **Outputs** in [`Behaviours.md`](Behaviours.md) produce values to bind.
   Bind them in `Outputs:`, then read the bound local name with `!output <localName>` downstream
-  (usually inside an `!expr` `With:` list).
+  (usually as a value inside an `!expr` `With:` map).
 
 ---
 
@@ -473,10 +474,13 @@ Lists of values accept either flow (`[ a, b ]`) or block (`- a`) syntax.
 ```yaml
 !expr
   Do:   <name-or-inline-body>        # required
-  With: [ <arg>, <arg>, … ]          # optional — the operands
+  With:                              # optional — a map of name: value operands
+    velocity: !var bird velocity
+    gravity:  !var bird gravity
+    dt:       !clock deltaTime
   # inline-only hints (ignored on a named Do; the named expression declares its own):
   ReturnType:  int                   # required when the use-site type can't be inferred (object slots)
-  ArgumentTypes: [ int, int ]        # explicit per-operand types (positional to With)
+  ArgumentTypes: [ int, int ]        # explicit per-operand types (positional to With's declaration order)
   RegisterTypes: [ UnityEngine.Vector3 ]
   RegisterTypeStatics: [ UnityEngine.Mathf ]
 ```
@@ -485,14 +489,18 @@ Lists of values accept either flow (`[ a, b ]`) or block (`- a`) syntax.
 `RegisterTypeStatics`. `Do` dispatches **by name first**:
 
 - **Named call** — if `Do` matches an `Expressions:` id (or a `CallableAs` alias), it calls that
-  expression; `With` supplies its declared arguments in order.
-- **Inline body** — otherwise `Do` is compiled as an anonymous C# body, and `With` binds
-  **positionally** to `arg0`, `arg1`, `arg2`, … inside it. A zero-arg body needs no `With`.
+  expression; the `With` map keys must match the expression's declared `ArgumentNames` (order is
+  irrelevant — operands bind by name).
+- **Inline body** — otherwise `Do` is compiled as an anonymous C# body, and each `With` key is a
+  parameter referenced **by name** inside the body (e.g. `Do: 'velocity - gravity * dt'`). A zero-arg
+  body needs no `With`.
 
-`Do`/`With` is the only accepted form. The legacy `ExpressionId` / `Arguments` keys are gone (the only
-surviving `Arguments:` is inside `!text`, which is unrelated). Inline bodies are still **code** —
-author them with the `unity-expression-compiler` skill and prefer [`Libraries.md`](Libraries.md)
-helpers over `RegisterTypeStatics`.
+`With` is a **map**, not a sequence — the positional `arg0`/`arg1` form has been removed. Inserting or
+reordering an operand no longer renumbers anything, and the body reads self-documenting. The legacy
+`ExpressionId` / `Arguments` keys are also gone (the only surviving `Arguments:` is inside `!text`,
+which is unrelated). Inline bodies are still **code** — author them with the
+`unity-expression-compiler` skill and prefer [`Libraries.md`](Libraries.md) helpers over
+`RegisterTypeStatics`.
 
 ---
 

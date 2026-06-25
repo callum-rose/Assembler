@@ -57,10 +57,10 @@ Entities:
           Type: point
           Colour: !colour "#80ff80"
           Intensity: !expr
-            Do: 'arg0 + arg1'
+            Do: 'base_level + gain'
             With:
-              - !var base level
-              - !var gain
+              base_level: !var base level
+              gain: !var gain
           Range: 20
 
   # 3) Intensity from an expression over !clock time (non-observable arg → poll).
@@ -74,9 +74,9 @@ Entities:
           Type: point
           Colour: !colour "#80c0ff"
           Intensity: !expr
-            Do: '1.5f + 0.5f * UnityEngine.Mathf.Sin((float)arg0)'
+            Do: '1.5f + 0.5f * UnityEngine.Mathf.Sin((float)time)'
             With:
-              - !clock time
+              time: !clock time
           Range: 20
 
   ground:

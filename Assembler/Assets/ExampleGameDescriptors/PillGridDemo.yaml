@@ -56,8 +56,8 @@ Placements:
     Template: pill
     At: !expr
       ReturnType: vector list
-      Do: 'GridPositions(5, 4, 0.5f, arg0)'
-      With: [ !var grid origin ]
+      Do: 'GridPositions(5, 4, 0.5f, origin)'
+      With: { origin: !var grid origin }
       ArgumentTypes: [ vector ]
 
 Controls:

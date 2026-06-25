@@ -112,11 +112,11 @@ Entities:
         Type: translate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       # --- BUTTON action (down phase): fed by the on-screen Quit button on mobile. ---
       quit action:
