@@ -7,9 +7,9 @@ using UnityEngine;
 namespace VoxelsFromMeshSpike
 {
     /// <summary>
-    /// Spike editor window: pick a textured OBJ, choose a resolution, solid-fill it
-    /// into a coloured MagicaVoxel <c>.vox</c> for import by the Voxel Toolkit.
-    /// Intentionally standalone and trivially deletable.
+    /// Spike editor window: pick a textured mesh (.obj or .fbx), choose a resolution,
+    /// solid-fill it into a coloured MagicaVoxel <c>.vox</c> for import by the Voxel
+    /// Toolkit. Intentionally standalone and trivially deletable.
     /// </summary>
     public sealed class VoxelsFromMeshSpikeWindow : EditorWindow
     {
@@ -22,29 +22,29 @@ namespace VoxelsFromMeshSpike
         private float _similarity = 0.12f;
         private float _minRegionPercent = 1.0f;
 
-        [MenuItem("Window/Voxels/OBJ → VOX (Spike)")]
-        private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("OBJ → VOX (Spike)");
+        [MenuItem("Window/Voxels/Mesh → VOX (Spike)")]
+        private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh → VOX (Spike)");
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("OBJ → VOX (Spike)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Mesh → VOX (Spike)", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Solid-fills a textured OBJ into a coloured MagicaVoxel .vox using a " +
-                "fast-winding-number occupancy test. Standalone spike — safe to delete.",
+                "Solid-fills a textured .obj or .fbx into a coloured MagicaVoxel .vox " +
+                "using a fast-winding-number occupancy test. Standalone spike — safe to delete.",
                 MessageType.Info);
 
             EditorGUILayout.Space();
 
-            // OBJ source.
+            // Mesh source.
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("OBJ", GUILayout.Width(40));
+                EditorGUILayout.LabelField("Mesh", GUILayout.Width(40));
                 EditorGUILayout.SelectableLabel(
                     string.IsNullOrEmpty(_objPath) ? "(none selected)" : _objPath,
                     EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
                 if (GUILayout.Button("Browse…", GUILayout.Width(80)))
                 {
-                    string picked = EditorUtility.OpenFilePanel("Select OBJ", "", "obj");
+                    string picked = EditorUtility.OpenFilePanel("Select mesh", "", "obj,fbx");
                     if (!string.IsNullOrEmpty(picked))
                     {
                         _objPath = picked;
@@ -133,7 +133,7 @@ namespace VoxelsFromMeshSpike
             {
                 if (!File.Exists(_objPath))
                 {
-                    EditorUtility.DisplayDialog("OBJ → VOX", $"OBJ not found:\n{_objPath}", "OK");
+                    EditorUtility.DisplayDialog("Mesh → VOX", $"Mesh not found:\n{_objPath}", "OK");
                     return;
                 }
 
@@ -141,7 +141,7 @@ namespace VoxelsFromMeshSpike
 
                 if (_quantise)
                 {
-                    EditorUtility.DisplayProgressBar("OBJ → VOX", "Quantising colours…", 0.99f);
+                    EditorUtility.DisplayProgressBar("Mesh → VOX", "Quantising colours…", 0.99f);
                     var options = new ColorQuantizer.Options(_maxColors, _similarity, _minRegionPercent / 100f);
                     result = ColorQuantizer.Quantise(result, options);
                 }
@@ -161,19 +161,19 @@ namespace VoxelsFromMeshSpike
                 }
 
                 EditorUtility.DisplayDialog(
-                    "OBJ → VOX",
+                    "Mesh → VOX",
                     $"Wrote {result.Cells.Count:N0} voxels ({result.GridX}×{result.GridY}×{result.GridZ}), " +
                     $"{colorCount:N0} colour(s) to:\n{_voxPath}",
                     "OK");
             }
             catch (OperationCanceledException)
             {
-                EditorUtility.DisplayDialog("OBJ → VOX", "Conversion cancelled.", "OK");
+                EditorUtility.DisplayDialog("Mesh → VOX", "Conversion cancelled.", "OK");
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                EditorUtility.DisplayDialog("OBJ → VOX", $"Conversion failed:\n{e.Message}", "OK");
+                EditorUtility.DisplayDialog("Mesh → VOX", $"Conversion failed:\n{e.Message}", "OK");
             }
             finally
             {
@@ -197,7 +197,7 @@ namespace VoxelsFromMeshSpike
         private sealed class EditorProgressReporter : IProgressReporter
         {
             public bool Report(float fraction, string message) =>
-                !EditorUtility.DisplayCancelableProgressBar("OBJ → VOX", message, fraction);
+                !EditorUtility.DisplayCancelableProgressBar("Mesh → VOX", message, fraction);
         }
     }
 }
