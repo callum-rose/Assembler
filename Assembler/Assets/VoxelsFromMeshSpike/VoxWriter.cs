@@ -18,13 +18,21 @@ namespace VoxelsFromMeshSpike
     /// </summary>
     public static class VoxWriter
     {
-        // VOX colour index 0 means "empty", so voxel indices live in 1..255.
+        // VOX colour index 0 means "empty", so voxel indices live in 1..255. We additionally
+        // RESERVE voxel index 1 (palette entry 0) as an unused, opaque dummy and start real
+        // colours at index 2: the Voxel Toolkit importer subtracts 1 from each voxel byte and
+        // then hardcodes material index 0 as empty air (FacesGenerationJob: Material==0 emits no
+        // faces; it is also force-flagged Invalid/Transparent and never recomputed), so any real
+        // colour written to that slot renders invisible — dropping every voxel of that colour.
+        // Real colours therefore occupy voxel indices 2..255 (palette entries 1..254).
+        private const int FirstColorIndex = 2;
         private const int MaxColorIndex = 255;
+        private const int MaxColors = MaxColorIndex - FirstColorIndex + 1; // 254
 
         public static void Write(string path, VoxResult result)
         {
             // Prefer an exact palette so distinct (quantised) colours survive unaltered;
-            // fall back to 3-3-2 only when the model has more than 255 distinct colours.
+            // fall back to median-cut only when the model has more than 254 distinct colours.
             byte[] palette;
             Func<Color32, byte> colorIndexOf;
             var exactPalette = new byte[256 * 4];
@@ -35,7 +43,7 @@ namespace VoxelsFromMeshSpike
             }
             else
             {
-                var (medianPalette, medianSlots) = BuildMedianCutPalette(result.Cells, MaxColorIndex);
+                var (medianPalette, medianSlots) = BuildMedianCutPalette(result.Cells, MaxColors);
                 palette = medianPalette;
                 colorIndexOf = c => medianSlots[ColorKey(c)];
             }
@@ -118,9 +126,10 @@ namespace VoxelsFromMeshSpike
         private static int ColorKey(Color32 c) => (c.r << 16) | (c.g << 8) | c.b;
 
         /// <summary>
-        /// Assigns each distinct voxel colour a palette slot (1..255) and fills the
-        /// RGBA table with those exact colours. Returns false (leaving outputs to be
-        /// discarded) if the model has more than 255 distinct colours.
+        /// Assigns each distinct voxel colour a palette slot (2..255 — slot 1 is reserved, see
+        /// <see cref="FirstColorIndex"/>) and fills the RGBA table with those exact colours.
+        /// Returns false (leaving outputs to be discarded) if the model has more than 254
+        /// distinct colours.
         /// </summary>
         private static bool TryBuildExactPalette(
             IReadOnlyList<VoxCell> cells, out Dictionary<int, byte> slotByColor, byte[] paletteOut)
@@ -133,12 +142,12 @@ namespace VoxelsFromMeshSpike
                 {
                     continue;
                 }
-                if (slotByColor.Count >= MaxColorIndex)
+                if (slotByColor.Count >= MaxColors)
                 {
-                    return false; // > 255 distinct colours — caller uses 3-3-2 instead.
+                    return false; // > 254 distinct colours — caller uses median-cut instead.
                 }
 
-                int slot = slotByColor.Count + 1; // 1..255
+                int slot = slotByColor.Count + FirstColorIndex; // 2..255
                 slotByColor[key] = (byte)slot;
                 int offset = (slot - 1) * 4;
                 paletteOut[offset + 0] = cell.Color.r;
@@ -155,7 +164,9 @@ namespace VoxelsFromMeshSpike
         /// turns neutral greys into lavender — R/G snap to 8 levels, B to only 4), this derives the
         /// palette from the model's <i>actual</i> colours: each box's representative is the
         /// population-weighted average of its members, so a cloud of near-neutral greys collapses to
-        /// a neutral grey. Returns the 256-entry RGBA table plus a colour→slot (1..maxColors) map.
+        /// a neutral grey. Returns the 256-entry RGBA table plus a colour→slot map. Slots start at
+        /// <see cref="FirstColorIndex"/> (slot 1 is the reserved dummy), so they span
+        /// <c>2..maxColors+1</c>.
         /// </summary>
         private static (byte[] palette, Dictionary<int, byte> indexOf) BuildMedianCutPalette(
             IReadOnlyList<VoxCell> cells, int maxColors)
@@ -237,7 +248,7 @@ namespace VoxelsFromMeshSpike
                 {
                     rs += (long)c.r * c.n; gs += (long)c.g * c.n; bs += (long)c.b * c.n; ns += c.n;
                 }
-                var slot = (byte)(i + 1); // 1..maxColors
+                var slot = (byte)(i + FirstColorIndex); // 2..maxColors+1
                 int offset = (slot - 1) * 4;
                 palette[offset + 0] = (byte)(rs / ns);
                 palette[offset + 1] = (byte)(gs / ns);
