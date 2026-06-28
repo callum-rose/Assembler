@@ -7,7 +7,7 @@ Game:
     A single gold `leader` cube drives itself:
       * it ORBITS the origin (position changes every frame),
       * it SPINS in place (rotation changes every frame, via `angular velocity`),
-      * it PULSES bigger/smaller once a second (scale changes, via `scale animation`).
+      * it PULSES bigger/smaller once a second (scale changes, via the `animation` behaviour).
 
     Three "mirror" cubes each read ONE of the leader's transform properties off
     its transform — no shared variables — and react to it:
@@ -96,8 +96,9 @@ Entities:
           VariableId: !var leader big
           Value: !expr { Do: '!big', With: { big: !var leader big }, ArgumentTypes: [ bool ], ReturnType: bool }
       resize:
-        Type: scale animation
+        Type: animation
         Properties:
+          Animate: scale
           End: !expr
             Do: 'leader_big ? big_scale : small_scale'
             With:

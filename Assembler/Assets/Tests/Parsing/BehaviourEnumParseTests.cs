@@ -4,6 +4,7 @@ using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 using UnityEngine;
+using AnimationInfo = Assembler.Parsing.Info.Behaviours.AnimationInfo;
 
 namespace Tests.Parsing
 {
@@ -49,8 +50,9 @@ Entities:
   e:
     Behaviours:
       anim:
-        Type: move animation
+        Type: animation
         Properties:
+          Animate: move
           End: !vec { X: 1, Y: 0, Z: 0 }
           Duration: 1
 ";
@@ -58,9 +60,9 @@ Entities:
 		[Test]
 		public void OmittedEnumPropertyTakesItsDefault()
 		{
-			var anim = (MoveAnimationInfo)Parse(AnimationYaml).Entities[0].Behaviours[0];
+			var anim = (AnimationInfo)Parse(AnimationYaml).Entities[0].Behaviours[0];
 
-			Assert.AreEqual(Easing.InOutSine, ((ConstantSource<Easing>)anim.Easing).Value);
+			Assert.AreEqual(Easing.InOutSine, ((ConstantSource<Easing>)anim.Steps[0].Easing).Value);
 		}
 
 		[Test]
@@ -71,15 +73,16 @@ Entities:
   e:
     Behaviours:
       anim:
-        Type: move animation
+        Type: animation
         Properties:
+          Animate: move
           End: !vec { X: 1, Y: 0, Z: 0 }
           Duration: 1
           Easing: outBack
 ";
-			var anim = (MoveAnimationInfo)Parse(yaml).Entities[0].Behaviours[0];
+			var anim = (AnimationInfo)Parse(yaml).Entities[0].Behaviours[0];
 
-			Assert.AreEqual(Easing.OutBack, ((ConstantSource<Easing>)anim.Easing).Value);
+			Assert.AreEqual(Easing.OutBack, ((ConstantSource<Easing>)anim.Steps[0].Easing).Value);
 		}
 
 		[Test]

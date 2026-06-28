@@ -66,6 +66,35 @@ namespace Assembler.Parsing.Info.Behaviours
 		Spot
 	}
 
+	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
+	/// (an <c>AppendInterval</c>) that animates nothing.</summary>
+	public enum AnimationTarget
+	{
+		Move,
+		Rotate,
+		Scale,
+		Wait
+	}
+
+	/// <summary>How an <c>animation</c> step is placed in the DOTween sequence relative to the previous step:
+	/// <c>Append</c> after it, <c>Join</c> alongside the previously appended step, or <c>Insert</c> at an
+	/// absolute time (<c>At</c>). Mirrors DOTween's <c>Append</c>/<c>Join</c>/<c>Insert</c>.</summary>
+	public enum SequenceMode
+	{
+		Append,
+		Join,
+		Insert
+	}
+
+	/// <summary>How an <c>animation</c> sequence repeats when <c>Loops</c> ≠ 1. Mirrors the realtime subset of
+	/// <c>DG.Tweening.LoopType</c>.</summary>
+	public enum SequenceLoopType
+	{
+		Restart,
+		Yoyo,
+		Incremental
+	}
+
 	/// <summary>
 	/// Parses the fixed-set "string enum" behaviour properties into concrete enums. Parsing is
 	/// case-, space- and dash-insensitive and throws a <see cref="ParsingException"/> on an
@@ -86,6 +115,9 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
 				typeof(TEnum) == typeof(CameraConfinerMode) ? ParseCameraConfinerMode(normalised, raw) :
 				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
+				typeof(TEnum) == typeof(AnimationTarget) ? ParseAnimationTarget(normalised, raw) :
+				typeof(TEnum) == typeof(SequenceMode) ? ParseSequenceMode(normalised, raw) :
+				typeof(TEnum) == typeof(SequenceLoopType) ? ParseSequenceLoopType(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				typeof(TEnum) == typeof(OnScreenControlKind) ? ParseOnScreenControlKind(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
@@ -219,6 +251,37 @@ namespace Assembler.Parsing.Info.Behaviours
 				"spot" => LightKind.Spot,
 				_ => throw new ParsingException(
 					$"Unknown light type '{raw}'. Valid values: directional, point, spot")
+			};
+
+		private static AnimationTarget ParseAnimationTarget(string s, string raw) =>
+			s switch
+			{
+				"move" or "position" => AnimationTarget.Move,
+				"rotate" or "rotation" => AnimationTarget.Rotate,
+				"scale" => AnimationTarget.Scale,
+				"wait" or "delay" or "pause" => AnimationTarget.Wait,
+				_ => throw new ParsingException(
+					$"Unknown animation target '{raw}'. Valid values: move, rotate, scale, wait")
+			};
+
+		private static SequenceMode ParseSequenceMode(string s, string raw) =>
+			s switch
+			{
+				"append" => SequenceMode.Append,
+				"join" => SequenceMode.Join,
+				"insert" => SequenceMode.Insert,
+				_ => throw new ParsingException(
+					$"Unknown animation step mode '{raw}'. Valid values: append, join, insert")
+			};
+
+		private static SequenceLoopType ParseSequenceLoopType(string s, string raw) =>
+			s switch
+			{
+				"restart" => SequenceLoopType.Restart,
+				"yoyo" => SequenceLoopType.Yoyo,
+				"incremental" => SequenceLoopType.Incremental,
+				_ => throw new ParsingException(
+					$"Unknown animation loop type '{raw}'. Valid values: restart, yoyo, incremental")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>
