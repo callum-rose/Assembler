@@ -49,6 +49,13 @@ namespace VoxelsFromMeshSpike
         [Tooltip("Max perceptual (Oklab) distance between adjacent voxels to join one region. Higher = larger, flatter regions.")]
         public float deLightThreshold = 0.10f;
 
+        [Tooltip("Reduce to the model's own dominant colours first: snap every voxel to one of the top N peaks in its colour histogram (Oklab).")]
+        public bool snapToHistogramPeaks = false;
+
+        [Range(1, 64)]
+        [Tooltip("How many histogram peaks (distinct dominant colours) to keep when reducing to the model's own palette.")]
+        public int histogramPeakCount = 8;
+
         [Tooltip("Snap each colour to the nearest swatch in the shared master palette (Oklab) for cross-asset cohesion.")]
         public bool snapToPalette = true;
 

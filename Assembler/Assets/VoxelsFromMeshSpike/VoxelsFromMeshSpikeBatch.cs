@@ -19,6 +19,7 @@ namespace VoxelsFromMeshSpike
     ///         -meshPath &lt;mesh.obj|.fbx&gt; [-voxPath &lt;out.vox&gt;] [-maxDim 32] \
     ///         [-preset Creature|Prop|RawVoxelCleanup] [-palettePath Assets/…/MasterPalette.asset] \
     ///         [-removeFloaters true|false] [-mirror …] [-revolve …] [-deLight …] \
+    ///         [-snapToHistogramPeaks true|false] [-histogramPeakCount &lt;int&gt;] \
     ///         [-snapToPalette …] [-morphology …]
     ///
     /// Boolean step flags override the preset's defaults. Exits 0 on success, non-zero on any failure.
@@ -55,8 +56,9 @@ namespace VoxelsFromMeshSpike
                 Debug.Log(
                     $"[VoxelsFromMeshSpikeBatch] mesh='{meshPath}' out='{voxPath}' maxDim={maxDim} " +
                     $"preset={preset} (floaters={settings.removeFloaters}, mirror={settings.mirror}, " +
-                    $"revolve={settings.revolve}, deLight={settings.deLight}, snap={settings.snapToPalette}, " +
-                    $"morphology={settings.morphology})");
+                    $"revolve={settings.revolve}, deLight={settings.deLight}, " +
+                    $"histogramPeaks={settings.snapToHistogramPeaks}×{settings.histogramPeakCount}, " +
+                    $"snap={settings.snapToPalette}, morphology={settings.morphology})");
 
                 VoxConversion.Summary summary = VoxConversion.Run(meshPath, voxPath, maxDim, settings, palette);
 
@@ -77,6 +79,8 @@ namespace VoxelsFromMeshSpike
             settings.mirror = ParseBool(ArgValue(args, "-mirror"), settings.mirror);
             settings.revolve = ParseBool(ArgValue(args, "-revolve"), settings.revolve);
             settings.deLight = ParseBool(ArgValue(args, "-deLight"), settings.deLight);
+            settings.snapToHistogramPeaks = ParseBool(ArgValue(args, "-snapToHistogramPeaks"), settings.snapToHistogramPeaks);
+            settings.histogramPeakCount = ParseInt(ArgValue(args, "-histogramPeakCount"), settings.histogramPeakCount);
             settings.snapToPalette = ParseBool(ArgValue(args, "-snapToPalette"), settings.snapToPalette);
             settings.morphology = ParseBool(ArgValue(args, "-morphology"), settings.morphology);
         }
