@@ -1,0 +1,95 @@
+Game:
+  Title: Animation Sequence Demo
+  Description: |
+    Shows the `animation` behaviour compiling several tween steps into one DOTween
+    sequence. On start a magenta square:
+      * pops in        (scale 0 -> 1, OutBack)          — append
+      * drifts upward  (move +2 on Y, InOutSine)        — append
+      * spins 360      (rotate, Linear)                 — join: runs alongside the drift
+      * waits 0.3s                                       — a pure pause
+      * squashes       (scale up to 1.4)               — insert: placed at absolute time 2.3s
+    The whole sequence loops twice with a yoyo (forward then back). When it
+    finishes, a single Listener snaps the square back to its resting spot — proof
+    that listeners fire once, on full completion. Press Q (or Start on a gamepad)
+    to quit.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101018"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera rotation: !vec { X: 0, Y: 0, Z: 0 }
+  camera view: "orthographic"
+  camera size: 5
+  square colour: !colour { R: 1.0, G: 0.2, B: 0.8, A: 1 }
+  resting spot: !vec { X: 0, Y: -1, Z: 0 }
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
+Entities:
+  controls:
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
+  logo:
+    Position: !var resting spot
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      gizmo:
+        Type: cube gizmo
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+          IsWire: false
+          Colour: !var square colour
+
+      start:
+        Type: on start trigger
+        Listeners: [ flourish ]
+
+      flourish:
+        Type: animation
+        Properties:
+          Loops: 2
+          LoopType: yoyo
+          Steps:
+            - { Animate: scale,  Start: !vec { X: 0, Y: 0, Z: 0 }, End: !vec { X: 1, Y: 1, Z: 1 }, Duration: 0.5, Easing: OutBack }
+            - { Animate: move,   End: !vec { X: 0, Y: 2, Z: 0 }, Duration: 1.5, Easing: InOutSine }
+            - { Animate: rotate, Mode: join, End: !vec { X: 0, Y: 0, Z: 360 }, Duration: 1.5, Easing: Linear }
+            - { Animate: wait,   Duration: 0.3 }
+            - { Animate: scale,  Mode: insert, At: 2.3, End: !vec { X: 1.4, Y: 1.4, Z: 1.4 }, Duration: 0.3, Easing: OutBack }
+        Listeners: [ settle ]
+
+      settle:
+        Type: position setter
+        Properties:
+          Position: !var resting spot
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size

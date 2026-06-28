@@ -6,6 +6,7 @@
         "Assembler.Building",
         "Assembler.Resolving",
         "Assembler.Parsing",
+        "Assembler.Deserialisation",
         "Assembler.Compiler",
         "Assembler.Time",
         "Unity.Cinemachine",

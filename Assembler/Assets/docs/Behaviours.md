@@ -288,8 +288,11 @@ Turns the entity each frame to face Target in the XZ ground plane (a yaw about +
 | Target | Vector3 | World-space point to face. |
 | TurnRate | float | Maximum turn speed in degrees/sec; 0 (the default) snaps instantly to face the target. |
 
-## `move animation`
-Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
+## `animation`
+Compiles an ordered list of tween steps into a single DOTween sequence and plays it as a unit, notifying
+            listeners once when the whole sequence completes. Each step tweens one transform property (move/rotate/scale)
+            or is a pure wait, and is placed relative to the previous step by its mode (append after, join alongside, or
+            insert at an absolute time). The sequence is rebuilt from the live providers on every Execute.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -297,38 +300,9 @@ Tweens the entity's world position from Start to End over Duration. See Transfor
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
-
-## `scale animation`
-Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
-
-**Role:** Executable (valid `Listeners:` target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
-
-## `rotate animation`
-Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
-
-**Role:** Executable (valid `Listeners:` target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
+| Steps | IReadOnlyList<AnimationStepInfo> | Ordered list of tween-step maps; each has Animate (move=position, rotate=eulerAngles, scale=localScale, or wait=pure delay), Mode (append after the previous step [default], join alongside the previously appended step, or insert at the absolute time given by At; ignored for wait), Start (Vector3 to tween from via DOTween .From — omit to chain from the live value at that point), End (Vector3 to tween to; required for move/rotate/scale), Duration (seconds, clamped to ≥ 0; the pause length for a wait), At (absolute sequence time used when Mode is insert), and Easing (default inOutSine). For a single-tween animation, omit Steps and set Animate/Start/End/Duration/Easing at the top level instead. |
+| Loops | int | How many times the whole sequence plays; 1 (default) plays once, -1 loops forever. |
+| LoopType | SequenceLoopType | How the sequence repeats when Loops ≠ 1 — restart (default), yoyo, or incremental. |
 
 ## `input action`
 Relays an abstract input action (declared in the descriptor's Controls section and bound to a
