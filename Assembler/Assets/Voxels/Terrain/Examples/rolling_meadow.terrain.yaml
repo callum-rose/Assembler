@@ -1,0 +1,35 @@
+# Rolling natural landscape — an open, undulating ridged-noise surface fenced
+# by a low perimeter wall.
+#
+# Bake with: Assembler > Generate Terrain → Load this file → Bake to Resources.
+# Writes Assets/Resources/Voxels/rolling_meadow.vox (auto-imported to a Mesh).
+#
+# Axes: X,Y are horizontal; Z is up. Each axis must be <= 256 voxels.
+Name: rolling_meadow
+Seed: 1337
+Size: { X: 200, Y: 200, Z: 64 }
+SkinThickness: 3          # fill the top 3 voxels of each column (a surface skin)
+
+Enclosure: walled         # open | walled | sealed
+WallHeight: 24
+WallThickness: 2
+WallColour: "#6b6b6b"
+
+Base:
+  Type: noise             # noise | flat
+  Colour: "#5a8f3c"
+  BaseHeight: 6           # floor the surface sits on; noise rises Amplitude above it
+  Noise:
+    Kind: ridged          # fbm | ridged | billow
+    Octaves: 5
+    Frequency: 0.015
+    Amplitude: 28
+    Lacunarity: 2.0
+    Gain: 0.5
+    DomainWarp: 8         # voxels of organic warp (0 = off)
+
+Ops:
+  # A stone plateau stamped into the middle of the meadow.
+  - { Op: stamp, Shape: box, Min: { X: 60, Y: 60, Z: 0 }, Max: { X: 110, Y: 110, Z: 40 }, Colour: "#8a8f95" }
+  # A bowl-shaped crater carved out of the eastern slope.
+  - { Op: carve, Shape: sphere, Centre: { X: 150, Y: 80, Z: 30 }, Radius: 22 }
