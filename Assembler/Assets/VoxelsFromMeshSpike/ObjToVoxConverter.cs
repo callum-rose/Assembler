@@ -86,10 +86,15 @@ namespace VoxelsFromMeshSpike
             int gridY = GridDim(b.Height, voxelSize);
             int gridZ = GridDim(b.Depth, voxelSize);
 
-            var cells = new List<VoxCell>();
+            // --- Pass 1: occupancy. Solid-fill via winding number. ---
+            // |winding| so the fill is robust to global orientation: an inverted/flipped
+            // mesh (handedness conversion on FBX, or a generative mesh wound inside-out)
+            // reads −1 inside, not +1.
+            var occupied = new bool[gridX * gridY * gridZ];
             long total = (long)gridX * gridY * gridZ;
             long done = 0;
             int reportEvery = Mathf.Max(1, (int)(total / 100));
+            int filled = 0;
 
             for (int gy = 0; gy < gridY; gy++)
             {
@@ -100,30 +105,261 @@ namespace VoxelsFromMeshSpike
                     for (int gx = 0; gx < gridX; gx++)
                     {
                         double px = b.Min.x + (gx + 0.5) * voxelSize;
-                        var p = new g3.Vector3d(px, py, pz);
-
-                        // |winding| so the fill is robust to global orientation: an
-                        // inverted/flipped mesh (e.g. handedness conversion on FBX, or a
-                        // generative mesh wound inside-out) reads −1 inside, not +1.
-                        if (Math.Abs(tree.FastWindingNumber(p)) > 0.5)
+                        if (Math.Abs(tree.FastWindingNumber(new g3.Vector3d(px, py, pz))) > 0.5)
                         {
-                            Color32 color = SampleColor(mesh, tree, colors, hasUVs, p);
-                            cells.Add(new VoxCell(gx, gy, gz, color));
+                            occupied[VoxelIndex(gx, gy, gz, gridX, gridZ)] = true;
+                            filled++;
                         }
 
-                        if (++done % reportEvery == 0)
+                        if (++done % reportEvery == 0 &&
+                            !progress.Report(
+                                0.6f * (float)((double)done / total),
+                                $"Voxelizing… {done:N0}/{total:N0} cells, {filled:N0} filled"))
                         {
-                            float frac = (float)((double)done / total);
-                            if (!progress.Report(frac, $"Voxelizing… {done:N0}/{total:N0} cells, {cells.Count:N0} filled"))
-                            {
-                                throw new OperationCanceledException("Voxelization cancelled.");
-                            }
+                            throw new OperationCanceledException("Voxelization cancelled.");
                         }
                     }
                 }
             }
 
+            // --- Pass 2: surface colour. Supersample every triangle at ~½-voxel spacing
+            // and bin each surface sample's texel colour into the voxel it lands in, so a
+            // voxel's colour is the dominant colour of the surface it actually covers — not
+            // one noisy point sample. Thin baked-AO seams lose to the panel majority. ---
+            Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>> accum =
+                AccumulateSurfaceColours(mesh, colors, hasUVs, b, voxelSize, gridX, gridY, gridZ, progress);
+
+            // --- Pass 3: assign each occupied voxel its dominant surface colour. ---
+            var cells = new List<VoxCell>();
+            for (int gy = 0; gy < gridY; gy++)
+            {
+                for (int gz = 0; gz < gridZ; gz++)
+                {
+                    for (int gx = 0; gx < gridX; gx++)
+                    {
+                        if (!occupied[VoxelIndex(gx, gy, gz, gridX, gridZ)])
+                        {
+                            continue;
+                        }
+                        Color32 color = ResolveVoxelColour(
+                            gx, gy, gz, accum, gridX, gridY, gridZ, mesh, tree, colors, hasUVs, b, voxelSize);
+                        cells.Add(new VoxCell(gx, gy, gz, color));
+                    }
+                }
+            }
+
             return new VoxResult(gridX, gridY, gridZ, cells);
+        }
+
+        private static int VoxelIndex(int gx, int gy, int gz, int gridX, int gridZ) =>
+            (gy * gridZ + gz) * gridX + gx;
+
+        /// <summary>
+        /// Supersamples the mesh surface and bins each sample's texel colour into the voxel it
+        /// falls in. Every triangle is sampled on an interior barycentric grid at roughly half-
+        /// voxel spacing (centroid always included), so each occupied surface voxel accumulates
+        /// many texels — letting a robust per-voxel dominant (<see cref="DominantColour"/>) wash
+        /// out thin baked shading and single-sample noise. Sampling triangle <i>interiors</i>
+        /// (never the shared edges/vertices) also dodges the seam-AO bias of nearest-point sampling.
+        /// </summary>
+        private static Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>>
+            AccumulateSurfaceColours(
+                g3.DMesh3 mesh, ColorSource colors, bool hasUVs,
+                g3.AxisAlignedBox3d bounds, double voxelSize,
+                int gridX, int gridY, int gridZ, IProgressReporter progress)
+        {
+            var accum = new Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>>();
+            bool textured = colors.HasTexture && hasUVs;
+            Texture2D? tex = colors.Texture;
+
+            // Model centre, for the outward-facing test below.
+            double cx = bounds.Min.x + bounds.Width * 0.5;
+            double cy = bounds.Min.y + bounds.Height * 0.5;
+            double cz = bounds.Min.z + bounds.Depth * 0.5;
+
+            foreach (int tid in mesh.TriangleIndices())
+            {
+                g3.Vector3d v0 = g3.Vector3d.Zero, v1 = g3.Vector3d.Zero, v2 = g3.Vector3d.Zero;
+                mesh.GetTriVertices(tid, ref v0, ref v1, ref v2);
+
+                // Back-face cull: skip inward/interior faces. The mesh's hidden inner surfaces
+                // carry baked occlusion (a dark dusty purple) the visible model never shows;
+                // accumulating them pollutes exterior voxels. Keep only faces whose normal
+                // points outward — radially away from the model centre. (Measured: inner faces
+                // are ~6× more purple than outer; the OBJ's winding is outward-consistent.)
+                double e1x = v1.x - v0.x, e1y = v1.y - v0.y, e1z = v1.z - v0.z;
+                double e2x = v2.x - v0.x, e2y = v2.y - v0.y, e2z = v2.z - v0.z;
+                double nx = e1y * e2z - e1z * e2y;
+                double ny = e1z * e2x - e1x * e2z;
+                double nz = e1x * e2y - e1y * e2x;
+                double rx = (v0.x + v1.x + v2.x) / 3.0 - cx;
+                double ry = (v0.y + v1.y + v2.y) / 3.0 - cy;
+                double rz = (v0.z + v1.z + v2.z) / 3.0 - cz;
+                if (nx * rx + ny * ry + nz * rz <= 0)
+                {
+                    continue;
+                }
+
+                g3.Index3i tri = mesh.GetTriangle(tid);
+                g3.Vector2f uv0 = mesh.GetVertexUV(tri.a);
+                g3.Vector2f uv1 = mesh.GetVertexUV(tri.b);
+                g3.Vector2f uv2 = mesh.GetVertexUV(tri.c);
+
+                double maxEdge = Math.Max((v0 - v1).Length, Math.Max((v1 - v2).Length, (v2 - v0).Length));
+                int n = Mathf.Clamp(Mathf.CeilToInt((float)(maxEdge / (0.5 * voxelSize))), 1, 64);
+
+                // Bin each sample into the voxel half a cell INWARD of the surface (along −normal),
+                // i.e. the occupied shell voxel whose centre sits just inside the hull — instead of
+                // the empty voxel the surface point itself may fall in. This lands colour directly on
+                // the shell voxel, so it rarely needs the 27-neighbour merge (which would otherwise
+                // smear a recess colour across its neighbours).
+                double nlen = Math.Sqrt(nx * nx + ny * ny + nz * nz);
+                double nudge = nlen > 1e-12 ? 0.5 * voxelSize / nlen : 0.0;
+
+                foreach ((double ba, double bb, double bc) in BarycentricSamples(n))
+                {
+                    double wx = ba * v0.x + bb * v1.x + bc * v2.x - nx * nudge;
+                    double wy = ba * v0.y + bb * v1.y + bc * v2.y - ny * nudge;
+                    double wz = ba * v0.z + bb * v1.z + bc * v2.z - nz * nudge;
+
+                    int gx = Mathf.Clamp((int)((wx - bounds.Min.x) / voxelSize), 0, gridX - 1);
+                    int gy = Mathf.Clamp((int)((wy - bounds.Min.y) / voxelSize), 0, gridY - 1);
+                    int gz = Mathf.Clamp((int)((wz - bounds.Min.z) / voxelSize), 0, gridZ - 1);
+
+                    Color32 c;
+                    if (textured)
+                    {
+                        float u = (float)(ba * uv0.x + bb * uv1.x + bc * uv2.x);
+                        float v = (float)(ba * uv0.y + bb * uv1.y + bc * uv2.y);
+                        c = SampleTexel(tex!, u, v);
+                    }
+                    else
+                    {
+                        c = colors.FlatColor;
+                    }
+
+                    AccumulateColour(accum, VoxelIndex(gx, gy, gz, gridX, gridZ), c);
+                }
+            }
+
+            progress.Report(0.9f, "Resolving voxel colours…");
+            return accum;
+        }
+
+        /// <summary>
+        /// Interior barycentric sample points for a triangle subdivided <paramref name="n"/> ways:
+        /// the centroid plus an (n×n) half-offset grid clipped to the triangle. All strictly inside,
+        /// so no sample lands on a shared edge/vertex (where UV islands — and baked AO — meet).
+        /// </summary>
+        private static IEnumerable<(double a, double b, double c)> BarycentricSamples(int n)
+        {
+            yield return (1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0);
+            if (n < 2)
+            {
+                yield break;
+            }
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    double a = (i + 0.5) / n;
+                    double b = (j + 0.5) / n;
+                    if (a + b >= 1.0)
+                    {
+                        continue;
+                    }
+                    yield return (a, b, 1.0 - a - b);
+                }
+            }
+        }
+
+        // sRGB texel fetch: GetPixelBilinear decodes to linear in a Linear-space project, so
+        // re-encode to gamma for the (sRGB) .vox palette. Bilinear is fine here — the gutter is
+        // grey, and these samples are averaged per voxel anyway.
+        private static Color32 SampleTexel(Texture2D tex, float u, float v) =>
+            ((Color)tex.GetPixelBilinear(u, v)).gamma;
+
+        private static void AccumulateColour(
+            Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>> accum, int voxel, Color32 c)
+        {
+            if (!accum.TryGetValue(voxel, out Dictionary<int, (long r, long g, long b, int n)>? bins))
+            {
+                bins = new Dictionary<int, (long r, long g, long b, int n)>();
+                accum[voxel] = bins;
+            }
+            // Coarse 5-bit/channel bin so near-identical samples pool (matches DeLight).
+            int key = ((c.r >> 3) << 10) | ((c.g >> 3) << 5) | (c.b >> 3);
+            bins.TryGetValue(key, out (long r, long g, long b, int n) acc);
+            bins[key] = (acc.r + c.r, acc.g + c.g, acc.b + c.b, acc.n + 1);
+        }
+
+        /// <summary>
+        /// The colour for one occupied voxel: the dominant of its own surface samples; failing
+        /// that (the surface rounded into a neighbouring cell), the dominant of its 26-neighbour
+        /// samples; failing that (deep interior / sparse surface), a single nearest-surface sample.
+        /// </summary>
+        private static Color32 ResolveVoxelColour(
+            int gx, int gy, int gz,
+            Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>> accum,
+            int gridX, int gridY, int gridZ,
+            g3.DMesh3 mesh, g3.DMeshAABBTree3 tree, ColorSource colors, bool hasUVs,
+            g3.AxisAlignedBox3d bounds, double voxelSize)
+        {
+            if (accum.TryGetValue(VoxelIndex(gx, gy, gz, gridX, gridZ), out var bins) && bins.Count > 0)
+            {
+                return DominantColour(bins);
+            }
+
+            var merged = new Dictionary<int, (long r, long g, long b, int n)>();
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        int nx = gx + dx, ny = gy + dy, nz = gz + dz;
+                        if (nx < 0 || ny < 0 || nz < 0 || nx >= gridX || ny >= gridY || nz >= gridZ)
+                        {
+                            continue;
+                        }
+                        if (!accum.TryGetValue(VoxelIndex(nx, ny, nz, gridX, gridZ), out var nb))
+                        {
+                            continue;
+                        }
+                        foreach (KeyValuePair<int, (long r, long g, long b, int n)> kv in nb)
+                        {
+                            merged.TryGetValue(kv.Key, out (long r, long g, long b, int n) acc);
+                            merged[kv.Key] = (acc.r + kv.Value.r, acc.g + kv.Value.g, acc.b + kv.Value.b, acc.n + kv.Value.n);
+                        }
+                    }
+                }
+            }
+            if (merged.Count > 0)
+            {
+                return DominantColour(merged);
+            }
+
+            double px = bounds.Min.x + (gx + 0.5) * voxelSize;
+            double py = bounds.Min.y + (gy + 0.5) * voxelSize;
+            double pz = bounds.Min.z + (gz + 0.5) * voxelSize;
+            return SampleColor(mesh, tree, colors, hasUVs, new g3.Vector3d(px, py, pz));
+        }
+
+        /// <summary>The most-populous coarse colour bin's average — the voxel's dominant material colour.</summary>
+        private static Color32 DominantColour(Dictionary<int, (long r, long g, long b, int n)> bins)
+        {
+            (long r, long g, long b, int n) best = default;
+            int bestCount = -1;
+            foreach ((long r, long g, long b, int n) acc in bins.Values)
+            {
+                if (acc.n > bestCount)
+                {
+                    bestCount = acc.n;
+                    best = acc;
+                }
+            }
+            return new Color32(
+                (byte)(best.r / best.n), (byte)(best.g / best.n), (byte)(best.b / best.n), 255);
         }
 
         private static Color32 SampleColor(
@@ -156,7 +392,11 @@ namespace VoxelsFromMeshSpike
             // If the imported result looks vertically flipped, sample (u, 1 - v) instead.
             float v = (float)(bary.x * uv0.y + bary.y * uv1.y + bary.z * uv2.y);
 
-            return colors.Texture!.GetPixelBilinear(u, v);
+            // In a Linear-space project GetPixelBilinear returns the colour in LINEAR
+            // space (it mirrors the GPU sampler's sRGB→linear decode), whereas the .vox
+            // palette is sRGB. Re-encode to gamma so the written colours aren't darkened
+            // by the gamma curve. (Color.gamma applies the linear→sRGB conversion.)
+            return ((Color)colors.Texture!.GetPixelBilinear(u, v)).gamma;
         }
 
         private static int GridDim(double extent, double voxelSize) =>

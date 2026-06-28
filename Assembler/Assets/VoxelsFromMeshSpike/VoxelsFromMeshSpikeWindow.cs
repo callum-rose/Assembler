@@ -15,6 +15,7 @@ namespace VoxelsFromMeshSpike
     public sealed class VoxelsFromMeshSpikeWindow : EditorWindow
     {
         private const string DefaultPaletteAssetPath = "Assets/VoxelsFromMeshSpike/MasterPalette.asset";
+        private const string PrefPrefix = "VoxelsFromMeshSpike.";
 
         private string _objPath = "";
         private string _voxPath = "";
@@ -26,6 +27,10 @@ namespace VoxelsFromMeshSpike
 
         [MenuItem("Window/Voxels/Mesh → VOX (Spike)")]
         private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh → VOX (Spike)");
+
+        private void OnEnable() => LoadState();
+
+        private void OnDisable() => SaveState();
 
         private void OnGUI()
         {
@@ -90,7 +95,10 @@ namespace VoxelsFromMeshSpike
                     string startName = string.IsNullOrEmpty(_objPath)
                         ? "model.vox"
                         : Path.GetFileNameWithoutExtension(_objPath) + ".vox";
-                    string picked = EditorUtility.SaveFilePanel("Save VOX", Application.dataPath, startName, "vox");
+                    string startDir = string.IsNullOrEmpty(_objPath)
+                        ? Application.dataPath
+                        : Path.GetDirectoryName(_objPath) ?? Application.dataPath;
+                    string picked = EditorUtility.SaveFilePanel("Save VOX", startDir, startName, "vox");
                     if (!string.IsNullOrEmpty(picked))
                     {
                         _voxPath = picked;
@@ -270,11 +278,9 @@ namespace VoxelsFromMeshSpike
                     AssetDatabase.Refresh();
                 }
 
-                EditorUtility.DisplayDialog(
-                    "Mesh → VOX",
-                    $"Wrote {result.Cells.Count:N0} voxels ({result.GridX}×{result.GridY}×{result.GridZ}), " +
-                    $"{colorCount:N0} colour(s) to:\n{_voxPath}",
-                    "OK");
+                Debug.Log(
+                    $"[VoxelsFromMeshSpike] Wrote {result.Cells.Count:N0} voxels " +
+                    $"({result.GridX}×{result.GridY}×{result.GridZ}), {colorCount:N0} colour(s) to: {_voxPath}");
             }
             catch (OperationCanceledException)
             {
@@ -308,8 +314,55 @@ namespace VoxelsFromMeshSpike
             return palette;
         }
 
-        private static string DefaultVoxPath(string objPath) =>
-            Path.Combine(Application.dataPath, Path.GetFileNameWithoutExtension(objPath) + ".vox");
+        // ---- EditorPrefs persistence ----------------------------------------
+        // All window settings are cached so the next session reopens where you left
+        // off. Saved on close/domain-reload (OnDisable), restored on OnEnable.
+
+        private void LoadState()
+        {
+            _objPath = EditorPrefs.GetString(PrefPrefix + "MeshPath", _objPath);
+            _voxPath = EditorPrefs.GetString(PrefPrefix + "VoxPath", _voxPath);
+            _maxDimVoxels = EditorPrefs.GetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
+            _preset = (VoxPipelinePreset)EditorPrefs.GetInt(PrefPrefix + "Preset", (int)_preset);
+
+            string settingsJson = EditorPrefs.GetString(PrefPrefix + "Settings", "");
+            if (!string.IsNullOrEmpty(settingsJson))
+            {
+                JsonUtility.FromJsonOverwrite(settingsJson, _settings);
+            }
+
+            string paletteGuid = EditorPrefs.GetString(PrefPrefix + "PaletteGuid", "");
+            if (!string.IsNullOrEmpty(paletteGuid))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(paletteGuid);
+                _palette = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<VoxMasterPalette>(path);
+            }
+
+            if (!string.IsNullOrEmpty(_objPath) && string.IsNullOrEmpty(_voxPath))
+            {
+                _voxPath = DefaultVoxPath(_objPath);
+            }
+        }
+
+        private void SaveState()
+        {
+            EditorPrefs.SetString(PrefPrefix + "MeshPath", _objPath);
+            EditorPrefs.SetString(PrefPrefix + "VoxPath", _voxPath);
+            EditorPrefs.SetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
+            EditorPrefs.SetInt(PrefPrefix + "Preset", (int)_preset);
+            EditorPrefs.SetString(PrefPrefix + "Settings", JsonUtility.ToJson(_settings));
+
+            string assetPath = _palette != null ? AssetDatabase.GetAssetPath(_palette) : "";
+            EditorPrefs.SetString(
+                PrefPrefix + "PaletteGuid",
+                string.IsNullOrEmpty(assetPath) ? "" : AssetDatabase.AssetPathToGUID(assetPath));
+        }
+
+        // Default the .vox next to the source mesh, matching its basename.
+        private static string DefaultVoxPath(string meshPath) =>
+            Path.Combine(
+                Path.GetDirectoryName(meshPath) ?? Application.dataPath,
+                Path.GetFileNameWithoutExtension(meshPath) + ".vox");
 
         private static int CountDistinctColors(VoxResult result)
         {
