@@ -91,7 +91,9 @@ namespace Editor
 				SandboxValidationResult result;
 				try
 				{
-					result = SandboxValidator.Validate(File.ReadAllText(file));
+					// Block at this synchronous -executeMethod entry point. Local content resolves immediately;
+					// only remote Addressables assets would genuinely wait here.
+					result = SandboxValidator.ValidateAsync(File.ReadAllText(file)).GetAwaiter().GetResult();
 				}
 				catch (Exception e)
 				{

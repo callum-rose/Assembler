@@ -180,11 +180,13 @@ namespace Editor
 			}
 		}
 
-		private static void LaunchGame(string yamlPath, int platformIndex)
+		// async void: editor event callback (the Play button), so a Task return isn't possible. Only the
+		// already-playing branch awaits the build; remote Addressables content downloads during play mode.
+		private static async void LaunchGame(string yamlPath, int platformIndex)
 		{
 			if (EditorApplication.isPlaying)
 			{
-				Builder.Build(yamlPath, PlatformOverride(platformIndex));
+				await Builder.BuildAsync(yamlPath, PlatformOverride(platformIndex));
 			}
 			else
 			{
@@ -204,7 +206,9 @@ namespace Editor
 			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 		}
 
-		private static void OnPlayModeStateChanged(PlayModeStateChange change)
+		// async void: editor event callback, so a Task return isn't possible. Awaits the build so remote
+		// Addressables content resolves before the game runs.
+		private static async void OnPlayModeStateChanged(PlayModeStateChange change)
 		{
 			if (change != PlayModeStateChange.EnteredPlayMode)
 			{
@@ -224,7 +228,7 @@ namespace Editor
 
 			try
 			{
-				Builder.Build(pending, PlatformOverride(platformIndex));
+				await Builder.BuildAsync(pending, PlatformOverride(platformIndex));
 			}
 			catch (System.Exception e)
 			{

@@ -95,9 +95,20 @@ with the `!asset` tag (for `sprite.Sprite`, `voxel mesh.Mesh`, `audio source.Cli
 Assets:
   - Id: voxel mesh asset             # string — the id used by !asset
     Type: mesh                       # string — asset kind (mesh | sprite | audio | …)
-    Source: resources                # string — where to load from (e.g. resources)
-    Path: Voxels/voxel               # string — load path within that source
+    Source: resources                # string — where to load from (resources | addressables)
+    Path: Voxels/voxel               # string — load path/address within that source
 ```
+
+**`Source`** selects where the bytes come from:
+
+- `resources` — loaded synchronously from a Unity **Resources** folder; `Path` is the Resources path
+  (e.g. `Voxels/voxel`).
+- `addressables` — loaded (possibly downloaded) via Unity **Addressables**, including remote content;
+  `Path` is the Addressables **address/key** (e.g. `Enemies/Goblin`), not a Resources path. The asset's
+  load handle is released automatically when the game is torn down. Referencing an `addressables` asset
+  requires the project to have Addressables set up (settings created, the target asset marked Addressable
+  with that address, and — for remote content — a built/hosted catalog). The `!asset` reference syntax is
+  unchanged regardless of source.
 
 ### `Constants` — map `id → value`
 

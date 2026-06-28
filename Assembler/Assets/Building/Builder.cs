@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.UI;
@@ -23,19 +24,19 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static void Build(string yamlPath, InputPlatform? overridePlatform = null)
+		public static async Task BuildAsync(string yamlPath, InputPlatform? overridePlatform = null)
 		{
 			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			Build(gameInfo, controls, overridePlatform);
+			await BuildAsync(gameInfo, controls, overridePlatform);
 		}
 
-		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
+		public static Task BuildAsync(GameInfo gameInfo) => BuildAsync(gameInfo, ControlsInfo.Empty, null);
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
-			=> gameInfo.Resolve(controls, overridePlatform).Instantiate();
+		public static async Task BuildAsync(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+			=> (await gameInfo.ResolveAsync(controls, overridePlatform)).Instantiate();
 
 		/// <summary>
 		/// First build phase: validate the descriptor's game-over path and controls, then stand up all the
@@ -44,7 +45,7 @@ namespace Assembler.Building
 		/// resolution-time failures separately from instantiation-time ones. The returned handle carries the
 		/// resolved state into <see cref="Instantiate"/>.
 		/// </summary>
-		public static ResolvedGame Resolve(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+		public static async Task<ResolvedGame> ResolveAsync(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			if (!GameOverReachability.HasReachableGameOver(gameInfo))
@@ -77,9 +78,10 @@ namespace Assembler.Building
 
 			compiledExpressionsRegistry.CompileAndRegisterAll(gameInfo.Expressions);
 
-			// 2. Load assets
+			// 2. Load assets. The only async step in resolve: Resources completes synchronously, but Addressables
+			// (especially remote content) genuinely awaits a download here, off the main thread.
 			var assetRegistry = new AssetRegistry();
-			assetRegistry.LoadAll(gameInfo.Assets);
+			await assetRegistry.LoadAllAsync(gameInfo.Assets);
 
 			// 2b. Load the localisation string table. Locale is hardcoded for now; this is the seam the
 			// future settings/options system will drive.
@@ -147,6 +149,10 @@ namespace Assembler.Building
 			// Enable the controls asset for the game's lifetime and tie its destruction to the game root, so
 			// individual input triggers never enable/disable (and never leak) the shared asset themselves.
 			gameRoot.AddComponent<ControlsAssetOwner>().Initialise(controlsAsset);
+
+			// Release the registry's loaded assets (Addressables handles) when the game root is destroyed, mirroring
+			// the controls asset above. Resources-sourced assets need no release; Dispose is a no-op for them.
+			gameRoot.AddComponent<AssetRegistryOwner>().Initialise(assetRegistry);
 
 			// uGUI needs exactly one EventSystem to deliver pointer input. The project is Input System-only
 			// (activeInputHandler == 2), so the Input System UI module is required — StandaloneInputModule
