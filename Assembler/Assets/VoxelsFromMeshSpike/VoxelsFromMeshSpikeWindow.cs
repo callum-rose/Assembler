@@ -139,6 +139,12 @@ namespace VoxelsFromMeshSpike
 
                 VoxResult result = ObjToVoxConverter.Convert(_objPath, _maxDimVoxels, reporter);
 
+                // Route through the dense working model. Post-processing steps (floaters,
+                // de-light, morphology, …) will mutate the model here; for now it's a
+                // lossless round-trip that proves the seam ahead of the quantiser.
+                VoxModel model = VoxModel.FromResult(result);
+                result = model.ToResult();
+
                 if (_quantise)
                 {
                     EditorUtility.DisplayProgressBar("Mesh → VOX", "Quantising colours…", 0.99f);
