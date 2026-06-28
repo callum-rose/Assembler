@@ -8,19 +8,28 @@ namespace VoxelsFromMeshSpike
 {
     /// <summary>
     /// Spike editor window: pick a textured mesh (.obj or .fbx), choose a resolution,
-    /// solid-fill it into a coloured MagicaVoxel <c>.vox</c> for import by the Voxel
-    /// Toolkit. Intentionally standalone and trivially deletable.
+    /// solid-fill it into a coloured MagicaVoxel <c>.vox</c>, then run the conservative
+    /// post-processing trio (floaters → de-light → palette-snap → morphology) over the
+    /// dense <see cref="VoxModel"/>. Intentionally standalone and trivially deletable.
     /// </summary>
     public sealed class VoxelsFromMeshSpikeWindow : EditorWindow
     {
+        private const string DefaultPaletteAssetPath = "Assets/VoxelsFromMeshSpike/MasterPalette.asset";
+
         private string _objPath = "";
         private string _voxPath = "";
         private int _maxDimVoxels = 32;
 
-        private bool _quantise = true;
-        private int _maxColors = 16;
-        private float _similarity = 0.12f;
-        private float _minRegionPercent = 1.0f;
+        private bool _removeFloaters = true;
+        private float _floaterMinPercent = 0.5f;
+
+        private bool _deLight = true;
+        private float _deLightThreshold = 0.10f;
+
+        private bool _snapToPalette = true;
+        private VoxMasterPalette? _palette;
+
+        private bool _morphology;
 
         [MenuItem("Window/Voxels/Mesh → VOX (Spike)")]
         private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh → VOX (Spike)");
@@ -30,7 +39,7 @@ namespace VoxelsFromMeshSpike
             EditorGUILayout.LabelField("Mesh → VOX (Spike)", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Solid-fills a textured .obj or .fbx into a coloured MagicaVoxel .vox " +
-                "using a fast-winding-number occupancy test. Standalone spike — safe to delete.",
+                "using a fast-winding-number occupancy test, then cleans it up. Standalone spike — safe to delete.",
                 MessageType.Info);
 
             EditorGUILayout.Space();
@@ -70,28 +79,69 @@ namespace VoxelsFromMeshSpike
             }
 
             EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Post-processing", EditorStyles.boldLabel);
 
-            // Colour quantisation.
-            _quantise = EditorGUILayout.ToggleLeft(
-                new GUIContent("Quantise colours",
-                    "Extract the model's basic colours, snap noisy colours to the nearest one, " +
-                    "and turn soft gradients at boundaries into hard colour steps."),
-                _quantise);
-            if (_quantise)
+            // Step 2 — floaters.
+            _removeFloaters = EditorGUILayout.ToggleLeft(
+                new GUIContent("Remove floaters",
+                    "Delete small disconnected components (voxelization specks). Substantial detached parts are kept."),
+                _removeFloaters);
+            if (_removeFloaters)
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    _maxColors = EditorGUILayout.IntSlider(
-                        new GUIContent("Max basic colours", "Upper bound on the extracted palette size."),
-                        _maxColors, 1, 64);
-                    _similarity = EditorGUILayout.Slider(
-                        new GUIContent("Merge similarity", "Colours closer than this (0..1) are merged into one basic colour. Higher = fewer, blockier colours."),
-                        _similarity, 0f, 0.5f);
-                    _minRegionPercent = EditorGUILayout.Slider(
-                        new GUIContent("Min region %", "A colour must cover at least this % of voxels to count as basic — filters thin gradient/noise bands."),
-                        _minRegionPercent, 0f, 10f);
+                    _floaterMinPercent = EditorGUILayout.Slider(
+                        new GUIContent("Min component %", "A component covering less than this % of voxels (and < 2 voxels) is removed."),
+                        _floaterMinPercent, 0f, 10f);
                 }
             }
+
+            // Step 4 — de-light.
+            _deLight = EditorGUILayout.ToggleLeft(
+                new GUIContent("De-light",
+                    "Flatten baked shading: grow material regions of similar colour and collapse each to one flat colour."),
+                _deLight);
+            if (_deLight)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _deLightThreshold = EditorGUILayout.Slider(
+                        new GUIContent("Region similarity (Oklab)", "Max perceptual distance between adjacent voxels to join one region. Higher = larger, flatter regions."),
+                        _deLightThreshold, 0f, 0.5f);
+                }
+            }
+
+            // Step 5 — palette-snap.
+            _snapToPalette = EditorGUILayout.ToggleLeft(
+                new GUIContent("Snap to master palette",
+                    "Snap each colour to the nearest swatch in a shared master palette (Oklab) for cross-asset cohesion."),
+                _snapToPalette);
+            if (_snapToPalette)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _palette = (VoxMasterPalette?)EditorGUILayout.ObjectField(
+                        new GUIContent("Master palette", "Hand-authored swatches. Leave empty to use the built-in starter palette."),
+                        _palette, typeof(VoxMasterPalette), false);
+                    if (_palette == null)
+                    {
+                        using (new EditorGUILayout.HorizontalScope())
+                        {
+                            EditorGUILayout.LabelField("Using built-in starter palette.", EditorStyles.miniLabel);
+                            if (GUILayout.Button("Create starter palette…", GUILayout.Width(170)))
+                            {
+                                _palette = CreateStarterPalette();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Step 6 — morphology.
+            _morphology = EditorGUILayout.ToggleLeft(
+                new GUIContent("Despeckle / fill (morphology)",
+                    "Mild: remove single-face bumps and fill near-enclosed pinholes. Off by default — can erode thin features."),
+                _morphology);
 
             EditorGUILayout.Space();
 
@@ -139,18 +189,29 @@ namespace VoxelsFromMeshSpike
 
                 VoxResult result = ObjToVoxConverter.Convert(_objPath, _maxDimVoxels, reporter);
 
-                // Route through the dense working model. Post-processing steps (floaters,
-                // de-light, morphology, …) will mutate the model here; for now it's a
-                // lossless round-trip that proves the seam ahead of the quantiser.
+                // Post-processing operates on the dense working model (canonical pipeline order:
+                // floaters → de-light → palette-snap → morphology), then exports back to a VoxResult.
+                EditorUtility.DisplayProgressBar("Mesh → VOX", "Post-processing…", 0.99f);
                 VoxModel model = VoxModel.FromResult(result);
-                result = model.ToResult();
 
-                if (_quantise)
+                if (_removeFloaters)
                 {
-                    EditorUtility.DisplayProgressBar("Mesh → VOX", "Quantising colours…", 0.99f);
-                    var options = new ColorQuantizer.Options(_maxColors, _similarity, _minRegionPercent / 100f);
-                    result = ColorQuantizer.Quantise(result, options);
+                    FloaterRemoval.Apply(model, new FloaterRemoval.Options(2, _floaterMinPercent / 100f));
                 }
+                if (_deLight)
+                {
+                    DeLight.Apply(model, new DeLight.Options(_deLightThreshold));
+                }
+                if (_snapToPalette)
+                {
+                    PaletteSnap.Apply(model, _palette != null ? _palette.ToColor32() : DefaultMasterPalette.Colors);
+                }
+                if (_morphology)
+                {
+                    Morphology.Apply(model, Morphology.Options.Default);
+                }
+
+                result = model.ToResult();
 
                 int colorCount = CountDistinctColors(result);
 
@@ -185,6 +246,23 @@ namespace VoxelsFromMeshSpike
             {
                 EditorUtility.ClearProgressBar();
             }
+        }
+
+        private static VoxMasterPalette CreateStarterPalette()
+        {
+            var palette = CreateInstance<VoxMasterPalette>();
+            palette.SetColors(DefaultMasterPalette.Colors);
+
+            string dir = Path.GetDirectoryName(DefaultPaletteAssetPath)!;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            string path = AssetDatabase.GenerateUniqueAssetPath(DefaultPaletteAssetPath);
+            AssetDatabase.CreateAsset(palette, path);
+            AssetDatabase.SaveAssets();
+            EditorGUIUtility.PingObject(palette);
+            return palette;
         }
 
         private static string DefaultVoxPath(string objPath) =>
