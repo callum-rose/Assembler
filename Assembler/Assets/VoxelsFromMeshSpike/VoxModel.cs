@@ -48,6 +48,22 @@ namespace VoxelsFromMeshSpike
         public bool IsOccupied(int x, int y, int z) =>
             InBounds(x, y, z) && Occupied[Index(x, y, z)];
 
+        /// <summary>Decodes a flat index back to its grid coordinate (inverse of <see cref="Index"/>).</summary>
+        public (int x, int y, int z) Coords(int index)
+        {
+            int x = index % X;
+            int rem = index / X;
+            return (x, rem % Y, rem / Y);
+        }
+
+        /// <summary>The six face-adjacent (6-connectivity) neighbour offsets shared by the grid steps.</summary>
+        public static readonly (int dx, int dy, int dz)[] FaceNeighbours =
+        {
+            (1, 0, 0), (-1, 0, 0),
+            (0, 1, 0), (0, -1, 0),
+            (0, 0, 1), (0, 0, -1),
+        };
+
         /// <summary>Builds a dense model from the sparse converter/quantiser output.</summary>
         public static VoxModel FromResult(VoxResult result)
         {
