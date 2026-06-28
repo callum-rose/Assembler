@@ -23,8 +23,8 @@ namespace VoxelsFromMeshSpike
 
         /// <summary>
         /// Builds the canonical-order pipeline from settings. The palette is passed in separately
-        /// (it is a shared, window-level art-direction knob, not a per-asset setting). Mirror/revolve
-        /// (M4) will slot in between floaters and de-light, per §4.4.
+        /// (it is a shared, window-level art-direction knob, not a per-asset setting). The opt-in
+        /// symmetry steps (mirror, then revolve) slot in between floaters and de-light, per §4.4.
         /// </summary>
         public static VoxPipeline FromSettings(VoxPipelineSettings settings, IReadOnlyList<Color32> palette)
         {
@@ -38,7 +38,18 @@ namespace VoxelsFromMeshSpike
                 new RemoveFloatersStep(
                     settings.removeFloaters,
                     new FloaterRemoval.Options(2, settings.floaterMinPercent / 100f)),
-                // M4 inserts Mirror / Revolve here (colour still raw).
+                // Symmetry (§6.4) runs here, between floaters and de-light, while colour is still raw.
+                new MirrorStep(
+                    settings.mirror,
+                    new Mirror.Options(
+                        settings.mirrorAxis,
+                        settings.mirrorConfidence,
+                        settings.mirrorForce,
+                        Mirror.Options.Default.ColourWeight,
+                        Mirror.Options.Default.ColourTolerance)),
+                new RevolveStep(
+                    settings.revolve,
+                    new Revolve.Options(settings.revolveAxis, settings.revolveFillThreshold)),
                 new DeLightStep(
                     settings.deLight,
                     new DeLight.Options(settings.deLightThreshold)),
