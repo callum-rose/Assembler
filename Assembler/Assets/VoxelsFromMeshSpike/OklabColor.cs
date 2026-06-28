@@ -43,6 +43,9 @@ namespace VoxelsFromMeshSpike
                 0.0259040371f * lCbrt + 0.7827717662f * mCbrt - 0.8086757660f * sCbrt);
         }
 
+        /// <summary>Chroma (saturation): distance from the neutral axis in the a/b plane.</summary>
+        public float Chroma => Mathf.Sqrt(A * A + B * B);
+
         public float SquaredDistanceTo(OklabColor other)
         {
             float dl = L - other.L;

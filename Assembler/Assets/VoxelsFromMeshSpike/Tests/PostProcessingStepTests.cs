@@ -101,6 +101,25 @@ namespace Tests.VoxelsFromMeshSpike
         }
 
         [Test]
+        public void PaletteSnap_NearNeutralPrefersNeutralOverSaturatedSameHue()
+        {
+            // A faintly-warm light grey (a starship hull panel) must not jump to a saturated
+            // pink of the same hue — the "hull panels turn pink" bug. The chroma-gain penalty
+            // keeps it on the neutral grey even though the pink is the raw Oklab nearest.
+            var palette = new List<Color32>
+            {
+                new Color32(189, 189, 189, 255), // neutral grey
+                new Color32(255, 204, 188, 255), // saturated pink/skin (raw nearest)
+            };
+            var model = new VoxModel(1, 1, 1);
+            SetVoxel(model, 0, 0, 0, new Color32(225, 205, 200, 255)); // faintly-warm light grey
+
+            PaletteSnap.Apply(model, palette);
+
+            Assert.AreEqual(new Color32(189, 189, 189, 255), model.Colors[model.Index(0, 0, 0)]);
+        }
+
+        [Test]
         public void PaletteSnap_EmptyPalette_LeavesColorsUntouched()
         {
             var model = new VoxModel(1, 1, 1);

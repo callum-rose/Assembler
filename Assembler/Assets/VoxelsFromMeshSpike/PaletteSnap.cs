@@ -18,6 +18,15 @@ namespace VoxelsFromMeshSpike
     /// </summary>
     public static class PaletteSnap
     {
+        // Penalises snapping a near-neutral voxel onto a saturated swatch. The squared Oklab
+        // distance gets an added cost for any CHROMA the swatch introduces beyond the source's
+        // own — only ADDED saturation is penalised, desaturating is free. Without it a faintly
+        // warm light grey (with no light warm-neutral swatch to land on) snaps to a saturated
+        // pink/salmon of the same hue, turning whole hull panels pink. Tuned (well below the
+        // ~15 where it starts overriding clear hue matches) to bias near-neutrals toward
+        // neutral swatches without ever flipping a saturated colour onto the wrong hue.
+        private const float ChromaGainPenalty = 8f;
+
         public static void Apply(VoxModel model, IReadOnlyList<Color32> palette)
         {
             if (palette == null || palette.Count == 0)
@@ -52,7 +61,8 @@ namespace VoxelsFromMeshSpike
             float bestSqr = float.MaxValue;
             for (int i = 0; i < paletteLab.Length; i++)
             {
-                float d = c.SquaredDistanceTo(paletteLab[i]);
+                float gain = Mathf.Max(0f, paletteLab[i].Chroma - c.Chroma);
+                float d = c.SquaredDistanceTo(paletteLab[i]) + ChromaGainPenalty * gain * gain;
                 if (d < bestSqr)
                 {
                     bestSqr = d;
