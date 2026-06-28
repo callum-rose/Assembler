@@ -35,8 +35,19 @@ namespace VoxelsFromMeshSpike
             }
             else
             {
-                palette = BuildPalette332();
-                colorIndexOf = ColorIndex332;
+                var (medianPalette, medianSlots) = BuildMedianCutPalette(result.Cells, MaxColorIndex);
+                palette = medianPalette;
+                colorIndexOf = c => medianSlots[ColorKey(c)];
+            }
+
+            // Force every palette entry fully opaque. We never write transparency, but both
+            // builders leave UNUSED slots zero-filled (alpha 0), and importers that derive a
+            // material from the palette can treat any alpha<255 entry as transparent/glass
+            // (e.g. Voxel Toolkit flags alpha<0.99) — so a stray index/sample into an unused
+            // slot renders see-through. Opaque-filling the whole table removes that hazard.
+            for (int e = 0; e < 256; e++)
+            {
+                palette[e * 4 + 3] = 255;
             }
 
             // Remap mesh-grid cells (gx, gy=up, gz) → MagicaVoxel (vx, vy, vz=up).
@@ -44,11 +55,14 @@ namespace VoxelsFromMeshSpike
             // The mesh is in OBJ space (right-handed: +X right, +Y up, +Z toward
             // viewer); MagicaVoxel is right-handed with +Z up and +Y pointing away.
             // A bare axis swap (x,y,z)→(x,z,y) is a reflection (mirrors the model),
-            // so we also flip the depth axis to keep handedness and avoid a mirror.
+            // so we rotate 180° about the up (vox-Z) axis on top of it — flipping
+            // BOTH the width and depth axes — which keeps handedness (a proper
+            // rotation, det +1) and lands the model facing the viewer the right way
+            // round. (A plain `vx = gx` came out turned 180° about the vertical.)
             //
-            // VERIFY against an asymmetric mesh (e.g. an "L"): if the result is
-            // mirrored, drop the `(gridZ - 1 - gz)` flip back to a plain `gz`
-            // (or flip a different axis instead).
+            // VERIFY against an asymmetric mesh (e.g. an "L"): this only ever rotates,
+            // never mirrors. If it still reads as mirror-imaged, the source mesh's own
+            // handedness is the culprit (e.g. the FBX Z-negation), not this mapping.
             int gridX = result.GridX;
             int gridY = result.GridY;
             int gridZ = result.GridZ;
@@ -60,8 +74,8 @@ namespace VoxelsFromMeshSpike
             var voxels = new List<(byte x, byte y, byte z, byte i)>(result.Cells.Count);
             foreach (VoxCell cell in result.Cells)
             {
-                byte vx = (byte)cell.X;
-                byte vy = (byte)(gridZ - 1 - cell.Z);
+                byte vx = (byte)(gridX - 1 - cell.X);
+                byte vy = (byte)cell.Z;
                 byte vz = (byte)cell.Y;
                 voxels.Add((vx, vy, vz, colorIndexOf(cell.Color)));
             }
@@ -135,35 +149,106 @@ namespace VoxelsFromMeshSpike
             return true;
         }
 
-        // 3-3-2 RGB quantisation: 3 bits red, 3 bits green, 2 bits blue → code 0..255.
-        private static byte ColorIndex332(Color32 c)
-        {
-            int code = (c.r & 0xE0) | ((c.g & 0xE0) >> 3) | ((c.b & 0xC0) >> 6);
-            // Reserve index 0 for "empty"; collapse pure-black-ish code 0 onto 1.
-            return (byte)Mathf.Clamp(code == 0 ? 1 : code, 1, MaxColorIndex);
-        }
-
         /// <summary>
-        /// 256-entry RGBA table. Voxel colour index <c>i</c> (1..255) reads array
-        /// position <c>i-1</c> (per the VOX spec's off-by-one), so we store the
-        /// representative colour for code <c>i</c> at <c>(i-1)</c>.
+        /// Median-cut quantisation to <paramref name="maxColors"/> swatches when the model has
+        /// more than 255 distinct colours. Unlike a fixed 3-3-2 palette (whose 2-bit blue channel
+        /// turns neutral greys into lavender — R/G snap to 8 levels, B to only 4), this derives the
+        /// palette from the model's <i>actual</i> colours: each box's representative is the
+        /// population-weighted average of its members, so a cloud of near-neutral greys collapses to
+        /// a neutral grey. Returns the 256-entry RGBA table plus a colour→slot (1..maxColors) map.
         /// </summary>
-        private static byte[] BuildPalette332()
+        private static (byte[] palette, Dictionary<int, byte> indexOf) BuildMedianCutPalette(
+            IReadOnlyList<VoxCell> cells, int maxColors)
         {
-            var palette = new byte[256 * 4];
-            for (int i = 1; i <= MaxColorIndex; i++)
+            var counts = new Dictionary<int, int>();
+            foreach (VoxCell cell in cells)
             {
-                int r3 = (i >> 5) & 0x7;
-                int g3 = (i >> 2) & 0x7;
-                int b2 = i & 0x3;
-
-                int offset = (i - 1) * 4;
-                palette[offset + 0] = (byte)(r3 * 255 / 7);
-                palette[offset + 1] = (byte)(g3 * 255 / 7);
-                palette[offset + 2] = (byte)(b2 * 255 / 3);
-                palette[offset + 3] = 255;
+                int key = ColorKey(cell.Color);
+                counts.TryGetValue(key, out int existing);
+                counts[key] = existing + 1;
             }
-            return palette;
+
+            var initial = new List<(int r, int g, int b, int n)>(counts.Count);
+            foreach (KeyValuePair<int, int> kv in counts)
+            {
+                initial.Add(((kv.Key >> 16) & 0xFF, (kv.Key >> 8) & 0xFF, kv.Key & 0xFF, kv.Value));
+            }
+
+            var boxes = new List<List<(int r, int g, int b, int n)>> { initial };
+            while (boxes.Count < maxColors)
+            {
+                // Pick the box with the widest single-channel spread and split it at the
+                // population median along that channel.
+                int target = -1, targetRange = 0, targetChannel = 0;
+                for (int i = 0; i < boxes.Count; i++)
+                {
+                    List<(int r, int g, int b, int n)> box = boxes[i];
+                    if (box.Count < 2)
+                    {
+                        continue;
+                    }
+                    int rmin = 255, rmax = 0, gmin = 255, gmax = 0, bmin = 255, bmax = 0;
+                    foreach ((int r, int g, int b, int n) c in box)
+                    {
+                        rmin = Math.Min(rmin, c.r); rmax = Math.Max(rmax, c.r);
+                        gmin = Math.Min(gmin, c.g); gmax = Math.Max(gmax, c.g);
+                        bmin = Math.Min(bmin, c.b); bmax = Math.Max(bmax, c.b);
+                    }
+                    int range = rmax - rmin, channel = 0;
+                    if (gmax - gmin > range) { range = gmax - gmin; channel = 1; }
+                    if (bmax - bmin > range) { range = bmax - bmin; channel = 2; }
+                    if (range > targetRange) { targetRange = range; target = i; targetChannel = channel; }
+                }
+                if (target < 0)
+                {
+                    break; // every box is a single colour — can't split further
+                }
+
+                List<(int r, int g, int b, int n)> split = boxes[target];
+                int ch = targetChannel;
+                split.Sort((x, y) =>
+                    (ch == 0 ? x.r : ch == 1 ? x.g : x.b).CompareTo(ch == 0 ? y.r : ch == 1 ? y.g : y.b));
+                int total = 0;
+                foreach ((int r, int g, int b, int n) c in split)
+                {
+                    total += c.n;
+                }
+                int acc = 0, at = 1;
+                for (int i = 0; i < split.Count; i++)
+                {
+                    acc += split[i].n;
+                    if (acc * 2 >= total)
+                    {
+                        at = Math.Max(1, Math.Min(split.Count - 1, i + 1));
+                        break;
+                    }
+                }
+                boxes[target] = split.GetRange(0, at);
+                boxes.Add(split.GetRange(at, split.Count - at));
+            }
+
+            var palette = new byte[256 * 4];
+            var indexOf = new Dictionary<int, byte>();
+            for (int i = 0; i < boxes.Count; i++)
+            {
+                List<(int r, int g, int b, int n)> box = boxes[i];
+                long rs = 0, gs = 0, bs = 0, ns = 0;
+                foreach ((int r, int g, int b, int n) c in box)
+                {
+                    rs += (long)c.r * c.n; gs += (long)c.g * c.n; bs += (long)c.b * c.n; ns += c.n;
+                }
+                var slot = (byte)(i + 1); // 1..maxColors
+                int offset = (slot - 1) * 4;
+                palette[offset + 0] = (byte)(rs / ns);
+                palette[offset + 1] = (byte)(gs / ns);
+                palette[offset + 2] = (byte)(bs / ns);
+                palette[offset + 3] = 255;
+                foreach ((int r, int g, int b, int n) c in box)
+                {
+                    indexOf[(c.r << 16) | (c.g << 8) | c.b] = slot;
+                }
+            }
+            return (palette, indexOf);
         }
 
         private static byte[] BuildChunk(string id, System.Action<BinaryWriter> writeContent)
