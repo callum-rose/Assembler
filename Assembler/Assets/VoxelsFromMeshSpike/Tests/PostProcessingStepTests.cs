@@ -133,8 +133,9 @@ namespace Tests.VoxelsFromMeshSpike
         [Test]
         public void HistogramSnap_ReducesToTopNDominantColors()
         {
-            // 6x1x1: three reds (the dominant peak), two greens, one blue. Keep 2 peaks → red+green,
-            // and the lone blue must snap to whichever peak is nearer (green, in Oklab).
+            // 6x1x1: three reds (the dominant peak), two greens, one blue. Keep 2 peaks → red+green
+            // (the blue is a lone speck, gated out of candidacy), and it must snap to whichever peak is
+            // nearer (green, in Oklab).
             var model = new VoxModel(6, 1, 1);
             SetVoxel(model, 0, 0, 0, new Color32(200, 0, 0, 255));
             SetVoxel(model, 1, 0, 0, new Color32(200, 0, 0, 255));
@@ -143,7 +144,7 @@ namespace Tests.VoxelsFromMeshSpike
             SetVoxel(model, 4, 0, 0, new Color32(0, 200, 0, 255));
             SetVoxel(model, 5, 0, 0, new Color32(0, 0, 200, 255));
 
-            HistogramSnap.Apply(model, 2);
+            HistogramSnap.Apply(model, 2, 0.10f);
 
             HashSet<int> colors = DistinctColors(model);
             Assert.AreEqual(2, colors.Count, "should reduce to exactly the 2 dominant peaks");
@@ -160,10 +161,86 @@ namespace Tests.VoxelsFromMeshSpike
             SetVoxel(model, 0, 0, 0, new Color32(200, 0, 0, 255));
             SetVoxel(model, 1, 0, 0, new Color32(0, 200, 0, 255));
 
-            HistogramSnap.Apply(model, 8);
+            HistogramSnap.Apply(model, 8, 0.10f);
 
             Assert.AreEqual(new Color32(200, 0, 0, 255), model.Colors[model.Index(0, 0, 0)]);
             Assert.AreEqual(new Color32(0, 200, 0, 255), model.Colors[model.Index(1, 0, 0)]);
+        }
+
+        [Test]
+        public void HistogramSnap_PrefersDistinctColor_OverMoreFrequentNearDuplicate()
+        {
+            // The headline of variety-driven selection: redB is the SECOND most common colour but a
+            // near-duplicate of redA; green is rarer but perceptually distinct. With a cap of 2, a plain
+            // top-by-frequency would keep both reds and discard green — max-min keeps redA + green and
+            // folds the near-duplicate redB onto redA.
+            var model = new VoxModel(9, 1, 1);
+            for (int x = 0; x < 4; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(200, 0, 0, 255)); // redA ×4 (most common)
+            }
+            for (int x = 4; x < 7; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(190, 5, 5, 255)); // redB ×3 (near-duplicate)
+            }
+            SetVoxel(model, 7, 0, 0, new Color32(0, 200, 0, 255)); // green ×2 (distinct)
+            SetVoxel(model, 8, 0, 0, new Color32(0, 200, 0, 255));
+
+            HistogramSnap.Apply(model, 2, 0.10f);
+
+            HashSet<int> colors = DistinctColors(model);
+            Assert.AreEqual(2, colors.Count);
+            Assert.IsTrue(colors.Contains(200 << 16), "dominant red kept as the seed");
+            Assert.IsTrue(colors.Contains(200 << 8), "distinct green kept over the near-duplicate red");
+            Assert.IsFalse(colors.Contains((190 << 16) | (5 << 8) | 5), "near-duplicate red folded onto redA");
+        }
+
+        [Test]
+        public void HistogramSnap_VarietyThreshold_StopsBelowCap()
+        {
+            // The variety threshold — not the count — drives the result: the cap is 8 but only two
+            // colours are far enough apart to keep, so the near-duplicate red merges away and we stop
+            // at 2 well before the cap.
+            var model = new VoxModel(9, 1, 1);
+            for (int x = 0; x < 4; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(200, 0, 0, 255)); // redA
+            }
+            for (int x = 4; x < 7; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(190, 5, 5, 255)); // redB (within threshold of redA)
+            }
+            SetVoxel(model, 7, 0, 0, new Color32(0, 200, 0, 255)); // green (well beyond threshold)
+            SetVoxel(model, 8, 0, 0, new Color32(0, 200, 0, 255));
+
+            HistogramSnap.Apply(model, 8, 0.15f);
+
+            Assert.AreEqual(2, DistinctColors(model).Count, "stops at 2 despite a cap of 8 — threshold gated redB");
+        }
+
+        [Test]
+        public void HistogramSnap_LoneSpeck_NotChosenAsPeak()
+        {
+            // A single maximally-distinct voxel (a magenta speck) is the farthest-point winner, but the
+            // population gate keeps it out of candidacy so it can't become a peak — it snaps to a red
+            // peak instead. Without the gate, variety selection would chase noise.
+            var model = new VoxModel(8, 1, 1);
+            for (int x = 0; x < 4; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(200, 0, 0, 255)); // redA ×4
+            }
+            for (int x = 4; x < 7; x++)
+            {
+                SetVoxel(model, x, 0, 0, new Color32(190, 5, 5, 255)); // redB ×3
+            }
+            SetVoxel(model, 7, 0, 0, new Color32(255, 0, 255, 255)); // magenta speck ×1
+
+            HistogramSnap.Apply(model, 8, 0.10f);
+
+            HashSet<int> colors = DistinctColors(model);
+            Assert.IsFalse(colors.Contains((255 << 16) | 255), "lone magenta speck must not become a peak");
+            Assert.AreNotEqual(new Color32(255, 0, 255, 255), model.Colors[model.Index(7, 0, 0)],
+                "the speck snaps to a surviving red peak");
         }
 
         // ---- Morphology ----

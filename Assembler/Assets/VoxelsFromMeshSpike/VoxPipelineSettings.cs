@@ -49,11 +49,15 @@ namespace VoxelsFromMeshSpike
         [Tooltip("Max perceptual (Oklab) distance between adjacent voxels to join one region. Higher = larger, flatter regions.")]
         public float deLightThreshold = 0.10f;
 
-        [Tooltip("Reduce to the model's own dominant colours first: snap every voxel to one of the top N peaks in its colour histogram (Oklab).")]
+        [Tooltip("Reduce to the model's own dominant colours first: snap every voxel to a variety-selected set of peaks in its colour histogram (Oklab), spread out perceptually rather than just the most common.")]
         public bool snapToHistogramPeaks = false;
 
+        [Range(0f, 0.5f)]
+        [Tooltip("Variety threshold (Oklab): keep adding peaks while each new one is at least this distinct from the colours already kept; stop when the next-best is closer. Higher = fewer, more distinct colours. This is the primary control; the peak count is just a cap.")]
+        public float histogramPeakVariety = 0.10f;
+
         [Range(1, 64)]
-        [Tooltip("How many histogram peaks (distinct dominant colours) to keep when reducing to the model's own palette.")]
+        [Tooltip("Safety cap on how many histogram peaks (distinct dominant colours) to keep. Selection usually stops earlier, once no remaining colour clears the variety threshold.")]
         public int histogramPeakCount = 8;
 
         [Tooltip("Snap each colour to the nearest swatch in the shared master palette (Oklab) for cross-asset cohesion.")]

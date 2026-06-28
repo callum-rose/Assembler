@@ -58,7 +58,8 @@ namespace VoxelsFromMeshSpike
                 // master swatches.
                 new HistogramSnapStep(
                     settings.snapToHistogramPeaks,
-                    settings.histogramPeakCount),
+                    settings.histogramPeakCount,
+                    settings.histogramPeakVariety),
                 new PaletteSnapStep(
                     settings.snapToPalette,
                     palette),

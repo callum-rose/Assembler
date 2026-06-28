@@ -19,7 +19,7 @@ namespace VoxelsFromMeshSpike
     ///         -meshPath &lt;mesh.obj|.fbx&gt; [-voxPath &lt;out.vox&gt;] [-maxDim 32] \
     ///         [-preset Creature|Prop|RawVoxelCleanup] [-palettePath Assets/…/MasterPalette.asset] \
     ///         [-removeFloaters true|false] [-mirror …] [-revolve …] [-deLight …] \
-    ///         [-snapToHistogramPeaks true|false] [-histogramPeakCount &lt;int&gt;] \
+    ///         [-snapToHistogramPeaks true|false] [-histogramPeakVariety &lt;float&gt;] [-histogramPeakCount &lt;int&gt;] \
     ///         [-snapToPalette …] [-morphology …]
     ///
     /// Boolean step flags override the preset's defaults. Exits 0 on success, non-zero on any failure.
@@ -57,7 +57,7 @@ namespace VoxelsFromMeshSpike
                     $"[VoxelsFromMeshSpikeBatch] mesh='{meshPath}' out='{voxPath}' maxDim={maxDim} " +
                     $"preset={preset} (floaters={settings.removeFloaters}, mirror={settings.mirror}, " +
                     $"revolve={settings.revolve}, deLight={settings.deLight}, " +
-                    $"histogramPeaks={settings.snapToHistogramPeaks}×{settings.histogramPeakCount}, " +
+                    $"histogramPeaks={settings.snapToHistogramPeaks} (variety={settings.histogramPeakVariety}, cap={settings.histogramPeakCount}), " +
                     $"snap={settings.snapToPalette}, morphology={settings.morphology})");
 
                 VoxConversion.Summary summary = VoxConversion.Run(meshPath, voxPath, maxDim, settings, palette);
@@ -80,6 +80,7 @@ namespace VoxelsFromMeshSpike
             settings.revolve = ParseBool(ArgValue(args, "-revolve"), settings.revolve);
             settings.deLight = ParseBool(ArgValue(args, "-deLight"), settings.deLight);
             settings.snapToHistogramPeaks = ParseBool(ArgValue(args, "-snapToHistogramPeaks"), settings.snapToHistogramPeaks);
+            settings.histogramPeakVariety = ParseFloat(ArgValue(args, "-histogramPeakVariety"), settings.histogramPeakVariety);
             settings.histogramPeakCount = ParseInt(ArgValue(args, "-histogramPeakCount"), settings.histogramPeakCount);
             settings.snapToPalette = ParseBool(ArgValue(args, "-snapToPalette"), settings.snapToPalette);
             settings.morphology = ParseBool(ArgValue(args, "-morphology"), settings.morphology);
@@ -123,6 +124,9 @@ namespace VoxelsFromMeshSpike
 
         private static int ParseInt(string? value, int fallback) =>
             int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? n : fallback;
+
+        private static float ParseFloat(string? value, float fallback) =>
+            float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float f) ? f : fallback;
 
         private static bool ParseBool(string? value, bool fallback) =>
             bool.TryParse(value, out bool b) ? b : fallback;

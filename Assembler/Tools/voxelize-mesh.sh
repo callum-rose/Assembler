@@ -19,7 +19,8 @@
 #   -preset <name>           Creature | Prop | RawVoxelCleanup (default Creature)
 #   -palettePath <Assets/…>  master-palette .asset for colour snapping (default: built-in starter palette)
 #   -removeFloaters|-mirror|-revolve|-deLight|-snapToHistogramPeaks|-snapToPalette|-morphology  <true|false>  override a step
-#   -histogramPeakCount <int>  how many dominant colours to keep when -snapToHistogramPeaks is on (default 8)
+#   -histogramPeakVariety <float>  min Oklab distinctness a kept peak must add (primary control; default 0.10)
+#   -histogramPeakCount <int>      safety cap on kept dominant colours when -snapToHistogramPeaks is on (default 8)
 #
 # Concurrency / cold-import caveats are identical to the other Tools/ scripts: runs alongside an editor on
 # a DIFFERENT path, refuses if one already has THIS path open, and a fresh worktree's first run does a
