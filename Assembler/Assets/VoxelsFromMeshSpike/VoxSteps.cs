@@ -72,17 +72,19 @@ namespace VoxelsFromMeshSpike
 
     public sealed class HistogramSnapStep : IVoxStep
     {
-        private readonly int _peakCount;
+        private readonly int _maxPeaks;
+        private readonly float _varietyThreshold;
 
-        public HistogramSnapStep(bool enabled, int peakCount)
+        public HistogramSnapStep(bool enabled, int maxPeaks, float varietyThreshold)
         {
             Enabled = enabled;
-            _peakCount = peakCount;
+            _maxPeaks = maxPeaks;
+            _varietyThreshold = varietyThreshold;
         }
 
         public string Name => "Snap to histogram peaks";
         public bool Enabled { get; }
-        public void Apply(VoxModel model) => HistogramSnap.Apply(model, _peakCount);
+        public void Apply(VoxModel model) => HistogramSnap.Apply(model, _maxPeaks, _varietyThreshold);
     }
 
     public sealed class PaletteSnapStep : IVoxStep
