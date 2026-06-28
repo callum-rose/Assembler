@@ -244,7 +244,6 @@ namespace VoxelsFromMeshSpike
 
         private void Convert()
         {
-            var reporter = new EditorProgressReporter();
             try
             {
                 if (!File.Exists(_objPath))
@@ -253,34 +252,14 @@ namespace VoxelsFromMeshSpike
                     return;
                 }
 
-                VoxResult result = ObjToVoxConverter.Convert(_objPath, _maxDimVoxels, reporter);
-
-                // Post-processing runs over the dense working model in canonical order (floaters →
-                // de-light → palette-snap → morphology), built from the chosen preset + overrides.
-                VoxModel model = VoxModel.FromResult(result);
                 var palette = _palette != null ? _palette.ToColor32() : DefaultMasterPalette.Colors;
-                VoxPipeline pipeline = VoxPipeline.FromSettings(_settings, palette);
-                pipeline.Run(model, (name, fraction) =>
-                    EditorUtility.DisplayProgressBar("Mesh → VOX", $"Post-processing: {name}…", 0.9f + 0.09f * fraction));
-                result = model.ToResult();
+                VoxConversion.Summary summary = VoxConversion.Run(
+                    _objPath, _voxPath, _maxDimVoxels, _settings, palette,
+                    new EditorProgressReporter(),
+                    (name, fraction) =>
+                        EditorUtility.DisplayProgressBar("Mesh → VOX", $"Post-processing: {name}…", 0.9f + 0.09f * fraction));
 
-                int colorCount = CountDistinctColors(result);
-
-                string? dir = Path.GetDirectoryName(_voxPath);
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                VoxWriter.Write(_voxPath, result);
-
-                if (_voxPath.Replace('\\', '/').Contains(Application.dataPath.Replace('\\', '/')))
-                {
-                    AssetDatabase.Refresh();
-                }
-
-                Debug.Log(
-                    $"[VoxelsFromMeshSpike] Wrote {result.Cells.Count:N0} voxels " +
-                    $"({result.GridX}×{result.GridY}×{result.GridZ}), {colorCount:N0} colour(s) to: {_voxPath}");
+                Debug.Log($"[VoxelsFromMeshSpike] Wrote {summary}");
             }
             catch (OperationCanceledException)
             {
@@ -363,16 +342,6 @@ namespace VoxelsFromMeshSpike
             Path.Combine(
                 Path.GetDirectoryName(meshPath) ?? Application.dataPath,
                 Path.GetFileNameWithoutExtension(meshPath) + ".vox");
-
-        private static int CountDistinctColors(VoxResult result)
-        {
-            var seen = new System.Collections.Generic.HashSet<int>();
-            foreach (VoxCell cell in result.Cells)
-            {
-                seen.Add((cell.Color.r << 16) | (cell.Color.g << 8) | cell.Color.b);
-            }
-            return seen.Count;
-        }
 
         private sealed class EditorProgressReporter : IProgressReporter
         {
