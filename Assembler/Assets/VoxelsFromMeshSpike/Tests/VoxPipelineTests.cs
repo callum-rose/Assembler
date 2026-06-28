@@ -49,15 +49,56 @@ namespace Tests.VoxelsFromMeshSpike
         // ---- canonical order ----
 
         [Test]
-        public void FromSettings_BuildsAllFourStepsInCanonicalOrder()
+        public void FromSettings_BuildsAllStepsInCanonicalOrder()
         {
             var settings = new VoxPipelineSettings();
             VoxPipeline pipeline = VoxPipeline.FromSettings(settings, new List<Color32>());
 
             string[] names = pipeline.Steps.Select(s => s.Name).ToArray();
             CollectionAssert.AreEqual(
-                new[] { "Remove floaters", "De-light", "Snap to master palette", "Despeckle / fill" },
+                new[]
+                {
+                    "Remove floaters",
+                    "Mirror (symmetry)",
+                    "Revolve (symmetry)",
+                    "De-light",
+                    "Snap to master palette",
+                    "Despeckle / fill",
+                },
                 names);
+        }
+
+        [Test]
+        public void FromSettings_PlacesSymmetryBetweenFloatersAndDeLight()
+        {
+            VoxPipeline pipeline = VoxPipeline.FromSettings(new VoxPipelineSettings(), new List<Color32>());
+            string[] names = pipeline.Steps.Select(s => s.Name).ToArray();
+
+            int floaters = System.Array.IndexOf(names, "Remove floaters");
+            int mirror = System.Array.IndexOf(names, "Mirror (symmetry)");
+            int revolve = System.Array.IndexOf(names, "Revolve (symmetry)");
+            int deLight = System.Array.IndexOf(names, "De-light");
+
+            Assert.Less(floaters, mirror, "mirror must run after floaters");
+            Assert.Less(mirror, revolve, "mirror must run before revolve");
+            Assert.Less(revolve, deLight, "symmetry must run before de-light (colour still raw)");
+        }
+
+        [Test]
+        public void FromSettings_SymmetryStepsOffByDefault()
+        {
+            VoxPipeline pipeline = VoxPipeline.FromSettings(new VoxPipelineSettings(), new List<Color32>());
+            Dictionary<string, bool> enabled = pipeline.Steps.ToDictionary(s => s.Name, s => s.Enabled);
+            Assert.IsFalse(enabled["Mirror (symmetry)"], "mirror is opt-in");
+            Assert.IsFalse(enabled["Revolve (symmetry)"], "revolve is opt-in");
+        }
+
+        [Test]
+        public void Preset_Creature_KeepsSymmetryOff()
+        {
+            VoxPipelineSettings s = VoxPipelinePresets.For(VoxPipelinePreset.Creature);
+            Assert.IsFalse(s.mirror);
+            Assert.IsFalse(s.revolve);
         }
 
         [Test]

@@ -148,6 +148,44 @@ namespace VoxelsFromMeshSpike
                 }
             }
 
+            // Step 3 — symmetry (opt-in). Both off by default: forcing symmetry erases intentional asymmetry.
+            _settings.mirror = EditorGUILayout.ToggleLeft(
+                new GUIContent("Mirror (force symmetry)",
+                    "Mirror one half about a plane onto the other. Off by default — erases intentional asymmetry (eyepatch, raised paw)."),
+                _settings.mirror);
+            if (_settings.mirror)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _settings.mirrorAxis = (SymmetryAxis)EditorGUILayout.EnumPopup(
+                        new GUIContent("Mirror axis", "Axis the mirror plane is perpendicular to. Left/right (X) is the usual bilateral plane."),
+                        _settings.mirrorAxis);
+                    _settings.mirrorConfidence = EditorGUILayout.Slider(
+                        new GUIContent("Confidence gate", "Min mirror-overlap score to auto-apply. Below this the model is treated as not symmetric and left as-is."),
+                        _settings.mirrorConfidence, 0f, 1f);
+                    _settings.mirrorForce = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Force past gate", "Apply at the best-scoring plane even when the confidence gate fails (for a stubborn asset)."),
+                        _settings.mirrorForce);
+                }
+            }
+
+            _settings.revolve = EditorGUILayout.ToggleLeft(
+                new GUIContent("Revolve (force roundness)",
+                    "Revolve the radial profile into a true solid of revolution. Off by default — for standalone wheels/cylinders only."),
+                _settings.revolve);
+            if (_settings.revolve)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _settings.revolveAxis = (SymmetryAxis)EditorGUILayout.EnumPopup(
+                        new GUIContent("Spin axis", "Axis the profile is revolved about. Up (Y) is the usual wheel axle."),
+                        _settings.revolveAxis);
+                    _settings.revolveFillThreshold = EditorGUILayout.Slider(
+                        new GUIContent("Ring fill threshold", "A ring is filled when at least this fraction of its cells were occupied."),
+                        _settings.revolveFillThreshold, 0f, 1f);
+                }
+            }
+
             // Step 4 — de-light.
             _settings.deLight = EditorGUILayout.ToggleLeft(
                 new GUIContent("De-light",

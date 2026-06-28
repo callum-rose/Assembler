@@ -25,6 +25,36 @@ namespace VoxelsFromMeshSpike
         public void Apply(VoxModel model) => FloaterRemoval.Apply(model, _options);
     }
 
+    public sealed class MirrorStep : IVoxStep
+    {
+        private readonly Mirror.Options _options;
+
+        public MirrorStep(bool enabled, Mirror.Options options)
+        {
+            Enabled = enabled;
+            _options = options;
+        }
+
+        public string Name => "Mirror (symmetry)";
+        public bool Enabled { get; }
+        public void Apply(VoxModel model) => Mirror.Apply(model, _options);
+    }
+
+    public sealed class RevolveStep : IVoxStep
+    {
+        private readonly Revolve.Options _options;
+
+        public RevolveStep(bool enabled, Revolve.Options options)
+        {
+            Enabled = enabled;
+            _options = options;
+        }
+
+        public string Name => "Revolve (symmetry)";
+        public bool Enabled { get; }
+        public void Apply(VoxModel model) => Revolve.Apply(model, _options);
+    }
+
     public sealed class DeLightStep : IVoxStep
     {
         private readonly DeLight.Options _options;
