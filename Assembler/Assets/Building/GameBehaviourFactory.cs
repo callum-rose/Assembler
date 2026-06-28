@@ -33,6 +33,7 @@ using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 using UnityEngine;
+using AnimationInfo = Assembler.Parsing.Info.Behaviours.AnimationInfo;
 using Rotate = Assembler.Behaviours.Rotation.Rotate;
 
 namespace Assembler.Building
@@ -216,15 +217,11 @@ namespace Assembler.Building
 					(i, ctx) => new LookAtData(i.Id,
 						i.Target.Resolve(ctx.Resolution),
 						i.TurnRate.Resolve(ctx.Resolution))),
-				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(ScaleAnimationInfo)] = new(typeof(ScaleAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<ScaleAnimationInfo, ScaleAnimation>(go, (ScaleAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(RotateAnimationInfo)] = new(typeof(RotateAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<RotateAnimationInfo, RotateAnimation>(go, (RotateAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
+				[typeof(AnimationInfo)] = Entry<AnimationInfo, AnimationBehaviour, AnimationData>(
+					(i, ctx) => new AnimationData(i.Id,
+						i.Steps.Select(s => s.Resolve(ctx.Resolution)).ToArray(),
+						i.Loops.Resolve(ctx.Resolution),
+						i.LoopType.Resolve(ctx.Resolution))),
 				[typeof(SetPositionInfo)] = Entry<SetPositionInfo, SetPosition, SetPositionData>(
 					(i, ctx) => new SetPositionData(i.Id,
 						i.ValueExpression.Resolve(ctx.Resolution))),
@@ -701,25 +698,6 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(makeData(i, ctx),
 					i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-
-		private static (GameBehaviour, InitialiseBehaviourEvent) BuildTransformAnimation<TInfo, TBehaviour>(
-			GameObject go,
-			TInfo info,
-			BehaviourBuildContext ctx,
-			Func<TInfo, ValueSource<Vector3>> start,
-			Func<TInfo, ValueSource<Vector3>> end,
-			Func<TInfo, ValueSource<float>> duration,
-			Func<TInfo, ValueSource<Easing>> easing)
-			where TInfo : BehaviourInfo
-			where TBehaviour : GameBehaviour<TransformAnimationData>
-		{
-			var b = go.AddComponent<TBehaviour>();
-			return (b, lr => b.Initialise(new TransformAnimationData(info.Id,
-				start(info).Resolve(ctx.Resolution),
-				end(info).Resolve(ctx.Resolution),
-				duration(info).Resolve(ctx.Resolution),
-				easing(info).Resolve(ctx.Resolution)), info.Listeners.ToListeners(lr, ctx.Resolution)));
-		}
 
 		private static void RegisterVariableSetter<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
 			where TBehaviour : GameBehaviour<VariableSetterData<T>>

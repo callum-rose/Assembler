@@ -6,13 +6,14 @@ Every property value is wrapped in a deferred "value source" — covering consta
 
 ## Expressions: the `!expr { Do, With }` call site
 
-Every expression call site uses one form — `!expr { Do: <name-or-body>, With: [ <operand>, … ] }` —
-dispatched by registry membership (**name wins**):
+Every expression call site uses one form — `!expr { Do: <name-or-body>, With: { name: value, … } }` —
+dispatched by registry membership (**name wins**). `With` is a **map** of named operands (the
+positional `arg0`/`arg1` form has been removed):
 
-- **Named call** — `Do` matches a declared `Expressions:` entry (by id or `CallableAs`); `With` binds
-  to its declared parameters: `!expr { Do: int add, With: [ !var score, 1 ] }`.
+- **Named call** — `Do` matches a declared `Expressions:` entry (by id or `CallableAs`); the `With`
+  keys match its declared `ArgumentNames` (order-independent): `!expr { Do: int add, With: { a: !var score, b: 1 } }`.
 - **Inline body** — otherwise `Do` is a one-off C# body ([compiler syntax](../Compiler/COMPILER_SYNTAX_REFERENCE.md))
-  with `With` bound positionally to `arg0`, `arg1`, …: `!expr { Do: 'arg0 * 2', With: [ !var velocity ] }`.
+  whose parameters are the `With` keys, referenced by name: `!expr { Do: 'velocity * 2', With: { velocity: !var velocity } }`.
   Operand and return types are inferred (return type from the use-site); a body without `;` gets an
   implicit `return … ;`. Each becomes an anonymous expression compiled with the declared ones.
 

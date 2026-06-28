@@ -62,9 +62,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ player ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: take damage
+        Listeners: [ take damage ]
       take damage:
         Type: int variable setter
         # !var health resolves to THIS entity's `health`, not a global one,
@@ -74,22 +72,20 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var health
-              - !var damage per hit
+              a: !var health
+              b: !var damage per hit
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= arg1'
+            Do: 'health <= zero'
             ArgumentTypes: [ int, int ]
             With:
-              - !var health
-              - !var zero
+              health: !var health
+              zero: !var zero
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: on death decrement counter
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - on death decrement counter
+          - self destruct
       on death decrement counter:
         Type: int variable setter
         Properties:
@@ -97,8 +93,8 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var enemies remaining
-              - !var damage per hit
+              a: !var enemies remaining
+              b: !var damage per hit
       self destruct:
         Type: destroy
 
@@ -135,15 +131,11 @@ Templates:
       up press:
         Type: input action
         Properties: { Action: up }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go up
+        Listeners: [ go up ]
       up release:
         Type: input action
         Properties: { Action: up-release }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Listeners: [ stop ]
       go up:
         Type: vector variable setter
         Properties:
@@ -152,15 +144,11 @@ Templates:
       down press:
         Type: input action
         Properties: { Action: down }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go down
+        Listeners: [ go down ]
       down release:
         Type: input action
         Properties: { Action: down-release }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Listeners: [ stop ]
       go down:
         Type: vector variable setter
         Properties:
@@ -169,15 +157,11 @@ Templates:
       left press:
         Type: input action
         Properties: { Action: left }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go left
+        Listeners: [ go left ]
       left release:
         Type: input action
         Properties: { Action: left-release }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Listeners: [ stop ]
       go left:
         Type: vector variable setter
         Properties:
@@ -186,15 +170,11 @@ Templates:
       right press:
         Type: input action
         Properties: { Action: right }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go right
+        Listeners: [ go right ]
       right release:
         Type: input action
         Properties: { Action: right-release }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Listeners: [ stop ]
       go right:
         Type: vector variable setter
         Properties:
@@ -271,16 +251,14 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0'
+            Do: 'enemies_remaining <= 0'
             With:
-              - !var enemies remaining
+              enemies_remaining: !var enemies remaining
         Listeners:
           - !gameover
 

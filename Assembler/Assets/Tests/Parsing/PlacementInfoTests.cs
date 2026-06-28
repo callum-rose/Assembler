@@ -53,8 +53,8 @@ Placements:
     Template: pill
     At: !expr
       ReturnType: vector list
-      Do: 'GridPositions(2, 2, 1f, arg0)'
-      With: [ !vec { X: 0, Y: 0 } ]
+      Do: 'GridPositions(2, 2, 1f, origin)'
+      With: { origin: !vec { X: 0, Y: 0 } }
       ArgumentTypes: [ vector ]
 ");
 

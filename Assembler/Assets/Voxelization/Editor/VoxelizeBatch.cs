@@ -98,7 +98,7 @@ namespace Assembler.Voxelization.Editor
 			if (!string.IsNullOrWhiteSpace(options.Brief))
 			{
 				log.Report("Generating manifest from brief...");
-				return await new ManifestGenerator(gateway, config).GenerateAsync(options.Brief, ct).ConfigureAwait(false);
+				return await new ManifestGenerator(gateway, config).GenerateAsync(options.Brief, ct, log).ConfigureAwait(false);
 			}
 
 			throw new VoxelizationException("Nothing to run: pass either a brief (--brief) or a manifest path (--manifest).");

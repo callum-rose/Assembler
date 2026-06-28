@@ -43,6 +43,7 @@ namespace Assembler.Deserialisation
 			.WithTypeConverter(new RigidbodyTypeConverter())
 			.WithTypeConverter(new ClockTypeConverter())
 			.WithTypeConverter(new GameOverListenerTypeConverter())
+			.WithTypeConverter(new ListenerTypeConverter())
 			.WithTypeConverter(new TextTypeConverter())
 			.WithTypeConverter(new RecordTypeConverter())
 			.WithTypeConverter(new BindingTypeConverter())

@@ -159,8 +159,7 @@ Entities:
       # Each frame, select which emitted velocity to apply based on the FSM mode.
       select clock:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: guard, BehaviourId: select velocity }
+        Listeners: [ select velocity ]
       select velocity:
         Type: vector variable setter
         Properties:
@@ -168,9 +167,9 @@ Entities:
           Value: !expr
             Do: pick velocity
             With:
-              - !var guard_mode
-              - !var chase_vel
-              - !var patrol_vel
+              mode: !var guard_mode
+              chase_vel: !var chase_vel
+              patrol_vel: !var patrol_vel
 
       # The single integrator that actually moves the guard.
       apply:
@@ -201,10 +200,10 @@ Entities:
               to: caught
               when: !expr
                 Do: within
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: chase
               to: patrol
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
 
       set mode patrol:
         Type: int variable setter
@@ -224,7 +223,7 @@ Entities:
       hold left:
         Type: input action
         Properties: { Action: left }
-        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.05, Y: 0, Z: 0 } }
@@ -232,7 +231,7 @@ Entities:
       hold right:
         Type: input action
         Properties: { Action: right }
-        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.05, Y: 0, Z: 0 } }
@@ -240,7 +239,7 @@ Entities:
       hold up:
         Type: input action
         Properties: { Action: up }
-        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.05, Z: 0 } }
@@ -248,7 +247,7 @@ Entities:
       hold down:
         Type: input action
         Properties: { Action: down }
-        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.05, Z: 0 } }

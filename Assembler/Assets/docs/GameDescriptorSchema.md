@@ -95,9 +95,20 @@ with the `!asset` tag (for `sprite.Sprite`, `voxel mesh.Mesh`, `audio source.Cli
 Assets:
   - Id: voxel mesh asset             # string — the id used by !asset
     Type: mesh                       # string — asset kind (mesh | sprite | audio | …)
-    Source: resources                # string — where to load from (e.g. resources)
-    Path: Voxels/voxel               # string — load path within that source
+    Source: resources                # string — where to load from (resources | addressables)
+    Path: Voxels/voxel               # string — load path/address within that source
 ```
+
+**`Source`** selects where the bytes come from:
+
+- `resources` — loaded synchronously from a Unity **Resources** folder; `Path` is the Resources path
+  (e.g. `Voxels/voxel`).
+- `addressables` — loaded (possibly downloaded) via Unity **Addressables**, including remote content;
+  `Path` is the Addressables **address/key** (e.g. `Enemies/Goblin`), not a Resources path. The asset's
+  load handle is released automatically when the game is torn down. Referencing an `addressables` asset
+  requires the project to have Addressables set up (settings created, the target asset marked Addressable
+  with that address, and — for remote content — a built/hosted catalog). The `!asset` reference syntax is
+  unchanged regardless of source.
 
 ### `Constants` — map `id → value`
 
@@ -168,7 +179,8 @@ scalar).
 
 ### `Expressions` — map `id → ExpressionDto`
 
-Named, reusable code snippets called via `!expr { Do: <id>, With: [...] }`. The `Expression:` body is
+Named, reusable code snippets called via `!expr { Do: <id>, With: { name: value, … } }` (the `With`
+keys match the declared `ArgumentNames`). The `Expression:` body is
 **code, not YAML** — a strict procedural C# subset; author it with the `unity-expression-compiler`
 skill. Prefer the global helpers in [`Libraries.md`](Libraries.md) over registering statics.
 
@@ -327,7 +339,7 @@ forms — pick exactly one shape per list entry:
 ```yaml
 Listeners:
   # 1. Direct — a named behaviour on a named entity
-  - EntityId: ball spawner            # entity id (or !parameter self_id inside a template)
+  - EntityId: ball spawner            # entity id; OMIT to target this listener's OWN entity
     BehaviourId: spawn ball           # a behaviour id on that entity
     Outputs:                          # optional — bind this trigger's named outputs to local names
       contact_point: hit_point        # <output name from Behaviours.md>: <local name read via !output>
@@ -343,7 +355,21 @@ Listeners:
   - !gameover
 ```
 
-`ListenerDto` fields: `EntityId` (value), `BehaviourId` (string), `EntityTag` (value),
+**Defaulting & shorthand (direct form only).** `EntityId` defaults to the listener's **own enclosing
+entity** when omitted — so a behaviour wiring to another behaviour on the same entity drops it entirely
+(and templates no longer need `EntityId: !parameter self_id`). A direct listener can also be written as
+a bare scalar instead of the four-line map:
+
+```yaml
+Listeners: [ spawn ball ]                          # behaviour on THIS entity (EntityId defaults to self)
+Listeners: [ "score tracker / increment score" ]   # explicit `entity / behaviour` (split on the last `/`)
+```
+
+Use the scalar `entity / behaviour` form for a one-target listener with no `Outputs`; the split is on
+the last `/`, so a child-entity path (`panel/score`) works as the entity part. Anything needing
+`Outputs`, an `EntityTag`/`BehaviourTag`, or `!gameover` still uses the map / tag forms above.
+
+`ListenerDto` fields: `EntityId` (value, defaults to self), `BehaviourId` (string), `EntityTag` (value),
 `BehaviourTag` (value), `Outputs` (map `outputName → localName`). The `!gameover` tag deserialises to
 a distinct `GameOverListenerDto` marker.
 
@@ -352,7 +378,7 @@ a distinct `GameOverListenerDto` marker.
   `Listeners` contains `- !gameover`.
 - Only triggers with declared **Outputs** in [`Behaviours.md`](Behaviours.md) produce values to bind.
   Bind them in `Outputs:`, then read the bound local name with `!output <localName>` downstream
-  (usually inside an `!expr` `With:` list).
+  (usually as a value inside an `!expr` `With:` map).
 
 ---
 
@@ -459,10 +485,13 @@ Lists of values accept either flow (`[ a, b ]`) or block (`- a`) syntax.
 ```yaml
 !expr
   Do:   <name-or-inline-body>        # required
-  With: [ <arg>, <arg>, … ]          # optional — the operands
+  With:                              # optional — a map of name: value operands
+    velocity: !var bird velocity
+    gravity:  !var bird gravity
+    dt:       !clock deltaTime
   # inline-only hints (ignored on a named Do; the named expression declares its own):
   ReturnType:  int                   # required when the use-site type can't be inferred (object slots)
-  ArgumentTypes: [ int, int ]        # explicit per-operand types (positional to With)
+  ArgumentTypes: [ int, int ]        # explicit per-operand types (positional to With's declaration order)
   RegisterTypes: [ UnityEngine.Vector3 ]
   RegisterTypeStatics: [ UnityEngine.Mathf ]
 ```
@@ -471,14 +500,18 @@ Lists of values accept either flow (`[ a, b ]`) or block (`- a`) syntax.
 `RegisterTypeStatics`. `Do` dispatches **by name first**:
 
 - **Named call** — if `Do` matches an `Expressions:` id (or a `CallableAs` alias), it calls that
-  expression; `With` supplies its declared arguments in order.
-- **Inline body** — otherwise `Do` is compiled as an anonymous C# body, and `With` binds
-  **positionally** to `arg0`, `arg1`, `arg2`, … inside it. A zero-arg body needs no `With`.
+  expression; the `With` map keys must match the expression's declared `ArgumentNames` (order is
+  irrelevant — operands bind by name).
+- **Inline body** — otherwise `Do` is compiled as an anonymous C# body, and each `With` key is a
+  parameter referenced **by name** inside the body (e.g. `Do: 'velocity - gravity * dt'`). A zero-arg
+  body needs no `With`.
 
-`Do`/`With` is the only accepted form. The legacy `ExpressionId` / `Arguments` keys are gone (the only
-surviving `Arguments:` is inside `!text`, which is unrelated). Inline bodies are still **code** —
-author them with the `unity-expression-compiler` skill and prefer [`Libraries.md`](Libraries.md)
-helpers over `RegisterTypeStatics`.
+`With` is a **map**, not a sequence — the positional `arg0`/`arg1` form has been removed. Inserting or
+reordering an operand no longer renumbers anything, and the body reads self-documenting. The legacy
+`ExpressionId` / `Arguments` keys are also gone (the only surviving `Arguments:` is inside `!text`,
+which is unrelated). Inline bodies are still **code** — author them with the
+`unity-expression-compiler` skill and prefer [`Libraries.md`](Libraries.md) helpers over
+`RegisterTypeStatics`.
 
 ---
 

@@ -193,9 +193,9 @@ game over:
         Condition: !expr
           Do: is game over
           With:
-            - !var left score
-            - !var right score
-            - !var score to win
+            left: !var left score
+            right: !var right score
+            target: !var score to win
       Listeners:
         - !gameover
 ```
@@ -213,7 +213,7 @@ as shown.
 | `!colour` | `!colour red`, `!colour "#FF8800"`, or `!colour { R: 1, G: 0, B: 0, A: 1 }` | Named colour (`red`, `blue`, `white`, `cyan`, `grey`, …), a hex string (`"#RGB"`, `"#RRGGBB"`, or `"#RRGGBBAA"` — quote it so YAML doesn't treat `#` as a comment), or an RGBA literal (A optional, defaults to 1). |
 | `!var` | `!var some name` | Reads a value by id. Resolves against per-entity variables first, then global Variables, then Constants. This is the only read tag — there is no separate `!const` form. |
 | `!parameter` | `!parameter slot_name` | Inside a template, refers to a parameter slot supplied at instantiation. `!parameter self_id` is the special implicit slot for the entity's own id (use when a template behaviour needs to refer to "this entity"). |
-| `!expr` | `!expr { Do: …, With: [ … ] }` | Evaluates code. `Do` is either a **named** expression id (calls an `Expressions:` entry) **or** an inline C# body; `With` supplies the arguments. See **Expressions and `!expr`** below. |
+| `!expr` | `!expr { Do: …, With: { name: value, … } }` | Evaluates code. `Do` is either a **named** expression id (calls an `Expressions:` entry) **or** an inline C# body; `With` is a **map** of named operands. See **Expressions and `!expr`** below. |
 | `!output` | `!output local_name` | Reads a trigger output that was bound by an upstream listener (see **Trigger outputs**). |
 | `!entity` | `!entity { Id: other_entity_id, Property: Position }` | A **live** read of another entity's transform property (`Position`, `Rotation`, or `Scale`) as a `Vector3`, re-resolved each frame — use it to follow, aim at, or measure distance to another entity (e.g. as an `!expr` `With:` argument). Use the **mapping** form with `Id` and `Property` keys. |
 | `!asset` | `!asset some_asset_id` | References a project asset by id for asset-typed properties (`sprite`'s `Sprite`, `voxel mesh`'s `Mesh`, `audio source`'s `Clip`). Use the **scalar** form (the asset id); the mapping form `!asset { Id: … }` fails to deserialise. |
@@ -227,34 +227,38 @@ Lists of values can use either flow `[ a, b ]` or block `- a` syntax — both wo
 
 ## Expressions and `!expr`
 
-Every `!expr` call site uses **one uniform form**: `Do` plus optional `With`.
+Every `!expr` call site uses **one uniform form**: `Do` plus optional `With`. `With` is a **map** of
+`name: value` operands — there is no positional `arg0`/`arg1` form.
 
 ```yaml
 !expr
   Do:   <name-or-inline-body>
-  With: [ <arg>, <arg>, … ]      # optional; the arguments
+  With:                          # optional; a map of named operands
+    name1: <value>
+    name2: <value>
 ```
 
 `Do` dispatches **by name first**:
 
 - **Named call** — if `Do` matches an id (or alias) declared in the top-level `Expressions:` block,
-  it calls that expression, passing `With` as its arguments in order:
+  it calls that expression; the `With` keys match the expression's declared `ArgumentNames` (order is
+  irrelevant — operands bind by name):
   ```yaml
   Value: !expr
     Do: paddle bounce            # an entry under Expressions:
     With:
-      - !var ball velocity
-      - !output hit_point
-      - !var paddle bounce factor
+      velocity: !var ball velocity
+      hit_point: !output hit_point
+      factor: !var paddle bounce factor
   ```
-- **Inline body** — otherwise `Do` is compiled as an anonymous C# body. The arguments in `With` bind
-  **positionally** to the parameters `arg0`, `arg1`, `arg2`, … inside the body:
+- **Inline body** — otherwise `Do` is compiled as an anonymous C# body. Each `With` key is a
+  parameter **referenced by name** inside the body:
   ```yaml
   Value: !expr
-    Do: 'arg0 + arg1'
+    Do: 'score + gain'
     With:
-      - !var score
-      - !var points per pickup
+      score: !var score
+      gain: !var points per pickup
   ```
   A zero-argument inline body needs no `With`:
   ```yaml
@@ -274,12 +278,12 @@ inference:
 
 ```yaml
 Value: !expr
-  Do: 'arg0 + arg1'
-  ArgumentTypes: [ int, int ]          # explicit per-operand types
+  Do: 'current + gain'
+  ArgumentTypes: [ int, int ]          # explicit per-operand types (positional to With's declaration order)
   ReturnType: int                      # required where the use-site type is ambiguous (object)
   With:
-    - !parameter score_var             # entity-local / template operand — type not statically known
-    - !var score per goal
+    current: !parameter score_var      # entity-local / template operand — type not statically known
+    gain: !var score per goal
 RegisterTypes: [ UnityEngine.Vector3 ] # extra types the body may construct
 RegisterTypeStatics: [ UnityEngine.Mathf ]
 ```
@@ -287,17 +291,17 @@ RegisterTypeStatics: [ UnityEngine.Mathf ]
 > **`!output` operands are NOT inferred — always give them an explicit `ArgumentTypes` entry.** A
 > trigger output's type is only known to the trigger that emits it, so an inline `!expr` defaults an
 > `!output` operand to `float`. If you read a non-float output (e.g. a `Vector3` like `mouse_delta`)
-> and then access a member (`arg0.x`), the body fails to compile (`'x' is not a member of type
+> and then access a member (`delta.x`), the body fails to compile (`'x' is not a member of type
 > 'System.Single'`). Look up the output's type in the behaviour's **Outputs** table (`Behaviours.md`)
 > and declare it:
 >
 > ```yaml
 > Displacement: !expr
->   Do: 'new UnityEngine.Vector3(0f, arg0.x * arg1, 0f)'
->   ArgumentTypes: [ vector, float ]   # mouse_delta is Vector3 — without this, arg0.x won't compile
+>   Do: 'new UnityEngine.Vector3(0f, delta.x * sensitivity, 0f)'
+>   ArgumentTypes: [ vector, float ]   # mouse_delta is Vector3 — without this, delta.x won't compile
 >   With:
->     - !output mouse_delta
->     - !var mouse sensitivity
+>     delta: !output mouse_delta
+>     sensitivity: !var mouse sensitivity
 > ```
 
 Reach for `ReturnType` especially in **object contexts** (spawner / template `Parameters:`, and
@@ -432,8 +436,11 @@ apply move:
   Type: translate
   Properties:
     Displacement: !expr
-      Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
-      With: [ !output x, !output y, !var move step ]
+      Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
+      With:
+        x: !output x
+        y: !output y
+        step: !var move step
 ```
 
 `InputActionDemo.yaml` is the canonical worked example; `GameOverDemo.yaml` shows the simplest
@@ -565,8 +572,8 @@ downstream:
        contact_point: hit_point
        other_position: paddle_position
    ```
-2. **Read** the bound name with `!output` in the target behaviour's properties (often inside an
-   `!expr` `With:` argument list):
+2. **Read** the bound name with `!output` in the target behaviour's properties (often as a value
+   inside an `!expr` `With:` map):
    ```yaml
    paddle bounce velocity setter:
      Type: vector variable setter
@@ -575,10 +582,10 @@ downstream:
        Value: !expr
          Do: paddle bounce
          With:
-           - !var ball velocity
-           - !output hit_point
-           - !output paddle_position
-           - !var paddle bounce factor
+           velocity: !var ball velocity
+           hit_point: !output hit_point
+           paddle_position: !output paddle_position
+           factor: !var paddle bounce factor
    ```
 
 Only triggers with declared **Outputs** in the catalogue produce values to bind. Don't make up output
@@ -721,7 +728,7 @@ Key points:
 
 ## Lists of values
 
-For `IList<T>`-typed properties (e.g. `TagsToDetect`, `With`, list-variable behaviours), use plain
+For `IList<T>`-typed properties (e.g. `TagsToDetect`, list-variable behaviours), use plain
 YAML sequences:
 
 ```yaml
@@ -829,8 +836,10 @@ Run through this before handing a descriptor back:
 - [ ] Any colliders that need `collision_*` / `trigger_*` events have a `rigidbody` on at least one of
       the two entities involved.
 - [ ] A `camera` entity exists, with a `camera` behaviour, otherwise nothing renders.
-- [ ] Every `!expr` uses `{ Do, With }` (never `ExpressionId`/`Arguments`), and every inline `Do:`
-      body has been authored via the `unity-expression-compiler` skill.
+- [ ] Every `!expr` uses `{ Do, With }` with `With` as a **map** of named operands (never the
+      positional `arg0`/`arg1` form, never `ExpressionId`/`Arguments`), and every inline `Do:` body
+      references its operands by their `With` key names and has been authored via the
+      `unity-expression-compiler` skill.
 - [ ] Math-heavy expressions reuse the bare-name library helpers from
       [`Libraries.md`](../../../Assets/docs/Libraries.md) instead of hand-rolling them, and no
       `RegisterTypeStatics`/`RegisterTypes` entry remains that the helpers made unnecessary.

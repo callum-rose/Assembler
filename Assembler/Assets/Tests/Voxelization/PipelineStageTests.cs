@@ -347,7 +347,7 @@ reference_brief:
 				Is.EqualTo(new[] { BriefExtractor.Stage, ModelPlanner.Stage }));
 
 			// The planner received the transcribed silhouette as locked input.
-			Assert.That(gateway.Calls[1].Messages[0].Content, Does.Contain("Reference brief (authoritative"));
+			Assert.That(gateway.Calls[1].Messages[0].Content, Does.Contain("Reference brief (silhouette authoritative"));
 			Assert.That(result.Brief.PrimarySilhouette.Rows, Is.EqualTo(new[] { "##", "##" }));
 		}
 

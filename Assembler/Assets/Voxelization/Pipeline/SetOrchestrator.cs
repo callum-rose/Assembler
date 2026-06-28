@@ -121,7 +121,7 @@ namespace Assembler.Voxelization
 				else if (references.Count > 0)
 				{
 					progress?.Report($"{asset.Id}: transcribing {references.Count} reference image(s)...");
-					brief = await _briefer.ExtractAsync(manifest, asset, references, ct);
+					brief = await _briefer.ExtractAsync(manifest, asset, references, ct, progress);
 					progress?.Report($"{asset.Id}: reference brief — {brief.Palette.Count} colours, " +
 									 $"{brief.Silhouettes.Count} silhouette(s)" + RenderSilhouettes(brief));
 
@@ -147,7 +147,7 @@ namespace Assembler.Voxelization
 					{
 						progress?.Report($"{asset.Id}: planning...");
 						var plan = await _planner.PlanAsync(
-							manifest, asset, attachments, brief, note, ct, previousModelYaml, suppressPaletteGate);
+							manifest, asset, attachments, brief, note, ct, previousModelYaml, suppressPaletteGate, progress);
 						brief = plan.Brief;
 						progress?.Report($"{asset.Id}: plan — {DescribePlan(plan.Skeleton)}");
 
@@ -163,7 +163,7 @@ namespace Assembler.Voxelization
 							progress?.Report(
 								$"{asset.Id}: authoring {partId} ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
 								$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}{Note(planned)})...");
-							model = await AuthorPartAsync(model, brief, partId, planned, string.Empty, ct);
+							model = await AuthorPartAsync(model, brief, partId, planned, string.Empty, ct, progress);
 						}
 
 						(model, assembled, report) = await AssembleAndRepairAsync(
@@ -235,7 +235,7 @@ namespace Assembler.Voxelization
 			{
 				progress?.Report($"{asset.Id}: refining against the note:\n{note}");
 				progress?.Report($"{asset.Id}: proposing edits...");
-				var ops = await _refiner.ProposeAsync(previous.Model, previous.Brief, note, ct);
+				var ops = await _refiner.ProposeAsync(previous.Model, previous.Brief, note, ct, progress);
 				progress?.Report($"{asset.Id}: refiner proposed {ops.Count} op(s):\n  " +
 								 string.Join("\n  ", ops.Select(DescribeOp)));
 
@@ -318,7 +318,7 @@ namespace Assembler.Voxelization
 							.Where(i => i.PartId == partId)
 							.Select(i => i.ToString()));
 						progress?.Report($"{assetId}: re-authoring {partId} (round {round}) because: {issuesText}");
-						model = await AuthorPartAsync(model, brief, partId, reauthorable[partId], $"{issuesText}\n\n{views}", ct);
+						model = await AuthorPartAsync(model, brief, partId, reauthorable[partId], $"{issuesText}\n\n{views}", ct, progress);
 					}
 				}
 				catch (VoxelizationException ex)
@@ -386,7 +386,7 @@ namespace Assembler.Voxelization
 			progress?.Report(
 				$"{model.Id}/{op.PartId}: re-authoring ({planned.PlannedEncoding.ToString().ToLowerInvariant()}, " +
 				$"{planned.Size.x}x{planned.Size.y}x{planned.Size.z}) — {op.Instructions}");
-			return await AuthorPartAsync(model, brief, op.PartId, planned, string.Empty, ct);
+			return await AuthorPartAsync(model, brief, op.PartId, planned, string.Empty, ct, progress);
 		}
 
 		/// <summary>Recovers a part's encoding/box for re-authoring, applying any resize override from the refine op.</summary>
@@ -426,8 +426,13 @@ namespace Assembler.Voxelization
 
 		private static string Hex(Color32 c) => $"{c.r:X2}{c.g:X2}{c.b:X2}";
 
-		private static string Truncate(string message, int max = 500) =>
-			message.Length <= max ? message : message.Substring(0, max) + " … (see log)";
+		// Kept generous: this string is the asset's recorded failure reason (shown on
+		// the gallery card and written to the session log as the headline cause), and
+		// the gate feedback it carries — geometry/silhouette/palette rejections — runs
+		// well past a few hundred characters. Truncating it to 500 was what reduced a
+		// failure to an unhelpful one-liner.
+		private static string Truncate(string message, int max = 4000) =>
+			message.Length <= max ? message : message.Substring(0, max) + " … (truncated; full transcript in the verbose log)";
 
 		private static string DescribePlan(VoxelRigModel skeleton)
 		{
@@ -635,11 +640,12 @@ namespace Assembler.Voxelization
 			string partId,
 			PlannedPartData planned,
 			string feedback,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			var part = model.FindPart(partId)
 					   ?? throw new VoxelizationException($"Part '{partId}' vanished from the model.");
-			var data = await _author.AuthorAsync(model, brief, part, planned, feedback, ct);
+			var data = await _author.AuthorAsync(model, brief, part, planned, feedback, ct, progress);
 			return model.WithPartData(partId, data);
 		}
 	}

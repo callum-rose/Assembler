@@ -1273,7 +1273,7 @@ namespace Assembler.Voxelization.Editor
 				using var gateway = NewGateway();
 				var generator = new ManifestGenerator(gateway, BuildConfig());
 				Log("Generating manifest...");
-				var manifest = await generator.GenerateAsync(_gameBrief, _cts!.Token);
+				var manifest = await generator.GenerateAsync(_gameBrief, _cts!.Token, NewProgress());
 				_manifestYaml = ManifestYaml.Write(manifest);
 				EditorPrefs.SetString(ManifestPref, _manifestYaml);
 				Log("Manifest generated. Review it, assign reference images below if you have them, then run the batch.");
@@ -1509,6 +1509,16 @@ namespace Assembler.Voxelization.Editor
 			_previews.Remove(result.AssetId);
 			Log($"{result.AssetId}: {result.Status}");
 
+			// Record the failure REASON here, synchronously, alongside the status.
+			// The orchestrator's "FAILED — {ex}" line is posted through Progress<T> and
+			// can lose the race with the end-of-run session-log flush, so without this
+			// the saved log would end on a bare "{asset}: Failed". StoreResult runs on
+			// the main thread before the log is written, so this line always lands.
+			if (result.Status == ModelStatus.Failed && result.Error.Length > 0)
+			{
+				Log($"{result.AssetId}: FAILED — {result.Error}");
+			}
+
 			// Auto-export so the model is inspectable in the project (and on
 			// disk, surviving a domain reload) without waiting for the batch.
 			if (result.Export != null)
@@ -1571,11 +1581,9 @@ namespace Assembler.Voxelization.Editor
 				_runTimestamp = DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
 				_runFolder = Path.Combine(_outputFolder, $"run-{_runTimestamp}");
 			}
-			else
-			{
-				_runTimestamp = string.Empty;
-				_runFolder = string.Empty;
-			}
+			// Otherwise keep the existing run folder so a single-asset refine/regenerate
+			// exports its revision next to the original (in the same set folder) rather
+			// than landing in a brand-new directory.
 			_runTimer.Restart();
 			if (clearResults)
 			{

@@ -243,8 +243,7 @@ Templates:
           # currently expiring), then destroy the GameObject.
           - EntityId: segment manager
             BehaviourId: untrack oldest segment
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       self destruct:
         Type: destroy
 
@@ -282,8 +281,7 @@ Templates:
             BehaviourId: increment score
           - EntityId: segment manager
             BehaviourId: grow snake
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - self destruct
       self destruct:
         Type: destroy
 
@@ -295,18 +293,16 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
             Do: is game over
             With:
-              - !var score
-              - !var score to win
-              - !var is dead
+              score: !var score
+              target: !var score to win
+              dead: !var is dead
         Listeners:
           - !gameover
 
@@ -360,12 +356,9 @@ Entities:
         Properties:
           Interval: !var step interval
         Listeners:
-          - EntityId: snake head
-            BehaviourId: record prev pos
-          - EntityId: snake head
-            BehaviourId: advance head pos
-          - EntityId: snake head
-            BehaviourId: step move
+          - record prev pos
+          - advance head pos
+          - step move
           - EntityId: segment manager
             BehaviourId: spawn segment
           # After spawning the visible segment, record its position so the
@@ -386,8 +379,8 @@ Entities:
           Value: !expr
             Do: vec add
             With:
-              - !var head pos
-              - !var direction
+              a: !var head pos
+              b: !var direction
 
       step move:
         Type: translate
@@ -400,9 +393,7 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: snake head
-            BehaviourId: apply dir
+        Listeners: [ apply dir ]
       apply dir:
         Type: vector variable setter
         Properties:
@@ -410,9 +401,9 @@ Entities:
           Value: !expr
             Do: snap dir
             With:
-              - !output axis
-              - !var direction
-              - !var cell size
+              input: !output axis
+              current: !var direction
+              cell: !var cell size
 
       # Death triggers — wall collision (solid) or tail trigger sets is dead.
       wall hit:
@@ -466,8 +457,8 @@ Entities:
           Value: !expr
             Do: float add
             With:
-              - !var segment lifetime
-              - !var step interval
+              a: !var segment lifetime
+              b: !var step interval
 
   # --- Score Tracker ---
   score tracker:
@@ -480,8 +471,8 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var score
-              - !var score per food
+              a: !var score
+              b: !var score per food
 
   # --- Food Manager ---
   # Spawns first food on start, then a new piece each time the current one
@@ -491,9 +482,7 @@ Entities:
     Behaviours:
       on start:
         Type: on start trigger
-        Listeners:
-          - EntityId: food manager
-            BehaviourId: spawn next food
+        Listeners: [ spawn next food ]
 
       spawn next food:
         Type: spawner
@@ -502,7 +491,7 @@ Entities:
           Position: !expr
             Do: next food position
             With:
-              - !var segment positions
+              taken: !var segment positions
 
   # --- Game Manager ---
   game manager:
@@ -524,7 +513,7 @@ Entities:
           Text: !expr
             Do: format score
             With:
-              - !var score
+              s: !var score
           FontSize: 32
           Rect:
             Anchor: top-left

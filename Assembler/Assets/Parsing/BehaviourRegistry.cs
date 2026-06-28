@@ -3,6 +3,7 @@ using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
+using AnimationInfo = Assembler.Parsing.Info.Behaviours.AnimationInfo;
 using CubeGizmoInfo = Assembler.Parsing.Info.Behaviours.CubeGizmoInfo;
 using SphereGizmoInfo = Assembler.Parsing.Info.Behaviours.SphereGizmoInfo;
 
@@ -42,9 +43,7 @@ namespace Assembler.Parsing
 				["rotate"] = RotateInfo.Create,
 				["rotation setter"] = SetRotationInfo.Create,
 				["look at"] = LookAtInfo.Create,
-				["move animation"] = MoveAnimationInfo.Create,
-				["scale animation"] = ScaleAnimationInfo.Create,
-				["rotate animation"] = RotateAnimationInfo.Create,
+				["animation"] = AnimationInfo.Create,
 				["input action"] = InputActionTriggerInfo.Create,
 				["cursor lock"] = CursorLockInfo.Create,
 				["tap trigger"] = TapTriggerInfo.Create,

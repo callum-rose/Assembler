@@ -32,7 +32,8 @@ namespace Assembler.Voxelization
 			SetManifest manifest,
 			ManifestAsset asset,
 			IReadOnlyList<(ReferenceImage Label, AnthropicImage Image)> images,
-			CancellationToken ct)
+			CancellationToken ct,
+			IProgress<string>? progress = null)
 		{
 			if (images.Count == 0)
 			{
@@ -70,10 +71,12 @@ namespace Assembler.Voxelization
 				{
 					if (attempt >= 3)
 					{
+						progress?.Report($"{asset.Id}: brief extraction failed after {attempt} attempt(s) — {ex.Message}");
 						throw new VoxelizationException(
 							$"Extracting the reference brief for '{asset.Id}' failed: {ex.Message}", ex);
 					}
 
+					progress?.Report($"{asset.Id}: brief extraction attempt {attempt}/3 rejected, retrying — {ex.Message}");
 					messages.Add(new AnthropicMessage("assistant", response));
 					messages.Add(new AnthropicMessage("user",
 						$"That brief could not be parsed: {ex.Message}\nEmit the corrected ```brief block."));
@@ -118,7 +121,13 @@ namespace Assembler.Voxelization
 			var slice = rows.Skip(top).Take(bottom - top + 1).Select(r => r.PadRight(width, '_')).ToList();
 			var left = slice.Min(r => FirstSolid(r));
 			var right = slice.Max(r => LastSolid(r));
-			var trimmed = slice.Select(r => r.Substring(left, right - left + 1)).ToArray();
+			// Canonicalise empty cells to '_': vision reads transcribe interior gaps as '.',
+			// but the silhouette display convention is '#' solid / '_' empty (solid cells,
+			// including palette-keyed ones, are preserved as-is).
+			var trimmed = slice
+				.Select(r => r.Substring(left, right - left + 1))
+				.Select(r => new string(r.Select(c => SilhouetteSpec.IsSolid(c) ? c : '_').ToArray()))
+				.ToArray();
 
 			return silhouette with
 			{

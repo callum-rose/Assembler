@@ -256,7 +256,8 @@ namespace Assembler.Parsing
 					col.Raw),
 				ExprRef exprRef => exprRef with
 				{
-					With = exprRef.With.Select(a => SubstituteAssemblerValue(a, parameters)).ToArray()
+					With = exprRef.With
+						.Select(a => a with { Value = SubstituteAssemblerValue(a.Value, parameters) }).ToArray()
 				},
 				EntityPropertyRef { EntityId: { PendingParameter: { } idParam } } entityRef =>
 					entityRef.EntityId.Resolve(parameters) is LiteralEntityId resolved

@@ -23,7 +23,7 @@ namespace Assembler.Voxelization
 			_config = config;
 		}
 
-		public async Task<SetManifest> GenerateAsync(string gameBrief, CancellationToken ct)
+		public async Task<SetManifest> GenerateAsync(string gameBrief, CancellationToken ct, IProgress<string>? progress = null)
 		{
 			var messages = new List<AnthropicMessage>
 			{
@@ -49,12 +49,14 @@ namespace Assembler.Voxelization
 				}
 				catch (FormatException ex) when (attempt == 0)
 				{
+					progress?.Report($"manifest: generation attempt {attempt + 1} rejected, retrying — {ex.Message}");
 					messages.Add(new AnthropicMessage("assistant", response));
 					messages.Add(new AnthropicMessage("user",
 						$"That manifest could not be parsed: {ex.Message}\nEmit the corrected ```yaml block."));
 				}
 				catch (FormatException ex)
 				{
+					progress?.Report($"manifest: generation failed after {attempt + 1} attempt(s) — {ex.Message}");
 					throw new VoxelizationException($"Manifest generation failed: {ex.Message}", ex);
 				}
 			}

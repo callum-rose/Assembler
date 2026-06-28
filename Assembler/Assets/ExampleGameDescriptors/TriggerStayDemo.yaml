@@ -64,14 +64,12 @@ Entities:
         Type: trigger stay trigger
         Properties:
           TagsToDetect: [ zone ]
-        Listeners:
-          - EntityId: player
-            BehaviourId: count overlap
+        Listeners: [ count overlap ]
       count overlap:
         Type: int variable setter
         Properties:
           VariableId: !var overlap frames
-          Value: !expr { Do: increment, With: [ !var overlap frames ] }
+          Value: !expr { Do: increment, With: { n: !var overlap frames } }
 
   zone:
     Tags: [ zone ]

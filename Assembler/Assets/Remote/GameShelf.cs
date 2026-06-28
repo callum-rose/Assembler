@@ -15,7 +15,7 @@ namespace Assembler.Remote
 	/// <summary>
 	/// Runtime entry point for the remote shelf: fetches the manifest, lists the available games, and on tap
 	/// downloads (or reuses a cached) descriptor, runs the v1 asset-guard, and builds it through the normal
-	/// <see cref="Builder.BuildFromYaml"/> pipeline. When the running game tears itself down (the <c>!gameover</c>
+	/// <see cref="Builder.BuildFromYamlAsync"/> pipeline. When the running game tears itself down (the <c>!gameover</c>
 	/// path destroys the "Game" root), the shelf re-appears and re-fetches the manifest so freshly-published
 	/// games show up. Replaces <c>GameBootstrap</c> as the boot-scene component for player builds.
 	///
@@ -156,18 +156,21 @@ namespace Assembler.Remote
 
 			HideShelf();
 
-			GameObject gameRoot;
-			try
+			// The build pipeline is async (asset loading can await Addressables/remote content). Drive the Task
+			// from the coroutine rather than try/catch around a yield: wait for completion, then check for faults.
+			var buildTask = Builder.BuildFromYamlAsync(yaml);
+			yield return new WaitUntil(() => buildTask.IsCompleted);
+
+			if (buildTask.IsFaulted)
 			{
-				gameRoot = Builder.BuildFromYaml(yaml);
-			}
-			catch (Exception e)
-			{
-				UnityEngine.Debug.LogError($"GameShelf: failed to build '{entry.Id}': {e}");
+				var ex = buildTask.Exception?.GetBaseException();
+				UnityEngine.Debug.LogError($"GameShelf: failed to build '{entry.Id}': {ex}");
 				ShowShelf();
-				ShowStatus($"“{entry.Title}” failed to start.\n{e.Message}", showRetry: true);
+				ShowStatus($"“{entry.Title}” failed to start.\n{ex?.Message}", showRetry: true);
 				yield break;
 			}
+
+			var gameRoot = buildTask.Result;
 
 			// Wait until the game tears itself down (the !gameover path / any destruction of the root),
 			// then return to the shelf and refresh so newly-published games appear.

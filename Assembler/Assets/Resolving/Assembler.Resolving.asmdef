@@ -8,6 +8,8 @@
         "Assembler.Libraries",
         "Assembler.Core",
         "Unity.InputSystem",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
         "Assembler.Time"
     ],
     "includePlatforms": [],
