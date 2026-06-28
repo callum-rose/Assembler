@@ -12,7 +12,9 @@ namespace Assembler.Generation.Verification
 	{
 		public static BuildResult TryBuild(string yaml)
 		{
-			var result = SandboxValidator.Validate(yaml);
+			// Block at this synchronous top-level entry point (the generation fix-loop is sync). Local content
+			// resolves immediately; only remote Addressables assets would genuinely wait here.
+			var result = SandboxValidator.ValidateAsync(yaml).GetAwaiter().GetResult();
 
 			var errors = new List<string>();
 			foreach (var stage in result.Stages)

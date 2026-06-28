@@ -36,6 +36,8 @@ Favour modern C# and a functional style. These are preferences, not absolutes �
 - **Target-typed `new()`** to cut redundant type noise.
 - **`var`** for obvious types, `nameof`, and string interpolation throughout.
 - **Primary constructors** for records.
+- **Prefer `is` / `is not`** over `==` / `!=` for null, constant, and enum/type checks (e.g. `x is null`, `status is not Status.Ok`). **Exception:** Unity object null checks must stay `== null` / `!= null` — `UnityEngine.Object` overloads `==` to report destroyed objects as null, which `is null` bypasses.
+- **Wrap the whole body of any `async void` method in try/catch** — an exception escaping an `async void` is unhandled (it can crash a player build and isn't caught by callers). `async void` is only for event handlers / Unity lifecycle callbacks that can't return a `Task`; everywhere else return `Task`.
 - **Order members by accessibility** — within a type, declare members most-public-first (public → internal → protected → private). Exception: Unity lifecycle methods (`Awake`, `OnEnable`, `Start`, `Update`, `FixedUpdate`, `OnDisable`, `OnDestroy`, etc.) are exempt and always come first, in lifecycle order, regardless of their accessibility. This is a convention only: there is no Roslyn/`.editorconfig` rule for it, so `dotnet format` won't enforce or fix it — keep it in order by hand.
 
 ## Build & Test
