@@ -5,7 +5,7 @@ using UnityEngine;
 namespace VoxelsFromMeshSpike
 {
     /// <summary>
-    /// A bootstrap ~48-swatch master palette in a flat, cheerful <b>Crossy-Road</b> register
+    /// A bootstrap ~51-swatch master palette in a flat, cheerful <b>Crossy-Road</b> register
     /// (bright albedo, hard steps, no baked shading). This is the starter art-direction set:
     /// it's meant to be edited — create a <see cref="VoxMasterPalette"/> asset seeded from it
     /// and tune the swatches there. <see cref="PaletteSnap"/> falls back to this when no asset
@@ -31,6 +31,10 @@ namespace VoxelsFromMeshSpike
             "26A69A", "00897B", "4DB6AC",
             // Skin / tan
             "FFCCBC", "FFAB91", "D7A86E", "F5DEB3",
+            // Warm neutrals (greige) — a light/mid/low warm-grey ramp. Without these, faintly
+            // warm hull/panel colours (ubiquitous in Meshy albedo) have no light warm-neutral to
+            // snap to and jump to the saturated pink/salmon swatches above. See PaletteSnap.
+            "EFE7DB", "D8CEC1", "BBB1A5",
             // Neutrals (greys + near-white / near-black)
             "FAFAFA", "EEEEEE", "BDBDBD", "9E9E9E", "616161", "424242", "1A1A1A",
         };
