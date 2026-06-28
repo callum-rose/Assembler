@@ -181,18 +181,26 @@ namespace Editor
 		}
 
 		// async void: editor event callback (the Play button), so a Task return isn't possible. Only the
-		// already-playing branch awaits the build; remote Addressables content downloads during play mode.
+		// already-playing branch awaits the build; remote Addressables content downloads during play mode. The
+		// whole body is wrapped: an exception escaping an async void is unhandled.
 		private static async void LaunchGame(string yamlPath, int platformIndex)
 		{
-			if (EditorApplication.isPlaying)
+			try
 			{
-				await Builder.BuildAsync(yamlPath, PlatformOverride(platformIndex));
+				if (EditorApplication.isPlaying)
+				{
+					await Builder.BuildAsync(yamlPath, PlatformOverride(platformIndex));
+				}
+				else
+				{
+					SessionState.SetString(PendingLaunchKey, yamlPath);
+					SessionState.SetInt(PendingPlatformKey, platformIndex);
+					EditorApplication.EnterPlaymode();
+				}
 			}
-			else
+			catch (System.Exception e)
 			{
-				SessionState.SetString(PendingLaunchKey, yamlPath);
-				SessionState.SetInt(PendingPlatformKey, platformIndex);
-				EditorApplication.EnterPlaymode();
+				Debug.LogError($"Failed to launch game '{yamlPath}': {e}");
 			}
 		}
 
@@ -207,7 +215,8 @@ namespace Editor
 		}
 
 		// async void: editor event callback, so a Task return isn't possible. Awaits the build so remote
-		// Addressables content resolves before the game runs.
+		// Addressables content resolves before the game runs. The whole body is wrapped: an exception escaping an
+		// async void is unhandled.
 		private static async void OnPlayModeStateChanged(PlayModeStateChange change)
 		{
 			if (change != PlayModeStateChange.EnteredPlayMode)
@@ -221,13 +230,13 @@ namespace Editor
 				return;
 			}
 
-			var platformIndex = SessionState.GetInt(PendingPlatformKey, 0);
-
-			SessionState.EraseString(PendingLaunchKey);
-			SessionState.EraseInt(PendingPlatformKey);
-
 			try
 			{
+				var platformIndex = SessionState.GetInt(PendingPlatformKey, 0);
+
+				SessionState.EraseString(PendingLaunchKey);
+				SessionState.EraseInt(PendingPlatformKey);
+
 				await Builder.BuildAsync(pending, PlatformOverride(platformIndex));
 			}
 			catch (System.Exception e)

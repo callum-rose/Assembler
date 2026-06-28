@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -29,11 +30,12 @@ namespace Assembler.Resolving
 
 			var asset = await handle.Task;
 
-			if (handle.Status != AsyncOperationStatus.Succeeded || asset == null)
+			// asset == null stays a Unity object null check; the rest use is/is not per house style.
+			if (handle.Status is not AsyncOperationStatus.Succeeded || asset == null)
 			{
 				throw new InvalidOperationException(
 					$"Failed to load Addressables asset of type '{typeof(T).Name}' at address '{path}'" +
-					(handle.OperationException != null ? $": {handle.OperationException.Message}" : "."));
+					(handle.OperationException is not null ? $": {handle.OperationException.Message}" : "."));
 			}
 
 			return asset;
@@ -41,12 +43,9 @@ namespace Assembler.Resolving
 
 		public void Dispose()
 		{
-			foreach (var handle in _handles)
+			foreach (var handle in _handles.Where(handle => handle.IsValid()))
 			{
-				if (handle.IsValid())
-				{
-					Addressables.Release(handle);
-				}
+				Addressables.Release(handle);
 			}
 
 			_handles.Clear();

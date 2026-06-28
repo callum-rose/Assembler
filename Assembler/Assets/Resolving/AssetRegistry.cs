@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Assembler.Parsing.Info;
 using UnityEngine;
@@ -53,12 +54,9 @@ namespace Assembler.Resolving
 		// no release. Tied to game teardown via AssetRegistryOwner so destroying the game root frees all handles.
 		public void Dispose()
 		{
-			foreach (var loader in _loaders.Values)
+			foreach (var disposable in _loaders.Values.OfType<IDisposable>())
 			{
-				if (loader is IDisposable disposable)
-				{
-					disposable.Dispose();
-				}
+				disposable.Dispose();
 			}
 
 			_loaders.Clear();

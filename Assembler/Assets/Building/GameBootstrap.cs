@@ -19,20 +19,21 @@ namespace Assembler.Building
 
 		// async void: a Unity lifecycle callback can't return a Task, and the build is fire-and-forget here. The
 		// await matters for remote Addressables content, which downloads asynchronously without blocking the frame.
+		// The whole body is wrapped: an exception escaping an async void is unhandled (it can crash the player).
 		private async void Start()
 		{
-			var path = Path.Combine(Application.streamingAssetsPath, _descriptorFileName);
-
-			if (!File.Exists(path))
-			{
-				// Fully qualified: Assembler.Building has a nested `Debug` namespace that shadows the simple name.
-				UnityEngine.Debug.LogError($"GameBootstrap: descriptor not found at '{path}'. " +
-					"Ensure it is copied into Assets/StreamingAssets and included in the build.");
-				return;
-			}
-
 			try
 			{
+				var path = Path.Combine(Application.streamingAssetsPath, _descriptorFileName);
+
+				if (!File.Exists(path))
+				{
+					// Fully qualified: Assembler.Building has a nested `Debug` namespace that shadows the simple name.
+					UnityEngine.Debug.LogError($"GameBootstrap: descriptor not found at '{path}'. " +
+						"Ensure it is copied into Assets/StreamingAssets and included in the build.");
+					return;
+				}
+
 				// overridePlatform left null: PlatformSelector resolves to Mobile on iOS, which falls back to
 				// the descriptor's desktop bindings (see PlatformFallback). The point of this build is to
 				// exercise the runtime expression compiler under iOS AOT, so surface any failure loudly.
