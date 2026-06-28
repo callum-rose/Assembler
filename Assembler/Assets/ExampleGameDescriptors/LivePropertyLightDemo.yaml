@@ -1,0 +1,120 @@
+Game:
+  Title: Live Property Light Demo
+  Description: >
+    Exercises live-driving a `light`'s properties from variables and expressions.
+    Three point lights bind Intensity/Colour to: a plain `!var`, an `!expr` over
+    `!var`s (push — all args observable), and an `!expr` over `!clock time` (poll —
+    a non-observable arg forces the per-frame updater). Drives the live-property
+    routing end-to-end through the build pipeline.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#05060a"
+
+Variables:
+  # Bound straight into a light; writing these at runtime re-applies live (push).
+  pulse intensity: 2.0
+  glow colour: !colour "#ff8040"
+  # Args of the all-observable expression light.
+  base level: 0.5
+  gain: 2.0
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+  Bindings:
+    desktop:
+      quit:
+        - "<Keyboard>/escape"
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
+Entities:
+  # 1) Intensity + Colour driven by plain variables (observable → push).
+  var light:
+    Position: !vec { X: -4, Y: 6, Z: 0 }
+    Rotation: !vec { X: 90, Y: 0, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !var glow colour
+          Intensity: !var pulse intensity
+          Range: 20
+
+  # 2) Intensity from an expression whose args are all variables (observable → push).
+  expr var light:
+    Position: !vec { X: 0, Y: 6, Z: 0 }
+    Rotation: !vec { X: 90, Y: 0, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !colour "#80ff80"
+          Intensity: !expr
+            Do: 'base_level + gain'
+            With:
+              base_level: !var base level
+              gain: !var gain
+          Range: 20
+
+  # 3) Intensity from an expression over !clock time (non-observable arg → poll).
+  clock light:
+    Position: !vec { X: 4, Y: 6, Z: 0 }
+    Rotation: !vec { X: 90, Y: 0, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !colour "#80c0ff"
+          Intensity: !expr
+            Do: '1.5f + 0.5f * UnityEngine.Mathf.Sin((float)time)'
+            With:
+              time: !clock time
+          Range: 20
+
+  ground:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#cfd4dc"
+          Size: !vec { X: 24, Y: 0.1, Z: 24 }
+
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 1, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: sphere
+          Colour: !colour white
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+      # Press Escape to end the game (satisfies the required game-over path).
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+  camera:
+    Tags: [ camera ]
+    Position: !vec { X: 0, Y: 8, Z: -14 }
+    Rotation: !vec { X: 22, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: perspective

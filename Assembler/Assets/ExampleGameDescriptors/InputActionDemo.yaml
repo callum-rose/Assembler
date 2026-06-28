@@ -8,16 +8,14 @@ Game:
 
     Steer the green cube to the gold goal. Two actions demonstrate the layer:
 
-      - `move`  — a VALUE (vector2) action. It emits axis/x/y every frame
-                  (exactly like the old `axis trigger`), so the same listener
-                  drives smooth analogue movement whether the value comes from
-                  a keyboard 2DVector composite or a gamepad stick.
-      - `quit`  — a BUTTON action on its `down` phase (≡ the old key-down
-                  trigger). Fires `!gameover` to give up.
+      - `move`  — a VALUE (vector2) action. It emits axis/x/y every frame, so the
+                  same listener drives smooth analogue movement whether the value
+                  comes from a keyboard 2DVector composite or a gamepad stick.
+      - `quit`  — a BUTTON action on its `down` phase: fires once on press.
+                  Fires `!gameover` to give up.
 
-    The `input action` trigger is a 1:1 drop-in for the old `key hold/down`
-    triggers — note the `Listeners:` still live on the behaviour, in the usual
-    place. Only the `Controls` block knows about physical inputs; swapping
+    The `input action` trigger carries its `Listeners:` on the behaviour, in the
+    usual place. Only the `Controls` block knows about physical inputs; swapping
     keyboard for gamepad is a binding change, not a gameplay change.
 
     To make the platform switch easy to feel without a controller, this demo
@@ -85,6 +83,13 @@ Controls:
           Right: "<Keyboard>/rightArrow"
       quit:
         - "<Keyboard>/backspace"
+    mobile:
+      move: [ "<Gamepad>/dpad" ]
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: dpad,   Action: move, Anchor: lower-left,  Offset: { X: 280, Y: 280 }, Size: { X: 380, Y: 380 } }
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   player:
@@ -115,20 +120,18 @@ Entities:
         Type: input action
         Properties:
           Action: move
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: translate
         Properties:
           # x/y come from the move action's TriggerContext; the expression scales
           # them into this frame's displacement.
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       # --- BUTTON action (down phase): give up. ---
       quit action:

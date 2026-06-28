@@ -1,0 +1,20 @@
+{
+    "name": "Assembler.Voxelization.Editor",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.Voxelization",
+        "Assembler.Voxels",
+        "Assembler.Anthropic"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

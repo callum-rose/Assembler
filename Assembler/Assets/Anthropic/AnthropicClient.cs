@@ -43,6 +43,59 @@ namespace Assembler.Anthropic
 			_maxTokens = maxTokens ?? DefaultMaxTokens;
 		}
 
+		/// <summary>
+		/// Fetches the model ids available to this API key, most-recently-released
+		/// first (the order the Models API returns them). Lets pickers populate
+		/// dynamically rather than hardcoding a list that drifts as new models ship.
+		/// When <paramref name="releasedOnOrAfter"/> is set, models released before
+		/// it are dropped, so callers can surface only recent generations.
+		/// </summary>
+		public static async Task<IReadOnlyList<string>> ListModelsAsync(
+			string apiKey,
+			DateTimeOffset? releasedOnOrAfter = null,
+			CancellationToken cancellationToken = default)
+		{
+			if (string.IsNullOrWhiteSpace(apiKey))
+			{
+				throw new ArgumentException("API key is required", nameof(apiKey));
+			}
+
+			using var client = new global::Anthropic.AnthropicClient { ApiKey = apiKey };
+			var ids = new List<string>();
+
+			try
+			{
+				var page = await client.Models
+					.List(new global::Anthropic.Models.Models.ModelListParams { Limit = 1000 }, cancellationToken)
+					.ConfigureAwait(false);
+
+				while (true)
+				{
+					var recent = releasedOnOrAfter is { } cutoff
+						? page.Items.Where(model => model.CreatedAt >= cutoff)
+						: page.Items;
+					ids.AddRange(recent.Select(model => model.ID));
+
+					if (!page.HasNext())
+					{
+						break;
+					}
+
+					page = await page.Next(cancellationToken).ConfigureAwait(false);
+				}
+			}
+			catch (AnthropicApiException ex)
+			{
+				throw new AnthropicRequestException(GetStatusCode(ex), ex.Message, ex);
+			}
+			catch (AnthropicException ex)
+			{
+				throw new AnthropicRequestException(0, ex.Message, ex);
+			}
+
+			return ids;
+		}
+
 		public async Task<string> SendAsync(
 			string cachedSystemPrompt,
 			IReadOnlyList<AnthropicMessage> messages,
@@ -50,18 +103,13 @@ namespace Assembler.Anthropic
 			Action<string>? onDelta = null,
 			IReadOnlyList<AnthropicTool>? tools = null,
 			Func<AnthropicToolUse, CancellationToken, Task<AnthropicToolResult>>? onToolUse = null,
-			int maxToolIterations = DefaultMaxToolIterations)
+			int maxToolIterations = DefaultMaxToolIterations,
+			Action<AnthropicTokenUsage>? onUsage = null)
 		{
-			// Seed the SDK message list from our simple (role, text) messages.
-			// Intermediate tool_use / tool_result turns are appended here as the
-			// loop runs; they never escape into the caller's history.
-			var sdkMessages = messages
-				.Select(m => new MessageParam
-				{
-					Role = RoleFromString(m.Role),
-					Content = m.Content,
-				})
-				.ToList();
+			// Seed the SDK message list from our simple (role, text[, images])
+			// messages. Intermediate tool_use / tool_result turns are appended here
+			// as the loop runs; they never escape into the caller's history.
+			var sdkMessages = messages.Select(BuildMessage).ToList();
 
 			IReadOnlyList<ToolUnion>? sdkTools = tools is { Count: > 0 }
 				? tools.Select(BuildTool).ToArray()
@@ -97,10 +145,24 @@ namespace Assembler.Anthropic
 					var iterationText = new StringBuilder();
 					var toolUses = new Dictionary<long, ToolUseAccumulator>();
 					StopReason? stopReason = null;
+					var usage = AnthropicTokenUsage.Zero;
 
 					await foreach (var ev in _client.Messages.CreateStreaming(parameters, cancellationToken))
 					{
-						if (ev.TryPickContentBlockStart(out var start))
+						if (ev.TryPickStart(out var messageStart))
+						{
+							try
+							{
+								var u = messageStart.Message.Usage;
+								usage = new AnthropicTokenUsage(
+									u.InputTokens,
+									u.OutputTokens,
+									u.CacheReadInputTokens ?? 0,
+									u.CacheCreationInputTokens ?? 0);
+							}
+							catch { /* usage not present on this event */ }
+						}
+						else if (ev.TryPickContentBlockStart(out var start))
 						{
 							if (start.ContentBlock.TryPickToolUse(out var toolUseBlock))
 							{
@@ -126,10 +188,14 @@ namespace Assembler.Anthropic
 						{
 							try { stopReason = messageDelta.Delta.StopReason.Value(); }
 							catch { /* stop_reason not present on this delta */ }
+
+							try { usage = usage with { OutputTokens = messageDelta.Usage.OutputTokens }; }
+							catch { /* usage not present on this delta */ }
 						}
 					}
 
 					fullText.Append(iterationText);
+					onUsage?.Invoke(usage);
 
 					var wantsTools = onToolUse != null && toolUses.Count > 0 && stopReason == StopReason.ToolUse;
 					if (!wantsTools)
@@ -195,6 +261,50 @@ namespace Assembler.Anthropic
 			}
 
 			return fullText.ToString();
+		}
+
+		private static MessageParam BuildMessage(AnthropicMessage message)
+		{
+			var role = RoleFromString(message.Role);
+			if (message.Images.Count == 0)
+			{
+				return new MessageParam { Role = role, Content = message.Content };
+			}
+
+			var blocks = new List<ContentBlockParam>();
+			foreach (var image in message.Images)
+			{
+				if (!image.IsEmpty)
+				{
+					blocks.Add(BuildImageBlock(image));
+				}
+			}
+
+			if (!string.IsNullOrEmpty(message.Content))
+			{
+				blocks.Add(new TextBlockParam(message.Content));
+			}
+
+			return new MessageParam { Role = role, Content = blocks };
+		}
+
+		private static ImageBlockParam BuildImageBlock(AnthropicImage image)
+		{
+			// Built from raw JSON rather than the typed source union so this stays
+			// stable across SDK versions that reshape the image source types.
+			var json = JsonSerializer.Serialize(new Dictionary<string, object>
+			{
+				["type"] = "image",
+				["source"] = new Dictionary<string, object>
+				{
+					["type"] = "base64",
+					["media_type"] = image.MediaType,
+					["data"] = Convert.ToBase64String(image.Data),
+				},
+			});
+			var raw = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)
+					  ?? new Dictionary<string, JsonElement>();
+			return ImageBlockParam.FromRawUnchecked(raw);
 		}
 
 		private static ToolUnion BuildTool(AnthropicTool tool)

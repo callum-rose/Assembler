@@ -85,11 +85,38 @@ Templates:
       life:
         Type: timer trigger
         Properties: { Delay: 2.0 }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       expire:
         Type: destroy
+
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right: { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right: [ "<Keyboard>/d" ]
+      up:    [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      right: [ "<Gamepad>/dpad/right" ]
+      up:    [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   wall a:
@@ -146,7 +173,7 @@ Entities:
       # --- Shared blackboard plumbing: pick the nav goal from drive_mode each frame. ---
       goal clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: driver, BehaviourId: update goal } ]
+        Listeners: [ update goal ]
       update goal:
         Type: vector variable setter
         Properties:
@@ -154,9 +181,9 @@ Entities:
           Value: !expr
             Do: pick goal
             With:
-              - !var drive_mode
-              - !var target_position
-              - !entity { Id: driver, Property: Position }
+              mode: !var drive_mode
+              target_pos: !var target_position
+              self_pos: !entity { Id: driver, Property: Position }
 
       # --- Machine 1: movement. Drives the grid navigation. ---
       movement:
@@ -173,7 +200,7 @@ Entities:
             - { from: idle, to: pursue, when: !var has_target }
             - from: pursue
               to: idle
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
       set idle:
         Type: int variable setter
         Properties: { VariableId: !var drive_mode, Value: 0 }
@@ -202,16 +229,16 @@ Entities:
             - { from: hold, to: engage, when: !var has_target }
             - from: engage
               to: hold
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
       fire clock:
         Type: interval trigger
         Properties: { Interval: 0.4, AutoStart: true }
-        Listeners: [ { EntityId: driver, BehaviourId: fire gate } ]
+        Listeners: [ fire gate ]
       fire gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: is engaged, With: [ !var combat_state ] }
-        Listeners: [ { EntityId: driver, BehaviourId: fire } ]
+          Condition: !expr { Do: is engaged, With: { state: !var combat_state } }
+        Listeners: [ fire ]
       fire:
         Type: spawner
         Properties:
@@ -222,9 +249,9 @@ Entities:
               Do: bullet velocity
               ReturnType: vector
               With:
-                - !entity { Id: driver, Property: Position }
-                - !var target_position
-                - !var bullet speed
+                from: !entity { Id: driver, Property: Position }
+                to: !var target_position
+                speed: !var bullet speed
 
   player:
     Position: !vec { X: 7, Y: 0, Z: 0 }
@@ -235,40 +262,40 @@ Entities:
         Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
 
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
-        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.04, Y: 0, Z: 0 } }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
-        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.04, Y: 0, Z: 0 } }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
-        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.04, Z: 0 } }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
-        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.04, Z: 0 } }
 
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   camera:

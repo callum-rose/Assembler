@@ -87,6 +87,35 @@ Expressions:
     ReturnType: bool
     Expression: "return Distance(a, b) > threshold;"
 
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right: { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right: [ "<Keyboard>/d" ]
+      up:    [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      right: [ "<Gamepad>/dpad/right" ]
+      up:    [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
   guard:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -109,28 +138,27 @@ Entities:
           Velocity: !expr
             Do: guard velocity
             With:
-              - !var guard_mode
-              - !entity { Id: guard, Property: Position }
-              - !entity { Id: player, Property: Position }
-              - !var chase speed
-              - !var flee speed
+              mode: !var guard_mode
+              self_pos: !entity { Id: guard, Property: Position }
+              target_pos: !entity { Id: player, Property: Position }
+              chase_speed: !var chase speed
+              flee_speed: !var flee speed
 
       # Keep the guard on screen: every frame, clamp its position to the play field
       # so a fleeing guard can be cornered against a wall instead of escaping off-screen.
       keep in bounds:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: guard, BehaviourId: clamp position }
+        Listeners: [ clamp position ]
       clamp position:
         Type: position setter
         Properties:
           Position: !expr
-            Do: 'new UnityEngine.Vector3(Clamp(arg0.x, -arg1, arg1), Clamp(arg0.y, -arg1, arg1), arg0.z)'
+            Do: 'new UnityEngine.Vector3(Clamp(pos.x, -bound, bound), Clamp(pos.y, -bound, bound), pos.z)'
             ArgumentTypes: [ vector, float ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             With:
-              - !entity { Id: guard, Property: Position }
-              - !var field bound
+              pos: !entity { Id: guard, Property: Position }
+              bound: !var field bound
 
       ai:
         Type: state machine
@@ -160,27 +188,27 @@ Entities:
               to: chase
               when: !expr
                 Do: closer than
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var chase range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var chase range }
             - from: chase
               to: flee
               when: !expr
                 Do: closer than
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var flee range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var flee range }
             - from: chase
               to: patrol
               when: !expr
                 Do: farther than
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var lose range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var lose range }
             - from: flee
               to: caught
               when: !expr
                 Do: closer than
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: flee
               to: patrol
               when: !expr
                 Do: farther than
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var safe range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var safe range }
 
       # --- OnEnter hook targets: drive the movement mode and the live colour. ---
       set mode idle:
@@ -219,39 +247,35 @@ Entities:
           IsWire: false
           Colour: !var player colour
 
-      # --- WASD: each key-hold trigger nudges the player while held. ---
+      # --- WASD: each hold input action nudges the player while held. ---
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - { EntityId: player, BehaviourId: move left }
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.024, Y: 0, Z: 0 } }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - { EntityId: player, BehaviourId: move right }
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.024, Y: 0, Z: 0 } }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
-        Listeners:
-          - { EntityId: player, BehaviourId: move up }
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.024, Z: 0 } }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
-        Listeners:
-          - { EntityId: player, BehaviourId: move down }
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.024, Z: 0 } }
@@ -259,8 +283,8 @@ Entities:
       # Press Q to quit. Top-level `!gameover` also satisfies the build's
       # requirement that every game declare a game-over path.
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover
 

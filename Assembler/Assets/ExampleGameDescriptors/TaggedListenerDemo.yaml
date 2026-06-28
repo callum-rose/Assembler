@@ -27,8 +27,6 @@ Physics:
 Constants:
   spawn interval: 0.5
   enemy size: !vec { X: 0.6, Y: 0.6 }
-  fire key: "space"
-  score key: "f"
   scoreable tag: "scoreable"
   one: 1
   camera position: !vec { X: 0, Y: 0, Z: -10 }
@@ -65,8 +63,8 @@ Templates:
           Value: !expr
             Do: int add
             With:
-              - !var enemies destroyed
-              - !var one
+              a: !var enemies destroyed
+              b: !var one
       self destruct:
         Type: destroy
       # Behaviour tag — the F-key listener finds this by tag alone,
@@ -79,8 +77,8 @@ Templates:
           Value: !expr
             Do: int add
             With:
-              - !var score
-              - !var one
+              a: !var score
+              b: !var one
 
 Expressions:
   int add:
@@ -88,7 +86,37 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
+# Two button actions drive the demo: Space fires the zapper, F scores. The keys
+# now live as bindings here rather than `fire key` / `score key` constants.
+Controls:
+  Actions:
+    fire:  { Type: button, Phase: down }
+    score: { Type: button, Phase: down }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      fire:  [ "<Keyboard>/space" ]
+      score: [ "<Keyboard>/f" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      fire:  [ "<Gamepad>/buttonSouth" ]
+      score: [ "<Gamepad>/buttonWest" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: fire,  Label: "Fire",  Anchor: lower-right, Offset: { X: 200, Y: 440 }, Size: { X: 240, Y: 200 } }
+    - { Type: button, Action: score, Label: "Score", Anchor: lower-right, Offset: { X: 200, Y: 200 }, Size: { X: 240, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit",  Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   enemy spawner:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
@@ -96,11 +124,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: enemy spawner
-            BehaviourId: count spawn
-          - EntityId: enemy spawner
-            BehaviourId: spawn enemy
+        Listeners: [ count spawn, spawn enemy ]
       count spawn:
         Type: int variable setter
         Properties:
@@ -108,8 +132,8 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var enemies spawned
-              - !var one
+              a: !var enemies spawned
+              b: !var one
       spawn enemy:
         Type: spawner
         Properties:
@@ -124,11 +148,10 @@ Entities:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       fire:
-        Type: key down trigger
-        Properties: { Key: !var fire key }
+        Type: input action
+        Properties: { Action: fire }
         Listeners:
-          - EntityId: zapper
-            BehaviourId: count zap
+          - count zap
           - EntityTag: !var target tag
             BehaviourId: count as destroyed
           - EntityTag: !var target tag
@@ -140,14 +163,14 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var zap count
-              - !var one
+              a: !var zap count
+              b: !var one
 
       # F-key uses a BehaviourTag listener — pure behaviour-tag dispatch.
       # No entity is mentioned; every behaviour tagged `scoreable` runs.
       score all:
-        Type: key down trigger
-        Properties: { Key: !var score key }
+        Type: input action
+        Properties: { Action: score }
         Listeners:
           - BehaviourTag: !var scoreable tag
 
@@ -180,10 +203,10 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"Alive now: " + (arg0 - arg1)'
+            Do: '"Alive now: " + (enemies_spawned - enemies_destroyed)'
             With:
-              - !var enemies spawned
-              - !var enemies destroyed
+              enemies_spawned: !var enemies spawned
+              enemies_destroyed: !var enemies destroyed
           FontSize: 22
           Rect:
             Anchor: top-left
@@ -195,12 +218,12 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"Spawned: " + arg0 + "     Destroyed: " + arg1 + "     Zaps: " + arg2 + "     Score: " + arg3'
+            Do: '"Spawned: " + enemies_spawned + "     Destroyed: " + enemies_destroyed + "     Zaps: " + zap_count + "     Score: " + score'
             With:
-              - !var enemies spawned
-              - !var enemies destroyed
-              - !var zap count
-              - !var score
+              enemies_spawned: !var enemies spawned
+              enemies_destroyed: !var enemies destroyed
+              zap_count: !var zap count
+              score: !var score
           FontSize: 18
           Rect:
             Anchor: top-left

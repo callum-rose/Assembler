@@ -1,7 +1,6 @@
 using Assembler.Libraries;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Rotation
@@ -15,13 +14,9 @@ namespace Assembler.Behaviours.Rotation
 	///   Target: World-space point to face.
 	///   TurnRate: Maximum turn speed in degrees/sec; 0 (the default) snaps instantly to face the target.
 	/// </remarks>
-	public sealed class LookAt : GameBehaviour<LookAtData>, INeedsGameClock
+	public sealed class LookAt : PerFrameBehaviour<LookAtData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			var offset = Data.Target.Get() - transform.position;
 

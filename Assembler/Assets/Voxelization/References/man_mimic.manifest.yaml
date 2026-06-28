@@ -1,0 +1,9 @@
+game: reference mimic test
+assets:
+  - id: man
+    height: 16
+    symmetry: bilateral
+    rig: true
+    references:
+      - file: man_reference.png
+        view: front

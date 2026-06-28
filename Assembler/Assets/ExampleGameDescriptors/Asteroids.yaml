@@ -132,16 +132,12 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ asteroid ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var bullet lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -175,8 +171,7 @@ Templates:
         Listeners:
           - EntityId: score tracker
             BehaviourId: increment score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       ship hit:
         Type: trigger enter trigger
         Properties:
@@ -184,15 +179,12 @@ Templates:
         Listeners:
           - EntityId: life tracker
             BehaviourId: decrement lives
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var asteroid lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -228,8 +220,7 @@ Templates:
         Listeners:
           - EntityId: score tracker
             BehaviourId: increment score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       ship hit:
         Type: trigger enter trigger
         Properties:
@@ -237,15 +228,12 @@ Templates:
         Listeners:
           - EntityId: life tracker
             BehaviourId: decrement lives
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       lifetime:
         Type: timer trigger
         Properties:
           Delay: !var asteroid lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ self destruct ]
       self destruct:
         Type: destroy
 
@@ -257,18 +245,16 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1 || arg2'
+            Do: 'score >= target || is_dead'
             With:
-              - !var score
-              - !var score to win
-              - !var is dead
+              score: !var score
+              target: !var score to win
+              is_dead: !var is dead
         Listeners:
           - !gameover
 
@@ -308,19 +294,17 @@ Entities:
       # --- Per-frame position tracking (for bullet spawn position) ---
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: ship
-            BehaviourId: track position
+        Listeners: [ track position ]
       track position:
         Type: vector variable setter
         Properties:
           VariableId: !var ship position
           Value: !expr
-            Do: 'IntegratePosition(arg0, arg1, arg2)'
+            Do: 'IntegratePosition(position, velocity, dt)'
             With:
-              - !var ship position
-              - !var ship velocity
-              - !clock deltaTime
+              position: !var ship position
+              velocity: !var ship velocity
+              dt: !clock deltaTime
 
       # --- Steering + thrust: one analogue `move` action drives both. x steers
       #     (A/D or stick-x), y > 0 thrusts (W or stick-up). It fires every frame,
@@ -328,44 +312,38 @@ Entities:
       move input:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: apply steer
-          - EntityId: ship
-            BehaviourId: apply thrust
+        Listeners: [ apply steer, apply thrust ]
       apply steer:
         Type: vector variable setter
         Properties:
           VariableId: !var ship facing
           Value: !expr
-            Do: 'Rotate2D(arg0, -arg1 * arg2)'
+            Do: 'Rotate2D(facing, -steer * turn)'
             ArgumentTypes: [ vector, float, float ]
             ReturnType: vector
             With:
-              - !var ship facing
-              - !output x
-              - !var turn deg
+              facing: !var ship facing
+              steer: !output x
+              turn: !var turn deg
       apply thrust:
         Type: vector variable setter
         Properties:
           VariableId: !var ship velocity
           Value: !expr
-            Do: 'AddVector(arg0, ScaleVector(arg1, arg2 * Max(arg3, 0f)))'
+            Do: 'AddVector(velocity, ScaleVector(facing, impulse * Max(thrust, 0f)))'
             ArgumentTypes: [ vector, vector, float, float ]
             ReturnType: vector
             With:
-              - !var ship velocity
-              - !var ship facing
-              - !var thrust impulse
-              - !output y
+              velocity: !var ship velocity
+              facing: !var ship facing
+              impulse: !var thrust impulse
+              thrust: !output y
 
       # --- Brake (S / on-screen Brake button) ---
       brake key:
         Type: input action
         Properties: { Action: brake }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: brake
+        Listeners: [ brake ]
       brake:
         Type: vector variable setter
         Properties:
@@ -376,9 +354,7 @@ Entities:
       fire key:
         Type: input action
         Properties: { Action: fire }
-        Listeners:
-          - EntityId: ship
-            BehaviourId: fire bullet
+        Listeners: [ fire bullet ]
       fire bullet:
         Type: spawner
         Properties:
@@ -386,11 +362,11 @@ Entities:
           Position: !var ship position
           Parameters:
             initial_velocity: !expr
-              Do: 'ScaleVector(arg0, arg1)'
+              Do: 'ScaleVector(facing, speed)'
               ReturnType: vector
               With:
-                - !var ship facing
-                - !var bullet speed
+                facing: !var ship facing
+                speed: !var bullet speed
 
   # --- Score tracker ---
   score tracker:
@@ -401,10 +377,10 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'score + increment'
             With:
-              - !var score
-              - !var score per asteroid
+              score: !var score
+              increment: !var score per asteroid
 
   # --- Life tracker ---
   life tracker:
@@ -415,21 +391,19 @@ Entities:
         Properties:
           VariableId: !var lives
           Value: !expr
-            Do: 'arg0 - arg1'
+            Do: 'lives - cost'
             With:
-              - !var lives
-              - !var life cost
+              lives: !var lives
+              cost: !var life cost
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= arg1'
+            Do: 'lives <= floor'
             With:
-              - !var lives
-              - !var zero int
-        Listeners:
-          - EntityId: life tracker
-            BehaviourId: set dead
+              lives: !var lives
+              floor: !var zero int
+        Listeners: [ set dead ]
       set dead:
         Type: bool variable setter
         Properties:
@@ -444,9 +418,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var asteroid spawn interval
-        Listeners:
-          - EntityId: asteroid spawner
-            BehaviourId: spawn asteroid
+        Listeners: [ spawn asteroid ]
       spawn asteroid:
         Type: spawner
         Properties:
@@ -460,10 +432,10 @@ Entities:
           Position: !expr { Do: 'RandomOnCircle(6.8f)' }
           Parameters:
             initial_velocity: !expr
-              Do: 'RandomOnCircle(arg0)'
+              Do: 'RandomOnCircle(speed)'
               ReturnType: vector
               With:
-                - !var asteroid speed
+                speed: !var asteroid speed
 
   # --- Camera ---
   camera:
@@ -485,9 +457,9 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"Score: " + arg0'
+            Do: '"Score: " + score'
             With:
-              - !var score
+              score: !var score
           FontSize: 28
           Rect:
             Anchor: top-left
@@ -503,9 +475,9 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: '"Lives: " + arg0'
+            Do: '"Lives: " + lives'
             With:
-              - !var lives
+              lives: !var lives
           FontSize: 28
           Rect:
             Anchor: top-right

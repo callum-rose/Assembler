@@ -100,9 +100,7 @@ Entities:
           Displacement: !var spin cw
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: warm orbit
-            BehaviourId: spin
+        Listeners: [ spin ]
     Children:
       lamp red:
         Position: !vec { X: 10, Y: 0, Z: 0 }
@@ -145,9 +143,7 @@ Entities:
           Displacement: !var spin ccw
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: cool orbit
-            BehaviourId: spin
+        Listeners: [ spin ]
     Children:
       # Each cool lamp is angled down-and-out (Rotation X≈55) so its spot cone
       # rakes across the floor as the rig turns.
@@ -204,18 +200,16 @@ Entities:
         Type: input action
         Properties:
           Action: move
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: translate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, 0f, arg1 * arg2)'
+            Do: 'new UnityEngine.Vector3(x * step, 0f, y * step)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
       # Press Escape (the quit action's bound key) to give up.
       quit action:
         Type: input action

@@ -18,7 +18,8 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class RigidbodyBehaviour : GameBehaviour<RigidbodyData>
 	{
-		private Rigidbody _rigidbody;
+		// Assigned in OnInitialise before any use (AddComponent never returns null); never observed null.
+		private Rigidbody _rigidbody = null!;
 
 		protected override void OnInitialise(RigidbodyData data)
 		{

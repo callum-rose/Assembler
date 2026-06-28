@@ -47,15 +47,15 @@ namespace Tests.Parsing
 		}
 
 		[Test]
-		public void KeyDownTrigger_WithQuotedNumberKey_TransformsToStringConstant()
+		public void InputAction_WithQuotedNumberName_TransformsToStringConstant()
 		{
 			var yaml = @"
 Entities:
   player:
     Behaviours:
       hotbar one:
-        Type: key down trigger
-        Properties: { Key: ""1"" }
+        Type: input action
+        Properties: { Action: ""1"" }
 ";
 
 			var gameDto = new GameFileParser().Parse(yaml);
@@ -63,10 +63,10 @@ Entities:
 			GameInfo gameInfo = null;
 			Assert.DoesNotThrow(() => gameInfo = Transformer.Transform(gameDto));
 
-			var trigger = (KeyDownTriggerInfo)gameInfo.Entities.Single().Behaviours.Single();
+			var trigger = (InputActionTriggerInfo)gameInfo.Entities.Single().Behaviours.Single();
 
-			Assert.IsInstanceOf<ConstantSource<string>>(trigger.Key);
-			Assert.AreEqual("1", ((ConstantSource<string>)trigger.Key).Value);
+			Assert.IsInstanceOf<ConstantSource<string>>(trigger.Action);
+			Assert.AreEqual("1", ((ConstantSource<string>)trigger.Action).Value);
 		}
 	}
 }

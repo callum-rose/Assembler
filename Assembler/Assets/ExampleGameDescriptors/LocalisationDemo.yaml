@@ -80,22 +80,47 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ player ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: add score
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ add score, self destruct ]
       add score:
         Type: int variable setter
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: 'arg0 + arg1'
+            Do: 'score + one'
             With:
-              - !var score
-              - !var one
+              score: !var score
+              one: !var one
       self destruct:
         Type: destroy
+
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right:  { Type: button, Phase: hold }
+    up:  { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right:  [ "<Keyboard>/d" ]
+      up:  [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      right:  [ "<Gamepad>/dpad/right" ]
+      up:  [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   # Game-over poll: every frame the gate checks the end condition; when it
@@ -105,17 +130,15 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'score >= total_coins'
             With:
-              - !var score
-              - !var total coins
+              score: !var score
+              total_coins: !var total coins
         Listeners:
           - !gameover
 
@@ -144,44 +167,36 @@ Entities:
 
       # --- WASD movement: each key-hold trigger drives a translate while held. ---
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move left
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties:
           Displacement: !vec { X: -0.12, Y: 0, Z: 0 }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move right
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties:
           Displacement: !vec { X: 0.12, Y: 0, Z: 0 }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move up
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties:
           Displacement: !vec { X: 0, Y: 0.12, Z: 0 }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
-        Listeners:
-          - EntityId: player
-            BehaviourId: move down
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties:
@@ -233,7 +248,7 @@ Entities:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover

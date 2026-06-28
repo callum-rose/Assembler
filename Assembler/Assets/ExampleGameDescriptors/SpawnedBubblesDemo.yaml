@@ -61,11 +61,7 @@ Templates:
         Type: timer trigger
         Properties:
           Delay: !var lifetime
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: increment pop counter
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+        Listeners: [ increment pop counter, self destruct ]
       # Local `lifetime` is read here, global `bubbles popped` is written.
       increment pop counter:
         Type: int variable setter
@@ -74,8 +70,8 @@ Templates:
           Value: !expr
             Do: int add
             With:
-              - !var bubbles popped
-              - !var one
+              a: !var bubbles popped
+              b: !var one
       self destruct:
         Type: destroy
 
@@ -85,7 +81,28 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # Game-over poll: every frame the gate checks whether enough bubbles have been
   # popped; once they have, the gate fires !gameover, which ends the game.
   game over:
@@ -93,17 +110,15 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'bubbles_popped >= bubbles_to_pop'
             With:
-              - !var bubbles popped
-              - !var bubbles to pop
+              bubbles_popped: !var bubbles popped
+              bubbles_to_pop: !var bubbles to pop
         Listeners:
           - !gameover
 
@@ -115,11 +130,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var spawn interval
-        Listeners:
-          - EntityId: bubble spawner
-            BehaviourId: increment spawn counter
-          - EntityId: bubble spawner
-            BehaviourId: spawn bubble
+        Listeners: [ increment spawn counter, spawn bubble ]
       increment spawn counter:
         Type: int variable setter
         Properties:
@@ -127,8 +138,8 @@ Entities:
           Value: !expr
             Do: int add
             With:
-              - !var bubbles spawned
-              - !var one
+              a: !var bubbles spawned
+              b: !var one
       spawn bubble:
         Type: spawner
         Properties:

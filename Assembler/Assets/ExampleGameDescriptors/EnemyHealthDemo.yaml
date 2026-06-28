@@ -15,10 +15,6 @@ Physics:
   Gravity: !vec { X: 0, Y: 0 }
 
 Constants:
-  player up key: "w"
-  player down key: "s"
-  player left key: "a"
-  player right key: "d"
   player speed: 4
   damage per hit: 1
   zero: 0
@@ -66,9 +62,7 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ player ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: take damage
+        Listeners: [ take damage ]
       take damage:
         Type: int variable setter
         # !var health resolves to THIS entity's `health`, not a global one,
@@ -78,22 +72,20 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var health
-              - !var damage per hit
+              a: !var health
+              b: !var damage per hit
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= arg1'
+            Do: 'health <= zero'
             ArgumentTypes: [ int, int ]
             With:
-              - !var health
-              - !var zero
+              health: !var health
+              zero: !var zero
         Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: on death decrement counter
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - on death decrement counter
+          - self destruct
       on death decrement counter:
         Type: int variable setter
         Properties:
@@ -101,8 +93,8 @@ Templates:
           Value: !expr
             Do: int sub
             With:
-              - !var enemies remaining
-              - !var damage per hit
+              a: !var enemies remaining
+              b: !var damage per hit
       self destruct:
         Type: destroy
 
@@ -137,68 +129,52 @@ Templates:
         Type: velocity
         Properties: { Velocity: !var velocity }
       up press:
-        Type: key down trigger
-        Properties: { Key: !var player up key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go up
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ go up ]
       up release:
-        Type: key up trigger
-        Properties: { Key: !var player up key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: up-release }
+        Listeners: [ stop ]
       go up:
         Type: vector variable setter
         Properties:
           VariableId: !var velocity
           Value: !var player up vel
       down press:
-        Type: key down trigger
-        Properties: { Key: !var player down key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go down
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ go down ]
       down release:
-        Type: key up trigger
-        Properties: { Key: !var player down key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: down-release }
+        Listeners: [ stop ]
       go down:
         Type: vector variable setter
         Properties:
           VariableId: !var velocity
           Value: !var player down vel
       left press:
-        Type: key down trigger
-        Properties: { Key: !var player left key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go left
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ go left ]
       left release:
-        Type: key up trigger
-        Properties: { Key: !var player left key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: left-release }
+        Listeners: [ stop ]
       go left:
         Type: vector variable setter
         Properties:
           VariableId: !var velocity
           Value: !var player left vel
       right press:
-        Type: key down trigger
-        Properties: { Key: !var player right key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: go right
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ go right ]
       right release:
-        Type: key up trigger
-        Properties: { Key: !var player right key }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: right-release }
+        Listeners: [ stop ]
       go right:
         Type: vector variable setter
         Properties:
@@ -216,7 +192,58 @@ Expressions:
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a - b;"
+# WASD movement as abstract actions: each direction is a button with both a
+# press (down) and a release (up) action, replacing the old per-key triggers.
+# Rebinding is now a binding change here, not a `player <dir> key` constant.
+Controls:
+  Actions:
+    up:            { Type: button, Phase: down }
+    up-release:    { Type: button, Phase: up }
+    down:          { Type: button, Phase: down }
+    down-release:  { Type: button, Phase: up }
+    left:          { Type: button, Phase: down }
+    left-release:  { Type: button, Phase: up }
+    right:         { Type: button, Phase: down }
+    right-release: { Type: button, Phase: up }
+    quit:          { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      up:            [ "<Keyboard>/w" ]
+      up-release:    [ "<Keyboard>/w" ]
+      down:          [ "<Keyboard>/s" ]
+      down-release:  [ "<Keyboard>/s" ]
+      left:          [ "<Keyboard>/a" ]
+      left-release:  [ "<Keyboard>/a" ]
+      right:         [ "<Keyboard>/d" ]
+      right-release: [ "<Keyboard>/d" ]
+      quit:          [ "<Keyboard>/q" ]
+    mobile:
+      up:            [ "<Gamepad>/dpad/up" ]
+      up-release:    [ "<Gamepad>/dpad/up" ]
+      down:          [ "<Gamepad>/dpad/down" ]
+      down-release:  [ "<Gamepad>/dpad/down" ]
+      left:          [ "<Gamepad>/dpad/left" ]
+      left-release:  [ "<Gamepad>/dpad/left" ]
+      right:         [ "<Gamepad>/dpad/right" ]
+      right-release: [ "<Gamepad>/dpad/right" ]
+      quit:          [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left, Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left, Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,  Label: "◀", Anchor: lower-left, Offset: { X: 80, Y: 235 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right, Label: "▶", Anchor: lower-left, Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit",  Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # Game-over poll: every frame the gate checks the end condition; when it
   # holds, the gate fires !gameover, which ends and unloads the game.
   game over:
@@ -224,16 +251,14 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: game over
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0'
+            Do: 'enemies_remaining <= 0'
             With:
-              - !var enemies remaining
+              enemies_remaining: !var enemies remaining
         Listeners:
           - !gameover
 

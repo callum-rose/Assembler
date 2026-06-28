@@ -1,7 +1,6 @@
 using System;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
@@ -15,10 +14,8 @@ namespace Assembler.Behaviours.Movement
 	///   Velocity [Vector3]: Writable shared velocity variable to decay (required, e.g. !var velocity).
 	///   Coefficient: Drag rate per second; larger values bleed speed off faster.
 	/// </remarks>
-	public class DragBehaviour : GameBehaviour<DragData>, INeedsGameClock
+	public class DragBehaviour : PerFrameBehaviour<DragData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
 		protected override void OnInitialise(DragData data)
 		{
 			if (data.Velocity is NullValueProvider<Vector3>)
@@ -28,9 +25,7 @@ namespace Assembler.Behaviours.Movement
 			}
 		}
 
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			var decay = Mathf.Exp(-Data.Coefficient.Get() * Clock.DeltaTime);
 			Data.Velocity.Set(Data.Velocity.Get() * decay);

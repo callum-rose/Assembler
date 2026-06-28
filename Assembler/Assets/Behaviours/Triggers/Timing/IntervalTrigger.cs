@@ -65,7 +65,9 @@ namespace Assembler.Behaviours.Triggers.Timing
 			_currentCoroutine = null;
 		}
 
-		public void FireIteration(int iterationIndex, int iterationCount, TriggerContext ctx)
+		// internal (not public) — only the coroutine above and Tests.Behaviours (via InternalsVisibleTo) call it,
+		// mirroring InputActionTrigger.Emit.
+		internal void FireIteration(int iterationIndex, int iterationCount, TriggerContext ctx)
 		{
 			NotifyListeners(ctx.With(b =>
 			{

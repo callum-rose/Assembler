@@ -56,17 +56,30 @@ Placements:
     Template: pill
     At: !expr
       ReturnType: vector list
-      Do: 'GridPositions(5, 4, 0.5f, arg0)'
-      With: [ !var grid origin ]
+      Do: 'GridPositions(5, 4, 0.5f, origin)'
+      With: { origin: !var grid origin }
       ArgumentTypes: [ vector ]
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
 
 Entities:
   # The only thing ending this game: press Q to fire the framework's !gameover path.
   controller:
     Behaviours:
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners:
           - !gameover
 

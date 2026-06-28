@@ -73,6 +73,35 @@ Expressions:
     ReturnType: bool
     Expression: "return !flag;"
 
+Controls:
+  Actions:
+    left:  { Type: button, Phase: hold }
+    right: { Type: button, Phase: hold }
+    up:    { Type: button, Phase: hold }
+    down:  { Type: button, Phase: hold }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      right: [ "<Keyboard>/d" ]
+      up:    [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      right: [ "<Gamepad>/dpad/right" ]
+      up:    [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left,  Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left,  Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,    Label: "◀", Anchor: lower-left,  Offset: { X: 80,  Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right,   Label: "▶", Anchor: lower-left,  Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,    Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
   guard:
     Position: !vec { X: -5, Y: 3, Z: 0 }
@@ -130,8 +159,7 @@ Entities:
       # Each frame, select which emitted velocity to apply based on the FSM mode.
       select clock:
         Type: every frame trigger
-        Listeners:
-          - { EntityId: guard, BehaviourId: select velocity }
+        Listeners: [ select velocity ]
       select velocity:
         Type: vector variable setter
         Properties:
@@ -139,9 +167,9 @@ Entities:
           Value: !expr
             Do: pick velocity
             With:
-              - !var guard_mode
-              - !var chase_vel
-              - !var patrol_vel
+              mode: !var guard_mode
+              chase_vel: !var chase_vel
+              patrol_vel: !var patrol_vel
 
       # The single integrator that actually moves the guard.
       apply:
@@ -172,10 +200,10 @@ Entities:
               to: caught
               when: !expr
                 Do: within
-                With: [ !entity { Id: guard, Property: Position }, !entity { Id: player, Property: Position }, !var catch range ]
+                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: chase
               to: patrol
-              when: !expr { Do: negate, With: [ !var has_target ] }
+              when: !expr { Do: negate, With: { flag: !var has_target } }
 
       set mode patrol:
         Type: int variable setter
@@ -193,40 +221,40 @@ Entities:
         Properties: { Size: !var player size, IsWire: false, Colour: !var player colour }
 
       hold left:
-        Type: key hold trigger
-        Properties: { Key: "a" }
-        Listeners: [ { EntityId: player, BehaviourId: move left } ]
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ move left ]
       move left:
         Type: translate
         Properties: { Displacement: !vec { X: -0.05, Y: 0, Z: 0 } }
 
       hold right:
-        Type: key hold trigger
-        Properties: { Key: "d" }
-        Listeners: [ { EntityId: player, BehaviourId: move right } ]
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ move right ]
       move right:
         Type: translate
         Properties: { Displacement: !vec { X: 0.05, Y: 0, Z: 0 } }
 
       hold up:
-        Type: key hold trigger
-        Properties: { Key: "w" }
-        Listeners: [ { EntityId: player, BehaviourId: move up } ]
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ move up ]
       move up:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: 0.05, Z: 0 } }
 
       hold down:
-        Type: key hold trigger
-        Properties: { Key: "s" }
-        Listeners: [ { EntityId: player, BehaviourId: move down } ]
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ move down ]
       move down:
         Type: translate
         Properties: { Displacement: !vec { X: 0, Y: -0.05, Z: 0 } }
 
       quit key:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   camera:

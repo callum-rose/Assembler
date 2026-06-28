@@ -16,11 +16,13 @@ namespace Assembler.Behaviours.Visual
 	///   Colour: Optional tint applied to the primitive's material.
 	///   Size: Optional local scale of the primitive child.
 	/// </remarks>
-	public class Primitive : GameBehaviour<PrimitiveData>
+	public class Primitive : GameBehaviour<PrimitiveData>, INeedsLiveProperties
 	{
 		// URP's Lit shader exposes the main colour as _BaseColor; _Color covers the built-in pipeline.
 		private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 		private static readonly int ColorId = Shader.PropertyToID("_Color");
+
+		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
 		protected override void OnInitialise(PrimitiveData data)
 		{
@@ -50,7 +52,9 @@ namespace Assembler.Behaviours.Visual
 #endif
 			}
 
-			data.Size.UseIfValueExists(size => primitive.transform.localScale = size);
+			// Live-bind the scale so a !var/!expr/!clock animates the primitive's size; an omitted Size falls
+			// back to Vector3.one, matching the transform's default (so the no-Size case is unchanged).
+			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
 
 			data.Colour.UseIfValueExists(colour =>
 			{

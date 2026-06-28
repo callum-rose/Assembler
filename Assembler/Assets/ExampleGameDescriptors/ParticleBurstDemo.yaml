@@ -104,11 +104,11 @@ Entities:
         Type: translate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, 0f, arg1 * arg2)'
+            Do: 'new UnityEngine.Vector3(x * step, 0f, y * step)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       # DUST: Space coughs a soft upward puff. No gravity, fades from grey to clear.
       puff action:
@@ -190,12 +190,12 @@ Entities:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            Do: 'UnityEngine.Vector3.Reflect(arg0, arg1)'
+            Do: 'UnityEngine.Vector3.Reflect(velocity, normal)'
             ReturnType: vector
             ArgumentTypes: [ vector, vector ]
             With:
-              - !var ball velocity
-              - !output contact_normal
+              velocity: !var ball velocity
+              normal: !output contact_normal
       sparks:
         Type: particle burst
         Properties:

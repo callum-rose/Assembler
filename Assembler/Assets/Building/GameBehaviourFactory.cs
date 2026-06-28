@@ -33,6 +33,7 @@ using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using Assembler.Time;
 using UnityEngine;
+using AnimationInfo = Assembler.Parsing.Info.Behaviours.AnimationInfo;
 using Rotate = Assembler.Behaviours.Rotation.Rotate;
 
 namespace Assembler.Building
@@ -90,6 +91,11 @@ namespace Assembler.Building
 			if (behaviour is INeedsNavigation needsNav)
 			{
 				needsNav.Nav = ctx.Nav;
+			}
+
+			if (behaviour is INeedsLiveProperties needsLive)
+			{
+				needsLive.LiveProperties = ctx.LiveProperties;
 			}
 
 			return (behaviour, initialise);
@@ -211,43 +217,18 @@ namespace Assembler.Building
 					(i, ctx) => new LookAtData(i.Id,
 						i.Target.Resolve(ctx.Resolution),
 						i.TurnRate.Resolve(ctx.Resolution))),
-				[typeof(MoveAnimationInfo)] = new(typeof(MoveAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<MoveAnimationInfo, MoveAnimation>(go, (MoveAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(ScaleAnimationInfo)] = new(typeof(ScaleAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<ScaleAnimationInfo, ScaleAnimation>(go, (ScaleAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
-				[typeof(RotateAnimationInfo)] = new(typeof(RotateAnimation), (go, info, ctx) =>
-					BuildTransformAnimation<RotateAnimationInfo, RotateAnimation>(go, (RotateAnimationInfo)info, ctx,
-						i => i.Start, i => i.End, i => i.Duration, i => i.Easing)),
+				[typeof(AnimationInfo)] = Entry<AnimationInfo, AnimationBehaviour, AnimationData>(
+					(i, ctx) => new AnimationData(i.Id,
+						i.Steps.Select(s => s.Resolve(ctx.Resolution)).ToArray(),
+						i.Loops.Resolve(ctx.Resolution),
+						i.LoopType.Resolve(ctx.Resolution))),
 				[typeof(SetPositionInfo)] = Entry<SetPositionInfo, SetPosition, SetPositionData>(
 					(i, ctx) => new SetPositionData(i.Id,
 						i.ValueExpression.Resolve(ctx.Resolution))),
-				[typeof(KeyHoldTriggerInfo)] = Entry<KeyHoldTriggerInfo, KeyHoldTrigger, KeyHoldTriggerData>(
-					(i, ctx) => new KeyHoldTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(KeyDownTriggerInfo)] = Entry<KeyDownTriggerInfo, KeyDownTrigger, KeyDownTriggerData>(
-					(i, ctx) => new KeyDownTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(KeyUpTriggerInfo)] = Entry<KeyUpTriggerInfo, KeyUpTrigger, KeyUpTriggerData>(
-					(i, ctx) => new KeyUpTriggerData(i.Id,
-						i.Key.Resolve(ctx.Resolution))),
-				[typeof(MouseButtonTriggerInfo)] = Entry<MouseButtonTriggerInfo, MouseButtonTrigger, MouseButtonTriggerData>(
-					(i, ctx) => new MouseButtonTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution),
-						i.Phase.Resolve(ctx.Resolution))),
-				[typeof(MousePositionTriggerInfo)] = Entry<MousePositionTriggerInfo, MousePositionTrigger, MousePositionTriggerData>(
-					(i, ctx) => new MousePositionTriggerData(i.Id)),
 				[typeof(CursorLockInfo)] = Entry<CursorLockInfo, CursorLock, CursorLockData>(
 					(i, ctx) => new CursorLockData(i.Id,
 						i.Locked.Resolve(ctx.Resolution),
 						i.Visible.Resolve(ctx.Resolution))),
-				[typeof(ScrollWheelTriggerInfo)] = Entry<ScrollWheelTriggerInfo, ScrollWheelTrigger, ScrollWheelTriggerData>(
-					(i, ctx) => new ScrollWheelTriggerData(i.Id)),
-				[typeof(AxisTriggerInfo)] = Entry<AxisTriggerInfo, AxisTrigger, AxisTriggerData>(
-					(i, ctx) => new AxisTriggerData(i.Id,
-						i.XAxis.Resolve(ctx.Resolution),
-						i.YAxis.Resolve(ctx.Resolution))),
 				[typeof(InputActionTriggerInfo)] = new(typeof(InputActionTrigger), (go, info, ctx) =>
 				{
 					var i = (InputActionTriggerInfo)info;
@@ -271,10 +252,6 @@ namespace Assembler.Building
 						actionInfo.Phase,
 						liveAction), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
-				[typeof(GamepadButtonTriggerInfo)] = Entry<GamepadButtonTriggerInfo, GamepadButtonTrigger, GamepadButtonTriggerData>(
-					(i, ctx) => new GamepadButtonTriggerData(i.Id,
-						i.Button.Resolve(ctx.Resolution),
-						i.Mode.Resolve(ctx.Resolution))),
 				[typeof(TapTriggerInfo)] = Entry<TapTriggerInfo, Tap, TapTriggerData>(
 					(i, ctx) => new TapTriggerData(i.Id,
 						i.MaxDuration.Resolve(ctx.Resolution),
@@ -739,25 +716,6 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(makeData(i, ctx),
 					i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
-
-		private static (GameBehaviour, InitialiseBehaviourEvent) BuildTransformAnimation<TInfo, TBehaviour>(
-			GameObject go,
-			TInfo info,
-			BehaviourBuildContext ctx,
-			Func<TInfo, ValueSource<Vector3>> start,
-			Func<TInfo, ValueSource<Vector3>> end,
-			Func<TInfo, ValueSource<float>> duration,
-			Func<TInfo, ValueSource<Easing>> easing)
-			where TInfo : BehaviourInfo
-			where TBehaviour : GameBehaviour<TransformAnimationData>
-		{
-			var b = go.AddComponent<TBehaviour>();
-			return (b, lr => b.Initialise(new TransformAnimationData(info.Id,
-				start(info).Resolve(ctx.Resolution),
-				end(info).Resolve(ctx.Resolution),
-				duration(info).Resolve(ctx.Resolution),
-				easing(info).Resolve(ctx.Resolution)), info.Listeners.ToListeners(lr, ctx.Resolution)));
-		}
 
 		private static void RegisterVariableSetter<T, TBehaviour>(IDictionary<Type, BuilderEntry> map)
 			where TBehaviour : GameBehaviour<VariableSetterData<T>>

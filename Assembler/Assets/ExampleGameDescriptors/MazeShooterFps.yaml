@@ -225,39 +225,34 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ bullet ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: take damage
-          - EntityId: !parameter self_id
-            BehaviourId: death check
+        Listeners: [ take damage, death check ]
       take damage:
         Type: int variable setter
         Properties:
           VariableId: !var health
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'health - 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var health
+              health: !var health
 
       # When this NPC's own health hits zero: tally the kill and self-destruct.
       death check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 <= 0'
+            Do: 'health <= 0'
             ArgumentTypes: [ int ]
             ReturnType: bool
             With:
-              - !var health
+              health: !var health
         Listeners:
           - EntityId: scoreboard
             BehaviourId: add kill
           - EntityId: scoreboard
             BehaviourId: dec alive
-          - EntityId: !parameter self_id
-            BehaviourId: self destruct
+          - BehaviourId: self destruct
       self destruct:
         Type: destroy
 
@@ -290,15 +285,11 @@ Templates:
         Type: trigger enter trigger
         Properties:
           TagsToDetect: [ enemy, wall ]
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       life:
         Type: timer trigger
         Properties: { Delay: !var bullet life }
-        Listeners:
-          - EntityId: !parameter self_id
-            BehaviourId: expire
+        Listeners: [ expire ]
       expire:
         Type: destroy
 
@@ -344,18 +335,16 @@ Entities:
       move action:
         Type: input action
         Properties: { Action: move }
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: set velocity
         Properties:
           Velocity: !expr
             Do: facing velocity
             With:
-              - !output axis
-              - !entity { Id: player, Property: Rotation }
-              - !var move speed
+              input: !output axis
+              euler: !entity { Id: player, Property: Rotation }
+              speed: !var move speed
 
       # --- Look: lock the cursor so raw mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
       # Locks (and hides) the OS pointer on start so the `look` value action (bound to <Mouse>/delta)
@@ -366,34 +355,28 @@ Entities:
       mouse look:
         Type: input action
         Properties: { Action: look }
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply yaw
+        Listeners: [ apply yaw ]
       apply yaw:
         Type: rotate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(0f, arg0.x * arg1, 0f)'
+            Do: 'new UnityEngine.Vector3(0f, axis.x * sensitivity, 0f)'
             ArgumentTypes: [ vector, float ]
             ReturnType: vector
             With:
-              - !output axis
-              - !var mouse sensitivity
+              axis: !output axis
+              sensitivity: !var mouse sensitivity
       turn left key:
         Type: input action
         Properties: { Action: turn-left }
-        Listeners:
-          - EntityId: player
-            BehaviourId: turn left
+        Listeners: [ turn left ]
       turn left:
         Type: rotate
         Properties: { Displacement: !var arrow turn back }
       turn right key:
         Type: input action
         Properties: { Action: turn-right }
-        Listeners:
-          - EntityId: player
-            BehaviourId: turn right
+        Listeners: [ turn right ]
       turn right:
         Type: rotate
         Properties: { Displacement: !var arrow turn }
@@ -402,9 +385,7 @@ Entities:
       shoot action:
         Type: input action
         Properties: { Action: shoot }
-        Listeners:
-          - EntityId: player
-            BehaviourId: fire
+        Listeners: [ fire ]
       fire:
         Type: spawner
         Properties:
@@ -412,14 +393,14 @@ Entities:
           Position: !expr
             Do: muzzle position
             With:
-              - !entity { Id: player, Property: Position }
-              - !entity { Id: player, Property: Rotation }
+              pos: !entity { Id: player, Property: Position }
+              euler: !entity { Id: player, Property: Rotation }
           Parameters:
             initial_velocity: !expr
               Do: forward velocity
               With:
-                - !entity { Id: player, Property: Rotation }
-                - !var bullet speed
+                euler: !entity { Id: player, Property: Rotation }
+                speed: !var bullet speed
 
       quit action:
         Type: input action
@@ -470,31 +451,31 @@ Entities:
         Properties:
           VariableId: !var kills
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'kills + 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var kills
+              kills: !var kills
       dec alive:
         Type: int variable setter
         Properties:
           VariableId: !var enemies in maze
           Value: !expr
-            Do: 'arg0 - 1'
+            Do: 'count - 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var enemies in maze
+              count: !var enemies in maze
       inc alive:
         Type: int variable setter
         Properties:
           VariableId: !var enemies in maze
           Value: !expr
-            Do: 'arg0 + 1'
+            Do: 'count + 1'
             ArgumentTypes: [ int ]
             ReturnType: int
             With:
-              - !var enemies in maze
+              count: !var enemies in maze
 
   # --- Wave 1: 3 NPCs from the south-east corner, starting at t = 1s. ---
   wave 1:
@@ -503,26 +484,23 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 1.0 }
-        Listeners:
-          - EntityId: wave 1
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.5, Count: 3, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 1
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner se
+              corner: !var corner se
           Parameters:
             initial_health: 2
 
@@ -533,26 +511,23 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 14.0 }
-        Listeners:
-          - EntityId: wave 2
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.3, Count: 4, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 2
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner ne
+              corner: !var corner ne
           Parameters:
             initial_health: 3
 
@@ -563,26 +538,23 @@ Entities:
       start:
         Type: timer trigger
         Properties: { Delay: 30.0 }
-        Listeners:
-          - EntityId: wave 3
-            BehaviourId: burst
+        Listeners: [ burst ]
       burst:
         Type: interval trigger
         Properties: { Interval: 1.2, Count: 5, AutoStart: false }
         Listeners:
           - EntityId: scoreboard
             BehaviourId: inc alive
-          - EntityId: wave 3
-            BehaviourId: spawn
+          - BehaviourId: spawn
       spawn:
         Type: spawner
         Properties:
           TemplateId: npc_template
           Position: !expr
-            Do: 'new UnityEngine.Vector3(arg0.x + RandomFloat(-1f, 1f), arg0.y, arg0.z + RandomFloat(-1f, 1f))'
+            Do: 'new UnityEngine.Vector3(corner.x + RandomFloat(-1f, 1f), corner.y, corner.z + RandomFloat(-1f, 1f))'
             ReturnType: vector
             With:
-              - !var corner nw
+              corner: !var corner nw
           Parameters:
             initial_health: 3
 
@@ -592,19 +564,17 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: victory
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'kills >= target'
             ArgumentTypes: [ int, int ]
             ReturnType: bool
             With:
-              - !var kills
-              - !var total to kill
+              kills: !var kills
+              target: !var total to kill
         Listeners:
           - !gameover
 

@@ -51,7 +51,55 @@ Expressions:
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "return new Vector3(pos.x, pos.y + yoffset, pos.z);"
 
+Controls:
+  Actions:
+    left:  { Type: button, Phase: down }
+    left-release:  { Type: button, Phase: up }
+    right:  { Type: button, Phase: down }
+    right-release:  { Type: button, Phase: up }
+    up:  { Type: button, Phase: down }
+    up-release:  { Type: button, Phase: up }
+    down:  { Type: button, Phase: down }
+    down-release:  { Type: button, Phase: up }
+    quit:  { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      left:  [ "<Keyboard>/a" ]
+      left-release:  [ "<Keyboard>/a" ]
+      right:  [ "<Keyboard>/d" ]
+      right-release:  [ "<Keyboard>/d" ]
+      up:  [ "<Keyboard>/w" ]
+      up-release:  [ "<Keyboard>/w" ]
+      down:  [ "<Keyboard>/s" ]
+      down-release:  [ "<Keyboard>/s" ]
+      quit:  [ "<Keyboard>/q" ]
+    mobile:
+      left:  [ "<Gamepad>/dpad/left" ]
+      left-release:  [ "<Gamepad>/dpad/left" ]
+      right:  [ "<Gamepad>/dpad/right" ]
+      right-release:  [ "<Gamepad>/dpad/right" ]
+      up:  [ "<Gamepad>/dpad/up" ]
+      up-release:  [ "<Gamepad>/dpad/up" ]
+      down:  [ "<Gamepad>/dpad/down" ]
+      down-release:  [ "<Gamepad>/dpad/down" ]
+      quit:  [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: up,    Label: "▲", Anchor: lower-left, Offset: { X: 305, Y: 450 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: down,  Label: "▼", Anchor: lower-left, Offset: { X: 305, Y: 20 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: left,  Label: "◀", Anchor: lower-left, Offset: { X: 80, Y: 235 },  Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: right, Label: "▶", Anchor: lower-left, Offset: { X: 530, Y: 235 }, Size: { X: 200, Y: 200 } }
+    - { Type: button, Action: quit,  Label: "Quit",  Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # Declared BEFORE `leader` on purpose: proves declaration order is irrelevant
   # for `!entity` reads. Property resolution happens after every
   # entity has registered its transform.
@@ -66,17 +114,15 @@ Entities:
           Colour: !var follower colour
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: follower above
-            BehaviourId: track
+        Listeners: [ track ]
       track:
         Type: position setter
         Properties:
           Position: !expr
             Do: shift y
             With:
-              - !entity { Id: leader, Property: Position }
-              - !var follower above offset y
+              pos: !entity { Id: leader, Property: Position }
+              yoffset: !var follower above offset y
 
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
@@ -98,68 +144,52 @@ Entities:
         Properties:
           Velocity: !var leader velocity
       press left:
-        Type: key down trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go left
+        Type: input action
+        Properties: { Action: left }
+        Listeners: [ go left ]
       release left:
-        Type: key up trigger
-        Properties: { Key: "a" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: left-release }
+        Listeners: [ stop ]
       go left:
         Type: vector variable setter
         Properties:
           VariableId: !var leader velocity
           Value: !vec { X: -4, Y: 0, Z: 0 }
       press right:
-        Type: key down trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go right
+        Type: input action
+        Properties: { Action: right }
+        Listeners: [ go right ]
       release right:
-        Type: key up trigger
-        Properties: { Key: "d" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: right-release }
+        Listeners: [ stop ]
       go right:
         Type: vector variable setter
         Properties:
           VariableId: !var leader velocity
           Value: !vec { X: 4, Y: 0, Z: 0 }
       press up:
-        Type: key down trigger
-        Properties: { Key: "w" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go up
+        Type: input action
+        Properties: { Action: up }
+        Listeners: [ go up ]
       release up:
-        Type: key up trigger
-        Properties: { Key: "w" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: up-release }
+        Listeners: [ stop ]
       go up:
         Type: vector variable setter
         Properties:
           VariableId: !var leader velocity
           Value: !vec { X: 0, Y: 4, Z: 0 }
       press down:
-        Type: key down trigger
-        Properties: { Key: "s" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: go down
+        Type: input action
+        Properties: { Action: down }
+        Listeners: [ go down ]
       release down:
-        Type: key up trigger
-        Properties: { Key: "s" }
-        Listeners:
-          - EntityId: leader
-            BehaviourId: stop
+        Type: input action
+        Properties: { Action: down-release }
+        Listeners: [ stop ]
       go down:
         Type: vector variable setter
         Properties:
@@ -182,17 +212,15 @@ Entities:
           Colour: !var follower colour
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: follower below
-            BehaviourId: track
+        Listeners: [ track ]
       track:
         Type: position setter
         Properties:
           Position: !expr
             Do: shift y
             With:
-              - !entity { Id: leader, Property: Position }
-              - !var follower below offset y
+              pos: !entity { Id: leader, Property: Position }
+              yoffset: !var follower below offset y
 
   camera:
     Position: !var camera position

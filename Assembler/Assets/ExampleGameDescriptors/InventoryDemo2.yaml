@@ -171,8 +171,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add coin
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - remove self
       remove self:
         Type: destroy
 
@@ -197,8 +196,7 @@ Templates:
         Listeners:
           - EntityId: inventory
             BehaviourId: add key
-          - EntityId: !parameter self_id
-            BehaviourId: remove self
+          - remove self
       remove self:
         Type: destroy
 
@@ -227,18 +225,16 @@ Entities:
         Type: input action
         Properties:
           Action: move
-        Listeners:
-          - EntityId: player
-            BehaviourId: apply move
+        Listeners: [ apply move ]
       apply move:
         Type: translate
         Properties:
           Displacement: !expr
-            Do: 'new UnityEngine.Vector3(arg0 * arg2, arg1 * arg2, 0f)'
+            Do: 'new UnityEngine.Vector3(x * step, y * step, 0f)'
             With:
-              - !output x
-              - !output y
-              - !var move step
+              x: !output x
+              y: !output y
+              step: !var move step
 
       keep in bounds:
         Type: clamp position
@@ -274,12 +270,8 @@ Entities:
       use potion gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: has potion, With: [ !var inventory ] }
-        Listeners:
-          - EntityId: inventory
-            BehaviourId: consume potion
-          - EntityId: inventory
-            BehaviourId: gain health
+          Condition: !expr { Do: has potion, With: { inv: !var inventory } }
+        Listeners: [ consume potion, gain health ]
       # The consume expression mutates the first in-stock potion in the list in place (count - 1,
       # durability - 0.1) and returns it; the setter parks that record in `last potion`. Because a
       # record is a reference type, the mutation is visible in the inventory list too.
@@ -287,12 +279,12 @@ Entities:
         Type: record variable setter
         Properties:
           VariableId: !var last potion
-          Value: !expr { Do: consume first potion, With: [ !var inventory ] }
+          Value: !expr { Do: consume first potion, With: { inv: !var inventory } }
       gain health:
         Type: int variable setter
         Properties:
           VariableId: !var health
-          Value: !expr { Do: 'arg0 + 1', With: [ !var health ] }
+          Value: !expr { Do: 'health + 1', With: { health: !var health } }
 
   # Polls the win condition every frame: collecting all the keys ends the game.
   win check:
@@ -300,18 +292,16 @@ Entities:
     Behaviours:
       tick:
         Type: every frame trigger
-        Listeners:
-          - EntityId: win check
-            BehaviourId: gate
+        Listeners: [ gate ]
       gate:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'arg0 >= arg1'
+            Do: 'key_count >= keys_to_win'
             ArgumentTypes: [ int, int ]
             With:
-              - !expr { Do: count of kind, With: [ !var inventory, "key" ] }
-              - !var keys to win
+              key_count: !expr { Do: count of kind, With: { inv: !var inventory, kind: "key" } }
+              keys_to_win: !var keys to win
         Listeners:
           - !gameover
 
@@ -368,7 +358,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.coins, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "coin" ] } ] }
+                  Text: !text { Key: hud.coins, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "coin" } } ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40
@@ -377,7 +367,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.potions, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "potion" ] } ] }
+                  Text: !text { Key: hud.potions, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "potion" } } ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40
@@ -386,7 +376,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.keys, Arguments: [ !expr { Do: count of kind, With: [ !var inventory, "key" ] }, !var keys to win ] }
+                  Text: !text { Key: hud.keys, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "key" } }, !var keys to win ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40

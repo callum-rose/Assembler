@@ -29,14 +29,14 @@ namespace Assembler.Resolving
 				{
 					IValueProvider<T> typedProvider => typedProvider,
 					IValueProvider<int> intProvider when typeof(T) == typeof(float) =>
-						(IValueProvider<T>)(object)new MappedValueProvider<int, float>(intProvider, i => i),
+						(IValueProvider<T>)(object)MappedValueProvider<int, float>.Create(intProvider, i => i),
 					// An enum-bound `!var` reads a plain string constant once and hands back a genuine
 					// ValueProvider<TEnum> with a real enum value — not a per-read string mapping. The enum
 					// type is known here (the read site is ValueReferenceSource<TEnum>), so parse in place.
 					IValueProvider<string> str when typeof(T).IsEnum =>
 						(IValueProvider<T>)(object)BuildEnumProvider(typeof(T), str.Get(TriggerContext.Empty)),
 					_ when typeof(T) == typeof(object) =>
-						(IValueProvider<T>)(object)new BoxingValueProvider(provider),
+						(IValueProvider<T>)(object)BoxingValueProvider.Create(provider),
 					_ => throw new ResolveException(
 						$"Type mismatch for variable '{id}'. Expected {typeof(T)}, got {provider.GetType()}")
 				};

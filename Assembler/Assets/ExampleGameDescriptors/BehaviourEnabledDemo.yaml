@@ -31,6 +31,27 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
+Controls:
+  Actions:
+    freeze: { Type: button, Phase: down }
+    resume: { Type: button, Phase: down }
+    quit:   { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      freeze: [ "<Keyboard>/f" ]
+      resume: [ "<Keyboard>/g" ]
+      quit:   [ "<Keyboard>/q" ]
+    mobile:
+      freeze: [ "<Gamepad>/buttonWest" ]
+      resume: [ "<Gamepad>/buttonEast" ]
+      quit:   [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: freeze, Label: "Freeze", Anchor: lower-right, Offset: { X: 200, Y: 440 }, Size: { X: 260, Y: 200 } }
+    - { Type: button, Action: resume, Label: "Resume", Anchor: lower-right, Offset: { X: 200, Y: 200 }, Size: { X: 260, Y: 200 } }
+    - { Type: button, Action: quit,   Label: "Quit",   Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
   mover:
     Position: !vec { X: -4, Y: 0, Z: 0 }
@@ -56,9 +77,7 @@ Entities:
         Type: interval trigger
         Properties:
           Interval: !var pulse interval
-        Listeners:
-          - EntityId: controller
-            BehaviourId: flip drift
+        Listeners: [ flip drift ]
       # Flips the cube's drift on/off relative to its current state.
       flip drift:
         Type: toggle behaviour enabled
@@ -68,11 +87,9 @@ Entities:
               BehaviourId: drift
 
       freeze key:
-        Type: key down trigger
-        Properties: { Key: "f" }
-        Listeners:
-          - EntityId: controller
-            BehaviourId: freeze
+        Type: input action
+        Properties: { Action: freeze }
+        Listeners: [ freeze ]
       freeze:
         Type: set behaviour enabled
         Properties:
@@ -82,11 +99,9 @@ Entities:
               BehaviourId: drift
 
       resume key:
-        Type: key down trigger
-        Properties: { Key: "g" }
-        Listeners:
-          - EntityId: controller
-            BehaviourId: resume
+        Type: input action
+        Properties: { Action: resume }
+        Listeners: [ resume ]
       resume:
         Type: set behaviour enabled
         Properties:
@@ -96,8 +111,8 @@ Entities:
               BehaviourId: drift
 
       quit:
-        Type: key down trigger
-        Properties: { Key: "q" }
+        Type: input action
+        Properties: { Action: quit }
         Listeners: [ !gameover ]
 
   camera:

@@ -43,7 +43,27 @@ Constants:
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera size: 8
 
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # --- Maze walls. Gaps alternate (top / bottom / top) to force a serpentine route. ---
   wall left:                      # spans y[-7, 2], gap at the TOP (y > 2)
     Position: !vec { X: -3.5, Y: -2.5, Z: 0 }
@@ -109,17 +129,17 @@ Entities:
       # Win when the agent reaches the goal: each frame, test the distance and end the game.
       arrival clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: agent, BehaviourId: arrival check } ]
+        Listeners: [ arrival check ]
       arrival check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'Distance(arg0, arg1) < arg2'
+            Do: 'Distance(agent_pos, goal_pos) < radius'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              - !entity { Id: agent, Property: Position }
-              - !var goal position
-              - !var reach radius
+              agent_pos: !entity { Id: agent, Property: Position }
+              goal_pos: !var goal position
+              radius: !var reach radius
         Listeners: [ !gameover ]
 
   camera:

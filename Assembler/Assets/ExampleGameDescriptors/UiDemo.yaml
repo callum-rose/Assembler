@@ -30,7 +30,27 @@ Localisation:
       btn.click: "Click me"
       btn.quit: "Quit"
 
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   ui:
     Behaviours:
       canvas:
@@ -94,6 +114,6 @@ Entities:
                 Properties:
                   VariableId: !var clicks
                   Value: !expr
-                    Do: 'arg0 + 1'
+                    Do: 'clicks + 1'
                     With:
-                      - !var clicks
+                      clicks: !var clicks

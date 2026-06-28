@@ -1,6 +1,5 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Movement
@@ -11,13 +10,9 @@ namespace Assembler.Behaviours.Movement
 	///   Target: World-space position to move toward.
 	///   Speed: Movement speed in units per second; a step never passes the target.
 	/// </remarks>
-	public class MoveTowards : GameBehaviour<MoveTowardsData>, INeedsGameClock
+	public class MoveTowards : PerFrameBehaviour<MoveTowardsData>
 	{
-		public IGameClock Clock { get; set; } = null!;
-
-		private void Update() => Step();
-
-		internal void Step()
+		internal override void Step()
 		{
 			transform.position = Vector3.MoveTowards(
 				transform.position, Data.Target.Get(), Data.Speed.Get() * Clock.DeltaTime);

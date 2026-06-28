@@ -1,0 +1,594 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+namespace VoxelsFromMeshSpike
+{
+    /// <summary>A single filled voxel in the mesh's Y-up grid space.</summary>
+    public readonly struct VoxCell
+    {
+        public readonly int X;
+        public readonly int Y;
+        public readonly int Z;
+        public readonly Color32 Color;
+
+        public VoxCell(int x, int y, int z, Color32 color)
+        {
+            X = x;
+            Y = y;
+            Z = z;
+            Color = color;
+        }
+    }
+
+    /// <summary>Output of <see cref="ObjToVoxConverter.Convert"/>: grid dims + filled cells.</summary>
+    public sealed class VoxResult
+    {
+        public int GridX { get; }
+        public int GridY { get; }
+        public int GridZ { get; }
+        public IReadOnlyList<VoxCell> Cells { get; }
+
+        public VoxResult(int gridX, int gridY, int gridZ, List<VoxCell> cells)
+        {
+            GridX = gridX;
+            GridY = gridY;
+            GridZ = gridZ;
+            Cells = cells;
+        }
+    }
+
+    /// <summary>Progress sink for the (slow) per-voxel pass. Return false to cancel.</summary>
+    public interface IProgressReporter
+    {
+        bool Report(float fraction, string message);
+    }
+
+    /// <summary>
+    /// Solid-fills a textured mesh (.obj or .fbx) into a coloured voxel grid.
+    ///
+    /// Geometry + spatial queries use geometry3Sharp (g3). OBJ is parsed by a small
+    /// local reader (rather than g3's <c>StandardMeshReader</c>) so that per-wedge UVs
+    /// survive — g3's single-material OBJ path collapses one UV per position and would
+    /// drop the UVs typical textured meshes carry. FBX is loaded through Unity's own
+    /// importer (there is no practical hand-written FBX parser), then the imported
+    /// mesh + material texture are read back out and fed into the same pipeline.
+    /// </summary>
+    public static class ObjToVoxConverter
+    {
+        private const int MaxGridDim = 256;
+        private const string TempImportFolder = "Assets/__VoxSpikeTemp";
+
+        public static VoxResult Convert(string meshPath, int maxDimVoxels, IProgressReporter progress)
+        {
+            maxDimVoxels = Mathf.Clamp(maxDimVoxels, 1, MaxGridDim);
+
+            LoadedModel model = LoadModel(meshPath);
+            g3.DMesh3 mesh = model.Mesh;
+            bool hasUVs = model.HasUVs;
+            ColorSource colors = model.Colors;
+
+            var tree = new g3.DMeshAABBTree3(mesh);
+            tree.Build();
+
+            g3.AxisAlignedBox3d b = mesh.GetBounds();
+            double maxDim = b.MaxDim;
+            if (maxDim <= 0)
+            {
+                throw new InvalidDataException("Mesh has zero extent; nothing to voxelize.");
+            }
+
+            double voxelSize = maxDim / maxDimVoxels;
+            int gridX = GridDim(b.Width, voxelSize);
+            int gridY = GridDim(b.Height, voxelSize);
+            int gridZ = GridDim(b.Depth, voxelSize);
+
+            var cells = new List<VoxCell>();
+            long total = (long)gridX * gridY * gridZ;
+            long done = 0;
+            int reportEvery = Mathf.Max(1, (int)(total / 100));
+
+            for (int gy = 0; gy < gridY; gy++)
+            {
+                double py = b.Min.y + (gy + 0.5) * voxelSize;
+                for (int gz = 0; gz < gridZ; gz++)
+                {
+                    double pz = b.Min.z + (gz + 0.5) * voxelSize;
+                    for (int gx = 0; gx < gridX; gx++)
+                    {
+                        double px = b.Min.x + (gx + 0.5) * voxelSize;
+                        var p = new g3.Vector3d(px, py, pz);
+
+                        // |winding| so the fill is robust to global orientation: an
+                        // inverted/flipped mesh (e.g. handedness conversion on FBX, or a
+                        // generative mesh wound inside-out) reads −1 inside, not +1.
+                        if (Math.Abs(tree.FastWindingNumber(p)) > 0.5)
+                        {
+                            Color32 color = SampleColor(mesh, tree, colors, hasUVs, p);
+                            cells.Add(new VoxCell(gx, gy, gz, color));
+                        }
+
+                        if (++done % reportEvery == 0)
+                        {
+                            float frac = (float)((double)done / total);
+                            if (!progress.Report(frac, $"Voxelizing… {done:N0}/{total:N0} cells, {cells.Count:N0} filled"))
+                            {
+                                throw new OperationCanceledException("Voxelization cancelled.");
+                            }
+                        }
+                    }
+                }
+            }
+
+            return new VoxResult(gridX, gridY, gridZ, cells);
+        }
+
+        private static Color32 SampleColor(
+            g3.DMesh3 mesh, g3.DMeshAABBTree3 tree, ColorSource colors, bool hasUVs, g3.Vector3d p)
+        {
+            if (!colors.HasTexture || !hasUVs)
+            {
+                return colors.FlatColor;
+            }
+
+            int tid = tree.FindNearestTriangle(p);
+            if (tid < 0)
+            {
+                return colors.FlatColor;
+            }
+
+            g3.Vector3d v0 = g3.Vector3d.Zero, v1 = g3.Vector3d.Zero, v2 = g3.Vector3d.Zero;
+            mesh.GetTriVertices(tid, ref v0, ref v1, ref v2);
+            var dist = new g3.DistPoint3Triangle3(p, new g3.Triangle3d(v0, v1, v2));
+            dist.GetSquared();
+            g3.Vector3d bary = dist.TriangleBaryCoords;
+
+            g3.Index3i tri = mesh.GetTriangle(tid);
+            g3.Vector2f uv0 = mesh.GetVertexUV(tri.a);
+            g3.Vector2f uv1 = mesh.GetVertexUV(tri.b);
+            g3.Vector2f uv2 = mesh.GetVertexUV(tri.c);
+
+            float u = (float)(bary.x * uv0.x + bary.y * uv1.x + bary.z * uv2.x);
+            // OBJ and Unity textures both put (0,0) at bottom-left, so V is used as-is.
+            // If the imported result looks vertically flipped, sample (u, 1 - v) instead.
+            float v = (float)(bary.x * uv0.y + bary.y * uv1.y + bary.z * uv2.y);
+
+            return colors.Texture!.GetPixelBilinear(u, v);
+        }
+
+        private static int GridDim(double extent, double voxelSize) =>
+            Mathf.Clamp(Mathf.Max(1, Mathf.CeilToInt((float)(extent / voxelSize))), 1, MaxGridDim);
+
+        // ---- Loader dispatch -------------------------------------------------
+
+        private static LoadedModel LoadModel(string path)
+        {
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            return ext switch
+            {
+                ".obj" => LoadObjModel(path),
+                ".fbx" => LoadUnityAssetModel(path),
+                _ => throw new InvalidDataException(
+                    $"Unsupported model format '{ext}'. Supported: .obj, .fbx.")
+            };
+        }
+
+        /// <summary>
+        /// Builds a g3 mesh from a per-vertex soup. Vertices are appended in order
+        /// (so array index == g3 vertex id), then triangles; g3 rejects triangles
+        /// that would make an edge non-manifold, so those are counted and reported
+        /// because the drops degrade the winding field on imperfect meshes.
+        /// </summary>
+        private static g3.DMesh3 BuildDMesh(
+            IReadOnlyList<g3.Vector3d> positions, IReadOnlyList<g3.Vector2f> uvs, IReadOnlyList<int> triangles)
+        {
+            var mesh = new g3.DMesh3();
+            mesh.EnableVertexUVs(g3.Vector2f.Zero);
+
+            for (int i = 0; i < positions.Count; i++)
+            {
+                var info = new g3.NewVertexInfo(positions[i]) { bHaveUV = true, uv = uvs[i] };
+                mesh.AppendVertex(ref info);
+            }
+
+            int appended = 0;
+            int dropped = 0;
+            for (int t = 0; t + 2 < triangles.Count; t += 3)
+            {
+                int a = triangles[t], b = triangles[t + 1], c = triangles[t + 2];
+                if (a == b || b == c || a == c)
+                {
+                    continue;
+                }
+                if (mesh.AppendTriangle(a, b, c) >= 0)
+                {
+                    appended++;
+                }
+                else
+                {
+                    dropped++;
+                }
+            }
+
+            if (dropped > 0)
+            {
+                Debug.LogWarning(
+                    $"[VoxelsFromMeshSpike] Dropped {dropped:N0} non-manifold triangle(s) " +
+                    $"of {appended + dropped:N0}; solid fill may be approximate.");
+            }
+
+            return mesh;
+        }
+
+        // ---- OBJ geometry ----------------------------------------------------
+
+        private static LoadedModel LoadObjModel(string objPath)
+        {
+            g3.DMesh3 mesh = LoadObjMesh(objPath, out bool hasUVs);
+            ColorSource colors = LoadColorSource(objPath);
+            return new LoadedModel(mesh, hasUVs, colors);
+        }
+
+        private static g3.DMesh3 LoadObjMesh(string objPath, out bool hasUVs)
+        {
+            var positions = new List<g3.Vector3d>();
+            var uvs = new List<g3.Vector2f>();
+            var faces = new List<int[]>(); // each entry: flattened [pos,uv, pos,uv, ...]
+
+            foreach (string raw in File.ReadLines(objPath))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0 || line[0] == '#')
+                {
+                    continue;
+                }
+
+                string[] tok = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                switch (tok[0])
+                {
+                    case "v" when tok.Length >= 4:
+                        positions.Add(new g3.Vector3d(ParseF(tok[1]), ParseF(tok[2]), ParseF(tok[3])));
+                        break;
+                    case "vt" when tok.Length >= 3:
+                        uvs.Add(new g3.Vector2f(ParseF(tok[1]), ParseF(tok[2])));
+                        break;
+                    case "f" when tok.Length >= 4:
+                        faces.Add(ParseFace(tok, positions.Count, uvs.Count));
+                        break;
+                }
+            }
+
+            // Split vertices per unique (position, uv) so wedge UVs are preserved.
+            var outPositions = new List<g3.Vector3d>();
+            var outUVs = new List<g3.Vector2f>();
+            var triangles = new List<int>();
+            var vertexMap = new Dictionary<(int pos, int uv), int>();
+
+            int VertexFor(int posIdx, int uvIdx)
+            {
+                var key = (posIdx, uvIdx);
+                if (vertexMap.TryGetValue(key, out int existing))
+                {
+                    return existing;
+                }
+
+                int index = outPositions.Count;
+                outPositions.Add(positions[posIdx]);
+                outUVs.Add(uvIdx >= 0 && uvIdx < uvs.Count ? uvs[uvIdx] : g3.Vector2f.Zero);
+                vertexMap[key] = index;
+                return index;
+            }
+
+            foreach (int[] face in faces)
+            {
+                int corners = face.Length / 2;
+                // Fan-triangulate the (assumed convex) polygon.
+                for (int i = 1; i < corners - 1; i++)
+                {
+                    triangles.Add(VertexFor(face[0], face[1]));
+                    triangles.Add(VertexFor(face[i * 2], face[i * 2 + 1]));
+                    triangles.Add(VertexFor(face[(i + 1) * 2], face[(i + 1) * 2 + 1]));
+                }
+            }
+
+            // UVs are usable only if faces referenced texture coords at all.
+            hasUVs = uvs.Count > 0 && faces.Exists(f => f[1] >= 0);
+            return BuildDMesh(outPositions, outUVs, triangles);
+        }
+
+        // ---- FBX / Unity-imported geometry -----------------------------------
+
+        private static LoadedModel LoadUnityAssetModel(string path)
+        {
+            string assetPath = ToProjectRelative(path, out bool isTemp);
+            try
+            {
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                if (go == null)
+                {
+                    throw new InvalidDataException($"Unity could not import '{path}' as a model.");
+                }
+
+                MeshFilter[] filters = go.GetComponentsInChildren<MeshFilter>();
+                if (filters.Length == 0)
+                {
+                    throw new InvalidDataException("Imported model contains no meshes.");
+                }
+
+                var positions = new List<g3.Vector3d>();
+                var uvs = new List<g3.Vector2f>();
+                var triangles = new List<int>();
+                bool hasUVs = false;
+
+                Matrix4x4 rootInverse = go.transform.worldToLocalMatrix;
+                foreach (MeshFilter filter in filters)
+                {
+                    Mesh? m = filter.sharedMesh;
+                    if (m == null)
+                    {
+                        continue;
+                    }
+
+                    Matrix4x4 toRoot = rootInverse * filter.transform.localToWorldMatrix;
+                    Vector3[] verts = m.vertices;
+                    Vector2[] meshUVs = m.uv;
+                    bool meshHasUVs = meshUVs.Length == verts.Length && verts.Length > 0;
+                    hasUVs |= meshHasUVs;
+
+                    int baseIndex = positions.Count;
+                    for (int i = 0; i < verts.Length; i++)
+                    {
+                        Vector3 p = toRoot.MultiplyPoint3x4(verts[i]);
+                        // Unity is left-handed (+Z forward); convert to the OBJ-style
+                        // right-handed convention (+Z toward viewer) by negating Z so
+                        // both formats share one orientation path downstream.
+                        positions.Add(new g3.Vector3d(p.x, p.y, -p.z));
+                        Vector2 uv = meshHasUVs ? meshUVs[i] : Vector2.zero;
+                        uvs.Add(new g3.Vector2f(uv.x, uv.y));
+                    }
+
+                    int[] tris = m.triangles;
+                    foreach (int idx in tris)
+                    {
+                        triangles.Add(baseIndex + idx);
+                    }
+                }
+
+                g3.DMesh3 mesh = BuildDMesh(positions, uvs, triangles);
+                ColorSource colors = LoadUnityColorSource(go);
+                return new LoadedModel(mesh, hasUVs, colors);
+            }
+            finally
+            {
+                if (isTemp)
+                {
+                    AssetDatabase.DeleteAsset(TempImportFolder);
+                }
+            }
+        }
+
+        // Returns a project-relative ("Assets/…") path. Files already inside the
+        // project are referenced in place; anything else is copied into a temp folder
+        // and imported (isTemp=true), so the caller cleans it up afterwards.
+        private static string ToProjectRelative(string absolutePath, out bool isTemp)
+        {
+            string dataPath = Application.dataPath.Replace('\\', '/');
+            string normalised = absolutePath.Replace('\\', '/');
+            if (normalised.StartsWith(dataPath, StringComparison.OrdinalIgnoreCase))
+            {
+                isTemp = false;
+                return "Assets" + normalised.Substring(dataPath.Length);
+            }
+
+            if (!AssetDatabase.IsValidFolder(TempImportFolder))
+            {
+                AssetDatabase.CreateFolder("Assets", Path.GetFileName(TempImportFolder));
+            }
+            string dest = $"{TempImportFolder}/{Path.GetFileName(absolutePath)}";
+            File.Copy(absolutePath, dest, true);
+            AssetDatabase.ImportAsset(dest, ImportAssetOptions.ForceSynchronousImport);
+            isTemp = true;
+            return dest;
+        }
+
+        private static ColorSource LoadUnityColorSource(GameObject go)
+        {
+            var midGrey = new Color32(128, 128, 128, 255);
+            Renderer[] renderers = go.GetComponentsInChildren<Renderer>();
+
+            foreach (Renderer r in renderers)
+            {
+                Material? mat = r.sharedMaterial;
+                if (mat != null && mat.mainTexture is Texture2D tex)
+                {
+                    return new ColorSource { Texture = MakeReadable(tex) };
+                }
+            }
+
+            foreach (Renderer r in renderers)
+            {
+                Material? mat = r.sharedMaterial;
+                if (mat == null)
+                {
+                    continue;
+                }
+                if (mat.HasProperty("_BaseColor"))
+                {
+                    return new ColorSource { FlatColor = mat.GetColor("_BaseColor") };
+                }
+                if (mat.HasProperty("_Color"))
+                {
+                    return new ColorSource { FlatColor = mat.color };
+                }
+            }
+
+            return new ColorSource { FlatColor = midGrey };
+        }
+
+        // Blits to a temporary RenderTexture so we get CPU-readable pixels regardless
+        // of the source texture's import settings (non-readable / compressed).
+        private static Texture2D MakeReadable(Texture2D src)
+        {
+            RenderTexture rt = RenderTexture.GetTemporary(
+                src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            Graphics.Blit(src, rt);
+
+            RenderTexture? previous = RenderTexture.active;
+            RenderTexture.active = rt;
+            var readable = new Texture2D(src.width, src.height, TextureFormat.RGBA32, false);
+            readable.ReadPixels(new Rect(0, 0, src.width, src.height), 0, 0);
+            readable.Apply();
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+            return readable;
+        }
+
+        // Parse one face token list into a flattened [pos,uv,...] array (0-based; uv = -1 if none).
+        private static int[] ParseFace(string[] tok, int posCount, int uvCount)
+        {
+            int corners = tok.Length - 1;
+            var flat = new int[corners * 2];
+            for (int i = 0; i < corners; i++)
+            {
+                string[] parts = tok[i + 1].Split('/');
+                int pos = ResolveIndex(parts[0], posCount);
+                int uv = parts.Length >= 2 ? ResolveIndex(parts[1], uvCount) : -1;
+                flat[i * 2] = pos;
+                flat[i * 2 + 1] = uv;
+            }
+            return flat;
+        }
+
+        // OBJ indices are 1-based; negative values count back from the current end.
+        private static int ResolveIndex(string s, int count)
+        {
+            if (string.IsNullOrEmpty(s) || !int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out int idx))
+            {
+                return -1;
+            }
+            return idx > 0 ? idx - 1 : count + idx;
+        }
+
+        private static float ParseF(string s) =>
+            float.Parse(s, NumberStyles.Float, CultureInfo.InvariantCulture);
+
+        // ---- Shared types ----------------------------------------------------
+
+        private sealed class LoadedModel
+        {
+            public g3.DMesh3 Mesh { get; }
+            public bool HasUVs { get; }
+            public ColorSource Colors { get; }
+
+            public LoadedModel(g3.DMesh3 mesh, bool hasUVs, ColorSource colors)
+            {
+                Mesh = mesh;
+                HasUVs = hasUVs;
+                Colors = colors;
+            }
+        }
+
+        // ---- Colour source (.mtl / map_Kd) -----------------------------------
+
+        private sealed class ColorSource
+        {
+            public Texture2D? Texture { get; init; }
+            public Color32 FlatColor { get; init; }
+            public bool HasTexture => Texture != null;
+        }
+
+        private static ColorSource LoadColorSource(string objPath)
+        {
+            var midGrey = new Color32(128, 128, 128, 255);
+            try
+            {
+                string? mtlPath = FindMtlPath(objPath);
+                if (mtlPath == null || !File.Exists(mtlPath))
+                {
+                    return new ColorSource { FlatColor = midGrey };
+                }
+
+                string mtlDir = Path.GetDirectoryName(mtlPath) ?? ".";
+                Color32 flat = midGrey;
+                string? mapKd = null;
+
+                foreach (string raw in File.ReadLines(mtlPath))
+                {
+                    string line = raw.Trim();
+                    if (line.StartsWith("map_Kd", StringComparison.OrdinalIgnoreCase))
+                    {
+                        mapKd = line.Substring("map_Kd".Length).Trim();
+                    }
+                    else if (line.StartsWith("Kd", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string[] t = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                        if (t.Length >= 4)
+                        {
+                            flat = new Color(ParseF(t[1]), ParseF(t[2]), ParseF(t[3]), 1f);
+                        }
+                    }
+                }
+
+                if (mapKd != null)
+                {
+                    string? texPath = ResolveTexturePath(mapKd, mtlDir);
+                    if (texPath != null && File.Exists(texPath))
+                    {
+                        var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                        if (tex.LoadImage(File.ReadAllBytes(texPath)))
+                        {
+                            return new ColorSource { Texture = tex };
+                        }
+                    }
+                    Debug.LogWarning($"[VoxelsFromMeshSpike] map_Kd '{mapKd}' not found/loadable; using flat Kd colour.");
+                }
+
+                return new ColorSource { FlatColor = flat };
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[VoxelsFromMeshSpike] Failed to load colour source: {e.Message}; using mid-grey.");
+                return new ColorSource { FlatColor = midGrey };
+            }
+        }
+
+        private static string? FindMtlPath(string objPath)
+        {
+            string objDir = Path.GetDirectoryName(objPath) ?? ".";
+            foreach (string raw in File.ReadLines(objPath))
+            {
+                string line = raw.Trim();
+                if (line.StartsWith("mtllib", StringComparison.OrdinalIgnoreCase))
+                {
+                    string name = line.Substring("mtllib".Length).Trim();
+                    return Path.IsPathRooted(name) ? name : Path.Combine(objDir, name);
+                }
+            }
+            // Fallback: sibling file sharing the OBJ basename.
+            string sibling = Path.Combine(objDir, Path.GetFileNameWithoutExtension(objPath) + ".mtl");
+            return File.Exists(sibling) ? sibling : null;
+        }
+
+        private static string? ResolveTexturePath(string mapKd, string mtlDir)
+        {
+            // map_Kd may carry options before the filename (e.g. "-bm 0.5 tex.png").
+            // Try the whole remainder first, then fall back to the last token.
+            string whole = Path.IsPathRooted(mapKd) ? mapKd : Path.Combine(mtlDir, mapKd);
+            if (File.Exists(whole))
+            {
+                return whole;
+            }
+
+            string[] parts = mapKd.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
+            {
+                return null;
+            }
+            string last = parts[parts.Length - 1];
+            return Path.IsPathRooted(last) ? last : Path.Combine(mtlDir, last);
+        }
+    }
+}

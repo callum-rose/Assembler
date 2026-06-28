@@ -3,6 +3,7 @@ using Assembler.Core;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using UnityEngine;
+using AnimationInfo = Assembler.Parsing.Info.Behaviours.AnimationInfo;
 using CubeGizmoInfo = Assembler.Parsing.Info.Behaviours.CubeGizmoInfo;
 using SphereGizmoInfo = Assembler.Parsing.Info.Behaviours.SphereGizmoInfo;
 
@@ -42,19 +43,9 @@ namespace Assembler.Parsing
 				["rotate"] = RotateInfo.Create,
 				["rotation setter"] = SetRotationInfo.Create,
 				["look at"] = LookAtInfo.Create,
-				["move animation"] = MoveAnimationInfo.Create,
-				["scale animation"] = ScaleAnimationInfo.Create,
-				["rotate animation"] = RotateAnimationInfo.Create,
-				["key hold trigger"] = KeyHoldTriggerInfo.Create,
-				["key down trigger"] = KeyDownTriggerInfo.Create,
-				["key up trigger"] = KeyUpTriggerInfo.Create,
-				["mouse button trigger"] = MouseButtonTriggerInfo.Create,
-				["mouse position trigger"] = MousePositionTriggerInfo.Create,
-				["scroll wheel trigger"] = ScrollWheelTriggerInfo.Create,
-				["axis trigger"] = AxisTriggerInfo.Create,
+				["animation"] = AnimationInfo.Create,
 				["input action"] = InputActionTriggerInfo.Create,
 				["cursor lock"] = CursorLockInfo.Create,
-				["gamepad button trigger"] = GamepadButtonTriggerInfo.Create,
 				["tap trigger"] = TapTriggerInfo.Create,
 				["double tap trigger"] = DoubleTapTriggerInfo.Create,
 				["long press trigger"] = LongPressTriggerInfo.Create,

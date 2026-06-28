@@ -65,7 +65,27 @@ Constants:
   camera position: !vec { X: 0, Y: 0, Z: -10 }
   camera size: 9
 
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   # --- The barrier: three wall segments leaving a narrow centre gap and a wide right gap. ---
   barrier left:
     Position: !var wall left position
@@ -149,17 +169,17 @@ Entities:
       # Win when the large agent (longest path) reaches the goal.
       arrival clock:
         Type: every frame trigger
-        Listeners: [ { EntityId: large agent, BehaviourId: arrival check } ]
+        Listeners: [ arrival check ]
       arrival check:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: 'Distance(arg0, arg1) < arg2'
+            Do: 'Distance(agent_pos, goal_pos) < radius'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              - !entity { Id: large agent, Property: Position }
-              - !var goal position
-              - !var reach radius
+              agent_pos: !entity { Id: large agent, Property: Position }
+              goal_pos: !var goal position
+              radius: !var reach radius
         Listeners: [ !gameover ]
 
   camera:

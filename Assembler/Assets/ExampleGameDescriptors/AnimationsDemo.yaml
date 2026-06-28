@@ -1,11 +1,11 @@
 Game:
   Title: Animations Demo
   Description: |
-    Demonstrates the move / scale / rotate animation behaviours backed by DOTween.
-    On start, a square pops in (scale 0 -> 1 with OutBack), then drifts upward
-    (InOutSine) when the pop completes, then spins (Linear) when the drift
-    completes. Start state is omitted on the move/rotate steps so they tween
-    from the entity's current transform value.
+    Demonstrates the `animation` behaviour backed by DOTween. On start, a single
+    sequence plays three appended steps: a square pops in (scale 0 -> 1 with
+    OutBack), then drifts upward (InOutSine), then spins (Linear). Start state is
+    omitted on the move/rotate steps so they tween from the entity's current
+    transform value at that point in the sequence.
 
 World:
   Dimensionality: 2
@@ -20,7 +20,27 @@ Constants:
   camera view: "orthographic"
   camera size: 5
 
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
 Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
   logo:
     Position: !vec { X: 0, Y: -1, Z: 0 }
     Behaviours:
@@ -33,37 +53,15 @@ Entities:
 
       start:
         Type: on start trigger
-        Listeners:
-          - EntityId: logo
-            BehaviourId: pop in
+        Listeners: [ flourish ]
 
-      pop in:
-        Type: scale animation
+      flourish:
+        Type: animation
         Properties:
-          Start: !vec { X: 0, Y: 0, Z: 0 }
-          End: !vec { X: 1, Y: 1, Z: 1 }
-          Duration: 0.5
-          Easing: OutBack
-        Listeners:
-          - EntityId: logo
-            BehaviourId: drift up
-
-      drift up:
-        Type: move animation
-        Properties:
-          End: !vec { X: 0, Y: 2, Z: 0 }
-          Duration: 1.5
-          Easing: InOutSine
-        Listeners:
-          - EntityId: logo
-            BehaviourId: spin
-
-      spin:
-        Type: rotate animation
-        Properties:
-          End: !vec { X: 0, Y: 0, Z: 360 }
-          Duration: 2.0
-          Easing: Linear
+          Steps:
+            - { Animate: scale,  Start: !vec { X: 0, Y: 0, Z: 0 }, End: !vec { X: 1, Y: 1, Z: 1 }, Duration: 0.5, Easing: OutBack }
+            - { Animate: move,   End: !vec { X: 0, Y: 2, Z: 0 }, Duration: 1.5, Easing: InOutSine }
+            - { Animate: rotate, End: !vec { X: 0, Y: 0, Z: 360 }, Duration: 2.0, Easing: Linear }
 
   camera:
     Tags: [ camera ]

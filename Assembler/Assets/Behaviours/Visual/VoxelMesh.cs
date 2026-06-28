@@ -10,8 +10,10 @@ namespace Assembler.Behaviours.Visual
 	///   Mesh: Asset reference to the Mesh to display.
 	///   Scale: Optional local-space scale multiplier applied to the child renderer.
 	/// </remarks>
-	public class VoxelMesh : GameBehaviour<VoxelMeshData>
+	public class VoxelMesh : GameBehaviour<VoxelMeshData>, INeedsLiveProperties
 	{
+		public LivePropertyUpdater LiveProperties { get; set; } = null!;
+
 		protected override void OnInitialise(VoxelMeshData data)
 		{
 			var meshGo = new GameObject("VoxelMesh");
@@ -21,7 +23,9 @@ namespace Assembler.Behaviours.Visual
 			filter.sharedMesh = data.Mesh.Get();
 			meshGo.AddComponent<MeshRenderer>();
 
-			data.Scale.UseIfValueExists(s => meshGo.transform.localScale = s);
+			// Live-bind the scale so a !var/!expr/!clock animates the mesh; an omitted Scale falls back to
+			// Vector3.one, matching the transform's default (so the no-Scale case is unchanged).
+			data.Scale.BindLive(this, s => meshGo.transform.localScale = s, Vector3.one);
 		}
 	}
 }

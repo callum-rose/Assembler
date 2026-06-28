@@ -9,26 +9,9 @@ namespace Assembler.Behaviours.Physics
 	/// Properties:
 	///   Velocity: World-space linear velocity in units per second.
 	/// </remarks>
-	public sealed class SetVelocityBehaviour : GameBehaviour<SetVelocityData>, IAmExecutable
+	public sealed class SetVelocityBehaviour : RigidbodyGameBehaviour<SetVelocityData>
 	{
-		private Rigidbody _rigidbody;
-
-		protected override void OnInitialise(SetVelocityData data)
-		{
-			_rigidbody = GetComponent<Rigidbody>();
-		}
-
-		public void Execute(TriggerContext ctx)
-		{
-			if (_rigidbody == null)
-			{
-				_rigidbody = GetComponent<Rigidbody>();
-			}
-
-			if (_rigidbody != null)
-			{
-				_rigidbody.linearVelocity = Data.Velocity.Get(ctx);
-			}
-		}
+		protected override void Apply(Rigidbody rigidbody, TriggerContext ctx) =>
+			rigidbody.linearVelocity = Data.Velocity.Get(ctx);
 	}
 }

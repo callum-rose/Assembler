@@ -288,8 +288,11 @@ Turns the entity each frame to face Target in the XZ ground plane (a yaw about +
 | Target | Vector3 | World-space point to face. |
 | TurnRate | float | Maximum turn speed in degrees/sec; 0 (the default) snaps instantly to face the target. |
 
-## `move animation`
-Tweens the entity's world position from Start to End over Duration. See TransformAnimation.
+## `animation`
+Compiles an ordered list of tween steps into a single DOTween sequence and plays it as a unit, notifying
+            listeners once when the whole sequence completes. Each step tweens one transform property (move/rotate/scale)
+            or is a pure wait, and is placed relative to the previous step by its mode (append after, join alongside, or
+            insert at an absolute time). The sequence is rebuilt from the live providers on every Execute.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -297,142 +300,16 @@ Tweens the entity's world position from Start to End over Duration. See Transfor
 
 | Name | Type | Description |
 |------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
-
-## `scale animation`
-Tweens the entity's local scale from Start to End over Duration. See TransformAnimation.
-
-**Role:** Executable (valid `Listeners:` target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
-
-## `rotate animation`
-Tweens the entity's euler angles from Start to End over Duration. See TransformAnimation.
-
-**Role:** Executable (valid `Listeners:` target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Start | Vector3 | Value to animate from. Falls back to the current transform value when unset. |
-| End | Vector3 | Value to animate to. |
-| Duration | float | Animation length in seconds (clamped to a minimum of 0). |
-| Easing | Easing | Which ease to apply — one of linear, inSine/outSine/inOutSine, inQuad/outQuad/inOutQuad, |
-
-## `key hold trigger`
-Fires every frame while the named key is held down.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Key | string | Legacy input key name (lowercase), e.g. "w", "space", "escape", "up", "mouse0". |
-
-## `key down trigger`
-Fires on the frame the named key is pressed down.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
-
-## `key up trigger`
-Fires on the frame the named key is released.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Key | string | Legacy input key name (lowercase), e.g. "space", "w", "mouse0", "escape". |
-
-## `mouse button trigger`
-Fires on a mouse button event during the selected phase (press, release, or hold).
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Button | int | Mouse button index — 0 (left), 1 (right), 2 (middle). |
-| Phase | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| mouse_position | Vector3 | Screen-space mouse position when the trigger fires. |
-
-## `mouse position trigger`
-Fires every frame the mouse moves, publishing the current position and frame delta.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-No properties.
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| mouse_position | Vector3 | Current screen-space mouse position. |
-| mouse_delta | Vector3 | Screen-space movement since the previous frame. |
-
-## `scroll wheel trigger`
-Fires on frames where the mouse scroll wheel moved.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-No properties.
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| scroll_delta | Vector3 | Scroll wheel delta for this frame (y is the common vertical scroll; z is 0). |
-
-## `axis trigger`
-Fires every frame with the current value(s) of one or two Unity input axes (1D or 2D).
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| XAxis | string | Name of the Unity input axis read into the x component (e.g. "Horizontal"). |
-| YAxis | string | Optional. Name of the Unity input axis read into the y component (e.g. "Vertical"). Leave unset for a 1D axis. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| axis | Vector3 | Combined (x, y, 0) axis value; y is 0 when YAxis is unset. |
-| x | float | Current XAxis value. |
-| y | float | Current YAxis value, or 0 when YAxis is unset. |
+| Steps | IReadOnlyList<AnimationStepInfo> | Ordered list of tween-step maps; each has Animate (move=position, rotate=eulerAngles, scale=localScale, or wait=pure delay), Mode (append after the previous step [default], join alongside the previously appended step, or insert at the absolute time given by At; ignored for wait), Start (Vector3 to tween from via DOTween .From — omit to chain from the live value at that point), End (Vector3 to tween to; required for move/rotate/scale), Duration (seconds, clamped to ≥ 0; the pause length for a wait), At (absolute sequence time used when Mode is insert), and Easing (default inOutSine). For a single-tween animation, omit Steps and set Animate/Start/End/Duration/Easing at the top level instead. |
+| Loops | int | How many times the whole sequence plays; 1 (default) plays once, -1 loops forever. |
+| LoopType | SequenceLoopType | How the sequence repeats when Loops ≠ 1 — restart (default), yoyo, or incremental. |
 
 ## `input action`
 Relays an abstract input action (declared in the descriptor's Controls section and bound to a
-            physical input per platform) to listeners. A drop-in replacement for the raw key triggers: a button action
-            behaves like the key hold/down/up triggers depending on its phase, and a value action behaves like the axis
-            trigger, emitting axis/x/y every frame.
+            physical input per platform) to listeners. This is the single input-event source for gameplay: a button
+            action fires on its phase (hold ⇒ every frame held, down ⇒ on press, up ⇒ on release), and a value action
+            emits axis/x/y every frame. Physical keys, mouse buttons, mouse position/scroll, and gamepad controls are
+            all expressed as bindings on the action rather than as separate trigger types.
 
 **Role:** Trigger (event source — emits to listeners; not a listener target).
 
@@ -461,18 +338,6 @@ Locks (and optionally hides) the hardware cursor so relative mouse-look deltas k
 |------|------|-------------|
 | Locked | bool | Whether to lock the cursor to the window centre (default true). |
 | Visible | bool | Whether the cursor stays visible while locked (default false). |
-
-## `gamepad button trigger`
-Fires on a gamepad / joystick button event (press, release, or hold).
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Button | string | Unity key string for the gamepad button (e.g. "joystick button 0", "joystick 1 button 1"). |
-| Mode | ButtonPhase | When to fire — "down" (press only), "up" (release only), or "hold" (every frame held). Defaults to "down". |
 
 ## `tap trigger`
 Fires once when the pointer is pressed and released quickly without moving (a tap).
