@@ -62,6 +62,7 @@ namespace Tests.VoxelsFromMeshSpike
                     "Mirror (symmetry)",
                     "Revolve (symmetry)",
                     "De-light",
+                    "Snap to histogram peaks",
                     "Snap to master palette",
                     "Despeckle / fill",
                 },

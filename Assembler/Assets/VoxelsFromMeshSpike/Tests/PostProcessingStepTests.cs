@@ -128,6 +128,44 @@ namespace Tests.VoxelsFromMeshSpike
             Assert.AreEqual(new Color32(12, 34, 56, 255), model.Colors[model.Index(0, 0, 0)]);
         }
 
+        // ---- Histogram-peak snap ----
+
+        [Test]
+        public void HistogramSnap_ReducesToTopNDominantColors()
+        {
+            // 6x1x1: three reds (the dominant peak), two greens, one blue. Keep 2 peaks → red+green,
+            // and the lone blue must snap to whichever peak is nearer (green, in Oklab).
+            var model = new VoxModel(6, 1, 1);
+            SetVoxel(model, 0, 0, 0, new Color32(200, 0, 0, 255));
+            SetVoxel(model, 1, 0, 0, new Color32(200, 0, 0, 255));
+            SetVoxel(model, 2, 0, 0, new Color32(200, 0, 0, 255));
+            SetVoxel(model, 3, 0, 0, new Color32(0, 200, 0, 255));
+            SetVoxel(model, 4, 0, 0, new Color32(0, 200, 0, 255));
+            SetVoxel(model, 5, 0, 0, new Color32(0, 0, 200, 255));
+
+            HistogramSnap.Apply(model, 2);
+
+            HashSet<int> colors = DistinctColors(model);
+            Assert.AreEqual(2, colors.Count, "should reduce to exactly the 2 dominant peaks");
+            Assert.IsTrue(colors.Contains((200 << 16)), "red peak kept");
+            Assert.IsTrue(colors.Contains((200 << 8)), "green peak kept");
+            Assert.AreEqual(new Color32(200, 0, 0, 255), model.Colors[model.Index(0, 0, 0)]);
+        }
+
+        [Test]
+        public void HistogramSnap_FewerDistinctThanN_LeavesColorsUntouched()
+        {
+            // Two distinct colours, ask for 8 peaks — nothing to reduce, both survive verbatim.
+            var model = new VoxModel(2, 1, 1);
+            SetVoxel(model, 0, 0, 0, new Color32(200, 0, 0, 255));
+            SetVoxel(model, 1, 0, 0, new Color32(0, 200, 0, 255));
+
+            HistogramSnap.Apply(model, 8);
+
+            Assert.AreEqual(new Color32(200, 0, 0, 255), model.Colors[model.Index(0, 0, 0)]);
+            Assert.AreEqual(new Color32(0, 200, 0, 255), model.Colors[model.Index(1, 0, 0)]);
+        }
+
         // ---- Morphology ----
 
         [Test]

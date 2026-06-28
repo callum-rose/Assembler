@@ -209,7 +209,22 @@ namespace VoxelsFromMeshSpike
                 }
             }
 
-            // Step 5 — palette-snap.
+            // Step 5a — histogram-peak snap (per-model colour reduction, before the shared-palette snap).
+            _settings.snapToHistogramPeaks = EditorGUILayout.ToggleLeft(
+                new GUIContent("Snap to histogram peaks",
+                    "Reduce to the model's own dominant colours: snap every voxel to one of the top N peaks in its colour histogram. Runs before the master-palette snap."),
+                _settings.snapToHistogramPeaks);
+            if (_settings.snapToHistogramPeaks)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _settings.histogramPeakCount = EditorGUILayout.IntSlider(
+                        new GUIContent("Peak count (N)", "How many distinct dominant colours to keep. Near-duplicate peaks are suppressed, so fewer may survive on a near-monochrome model."),
+                        _settings.histogramPeakCount, 1, 64);
+                }
+            }
+
+            // Step 5b — palette-snap.
             _settings.snapToPalette = EditorGUILayout.ToggleLeft(
                 new GUIContent("Snap to master palette",
                     "Snap each colour to the nearest swatch in a shared master palette (Oklab) for cross-asset cohesion."),

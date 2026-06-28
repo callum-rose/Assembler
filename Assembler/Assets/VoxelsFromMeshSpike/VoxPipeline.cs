@@ -53,6 +53,12 @@ namespace VoxelsFromMeshSpike
                 new DeLightStep(
                     settings.deLight,
                     new DeLight.Options(settings.deLightThreshold)),
+                // Per-model colour reduction (top-N histogram peaks) runs before the shared-palette
+                // snap: collapse a noisy model to its own dominant colours, then map those onto the
+                // master swatches.
+                new HistogramSnapStep(
+                    settings.snapToHistogramPeaks,
+                    settings.histogramPeakCount),
                 new PaletteSnapStep(
                     settings.snapToPalette,
                     palette),

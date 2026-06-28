@@ -5,8 +5,8 @@ namespace VoxelsFromMeshSpike
 {
     /// <summary>
     /// Thin <see cref="IVoxStep"/> adapters over the stateless step algorithms
-    /// (<see cref="FloaterRemoval"/>, <see cref="DeLight"/>, <see cref="PaletteSnap"/>,
-    /// <see cref="Morphology"/>). Each wrapper owns its enabled flag and params so the
+    /// (<see cref="FloaterRemoval"/>, <see cref="DeLight"/>, <see cref="HistogramSnap"/>,
+    /// <see cref="PaletteSnap"/>, <see cref="Morphology"/>). Each wrapper owns its enabled flag and params so the
     /// pipeline can treat every step uniformly. The algorithms stay independently testable;
     /// these just bind config to them.
     /// </summary>
@@ -68,6 +68,21 @@ namespace VoxelsFromMeshSpike
         public string Name => "De-light";
         public bool Enabled { get; }
         public void Apply(VoxModel model) => DeLight.Apply(model, _options);
+    }
+
+    public sealed class HistogramSnapStep : IVoxStep
+    {
+        private readonly int _peakCount;
+
+        public HistogramSnapStep(bool enabled, int peakCount)
+        {
+            Enabled = enabled;
+            _peakCount = peakCount;
+        }
+
+        public string Name => "Snap to histogram peaks";
+        public bool Enabled { get; }
+        public void Apply(VoxModel model) => HistogramSnap.Apply(model, _peakCount);
     }
 
     public sealed class PaletteSnapStep : IVoxStep

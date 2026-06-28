@@ -56,7 +56,8 @@ namespace VoxelsFromMeshSpike
                 meshPath, maxDimVoxels, voxelProgress ?? NullProgressReporter.Instance);
 
             // Post-processing runs over the dense working model in canonical order (floaters →
-            // de-light → palette-snap → morphology), built from the supplied preset + overrides.
+            // de-light → histogram-peak snap → palette-snap → morphology), built from the supplied
+            // preset + overrides.
             VoxModel model = VoxModel.FromResult(result);
             VoxPipeline pipeline = VoxPipeline.FromSettings(settings, palette);
             pipeline.Run(model, pipelineProgress);
