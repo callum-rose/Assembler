@@ -1,6 +1,7 @@
 using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
+using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
@@ -55,11 +56,11 @@ Entities:
 
 			CollectionAssert.AreEqual(
 				new[] { AnimationTarget.Scale, AnimationTarget.Move, AnimationTarget.Rotate, AnimationTarget.Wait },
-				info.Steps.Select(s => s.Animate).ToArray());
+				info.Steps.Select(s => ((ConstantSource<AnimationTarget>)s.Animate).Value).ToArray());
 
 			CollectionAssert.AreEqual(
 				new[] { SequenceMode.Append, SequenceMode.Append, SequenceMode.Join, SequenceMode.Append },
-				info.Steps.Select(s => s.Mode).ToArray());
+				info.Steps.Select(s => ((ConstantSource<SequenceMode>)s.Mode).Value).ToArray());
 		}
 
 		[Test]
@@ -71,11 +72,11 @@ Entities:
 
 			CollectionAssert.AreEqual(
 				new[] { AnimationTarget.Scale, AnimationTarget.Move, AnimationTarget.Rotate, AnimationTarget.Wait },
-				data.Steps.Select(s => s.Target).ToArray());
+				data.Steps.Select(s => s.Target.Get(TriggerContext.Empty)).ToArray());
 
 			CollectionAssert.AreEqual(
 				new[] { SequenceMode.Append, SequenceMode.Append, SequenceMode.Join, SequenceMode.Append },
-				data.Steps.Select(s => s.Mode).ToArray());
+				data.Steps.Select(s => s.Mode.Get(TriggerContext.Empty)).ToArray());
 
 			// The scale step set Start explicitly; the rotate step omitted it (chains from the live value).
 			Assert.IsNotInstanceOf<NullValueProvider<Vector3>>(data.Steps[0].Start);
@@ -102,8 +103,8 @@ Entities:
 ");
 
 			Assert.AreEqual(1, info.Steps.Count);
-			Assert.AreEqual(AnimationTarget.Move, info.Steps[0].Animate);
-			Assert.AreEqual(SequenceMode.Append, info.Steps[0].Mode);
+			Assert.AreEqual(AnimationTarget.Move, ((ConstantSource<AnimationTarget>)info.Steps[0].Animate).Value);
+			Assert.AreEqual(SequenceMode.Append, ((ConstantSource<SequenceMode>)info.Steps[0].Mode).Value);
 
 			// Default loop settings: plays once, restart.
 			var data = Build(info);

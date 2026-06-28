@@ -2,8 +2,6 @@ using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using DG.Tweening;
-using DG.Tweening.Core;
-using DG.Tweening.Plugins.Options;
 using UnityEngine;
 
 namespace Assembler.Behaviours.Animations
@@ -32,23 +30,26 @@ namespace Assembler.Behaviours.Animations
 
 			foreach (var step in Data.Steps)
 			{
+				var target = step.Target.Get(ctx);
 				var duration = Mathf.Max(0f, step.Duration.Get(ctx));
 
-				if (step.Target == AnimationTarget.Wait)
+				if (target == AnimationTarget.Wait)
 				{
 					sequence.AppendInterval(duration);
 					continue;
 				}
 
-				var tween = BuildTween(step.Target, step.End.Get(ctx), duration);
+				var tween = target switch
+				{
+					AnimationTarget.Rotate => DOTween.To(() => transform.eulerAngles, v => transform.eulerAngles = v, step.End.Get(ctx), duration),
+					AnimationTarget.Scale => DOTween.To(() => transform.localScale, v => transform.localScale = v, step.End.Get(ctx), duration),
+					_ => DOTween.To(() => transform.position, v => transform.position = v, step.End.Get(ctx), duration)
+				};
 				tween.SetEase(step.Easing.ValueOr(ctx, Easing.InOutSine).ToEase());
 
-				if (step.Start is not NullValueProvider<Vector3>)
-				{
-					tween.From(step.Start.Get(ctx));
-				}
+				step.Start.UseIfValueExists(ctx, from => tween.From(from));
 
-				switch (step.Mode)
+				switch (step.Mode.Get(ctx))
 				{
 					case SequenceMode.Join:
 						sequence.Join(tween);
@@ -69,24 +70,14 @@ namespace Assembler.Behaviours.Animations
 				sequence.SetLoops(loops, Data.LoopType.ValueOr(ctx, SequenceLoopType.Restart).ToLoopType());
 			}
 
-			var captured = ctx;
-
 			sequence.OnComplete(() =>
 			{
 				_sequence = null;
-				NotifyListeners(captured);
+				NotifyListeners(ctx);
 			});
 
 			_sequence = sequence;
 		}
-
-		private TweenerCore<Vector3, Vector3, VectorOptions> BuildTween(AnimationTarget target, Vector3 end, float duration) =>
-			target switch
-			{
-				AnimationTarget.Rotate => DOTween.To(() => transform.eulerAngles, v => transform.eulerAngles = v, end, duration),
-				AnimationTarget.Scale => DOTween.To(() => transform.localScale, v => transform.localScale = v, end, duration),
-				_ => DOTween.To(() => transform.position, v => transform.position = v, end, duration)
-			};
 
 		private void OnDestroy()
 		{

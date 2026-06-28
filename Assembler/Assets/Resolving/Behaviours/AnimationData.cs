@@ -4,13 +4,13 @@ using UnityEngine;
 
 namespace Assembler.Resolving.Behaviours
 {
-	/// <summary>One resolved tween step: live providers for the value-bearing fields plus the fixed
-	/// <see cref="Target"/>/<see cref="Mode"/> structure. <see cref="Start"/> and <see cref="At"/> are
-	/// <see cref="NullValueProvider{T}"/> when omitted (chain from the live value / append after the previous step).</summary>
+	/// <summary>One resolved tween step: live providers for every field, read when the sequence is (re)built on
+	/// Execute. <see cref="Start"/> and <see cref="At"/> are <see cref="NullValueProvider{T}"/> when omitted
+	/// (chain from the live value / append after the previous step).</summary>
 	public readonly struct AnimationStep
 	{
-		public AnimationTarget Target { get; }
-		public SequenceMode Mode { get; }
+		public IValueProvider<AnimationTarget> Target { get; }
+		public IValueProvider<SequenceMode> Mode { get; }
 		public IValueProvider<Vector3> Start { get; }
 		public IValueProvider<Vector3> End { get; }
 		public IValueProvider<float> Duration { get; }
@@ -18,8 +18,8 @@ namespace Assembler.Resolving.Behaviours
 		public IValueProvider<float> At { get; }
 
 		public AnimationStep(
-			AnimationTarget target,
-			SequenceMode mode,
+			IValueProvider<AnimationTarget> target,
+			IValueProvider<SequenceMode> mode,
 			IValueProvider<Vector3> start,
 			IValueProvider<Vector3> end,
 			IValueProvider<float> duration,
@@ -58,8 +58,8 @@ namespace Assembler.Resolving.Behaviours
 	{
 		/// <summary>Resolves one parsed step into its runtime form, turning each value source into a live provider.</summary>
 		public static AnimationStep Resolve(this AnimationStepInfo step, ResolutionContext ctx) =>
-			new(step.Animate,
-				step.Mode,
+			new(step.Animate.Resolve(ctx),
+				step.Mode.Resolve(ctx),
 				step.Start.Resolve(ctx),
 				step.End.Resolve(ctx),
 				step.Duration.Resolve(ctx),

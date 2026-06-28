@@ -4,14 +4,15 @@ using UnityEngine;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
-	/// <summary>One tween step of an <c>animation</c> sequence. <see cref="Animate"/> and <see cref="Mode"/> are
-	/// fixed structural enums parsed at transform time; the value-bearing fields are <c>!var</c>/<c>!expr</c>-capable
-	/// and resolved each time the sequence is (re)built on Execute. A <see cref="AnimationTarget.Wait"/> step is a
-	/// pure delay — only <see cref="Duration"/> is read; <see cref="Mode"/>, <see cref="End"/>, <see cref="Start"/>,
-	/// <see cref="At"/> and <see cref="Easing"/> are ignored.</summary>
+	/// <summary>One tween step of an <c>animation</c> sequence. Every field is a <see cref="ValueSource{T}"/> —
+	/// <c>!var</c>/<c>!expr</c>-capable and resolved each time the sequence is (re)built on Execute — including the
+	/// enum-valued <see cref="Animate"/>/<see cref="Mode"/>/<see cref="Easing"/> (matching how other behaviours
+	/// treat fixed enums). A <see cref="AnimationTarget.Wait"/> step is a pure delay — only <see cref="Duration"/>
+	/// is read; <see cref="Mode"/>, <see cref="End"/>, <see cref="Start"/>, <see cref="At"/> and
+	/// <see cref="Easing"/> are ignored.</summary>
 	public sealed record AnimationStepInfo(
-		AnimationTarget Animate,
-		SequenceMode Mode,
+		ValueSource<AnimationTarget> Animate,
+		ValueSource<SequenceMode> Mode,
 		ValueSource<Vector3> Start,
 		ValueSource<Vector3> End,
 		ValueSource<float> Duration,
@@ -21,6 +22,8 @@ namespace Assembler.Parsing.Info.Behaviours
 		public AnimationStepInfo SubstituteParameters(TransformContext ctx) =>
 			this with
 			{
+				Animate = Animate.SubstituteParameters(ctx),
+				Mode = Mode.SubstituteParameters(ctx),
 				Start = Start.SubstituteParameters(ctx),
 				End = End.SubstituteParameters(ctx),
 				Duration = Duration.SubstituteParameters(ctx),
@@ -100,12 +103,21 @@ namespace Assembler.Parsing.Info.Behaviours
 			IReadOnlyDictionary<string, AssemblerValue> dict,
 			string id)
 		{
-			var animate = ParseTarget(dict.GetValueOrDefault("Animate"), id);
-			var mode = ParseMode(dict.GetValueOrDefault("Mode"), id);
+			var animateRaw = dict.GetValueOrDefault("Animate");
 
-			if (animate != AnimationTarget.Wait && dict.GetValueOrDefault("End") is null or NoValue)
+			if (animateRaw is null or NoValue)
 			{
-				throw new ParsingException($"animation '{id}': a '{animate}' step needs an End value.");
+				throw new ParsingException(
+					$"animation '{id}': each step needs an Animate value (move, rotate, scale, wait).");
+			}
+
+			// A literal target lets us validate End presence up front; a bound (!var/!expr) target can only be
+			// known at runtime, so its End requirement is deferred to the End provider read in Execute.
+			if (animateRaw is StringValue s
+				&& BehaviourEnums.Parse<AnimationTarget>(s.Value) != AnimationTarget.Wait
+				&& dict.GetValueOrDefault("End") is null or NoValue)
+			{
+				throw new ParsingException($"animation '{id}': a '{s.Value}' step needs an End value.");
 			}
 
 			if (dict.GetValueOrDefault("Duration") is null or NoValue)
@@ -114,32 +126,13 @@ namespace Assembler.Parsing.Info.Behaviours
 			}
 
 			return new AnimationStepInfo(
-				animate,
-				mode,
+				ValueSourceFactory.CreateEnumSource(ctx, animateRaw, AnimationTarget.Move),
+				ValueSourceFactory.CreateEnumSource(ctx, dict.GetValueOrDefault("Mode"), SequenceMode.Append),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, dict.GetValueOrDefault("Start")),
 				ValueSourceFactory.CreateValueSource<Vector3>(ctx, dict.GetValueOrDefault("End")),
 				ValueSourceFactory.CreateValueSource<float>(ctx, dict.GetValueOrDefault("Duration")),
 				ValueSourceFactory.CreateEnumSource(ctx, dict.GetValueOrDefault("Easing"), Easing.InOutSine),
 				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, dict.GetValueOrDefault("At")));
 		}
-
-		private static AnimationTarget ParseTarget(AssemblerValue? raw, string id) =>
-			raw switch
-			{
-				StringValue s => BehaviourEnums.Parse<AnimationTarget>(s.Value),
-				null or NoValue => throw new ParsingException(
-					$"animation '{id}': each step needs an Animate value (move, rotate, scale, wait)."),
-				_ => throw new ParsingException(
-					$"animation '{id}': Animate must be a literal (move, rotate, scale, wait), not a binding.")
-			};
-
-		private static SequenceMode ParseMode(AssemblerValue? raw, string id) =>
-			raw switch
-			{
-				StringValue s => BehaviourEnums.Parse<SequenceMode>(s.Value),
-				null or NoValue => SequenceMode.Append,
-				_ => throw new ParsingException(
-					$"animation '{id}': Mode must be a literal (append, join, insert), not a binding.")
-			};
 	}
 }

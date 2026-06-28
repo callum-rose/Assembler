@@ -5,7 +5,7 @@ namespace Assembler.Behaviours.Animations
 {
 	/// <summary>Maps the descriptor-facing <see cref="Easing"/> / <see cref="SequenceLoopType"/> enums onto their
 	/// DOTween equivalents. Sole home for the mapping shared by the animation behaviour.</summary>
-	public static class EasingExtensions
+	public static class AnimationEnumExtensions
 	{
 		// The Easing members mirror DOTween's Ease names one-for-one, so this maps straight across.
 		public static Ease ToEase(this Easing easing) =>
