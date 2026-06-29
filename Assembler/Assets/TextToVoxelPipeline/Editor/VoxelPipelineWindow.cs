@@ -9,7 +9,7 @@ using Assembler.ImageGeneration;
 using Assembler.MeshyImageTo3D;
 using UnityEditor;
 using UnityEngine;
-using VoxelsFromMeshSpike;
+using Assembler.VoxelPipeline;
 
 namespace Assembler.TextToVoxelPipeline
 {
@@ -24,7 +24,7 @@ namespace Assembler.TextToVoxelPipeline
     public sealed class VoxelPipelineWindow : EditorWindow
     {
         private const string Pref = "Assembler.TextToVoxel.";
-        private const string DefaultPaletteAssetPath = "Assets/VoxelsFromMeshSpike/MasterPalette.asset";
+        private const string DefaultPaletteAssetPath = "Assets/VoxelPipeline/MasterPalette.asset";
 
         private static readonly string[] MeshyModels = { "meshy-6", "meshy-5", "meshy-4" };
 

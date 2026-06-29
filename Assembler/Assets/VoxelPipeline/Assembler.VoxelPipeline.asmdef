@@ -1,0 +1,16 @@
+{
+    "name": "Assembler.VoxelPipeline",
+    "rootNamespace": "Assembler.VoxelPipeline",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

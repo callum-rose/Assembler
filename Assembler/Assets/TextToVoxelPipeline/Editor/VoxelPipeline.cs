@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Assembler.ImageGeneration;
 using Assembler.MeshyImageTo3D;
 using UnityEngine;
-using VoxelsFromMeshSpike;
+using Assembler.VoxelPipeline;
 
 namespace Assembler.TextToVoxelPipeline
 {

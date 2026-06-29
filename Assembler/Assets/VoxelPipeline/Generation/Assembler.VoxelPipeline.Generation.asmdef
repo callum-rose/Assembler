@@ -1,0 +1,19 @@
+{
+    "name": "Assembler.VoxelPipeline.Generation",
+    "rootNamespace": "Assembler.VoxelPipeline.Generation",
+    "references": [
+        "Assembler.VoxelPipeline",
+        "Assembler.Anthropic"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
