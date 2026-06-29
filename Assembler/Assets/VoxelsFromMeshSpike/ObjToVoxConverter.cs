@@ -62,11 +62,22 @@ namespace VoxelsFromMeshSpike
         private const int MaxGridDim = 256;
         private const string TempImportFolder = "Assets/__VoxSpikeTemp";
 
-        public static VoxResult Convert(string meshPath, int maxDimVoxels, IProgressReporter progress)
+        /// <summary>
+        /// Imports the mesh and snapshots its textures into Unity-free buffers. Touches the
+        /// <c>AssetDatabase</c> / <c>Texture2D</c> APIs, so it <b>must run on the main thread</b>;
+        /// the returned <see cref="LoadedModel"/> can then be voxelized off-thread via
+        /// <see cref="Convert(LoadedModel, int, IProgressReporter)"/>.
+        /// </summary>
+        public static LoadedModel LoadScene(string meshPath) => LoadModel(meshPath);
+
+        /// <summary>
+        /// Voxelizes a pre-<see cref="LoadScene">loaded</see> model. Pure CPU work (g3 geometry +
+        /// managed texture sampling), so it is safe to run on a background thread.
+        /// </summary>
+        public static VoxResult Convert(LoadedModel model, int maxDimVoxels, IProgressReporter progress)
         {
             maxDimVoxels = Mathf.Clamp(maxDimVoxels, 1, MaxGridDim);
 
-            LoadedModel model = LoadModel(meshPath);
             g3.DMesh3 mesh = model.Mesh;
             bool hasUVs = model.HasUVs;
             ColorSource colors = model.Colors;
@@ -170,7 +181,7 @@ namespace VoxelsFromMeshSpike
         {
             var accum = new Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>>();
             bool textured = colors.HasTexture && hasUVs;
-            Texture2D? tex = colors.Texture;
+            TextureSnapshot? tex = colors.Texture;
 
             // Model centre, for the outward-facing test below.
             double cx = bounds.Min.x + bounds.Width * 0.5;
@@ -273,11 +284,11 @@ namespace VoxelsFromMeshSpike
             }
         }
 
-        // sRGB texel fetch: GetPixelBilinear decodes to linear in a Linear-space project, so
-        // re-encode to gamma for the (sRGB) .vox palette. Bilinear is fine here — the gutter is
-        // grey, and these samples are averaged per voxel anyway.
-        private static Color32 SampleTexel(Texture2D tex, float u, float v) =>
-            ((Color)tex.GetPixelBilinear(u, v)).gamma;
+        // sRGB texel fetch: the snapshot samples in linear space (mirroring GetPixelBilinear in a
+        // Linear-space project), so re-encode to gamma for the (sRGB) .vox palette. Bilinear is fine
+        // here — the gutter is grey, and these samples are averaged per voxel anyway.
+        private static Color32 SampleTexel(TextureSnapshot tex, float u, float v) =>
+            tex.SampleBilinear(u, v).gamma;
 
         private static void AccumulateColour(
             Dictionary<int, Dictionary<int, (long r, long g, long b, int n)>> accum, int voxel, Color32 c)
@@ -392,11 +403,10 @@ namespace VoxelsFromMeshSpike
             // If the imported result looks vertically flipped, sample (u, 1 - v) instead.
             float v = (float)(bary.x * uv0.y + bary.y * uv1.y + bary.z * uv2.y);
 
-            // In a Linear-space project GetPixelBilinear returns the colour in LINEAR
-            // space (it mirrors the GPU sampler's sRGB→linear decode), whereas the .vox
-            // palette is sRGB. Re-encode to gamma so the written colours aren't darkened
-            // by the gamma curve. (Color.gamma applies the linear→sRGB conversion.)
-            return ((Color)colors.Texture!.GetPixelBilinear(u, v)).gamma;
+            // The snapshot samples in LINEAR space (mirroring the GPU sampler's sRGB→linear
+            // decode), whereas the .vox palette is sRGB. Re-encode to gamma so the written
+            // colours aren't darkened by the gamma curve. (Color.gamma applies linear→sRGB.)
+            return colors.Texture!.SampleBilinear(u, v).gamma;
         }
 
         private static int GridDim(double extent, double voxelSize) =>
@@ -644,7 +654,7 @@ namespace VoxelsFromMeshSpike
                 Material? mat = r.sharedMaterial;
                 if (mat != null && mat.mainTexture is Texture2D tex)
                 {
-                    return new ColorSource { Texture = MakeReadable(tex) };
+                    return new ColorSource { Texture = SnapshotTexture(tex) };
                 }
             }
 
@@ -668,9 +678,10 @@ namespace VoxelsFromMeshSpike
             return new ColorSource { FlatColor = midGrey };
         }
 
-        // Blits to a temporary RenderTexture so we get CPU-readable pixels regardless
-        // of the source texture's import settings (non-readable / compressed).
-        private static Texture2D MakeReadable(Texture2D src)
+        // Blits to a temporary RenderTexture so we get CPU-readable pixels regardless of the
+        // source texture's import settings (non-readable / compressed), then snapshots them into
+        // a Unity-free linear buffer the off-thread colour passes can sample. Main thread only.
+        private static TextureSnapshot SnapshotTexture(Texture2D src)
         {
             RenderTexture rt = RenderTexture.GetTemporary(
                 src.width, src.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
@@ -683,7 +694,10 @@ namespace VoxelsFromMeshSpike
             readable.Apply();
             RenderTexture.active = previous;
             RenderTexture.ReleaseTemporary(rt);
-            return readable;
+
+            TextureSnapshot snapshot = TextureSnapshot.Capture(readable);
+            UnityEngine.Object.DestroyImmediate(readable);
+            return snapshot;
         }
 
         // Parse one face token list into a flattened [pos,uv,...] array (0-based; uv = -1 if none).
@@ -717,7 +731,7 @@ namespace VoxelsFromMeshSpike
 
         // ---- Shared types ----------------------------------------------------
 
-        private sealed class LoadedModel
+        public sealed class LoadedModel
         {
             public g3.DMesh3 Mesh { get; }
             public bool HasUVs { get; }
@@ -733,11 +747,74 @@ namespace VoxelsFromMeshSpike
 
         // ---- Colour source (.mtl / map_Kd) -----------------------------------
 
-        private sealed class ColorSource
+        public sealed class ColorSource
         {
-            public Texture2D? Texture { get; init; }
+            public TextureSnapshot? Texture { get; init; }
             public Color32 FlatColor { get; init; }
             public bool HasTexture => Texture != null;
+        }
+
+        /// <summary>
+        /// A CPU-side, Unity-free copy of a texture's pixels (decoded to linear space) plus a
+        /// managed bilinear sampler — the off-thread stand-in for <see cref="Texture2D.GetPixelBilinear"/>,
+        /// which is main-thread only. Captured during <see cref="LoadScene"/> so the colour passes
+        /// can sample it from a background thread.
+        /// </summary>
+        public sealed class TextureSnapshot
+        {
+            private readonly Color[] _linearPixels; // row-major, (0,0) bottom-left
+            private readonly int _width;
+            private readonly int _height;
+
+            public TextureSnapshot(Color[] linearPixels, int width, int height)
+            {
+                _linearPixels = linearPixels;
+                _width = width;
+                _height = height;
+            }
+
+            /// <summary>Snapshots <paramref name="tex"/> into a linear-space buffer. Main thread only.</summary>
+            public static TextureSnapshot Capture(Texture2D tex)
+            {
+                Color[] stored = tex.GetPixels(); // stored sRGB values, no colour-space conversion
+                var linear = new Color[stored.Length];
+                for (int i = 0; i < stored.Length; i++)
+                {
+                    linear[i] = stored[i].linear; // mirror the GPU sampler's sRGB→linear decode
+                }
+                return new TextureSnapshot(linear, tex.width, tex.height);
+            }
+
+            /// <summary>
+            /// Repeat-wrapped bilinear sample in LINEAR space — the off-thread equivalent of
+            /// <see cref="Texture2D.GetPixelBilinear"/> in a linear-colour-space project. Callers
+            /// re-encode the result to gamma for the (sRGB) .vox palette.
+            /// </summary>
+            public Color SampleBilinear(float u, float v)
+            {
+                if (_width <= 0 || _height <= 0)
+                {
+                    return Color.clear;
+                }
+
+                float fx = Mathf.Repeat(u, 1f) * _width - 0.5f;
+                float fy = Mathf.Repeat(v, 1f) * _height - 0.5f;
+                int x0 = Mathf.FloorToInt(fx);
+                int y0 = Mathf.FloorToInt(fy);
+                float tx = fx - x0;
+                float ty = fy - y0;
+
+                Color bottom = Color.Lerp(Texel(x0, y0), Texel(x0 + 1, y0), tx);
+                Color top = Color.Lerp(Texel(x0, y0 + 1), Texel(x0 + 1, y0 + 1), tx);
+                return Color.Lerp(bottom, top, ty);
+            }
+
+            private Color Texel(int x, int y)
+            {
+                x = ((x % _width) + _width) % _width;
+                y = ((y % _height) + _height) % _height;
+                return _linearPixels[y * _width + x];
+            }
         }
 
         private static ColorSource LoadColorSource(string objPath)
@@ -780,7 +857,9 @@ namespace VoxelsFromMeshSpike
                         var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                         if (tex.LoadImage(File.ReadAllBytes(texPath)))
                         {
-                            return new ColorSource { Texture = tex };
+                            TextureSnapshot snapshot = TextureSnapshot.Capture(tex);
+                            UnityEngine.Object.DestroyImmediate(tex);
+                            return new ColorSource { Texture = snapshot };
                         }
                     }
                     Debug.LogWarning($"[VoxelsFromMeshSpike] map_Kd '{mapKd}' not found/loadable; using flat Kd colour.");
