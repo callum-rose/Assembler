@@ -21,6 +21,7 @@ namespace VoxelsFromMeshSpike
         private string _voxDir = "";
         private string _voxFile = "";
         private int _maxDimVoxels = 32;
+        private bool _converting;
 
         [SerializeField] private VoxPipelinePreset _preset = VoxPipelinePreset.Creature;
         [SerializeField] private VoxPipelineSettings _settings = VoxPipelinePresets.For(VoxPipelinePreset.Creature);
@@ -109,9 +110,10 @@ namespace VoxelsFromMeshSpike
 
             EditorGUILayout.Space();
 
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(_objPath) || string.IsNullOrEmpty(_voxDir)))
+            using (new EditorGUI.DisabledScope(
+                _converting || string.IsNullOrEmpty(_objPath) || string.IsNullOrEmpty(_voxDir)))
             {
-                if (GUILayout.Button("Convert", GUILayout.Height(32)))
+                if (GUILayout.Button(_converting ? "Converting…" : "Convert", GUILayout.Height(32)))
                 {
                     Convert();
                 }
@@ -261,8 +263,16 @@ namespace VoxelsFromMeshSpike
                 _settings.morphology);
         }
 
-        private void Convert()
+        // async void: a UI event handler that can't return a Task. The whole body is wrapped in
+        // try/catch (per house style) so an exception can't escape unhandled, and the conversion
+        // itself runs off the main thread (VoxConversion.Run) so the editor stays responsive.
+        private async void Convert()
         {
+            if (_converting)
+            {
+                return;
+            }
+
             try
             {
                 if (!File.Exists(_objPath))
@@ -271,9 +281,10 @@ namespace VoxelsFromMeshSpike
                     return;
                 }
 
+                _converting = true;
                 string voxPath = ResolveVoxPath();
                 var palette = _palette != null ? _palette.ToColor32() : DefaultMasterPalette.Colors;
-                VoxConversion.Summary summary = VoxConversion.Run(
+                VoxConversion.Summary summary = await VoxConversion.Run(
                     _objPath, voxPath, _maxDimVoxels, _settings, palette,
                     new EditorProgressReporter(),
                     (name, fraction) =>
@@ -292,7 +303,9 @@ namespace VoxelsFromMeshSpike
             }
             finally
             {
+                _converting = false;
                 EditorUtility.ClearProgressBar();
+                Repaint();
             }
         }
 

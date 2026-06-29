@@ -9,9 +9,10 @@ namespace VoxelsFromMeshSpike
 {
     /// <summary>
     /// Headless entry point for the mesh → VOX spike, so an automated harness (or an AI) can voxelize a
-    /// mesh and inspect the output without the editor window. Drives the exact same
-    /// <see cref="VoxConversion.Run"/> as the window; only the I/O is different (CLI args + log instead of
-    /// GUI + progress bars).
+    /// mesh and inspect the output without the editor window. Drives the same pipeline as the window via
+    /// <see cref="VoxConversion.RunSynchronous"/> (the blocking variant — there is no interactive editor
+    /// to keep responsive under -batchmode); only the I/O is different (CLI args + log instead of GUI +
+    /// progress bars).
     ///
     /// Invoked via:
     ///   Unity -batchmode -nographics -projectPath &lt;project&gt; -quit -logFile - \
@@ -60,7 +61,7 @@ namespace VoxelsFromMeshSpike
                     $"histogramPeaks={settings.snapToHistogramPeaks} (variety={settings.histogramPeakVariety}, cap={settings.histogramPeakCount}), " +
                     $"snap={settings.snapToPalette}, morphology={settings.morphology})");
 
-                VoxConversion.Summary summary = VoxConversion.Run(meshPath, voxPath, maxDim, settings, palette);
+                VoxConversion.Summary summary = VoxConversion.RunSynchronous(meshPath, voxPath, maxDim, settings, palette);
 
                 Debug.Log($"[VoxelsFromMeshSpikeBatch] OK: wrote {summary}");
                 EditorApplication.Exit(0);
