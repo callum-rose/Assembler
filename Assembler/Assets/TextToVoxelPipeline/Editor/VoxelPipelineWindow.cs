@@ -42,6 +42,10 @@ namespace Assembler.TextToVoxelPipeline
         private bool _reviewImage;
         private bool _reviewMesh;
 
+        // AI-config import (paste JSON from the AI Model Config window).
+        private bool _showImport;
+        private string _aiConfigPaste = "";
+
         private bool _running;
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
@@ -103,19 +107,25 @@ namespace Assembler.TextToVoxelPipeline
 
         // ---- Import from the AI Model Config window --------------------------
 
-        // Pulls the last config chosen in the AI Model Config window (prompt + preset + post-
-        // processing settings + resolution) so the whole text → voxel run can be driven from it.
+        // Paste the config JSON the AI Model Config window produced and apply it to the run
+        // (prompt + preset + post-processing settings + resolution). A pasted value is parsed
+        // on demand — nothing is shared between the two windows, so there are no fragile pref keys.
         private void DrawImportFromAi()
         {
-            using (new EditorGUILayout.HorizontalScope())
+            _showImport = EditorGUILayout.Foldout(_showImport, "Import AI config (paste JSON)", true);
+            if (!_showImport)
+                return;
+
+            using (new EditorGUI.IndentLevelScope())
             {
                 EditorGUILayout.LabelField(
-                    new GUIContent("AI config", "Generated in Window ▸ Voxels ▸ AI Model Config."),
-                    GUILayout.Width(70));
-                using (new EditorGUI.DisabledScope(!VoxModelConfigStore.HasStored))
+                    "Paste the config JSON from the AI Model Config window (the whole reply or just the json).",
+                    EditorStyles.miniLabel);
+                var wrap = new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+                _aiConfigPaste = EditorGUILayout.TextArea(_aiConfigPaste, wrap, GUILayout.MinHeight(70));
+                using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_aiConfigPaste)))
                 {
-                    if (GUILayout.Button(new GUIContent("Import last AI config",
-                        "Load the prompt, preset, post-processing settings and resolution last produced by the AI Model Config window.")))
+                    if (GUILayout.Button("Import"))
                         ImportFromAi();
                 }
             }
@@ -123,21 +133,28 @@ namespace Assembler.TextToVoxelPipeline
 
         private void ImportFromAi()
         {
-            if (!VoxModelConfigStore.TryLoad(out var config))
+            try
             {
-                SetStatus("No AI config has been generated yet — run the AI Model Config window first.");
-                return;
+                // Accept either a full fenced assistant reply or the bare json object.
+                var text = _aiConfigPaste.Trim();
+                var json = VoxConfigExtractor.Extract(text) ?? text;
+                var config = VoxConfigParser.ParseJson(json);
+
+                if (!string.IsNullOrEmpty(config.ImagePrompt))
+                    _settings.Prompt = config.ImagePrompt;
+                _preset = config.Preset;
+                _settings.VoxSettings = config.Settings;
+                _settings.MaxDimVoxels = config.Resolution;
+
+                // Drop keyboard focus so the prompt text field repaints with the imported value.
+                GUI.FocusControl(null);
+                SaveState();
+                SetStatus($"Imported AI config — preset {config.Preset}, {config.Resolution} voxels.");
             }
-
-            _settings.Prompt = config.ImagePrompt;
-            _preset = config.Preset;
-            _settings.VoxSettings = config.Settings;
-            _settings.MaxDimVoxels = config.Resolution;
-
-            // Drop keyboard focus so the prompt text field repaints with the imported value.
-            GUI.FocusControl(null);
-            SaveState();
-            SetStatus($"Imported AI config — preset {config.Preset}, {config.Resolution} voxels.");
+            catch (Exception e)
+            {
+                SetStatus($"Import failed: {e.Message}");
+            }
         }
 
         // ---- Stage 1: prompt → image ----------------------------------------

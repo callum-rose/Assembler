@@ -57,6 +57,15 @@ namespace Assembler.VoxelPipeline.Generation
                 sb.AppendLine(DescribeField(field));
             }
             sb.AppendLine();
+            sb.AppendLine(
+                "Symmetry (`mirror`, `revolve`) is off in every preset and forcing it can ruin an " +
+                "asset, so leave both off unless the model clearly calls for it. Enable `mirror` only " +
+                "for an asset meant to be bilaterally symmetric (most creatures, characters, vehicles) " +
+                "whose description implies no deliberate one-sided feature (an eyepatch, a raised paw, " +
+                "a logo on one side); set `mirrorAxis` to the left/right axis (usually X). Enable " +
+                "`revolve` only for a standalone rotationally-symmetric solid (a wheel, barrel, " +
+                "bottle, gear); set `revolveAxis` to its spin axis. When in doubt, leave both off.");
+            sb.AppendLine();
 
             sb.AppendLine("# Resolution");
             sb.AppendLine(

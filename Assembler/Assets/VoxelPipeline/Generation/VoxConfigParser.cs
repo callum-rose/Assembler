@@ -21,19 +21,24 @@ namespace Assembler.VoxelPipeline.Generation
     /// </summary>
     public static class VoxConfigParser
     {
-        public static VoxModelConfig Parse(string rawText, VoxStyleRules rules)
+        /// <summary>
+        /// Parses a full assistant reply: extracts its fenced <c>```json</c> block (a missing block
+        /// is the one hard failure) and parses it. <paramref name="rules"/> is optional — when
+        /// supplied, unknown applied-rule ids are dropped; when null, they are kept as-is.
+        /// </summary>
+        public static VoxModelConfig Parse(string rawText, VoxStyleRules? rules = null)
         {
-            if (rules == null)
-            {
-                throw new ArgumentNullException(nameof(rules));
-            }
+            var json = VoxConfigExtractor.Extract(rawText)
+                ?? throw new AnthropicRequestException(200, "AI model-config response contained no ```json block.");
+            return ParseJson(json, rules, rawText);
+        }
 
-            var json = VoxConfigExtractor.Extract(rawText);
-            if (json == null)
-            {
-                throw new AnthropicRequestException(200, "AI model-config response contained no ```json block.");
-            }
-
+        /// <summary>
+        /// Parses an already-extracted JSON config object (no fenced block needed). Used by callers
+        /// that paste the config json directly. Same lenient rules as <see cref="Parse"/>.
+        /// </summary>
+        public static VoxModelConfig ParseJson(string json, VoxStyleRules? rules = null, string? rawText = null)
+        {
             JsonDocument doc;
             try
             {
@@ -41,7 +46,7 @@ namespace Assembler.VoxelPipeline.Generation
             }
             catch (JsonException e)
             {
-                throw new AnthropicRequestException(200, "AI model-config json block was not valid JSON.", e);
+                throw new AnthropicRequestException(200, "AI model-config json was not valid JSON.", e);
             }
 
             using (doc)
@@ -64,11 +69,11 @@ namespace Assembler.VoxelPipeline.Generation
                 ClampRanges(settings);
 
                 var appliedRuleIds = GetStringArray(root, "appliedRuleIds")
-                    .Where(rules.IsKnown)
+                    .Where(id => rules == null || rules.IsKnown(id))
                     .Distinct()
                     .ToList();
 
-                return new VoxModelConfig(rawText, imagePrompt, appliedRuleIds, preset, resolution, settings);
+                return new VoxModelConfig(rawText ?? json, imagePrompt, appliedRuleIds, preset, resolution, settings);
             }
         }
 

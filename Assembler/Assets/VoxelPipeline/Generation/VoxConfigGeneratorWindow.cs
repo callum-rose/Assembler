@@ -25,6 +25,7 @@ namespace Assembler.VoxelPipeline.Generation
         private string _status = string.Empty;
         private VoxModelConfig? _result;
         private string _settingsDump = string.Empty;
+        private string _configJson = string.Empty;
         private Vector2 _scroll;
         private bool _isRunning;
         private CancellationTokenSource? _cts;
@@ -128,10 +129,20 @@ namespace Assembler.VoxelPipeline.Generation
                 EditorGUILayout.LabelField("Resolved settings", EditorStyles.boldLabel);
                 DrawWrappedReadonly(_settingsDump, wrapArea);
 
-                EditorGUILayout.HelpBox(
-                    "Saved for import — open \"Assembler ▸ Text to Voxels (pipeline)\" and click " +
-                    "\"Import last AI config\" to load this prompt and settings.",
-                    MessageType.Info);
+                EditorGUILayout.Space();
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("Config JSON", EditorStyles.boldLabel);
+                    if (GUILayout.Button("Copy", GUILayout.Width(60)))
+                    {
+                        EditorGUIUtility.systemCopyBuffer = _configJson;
+                        _status = "Config JSON copied to clipboard.";
+                    }
+                }
+                EditorGUILayout.LabelField(
+                    "Paste this into the \"Text to Voxels (pipeline)\" window's Import box.",
+                    EditorStyles.miniLabel);
+                DrawWrappedReadonly(_configJson, wrapArea);
             }
 
             EditorGUILayout.EndScrollView();
@@ -176,7 +187,7 @@ namespace Assembler.VoxelPipeline.Generation
                 var result = await generator.ChooseAsync(_description, _artContext, ct);
                 _result = result;
                 _settingsDump = JsonUtility.ToJson(result.Settings, prettyPrint: true);
-                VoxModelConfigStore.Save(result);
+                _configJson = VoxConfigExtractor.Extract(result.RawText) ?? result.RawText;
                 _status = "Done.";
             }
             catch (OperationCanceledException)
