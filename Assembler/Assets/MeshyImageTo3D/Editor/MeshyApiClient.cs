@@ -140,8 +140,10 @@ namespace Assembler.MeshyImageTo3D
             }
             AppendBool(sb, "save_pre_remeshed_model", request.SavePreRemeshedModel);
 
-            // Output presentation.
-            AppendBool(sb, "remove_lighting", request.RemoveLighting);
+            // Output presentation. remove_lighting is a meshy-6-only flag — omit it entirely for any
+            // other model rather than sending it (even as false), which is an invalid request.
+            if (request.AiModel == "meshy-6")
+                AppendBool(sb, "remove_lighting", request.RemoveLighting);
             AppendBool(sb, "moderation", request.Moderation);
             AppendBool(sb, "auto_size", request.AutoSize);
             AppendString(sb, "origin_at", request.OriginAt == ModelOrigin.Center ? "center" : "bottom");
