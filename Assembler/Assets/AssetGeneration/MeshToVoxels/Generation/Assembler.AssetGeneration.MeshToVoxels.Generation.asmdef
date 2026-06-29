@@ -1,0 +1,22 @@
+{
+    "name": "Assembler.AssetGeneration.MeshToVoxels.Generation",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.AssetGeneration.VoxelPipeline",
+        "Assembler.Anthropic",
+        "Assembler.AssetGeneration.MeshyImageTo3D.Editor",
+        "Assembler.AssetGeneration.MeshToVoxels",
+        "Assembler.AssetGeneration.ImageToMesh.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
