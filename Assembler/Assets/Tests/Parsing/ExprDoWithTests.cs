@@ -156,6 +156,36 @@ Expressions:
 		}
 
 		[Test]
+		public void InlineBodyInfersEntityPropertyOperandAsVector()
+		{
+			// An `!entity { Property: Rotation }` operand resolves to Vector3, a type known from the ref
+			// kind alone — inference must pick "vector", not the "float" default, so no explicit
+			// ArgumentTypes hint is needed (issue #399).
+			var info = Parse(EntityWithPositionExpr(
+				"!expr { Do: 'heading * 2', With: { heading: !entity { Id: e, Property: Rotation } } }"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+
+			Assert.AreEqual(("vector", "heading"), synthesised.Arguments[0]);
+			Assert.AreEqual("vector", synthesised.ReturnType);
+		}
+
+		[Test]
+		public void InlineBodyInfersRigidbodyPropertyOperandAsVector()
+		{
+			// A `!rigidbody { Property: Velocity }` operand likewise resolves to Vector3.
+			var info = Parse(EntityWithPositionExpr(
+				"!expr { Do: '-vel', With: { vel: !rigidbody { Id: e, Property: Velocity } } }"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+
+			Assert.AreEqual(("vector", "vel"), synthesised.Arguments[0]);
+			Assert.AreEqual("vector", synthesised.ReturnType);
+		}
+
+		[Test]
 		public void DoNameWinsOverInlineInterpretation()
 		{
 			// "scale" is also a plausible inline identifier, but because it's a declared expression the

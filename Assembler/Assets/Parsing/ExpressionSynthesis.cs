@@ -190,9 +190,11 @@ namespace Assembler.Parsing
 		}
 
 		// Best-effort static type-name for an inline operand: literals by kind, `!var` by its
-		// resolved value, nested named `!expr` by its declared return type. Anything else (including
-		// nested inline `!expr`) falls back to the use-site type, supplied by the caller via the
-		// generic CreateValueSource<T> through InferReturnTypeName — here we default to "float".
+		// resolved value, nested named `!expr` by its declared return type, and the transform/physics
+		// property refs (`!entity` / `!rigidbody`) by their always-Vector3 result — a type that's known
+		// from the ref kind alone, so it holds even before a `!parameter` id is substituted. Anything
+		// else (including nested inline `!expr`) falls back to the use-site type, supplied by the caller
+		// via the generic CreateValueSource<T> through InferReturnTypeName — here we default to "float".
 		private static string InferTypeName(TransformContext ctx, AssemblerValue value) =>
 			value switch
 			{
@@ -202,6 +204,7 @@ namespace Assembler.Parsing
 				StringValue => "string",
 				Vector3Value or VecValue => "vector",
 				ColorValue or ColourValue => "colour",
+				EntityPropertyRef or RigidbodyPropertyRef => "vector",
 				TypedListValue typed when TryGetTypeName(ctx,
 					typeof(List<>).MakeGenericType(typed.ElementType), out var listName) => listName,
 				VarRef varRef => TryResolveValue(ctx, varRef.Id, out var resolved)
