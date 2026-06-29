@@ -408,17 +408,29 @@ namespace Assembler.TextToVoxelPipeline
 
             try
             {
-                await VoxelPipeline.RunAsync(
+                var result = await VoxelPipeline.RunAsync(
                     _settings, ct, SetStatus,
                     reviewImage: imageGate,
                     reviewMesh: meshGate,
                     voxelProgress: new EditorProgressReporter(),
                     pipelineProgress: (name, fraction) =>
                         EditorUtility.DisplayProgressBar("Mesh → VOX", $"Post-processing: {name}…", 0.9f + 0.09f * fraction));
-            }
-            catch (OperationCanceledException)
-            {
-                SetStatus("Cancelled.");
+
+                // The pipeline reports every outcome through the result. On success the in-run "Done."
+                // status already stands; otherwise surface the case's message, and for a per-stage
+                // failure also dump the carried exception's stack.
+                var stageError = result switch
+                {
+                    VoxelPipeline.Result.ImageFailed f => f.Error,
+                    VoxelPipeline.Result.MeshFailed f => f.Error,
+                    VoxelPipeline.Result.VoxelizationFailed f => f.Error,
+                    _ => null,
+                };
+
+                if (result is not VoxelPipeline.Result.Success)
+                    SetStatus(result.ToString());
+                if (stageError is not null)
+                    Debug.LogException(stageError);
             }
             catch (Exception e)
             {

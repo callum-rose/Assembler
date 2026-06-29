@@ -41,29 +41,72 @@ namespace Assembler.TextToVoxelPipeline
         /// Cancel via <paramref name="ct"/> (or by throwing) to abort the pipeline before the next stage.</summary>
         public delegate Task<ReviewDecision> ReviewGate<in T>(T stage, CancellationToken ct);
 
-        /// <summary>The output of all three stages, for inspection or further chaining.</summary>
-        public readonly struct Result
+        /// <summary>Which pipeline stage was running — pinpoints where a <see cref="Result.Cancelled"/> stopped.</summary>
+        public enum Stage
         {
-            public Result(
-                ImageGenerationCore.Result image,
-                MeshyConversionCore.Result mesh,
-                VoxConversion.Summary voxels)
+            /// <summary>Stage 1 — text → image.</summary>
+            Image,
+
+            /// <summary>Stage 2 — image → mesh.</summary>
+            Mesh,
+
+            /// <summary>Stage 3 — mesh → voxels.</summary>
+            Voxelization,
+        }
+
+        /// <summary>
+        /// The outcome of a pipeline run: a discriminated union over the one success and the several
+        /// distinct failure modes. <see cref="RunAsync"/> returns this rather than throwing, so a caller
+        /// can pattern-match the exact way a run ended — <see cref="Success"/>, the empty-input guard
+        /// (<see cref="InvalidInput"/>), a per-stage failure that names the stage and carries both the
+        /// thrown exception and whatever upstream stages <i>did</i> complete, or a <see cref="Cancelled"/>
+        /// that records which stage was interrupted. The closed hierarchy (private base ctor) means a
+        /// <c>switch</c> over the cases is exhaustive.
+        /// </summary>
+        public abstract record Result
+        {
+            // Private ctor closes the hierarchy to the nested cases below (they can reach it as nested types).
+            private Result() { }
+
+            /// <summary>All three stages completed; carries each stage's output for inspection or chaining.</summary>
+            public sealed record Success(
+                ImageGenerationCore.Result Image,
+                MeshyConversionCore.Result Mesh,
+                VoxConversion.Summary Voxels) : Result
             {
-                Image = image;
-                Mesh = mesh;
-                Voxels = voxels;
+                public override string ToString() => Voxels.ToString();
             }
 
-            /// <summary>Stage 1 — the generated image and where it was written.</summary>
-            public ImageGenerationCore.Result Image { get; }
+            /// <summary>The run never started: the prompt or output directory was empty.</summary>
+            public sealed record InvalidInput(string Message) : Result
+            {
+                public override string ToString() => $"Invalid input: {Message}";
+            }
 
-            /// <summary>Stage 2 — the downloaded mesh and the completed Meshy task.</summary>
-            public MeshyConversionCore.Result Mesh { get; }
+            /// <summary>Stage 1 (text → image) threw before producing anything downstream.</summary>
+            public sealed record ImageFailed(Exception Error) : Result
+            {
+                public override string ToString() => $"Image generation failed: {Error.Message}";
+            }
 
-            /// <summary>Stage 3 — the written <c>.vox</c> plus grid/voxel/colour counts.</summary>
-            public VoxConversion.Summary Voxels { get; }
+            /// <summary>Stage 2 (image → mesh) threw; <see cref="Image"/> is the accepted stage-1 output that fed it.</summary>
+            public sealed record MeshFailed(ImageGenerationCore.Result Image, Exception Error) : Result
+            {
+                public override string ToString() => $"Mesh conversion failed: {Error.Message}";
+            }
 
-            public override string ToString() => Voxels.ToString();
+            /// <summary>Stage 3 (mesh → voxels) threw; <see cref="Image"/> and <see cref="Mesh"/> are the upstream outputs.</summary>
+            public sealed record VoxelizationFailed(
+                ImageGenerationCore.Result Image, MeshyConversionCore.Result Mesh, Exception Error) : Result
+            {
+                public override string ToString() => $"Voxelization failed: {Error.Message}";
+            }
+
+            /// <summary>The run was cancelled (token or a review gate) while <see cref="At"/> was running.</summary>
+            public sealed record Cancelled(Stage At) : Result
+            {
+                public override string ToString() => $"Cancelled during {At.ToString().ToLowerInvariant()} stage.";
+            }
         }
 
         /// <summary>
@@ -74,8 +117,9 @@ namespace Assembler.TextToVoxelPipeline
         /// <param name="voxelProgress">Optional sink for stage 3's slow per-voxel pass; return false to cancel.</param>
         /// <param name="pipelineProgress">Optional <c>(stepName, fraction)</c> sink for stage 3 post-processing.</param>
         /// <param name="onStatus">Optional sink for human-readable progress (UI status line / log).</param>
-        /// <exception cref="VoxelPipelineException">The prompt or output directory is empty.</exception>
-        /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled (incl. by a review gate).</exception>
+        /// <returns>A <see cref="Result"/> describing exactly how the run ended — <see cref="Result.Success"/>
+        /// or one of the failure cases. Stage failures and cancellation are reported through the result
+        /// rather than thrown; only a programming error (e.g. a null <paramref name="settings"/>) throws.</returns>
         public static async Task<Result> RunAsync(
             VoxelPipelineSettings settings,
             CancellationToken ct = default,
@@ -88,9 +132,9 @@ namespace Assembler.TextToVoxelPipeline
             if (settings is null)
                 throw new ArgumentNullException(nameof(settings));
             if (string.IsNullOrWhiteSpace(settings.Prompt))
-                throw new VoxelPipelineException("Enter a prompt.");
+                return new Result.InvalidInput("Enter a prompt.");
             if (string.IsNullOrWhiteSpace(settings.OutputDir))
-                throw new VoxelPipelineException("Set an output directory.");
+                return new Result.InvalidInput("Set an output directory.");
 
             var baseName = ResolveBaseName(settings);
             var outputDir = ResolveOutputDir(settings, baseName, DateTime.Now);
@@ -117,47 +161,88 @@ namespace Assembler.TextToVoxelPipeline
                 }
             }
 
+            // Each stage is wrapped so an exception (or cancellation) surfaces as a typed failure case
+            // pinpointing the stage, rather than propagating out of the pipeline. Cancellation is
+            // distinguished from a genuine error: a cancelled review gate / token throws
+            // OperationCanceledException, which becomes a Cancelled(stage), not a *Failed case.
+
             // Stage 1 — text → image.
-            var image = await RunStage(
-                () => ImageGenerationCore.GenerateAsync(
-                    settings.ImageProvider, settings.ImageApiKey, settings.ImageModel,
-                    settings.Prompt, outputDir, baseName, ct, onStatus),
-                reviewImage,
-                "Stage 1/3 — generating image…",
-                "Review the image, then continue or retry…");
+            ImageGenerationCore.Result image;
+            try
+            {
+                image = await RunStage(
+                    () => ImageGenerationCore.GenerateAsync(
+                        settings.ImageProvider, settings.ImageApiKey, settings.ImageModel,
+                        settings.Prompt, outputDir, baseName, ct, onStatus),
+                    reviewImage,
+                    "Stage 1/3 — generating image…",
+                    "Review the image, then continue or retry…");
+            }
+            catch (OperationCanceledException)
+            {
+                return new Result.Cancelled(Stage.Image);
+            }
+            catch (Exception e)
+            {
+                return new Result.ImageFailed(e);
+            }
 
             // Stage 2 — image → mesh. The (possibly retried) image we just accepted is this stage's input.
-            var mesh = await RunStage(
-                () => MeshyConversionCore.ConvertAsync(
-                    settings.MeshyApiKey,
-                    new MeshyRequest
-                    {
-                        ImagePath = image.OutputPath,
-                        Format = settings.MeshFormat,
-                        AiModel = settings.MeshAiModel,
-                        GenerateTexture = settings.GenerateTexture,
-                        EnablePbr = settings.EnablePbr,
-                        Remesh = settings.Remesh,
-                        // New options keep Meshy's documented defaults here; the pipeline window
-                        // doesn't yet surface them. RemoveLighting defaults true to match the API.
-                        RemoveLighting = true,
-                    },
-                    outputDir, baseName, ct, onStatus),
-                reviewMesh,
-                "Stage 2/3 — converting image to mesh…",
-                "Review the mesh, then continue or retry…");
+            MeshyConversionCore.Result mesh;
+            try
+            {
+                mesh = await RunStage(
+                    () => MeshyConversionCore.ConvertAsync(
+                        settings.MeshyApiKey,
+                        new MeshyRequest
+                        {
+                            ImagePath = image.OutputPath,
+                            Format = settings.MeshFormat,
+                            AiModel = settings.MeshAiModel,
+                            GenerateTexture = settings.GenerateTexture,
+                            EnablePbr = settings.EnablePbr,
+                            Remesh = settings.Remesh,
+                            // New options keep Meshy's documented defaults here; the pipeline window
+                            // doesn't yet surface them. RemoveLighting defaults true to match the API.
+                            RemoveLighting = true,
+                        },
+                        outputDir, baseName, ct, onStatus),
+                    reviewMesh,
+                    "Stage 2/3 — converting image to mesh…",
+                    "Review the mesh, then continue or retry…");
+            }
+            catch (OperationCanceledException)
+            {
+                return new Result.Cancelled(Stage.Mesh);
+            }
+            catch (Exception e)
+            {
+                return new Result.MeshFailed(image, e);
+            }
 
             // Stage 3 — mesh → voxels. The CPU-heavy voxelization runs on a background thread (only the
             // mesh import + final AssetDatabase touch stay on the main thread), so this must be awaited
             // from the main thread — which it is, called from the editor window.
-            onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
-            var voxPath = Path.Combine(outputDir, baseName + ".vox");
-            var voxels = await VoxConversion.Run(
-                mesh.OutputPath, voxPath, settings.MaxDimVoxels,
-                settings.VoxSettings, settings.Palette, voxelProgress, pipelineProgress);
+            VoxConversion.Summary voxels;
+            try
+            {
+                onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
+                var voxPath = Path.Combine(outputDir, baseName + ".vox");
+                voxels = await VoxConversion.Run(
+                    mesh.OutputPath, voxPath, settings.MaxDimVoxels,
+                    settings.VoxSettings, settings.Palette, voxelProgress, pipelineProgress);
+            }
+            catch (OperationCanceledException)
+            {
+                return new Result.Cancelled(Stage.Voxelization);
+            }
+            catch (Exception e)
+            {
+                return new Result.VoxelizationFailed(image, mesh, e);
+            }
 
             onStatus?.Invoke($"Done. {voxels}");
-            return new Result(image, mesh, voxels);
+            return new Result.Success(image, mesh, voxels);
         }
 
         // An explicit base name wins; otherwise the prompt is slugged into one. The same base name
@@ -225,10 +310,5 @@ namespace Assembler.TextToVoxelPipeline
         // When true (default), each run's files are isolated in a "<base>_<timestamp>" subfolder of
         // OutputDir; when false they are written straight into OutputDir.
         public bool AutoSubfolderPerRun = true;
-    }
-
-    public sealed class VoxelPipelineException : Exception
-    {
-        public VoxelPipelineException(string message) : base(message) { }
     }
 }
