@@ -136,7 +136,10 @@ namespace Assembler.TextToVoxelPipeline
         {
             var words = (text ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(6);
             var invalid = Path.GetInvalidFileNameChars();
-            var cleaned = new string(string.Join("_", words).Where(c => Array.IndexOf(invalid, c) < 0).ToArray());
+            // Strip '.' too: it's a valid filename char, but an embedded dot would be mistaken for a
+            // file extension downstream (Path.GetExtension), so EnsureExtension would skip adding .png
+            // and the image-to-mesh stage would reject the bogus "extension".
+            var cleaned = new string(string.Join("_", words).Where(c => c != '.' && Array.IndexOf(invalid, c) < 0).ToArray());
             return string.IsNullOrWhiteSpace(cleaned) ? "model" : cleaned;
         }
     }
