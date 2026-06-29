@@ -25,6 +25,9 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
     public enum ImageProvider
     {
         GoogleGemini,
+        OpenAi,
+        BlackForestLabs,
+        Recraft,
     }
 
     /// <summary>
@@ -33,16 +36,38 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
     /// </summary>
     public readonly struct ImageGenerationRequest
     {
-        public ImageGenerationRequest(string prompt, string model)
+        public ImageGenerationRequest(string prompt, string model, ReferenceImage? referenceImage = null)
         {
             Prompt = prompt;
             Model = model;
+            ReferenceImage = referenceImage;
         }
 
         public string Prompt { get; }
 
         /// <summary>Provider-specific model id; empty means "use the provider default".</summary>
         public string Model { get; }
+
+        /// <summary>
+        /// Optional image to condition generation on (style reference / image edit).
+        /// Null for a pure text-to-image request. Providers that can take an input image
+        /// (Gemini's <c>generateContent</c>, OpenAI edits, …) should honour it; a provider
+        /// with no image-input support may ignore it.
+        /// </summary>
+        public ReferenceImage? ReferenceImage { get; }
+    }
+
+    /// <summary>Bytes + MIME type of an image handed *into* a generator as a reference.</summary>
+    public readonly struct ReferenceImage
+    {
+        public ReferenceImage(byte[] bytes, string mimeType)
+        {
+            Bytes = bytes;
+            MimeType = mimeType;
+        }
+
+        public byte[] Bytes { get; }
+        public string MimeType { get; }
     }
 
     /// <summary>Raw bytes plus the MIME type the provider returned them as.</summary>
@@ -65,6 +90,9 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             provider switch
             {
                 ImageProvider.GoogleGemini => new GeminiImageGenerator(apiKey),
+                ImageProvider.OpenAi => new OpenAiImageGenerator(apiKey),
+                ImageProvider.BlackForestLabs => new FluxImageGenerator(apiKey),
+                ImageProvider.Recraft => new RecraftImageGenerator(apiKey),
                 _ => throw new ImageGenerationException($"Unsupported provider: {provider}"),
             };
 
@@ -82,9 +110,31 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             {
                 ImageProvider.GoogleGemini => new[]
                 {
-                    "gemini-2.5-flash-image",
+                    "gemini-3-pro-image",       // Nano Banana Pro — highest quality, paid
+                    "gemini-3.1-flash-image",   // Nano Banana 2 — high-efficiency counterpart
+                    "gemini-2.5-flash-image",   // original Nano Banana — fast, free tier
                     "gemini-2.5-flash-image-preview",
                     "gemini-2.0-flash-preview-image-generation",
+                },
+                ImageProvider.OpenAi => new[]
+                {
+                    "gpt-image-2",
+                    "gpt-image-1.5",
+                    "gpt-image-1",
+                    "gpt-image-1-mini",
+                },
+                ImageProvider.BlackForestLabs => new[]
+                {
+                    "flux-2-pro",
+                    "flux-2-flex",
+                    "flux-2-dev",
+                    "flux-kontext-pro",  // editing/style-reference specialist
+                    "flux-kontext-max",
+                },
+                ImageProvider.Recraft => new[]
+                {
+                    "recraftv4",
+                    "recraftv3",
                 },
                 _ => Array.Empty<string>(),
             };

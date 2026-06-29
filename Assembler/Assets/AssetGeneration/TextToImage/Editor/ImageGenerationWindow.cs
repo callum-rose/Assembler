@@ -22,6 +22,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         private const string PromptPref = "Assembler.ImageGen.Prompt";
         private const string OutputDirPref = "Assembler.ImageGen.OutputDir";
         private const string OutputFilePref = "Assembler.ImageGen.OutputFile";
+        private const string ReferenceImagePref = "Assembler.ImageGen.ReferenceImage";
 
         // API keys are stored per provider so swapping providers keeps each key.
         private static string ApiKeyPref(ImageProvider provider) => $"Assembler.ImageGen.ApiKey.{provider}";
@@ -32,11 +33,14 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         private string _prompt = "";
         private string _outputDir = "";
         private string _outputFile = "";
+        private string _referenceImage = "";
 
         private bool _running;
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
         private Texture2D? _preview;
+        private Texture2D? _referencePreview;
+        private string _referencePreviewPath = "";
         private Vector2 _windowScroll;
 
         [MenuItem("Assembler/Text to Image")]
@@ -53,6 +57,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             _prompt = EditorPrefs.GetString(PromptPref, "");
             _outputDir = EditorPrefs.GetString(OutputDirPref, "Assets/GeneratedImages");
             _outputFile = EditorPrefs.GetString(OutputFilePref, "");
+            _referenceImage = EditorPrefs.GetString(ReferenceImagePref, "");
             _apiKey = EditorPrefs.GetString(ApiKeyPref(_provider), "");
         }
 
@@ -60,6 +65,8 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         {
             if (_preview != null)
                 DestroyImmediate(_preview);
+            if (_referencePreview != null)
+                DestroyImmediate(_referencePreview);
         }
 
         private void OnGUI()
@@ -74,6 +81,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                 DrawApiKey();
                 EditorGUILayout.Space();
                 DrawPrompt();
+                DrawReferenceImage();
                 DrawOutputPicker();
             }
 
@@ -133,6 +141,62 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             _prompt = EditorGUILayout.TextArea(_prompt, wrapStyle, GUILayout.MinHeight(90));
         }
 
+        private void DrawReferenceImage()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.BeginHorizontal();
+            _referenceImage = EditorGUILayout.TextField(
+                new GUIContent("Reference Image", "Optional image to condition generation on (style reference / edit). Leave blank for pure text-to-image."),
+                _referenceImage);
+            if (GUILayout.Button("Browse", GUILayout.Width(70)))
+            {
+                var picked = EditorUtility.OpenFilePanel(
+                    "Reference image", GuessStartDir(_referenceImage), "png,jpg,jpeg,webp");
+                if (!string.IsNullOrEmpty(picked))
+                    _referenceImage = picked;
+            }
+            if (!string.IsNullOrEmpty(_referenceImage) && GUILayout.Button("Clear", GUILayout.Width(50)))
+                _referenceImage = "";
+            EditorGUILayout.EndHorizontal();
+
+            DrawReferencePreview();
+        }
+
+        private void DrawReferencePreview()
+        {
+            if (string.IsNullOrEmpty(_referenceImage))
+                return;
+
+            // (Re)load the thumbnail only when the path changes, not every repaint.
+            if (_referencePreviewPath != _referenceImage)
+            {
+                if (_referencePreview != null)
+                    DestroyImmediate(_referencePreview);
+                _referencePreview = null;
+                _referencePreviewPath = _referenceImage;
+
+                if (File.Exists(_referenceImage))
+                {
+                    var tex = new Texture2D(2, 2);
+                    if (tex.LoadImage(File.ReadAllBytes(_referenceImage)))
+                        _referencePreview = tex;
+                    else
+                        DestroyImmediate(tex);
+                }
+            }
+
+            if (_referencePreview == null)
+            {
+                EditorGUILayout.HelpBox("Reference image not found or unreadable.", MessageType.Warning);
+                return;
+            }
+
+            var width = Mathf.Min(140, _referencePreview.width);
+            var height = width * _referencePreview.height / Mathf.Max(1, _referencePreview.width);
+            var rect = GUILayoutUtility.GetRect(width, height, GUILayout.ExpandWidth(false));
+            GUI.DrawTexture(rect, _referencePreview, ScaleMode.ScaleToFit);
+        }
+
         private void DrawOutputPicker()
         {
             EditorGUILayout.BeginHorizontal();
@@ -188,6 +252,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             EditorPrefs.SetString(PromptPref, _prompt);
             EditorPrefs.SetString(OutputDirPref, _outputDir);
             EditorPrefs.SetString(OutputFilePref, _outputFile);
+            EditorPrefs.SetString(ReferenceImagePref, _referenceImage);
             EditorPrefs.SetString(ApiKeyPref(_provider), _apiKey);
 
             _running = true;
@@ -199,7 +264,8 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                 // Core generation/saving lives in ImageGenerationCore so it can be driven
                 // headlessly or as one stage of the image → mesh → voxels pipeline.
                 var result = await ImageGenerationCore.GenerateAsync(
-                    _provider, _apiKey, _model, _prompt, _outputDir, _outputFile, ct, SetStatus);
+                    _provider, _apiKey, _model, _prompt, _outputDir, _outputFile, ct, SetStatus,
+                    string.IsNullOrWhiteSpace(_referenceImage) ? null : _referenceImage);
 
                 LoadPreview(result.Image.Bytes);
             }

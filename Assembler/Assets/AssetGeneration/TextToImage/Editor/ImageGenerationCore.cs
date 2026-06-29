@@ -45,8 +45,12 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         /// derived from the returned image's MIME type.
         /// </summary>
         /// <param name="onStatus">Optional sink for human-readable progress (UI status line / log).</param>
+        /// <param name="referenceImagePath">Optional image to condition generation on (style reference /
+        /// edit). Blank or null for a pure text-to-image request; the MIME type is inferred from the
+        /// file extension.</param>
         /// <returns>The written path plus the generated image, for chaining into the next stage.</returns>
-        /// <exception cref="ImageGenerationException">The prompt or output directory is empty.</exception>
+        /// <exception cref="ImageGenerationException">The prompt or output directory is empty, or the
+        /// reference image path was given but doesn't exist.</exception>
         /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
         public static async Task<Result> GenerateAsync(
             ImageProvider provider,
@@ -56,17 +60,23 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             string outputDir,
             string outputFile,
             CancellationToken ct = default,
-            Action<string>? onStatus = null)
+            Action<string>? onStatus = null,
+            string? referenceImagePath = null)
         {
             if (string.IsNullOrWhiteSpace(prompt))
                 throw new ImageGenerationException("Enter a prompt.");
             if (string.IsNullOrWhiteSpace(outputDir))
                 throw new ImageGenerationException("Set an output directory.");
 
+            var reference = LoadReferenceImage(referenceImagePath);
+
             using var generator = ImageGeneratorFactory.Create(provider, apiKey);
 
-            onStatus?.Invoke($"Generating with {generator.DisplayName}…");
-            var image = await generator.GenerateAsync(new ImageGenerationRequest(prompt, model), ct);
+            onStatus?.Invoke(
+                reference is null
+                    ? $"Generating with {generator.DisplayName}…"
+                    : $"Generating with {generator.DisplayName} (with reference image)…");
+            var image = await generator.GenerateAsync(new ImageGenerationRequest(prompt, model, reference), ct);
 
             // No filename given → fall back to a default base name; the extension is always
             // derived from the returned image's MIME type.
@@ -83,6 +93,25 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
 
             return new Result(path, image);
         }
+
+        private static ReferenceImage? LoadReferenceImage(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+            if (!File.Exists(path))
+                throw new ImageGenerationException($"Reference image not found: {path}");
+
+            return new ReferenceImage(File.ReadAllBytes(path), MimeFromExtension(path));
+        }
+
+        private static string MimeFromExtension(string path) =>
+            Path.GetExtension(path).ToLowerInvariant() switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                _ => "image/png",
+            };
 
         public static string EnsureExtension(string path, string mimeType)
         {
