@@ -94,7 +94,7 @@ Localisation:
 Expressions:
   # True when integer cell (x, y) sits inside one of the maze's inner wall blocks.
   # Mirrors the wall entities below so dots are never placed inside a wall.
-  is blocked:
+  isBlocked:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ x, y ]
     ReturnType: bool
@@ -107,7 +107,7 @@ Expressions:
           || (x >= 4 && x <= 5 && y >= -3 && y <= -2);
 
   # True at the four corner cells reserved for power pills (so the dot field skips them).
-  is power cell:
+  isPowerCell:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ x, y ]
     ReturnType: bool
@@ -116,7 +116,7 @@ Expressions:
   # The dot positions: every interior cell that is neither a wall nor a power-pill corner.
   # Built imperatively with the PositionList builder (the compiler has no collection
   # initializers, so we Add in a loop).
-  pill field:
+  pillField:
     ReturnType: vector list
     Expression: >
       var b = new PositionList();
@@ -133,14 +133,14 @@ Expressions:
       return b.ToList();
 
   # Number of dots on the board, so the win check knows the target.
-  pill count:
+  pillCount:
     ReturnType: int
     Expression: "return pillField().Count();"
 
   # Convert the move action's analogue/d-pad vector into a unit cardinal heading
   # for the grid mover. Neutral input keeps the current heading (so Pacman waits
   # at the start and keeps gliding between presses).
-  snap dir:
+  snapDir:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ input, current, cell ]
     ReturnType: vector
@@ -151,7 +151,7 @@ Expressions:
       return new Vector3(0f, input.y > 0f ? cell : -cell, 0f);
 
   # Where a frightened ghost runs to: the maze corner diagonally opposite Pacman.
-  flee target:
+  fleeTarget:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ p ]
     ReturnType: vector
@@ -271,7 +271,7 @@ Placements:
   # The dot field — an !expr `At` returning a hole-punched grid.
   dots:
     Template: pill
-    At: !expr { Do: pill field }
+    At: !expr { Do: pillField }
 
   # Four power pills, one per corner.
   power pills:
@@ -400,7 +400,7 @@ Entities:
         Properties:
           VariableId: !var pac dir
           Value: !expr
-            Do: snap dir
+            Do: snapDir
             With:
               input: !output axis
               current: !var pac dir
@@ -479,7 +479,7 @@ Entities:
         Type: int variable setter
         Properties:
           VariableId: !var dots total
-          Value: !expr { Do: pill count }
+          Value: !expr { Do: pillCount }
       fright tick:
         Type: every frame trigger
         Listeners: [ update fright ]

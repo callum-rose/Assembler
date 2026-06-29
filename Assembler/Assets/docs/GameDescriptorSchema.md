@@ -186,7 +186,7 @@ skill. Prefer the global helpers in [`Libraries.md`](Libraries.md) over register
 
 ```yaml
 Expressions:
-  paddle bounce:
+  paddleBounce:                              # the id is the exact name it's callable by — see note below
     ArgumentTypes: [ int, int ]              # optional — types of the declared params, positional
     ArgumentNames: [ a, b ]                  # optional — must match ArgumentTypes length
     ReturnType:    int                       # required — int | float | bool | string | vector | colour | record | record list | …
@@ -199,6 +199,13 @@ Expressions:
 `ExpressionDto` fields: `ArgumentTypes[]`, `ArgumentNames[]`, `ReturnType`, `RegisterTypes[]`,
 `RegisterTypeStatics[]`, `Expression`, `CallableAs`. You often don't need a named entry at all — a
 one-off body can be written inline at the `!expr` call site.
+
+> **Expression names must be valid identifiers.** Unlike entity/behaviour ids (which may contain
+> spaces), an expression's id — and its `CallableAs` alias — is the literal name it's invoked by from
+> another expression body and from `!expr Do:`, with no normalisation. So it must be a legal identifier:
+> letters, digits and underscores only, not starting with a digit (e.g. `paddleBounce` or
+> `paddle_bounce`, **not** `paddle bounce`). A name with a space or other illegal character is rejected
+> at parse time.
 
 ### `Templates` — map `id → EntityDto`
 

@@ -61,7 +61,7 @@ Templates:
         Properties:
           VariableId: !var enemies destroyed
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var enemies destroyed
               b: !var one
@@ -75,13 +75,13 @@ Templates:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var score
               b: !var one
 
 Expressions:
-  int add:
+  intAdd:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
@@ -130,7 +130,7 @@ Entities:
         Properties:
           VariableId: !var enemies spawned
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var enemies spawned
               b: !var one
@@ -161,7 +161,7 @@ Entities:
         Properties:
           VariableId: !var zap count
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var zap count
               b: !var one

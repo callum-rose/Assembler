@@ -52,7 +52,7 @@ Constants:
 Expressions:
   # Pick the navigation goal from the current mode: 1 = chase the player, 2 = search the
   # last-known spot, else hold position (head to self, so Arrive yields ~zero velocity).
-  pick goal:
+  pickGoal:
     ArgumentTypes: [ int, vector, vector, vector ]
     ArgumentNames: [ mode, target_pos, last_known, self_pos ]
     ReturnType: vector
@@ -160,7 +160,7 @@ Entities:
         Properties:
           VariableId: !var ai_goal
           Value: !expr
-            Do: pick goal
+            Do: pickGoal
             With:
               mode: !var guard_mode
               target_pos: !var target_position

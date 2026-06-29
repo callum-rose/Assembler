@@ -44,7 +44,7 @@ Constants:
 Expressions:
   # The fixed rectangular patrol route. The compiler has no collection initializers, so the
   # points are appended to a PositionList builder (see docs/Libraries.md) and returned as a list.
-  route points:
+  routePoints:
     ReturnType: vector list
     Expression: >
       var route = new PositionList();
@@ -55,7 +55,7 @@ Expressions:
       return route.ToList();
 
   # Pick the velocity for this frame: 1 = chasing (pursuit velocity), otherwise patrol velocity.
-  pick velocity:
+  pickVelocity:
     ArgumentTypes: [ int, vector, vector ]
     ArgumentNames: [ mode, chase_vel, patrol_vel ]
     ReturnType: vector
@@ -138,7 +138,7 @@ Entities:
       route:
         Type: patrol
         Properties:
-          Waypoints: !expr { Do: route points }
+          Waypoints: !expr { Do: routePoints }
           Loop: true
           Speed: !var guard speed
           ArriveRadius: 0.3
@@ -165,7 +165,7 @@ Entities:
         Properties:
           VariableId: !var ai_velocity
           Value: !expr
-            Do: pick velocity
+            Do: pickVelocity
             With:
               mode: !var guard_mode
               chase_vel: !var chase_vel

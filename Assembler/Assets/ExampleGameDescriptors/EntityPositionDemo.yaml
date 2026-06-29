@@ -44,7 +44,7 @@ Variables:
   leader velocity: !vec { X: 0, Y: 0, Z: 0 }
 
 Expressions:
-  shift y:
+  shiftY:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ pos, yoffset ]
     ReturnType: vector
@@ -119,7 +119,7 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: shift y
+            Do: shiftY
             With:
               pos: !entity { Id: leader, Property: Position }
               yoffset: !var follower above offset y
@@ -217,7 +217,7 @@ Entities:
         Type: position setter
         Properties:
           Position: !expr
-            Do: shift y
+            Do: shiftY
             With:
               pos: !entity { Id: leader, Property: Position }
               yoffset: !var follower below offset y

@@ -38,10 +38,10 @@ Entities:
 		public void NamedDoCallTargetsDeclaredExpressionById()
 		{
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !var v } }",
+				"!expr { Do: shiftUp, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -50,7 +50,7 @@ Expressions:
 			var source = PositionOf(info);
 
 			Assert.IsInstanceOf<ExpressionSource<Vector3>>(source);
-			Assert.AreEqual("shift up", ((ExpressionSource<Vector3>)source).ExpressionId);
+			Assert.AreEqual("shiftUp", ((ExpressionSource<Vector3>)source).ExpressionId);
 			Assert.AreEqual(1, ((ExpressionSource<Vector3>)source).Arguments.Count);
 
 			// A named call must not synthesise an inline expression.
@@ -64,7 +64,7 @@ Expressions:
 				"!expr { Do: up, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -74,7 +74,7 @@ Expressions:
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
 			// The call site uses the alias, but the source targets the canonical id.
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			Assert.IsFalse(info.Expressions.Any(e => e.Id.StartsWith("__inline_")));
 		}
 
@@ -104,10 +104,10 @@ Expressions:
 		public void NamedCallMissingOperandNameThrows()
 		{
 			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { wrong: !var v } }",
+				"!expr { Do: shiftUp, With: { wrong: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -223,10 +223,10 @@ Expressions:
 		public void NestedInlineInsideNamedCallResolves()
 		{
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !expr { Do: '-x', With: { x: !var v } } } }",
+				"!expr { Do: shiftUp, With: { a: !expr { Do: '-x', With: { x: !var v } } } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -234,7 +234,7 @@ Expressions:
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			// The nested inline operand synthesised exactly one anonymous expression.
 			Assert.AreEqual(1, info.Expressions.Count(e => e.Id.StartsWith("__inline_")));
 		}
@@ -273,7 +273,7 @@ Expressions:
 Variables:
   v: !vec {{ X: 1, Y: 2, Z: 3 }}
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -286,7 +286,7 @@ Entities:
     Position: !expr {{ Do: 'a * 2', With: {{ a: !var v }} }}
     Behaviours: {{}}
   named:
-    Position: !expr {{ Do: shift up, With: {{ a: !var v }} }}
+    Position: !expr {{ Do: shiftUp, With: {{ a: !var v }} }}
     Behaviours: {{}}
 ");
 
@@ -303,7 +303,7 @@ Entities:
 
 			var negate = (Func<Vector3, Vector3>)registry.GetCompiled(negateId).@delegate;
 			var scale = (Func<Vector3, Vector3>)registry.GetCompiled(scaleId).@delegate;
-			var shiftUp = (Func<Vector3, Vector3>)registry.GetCompiled("shift up").@delegate;
+			var shiftUp = (Func<Vector3, Vector3>)registry.GetCompiled("shiftUp").@delegate;
 
 			Assert.AreEqual(new Vector3(-1, -2, -3), negate(v));
 			Assert.AreEqual(new Vector3(2, 4, 6), scale(v));
@@ -440,10 +440,10 @@ Entities:
 			// ReturnType on a named call is ignored (logged); the source still targets the named id
 			// and no inline expression is synthesised.
 			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !var v }, ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
+				"!expr { Do: shiftUp, With: { a: !var v }, ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -451,8 +451,44 @@ Expressions:
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			Assert.IsFalse(info.Expressions.Any(e => e.Id.StartsWith("__inline_")));
+		}
+
+		[Test]
+		public void ExpressionIdWithIllegalCharactersIsRejected()
+		{
+			// The id is the exact name the expression is callable by, so a space (or other non-identifier
+			// character) is rejected up front rather than silently rewritten to a different callable name.
+			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!vec { X: 0, Y: 0, Z: 0 }",
+				extraTop: @"
+Expressions:
+  shift up:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    Expression: 'return a;'")));
+
+			Assert.That(ex!.Message, Does.Contain("shift up"));
+			Assert.That(ex.Message, Does.Contain("id"));
+		}
+
+		[Test]
+		public void CallableAsAliasWithIllegalCharactersIsRejected()
+		{
+			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!vec { X: 0, Y: 0, Z: 0 }",
+				extraTop: @"
+Expressions:
+  shiftUp:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    CallableAs: shift up
+    Expression: 'return a;'")));
+
+			Assert.That(ex!.Message, Does.Contain("CallableAs"));
 		}
 
 		// Descriptors that don't transform today for reasons unrelated to expressions (sequence-form

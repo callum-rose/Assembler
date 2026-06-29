@@ -66,7 +66,7 @@ Constants:
 
 Expressions:
   # Steer the guard from its current mode: 1 = toward target, 2 = away, else still.
-  guard velocity:
+  guardVelocity:
     ArgumentTypes: [ int, vector, vector, float, float ]
     ArgumentNames: [ mode, self_pos, target_pos, chase_speed, flee_speed ]
     ReturnType: vector
@@ -75,13 +75,13 @@ Expressions:
            : mode == 2 ? ScaleVector(Direction(target_pos, self_pos), flee_speed)
            : ScaleVector(self_pos, 0f);
 
-  closer than:
+  closerThan:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ a, b, threshold ]
     ReturnType: bool
     Expression: "return Distance(a, b) < threshold;"
 
-  farther than:
+  fartherThan:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ a, b, threshold ]
     ReturnType: bool
@@ -136,7 +136,7 @@ Entities:
         Type: velocity
         Properties:
           Velocity: !expr
-            Do: guard velocity
+            Do: guardVelocity
             With:
               mode: !var guard_mode
               self_pos: !entity { Property: Position }
@@ -187,27 +187,27 @@ Entities:
             - from: patrol
               to: chase
               when: !expr
-                Do: closer than
+                Do: closerThan
                 With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var chase range }
             - from: chase
               to: flee
               when: !expr
-                Do: closer than
+                Do: closerThan
                 With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var flee range }
             - from: chase
               to: patrol
               when: !expr
-                Do: farther than
+                Do: fartherThan
                 With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var lose range }
             - from: flee
               to: caught
               when: !expr
-                Do: closer than
+                Do: closerThan
                 With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: flee
               to: patrol
               when: !expr
-                Do: farther than
+                Do: fartherThan
                 With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var safe range }
 
       # --- OnEnter hook targets: drive the movement mode and the live colour. ---
