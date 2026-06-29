@@ -176,32 +176,11 @@ namespace Assembler.MeshyImageTo3D
 
             try
             {
-                if (string.IsNullOrWhiteSpace(_outputDir))
-                    throw new MeshyException("Set an output directory.");
-
-                using var client = new MeshyApiClient(_apiKey);
-                var request = new MeshyRequest
-                {
-                    ImagePath = _imagePath,
-                    Format = _format,
-                    GenerateTexture = _generateTexture,
-                    EnablePbr = _generateTexture && _enablePbr,
-                    Remesh = _remesh,
-                    AiModel = _aiModel,
-                };
-
-                SetStatus("Submitting image…");
-                var taskId = await client.CreateTaskAsync(request, ct);
-
-                SetStatus($"Queued (task {taskId}). Generating…");
-                var task = await client.PollUntilCompleteAsync(
-                    taskId, (p, s) => SetStatus($"{s} — {p}%"), ct);
-
-                var savedPath = await DownloadResultsAsync(client, task, ct);
-
-                SetStatus($"Done. Saved to {savedPath}");
-                if (IsUnderAssets(savedPath))
-                    AssetDatabase.Refresh();
+                // Core submit/poll/download lives in MeshyConversionCore so it can be driven
+                // headlessly or as one stage of the image → mesh → voxels pipeline.
+                await MeshyConversionCore.ConvertAsync(
+                    _apiKey, _imagePath, _outputDir, _outputFile, _format,
+                    _generateTexture, _enablePbr, _remesh, _aiModel, ct, SetStatus);
             }
             catch (OperationCanceledException)
             {
@@ -221,82 +200,10 @@ namespace Assembler.MeshyImageTo3D
             }
         }
 
-        private async Task<string> DownloadResultsAsync(
-            MeshyApiClient client, MeshyApiClient.TaskResponse task, CancellationToken ct)
-        {
-            var urls = task.model_urls
-                ?? throw new MeshyException("Task succeeded but returned no model URLs.");
-
-            var modelUrl = _format == ModelFormat.Obj ? urls.obj : urls.fbx;
-            if (string.IsNullOrEmpty(modelUrl))
-                throw new MeshyException($"No {_format} URL in the result.");
-
-            var ext = _format == ModelFormat.Obj ? "obj" : "fbx";
-            var dir = Path.GetFullPath(_outputDir);
-            var baseName = ResolveBaseName(modelUrl!);
-            var outputPath = Path.Combine(dir, $"{baseName}.{ext}");
-
-            SetStatus($"Downloading {_format} model…");
-            await client.DownloadAsync(modelUrl!, outputPath, ct);
-
-            // OBJ ships its material library separately; keep it beside the model.
-            if (_format == ModelFormat.Obj && !string.IsNullOrEmpty(urls.mtl))
-                await client.DownloadAsync(urls.mtl!, Path.Combine(dir, $"{baseName}.mtl"), ct);
-
-            // Texture maps are delivered as separate files; download them alongside.
-            var tex = task.texture_urls is { Length: > 0 } ? task.texture_urls[0] : null;
-            if (tex != null)
-            {
-                SetStatus("Downloading texture maps…");
-                await SaveMapAsync(client, tex.base_color, dir, $"{baseName}_basecolor", ct);
-                if (_enablePbr)
-                {
-                    await SaveMapAsync(client, tex.metallic, dir, $"{baseName}_metallic", ct);
-                    await SaveMapAsync(client, tex.roughness, dir, $"{baseName}_roughness", ct);
-                    await SaveMapAsync(client, tex.normal, dir, $"{baseName}_normal", ct);
-                }
-            }
-
-            return outputPath;
-        }
-
-        // The base filename for the downloaded model + its sidecar maps. An explicit
-        // file name wins; otherwise fall back to the name Meshy gave the model URL.
-        private string ResolveBaseName(string modelUrl)
-        {
-            if (!string.IsNullOrWhiteSpace(_outputFile))
-                return Path.GetFileNameWithoutExtension(_outputFile.Trim());
-
-            var fromUrl = Path.GetFileNameWithoutExtension(modelUrl.Split('?')[0]);
-            return string.IsNullOrEmpty(fromUrl) ? "model" : fromUrl;
-        }
-
-        private static async Task SaveMapAsync(
-            MeshyApiClient client, string? url, string dir, string baseName, CancellationToken ct)
-        {
-            if (string.IsNullOrEmpty(url))
-                return;
-
-            // Meshy serves PNGs; strip any query string before reading the extension.
-            var clean = url!.Split('?')[0];
-            var ext = Path.GetExtension(clean);
-            if (string.IsNullOrEmpty(ext))
-                ext = ".png";
-
-            await client.DownloadAsync(url, Path.Combine(dir, baseName + ext), ct);
-        }
-
         private void SetStatus(string message)
         {
             _status = message;
             Repaint();
-        }
-
-        private static bool IsUnderAssets(string path)
-        {
-            var full = Path.GetFullPath(path);
-            var assets = Path.GetFullPath(Application.dataPath);
-            return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GuessStartDir(string path)

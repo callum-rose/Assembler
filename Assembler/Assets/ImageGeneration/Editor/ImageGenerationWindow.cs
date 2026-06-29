@@ -196,28 +196,12 @@ namespace Assembler.ImageGeneration
 
             try
             {
-                if (string.IsNullOrWhiteSpace(_prompt))
-                    throw new ImageGenerationException("Enter a prompt.");
-                if (string.IsNullOrWhiteSpace(_outputDir))
-                    throw new ImageGenerationException("Set an output directory.");
+                // Core generation/saving lives in ImageGenerationCore so it can be driven
+                // headlessly or as one stage of the image → mesh → voxels pipeline.
+                var result = await ImageGenerationCore.GenerateAsync(
+                    _provider, _apiKey, _model, _prompt, _outputDir, _outputFile, ct, SetStatus);
 
-                using var generator = ImageGeneratorFactory.Create(_provider, _apiKey);
-
-                SetStatus($"Generating with {generator.DisplayName}…");
-                var image = await generator.GenerateAsync(new ImageGenerationRequest(_prompt, _model), ct);
-
-                // No filename given → fall back to a default base name; the extension
-                // is always derived from the returned image's MIME type.
-                var fileName = string.IsNullOrWhiteSpace(_outputFile) ? "image" : _outputFile.Trim();
-                var path = EnsureExtension(Path.Combine(_outputDir, fileName), image.MimeType);
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-                File.WriteAllBytes(path, image.Bytes);
-
-                LoadPreview(image.Bytes);
-                SetStatus($"Done ({image.Bytes.Length / 1024} KB). Saved to {path}");
-
-                if (IsUnderAssets(path))
-                    AssetDatabase.Refresh();
+                LoadPreview(result.Image.Bytes);
             }
             catch (OperationCanceledException)
             {
@@ -250,28 +234,6 @@ namespace Assembler.ImageGeneration
         {
             _status = message;
             Repaint();
-        }
-
-        private static string EnsureExtension(string path, string mimeType)
-        {
-            if (!string.IsNullOrEmpty(Path.GetExtension(path)))
-                return path;
-
-            var ext = mimeType switch
-            {
-                "image/png" => ".png",
-                "image/jpeg" => ".jpg",
-                "image/webp" => ".webp",
-                _ => ".png",
-            };
-            return path + ext;
-        }
-
-        private static bool IsUnderAssets(string path)
-        {
-            var full = Path.GetFullPath(path);
-            var assets = Path.GetFullPath(Application.dataPath);
-            return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string GuessStartDir(string path)
