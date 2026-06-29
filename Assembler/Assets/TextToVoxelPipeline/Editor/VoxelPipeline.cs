@@ -201,10 +201,20 @@ namespace Assembler.TextToVoxelPipeline
                             AiModel = settings.MeshAiModel,
                             GenerateTexture = settings.GenerateTexture,
                             EnablePbr = settings.EnablePbr,
+                            HdTexture = settings.HdTexture,
                             Remesh = settings.Remesh,
-                            // New options keep Meshy's documented defaults here; the pipeline window
-                            // doesn't yet surface them. RemoveLighting defaults true to match the API.
-                            RemoveLighting = true,
+                            Topology = settings.Topology,
+                            Decimation = settings.Decimation,
+                            TargetPolycount = settings.TargetPolycount,
+                            SavePreRemeshedModel = settings.SavePreRemeshedModel,
+                            // remove_lighting is a meshy-6-only flag; mirror the window's guard so a
+                            // headless caller that left it true on another model doesn't send an invalid request.
+                            RemoveLighting = settings.RemoveLighting && settings.MeshAiModel == "meshy-6",
+                            Moderation = settings.Moderation,
+                            AutoSize = settings.AutoSize,
+                            OriginAt = settings.OriginAt,
+                            MultiViewThumbnails = settings.MultiViewThumbnails,
+                            AlphaThumbnail = settings.AlphaThumbnail,
                         },
                         outputDir, baseName, ct, onStatus),
                     reviewMesh,
@@ -296,7 +306,19 @@ namespace Assembler.TextToVoxelPipeline
         public string MeshAiModel = "meshy-6";
         public bool GenerateTexture = true;
         public bool EnablePbr = true;
+        public bool HdTexture = false;
         public bool Remesh = true;
+        public MeshyTopology Topology = MeshyTopology.Triangle;
+        public DecimationMode Decimation = DecimationMode.None;
+        public int TargetPolycount = 30000;
+        public bool SavePreRemeshedModel = false;
+        // remove_lighting is only supported on meshy-6; the window forces it false for other models.
+        public bool RemoveLighting = true;
+        public bool Moderation = false;
+        public bool AutoSize = false;
+        public ModelOrigin OriginAt = ModelOrigin.Bottom;
+        public bool MultiViewThumbnails = false;
+        public bool AlphaThumbnail = false;
 
         // Stage 3 — mesh → voxels.
         public int MaxDimVoxels = 32;
