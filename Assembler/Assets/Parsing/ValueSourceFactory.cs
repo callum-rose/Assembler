@@ -194,6 +194,9 @@ namespace Assembler.Parsing
 					new ConstantSource<T>((T)BuildTypedList(ctx, typed)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
 					new ConstantSource<T>((T)BuildListFromUntyped(ctx, list, elementType!)),
+				RuntimeObjectValue obj when obj.Value is T typed => new ConstantSource<T>(typed),
+				RuntimeObjectValue obj => throw new ParsingException(
+					$"Parameter resolved to a {obj.Value.GetType().Name} but was used where a {typeof(T).Name} was expected"),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))
