@@ -144,6 +144,35 @@ namespace Assembler.VoxelPipeline
 
             EditorGUILayout.Space();
 
+            // Step 1 — supersample-and-downres (detail preservation). Runs at voxelization, before
+            // every post step, so it sits first. Off by default → unchanged direct voxelization.
+            _settings.supersample = EditorGUILayout.ToggleLeft(
+                new GUIContent("Supersample (preserve detail)",
+                    "Voxelize at a higher resolution then downres to the target, preserving thin features and small colour details that direct low-res voxelization aliases away."),
+                _settings.supersample);
+            if (_settings.supersample)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _settings.supersampleFactor = EditorGUILayout.IntSlider(
+                        new GUIContent("Factor", "Voxelize at this multiple of the target dimension. Each output voxel aggregates a factor³ block — higher preserves more but is much slower (factor³ work)."),
+                        _settings.supersampleFactor, 2, 4);
+                    _settings.downresCoverageThreshold = EditorGUILayout.Slider(
+                        new GUIContent("Coverage threshold", "Fill an output voxel when this fraction of its high-res block was occupied. Lower = fatter; higher = leaner."),
+                        _settings.downresCoverageThreshold, 0f, 1f);
+                    _settings.downresFeatureAware = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Feature-aware", "Force-keep features thinner than one output voxel (antennae, fins) that the coverage vote would erase."),
+                        _settings.downresFeatureAware);
+                    _settings.downresColourSalience = EditorGUILayout.Slider(
+                        new GUIContent("Colour salience", "Boost perceptually distinct minority colours when collapsing a block, so small details aren't outvoted into mush. 0 = pure majority."),
+                        _settings.downresColourSalience, 0f, 5f);
+                    EditorGUILayout.HelpBox(
+                        $"Voxelizes at up to {_settings.supersampleFactor}× the dimension " +
+                        $"({_settings.supersampleFactor * _settings.supersampleFactor * _settings.supersampleFactor}× the cells) before downres — slower.",
+                        MessageType.Info);
+                }
+            }
+
             // Step 2 — floaters.
             _settings.removeFloaters = EditorGUILayout.ToggleLeft(
                 new GUIContent("Remove floaters",
