@@ -17,7 +17,12 @@
     },
     {
       "id": "chunky-forms",
-      "text": "Favour bold, chunky, simplified forms that read clearly at low voxel resolutions; avoid fine filigree and tiny protrusions.",
+      "text": "Favour a bold, simplified silhouette built from large, clearly separated forms; avoid fine filigree and busy, fragmented outlines.",
+      "appliesWhen": "all assets"
+    },
+    {
+      "id": "voxel-budget",
+      "text": "This will be rendered as a low-resolution voxel model. Describe only features and colour regions that stay legible when the whole model is the chosen resolution voxels along its longest axis: every distinct colour patch and protruding feature should occupy at least ~2 voxels. Omit fine surface texture, thin lines, small multi-colour patterns, and gradients.",
       "appliesWhen": "all assets"
     }
   ]

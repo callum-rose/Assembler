@@ -813,6 +813,28 @@ namespace Assembler.AssetGeneration.MeshToVoxels
 				_height = height;
 			}
 
+			public int Width => _width;
+			public int Height => _height;
+
+			/// <summary>A copy of the linear-space pixel buffer (row-major, (0,0) bottom-left).</summary>
+			public Color[] ClonePixels() => (Color[])_linearPixels.Clone();
+
+			/// <summary>
+			/// Overwrites the linear-space pixel buffer in place — used by the texture-space palette
+			/// snap (<see cref="TextureQuantize"/>) to rewrite the texture before voxelizing. Length
+			/// must match the snapshot's existing buffer.
+			/// </summary>
+			public void ReplacePixels(Color[] linearPixels)
+			{
+				if (linearPixels.Length != _linearPixels.Length)
+				{
+					throw new ArgumentException(
+						$"Pixel count {linearPixels.Length} does not match snapshot's {_linearPixels.Length}.",
+						nameof(linearPixels));
+				}
+				Array.Copy(linearPixels, _linearPixels, _linearPixels.Length);
+			}
+
 			/// <summary>Snapshots <paramref name="tex"/> into a linear-space buffer. Main thread only.</summary>
 			public static TextureSnapshot Capture(Texture2D tex)
 			{

@@ -284,12 +284,43 @@ namespace Assembler.AssetGeneration.MeshToVoxels
 				}
 			}
 
-			// Step 5b — palette-snap.
+			// Step 5b — texture-space palette snap (C2). A pre-voxelization colour op: snap the source
+			// texture to the master palette in 2D so colour boundaries come out straight, regardless of
+			// how smooth the source render is. Uses the same master palette as the voxel-space snap below.
+			_settings.textureSpacePaletteSnap = EditorGUILayout.ToggleLeft(
+				new GUIContent("Texture-space palette snap (pre-voxelize)",
+					"Snap the source texture to the master palette in 2D before voxelizing, so colour boundaries come out straight and on-palette. Only affects textured meshes; uses the master palette below."),
+				_settings.textureSpacePaletteSnap);
+			if (_settings.textureSpacePaletteSnap)
+			{
+				using (new EditorGUI.IndentLevelScope())
+				{
+					_settings.textureSmooth = EditorGUILayout.ToggleLeft(
+						new GUIContent("Edge-preserving smooth", "Bilateral (Oklab) smooth before snapping: flattens within-region shading while keeping colour edges, so soft gradients don't snap to ragged boundaries."),
+						_settings.textureSmooth);
+					if (_settings.textureSmooth)
+					{
+						using (new EditorGUI.IndentLevelScope())
+						{
+							_settings.textureSmoothRadius = EditorGUILayout.IntSlider(
+								new GUIContent("Smooth radius", "Bilateral radius in texels. Larger flattens broader shading but costs (2r+1)² taps per texel."),
+								_settings.textureSmoothRadius, 1, 4);
+							_settings.textureSmoothRange = EditorGUILayout.Slider(
+								new GUIContent("Edge threshold (Oklab)", "Neighbours more perceptually distant than ~this are treated as across an edge and not blended in. Lower preserves finer edges."),
+								_settings.textureSmoothRange, 0.01f, 0.5f);
+						}
+					}
+				}
+			}
+
+			// Step 5c — per-voxel palette-snap. Kept on as a cheap idempotent backstop even when C2 runs.
 			_settings.snapToPalette = EditorGUILayout.ToggleLeft(
-				new GUIContent("Snap to master palette",
-					"Snap each colour to the nearest swatch in a shared master palette (Oklab) for cross-asset cohesion."),
+				new GUIContent("Snap to master palette (per-voxel)",
+					"Snap each voxel colour to the nearest swatch in a shared master palette (Oklab) for cross-asset cohesion. Cheap idempotent backstop to the texture-space snap above."),
 				_settings.snapToPalette);
-			if (_settings.snapToPalette)
+
+			// Shared master palette — both snap paths use it, so show the picker when either is enabled.
+			if (_settings.snapToPalette || _settings.textureSpacePaletteSnap)
 			{
 				using (new EditorGUI.IndentLevelScope())
 				{
