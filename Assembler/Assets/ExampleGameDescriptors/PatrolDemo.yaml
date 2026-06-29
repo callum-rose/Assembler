@@ -200,7 +200,7 @@ Entities:
               to: caught
               when: !expr
                 Do: within
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: chase
               to: patrol
               when: !expr { Do: negate, With: { flag: !var has_target } }

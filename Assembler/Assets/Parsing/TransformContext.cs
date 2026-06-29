@@ -49,6 +49,16 @@ namespace Assembler.Parsing
 		public InlineExpressionAccumulator InlineExpressions { get; }
 		public RecordSchemaRegistry RecordSchemas { get; }
 
+		/// <summary>
+		/// The concrete id of the entity currently being instantiated, or <c>null</c> outside a self-resolving
+		/// pass. Set only on the context used to substitute an entity's own behaviours (in
+		/// <see cref="TemplateInstantiator.Instantiate"/>), so an omitted-<c>Id</c> <c>!entity</c>
+		/// (a <see cref="Info.SelfEntityId"/>) binds to that id. Deliberately left <c>null</c> when
+		/// substituting child behaviours, so a child's self reference stays pending until the child's own
+		/// instantiation rather than capturing the parent's id.
+		/// </summary>
+		public string? EnclosingEntityId { get; }
+
 		public TransformContext(
 			IReadOnlyList<ValueInfo> values,
 			IReadOnlyDictionary<string, AssemblerValue> parameters,
@@ -56,7 +66,8 @@ namespace Assembler.Parsing
 			IReadOnlyDictionary<string, Type> typeRegistry,
 			Dictionary<Type, MethodInfo> exprArgFactoryCache,
 			InlineExpressionAccumulator inlineExpressions,
-			RecordSchemaRegistry recordSchemas)
+			RecordSchemaRegistry recordSchemas,
+			string? enclosingEntityId = null)
 		{
 			Values = values;
 			Parameters = parameters;
@@ -65,13 +76,25 @@ namespace Assembler.Parsing
 			ExprArgFactoryCache = exprArgFactoryCache;
 			InlineExpressions = inlineExpressions;
 			RecordSchemas = recordSchemas;
+			EnclosingEntityId = enclosingEntityId;
 		}
 
 		/// <summary>
 		/// Returns a sibling context with a new parameter scope, sharing the stable
 		/// values/expressions/type-registry/factory-cache/inline-accumulator/record-schemas with this one.
+		/// The self-resolving <see cref="EnclosingEntityId"/> is intentionally not carried across a parameter
+		/// scope change — it is set explicitly via <see cref="WithEnclosingEntityId"/> at the one point a
+		/// behaviour is bound to its owning entity.
 		/// </summary>
 		public TransformContext WithParameters(IReadOnlyDictionary<string, AssemblerValue> parameters) =>
 			new(Values, parameters, ExpressionsById, TypeRegistry, ExprArgFactoryCache, InlineExpressions, RecordSchemas);
+
+		/// <summary>
+		/// Returns a sibling context that resolves an omitted-<c>Id</c> <c>!entity</c> self reference to
+		/// <paramref name="entityId"/>, sharing everything else with this one.
+		/// </summary>
+		public TransformContext WithEnclosingEntityId(string entityId) =>
+			new(Values, Parameters, ExpressionsById, TypeRegistry, ExprArgFactoryCache, InlineExpressions, RecordSchemas,
+				entityId);
 	}
 }

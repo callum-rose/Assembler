@@ -183,7 +183,7 @@ Entities:
             With:
               mode: !var drive_mode
               target_pos: !var target_position
-              self_pos: !entity { Id: driver, Property: Position }
+              self_pos: !entity { Property: Position }
 
       # --- Machine 1: movement. Drives the grid navigation. ---
       movement:
@@ -243,13 +243,13 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: bullet
-          Position: !entity { Id: driver, Property: Position }
+          Position: !entity { Property: Position }
           Parameters:
             initial_velocity: !expr
               Do: bulletVelocity
               ReturnType: vector
               With:
-                from: !entity { Id: driver, Property: Position }
+                from: !entity { Property: Position }
                 to: !var target_position
                 speed: !var bullet speed
 

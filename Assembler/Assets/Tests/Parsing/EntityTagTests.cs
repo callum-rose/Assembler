@@ -2,6 +2,7 @@ using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 
 namespace Tests.Parsing
@@ -97,6 +98,41 @@ Entities:
     Position: !entity { Id: leader }
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
+";
+			Assert.Catch(() => Parse(yaml));
+		}
+
+		[Test]
+		public void OmittedIdBindsToEnclosingEntity()
+		{
+			// !entity with no Id is the self shorthand: a direct entity behaviour reading its own transform
+			// resolves to that entity's id at instantiation (issue #400).
+			var info = Parse(@"
+Entities:
+  spinner:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Property: Rotation }
+");
+			var translate = (TranslateInfo)info.Entities.First(e => e.Id == "spinner").Behaviours[0];
+			var source = (EntityPropertySource<UnityEngine.Vector3>)translate.Displacement;
+
+			Assert.AreEqual("spinner", source.EntityId.Id);
+			Assert.IsInstanceOf<LiteralEntityId>(source.EntityId);
+			Assert.IsNull(source.EntityId.PendingParameter);
+			Assert.AreEqual(EntityProperty.Rotation, source.Property);
+		}
+
+		[Test]
+		public void EmptyIdStringThrows()
+		{
+			// An explicit empty id is an authoring mistake, distinct from omitting Id entirely.
+			var yaml = @"
+Entities:
+  follower:
+    Position: !entity { Id: '', Property: Position }
 ";
 			Assert.Catch(() => Parse(yaml));
 		}

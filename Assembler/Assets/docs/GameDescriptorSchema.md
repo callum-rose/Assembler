@@ -315,8 +315,9 @@ entity id:                           # the YAML key is the entity id
 `EntityDto` fields: `Id`, `Template`, `Tags`, `Position`, `Rotation`, `Behaviours`, `Variables`,
 `Children`. Notes:
 
-- There is **no entity-level `Scale`** field — scale is *read* off another entity via
-  `!entity { Property: Scale }`, not set here.
+- There is **no entity-level `Scale`** field — scale is only *read* off an entity via
+  `!entity { Id: other, Property: Scale }` (or `!entity { Property: Scale }` for the entity itself),
+  not set here.
 - `Position` / `Rotation` are untyped (`object`), so they accept any value form that resolves to a
   `Vector3` (`!vec`, `!var`, `!expr`).
 - `Children` ids are **path-joined** onto the parent (`ui` → child `hud` → `ui/hud`). Target a nested
@@ -475,7 +476,7 @@ Tags carry a leading `!` and tell the loader how to interpret a value. The full 
 | `!expr` | `ExprRefDto` | `!expr { Do, With, … }` (mapping) | Evaluates code. See [`!expr`](#expr-detail). |
 | `!asset` | `AssetRefDto` | `!asset asset_id` (scalar **only** — mapping form fails) | References a top-level `Assets:` entry by id, for asset-typed properties. |
 | `!output` | `OutputRefDto` | `!output local_name` (scalar) | Reads a trigger output previously bound by a listener's `Outputs:` map. |
-| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of another entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. Inside a template, `Id` may be `!parameter <slot>` (e.g. `!entity { Id: !parameter self_id, Property: Position }`) to read the **instantiated** entity's own transform. |
+| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of an entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. **Omit `Id`** — `!entity { Property: Rotation }` — to read the **enclosing** entity's own transform ("self"); this works in a direct entity behaviour and inside a template behaviour alike (preferred over the older `Id: !parameter self_id` form). Or set `Id: !parameter <slot>` to read a parameterised entity by id. |
 | `!rigidbody` | `RigidbodyRefDto` | `!rigidbody { Id: car, Property: Velocity }` (mapping) | A live read of an entity's `Rigidbody` `Property` (`Velocity` \| `AngularVelocity` \| `Position`). |
 | `!query` | `EntityQueryRefDto` | `!query { Kind, EntityTag, Origin, MaxRange }` (mapping) | A one-off spatial perception query against the live entity index. `Kind` selects the verb (e.g. `NearestId`, `NearestPosition`). |
 | `!clock` | `ClockRefDto` | `!clock deltaTime` (scalar) | Reads a game-clock property (`deltaTime` \| `time` \| `frameCount` \| `unscaledDeltaTime`) as a number. Respects pause/slow-mo. |
