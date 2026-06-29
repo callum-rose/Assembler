@@ -186,6 +186,19 @@ Expressions:
 		}
 
 		[Test]
+		public void InlineUninferableOperandThrowsWithoutArgumentTypes()
+		{
+			// A nested *inline* !expr operand has no statically-known type. Rather than silently
+			// assuming float (the old default that masked issue #399), synthesis throws an actionable
+			// error naming the operand and pointing at the ArgumentTypes hint.
+			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+				"!expr { Do: 'outer + inner', With: { outer: !var v, inner: !expr { Do: '-outer', With: { outer: !var v } } } }")));
+
+			Assert.That(ex!.Message, Does.Contain("inner"));
+			Assert.That(ex!.Message, Does.Contain("ArgumentTypes"));
+		}
+
+		[Test]
 		public void DoNameWinsOverInlineInterpretation()
 		{
 			// "scale" is also a plausible inline identifier, but because it's a declared expression the
