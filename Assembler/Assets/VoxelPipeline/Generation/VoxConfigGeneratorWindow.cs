@@ -25,6 +25,7 @@ namespace Assembler.VoxelPipeline.Generation
         private string _status = string.Empty;
         private VoxModelConfig? _result;
         private string _settingsDump = string.Empty;
+        private string _meshyDump = string.Empty;
         private string _configJson = string.Empty;
         private Vector2 _scroll;
         private bool _isRunning;
@@ -126,8 +127,11 @@ namespace Assembler.VoxelPipeline.Generation
                 EditorGUILayout.LabelField("Preset", result.Preset.ToString());
                 EditorGUILayout.LabelField("Resolution", result.Resolution.ToString());
 
-                EditorGUILayout.LabelField("Resolved settings", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Resolved voxel settings", EditorStyles.boldLabel);
                 DrawWrappedReadonly(_settingsDump, wrapArea);
+
+                EditorGUILayout.LabelField("Resolved Meshy settings", EditorStyles.boldLabel);
+                DrawWrappedReadonly(_meshyDump, wrapArea);
 
                 EditorGUILayout.Space();
                 using (new EditorGUILayout.HorizontalScope())
@@ -187,6 +191,7 @@ namespace Assembler.VoxelPipeline.Generation
                 var result = await generator.ChooseAsync(_description, _artContext, ct);
                 _result = result;
                 _settingsDump = JsonUtility.ToJson(result.Settings, prettyPrint: true);
+                _meshyDump = JsonUtility.ToJson(result.Meshy, prettyPrint: true);
                 _configJson = VoxConfigExtractor.Extract(result.RawText) ?? result.RawText;
                 _status = "Done.";
             }

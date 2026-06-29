@@ -5,6 +5,7 @@
         "Assembler.VoxelPipeline.Generation",
         "Assembler.VoxelPipeline",
         "Assembler.Anthropic",
+        "Assembler.MeshyImageTo3D.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

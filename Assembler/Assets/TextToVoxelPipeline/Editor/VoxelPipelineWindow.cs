@@ -146,6 +146,25 @@ namespace Assembler.TextToVoxelPipeline
                 _settings.VoxSettings = config.Settings;
                 _settings.MaxDimVoxels = config.Resolution;
 
+                // Image → mesh (Meshy) generation parameters.
+                var m = config.Meshy;
+                _settings.MeshAiModel = m.MeshAiModel;
+                _settings.MeshFormat = m.MeshFormat;
+                _settings.GenerateTexture = m.GenerateTexture;
+                _settings.EnablePbr = m.EnablePbr;
+                _settings.HdTexture = m.HdTexture;
+                _settings.Remesh = m.Remesh;
+                _settings.Topology = m.Topology;
+                _settings.Decimation = m.Decimation;
+                _settings.TargetPolycount = m.TargetPolycount;
+                _settings.SavePreRemeshedModel = m.SavePreRemeshedModel;
+                _settings.RemoveLighting = m.RemoveLighting;
+                _settings.AutoSize = m.AutoSize;
+                _settings.OriginAt = m.OriginAt;
+                _settings.Moderation = m.Moderation;
+                _settings.MultiViewThumbnails = m.MultiViewThumbnails;
+                _settings.AlphaThumbnail = m.AlphaThumbnail;
+
                 // Drop keyboard focus so the prompt text field repaints with the imported value.
                 GUI.FocusControl(null);
                 SaveState();

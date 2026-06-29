@@ -61,19 +61,17 @@ namespace Assembler.VoxelPipeline.Generation
                     VoxConfigPromptBuilder.MaxResolution);
 
                 var settings = VoxPipelinePresets.For(preset);
-                if (root.TryGetProperty("settings", out var settingsEl) && settingsEl.ValueKind == JsonValueKind.Object)
-                {
-                    JsonUtility.FromJsonOverwrite(settingsEl.GetRawText(), settings);
-                    OverwriteEnumFields(settings, settingsEl);
-                }
-                ClampRanges(settings);
+                ApplyPartialObject(settings, root, "settings");
+
+                var meshy = new VoxMeshyConfig();
+                ApplyPartialObject(meshy, root, "meshy");
 
                 var appliedRuleIds = GetStringArray(root, "appliedRuleIds")
                     .Where(id => rules == null || rules.IsKnown(id))
                     .Distinct()
                     .ToList();
 
-                return new VoxModelConfig(rawText ?? json, imagePrompt, appliedRuleIds, preset, resolution, settings);
+                return new VoxModelConfig(rawText ?? json, imagePrompt, appliedRuleIds, preset, resolution, settings, meshy);
             }
         }
 
@@ -85,36 +83,52 @@ namespace Assembler.VoxelPipeline.Generation
                 : VoxPipelinePreset.Creature;
         }
 
-        private static void OverwriteEnumFields(VoxPipelineSettings settings, JsonElement settingsEl)
+        // Applies the named JSON sub-object onto <paramref name="target"/> as a partial overwrite:
+        // omitted fields keep their existing (preset/default) value. Works for any [Serializable]
+        // settings object — JsonUtility handles the field overwrite, then enums (which JsonUtility
+        // only understands as ints) are re-applied by name, and [Range] fields are clamped.
+        private static void ApplyPartialObject(object target, JsonElement root, string name)
         {
-            foreach (var field in SettingsFields().Where(f => f.FieldType.IsEnum))
+            if (!root.TryGetProperty(name, out var el) || el.ValueKind != JsonValueKind.Object)
             {
-                if (!settingsEl.TryGetProperty(field.Name, out var el))
+                return;
+            }
+
+            JsonUtility.FromJsonOverwrite(el.GetRawText(), target);
+            OverwriteEnumFields(target, el);
+            ClampRanges(target);
+        }
+
+        private static void OverwriteEnumFields(object target, JsonElement el)
+        {
+            foreach (var field in Fields(target).Where(f => f.FieldType.IsEnum))
+            {
+                if (!el.TryGetProperty(field.Name, out var value))
                 {
                     continue;
                 }
 
-                if (el.ValueKind == JsonValueKind.String && el.GetString() is { } name)
+                if (value.ValueKind == JsonValueKind.String && value.GetString() is { } name)
                 {
                     try
                     {
-                        field.SetValue(settings, Enum.Parse(field.FieldType, name, ignoreCase: true));
+                        field.SetValue(target, Enum.Parse(field.FieldType, name, ignoreCase: true));
                     }
                     catch (ArgumentException)
                     {
-                        // Unrecognised name — leave the preset value in place.
+                        // Unrecognised name — leave the existing value in place.
                     }
                 }
-                else if (el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var i) && Enum.IsDefined(field.FieldType, i))
+                else if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var i) && Enum.IsDefined(field.FieldType, i))
                 {
-                    field.SetValue(settings, Enum.ToObject(field.FieldType, i));
+                    field.SetValue(target, Enum.ToObject(field.FieldType, i));
                 }
             }
         }
 
-        private static void ClampRanges(VoxPipelineSettings settings)
+        private static void ClampRanges(object target)
         {
-            foreach (var field in SettingsFields())
+            foreach (var field in Fields(target))
             {
                 if (field.GetCustomAttribute<RangeAttribute>() is not { } range)
                 {
@@ -123,17 +137,17 @@ namespace Assembler.VoxelPipeline.Generation
 
                 if (field.FieldType == typeof(float))
                 {
-                    field.SetValue(settings, Mathf.Clamp((float)field.GetValue(settings)!, range.min, range.max));
+                    field.SetValue(target, Mathf.Clamp((float)field.GetValue(target)!, range.min, range.max));
                 }
                 else if (field.FieldType == typeof(int))
                 {
-                    field.SetValue(settings, Mathf.Clamp((int)field.GetValue(settings)!, (int)range.min, (int)range.max));
+                    field.SetValue(target, Mathf.Clamp((int)field.GetValue(target)!, (int)range.min, (int)range.max));
                 }
             }
         }
 
-        private static FieldInfo[] SettingsFields() =>
-            typeof(VoxPipelineSettings).GetFields(BindingFlags.Public | BindingFlags.Instance);
+        private static FieldInfo[] Fields(object target) =>
+            target.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance);
 
         private static string? GetString(JsonElement root, string name) =>
             root.TryGetProperty(name, out var el) && el.ValueKind == JsonValueKind.String

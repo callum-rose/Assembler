@@ -67,6 +67,17 @@ namespace Assembler.VoxelPipeline.Generation
                 "bottle, gear); set `revolveAxis` to its spin axis. When in doubt, leave both off.");
             sb.AppendLine();
 
+            sb.AppendLine("# Mesh generation (Meshy)");
+            sb.AppendLine(
+                "The image is turned into a 3D mesh by Meshy.ai before voxelizing. Choose the mesh " +
+                "generation parameters in `meshy`; include ONLY the fields you want to change from the " +
+                "defaults shown. Available fields:");
+            foreach (var field in MeshyFields())
+            {
+                sb.AppendLine(DescribeField(field));
+            }
+            sb.AppendLine();
+
             sb.AppendLine("# Resolution");
             sb.AppendLine(
                 $"`resolution` is the longest bounding-box axis in voxels ({MinResolution}–{MaxResolution}); " +
@@ -95,7 +106,8 @@ namespace Assembler.VoxelPipeline.Generation
             sb.AppendLine("  \"appliedRuleIds\": [\"rule-id\", ...],");
             sb.AppendLine("  \"preset\": \"Creature|Prop|RawVoxelCleanup\",");
             sb.AppendLine("  \"resolution\": 32,");
-            sb.AppendLine("  \"settings\": { }");
+            sb.AppendLine("  \"settings\": { },");
+            sb.AppendLine("  \"meshy\": { }");
             sb.AppendLine("}");
             sb.AppendLine("```");
 
@@ -104,6 +116,9 @@ namespace Assembler.VoxelPipeline.Generation
 
         private static FieldInfo[] SettingsFields() =>
             typeof(VoxPipelineSettings).GetFields(BindingFlags.Public | BindingFlags.Instance);
+
+        private static FieldInfo[] MeshyFields() =>
+            typeof(VoxMeshyConfig).GetFields(BindingFlags.Public | BindingFlags.Instance);
 
         private static string DescribeField(FieldInfo field)
         {

@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler.VoxelPipeline.Generation",
     "references": [
         "Assembler.VoxelPipeline",
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Assembler.MeshyImageTo3D.Editor"
     ],
     "includePlatforms": [
         "Editor"

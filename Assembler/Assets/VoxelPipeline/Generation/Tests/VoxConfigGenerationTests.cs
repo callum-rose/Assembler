@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Assembler.Anthropic;
+using Assembler.MeshyImageTo3D;
 using Assembler.VoxelPipeline;
 using Assembler.VoxelPipeline.Generation;
 using NUnit.Framework;
@@ -66,9 +67,49 @@ namespace Tests.VoxelPipeline.Generation
                 StringAssert.Contains(description, prompt);
             }
 
+            // Every Meshy field's tooltip + name.
+            foreach (var field in typeof(VoxMeshyConfig).GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                var tooltip = field.GetCustomAttribute<TooltipAttribute>()?.tooltip;
+                if (!string.IsNullOrEmpty(tooltip))
+                {
+                    StringAssert.Contains(tooltip, prompt);
+                }
+                StringAssert.Contains(field.Name, prompt);
+            }
+
             // The rule id and text.
             StringAssert.Contains("no-eyes", prompt);
             StringAssert.Contains("No eyes please.", prompt);
+        }
+
+        // --- Parser: meshy settings ----------------------------------------
+
+        [Test]
+        public void Parse_MeshySettings_OverridesApplied_DefaultsKept_EnumsByName_RangeClamped()
+        {
+            var config = VoxConfigParser.Parse(
+                Wrap("{\"meshy\":{\"MeshAiModel\":\"meshy-5\",\"GenerateTexture\":false," +
+                     "\"MeshFormat\":\"Fbx\",\"Decimation\":\"High\",\"TargetPolycount\":999999}}"),
+                Rules());
+
+            Assert.That(config.Meshy.MeshAiModel, Is.EqualTo("meshy-5"), "string override applied");
+            Assert.That(config.Meshy.GenerateTexture, Is.False, "bool override applied");
+            Assert.That(config.Meshy.MeshFormat, Is.EqualTo(ModelFormat.Fbx), "enum by name");
+            Assert.That(config.Meshy.Decimation, Is.EqualTo(DecimationMode.High), "enum by name");
+            Assert.That(config.Meshy.TargetPolycount, Is.EqualTo(300000), "int range clamped");
+            Assert.That(config.Meshy.Remesh, Is.True, "untouched field keeps default");
+        }
+
+        [Test]
+        public void Parse_NoMeshyObject_KeepsAllDefaults()
+        {
+            var config = VoxConfigParser.Parse(Wrap("{\"preset\":\"Creature\"}"), Rules());
+
+            var defaults = new VoxMeshyConfig();
+            Assert.That(config.Meshy.MeshAiModel, Is.EqualTo(defaults.MeshAiModel));
+            Assert.That(config.Meshy.MeshFormat, Is.EqualTo(defaults.MeshFormat));
+            Assert.That(config.Meshy.TargetPolycount, Is.EqualTo(defaults.TargetPolycount));
         }
 
         // --- Extractor -----------------------------------------------------
