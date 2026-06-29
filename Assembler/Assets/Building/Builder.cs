@@ -24,13 +24,21 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static async Task BuildAsync(string yamlPath, InputPlatform? overridePlatform = null)
+		public static Task BuildAsync(string yamlPath, InputPlatform? overridePlatform = null)
+			=> BuildFromYamlAsync(File.ReadAllText(yamlPath), overridePlatform);
+
+		/// <summary>
+		/// Build a game directly from a descriptor's YAML <em>content</em> (e.g. a descriptor downloaded from the
+		/// remote store), without it having to exist as a file first. Returns the root "Game" GameObject so the
+		/// caller can detect teardown (destroying the root unloads the whole game). Distinct from
+		/// <see cref="BuildAsync(string, InputPlatform?)"/>, whose string argument is a file path.
+		/// </summary>
+		public static async Task<GameObject> BuildFromYamlAsync(string yaml, InputPlatform? overridePlatform = null)
 		{
-			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			await BuildAsync(gameInfo, controls, overridePlatform);
+			return (await gameInfo.ResolveAsync(controls, overridePlatform)).Instantiate();
 		}
 
 		public static Task BuildAsync(GameInfo gameInfo) => BuildAsync(gameInfo, ControlsInfo.Empty, null);
