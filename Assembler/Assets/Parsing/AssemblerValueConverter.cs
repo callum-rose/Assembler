@@ -72,6 +72,9 @@ namespace Assembler.Parsing
 				// domain value type.
 				(Vector2 v, { AllowRuntimeTypes: true }) => new Vector3Value(v),
 				(Color c, { AllowRuntimeTypes: true }) => new ColorValue(c),
+				// Runtime stage: an already-resolved asset (UnityEngine.Object) passed as a spawner Parameter
+				// (e.g. !asset <id>). Carry it through; CreateValueSource rewraps it as a ConstantSource<T>.
+				(Object obj, { AllowRuntimeTypes: true }) => new RuntimeObjectValue(obj),
 				// IR stage: DTOs become unevaluated AssemblerValue IR. These inputs only occur in the IR
 				// stage; the resolved stage handles RefDto above (and rejects everything else) and the runtime
 				// stage never receives DTOs.
