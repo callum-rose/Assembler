@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -19,7 +20,8 @@ namespace Assembler.ImageGeneration
         private const string ProviderPref = "Assembler.ImageGen.Provider";
         private const string ModelPref = "Assembler.ImageGen.Model";
         private const string PromptPref = "Assembler.ImageGen.Prompt";
-        private const string OutputPathPref = "Assembler.ImageGen.OutputPath";
+        private const string OutputDirPref = "Assembler.ImageGen.OutputDir";
+        private const string OutputFilePref = "Assembler.ImageGen.OutputFile";
 
         // API keys are stored per provider so swapping providers keeps each key.
         private static string ApiKeyPref(ImageProvider provider) => $"Assembler.ImageGen.ApiKey.{provider}";
@@ -28,18 +30,19 @@ namespace Assembler.ImageGeneration
         private string _apiKey = "";
         private string _model = "";
         private string _prompt = "";
-        private string _outputPath = "";
+        private string _outputDir = "";
+        private string _outputFile = "";
 
         private bool _running;
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
         private Texture2D? _preview;
-        private Vector2 _promptScroll;
+        private Vector2 _windowScroll;
 
-        [MenuItem("Assembler/Image Generation")]
+        [MenuItem("Assembler/Text to Image")]
         public static void Open()
         {
-            var window = GetWindow<ImageGenerationWindow>("Image Generation");
+            var window = GetWindow<ImageGenerationWindow>("Text to Image");
             window.minSize = new Vector2(460, 520);
         }
 
@@ -48,7 +51,8 @@ namespace Assembler.ImageGeneration
             _provider = (ImageProvider)EditorPrefs.GetInt(ProviderPref, (int)ImageProvider.GoogleGemini);
             _model = EditorPrefs.GetString(ModelPref, ImageGeneratorFactory.DefaultModelFor(_provider));
             _prompt = EditorPrefs.GetString(PromptPref, "");
-            _outputPath = EditorPrefs.GetString(OutputPathPref, "Assets/GeneratedImages/image.png");
+            _outputDir = EditorPrefs.GetString(OutputDirPref, "Assets/GeneratedImages");
+            _outputFile = EditorPrefs.GetString(OutputFilePref, "");
             _apiKey = EditorPrefs.GetString(ApiKeyPref(_provider), "");
         }
 
@@ -60,14 +64,12 @@ namespace Assembler.ImageGeneration
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("AI Image Generation", EditorStyles.boldLabel);
-            EditorGUILayout.Space();
+            _windowScroll = EditorGUILayout.BeginScrollView(_windowScroll);
 
             using (new EditorGUI.DisabledScope(_running))
             {
                 DrawProvider();
-                _model = EditorGUILayout.TextField(
-                    new GUIContent("Model", "Provider model id. Leave blank for the provider default."), _model);
+                DrawModel();
                 EditorGUILayout.Space();
                 DrawApiKey();
                 EditorGUILayout.Space();
@@ -80,6 +82,8 @@ namespace Assembler.ImageGeneration
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(_status, _running ? MessageType.Info : MessageType.None);
             DrawPreview();
+
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawProvider()
@@ -92,6 +96,22 @@ namespace Assembler.ImageGeneration
                 _apiKey = EditorPrefs.GetString(ApiKeyPref(_provider), "");
                 _model = EditorPrefs.GetString(ModelPref + "." + _provider, ImageGeneratorFactory.DefaultModelFor(_provider));
             }
+        }
+
+        private void DrawModel()
+        {
+            // Offer the provider's known models as a dropdown, but keep any
+            // previously-saved custom id selectable by prepending it when missing.
+            var models = ImageGeneratorFactory.AvailableModelsFor(_provider);
+            var options = Array.IndexOf(models, _model) >= 0 || string.IsNullOrEmpty(_model)
+                ? models
+                : new[] { _model }.Concat(models).ToArray();
+
+            var index = Mathf.Max(0, Array.IndexOf(options, _model));
+            index = EditorGUILayout.Popup(
+                new GUIContent("Model", "Provider model id."), index, options.Select(m => new GUIContent(m)).ToArray());
+            if (options.Length > 0)
+                _model = options[index];
         }
 
         private void DrawApiKey()
@@ -109,26 +129,25 @@ namespace Assembler.ImageGeneration
         private void DrawPrompt()
         {
             EditorGUILayout.LabelField("Prompt");
-            _promptScroll = EditorGUILayout.BeginScrollView(_promptScroll, GUILayout.Height(90));
-            _prompt = EditorGUILayout.TextArea(_prompt, GUILayout.ExpandHeight(true));
-            EditorGUILayout.EndScrollView();
+            var wrapStyle = new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+            _prompt = EditorGUILayout.TextArea(_prompt, wrapStyle, GUILayout.MinHeight(90));
         }
 
         private void DrawOutputPicker()
         {
             EditorGUILayout.BeginHorizontal();
-            _outputPath = EditorGUILayout.TextField("Output Image Path", _outputPath);
+            _outputDir = EditorGUILayout.TextField("Output Directory", _outputDir);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
-                var dir = GuessStartDir(_outputPath);
-                var name = string.IsNullOrEmpty(_outputPath)
-                    ? "image"
-                    : Path.GetFileNameWithoutExtension(_outputPath);
-                var picked = EditorUtility.SaveFilePanel("Output image", dir, name, "png");
+                var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_outputDir), "");
                 if (!string.IsNullOrEmpty(picked))
-                    _outputPath = picked;
+                    _outputDir = picked;
             }
             EditorGUILayout.EndHorizontal();
+
+            _outputFile = EditorGUILayout.TextField(
+                new GUIContent("File Name", "Leave blank to use a default name. The extension is set from the returned image type."),
+                _outputFile);
         }
 
         private void DrawActions()
@@ -167,7 +186,8 @@ namespace Assembler.ImageGeneration
             EditorPrefs.SetString(ModelPref, _model);
             EditorPrefs.SetString(ModelPref + "." + _provider, _model);
             EditorPrefs.SetString(PromptPref, _prompt);
-            EditorPrefs.SetString(OutputPathPref, _outputPath);
+            EditorPrefs.SetString(OutputDirPref, _outputDir);
+            EditorPrefs.SetString(OutputFilePref, _outputFile);
             EditorPrefs.SetString(ApiKeyPref(_provider), _apiKey);
 
             _running = true;
@@ -178,15 +198,18 @@ namespace Assembler.ImageGeneration
             {
                 if (string.IsNullOrWhiteSpace(_prompt))
                     throw new ImageGenerationException("Enter a prompt.");
-                if (string.IsNullOrWhiteSpace(_outputPath))
-                    throw new ImageGenerationException("Set an output image path.");
+                if (string.IsNullOrWhiteSpace(_outputDir))
+                    throw new ImageGenerationException("Set an output directory.");
 
                 using var generator = ImageGeneratorFactory.Create(_provider, _apiKey);
 
                 SetStatus($"Generating with {generator.DisplayName}…");
                 var image = await generator.GenerateAsync(new ImageGenerationRequest(_prompt, _model), ct);
 
-                var path = EnsureExtension(_outputPath, image.MimeType);
+                // No filename given → fall back to a default base name; the extension
+                // is always derived from the returned image's MIME type.
+                var fileName = string.IsNullOrWhiteSpace(_outputFile) ? "image" : _outputFile.Trim();
+                var path = EnsureExtension(Path.Combine(_outputDir, fileName), image.MimeType);
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
                 File.WriteAllBytes(path, image.Bytes);
 

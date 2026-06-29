@@ -18,15 +18,16 @@ namespace VoxelsFromMeshSpike
         private const string PrefPrefix = "VoxelsFromMeshSpike.";
 
         private string _objPath = "";
-        private string _voxPath = "";
+        private string _voxDir = "";
+        private string _voxFile = "";
         private int _maxDimVoxels = 32;
 
         [SerializeField] private VoxPipelinePreset _preset = VoxPipelinePreset.Creature;
         [SerializeField] private VoxPipelineSettings _settings = VoxPipelinePresets.For(VoxPipelinePreset.Creature);
         [SerializeField] private VoxMasterPalette? _palette;
 
-        [MenuItem("Window/Voxels/Mesh → VOX (Spike)")]
-        private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh → VOX (Spike)");
+        [MenuItem("Window/Voxels/Mesh to Voxels")]
+        private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh to Voxels");
 
         private void OnEnable() => LoadState();
 
@@ -34,7 +35,6 @@ namespace VoxelsFromMeshSpike
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Mesh → VOX (Spike)", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Solid-fills a textured .obj or .fbx into a coloured MagicaVoxel .vox " +
                 "using a fast-winding-number occupancy test, then cleans it up. Standalone spike — safe to delete.",
@@ -55,9 +55,9 @@ namespace VoxelsFromMeshSpike
                     if (!string.IsNullOrEmpty(picked))
                     {
                         _objPath = picked;
-                        if (string.IsNullOrEmpty(_voxPath))
+                        if (string.IsNullOrEmpty(_voxDir))
                         {
-                            _voxPath = DefaultVoxPath(picked);
+                            _voxDir = Path.GetDirectoryName(picked) ?? Application.dataPath;
                         }
                     }
                 }
@@ -86,29 +86,30 @@ namespace VoxelsFromMeshSpike
             // Output.
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("VOX out", GUILayout.Width(60));
+                EditorGUILayout.LabelField("VOX dir", GUILayout.Width(60));
                 EditorGUILayout.SelectableLabel(
-                    string.IsNullOrEmpty(_voxPath) ? "(none)" : _voxPath,
+                    string.IsNullOrEmpty(_voxDir) ? "(none)" : _voxDir,
                     EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
                 if (GUILayout.Button("Browse…", GUILayout.Width(80)))
                 {
-                    string startName = string.IsNullOrEmpty(_objPath)
-                        ? "model.vox"
-                        : Path.GetFileNameWithoutExtension(_objPath) + ".vox";
-                    string startDir = string.IsNullOrEmpty(_objPath)
-                        ? Application.dataPath
-                        : Path.GetDirectoryName(_objPath) ?? Application.dataPath;
-                    string picked = EditorUtility.SaveFilePanel("Save VOX", startDir, startName, "vox");
+                    string startDir = string.IsNullOrEmpty(_voxDir)
+                        ? (string.IsNullOrEmpty(_objPath) ? Application.dataPath : Path.GetDirectoryName(_objPath) ?? Application.dataPath)
+                        : _voxDir;
+                    string picked = EditorUtility.OpenFolderPanel("Save VOX into", startDir, "");
                     if (!string.IsNullOrEmpty(picked))
                     {
-                        _voxPath = picked;
+                        _voxDir = picked;
                     }
                 }
             }
 
+            _voxFile = EditorGUILayout.TextField(
+                new GUIContent("VOX file", "Leave blank to use the source mesh's filename. A .vox extension is added if missing."),
+                _voxFile);
+
             EditorGUILayout.Space();
 
-            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(_objPath) || string.IsNullOrEmpty(_voxPath)))
+            using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(_objPath) || string.IsNullOrEmpty(_voxDir)))
             {
                 if (GUILayout.Button("Convert", GUILayout.Height(32)))
                 {
@@ -270,9 +271,10 @@ namespace VoxelsFromMeshSpike
                     return;
                 }
 
+                string voxPath = ResolveVoxPath();
                 var palette = _palette != null ? _palette.ToColor32() : DefaultMasterPalette.Colors;
                 VoxConversion.Summary summary = VoxConversion.Run(
-                    _objPath, _voxPath, _maxDimVoxels, _settings, palette,
+                    _objPath, voxPath, _maxDimVoxels, _settings, palette,
                     new EditorProgressReporter(),
                     (name, fraction) =>
                         EditorUtility.DisplayProgressBar("Mesh → VOX", $"Post-processing: {name}…", 0.9f + 0.09f * fraction));
@@ -318,7 +320,8 @@ namespace VoxelsFromMeshSpike
         private void LoadState()
         {
             _objPath = EditorPrefs.GetString(PrefPrefix + "MeshPath", _objPath);
-            _voxPath = EditorPrefs.GetString(PrefPrefix + "VoxPath", _voxPath);
+            _voxDir = EditorPrefs.GetString(PrefPrefix + "VoxDir", _voxDir);
+            _voxFile = EditorPrefs.GetString(PrefPrefix + "VoxFile", _voxFile);
             _maxDimVoxels = EditorPrefs.GetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
             _preset = (VoxPipelinePreset)EditorPrefs.GetInt(PrefPrefix + "Preset", (int)_preset);
 
@@ -335,16 +338,17 @@ namespace VoxelsFromMeshSpike
                 _palette = string.IsNullOrEmpty(path) ? null : AssetDatabase.LoadAssetAtPath<VoxMasterPalette>(path);
             }
 
-            if (!string.IsNullOrEmpty(_objPath) && string.IsNullOrEmpty(_voxPath))
+            if (!string.IsNullOrEmpty(_objPath) && string.IsNullOrEmpty(_voxDir))
             {
-                _voxPath = DefaultVoxPath(_objPath);
+                _voxDir = Path.GetDirectoryName(_objPath) ?? Application.dataPath;
             }
         }
 
         private void SaveState()
         {
             EditorPrefs.SetString(PrefPrefix + "MeshPath", _objPath);
-            EditorPrefs.SetString(PrefPrefix + "VoxPath", _voxPath);
+            EditorPrefs.SetString(PrefPrefix + "VoxDir", _voxDir);
+            EditorPrefs.SetString(PrefPrefix + "VoxFile", _voxFile);
             EditorPrefs.SetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
             EditorPrefs.SetInt(PrefPrefix + "Preset", (int)_preset);
             EditorPrefs.SetString(PrefPrefix + "Settings", JsonUtility.ToJson(_settings));
@@ -355,11 +359,21 @@ namespace VoxelsFromMeshSpike
                 string.IsNullOrEmpty(assetPath) ? "" : AssetDatabase.AssetPathToGUID(assetPath));
         }
 
-        // Default the .vox next to the source mesh, matching its basename.
-        private static string DefaultVoxPath(string meshPath) =>
-            Path.Combine(
-                Path.GetDirectoryName(meshPath) ?? Application.dataPath,
-                Path.GetFileNameWithoutExtension(meshPath) + ".vox");
+        // Combine the chosen directory with the file name; a blank name falls back to
+        // the source mesh's basename, and a missing extension defaults to .vox.
+        private string ResolveVoxPath()
+        {
+            string name = string.IsNullOrWhiteSpace(_voxFile)
+                ? Path.GetFileNameWithoutExtension(_objPath) + ".vox"
+                : _voxFile.Trim();
+            if (!Path.HasExtension(name))
+                name += ".vox";
+
+            string dir = string.IsNullOrEmpty(_voxDir)
+                ? (Path.GetDirectoryName(_objPath) ?? Application.dataPath)
+                : _voxDir;
+            return Path.Combine(dir, name);
+        }
 
         private sealed class EditorProgressReporter : IProgressReporter
         {
