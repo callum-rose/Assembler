@@ -193,9 +193,20 @@ namespace Assembler.TextToVoxelPipeline
             {
                 mesh = await RunStage(
                     () => MeshyConversionCore.ConvertAsync(
-                        settings.MeshyApiKey, image.OutputPath, outputDir, baseName,
-                        settings.MeshFormat, settings.GenerateTexture, settings.EnablePbr,
-                        settings.Remesh, settings.MeshAiModel, ct, onStatus),
+                        settings.MeshyApiKey,
+                        new MeshyRequest
+                        {
+                            ImagePath = image.OutputPath,
+                            Format = settings.MeshFormat,
+                            AiModel = settings.MeshAiModel,
+                            GenerateTexture = settings.GenerateTexture,
+                            EnablePbr = settings.EnablePbr,
+                            Remesh = settings.Remesh,
+                            // New options keep Meshy's documented defaults here; the pipeline window
+                            // doesn't yet surface them. RemoveLighting defaults true to match the API.
+                            RemoveLighting = true,
+                        },
+                        outputDir, baseName, ct, onStatus),
                     reviewMesh,
                     "Stage 2/3 — converting image to mesh…",
                     "Review the mesh, then continue or retry…");
