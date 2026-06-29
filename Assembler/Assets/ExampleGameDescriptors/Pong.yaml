@@ -158,7 +158,7 @@ Templates:
         Properties:
           VariableId: !var ball velocity
           Value: !expr
-            Do: paddle bounce
+            Do: paddleBounce
             With:
               ball_vel: !var ball velocity
               hit_point: !output hit_point
@@ -246,14 +246,14 @@ Controls:
       Size:   { X: 220, Y: 220 }
 
 Expressions:
-  paddle bounce:
+  paddleBounce:
     ArgumentTypes: [ vector, vector, vector, float ]
     ArgumentNames: [ ball_vel, hit_point, paddle_pos, factor ]
     ReturnType: vector
     Expression: "var speed = Magnitude(ball_vel);
       var dir = new UnityEngine.Vector3(-ball_vel.x, (hit_point.y - paddle_pos.y) * factor, 0f);
       ScaleVector(Normalize(dir), speed);"
-  int greater or equal:
+  intGreaterOrEqual:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
@@ -331,7 +331,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: int greater or equal
+            Do: intGreaterOrEqual
             With:
               a: !var left score
               b: !var score to win
@@ -339,7 +339,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: int greater or equal
+            Do: intGreaterOrEqual
             With:
               a: !var right score
               b: !var score to win

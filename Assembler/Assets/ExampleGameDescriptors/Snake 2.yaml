@@ -110,31 +110,31 @@ Controls:
       Size:   { X: 380, Y: 380 }
 
 Expressions:
-  int add:
+  intAdd:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
     Expression: "a + b;"
 
-  float add:
+  floatAdd:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ a, b ]
     ReturnType: float
     Expression: "a + b;"
 
-  vec add:
+  vecAdd:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ a, b ]
     ReturnType: vector
     Expression: "new UnityEngine.Vector3(a.x + b.x, a.y + b.y, a.z + b.z);"
 
-  int greater or equal:
+  intGreaterOrEqual:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: bool
     Expression: "a >= b;"
 
-  is game over:
+  isGameOver:
     ArgumentTypes: [ int, int, bool ]
     ArgumentNames: [ score, target, dead ]
     ReturnType: bool
@@ -144,7 +144,7 @@ Expressions:
   # Takes the list of cells currently occupied by the snake so food never
   # spawns inside the body. Bails out after 50 attempts if the snake fills
   # the arena (in practice this never happens at score-to-win = 10).
-  next food position:
+  nextFoodPosition:
     ArgumentTypes: [ vector list ]
     ArgumentNames: [ taken ]
     ReturnType: vector
@@ -167,7 +167,7 @@ Expressions:
       }
       return new Vector3(x, y, 0f);
 
-  format score:
+  formatScore:
     ArgumentTypes: [ int ]
     ArgumentNames: [ s ]
     ReturnType: string
@@ -176,7 +176,7 @@ Expressions:
   # Convert the move action's analogue/d-pad vector into a single cardinal cell
   # step (magnitude `cell`). A neutral input keeps the current heading, so the
   # snake glides on between presses exactly as the old key-down version did.
-  snap dir:
+  snapDir:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ input, current, cell ]
     ReturnType: vector
@@ -298,7 +298,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: is game over
+            Do: isGameOver
             With:
               score: !var score
               target: !var score to win
@@ -377,7 +377,7 @@ Entities:
         Properties:
           VariableId: !var head pos
           Value: !expr
-            Do: vec add
+            Do: vecAdd
             With:
               a: !var head pos
               b: !var direction
@@ -399,7 +399,7 @@ Entities:
         Properties:
           VariableId: !var direction
           Value: !expr
-            Do: snap dir
+            Do: snapDir
             With:
               input: !output axis
               current: !var direction
@@ -455,7 +455,7 @@ Entities:
         Properties:
           VariableId: !var segment lifetime
           Value: !expr
-            Do: float add
+            Do: floatAdd
             With:
               a: !var segment lifetime
               b: !var step interval
@@ -469,7 +469,7 @@ Entities:
         Properties:
           VariableId: !var score
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var score
               b: !var score per food
@@ -489,7 +489,7 @@ Entities:
         Properties:
           TemplateId: food_template
           Position: !expr
-            Do: next food position
+            Do: nextFoodPosition
             With:
               taken: !var segment positions
 
@@ -511,7 +511,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format score
+            Do: formatScore
             With:
               s: !var score
           FontSize: 32

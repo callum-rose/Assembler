@@ -47,7 +47,7 @@ Constants:
   camera size: 7
 
 Expressions:
-  pick goal:
+  pickGoal:
     ArgumentTypes: [ int, vector, vector ]
     ArgumentNames: [ mode, target_pos, self_pos ]
     ReturnType: vector
@@ -59,13 +59,13 @@ Expressions:
     ReturnType: bool
     Expression: "return !flag;"
 
-  is engaged:
+  isEngaged:
     ArgumentTypes: [ string ]
     ArgumentNames: [ state ]
     ReturnType: bool
     Expression: "return state == \"engage\";"
 
-  bullet velocity:
+  bulletVelocity:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ from, to, speed ]
     ReturnType: vector
@@ -179,7 +179,7 @@ Entities:
         Properties:
           VariableId: !var ai_goal
           Value: !expr
-            Do: pick goal
+            Do: pickGoal
             With:
               mode: !var drive_mode
               target_pos: !var target_position
@@ -237,7 +237,7 @@ Entities:
       fire gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: is engaged, With: { state: !var combat_state } }
+          Condition: !expr { Do: isEngaged, With: { state: !var combat_state } }
         Listeners: [ fire ]
       fire:
         Type: spawner
@@ -246,7 +246,7 @@ Entities:
           Position: !entity { Id: driver, Property: Position }
           Parameters:
             initial_velocity: !expr
-              Do: bullet velocity
+              Do: bulletVelocity
               ReturnType: vector
               With:
                 from: !entity { Id: driver, Property: Position }

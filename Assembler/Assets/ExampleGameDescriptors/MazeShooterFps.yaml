@@ -149,7 +149,7 @@ Controls:
 
 Expressions:
   # WASD input (axis) rotated by the player's yaw, scaled to a rigidbody velocity.
-  facing velocity:
+  facingVelocity:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ input, euler, speed ]
     ReturnType: vector
@@ -162,7 +162,7 @@ Expressions:
       return ScaleVector(Normalize(dir), speed);
 
   # Forward direction (from yaw) scaled to the bullet's muzzle velocity.
-  forward velocity:
+  forwardVelocity:
     ArgumentTypes: [ vector, float ]
     ArgumentNames: [ euler, speed ]
     ReturnType: vector
@@ -173,7 +173,7 @@ Expressions:
       return ScaleVector(fwd, speed);
 
   # Muzzle position: a little in front of the player's eyes, along facing.
-  muzzle position:
+  muzzlePosition:
     ArgumentTypes: [ vector, vector ]
     ArgumentNames: [ pos, euler ]
     ReturnType: vector
@@ -340,7 +340,7 @@ Entities:
         Type: set velocity
         Properties:
           Velocity: !expr
-            Do: facing velocity
+            Do: facingVelocity
             With:
               input: !output axis
               euler: !entity { Id: player, Property: Rotation }
@@ -391,13 +391,13 @@ Entities:
         Properties:
           TemplateId: bullet_template
           Position: !expr
-            Do: muzzle position
+            Do: muzzlePosition
             With:
               pos: !entity { Id: player, Property: Position }
               euler: !entity { Id: player, Property: Rotation }
           Parameters:
             initial_velocity: !expr
-              Do: forward velocity
+              Do: forwardVelocity
               With:
                 euler: !entity { Id: player, Property: Rotation }
                 speed: !var bullet speed

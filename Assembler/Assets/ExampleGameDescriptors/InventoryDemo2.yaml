@@ -77,19 +77,19 @@ Variables:
 # Reusable record expressions. `count of kind` sums the stack counts of one kind; `has potion`
 # gates the spend; `consume first potion` mutates a record in place and returns it.
 Expressions:
-  count of kind:
+  countOfKind:
     ArgumentTypes: [ record list, string ]
     ArgumentNames: [ inv, kind ]
     ReturnType: int
     Expression: 'return inv.Where(r => GetString(r, "kind") == kind).Sum(r => GetInt(r, "count"));'
 
-  has potion:
+  hasPotion:
     ArgumentTypes: [ record list ]
     ArgumentNames: [ inv ]
     ReturnType: bool
     Expression: 'return inv.Where(r => GetString(r, "kind") == "potion").Sum(r => GetInt(r, "count")) >= 1;'
 
-  consume first potion:
+  consumeFirstPotion:
     ArgumentTypes: [ record list ]
     ArgumentNames: [ inv ]
     ReturnType: record
@@ -270,7 +270,7 @@ Entities:
       use potion gate:
         Type: condition gate
         Properties:
-          Condition: !expr { Do: has potion, With: { inv: !var inventory } }
+          Condition: !expr { Do: hasPotion, With: { inv: !var inventory } }
         Listeners: [ consume potion, gain health ]
       # The consume expression mutates the first in-stock potion in the list in place (count - 1,
       # durability - 0.1) and returns it; the setter parks that record in `last potion`. Because a
@@ -279,7 +279,7 @@ Entities:
         Type: record variable setter
         Properties:
           VariableId: !var last potion
-          Value: !expr { Do: consume first potion, With: { inv: !var inventory } }
+          Value: !expr { Do: consumeFirstPotion, With: { inv: !var inventory } }
       gain health:
         Type: int variable setter
         Properties:
@@ -300,7 +300,7 @@ Entities:
             Do: 'key_count >= keys_to_win'
             ArgumentTypes: [ int, int ]
             With:
-              key_count: !expr { Do: count of kind, With: { inv: !var inventory, kind: "key" } }
+              key_count: !expr { Do: countOfKind, With: { inv: !var inventory, kind: "key" } }
               keys_to_win: !var keys to win
         Listeners:
           - !gameover
@@ -358,7 +358,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.coins, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "coin" } } ] }
+                  Text: !text { Key: hud.coins, Arguments: [ !expr { Do: countOfKind, With: { inv: !var inventory, kind: "coin" } } ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40
@@ -367,7 +367,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.potions, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "potion" } } ] }
+                  Text: !text { Key: hud.potions, Arguments: [ !expr { Do: countOfKind, With: { inv: !var inventory, kind: "potion" } } ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40
@@ -376,7 +376,7 @@ Entities:
               label:
                 Type: text label
                 Properties:
-                  Text: !text { Key: hud.keys, Arguments: [ !expr { Do: count of kind, With: { inv: !var inventory, kind: "key" } }, !var keys to win ] }
+                  Text: !text { Key: hud.keys, Arguments: [ !expr { Do: countOfKind, With: { inv: !var inventory, kind: "key" } }, !var keys to win ] }
                   FontSize: 28
                   PreferredWidth: 400
                   PreferredHeight: 40

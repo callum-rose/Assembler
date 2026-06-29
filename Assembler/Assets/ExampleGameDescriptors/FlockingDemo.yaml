@@ -65,38 +65,38 @@ Expressions:
   # Each Reynolds rule wrapped as a named expression so the boid's own position/velocity can be
   # passed in explicitly typed (a template's !entity self id has no resolvable type until it is
   # instantiated, so the inline-expr form can't infer it — named ArgumentTypes pin it down).
-  separation force:
+  separationForce:
     ArgumentTypes: [ vector, vector list, float, float ]
     ArgumentNames: [ pos, neighbours, radius, max ]
     ReturnType: vector
     Expression: "return Separate(pos, neighbours, radius, max);"
 
-  cohesion force:
+  cohesionForce:
     ArgumentTypes: [ vector, vector list, float ]
     ArgumentNames: [ pos, neighbours, max ]
     ReturnType: vector
     Expression: "return Cohesion(pos, neighbours, max);"
 
-  alignment force:
+  alignmentForce:
     ArgumentTypes: [ vector, vector list, float ]
     ArgumentNames: [ vel, neighbour_vels, max ]
     ReturnType: vector
     Expression: "return Alignment(vel, neighbour_vels, max);"
 
-  wander force:
+  wanderForce:
     ArgumentTypes: [ vector, float, float ]
     ArgumentNames: [ vel, max, jitter ]
     ReturnType: vector
     Expression: "return Wander(vel, max, jitter);"
 
-  seek centre:
+  seekCentre:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ pos, target, max ]
     ReturnType: vector
     Expression: "return Seek(pos, target, max);"
 
   # Flee the mouse, but only when it is within `radius` — otherwise contribute nothing.
-  avoid mouse:
+  avoidMouse:
     ArgumentTypes: [ vector, vector, float, float ]
     ArgumentNames: [ pos, mouse, radius, max ]
     ReturnType: vector
@@ -105,7 +105,7 @@ Expressions:
   # Convert a screen-space pointer position to a world point on the z=0 plane for this orthographic
   # camera. Self-contained (no Camera.main, which the camera entity isn't tagged for) — derived from
   # the viewport mapping using the camera's known position and orthographic size.
-  screen to world:
+  screenToWorld:
     ArgumentTypes: [ vector, vector, float ]
     ArgumentNames: [ screen_pos, cam_pos, ortho_size ]
     ReturnType: vector
@@ -152,7 +152,7 @@ Templates:
           Output: !var velocity
           Forces:
             - Force: !expr
-                Do: separation force
+                Do: separationForce
                 With:
                   pos: !entity { Id: !parameter self_id, Property: Position }
                   neighbours: !var neighbours
@@ -160,35 +160,35 @@ Templates:
                   max: !var max speed
               Weight: !var separation weight
             - Force: !expr
-                Do: cohesion force
+                Do: cohesionForce
                 With:
                   pos: !entity { Id: !parameter self_id, Property: Position }
                   neighbours: !var neighbours
                   max: !var max speed
               Weight: !var cohesion weight
             - Force: !expr
-                Do: alignment force
+                Do: alignmentForce
                 With:
                   vel: !var velocity
                   neighbour_vels: !var neighbour vels
                   max: !var max speed
               Weight: !var alignment weight
             - Force: !expr
-                Do: wander force
+                Do: wanderForce
                 With:
                   vel: !var velocity
                   max: !var max speed
                   jitter: 25
               Weight: !var wander weight
             - Force: !expr
-                Do: seek centre
+                Do: seekCentre
                 With:
                   pos: !entity { Id: !parameter self_id, Property: Position }
                   target: !vec { X: 0, Y: 0, Z: 0 }
                   max: !var max speed
               Weight: !var containment weight
             - Force: !expr
-                Do: avoid mouse
+                Do: avoidMouse
                 With:
                   pos: !entity { Id: !parameter self_id, Property: Position }
                   mouse: !var mouse world
@@ -264,7 +264,7 @@ Entities:
         Properties:
           VariableId: !var mouse world
           Value: !expr
-            Do: screen to world
+            Do: screenToWorld
             With:
               screen_pos: !output axis
               cam_pos: !var camera position
