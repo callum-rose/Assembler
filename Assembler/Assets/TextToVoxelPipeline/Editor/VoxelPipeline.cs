@@ -93,6 +93,7 @@ namespace Assembler.TextToVoxelPipeline
                 throw new VoxelPipelineException("Set an output directory.");
 
             var baseName = ResolveBaseName(settings);
+            var outputDir = ResolveOutputDir(settings, baseName, DateTime.Now);
 
             // Each gated stage runs in a loop: produce the output, let the optional review gate inspect it,
             // and re-run the same stage if the reviewer chose Retry (overwriting the shared-base-name file).
@@ -120,7 +121,7 @@ namespace Assembler.TextToVoxelPipeline
             var image = await RunStage(
                 () => ImageGenerationCore.GenerateAsync(
                     settings.ImageProvider, settings.ImageApiKey, settings.ImageModel,
-                    settings.Prompt, settings.OutputDir, baseName, ct, onStatus),
+                    settings.Prompt, outputDir, baseName, ct, onStatus),
                 reviewImage,
                 "Stage 1/3 — generating image…",
                 "Review the image, then continue or retry…");
@@ -128,7 +129,7 @@ namespace Assembler.TextToVoxelPipeline
             // Stage 2 — image → mesh. The (possibly retried) image we just accepted is this stage's input.
             var mesh = await RunStage(
                 () => MeshyConversionCore.ConvertAsync(
-                    settings.MeshyApiKey, image.OutputPath, settings.OutputDir, baseName,
+                    settings.MeshyApiKey, image.OutputPath, outputDir, baseName,
                     settings.MeshFormat, settings.GenerateTexture, settings.EnablePbr,
                     settings.Remesh, settings.MeshAiModel, ct, onStatus),
                 reviewMesh,
@@ -139,7 +140,7 @@ namespace Assembler.TextToVoxelPipeline
             // mesh import + final AssetDatabase touch stay on the main thread), so this must be awaited
             // from the main thread — which it is, called from the editor window.
             onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
-            var voxPath = Path.Combine(settings.OutputDir, baseName + ".vox");
+            var voxPath = Path.Combine(outputDir, baseName + ".vox");
             var voxels = await VoxConversion.Run(
                 mesh.OutputPath, voxPath, settings.MaxDimVoxels,
                 settings.VoxSettings, settings.Palette, voxelProgress, pipelineProgress);
@@ -155,6 +156,17 @@ namespace Assembler.TextToVoxelPipeline
             var explicitName = settings.BaseName?.Trim();
             return Slug(string.IsNullOrEmpty(explicitName) ? settings.Prompt : explicitName!);
         }
+
+        // Where this run's three files land. By default each run gets its own
+        // "<base>_<timestamp>" subfolder under OutputDir so repeated runs don't clobber each
+        // other; turn AutoSubfolderPerRun off to write straight into OutputDir.
+        public static string ResolveOutputDir(VoxelPipelineSettings settings, string baseName, DateTime startedAt) =>
+            settings.AutoSubfolderPerRun
+                ? Path.Combine(settings.OutputDir, $"{baseName}_{startedAt.ToString(RunFolderTimeFormat)}")
+                : settings.OutputDir;
+
+        // Sortable, filesystem-safe timestamp (no ':' — invalid on Windows/macOS).
+        public const string RunFolderTimeFormat = "yyyy-MM-dd_HH-mm-ss";
 
         // First few words of the text → a filesystem-safe slug, falling back to "model".
         private static string Slug(string text)
@@ -198,6 +210,10 @@ namespace Assembler.TextToVoxelPipeline
         // Shared output. A blank base name is derived from the prompt; all three stages share it.
         public string OutputDir = "Assets/TextToVoxel";
         public string BaseName = "";
+
+        // When true (default), each run's files are isolated in a "<base>_<timestamp>" subfolder of
+        // OutputDir; when false they are written straight into OutputDir.
+        public bool AutoSubfolderPerRun = true;
     }
 
     public sealed class VoxelPipelineException : Exception

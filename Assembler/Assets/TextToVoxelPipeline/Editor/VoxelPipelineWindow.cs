@@ -309,7 +309,14 @@ namespace Assembler.TextToVoxelPipeline
             _settings.BaseName = EditorGUILayout.TextField(
                 new GUIContent("Base Name", "Shared by all three files (image/mesh/.vox). Leave blank to slug it from the prompt."),
                 _settings.BaseName);
-            EditorGUILayout.LabelField(" ", $"→ {VoxelPipeline.ResolveBaseName(_settings)}.png / .obj / .vox", EditorStyles.miniLabel);
+            _settings.AutoSubfolderPerRun = EditorGUILayout.ToggleLeft(
+                new GUIContent("Subfolder per run",
+                    "Put each run's files in their own <base>_<timestamp> subfolder so runs don't overwrite each other. Off: write straight into the output directory."),
+                _settings.AutoSubfolderPerRun);
+
+            var baseName = VoxelPipeline.ResolveBaseName(_settings);
+            var prefix = _settings.AutoSubfolderPerRun ? $"{baseName}_<timestamp>/" : "";
+            EditorGUILayout.LabelField(" ", $"→ {prefix}{baseName}.png / .obj / .vox", EditorStyles.miniLabel);
         }
 
         private void DrawReviewToggles()
@@ -581,6 +588,7 @@ namespace Assembler.TextToVoxelPipeline
 
             _settings.OutputDir = EditorPrefs.GetString(Pref + "OutputDir", "Assets/TextToVoxel");
             _settings.BaseName = EditorPrefs.GetString(Pref + "BaseName", "");
+            _settings.AutoSubfolderPerRun = EditorPrefs.GetBool(Pref + "AutoSubfolderPerRun", true);
             _reviewImage = EditorPrefs.GetBool(Pref + "ReviewImage", false);
             _reviewMesh = EditorPrefs.GetBool(Pref + "ReviewMesh", false);
         }
@@ -609,6 +617,7 @@ namespace Assembler.TextToVoxelPipeline
 
             EditorPrefs.SetString(Pref + "OutputDir", _settings.OutputDir);
             EditorPrefs.SetString(Pref + "BaseName", _settings.BaseName);
+            EditorPrefs.SetBool(Pref + "AutoSubfolderPerRun", _settings.AutoSubfolderPerRun);
             EditorPrefs.SetBool(Pref + "ReviewImage", _reviewImage);
             EditorPrefs.SetBool(Pref + "ReviewMesh", _reviewMesh);
         }
