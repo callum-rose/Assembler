@@ -147,8 +147,15 @@ namespace Assembler.MeshyImageTo3D
                 }
 
                 EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
-                _removeLighting = EditorGUILayout.Toggle(
-                    new GUIContent("Remove Lighting", "Bake out baked-in lighting from the source image (remove_lighting)."), _removeLighting);
+                // remove_lighting is only supported on meshy-6; grey it out (and force false) for other models.
+                var supportsRemoveLighting = _aiModel == "meshy-6";
+                if (!supportsRemoveLighting)
+                    _removeLighting = false;
+                using (new EditorGUI.DisabledScope(!supportsRemoveLighting))
+                {
+                    _removeLighting = EditorGUILayout.Toggle(
+                        new GUIContent("Remove Lighting", "Bake out baked-in lighting from the source image (remove_lighting). Only available on meshy-6."), _removeLighting);
+                }
                 _autoSize = EditorGUILayout.Toggle(
                     new GUIContent("Auto Size", "Auto-scale the model to a realistic size (auto_size)."), _autoSize);
                 _originAt = (ModelOrigin)EditorGUILayout.EnumPopup(

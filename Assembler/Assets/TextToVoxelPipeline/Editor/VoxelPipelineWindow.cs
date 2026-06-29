@@ -131,16 +131,63 @@ namespace Assembler.TextToVoxelPipeline
             DrawApiKeyRow("Meshy API Key", ref _settings.MeshyApiKey, Pref + "MeshyApiKey");
 
             _settings.MeshAiModel = ModelPopup("Meshy Model", _settings.MeshAiModel, MeshyModels);
-            _settings.MeshFormat = (ModelFormat)EditorGUILayout.EnumPopup("Output Format", _settings.MeshFormat);
+            _settings.MeshFormat = (ModelFormat)EditorGUILayout.EnumPopup(
+                new GUIContent("Output Format", "Model format to generate and download (sent as target_formats)."), _settings.MeshFormat);
+
+            EditorGUILayout.LabelField("Texture", EditorStyles.boldLabel);
             _settings.GenerateTexture = EditorGUILayout.Toggle(
                 new GUIContent("Generate Texture", "Generate a texture for the model."), _settings.GenerateTexture);
             using (new EditorGUI.DisabledScope(!_settings.GenerateTexture))
             {
                 _settings.EnablePbr = EditorGUILayout.Toggle(
                     new GUIContent("Enable PBR Maps", "Also generate metallic/roughness/normal maps."), _settings.EnablePbr);
+                _settings.HdTexture = EditorGUILayout.Toggle(
+                    new GUIContent("HD Texture", "Generate a higher-resolution texture (hd_texture)."), _settings.HdTexture);
             }
+
+            EditorGUILayout.LabelField("Geometry", EditorStyles.boldLabel);
             _settings.Remesh = EditorGUILayout.Toggle(
-                new GUIContent("Remesh", "Let Meshy clean up the topology."), _settings.Remesh);
+                new GUIContent("Remesh", "Let Meshy clean up the topology (should_remesh)."), _settings.Remesh);
+            using (new EditorGUI.DisabledScope(!_settings.Remesh))
+            {
+                _settings.Topology = (MeshyTopology)EditorGUILayout.EnumPopup(
+                    new GUIContent("Topology", "Target face topology when remeshing (topology)."), _settings.Topology);
+                _settings.Decimation = (DecimationMode)EditorGUILayout.EnumPopup(
+                    new GUIContent("Decimation", "Remesh decimation preset (decimation_mode). 'None' lets Meshy decide, or set a target polycount instead."),
+                    _settings.Decimation);
+                // target_polycount is the alternative to a decimation preset, so only offer it when no preset is chosen.
+                using (new EditorGUI.DisabledScope(_settings.Decimation != DecimationMode.None))
+                {
+                    _settings.TargetPolycount = EditorGUILayout.IntSlider(
+                        new GUIContent("Target Polycount", "Target triangle count when remeshing (target_polycount, 100–300000)."),
+                        _settings.TargetPolycount, 100, 300000);
+                }
+                _settings.SavePreRemeshedModel = EditorGUILayout.Toggle(
+                    new GUIContent("Save Pre-Remeshed Model", "Also keep the model before remeshing (save_pre_remeshed_model)."),
+                    _settings.SavePreRemeshedModel);
+            }
+
+            EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
+            // remove_lighting is only supported on meshy-6; grey it out (and force false) for other models.
+            var supportsRemoveLighting = _settings.MeshAiModel == "meshy-6";
+            if (!supportsRemoveLighting)
+                _settings.RemoveLighting = false;
+            using (new EditorGUI.DisabledScope(!supportsRemoveLighting))
+            {
+                _settings.RemoveLighting = EditorGUILayout.Toggle(
+                    new GUIContent("Remove Lighting", "Bake out baked-in lighting from the source image (remove_lighting). Only available on meshy-6."),
+                    _settings.RemoveLighting);
+            }
+            _settings.AutoSize = EditorGUILayout.Toggle(
+                new GUIContent("Auto Size", "Auto-scale the model to a realistic size (auto_size)."), _settings.AutoSize);
+            _settings.OriginAt = (ModelOrigin)EditorGUILayout.EnumPopup(
+                new GUIContent("Origin At", "Where the model's pivot sits (origin_at)."), _settings.OriginAt);
+            _settings.Moderation = EditorGUILayout.Toggle(
+                new GUIContent("Moderation", "Run content moderation on the input (moderation)."), _settings.Moderation);
+            _settings.MultiViewThumbnails = EditorGUILayout.Toggle(
+                new GUIContent("Multi-View Thumbnails", "Generate thumbnails from several angles (multi_view_thumbnails)."), _settings.MultiViewThumbnails);
+            _settings.AlphaThumbnail = EditorGUILayout.Toggle(
+                new GUIContent("Alpha Thumbnail", "Generate a thumbnail with a transparent background (alpha_thumbnail)."), _settings.AlphaThumbnail);
         }
 
         // ---- Stage 3: mesh → voxels -----------------------------------------
@@ -582,7 +629,18 @@ namespace Assembler.TextToVoxelPipeline
             _settings.MeshFormat = (ModelFormat)EditorPrefs.GetInt(Pref + "MeshFormat", (int)ModelFormat.Obj);
             _settings.GenerateTexture = EditorPrefs.GetBool(Pref + "GenerateTexture", true);
             _settings.EnablePbr = EditorPrefs.GetBool(Pref + "EnablePbr", true);
+            _settings.HdTexture = EditorPrefs.GetBool(Pref + "HdTexture", false);
             _settings.Remesh = EditorPrefs.GetBool(Pref + "Remesh", true);
+            _settings.Topology = (MeshyTopology)EditorPrefs.GetInt(Pref + "Topology", (int)MeshyTopology.Triangle);
+            _settings.Decimation = (DecimationMode)EditorPrefs.GetInt(Pref + "Decimation", (int)DecimationMode.None);
+            _settings.TargetPolycount = EditorPrefs.GetInt(Pref + "TargetPolycount", 30000);
+            _settings.SavePreRemeshedModel = EditorPrefs.GetBool(Pref + "SavePreRemeshedModel", false);
+            _settings.RemoveLighting = EditorPrefs.GetBool(Pref + "RemoveLighting", true);
+            _settings.Moderation = EditorPrefs.GetBool(Pref + "Moderation", false);
+            _settings.AutoSize = EditorPrefs.GetBool(Pref + "AutoSize", false);
+            _settings.OriginAt = (ModelOrigin)EditorPrefs.GetInt(Pref + "OriginAt", (int)ModelOrigin.Bottom);
+            _settings.MultiViewThumbnails = EditorPrefs.GetBool(Pref + "MultiViewThumbnails", false);
+            _settings.AlphaThumbnail = EditorPrefs.GetBool(Pref + "AlphaThumbnail", false);
 
             _settings.MaxDimVoxels = EditorPrefs.GetInt(Pref + "MaxDim", 32);
             _preset = (VoxPipelinePreset)EditorPrefs.GetInt(Pref + "Preset", (int)VoxPipelinePreset.Creature);
@@ -617,7 +675,18 @@ namespace Assembler.TextToVoxelPipeline
             EditorPrefs.SetInt(Pref + "MeshFormat", (int)_settings.MeshFormat);
             EditorPrefs.SetBool(Pref + "GenerateTexture", _settings.GenerateTexture);
             EditorPrefs.SetBool(Pref + "EnablePbr", _settings.EnablePbr);
+            EditorPrefs.SetBool(Pref + "HdTexture", _settings.HdTexture);
             EditorPrefs.SetBool(Pref + "Remesh", _settings.Remesh);
+            EditorPrefs.SetInt(Pref + "Topology", (int)_settings.Topology);
+            EditorPrefs.SetInt(Pref + "Decimation", (int)_settings.Decimation);
+            EditorPrefs.SetInt(Pref + "TargetPolycount", _settings.TargetPolycount);
+            EditorPrefs.SetBool(Pref + "SavePreRemeshedModel", _settings.SavePreRemeshedModel);
+            EditorPrefs.SetBool(Pref + "RemoveLighting", _settings.RemoveLighting);
+            EditorPrefs.SetBool(Pref + "Moderation", _settings.Moderation);
+            EditorPrefs.SetBool(Pref + "AutoSize", _settings.AutoSize);
+            EditorPrefs.SetInt(Pref + "OriginAt", (int)_settings.OriginAt);
+            EditorPrefs.SetBool(Pref + "MultiViewThumbnails", _settings.MultiViewThumbnails);
+            EditorPrefs.SetBool(Pref + "AlphaThumbnail", _settings.AlphaThumbnail);
 
             EditorPrefs.SetInt(Pref + "MaxDim", _settings.MaxDimVoxels);
             EditorPrefs.SetInt(Pref + "Preset", (int)_preset);
