@@ -124,6 +124,15 @@ namespace Assembler.AssetGeneration.MeshToVoxels
 			IProgressReporter voxelProgress,
 			Action<string, float>? pipelineProgress)
 		{
+			// C2 — texture-space palette snap (pre-voxelization). Quantize the source texture to the
+			// master palette in 2D first, so colour boundaries land straight and on-palette before the
+			// voxelizer samples them — independent of, and complementary to, the voxel-space snap below.
+			if (settings.textureSpacePaletteSnap)
+			{
+				pipelineProgress?.Invoke("Texture snap", 0f);
+				TextureQuantize.Apply(model, palette, TextureQuantize.Options.From(settings));
+			}
+
 			VoxModel voxModel = BuildWorkingModel(model, maxDimVoxels, settings, voxelProgress, pipelineProgress);
 
 			VoxPipeline pipeline = VoxPipeline.FromSettings(settings, palette);

@@ -38,6 +38,14 @@ namespace Assembler.AssetGeneration.MeshToVoxels.Generation
                 "Write `imagePrompt`: a vivid description of the single model, suitable for an " +
                 "image generator. Describe one centred object on a plain background. Fold in the shared " +
                 "art direction and any style rules you decide apply (see below).");
+            sb.AppendLine(
+                "Decide `resolution` (see below) FIRST, then write `imagePrompt` for that voxel budget: " +
+                "every distinct colour region and protruding feature must span at least ~2 voxels at the " +
+                "chosen resolution — i.e. roughly 2/`resolution` of the model's longest extent or larger. " +
+                "Describe nothing finer than that budget (no fine surface texture, thin lines, small " +
+                "multi-colour patterns, or gradients), and state the budget explicitly in the prompt you " +
+                "emit (e.g. \"rendered as a ~N-voxel-tall low-resolution voxel model, no detail smaller " +
+                "than two voxels\"), so the generator doesn't invent detail the voxelizer will mud.");
             sb.AppendLine();
 
             sb.AppendLine("# Pipeline preset");
@@ -83,7 +91,8 @@ namespace Assembler.AssetGeneration.MeshToVoxels.Generation
                 $"`resolution` is the longest bounding-box axis in voxels ({MinResolution}–{MaxResolution}); " +
                 "the other axes scale proportionally. 32 is a good default. Higher values capture more " +
                 "detail but cost much more to convert (resolutions of ~96+ run millions of queries and are " +
-                "slow), so only go high for assets that genuinely need the detail.");
+                "slow), so only go high for assets that genuinely need the detail. Pick `resolution` before " +
+                "writing `imagePrompt` so the image can be described to fit this budget (see # Image prompt).");
             sb.AppendLine();
 
             sb.AppendLine("# Style rules");

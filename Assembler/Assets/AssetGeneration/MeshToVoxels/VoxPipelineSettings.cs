@@ -85,6 +85,20 @@ namespace Assembler.AssetGeneration.MeshToVoxels
 		[Tooltip("Safety cap on how many histogram peaks (distinct dominant colours) to keep. Selection usually stops earlier, once no remaining colour clears the variety threshold.")]
 		public int histogramPeakCount = 8;
 
+		[Tooltip("Texture-space palette snap (C2): snap the source texture to the master palette in 2D BEFORE voxelizing, so colour boundaries come out straight and on-palette instead of ragged. Runs pre-voxelization on the master palette and only affects textured meshes; complements the per-voxel snapToPalette below, which stays on as a cheap backstop.")]
+		public bool textureSpacePaletteSnap = false;
+
+		[Tooltip("Before the texture-space snap, run an edge-preserving (Oklab bilateral) smooth that flattens within-region shading while keeping colour edges, so soft gradients don't snap to ragged boundaries. Off = snap the raw texels.")]
+		public bool textureSmooth = true;
+
+		[Range(1, 4)]
+		[Tooltip("Bilateral smoothing radius in texels. Larger flattens broader shading but costs (2r+1)² taps per texel.")]
+		public int textureSmoothRadius = 2;
+
+		[Range(0.01f, 0.5f)]
+		[Tooltip("Edge threshold (Oklab) for the smoothing: neighbours more perceptually distant than ~this are treated as across an edge and not blended in. Lower = preserves finer edges; higher = flattens more.")]
+		public float textureSmoothRange = 0.10f;
+
 		[Tooltip("Snap each colour to the nearest swatch in the shared master palette (Oklab) for cross-asset cohesion.")]
 		public bool snapToPalette = true;
 

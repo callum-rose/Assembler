@@ -20,6 +20,7 @@ namespace Assembler.AssetGeneration.MeshToVoxels.Generation.Tests
             Assert.That(rules.Rules, Is.Not.Empty);
             Assert.That(rules.IsKnown("no-eyes"), Is.True);
             Assert.That(rules.IsKnown("glass-blue"), Is.True);
+            Assert.That(rules.IsKnown("voxel-budget"), Is.True, "B1 resolution-aware budget rule");
             // Each rule round-trips its three fields.
             foreach (var rule in rules.Rules)
             {
@@ -79,6 +80,17 @@ namespace Assembler.AssetGeneration.MeshToVoxels.Generation.Tests
             // The rule id and text.
             StringAssert.Contains("no-eyes", prompt);
             StringAssert.Contains("No eyes please.", prompt);
+        }
+
+        [Test]
+        public void PromptBuilder_InstructsResolutionAwareFeatureBudget()
+        {
+            // B1: the builder must tell the chooser to pick resolution first and write the image prompt
+            // to a per-feature voxel budget, so it stops inventing detail the voxelizer can't represent.
+            var prompt = VoxConfigPromptBuilder.Build(VoxStyleRules.Parse("{\"rules\":[]}"));
+
+            StringAssert.Contains("at least ~2 voxels", prompt);
+            StringAssert.Contains("Decide `resolution`", prompt);
         }
 
         // --- Parser: meshy settings ----------------------------------------
