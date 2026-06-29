@@ -369,10 +369,16 @@ doSomething(10);
 
 ### Calling Registered Static Methods
 ```csharp
-// If Math class methods are registered
+// If Math class methods are registered, call them by bare name…
 int absolute = (int)Abs(-5);
 double power = Pow(2.0, 3.0);
+
+// …or by their type-qualified name, exactly as in regular C#:
+float s = Mathf.Sin(x);
+float p = UnityEngine.Mathf.Sin(x); // fully-qualified also works
 ```
+`RegisterStaticMethods(type)` registers each method by its bare name *and* the type itself, so
+both the bare (`Sin(x)`) and qualified (`Mathf.Sin(x)`) call forms resolve.
 
 ### Method Overloading
 The compiler supports calling overloaded methods and will select the best matching overload based on argument types.
