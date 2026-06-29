@@ -12,6 +12,24 @@ namespace Assembler.AssetGeneration.MeshToVoxels
     [Serializable]
     public sealed class VoxPipelineSettings
     {
+        [Tooltip("Voxelize at a higher resolution then downres to the target, preserving sub-voxel detail (thin features, small colour details) that direct low-res voxelization aliases away. Costs factor³ more voxelization work.")]
+        public bool supersample = false;
+
+        [Range(2, 4)]
+        [Tooltip("Voxelize at this multiple of the target dimension before downres. Each output voxel aggregates a factor³ block. Higher preserves more but is much slower (factor³ work).")]
+        public int supersampleFactor = 2;
+
+        [Range(0f, 1f)]
+        [Tooltip("Downres occupancy: fill an output voxel when this fraction of its high-res block was occupied. Lower = fatter/more inclusive; higher = leaner.")]
+        public float downresCoverageThreshold = 0.5f;
+
+        [Tooltip("Force-keep features thinner than one output voxel (antennae, fins) that the coverage vote would otherwise erase. Off = plain coverage majority.")]
+        public bool downresFeatureAware = true;
+
+        [Range(0f, 5f)]
+        [Tooltip("When collapsing a block to one colour, boost perceptually distinct minority colours so small details (an eye, a stripe) aren't outvoted into mush. 0 = pure majority vote.")]
+        public float downresColourSalience = 1.0f;
+
         [Tooltip("Delete small disconnected components (voxelization specks). Substantial detached parts are kept.")]
         public bool removeFloaters = true;
 

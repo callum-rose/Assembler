@@ -124,9 +124,28 @@ namespace Assembler.AssetGeneration.MeshToVoxels
             IProgressReporter voxelProgress,
             Action<string, float>? pipelineProgress)
         {
-            VoxResult result = ObjToVoxConverter.Convert(model, maxDimVoxels, voxelProgress);
+            // Supersample-and-downres (§ detail preservation): voxelize at factor× the target so the
+            // downres sees a coverage fraction (and sub-voxel features) per output cell, instead of a
+            // single aliased centre sample. Off (factor 1) → unchanged direct voxelization, so this is
+            // a clean A/B toggle. maxDim × factor may exceed the converter's 256 cap; it clamps, which
+            // just yields a coarser-than-target result at extreme settings.
+            int factor = settings.supersample ? Mathf.Clamp(settings.supersampleFactor, 1, 4) : 1;
+
+            VoxResult result = ObjToVoxConverter.Convert(model, maxDimVoxels * factor, voxelProgress);
 
             VoxModel voxModel = VoxModel.FromResult(result);
+            if (factor > 1)
+            {
+                pipelineProgress?.Invoke("Downres", 0f);
+                voxModel = VoxDownres.Apply(voxModel, new VoxDownres.Options
+                {
+                    Factor = factor,
+                    CoverageThreshold = settings.downresCoverageThreshold,
+                    FeatureAware = settings.downresFeatureAware,
+                    ColourSalience = settings.downresColourSalience,
+                });
+            }
+
             VoxPipeline pipeline = VoxPipeline.FromSettings(settings, palette);
             pipeline.Run(voxModel, pipelineProgress);
             result = voxModel.ToResult();
