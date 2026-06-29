@@ -116,6 +116,36 @@ namespace Tests.Resolving
 		}
 
 		[Test]
+		public void ForwardFromRotation2DFacesUpThenLeft()
+		{
+			// Rotation 0 faces +Y (up); 90 CCW faces -X; 180 faces -Y.
+			AssertVec(VectorMath.ForwardFromRotation2D(0), 0, 1);
+			AssertVec(VectorMath.ForwardFromRotation2D(90), -1, 0);
+			AssertVec(VectorMath.ForwardFromRotation2D(180), 0, -1);
+		}
+
+		[Test]
+		public void RightFromRotation2DIsNinetyClockwiseOfForward()
+		{
+			// Rotation 0: right is +X; 90: right is +Y.
+			AssertVec(VectorMath.RightFromRotation2D(0), 1, 0);
+			AssertVec(VectorMath.RightFromRotation2D(90), 0, 1);
+		}
+
+		[Test]
+		public void Rotation2DHelpersMatchUnityQuaternion()
+		{
+			foreach (var degrees in new[] { 17f, 123f, -48f })
+			{
+				var q = Quaternion.Euler(0f, 0f, degrees);
+				var fwd = q * Vector3.up;
+				var right = q * Vector3.right;
+				AssertVec(VectorMath.ForwardFromRotation2D(degrees), fwd.x, fwd.y, fwd.z);
+				AssertVec(VectorMath.RightFromRotation2D(degrees), right.x, right.y, right.z);
+			}
+		}
+
+		[Test]
 		public void AnglesHelpersMatchUnityQuaternionBasis()
 		{
 			var euler = V(20, 45, 10);

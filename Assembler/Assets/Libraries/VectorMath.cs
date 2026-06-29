@@ -152,5 +152,35 @@ namespace Assembler.Libraries
 		/// <returns>The unit up vector.</returns>
 		public static Vector3 UpFromAngles(Vector3 eulerAngles) =>
 			Quaternion.Euler(eulerAngles) * Vector3.up;
+
+		/// <summary>
+		/// Unit forward direction for a 2D top-down entity from its Z-axis rotation, in the XY
+		/// plane. Rotation 0 faces +Y (up), 90 faces -X — the convention for a sprite drawn
+		/// pointing up, matching Quaternion.Euler(0, 0, degrees) * Vector3.up. Feed it an
+		/// entity's Rotation.z to get its facing direction; drops the sin/cos boilerplate every
+		/// top-down shooter ("thrust along facing") would otherwise hand-roll. This is the
+		/// +Y-up counterpart to the +X-forward <c>Heading2D</c>/<c>LookRotation2D</c> convention
+		/// in SteeringMath.
+		/// </summary>
+		/// <param name="degrees">Z-axis rotation in degrees (counter-clockwise).</param>
+		/// <returns>The unit forward vector (-sin(degrees), cos(degrees), 0).</returns>
+		public static Vector3 ForwardFromRotation2D(float degrees)
+		{
+			float rad = degrees * Mathf.Deg2Rad;
+			return new Vector3(-Mathf.Sin(rad), Mathf.Cos(rad), 0f);
+		}
+
+		/// <summary>
+		/// Unit right direction for a 2D top-down entity from its Z-axis rotation, in the XY
+		/// plane — 90 degrees clockwise of <see cref="ForwardFromRotation2D"/>. Rotation 0 gives
+		/// +X (right), 90 gives +Y. Use for strafing or lateral offsets relative to facing.
+		/// </summary>
+		/// <param name="degrees">Z-axis rotation in degrees (counter-clockwise).</param>
+		/// <returns>The unit right vector (cos(degrees), sin(degrees), 0).</returns>
+		public static Vector3 RightFromRotation2D(float degrees)
+		{
+			float rad = degrees * Mathf.Deg2Rad;
+			return new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f);
+		}
 	}
 }
