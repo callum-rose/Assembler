@@ -139,7 +139,7 @@ Entities:
             Do: guard velocity
             With:
               mode: !var guard_mode
-              self_pos: !entity { Id: guard, Property: Position }
+              self_pos: !entity { Property: Position }
               target_pos: !entity { Id: player, Property: Position }
               chase_speed: !var chase speed
               flee_speed: !var flee speed
@@ -157,7 +157,7 @@ Entities:
             ArgumentTypes: [ vector, float ]
             RegisterTypes: [ UnityEngine.Vector3 ]
             With:
-              pos: !entity { Id: guard, Property: Position }
+              pos: !entity { Property: Position }
               bound: !var field bound
 
       ai:
@@ -188,27 +188,27 @@ Entities:
               to: chase
               when: !expr
                 Do: closer than
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var chase range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var chase range }
             - from: chase
               to: flee
               when: !expr
                 Do: closer than
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var flee range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var flee range }
             - from: chase
               to: patrol
               when: !expr
                 Do: farther than
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var lose range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var lose range }
             - from: flee
               to: caught
               when: !expr
                 Do: closer than
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: flee
               to: patrol
               when: !expr
                 Do: farther than
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var safe range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var safe range }
 
       # --- OnEnter hook targets: drive the movement mode and the live colour. ---
       set mode idle:

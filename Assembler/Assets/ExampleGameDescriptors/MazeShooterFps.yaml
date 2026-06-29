@@ -343,7 +343,7 @@ Entities:
             Do: facing velocity
             With:
               input: !output axis
-              euler: !entity { Id: player, Property: Rotation }
+              euler: !entity { Property: Rotation }
               speed: !var move speed
 
       # --- Look: lock the cursor so raw mouse delta yaws the player; arrow keys are a no-mouse fallback. ---
@@ -393,13 +393,13 @@ Entities:
           Position: !expr
             Do: muzzle position
             With:
-              pos: !entity { Id: player, Property: Position }
-              euler: !entity { Id: player, Property: Rotation }
+              pos: !entity { Property: Position }
+              euler: !entity { Property: Rotation }
           Parameters:
             initial_velocity: !expr
               Do: forward velocity
               With:
-                euler: !entity { Id: player, Property: Rotation }
+                euler: !entity { Property: Rotation }
                 speed: !var bullet speed
 
       quit action:

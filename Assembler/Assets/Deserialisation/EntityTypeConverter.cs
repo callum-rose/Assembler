@@ -37,9 +37,12 @@ namespace Assembler.Deserialisation
 				}
 			}
 
-			if (id is null || (id is string s && string.IsNullOrWhiteSpace(s)))
+			// Id is optional: omit it entirely to reference the enclosing entity ("self"). An empty/whitespace
+			// id, however, is an authoring mistake rather than the self shorthand, so it still errors.
+			if (id is string s && string.IsNullOrWhiteSpace(s))
 			{
-				throw new YamlException("!entity requires a non-empty 'Id' key (the entity to read).");
+				throw new YamlException(
+					"!entity 'Id' must be a non-empty entity id when present; omit it entirely to reference the enclosing entity.");
 			}
 
 			if (string.IsNullOrWhiteSpace(property))

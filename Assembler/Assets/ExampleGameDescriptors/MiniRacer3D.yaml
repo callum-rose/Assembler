@@ -342,7 +342,7 @@ Entities:
           Velocity: !expr
             Do: drive velocity
             With:
-              rotation: !entity { Id: car, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: car, Property: Velocity }
               angVel: !rigidbody { Id: car, Property: AngularVelocity }
               throttle: !output y
@@ -360,7 +360,7 @@ Entities:
             Do: steer yaw
             With:
               steer: !output x
-              rotation: !entity { Id: car, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: car, Property: Velocity }
               rate: !var turn rate
               gripSpeed: !var grip speed
@@ -410,7 +410,7 @@ Entities:
           Tag: racer
           Radius: !var avoid lookahead
           ConeAngle: !var avoid cone
-          Forward: !expr { Do: forward dir, With: { rotation: !entity { Id: rival 1, Property: Rotation } } }
+          Forward: !expr { Do: forward dir, With: { rotation: !entity { Property: Rotation } } }
           Interval: 0
           TargetPosition: !var foe pos
           HasTarget: !var foe seen
@@ -450,15 +450,15 @@ Entities:
               steer: !expr
                 Do: ai steer
                 With:
-                  rotation: !entity { Id: rival 1, Property: Rotation }
-                  self: !entity { Id: rival 1, Property: Position }
+                  rotation: !entity { Property: Rotation }
+                  self: !entity { Property: Position }
                   navDir: !var nav dir
                   foePos: !var foe pos
                   foeSeen: !var foe seen
                   lookAhead: !var avoid lookahead
                   avoidRadius: !var avoid radius
                   avoidStrength: !var avoid strength
-              rotation: !entity { Id: rival 1, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 1, Property: Velocity }
               rate: !var turn rate
               gripSpeed: !var grip speed
@@ -468,7 +468,7 @@ Entities:
           Velocity: !expr
             Do: drive velocity
             With:
-              rotation: !entity { Id: rival 1, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 1, Property: Velocity }
               angVel: !rigidbody { Id: rival 1, Property: AngularVelocity }
               throttle: !var rival throttle
@@ -489,7 +489,7 @@ Entities:
             Do: 'Distance(self_pos, corner_pos) < reach'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              self_pos: !entity { Id: rival 1, Property: Position }
+              self_pos: !entity { Property: Position }
               corner_pos: !expr { Do: corner at, With: { i: !var wp } }
               reach: !var rival reach
         Listeners: [ advance ]
@@ -526,7 +526,7 @@ Entities:
           Tag: racer
           Radius: !var avoid lookahead
           ConeAngle: !var avoid cone
-          Forward: !expr { Do: forward dir, With: { rotation: !entity { Id: rival 2, Property: Rotation } } }
+          Forward: !expr { Do: forward dir, With: { rotation: !entity { Property: Rotation } } }
           Interval: 0
           TargetPosition: !var foe pos
           HasTarget: !var foe seen
@@ -564,15 +564,15 @@ Entities:
               steer: !expr
                 Do: ai steer
                 With:
-                  rotation: !entity { Id: rival 2, Property: Rotation }
-                  self: !entity { Id: rival 2, Property: Position }
+                  rotation: !entity { Property: Rotation }
+                  self: !entity { Property: Position }
                   navDir: !var nav dir
                   foePos: !var foe pos
                   foeSeen: !var foe seen
                   lookAhead: !var avoid lookahead
                   avoidRadius: !var avoid radius
                   avoidStrength: !var avoid strength
-              rotation: !entity { Id: rival 2, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 2, Property: Velocity }
               rate: !var turn rate
               gripSpeed: !var grip speed
@@ -582,7 +582,7 @@ Entities:
           Velocity: !expr
             Do: drive velocity
             With:
-              rotation: !entity { Id: rival 2, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 2, Property: Velocity }
               angVel: !rigidbody { Id: rival 2, Property: AngularVelocity }
               throttle: !var rival throttle
@@ -603,7 +603,7 @@ Entities:
             Do: 'Distance(self_pos, corner_pos) < reach'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              self_pos: !entity { Id: rival 2, Property: Position }
+              self_pos: !entity { Property: Position }
               corner_pos: !expr { Do: corner at, With: { i: !var wp } }
               reach: !var rival reach
         Listeners: [ advance ]
@@ -640,7 +640,7 @@ Entities:
           Tag: racer
           Radius: !var avoid lookahead
           ConeAngle: !var avoid cone
-          Forward: !expr { Do: forward dir, With: { rotation: !entity { Id: rival 3, Property: Rotation } } }
+          Forward: !expr { Do: forward dir, With: { rotation: !entity { Property: Rotation } } }
           Interval: 0
           TargetPosition: !var foe pos
           HasTarget: !var foe seen
@@ -678,15 +678,15 @@ Entities:
               steer: !expr
                 Do: ai steer
                 With:
-                  rotation: !entity { Id: rival 3, Property: Rotation }
-                  self: !entity { Id: rival 3, Property: Position }
+                  rotation: !entity { Property: Rotation }
+                  self: !entity { Property: Position }
                   navDir: !var nav dir
                   foePos: !var foe pos
                   foeSeen: !var foe seen
                   lookAhead: !var avoid lookahead
                   avoidRadius: !var avoid radius
                   avoidStrength: !var avoid strength
-              rotation: !entity { Id: rival 3, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 3, Property: Velocity }
               rate: !var turn rate
               gripSpeed: !var grip speed
@@ -696,7 +696,7 @@ Entities:
           Velocity: !expr
             Do: drive velocity
             With:
-              rotation: !entity { Id: rival 3, Property: Rotation }
+              rotation: !entity { Property: Rotation }
               velocity: !rigidbody { Id: rival 3, Property: Velocity }
               angVel: !rigidbody { Id: rival 3, Property: AngularVelocity }
               throttle: !var rival throttle
@@ -717,7 +717,7 @@ Entities:
             Do: 'Distance(self_pos, corner_pos) < reach'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              self_pos: !entity { Id: rival 3, Property: Position }
+              self_pos: !entity { Property: Position }
               corner_pos: !expr { Do: corner at, With: { i: !var wp } }
               reach: !var rival reach
         Listeners: [ advance ]
