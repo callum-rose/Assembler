@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "id": "no-eyes",
+      "text": "Do not render eyes or facial features.",
+      "appliesWhen": "creatures, characters, or anything with a face"
+    },
+    {
+      "id": "glass-blue",
+      "text": "Render glass/windows as solid blue, never transparent.",
+      "appliesWhen": "vehicles, buildings, or anything with glass or windows"
+    },
+    {
+      "id": "flat-colour",
+      "text": "Use flat, solid colours with no gradients, smooth shading, or photographic texture detail.",
+      "appliesWhen": "all assets"
+    },
+    {
+      "id": "chunky-forms",
+      "text": "Favour bold, chunky, simplified forms that read clearly at low voxel resolutions; avoid fine filigree and tiny protrusions.",
+      "appliesWhen": "all assets"
+    }
+  ]
+}

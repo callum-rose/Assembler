@@ -9,7 +9,8 @@ using Assembler.ImageGeneration;
 using Assembler.MeshyImageTo3D;
 using UnityEditor;
 using UnityEngine;
-using VoxelsFromMeshSpike;
+using Assembler.VoxelPipeline;
+using Assembler.VoxelPipeline.Generation;
 
 namespace Assembler.TextToVoxelPipeline
 {
@@ -24,7 +25,7 @@ namespace Assembler.TextToVoxelPipeline
     public sealed class VoxelPipelineWindow : EditorWindow
     {
         private const string Pref = "Assembler.TextToVoxel.";
-        private const string DefaultPaletteAssetPath = "Assets/VoxelsFromMeshSpike/MasterPalette.asset";
+        private const string DefaultPaletteAssetPath = "Assets/VoxelPipeline/MasterPalette.asset";
 
         private static readonly string[] MeshyModels = { "meshy-6", "meshy-5", "meshy-4" };
 
@@ -40,6 +41,10 @@ namespace Assembler.TextToVoxelPipeline
 
         private bool _reviewImage;
         private bool _reviewMesh;
+
+        // AI-config import (paste JSON from the AI Model Config window).
+        private bool _showImport;
+        private string _aiConfigPaste = "";
 
         private bool _running;
         private string _status = "Idle.";
@@ -76,6 +81,8 @@ namespace Assembler.TextToVoxelPipeline
 
             using (new EditorGUI.DisabledScope(_running))
             {
+                DrawImportFromAi();
+                EditorGUILayout.Space();
                 DrawPromptStage();
                 EditorGUILayout.Space();
                 DrawMeshStage();
@@ -96,6 +103,77 @@ namespace Assembler.TextToVoxelPipeline
             DrawPreview();
 
             EditorGUILayout.EndScrollView();
+        }
+
+        // ---- Import from the AI Model Config window --------------------------
+
+        // Paste the config JSON the AI Model Config window produced and apply it to the run
+        // (prompt + preset + post-processing settings + resolution). A pasted value is parsed
+        // on demand — nothing is shared between the two windows, so there are no fragile pref keys.
+        private void DrawImportFromAi()
+        {
+            _showImport = EditorGUILayout.Foldout(_showImport, "Import AI config (paste JSON)", true);
+            if (!_showImport)
+                return;
+
+            using (new EditorGUI.IndentLevelScope())
+            {
+                EditorGUILayout.LabelField(
+                    "Paste the config JSON from the AI Model Config window (the whole reply or just the json).",
+                    EditorStyles.miniLabel);
+                var wrap = new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+                _aiConfigPaste = EditorGUILayout.TextArea(_aiConfigPaste, wrap, GUILayout.MinHeight(70));
+                using (new EditorGUI.DisabledScope(string.IsNullOrWhiteSpace(_aiConfigPaste)))
+                {
+                    if (GUILayout.Button("Import"))
+                        ImportFromAi();
+                }
+            }
+        }
+
+        private void ImportFromAi()
+        {
+            try
+            {
+                // Accept either a full fenced assistant reply or the bare json object.
+                var text = _aiConfigPaste.Trim();
+                var json = VoxConfigExtractor.Extract(text) ?? text;
+                var config = VoxConfigParser.ParseJson(json);
+
+                if (!string.IsNullOrEmpty(config.ImagePrompt))
+                    _settings.Prompt = config.ImagePrompt;
+                _preset = config.Preset;
+                _settings.VoxSettings = config.Settings;
+                _settings.MaxDimVoxels = config.Resolution;
+
+                // Image → mesh (Meshy) generation parameters.
+                var m = config.Meshy;
+                _settings.MeshAiModel = m.MeshAiModel;
+                _settings.MeshFormat = m.MeshFormat;
+                _settings.GenerateTexture = m.GenerateTexture;
+                _settings.EnablePbr = m.EnablePbr;
+                _settings.HdTexture = m.HdTexture;
+                _settings.Remesh = m.Remesh;
+                _settings.Topology = m.Topology;
+                _settings.Decimation = m.Decimation;
+                _settings.TargetPolycount = m.TargetPolycount;
+                _settings.SavePreRemeshedModel = m.SavePreRemeshedModel;
+                _settings.RemoveLighting = m.RemoveLighting;
+                _settings.AutoSize = m.AutoSize;
+                _settings.OriginAt = m.OriginAt;
+                _settings.Moderation = m.Moderation;
+                _settings.MultiViewThumbnails = m.MultiViewThumbnails;
+                _settings.AlphaThumbnail = m.AlphaThumbnail;
+
+                // Drop keyboard focus so the prompt text field repaints with the imported value.
+                GUI.FocusControl(null);
+                SaveState();
+                SetStatus($"Imported AI config — preset {config.Preset}, {config.Resolution} voxels.");
+            }
+            catch (Exception e)
+            {
+                SetStatus($"Import failed: {e.Message}");
+            }
         }
 
         // ---- Stage 1: prompt → image ----------------------------------------

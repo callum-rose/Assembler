@@ -1,11 +1,10 @@
 {
-    "name": "Assembler.TextToVoxelPipeline.Editor",
-    "rootNamespace": "Assembler.TextToVoxelPipeline",
+    "name": "Assembler.VoxelPipeline.Generation",
+    "rootNamespace": "Assembler.VoxelPipeline.Generation",
     "references": [
-        "GUID:f694439fe97b143379fafb560f57b62a",
-        "GUID:74f167e5e8971479ba1134fb45be13fb",
-        "GUID:3dfd5c7cd1ee24872ac47f969b992bf8",
-        "GUID:9cb227eb9bbda487798a7b5516f65ead"
+        "Assembler.VoxelPipeline",
+        "Assembler.Anthropic",
+        "Assembler.MeshyImageTo3D.Editor"
     ],
     "includePlatforms": [
         "Editor"
