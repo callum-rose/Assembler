@@ -26,7 +26,7 @@ namespace Assembler.Parsing.Info
 	/// <summary>An already-resolved runtime object (e.g. a UnityEngine.Object asset such as a Mesh,
 	/// Sprite, Material or AudioClip) captured when adapting a spawner's runtime Parameter. Only appears
 	/// at the runtime-parameter-adaptation stage; CreateValueSource turns it back into a ConstantSource&lt;T&gt;.</summary>
-	public sealed record RuntimeObjectValue(object Value) : AssemblerValue;
+	public sealed record RuntimeObjectValue(UnityEngine.Object Value) : AssemblerValue;
 
 	public sealed record VecValue(AssemblerValue X, AssemblerValue Y, AssemblerValue Z) : AssemblerValue;
 
