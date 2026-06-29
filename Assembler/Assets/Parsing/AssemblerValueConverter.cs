@@ -174,13 +174,15 @@ namespace Assembler.Parsing
 
 		// Builds the !entity IR. A literal Id is carried verbatim; a !parameter Id (a ParamRefDto) is
 		// captured as a pending ParameterEntityId so template instantiation can substitute the resolved
-		// entity id later (mirroring how a listener's `EntityId: !parameter self_id` is threaded through).
+		// entity id later (mirroring how a listener's `EntityId: !parameter self_id` is threaded through);
+		// an omitted Id becomes the SelfEntityId sentinel — the same "enclosing entity" marker listeners use
+		// when they omit EntityId — resolved to the concrete id at TemplateInstantiator.Instantiate.
 		private static EntityPropertyRef ToEntityPropertyRef(EntityRefDto dto) =>
 			dto.Id switch
 			{
 				ParamRefDto p => new EntityPropertyRef(new ParameterEntityId(p.Id ?? string.Empty), ParseEntityProperty(dto.Property)),
 				string s => new EntityPropertyRef(new LiteralEntityId(s), ParseEntityProperty(dto.Property)),
-				null => new EntityPropertyRef(new LiteralEntityId(string.Empty), ParseEntityProperty(dto.Property)),
+				null => new EntityPropertyRef(SelfEntityId.Instance, ParseEntityProperty(dto.Property)),
 				_ => throw new ParsingException(
 					$"!entity 'Id' must be an entity id or !parameter, but was {dto.Id.GetType().Name}.")
 			};

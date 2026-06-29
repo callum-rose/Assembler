@@ -154,7 +154,7 @@ Templates:
             - Force: !expr
                 Do: separation force
                 With:
-                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  pos: !entity { Property: Position }
                   neighbours: !var neighbours
                   radius: !var separation radius
                   max: !var max speed
@@ -162,7 +162,7 @@ Templates:
             - Force: !expr
                 Do: cohesion force
                 With:
-                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  pos: !entity { Property: Position }
                   neighbours: !var neighbours
                   max: !var max speed
               Weight: !var cohesion weight
@@ -183,14 +183,14 @@ Templates:
             - Force: !expr
                 Do: seek centre
                 With:
-                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  pos: !entity { Property: Position }
                   target: !vec { X: 0, Y: 0, Z: 0 }
                   max: !var max speed
               Weight: !var containment weight
             - Force: !expr
                 Do: avoid mouse
                 With:
-                  pos: !entity { Id: !parameter self_id, Property: Position }
+                  pos: !entity { Property: Position }
                   mouse: !var mouse world
                   radius: !var mouse avoid radius
                   max: !var max speed
