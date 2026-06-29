@@ -3,7 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Editor window for the mesh → voxel conversion: pick a textured mesh (.obj or .fbx),
@@ -12,10 +12,10 @@ namespace Assembler.VoxelPipeline
     /// The pipeline is driven by a category <see cref="VoxPipelinePreset"/> whose
     /// <see cref="VoxPipelineSettings"/> the per-step toggles below override.
     /// </summary>
-    public sealed class VoxelsFromMeshSpikeWindow : EditorWindow
+    public sealed class MeshToVoxelsWindow : EditorWindow
     {
         private const string DefaultPaletteAssetPath = "Assets/VoxelPipeline/MasterPalette.asset";
-        private const string PrefPrefix = "VoxelsFromMeshSpike.";
+        private const string PrefPrefix = "MeshToVoxels.";
 
         private string _objPath = "";
         private string _voxDir = "";
@@ -28,7 +28,7 @@ namespace Assembler.VoxelPipeline
         [SerializeField] private VoxMasterPalette? _palette;
 
         [MenuItem("Window/Voxels/Mesh to Voxels")]
-        private static void Open() => GetWindow<VoxelsFromMeshSpikeWindow>("Mesh to Voxels");
+        private static void Open() => GetWindow<MeshToVoxelsWindow>("Mesh to Voxels");
 
         private void OnEnable() => LoadState();
 
@@ -290,7 +290,7 @@ namespace Assembler.VoxelPipeline
                     (name, fraction) =>
                         EditorUtility.DisplayProgressBar("Mesh → VOX", $"Post-processing: {name}…", 0.9f + 0.09f * fraction));
 
-                Debug.Log($"[VoxelsFromMeshSpike] Wrote {summary}");
+                Debug.Log($"[MeshToVoxels] Wrote {summary}");
             }
             catch (OperationCanceledException)
             {

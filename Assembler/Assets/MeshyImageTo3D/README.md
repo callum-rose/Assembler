@@ -1,4 +1,4 @@
-# Meshy Image → 3D (spike)
+# Meshy Image → 3D
 
 A small, self-contained editor tool that calls the [Meshy.ai](https://meshy.ai)
 **Image to 3D** OpenAPI endpoint: feed it a reference image, get a textured
@@ -6,7 +6,7 @@ model (OBJ or FBX) back on disk.
 
 This is independent of the bundled `Assets/Plugins/ai.meshy` "Bridge" plugin
 (which pushes models *from* the website). Everything here lives in its own
-folder and assembly (`Assembler.MeshyImageTo3D.Editor`).
+folder and assembly (`Assembler.AssetGeneration.MeshyImageTo3D.Editor`).
 
 ## Usage
 
@@ -29,7 +29,7 @@ Next to the chosen output file (`model.obj` → `MeshyOutput/`):
 - texture maps: `model_basecolor.*`, and with PBR on,
   `model_metallic.*` / `model_roughness.*` / `model_normal.*`
 
-## Spike caveats
+## Caveats
 
 - Texturing is always requested (`should_texture`), so the model comes back
   textured. The maps are downloaded as separate files — wiring them onto the

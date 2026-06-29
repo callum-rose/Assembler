@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Pipeline step 3 (opt-in) — forces bilateral symmetry by mirroring one half of the model

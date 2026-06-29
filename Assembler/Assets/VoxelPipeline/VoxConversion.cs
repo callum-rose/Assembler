@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// UI-free core of the mesh → VOX conversion: solid-fill a mesh into a coloured <see cref="VoxResult"/>,
     /// run the post-processing <see cref="VoxPipeline"/> over it, then write the <c>.vox</c>. Shared by
-    /// the editor window (<see cref="VoxelsFromMeshSpikeWindow"/>) and the headless batch entry point
-    /// (<see cref="VoxelsFromMeshSpikeBatch"/>) so both drive an identical pipeline. No dialogs, progress
+    /// the editor window (<see cref="MeshToVoxelsWindow"/>) and the headless batch entry point
+    /// (<see cref="MeshToVoxelsBatch"/>) so both drive an identical pipeline. No dialogs, progress
     /// bars, or window state here — callers supply optional progress sinks.
     ///
     /// The heavy voxelization runs on a background thread (<see cref="Run"/>) so the editor stays

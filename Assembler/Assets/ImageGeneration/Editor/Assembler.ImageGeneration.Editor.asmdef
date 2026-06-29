@@ -1,6 +1,6 @@
 {
-    "name": "Assembler.ImageGeneration.Editor",
-    "rootNamespace": "Assembler.ImageGeneration",
+    "name": "Assembler.AssetGeneration.ImageGeneration.Editor",
+    "rootNamespace": "Assembler.AssetGeneration.ImageGeneration",
     "references": [],
     "includePlatforms": [
         "Editor"

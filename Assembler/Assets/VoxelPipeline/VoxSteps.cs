@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Thin <see cref="IVoxStep"/> adapters over the stateless step algorithms

@@ -6,15 +6,15 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.ImageGeneration;
-using Assembler.MeshyImageTo3D;
+using Assembler.AssetGeneration.ImageGeneration;
+using Assembler.AssetGeneration.MeshyImageTo3D;
 using UnityEngine;
-using Assembler.VoxelPipeline;
+using Assembler.AssetGeneration.VoxelPipeline;
 
-namespace Assembler.TextToVoxelPipeline
+namespace Assembler.AssetGeneration.TextToVoxelPipeline
 {
     /// <summary>
-    /// UI-free core that chains the three asset-generation spikes end to end —
+    /// UI-free core that chains the three asset-generation stages end to end —
     /// text → image (<see cref="ImageGenerationCore"/>) → mesh (<see cref="MeshyConversionCore"/>)
     /// → voxels (<see cref="VoxConversion"/>) — driving each stage's existing core so this and
     /// the editor window (<see cref="VoxelPipelineWindow"/>) run an identical path. No EditorPrefs,
@@ -289,7 +289,7 @@ namespace Assembler.TextToVoxelPipeline
 
     /// <summary>
     /// All inputs for the three pipeline stages plus the shared output target. Mutable plain fields so
-    /// the editor window can bind directly to it; <see cref="VoxSettings"/> reuses the voxel spike's own
+    /// the editor window can bind directly to it; <see cref="VoxSettings"/> reuses the voxel stage's own
     /// per-step settings, and <see cref="Palette"/> the shared master palette.
     /// </summary>
     public sealed class VoxelPipelineSettings

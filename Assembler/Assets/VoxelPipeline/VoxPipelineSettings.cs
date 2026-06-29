@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Serializable bundle of which steps are on and with what params — the data a preset

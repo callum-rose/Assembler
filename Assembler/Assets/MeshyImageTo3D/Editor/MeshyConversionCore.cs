@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.MeshyImageTo3D
+namespace Assembler.AssetGeneration.MeshyImageTo3D
 {
     /// <summary>
-    /// UI-free core of the image → mesh spike: submit a reference image to Meshy.ai, poll until the
+    /// UI-free core of the image → mesh stage: submit a reference image to Meshy.ai, poll until the
     /// textured model is ready, and download it (plus its sidecar material/texture maps) to disk.
     /// Shared by the editor window (<see cref="MeshyImageTo3DWindow"/>) and any headless / pipeline
     /// caller, so both drive an identical path. No EditorPrefs or window state lives here — callers
     /// supply an optional status sink and read the output path off the returned <see cref="Result"/>.
-    /// Mirrors <c>VoxConversion</c> so the three spikes can be chained: this stage's input image is
+    /// Mirrors <c>VoxConversion</c> so the three stages can be chained: this stage's input image is
     /// the text-to-image stage's output, and this stage's <see cref="Result.OutputPath"/> is the
     /// mesh-to-voxels stage's input.
     /// </summary>

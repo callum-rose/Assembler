@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
-using Assembler.VoxelPipeline;
+using Assembler.AssetGeneration.VoxelPipeline;
 
-namespace Tests.VoxelPipeline
+namespace Tests.AssetGeneration.VoxelPipeline
 {
     public sealed class MirrorRevolveTests
     {

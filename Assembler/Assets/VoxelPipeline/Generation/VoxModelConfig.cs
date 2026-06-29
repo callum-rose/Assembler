@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// The data the AI layer emits for one model: an image-generation prompt plus the settings for

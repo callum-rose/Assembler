@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Pipeline step 3 (opt-in) — turns a near-cylindrical asset into a true solid of revolution

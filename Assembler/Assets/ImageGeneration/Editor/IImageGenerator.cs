@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.ImageGeneration
+namespace Assembler.AssetGeneration.ImageGeneration
 {
     /// <summary>
     /// Provider-agnostic image generator. Implement this once per backend
@@ -21,7 +21,7 @@ namespace Assembler.ImageGeneration
         Task<GeneratedImage> GenerateAsync(ImageGenerationRequest request, CancellationToken ct);
     }
 
-    /// <summary>The providers the spike knows how to build. Add new backends here.</summary>
+    /// <summary>The providers the module knows how to build. Add new backends here.</summary>
     public enum ImageProvider
     {
         GoogleGemini,
@@ -75,7 +75,7 @@ namespace Assembler.ImageGeneration
         /// The model ids offered for a provider, newest/default first. Only models
         /// the concrete client can actually drive are listed — for Gemini that's the
         /// <c>generateContent</c> image family (the Imagen models use a different
-        /// endpoint this spike doesn't implement).
+        /// endpoint this module doesn't implement).
         /// </summary>
         public static string[] AvailableModelsFor(ImageProvider provider) =>
             provider switch

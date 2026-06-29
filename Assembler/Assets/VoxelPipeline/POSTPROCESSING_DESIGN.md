@@ -6,8 +6,8 @@
 
 ## 1. Context
 
-This lives in the `VoxelsFromMeshSpike` editor-only spike, which converts a textured
-mesh (`.obj` / `.fbx`, from **Meshy**) into a coloured MagicaVoxel `.vox`. The spike
+This lives in the `Assembler.AssetGeneration.VoxelPipeline` editor-only module, which converts a textured
+mesh (`.obj` / `.fbx`, from **Meshy**) into a coloured MagicaVoxel `.vox`. The module
 already does:
 
 - **Voxelization** — `ObjToVoxConverter.Convert(meshPath, maxDimVoxels, progress)` solid-fills
@@ -33,7 +33,7 @@ public sealed class VoxResult {
 `VoxWriter` remaps to MagicaVoxel's Z-up at write time. **All pipeline steps operate in the
 Y-up `VoxResult` space.** When this doc says "axis", it means an axis of that space.
 
-Compile setup: the spike is a standalone editor asmdef (`VoxelsFromMeshSpike`) with
+Compile setup: this is a standalone editor asmdef (`Assembler.AssetGeneration.VoxelPipeline`) with
 `-nullable:enable` (`csc.rsp`) and a local `IsExternalInit.cs` shim, so **records and
 `init`-only setters work** here. Respect nullable annotations (house rule). No `.meta`
 files by hand — Unity generates them.
@@ -233,7 +233,7 @@ is **geometric** noise:
    These improve *every* Meshy model regardless of category and are the real first deliverable.
    Replace/refactor the current `ColorQuantizer` into the de-light + palette-snap steps.
 3. **Pipeline + presets** — `IVoxStep`, fixed-order runner, category presets, per-asset override.
-   Update `VoxelsFromMeshSpikeWindow` to expose preset selection + per-step toggles.
+   Update `MeshToVoxelsWindow` to expose preset selection + per-step toggles.
 4. **Symmetry (opt-in)** — mirror, then revolve (§6.4).
 
 Author the **master palette** asset alongside milestone 2 — it gates colour quality.

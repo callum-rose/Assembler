@@ -1,6 +1,6 @@
 {
-    "name": "Assembler.VoxelPipeline",
-    "rootNamespace": "Assembler.VoxelPipeline",
+    "name": "Assembler.AssetGeneration.VoxelPipeline",
+    "rootNamespace": "Assembler.AssetGeneration.VoxelPipeline",
     "references": [],
     "includePlatforms": [
         "Editor"

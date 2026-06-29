@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.ImageGeneration
+namespace Assembler.AssetGeneration.ImageGeneration
 {
     /// <summary>
-    /// UI-free core of the text → image spike: generate an image from a prompt and write it to disk.
+    /// UI-free core of the text → image stage: generate an image from a prompt and write it to disk.
     /// Shared by the editor window (<see cref="ImageGenerationWindow"/>) and any headless / pipeline
     /// caller, so both drive an identical path. No EditorPrefs, preview textures, or window state lives
     /// here — callers supply an optional status sink and read the output path off the returned
-    /// <see cref="Result"/>. Mirrors <c>VoxConversion</c> so the three spikes can be chained:
+    /// <see cref="Result"/>. Mirrors <c>VoxConversion</c> so the three stages can be chained:
     /// this stage's <see cref="Result.OutputPath"/> is the next stage's input image.
     /// </summary>
     public static class ImageGenerationCore

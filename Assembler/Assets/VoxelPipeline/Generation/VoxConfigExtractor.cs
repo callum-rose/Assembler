@@ -1,6 +1,6 @@
 using Assembler.Anthropic;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// Pulls the single fenced <c>```json</c> block out of an assistant reply, or <c>null</c>

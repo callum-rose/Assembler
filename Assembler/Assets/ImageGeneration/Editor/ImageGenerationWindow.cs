@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.ImageGeneration
+namespace Assembler.AssetGeneration.ImageGeneration
 {
     /// <summary>
-    /// Spike editor window: type a prompt, pick a provider, and write the
+    /// Editor window: type a prompt, pick a provider, and write the
     /// generated image to a chosen path. Everything (provider, model, per-provider
     /// API key, prompt, output path) is persisted in <see cref="EditorPrefs"/>.
     /// </summary>

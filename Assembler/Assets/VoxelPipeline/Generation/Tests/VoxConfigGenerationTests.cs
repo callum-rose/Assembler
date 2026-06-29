@@ -2,13 +2,13 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Assembler.Anthropic;
-using Assembler.MeshyImageTo3D;
-using Assembler.VoxelPipeline;
-using Assembler.VoxelPipeline.Generation;
+using Assembler.AssetGeneration.MeshyImageTo3D;
+using Assembler.AssetGeneration.VoxelPipeline;
+using Assembler.AssetGeneration.VoxelPipeline.Generation;
 using NUnit.Framework;
 using UnityEngine;
 
-namespace Tests.VoxelPipeline.Generation
+namespace Tests.AssetGeneration.VoxelPipeline.Generation
 {
     public sealed class VoxConfigGenerationTests
     {

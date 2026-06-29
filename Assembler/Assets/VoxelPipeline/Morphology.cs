@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Pipeline step 6 (last) — mild geometric despeckle/fill. Colour anomalies are already

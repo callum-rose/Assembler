@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// Builds the system prompt for the model-config chooser. The settings reference and the preset

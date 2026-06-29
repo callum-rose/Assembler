@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.ImageGeneration
+namespace Assembler.AssetGeneration.ImageGeneration
 {
     /// <summary>
     /// Minimal client for Google's Gemini image generation (free-tier "AI Studio"

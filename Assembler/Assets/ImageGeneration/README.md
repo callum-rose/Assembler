@@ -1,6 +1,6 @@
-# AI Image Generation (editor spike)
+# AI Image Generation (editor module)
 
-A throwaway editor window that turns a text prompt into an image file on disk.
+An editor window that turns a text prompt into an image file on disk.
 Open it from **Assembler → Image Generation**.
 
 ## Usage
@@ -31,4 +31,4 @@ No window changes are needed; it picks the provider from a dropdown.
 
 - Gemini's image models (e.g. `gemini-2.5-flash-image`) are on the free tier;
   leave **Model** blank to use the default.
-- Spike-quality: single request, no retries/queuing, key lives in `EditorPrefs`.
+- Minimal: single request, no retries/queuing, key lives in `EditorPrefs`.

@@ -6,7 +6,7 @@ using System.Text.Json;
 using Assembler.Anthropic;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// Turns an assistant reply into a <see cref="VoxModelConfig"/>, leniently. The only hard

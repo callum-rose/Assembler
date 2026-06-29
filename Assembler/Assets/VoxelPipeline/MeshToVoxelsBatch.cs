@@ -5,10 +5,10 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
-    /// Headless entry point for the mesh → VOX spike, so an automated harness (or an AI) can voxelize a
+    /// Headless entry point for the mesh → VOX stage, so an automated harness (or an AI) can voxelize a
     /// mesh and inspect the output without the editor window. Drives the same pipeline as the window via
     /// <see cref="VoxConversion.RunSynchronous"/> (the blocking variant — there is no interactive editor
     /// to keep responsive under -batchmode); only the I/O is different (CLI args + log instead of GUI +
@@ -16,7 +16,7 @@ namespace Assembler.VoxelPipeline
     ///
     /// Invoked via:
     ///   Unity -batchmode -nographics -projectPath &lt;project&gt; -quit -logFile - \
-    ///         -executeMethod Assembler.VoxelPipeline.VoxelsFromMeshSpikeBatch.Run \
+    ///         -executeMethod Assembler.AssetGeneration.VoxelPipeline.MeshToVoxelsBatch.Run \
     ///         -meshPath &lt;mesh.obj|.fbx&gt; [-voxPath &lt;out.vox&gt;] [-maxDim 32] \
     ///         [-preset Creature|Prop|RawVoxelCleanup] [-palettePath Assets/…/MasterPalette.asset] \
     ///         [-removeFloaters true|false] [-mirror …] [-revolve …] [-deLight …] \
@@ -25,7 +25,7 @@ namespace Assembler.VoxelPipeline
     ///
     /// Boolean step flags override the preset's defaults. Exits 0 on success, non-zero on any failure.
     /// </summary>
-    public static class VoxelsFromMeshSpikeBatch
+    public static class MeshToVoxelsBatch
     {
         public static void Run()
         {
@@ -55,7 +55,7 @@ namespace Assembler.VoxelPipeline
                 IReadOnlyList<Color32> palette = LoadPalette(ArgValue(args, "-palettePath"));
 
                 Debug.Log(
-                    $"[VoxelsFromMeshSpikeBatch] mesh='{meshPath}' out='{voxPath}' maxDim={maxDim} " +
+                    $"[MeshToVoxelsBatch] mesh='{meshPath}' out='{voxPath}' maxDim={maxDim} " +
                     $"preset={preset} (floaters={settings.removeFloaters}, mirror={settings.mirror}, " +
                     $"revolve={settings.revolve}, deLight={settings.deLight}, " +
                     $"histogramPeaks={settings.snapToHistogramPeaks} (variety={settings.histogramPeakVariety}, cap={settings.histogramPeakCount}), " +
@@ -63,13 +63,13 @@ namespace Assembler.VoxelPipeline
 
                 VoxConversion.Summary summary = VoxConversion.RunSynchronous(meshPath, voxPath, maxDim, settings, palette);
 
-                Debug.Log($"[VoxelsFromMeshSpikeBatch] OK: wrote {summary}");
+                Debug.Log($"[MeshToVoxelsBatch] OK: wrote {summary}");
                 EditorApplication.Exit(0);
             }
             catch (Exception e)
             {
                 // ToString() carries the trace, so the muted-trace setting above doesn't hide it.
-                Debug.LogError($"[VoxelsFromMeshSpikeBatch] FAILED: {e}");
+                Debug.LogError($"[MeshToVoxelsBatch] FAILED: {e}");
                 EditorApplication.Exit(1);
             }
         }
@@ -104,7 +104,7 @@ namespace Assembler.VoxelPipeline
 
         private static void Fail(string message)
         {
-            Debug.LogError($"[VoxelsFromMeshSpikeBatch] FAILED: {message}");
+            Debug.LogError($"[MeshToVoxelsBatch] FAILED: {message}");
             EditorApplication.Exit(2);
         }
 

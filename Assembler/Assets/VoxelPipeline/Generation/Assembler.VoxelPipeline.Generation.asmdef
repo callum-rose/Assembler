@@ -1,10 +1,10 @@
 {
-    "name": "Assembler.VoxelPipeline.Generation",
-    "rootNamespace": "Assembler.VoxelPipeline.Generation",
+    "name": "Assembler.AssetGeneration.VoxelPipeline.Generation",
+    "rootNamespace": "Assembler.AssetGeneration.VoxelPipeline.Generation",
     "references": [
-        "Assembler.VoxelPipeline",
+        "Assembler.AssetGeneration.VoxelPipeline",
         "Assembler.Anthropic",
-        "Assembler.MeshyImageTo3D.Editor"
+        "Assembler.AssetGeneration.MeshyImageTo3D.Editor"
     ],
     "includePlatforms": [
         "Editor"

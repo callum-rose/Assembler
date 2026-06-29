@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// One shared art-direction rule. Kept as a <see cref="SerializableAttribute"/> class with

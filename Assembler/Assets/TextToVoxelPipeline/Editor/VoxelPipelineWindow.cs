@@ -5,17 +5,17 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.ImageGeneration;
-using Assembler.MeshyImageTo3D;
+using Assembler.AssetGeneration.ImageGeneration;
+using Assembler.AssetGeneration.MeshyImageTo3D;
 using UnityEditor;
 using UnityEngine;
-using Assembler.VoxelPipeline;
-using Assembler.VoxelPipeline.Generation;
+using Assembler.AssetGeneration.VoxelPipeline;
+using Assembler.AssetGeneration.VoxelPipeline.Generation;
 
-namespace Assembler.TextToVoxelPipeline
+namespace Assembler.AssetGeneration.TextToVoxelPipeline
 {
     /// <summary>
-    /// Spike editor window for the full text → voxel pipeline: type a prompt and get a <c>.vox</c>,
+    /// Editor window for the full text → voxel pipeline: type a prompt and get a <c>.vox</c>,
     /// driving the shared <see cref="VoxelPipeline.RunAsync"/> so the window and any headless caller
     /// take an identical path. The gap between stages is optionally reviewable — tick "Review image"
     /// / "Review mesh" and the run pauses after that stage (showing the image preview / the mesh path)
@@ -288,7 +288,7 @@ namespace Assembler.TextToVoxelPipeline
             DrawPipelineControls();
         }
 
-        // Preset picker + per-step overrides, ported from VoxelsFromMeshSpikeWindow: choosing a preset
+        // Preset picker + per-step overrides, ported from MeshToVoxelsWindow: choosing a preset
         // loads its settings; the toggles below are the per-asset override on top.
         private void DrawPipelineControls()
         {

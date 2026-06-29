@@ -1,6 +1,6 @@
 {
-    "name": "Assembler.TextToVoxelPipeline.Editor",
-    "rootNamespace": "Assembler.TextToVoxelPipeline",
+    "name": "Assembler.AssetGeneration.TextToVoxelPipeline.Editor",
+    "rootNamespace": "Assembler.AssetGeneration.TextToVoxelPipeline",
     "references": [
         "GUID:f694439fe97b143379fafb560f57b62a",
         "GUID:74f167e5e8971479ba1134fb45be13fb",

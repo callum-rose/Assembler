@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// A colour in <b>Oklab</b> perceptual space (L = lightness, a/b = chroma axes).

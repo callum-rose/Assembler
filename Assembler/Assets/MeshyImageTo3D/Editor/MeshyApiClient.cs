@@ -8,11 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Assembler.MeshyImageTo3D
+namespace Assembler.AssetGeneration.MeshyImageTo3D
 {
     /// <summary>
     /// Minimal client for the Meshy.ai "Image to 3D" OpenAPI v1 endpoint.
-    /// Spike-quality: one create call, polled until the task finishes, then the
+    /// Minimal: one create call, polled until the task finishes, then the
     /// requested model format plus its texture maps are downloaded to disk.
     /// </summary>
     public sealed class MeshyApiClient : IDisposable

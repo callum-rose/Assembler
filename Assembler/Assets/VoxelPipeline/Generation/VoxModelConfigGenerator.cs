@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// Public entry point: given one model's description and the shared art-direction blurb, returns

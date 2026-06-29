@@ -1,4 +1,4 @@
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// A single post-processing step: a pure-ish transform over the dense <see cref="VoxModel"/>.

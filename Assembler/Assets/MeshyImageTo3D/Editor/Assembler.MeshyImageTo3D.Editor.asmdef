@@ -1,6 +1,6 @@
 {
-    "name": "Assembler.MeshyImageTo3D.Editor",
-    "rootNamespace": "Assembler.MeshyImageTo3D",
+    "name": "Assembler.AssetGeneration.MeshyImageTo3D.Editor",
+    "rootNamespace": "Assembler.AssetGeneration.MeshyImageTo3D",
     "references": [],
     "includePlatforms": [
         "Editor"

@@ -1,4 +1,4 @@
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// A grid axis in the Y-up <see cref="VoxResult"/> space, shared by the opt-in symmetry

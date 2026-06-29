@@ -4,7 +4,7 @@ using Assembler.Anthropic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// Manual harness for the AI model-config layer: enter an asset description + the shared art
@@ -15,8 +15,8 @@ namespace Assembler.VoxelPipeline.Generation
     {
         // Shared with the descriptor generator window so the key is entered once.
         private const string ApiKeyPref = "Assembler.Generation.ApiKey";
-        private const string ArtContextPref = "Assembler.VoxelPipeline.Generation.ArtContext";
-        private const string DescriptionPref = "Assembler.VoxelPipeline.Generation.Description";
+        private const string ArtContextPref = "Assembler.AssetGeneration.VoxelPipeline.Generation.ArtContext";
+        private const string DescriptionPref = "Assembler.AssetGeneration.VoxelPipeline.Generation.Description";
 
         private string _apiKey = string.Empty;
         private string _artContext = string.Empty;

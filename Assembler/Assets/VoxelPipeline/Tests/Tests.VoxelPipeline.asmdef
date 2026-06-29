@@ -1,8 +1,8 @@
 {
-    "name": "Tests.VoxelPipeline",
+    "name": "Tests.AssetGeneration.VoxelPipeline",
     "rootNamespace": "",
     "references": [
-        "Assembler.VoxelPipeline",
+        "Assembler.AssetGeneration.VoxelPipeline",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

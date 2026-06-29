@@ -1,6 +1,6 @@
-# Text → Voxels (pipeline spike)
+# Text → Voxels (pipeline)
 
-Chains the three asset-generation spikes end to end so a single text prompt
+Chains the three asset-generation stages end to end so a single text prompt
 produces a MagicaVoxel `.vox`:
 
 ```
@@ -9,10 +9,10 @@ prompt ──▶ image ──▶ mesh ──▶ voxels
    ImageGenerationCore  MeshyConversionCore  VoxConversion
 ```
 
-Each stage drives the *existing* core of its spike — nothing is reimplemented —
+Each stage drives the *existing* core of its module — nothing is reimplemented —
 so this pipeline and the standalone windows take an identical path. Lives in its
-own folder and assembly (`Assembler.TextToVoxelPipeline.Editor`), which
-references the three spike assemblies.
+own folder and assembly (`Assembler.AssetGeneration.TextToVoxelPipeline.Editor`), which
+references the three stage assemblies.
 
 ## Two entry points
 
@@ -61,4 +61,4 @@ project so Unity imports the result.
   dimension** modest regardless. `VoxelPipeline.RunAsync` awaits the async
   `VoxConversion.Run`, so call it from the main thread.
 - Per-stage caveats (texture wiring, API retries, palette snapping) are inherited
-  from each spike — see their READMEs.
+  from each stage — see their READMEs.

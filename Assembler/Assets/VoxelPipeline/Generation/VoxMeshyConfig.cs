@@ -1,8 +1,8 @@
 using System;
-using Assembler.MeshyImageTo3D;
+using Assembler.AssetGeneration.MeshyImageTo3D;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline.Generation
+namespace Assembler.AssetGeneration.VoxelPipeline.Generation
 {
     /// <summary>
     /// The image → mesh (Meshy.ai) generation parameters the AI layer chooses for the full pipeline.

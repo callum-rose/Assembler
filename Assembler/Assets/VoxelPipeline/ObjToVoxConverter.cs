@@ -5,7 +5,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>A single filled voxel in the mesh's Y-up grid space.</summary>
     public readonly struct VoxCell
@@ -60,7 +60,7 @@ namespace Assembler.VoxelPipeline
     public static class ObjToVoxConverter
     {
         private const int MaxGridDim = 256;
-        private const string TempImportFolder = "Assets/__VoxSpikeTemp";
+        private const string TempImportFolder = "Assets/__VoxTemp";
 
         /// <summary>
         /// Imports the mesh and snapshots its textures into Unity-free buffers. Touches the
@@ -466,7 +466,7 @@ namespace Assembler.VoxelPipeline
             if (dropped > 0)
             {
                 Debug.LogWarning(
-                    $"[VoxelsFromMeshSpike] Dropped {dropped:N0} non-manifold triangle(s) " +
+                    $"[MeshToVoxels] Dropped {dropped:N0} non-manifold triangle(s) " +
                     $"of {appended + dropped:N0}; solid fill may be approximate.");
             }
 
@@ -862,14 +862,14 @@ namespace Assembler.VoxelPipeline
                             return new ColorSource { Texture = snapshot };
                         }
                     }
-                    Debug.LogWarning($"[VoxelsFromMeshSpike] map_Kd '{mapKd}' not found/loadable; using flat Kd colour.");
+                    Debug.LogWarning($"[MeshToVoxels] map_Kd '{mapKd}' not found/loadable; using flat Kd colour.");
                 }
 
                 return new ColorSource { FlatColor = flat };
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[VoxelsFromMeshSpike] Failed to load colour source: {e.Message}; using mid-grey.");
+                Debug.LogWarning($"[MeshToVoxels] Failed to load colour source: {e.Message}; using mid-grey.");
                 return new ColorSource { FlatColor = midGrey };
             }
         }

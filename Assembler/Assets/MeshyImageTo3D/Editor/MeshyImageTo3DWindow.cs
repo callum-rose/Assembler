@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
-namespace Assembler.MeshyImageTo3D
+namespace Assembler.AssetGeneration.MeshyImageTo3D
 {
     /// <summary>
-    /// Spike editor window: take a reference image, send it to Meshy.ai's
+    /// Editor window: take a reference image, send it to Meshy.ai's
     /// image-to-3D endpoint, and download the resulting textured model (OBJ or
     /// FBX) to a chosen output path.
     /// </summary>

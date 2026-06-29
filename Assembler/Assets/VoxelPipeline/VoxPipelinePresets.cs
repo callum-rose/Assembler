@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace Assembler.VoxelPipeline
+namespace Assembler.AssetGeneration.VoxelPipeline
 {
     /// <summary>
     /// Named category presets — sensible starting bundles per asset kind (§4.3). Each member

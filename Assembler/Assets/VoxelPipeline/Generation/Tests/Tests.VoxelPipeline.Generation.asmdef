@@ -1,11 +1,11 @@
 {
-    "name": "Tests.VoxelPipeline.Generation",
+    "name": "Tests.AssetGeneration.VoxelPipeline.Generation",
     "rootNamespace": "",
     "references": [
-        "Assembler.VoxelPipeline.Generation",
-        "Assembler.VoxelPipeline",
+        "Assembler.AssetGeneration.VoxelPipeline.Generation",
+        "Assembler.AssetGeneration.VoxelPipeline",
         "Assembler.Anthropic",
-        "Assembler.MeshyImageTo3D.Editor",
+        "Assembler.AssetGeneration.MeshyImageTo3D.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
