@@ -40,9 +40,9 @@ namespace Assembler.MeshyImageTo3D
         }
 
         /// <summary>
-        /// Generate a 3D model from <paramref name="imagePath"/> and download it into
+        /// Generate a 3D model from <paramref name="request"/>'s image and download it into
         /// <paramref name="outputDir"/>. A blank <paramref name="outputFile"/> falls back to the name
-        /// Meshy gave the model; the extension follows <paramref name="format"/>.
+        /// Meshy gave the model; the extension follows <see cref="MeshyRequest.Format"/>.
         /// </summary>
         /// <param name="onStatus">Optional sink for human-readable progress (UI status line / log).</param>
         /// <returns>The written model path plus the completed task, for chaining into the next stage.</returns>
@@ -50,30 +50,19 @@ namespace Assembler.MeshyImageTo3D
         /// <exception cref="OperationCanceledException"><paramref name="ct"/> was cancelled.</exception>
         public static async Task<Result> ConvertAsync(
             string apiKey,
-            string imagePath,
+            MeshyRequest request,
             string outputDir,
             string outputFile,
-            ModelFormat format,
-            bool generateTexture,
-            bool enablePbr,
-            bool remesh,
-            string aiModel,
             CancellationToken ct = default,
             Action<string>? onStatus = null)
         {
             if (string.IsNullOrWhiteSpace(outputDir))
                 throw new MeshyException("Set an output directory.");
 
+            // PBR maps only exist alongside a generated texture.
+            request.EnablePbr = request.GenerateTexture && request.EnablePbr;
+
             using var client = new MeshyApiClient(apiKey);
-            var request = new MeshyRequest
-            {
-                ImagePath = imagePath,
-                Format = format,
-                GenerateTexture = generateTexture,
-                EnablePbr = generateTexture && enablePbr,
-                Remesh = remesh,
-                AiModel = aiModel,
-            };
 
             onStatus?.Invoke("Submitting image…");
             var taskId = await client.CreateTaskAsync(request, ct);
@@ -83,7 +72,7 @@ namespace Assembler.MeshyImageTo3D
                 taskId, (p, s) => onStatus?.Invoke($"{s} — {p}%"), ct);
 
             var savedPath = await DownloadResultsAsync(
-                client, task, outputDir, outputFile, format, enablePbr, ct, onStatus);
+                client, task, outputDir, outputFile, request.Format, request.EnablePbr, ct, onStatus);
 
             onStatus?.Invoke($"Done. Saved to {savedPath}");
             if (IsUnderAssets(savedPath))
