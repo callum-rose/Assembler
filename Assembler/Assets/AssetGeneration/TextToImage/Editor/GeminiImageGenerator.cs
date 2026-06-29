@@ -44,7 +44,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
 
             var model = string.IsNullOrWhiteSpace(request.Model) ? DefaultModel : request.Model.Trim();
             var url = $"{BaseUrl}/{model}:generateContent";
-            var body = BuildRequestJson(request.Prompt);
+            var body = BuildRequestJson(request.Prompt, request.ReferenceImage);
 
             using var content = new StringContent(body, Encoding.UTF8, "application/json");
             using var message = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
@@ -63,9 +63,20 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
 
         // Built by hand rather than JsonUtility so the prompt is escaped cleanly and
         // we can pin responseModalities (required by the preview image models).
-        private static string BuildRequestJson(string prompt) =>
-            "{\"contents\":[{\"parts\":[{\"text\":\"" + EscapeJson(prompt) + "\"}]}]," +
-            "\"generationConfig\":{\"responseModalities\":[\"IMAGE\",\"TEXT\"]}}";
+        // When a reference image is supplied it goes in as an inlineData part *before*
+        // the text, which is how Gemini's generateContent does image-conditioned edits.
+        private static string BuildRequestJson(string prompt, ReferenceImage? reference)
+        {
+            var textPart = "{\"text\":\"" + EscapeJson(prompt) + "\"}";
+
+            var parts = reference is { } image
+                ? "{\"inlineData\":{\"mimeType\":\"" + EscapeJson(image.MimeType) +
+                  "\",\"data\":\"" + Convert.ToBase64String(image.Bytes) + "\"}}," + textPart
+                : textPart;
+
+            return "{\"contents\":[{\"parts\":[" + parts + "]}]," +
+                "\"generationConfig\":{\"responseModalities\":[\"IMAGE\",\"TEXT\"]}}";
+        }
 
         private static GeneratedImage ExtractImage(string json)
         {
