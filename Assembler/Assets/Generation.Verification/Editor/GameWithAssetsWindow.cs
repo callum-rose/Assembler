@@ -3,6 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.MeshToVoxels;
+using Assembler.AssetGeneration.TextToImage.Editor;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -21,11 +23,27 @@ namespace Assembler.Generation.Verification.Editor
 		private const string PromptPref = "Assembler.Generation.Assets.LastPrompt";
 		private const string MaxAttemptsPref = "Assembler.Generation.Assets.MaxAttempts";
 		private const string ConcurrencyPref = "Assembler.Generation.Assets.Concurrency";
+		private const string MeshSourcePref = "Assembler.Generation.Assets.MeshSource";
+
+		// Pipeline image/Meshy/voxel config shares the Text→Voxels pipeline window's pref namespace,
+		// so keys + voxel knobs entered in either window stay in sync.
+		private const string PipelinePref = "Assembler.TextToVoxel.";
 
 		private string _prompt = string.Empty;
 		private string _apiKey = string.Empty;
 		private int _maxAttempts = 3;
 		private int _concurrency = 4;
+
+		private MeshSource _meshSource = MeshSource.Script;
+		private ImageProvider _imageProvider = ImageProvider.GoogleGemini;
+		private string _imageApiKey = string.Empty;
+		private string _imageModel = string.Empty;
+		private string _meshyApiKey = string.Empty;
+		private int _maxDimVoxels = 32;
+		private VoxPipelinePreset _voxPreset = VoxPipelinePreset.Creature;
+
+		private static string ImageApiKeyPref(ImageProvider provider) => $"{PipelinePref}ImageApiKey.{provider}";
+		private static string ImageModelPref(ImageProvider provider) => $"{PipelinePref}ImageModel.{provider}";
 
 		private string _revisePrompt = string.Empty;
 
@@ -55,6 +73,14 @@ namespace Assembler.Generation.Verification.Editor
 			_prompt = EditorPrefs.GetString(PromptPref, string.Empty);
 			_maxAttempts = Mathf.Max(1, EditorPrefs.GetInt(MaxAttemptsPref, 3));
 			_concurrency = Mathf.Max(1, EditorPrefs.GetInt(ConcurrencyPref, 4));
+
+			_meshSource = (MeshSource)EditorPrefs.GetInt(MeshSourcePref, (int)MeshSource.Script);
+			_imageProvider = (ImageProvider)EditorPrefs.GetInt(PipelinePref + "Provider", (int)ImageProvider.GoogleGemini);
+			_imageApiKey = EditorPrefs.GetString(ImageApiKeyPref(_imageProvider), string.Empty);
+			_imageModel = EditorPrefs.GetString(ImageModelPref(_imageProvider), ImageGeneratorFactory.DefaultModelFor(_imageProvider));
+			_meshyApiKey = EditorPrefs.GetString(PipelinePref + "MeshyApiKey", string.Empty);
+			_maxDimVoxels = Mathf.Clamp(EditorPrefs.GetInt(PipelinePref + "MaxDim", 32), 1, 256);
+			_voxPreset = (VoxPipelinePreset)EditorPrefs.GetInt(PipelinePref + "Preset", (int)VoxPipelinePreset.Creature);
 		}
 
 		private void OnDisable()
@@ -95,6 +121,8 @@ namespace Assembler.Generation.Verification.Editor
 				}
 			}
 
+			DrawMeshSourceSection();
+
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("Prompt", EditorStyles.boldLabel);
 			_promptScroll = EditorGUILayout.BeginScrollView(_promptScroll, GUILayout.MinHeight(80), GUILayout.MaxHeight(160));
@@ -133,6 +161,93 @@ namespace Assembler.Generation.Verification.Editor
 			EditorGUILayout.EndScrollView();
 
 			DrawSummarySection();
+		}
+
+		private void DrawMeshSourceSection()
+		{
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("Mesh source", EditorStyles.boldLabel);
+			using (var scope = new EditorGUI.ChangeCheckScope())
+			{
+				_meshSource = (MeshSource)EditorGUILayout.EnumPopup(_meshSource);
+				if (scope.changed)
+				{
+					EditorPrefs.SetInt(MeshSourcePref, (int)_meshSource);
+				}
+			}
+
+			if (_meshSource == MeshSource.Script)
+			{
+				EditorGUILayout.HelpBox(
+					"Script: Anthropic writes a voxel-drawing script. Free, near-instant, clean/blocky.",
+					MessageType.None);
+				return;
+			}
+
+			EditorGUILayout.HelpBox(
+				"Pipeline: text → image → Meshy mesh → voxels per asset. Costs image + Meshy API calls " +
+				"and can take minutes per asset.",
+				MessageType.Warning);
+
+			using (new EditorGUI.IndentLevelScope())
+			{
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_imageProvider = (ImageProvider)EditorGUILayout.EnumPopup("Image provider", _imageProvider);
+					if (scope.changed)
+					{
+						EditorPrefs.SetInt(PipelinePref + "Provider", (int)_imageProvider);
+						_imageApiKey = EditorPrefs.GetString(ImageApiKeyPref(_imageProvider), string.Empty);
+						_imageModel = EditorPrefs.GetString(
+							ImageModelPref(_imageProvider), ImageGeneratorFactory.DefaultModelFor(_imageProvider));
+					}
+				}
+
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_imageModel = EditorGUILayout.TextField("Image model", _imageModel);
+					if (scope.changed)
+					{
+						EditorPrefs.SetString(ImageModelPref(_imageProvider), _imageModel);
+					}
+				}
+
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_imageApiKey = EditorGUILayout.PasswordField("Image API key", _imageApiKey);
+					if (scope.changed)
+					{
+						EditorPrefs.SetString(ImageApiKeyPref(_imageProvider), _imageApiKey);
+					}
+				}
+
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_meshyApiKey = EditorGUILayout.PasswordField("Meshy API key", _meshyApiKey);
+					if (scope.changed)
+					{
+						EditorPrefs.SetString(PipelinePref + "MeshyApiKey", _meshyApiKey);
+					}
+				}
+
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_voxPreset = (VoxPipelinePreset)EditorGUILayout.EnumPopup("Voxel preset", _voxPreset);
+					if (scope.changed)
+					{
+						EditorPrefs.SetInt(PipelinePref + "Preset", (int)_voxPreset);
+					}
+				}
+
+				using (var scope = new EditorGUI.ChangeCheckScope())
+				{
+					_maxDimVoxels = EditorGUILayout.IntSlider("Max voxel dimension", _maxDimVoxels, 1, 256);
+					if (scope.changed)
+					{
+						EditorPrefs.SetInt(PipelinePref + "MaxDim", _maxDimVoxels);
+					}
+				}
+			}
 		}
 
 		private void DrawReviseSection()
@@ -205,14 +320,45 @@ namespace Assembler.Generation.Verification.Editor
 				Log("ERROR: prompt is required.");
 				return;
 			}
+			if (_meshSource == MeshSource.Pipeline)
+			{
+				if (string.IsNullOrWhiteSpace(_imageApiKey))
+				{
+					Log("ERROR: an image API key is required for the pipeline mesh source.");
+					return;
+				}
+				if (string.IsNullOrWhiteSpace(_meshyApiKey))
+				{
+					Log("ERROR: a Meshy API key is required for the pipeline mesh source.");
+					return;
+				}
+			}
 
 			_log.Clear();
 			_lastResult = null;
 			_orchestrator = new GameWithAssetsOrchestrator(
-				_apiKey, this, AssetGenerationOptions.Default, _concurrency);
+				_apiKey, this, BuildOptions(), _concurrency, _meshSource);
 
 			RunOperation(ct => _orchestrator.GenerateAsync(_prompt, _maxAttempts, ct));
 		}
+
+		// The script generator only needs VoxelLimits (defaults); the pipeline generator reads the
+		// window's image/Meshy/voxel config. Palette stays the built-in master palette.
+		private AssetGenerationOptions BuildOptions() =>
+			_meshSource == MeshSource.Pipeline
+				? AssetGenerationOptions.Default with
+				{
+					Pipeline = AssetGenerationOptions.Default.Pipeline with
+					{
+						ImageProvider = _imageProvider,
+						ImageApiKey = _imageApiKey,
+						ImageModel = _imageModel,
+						MeshyApiKey = _meshyApiKey,
+						MaxDimVoxels = _maxDimVoxels,
+						VoxPreset = _voxPreset,
+					},
+				}
+				: AssetGenerationOptions.Default;
 
 		private void StartRevise()
 		{

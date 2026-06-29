@@ -44,11 +44,12 @@ namespace Assembler.Generation.Verification.Editor
 		private string? _storedPath;
 
 		public GameWithAssetsOrchestrator(string apiKey, IGeneratorLogger logger,
-			AssetGenerationOptions? options = null, int maxConcurrency = 4)
+			AssetGenerationOptions? options = null, int maxConcurrency = 4,
+			MeshSource meshSource = MeshSource.Script)
 		{
 			_apiKey = apiKey;
 			_logger = logger;
-			_registry = AssetGeneratorRegistry.Default;
+			_registry = AssetGeneratorRegistry.For(meshSource);
 			_options = options ?? AssetGenerationOptions.Default;
 			_maxConcurrency = Math.Max(1, maxConcurrency);
 			_generator = new GameDescriptorGenerator(new AnthropicClient(_apiKey));

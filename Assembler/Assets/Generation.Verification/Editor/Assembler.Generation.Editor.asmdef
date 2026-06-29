@@ -6,7 +6,11 @@
         "Assembler.Anthropic",
         "Assembler.Voxels",
         "Voxels.Editor",
-        "Assembler.Generation.Verification"
+        "Assembler.Generation.Verification",
+        "Assembler.TextToVoxelPipeline.Editor",
+        "Assembler.AssetGeneration.ImageGeneration.Editor",
+        "Assembler.AssetGeneration.ImageToMesh.Editor",
+        "Assembler.AssetGeneration.MeshToVoxels"
     ],
     "includePlatforms": [
         "Editor"
