@@ -25,8 +25,8 @@ namespace Assembler.MeshyImageTo3D
         private const string TexturePref = "Meshy.ImageTo3D.Texture";
 
         // The Meshy image-to-3D AI models, newest first.
-        private static readonly string[] AiModels = { "meshy-5", "meshy-4" };
-        private const string DefaultAiModel = "meshy-5";
+        private static readonly string[] AiModels = { "meshy-6", "meshy-5", "meshy-4" };
+        private const string DefaultAiModel = "meshy-6";
 
         private string _apiKey = "";
         private string _imagePath = "";
