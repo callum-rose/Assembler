@@ -30,12 +30,15 @@ straight through; the window passes gates that **pause** the run so you can chec
 the intermediate before paying for the next stage:
 
 - tick **Review image before meshing** → the run stops after the image is
-  written, shows a preview, and waits for **Continue** (or **Cancel**).
+  written, shows a preview, and waits for **Continue**, **Retry**, or **Cancel**.
 - tick **Review mesh before voxelizing** → it stops after the mesh downloads,
-  shows the path (with a *Select in Project* button), and waits for **Continue**.
+  shows the path (with a *Select in Project* button), and waits for the same.
 
-A gate aborts the whole pipeline by cancelling the token (the window's **Cancel**
-button does this), which surfaces as `OperationCanceledException`.
+Each gate returns a `ReviewDecision`: **Continue** accepts the output and moves
+on; **Retry** discards it and re-runs that same stage (overwriting the
+shared-base-name file), looping until you Continue or Cancel. **Cancel** aborts
+the whole pipeline by cancelling the token (the window's **Cancel** button does
+this), which surfaces as `OperationCanceledException`.
 
 ## Usage
 

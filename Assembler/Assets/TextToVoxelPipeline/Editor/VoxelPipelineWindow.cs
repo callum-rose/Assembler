@@ -18,8 +18,8 @@ namespace Assembler.TextToVoxelPipeline
     /// driving the shared <see cref="VoxelPipeline.RunAsync"/> so the window and any headless caller
     /// take an identical path. The gap between stages is optionally reviewable — tick "Review image"
     /// / "Review mesh" and the run pauses after that stage (showing the image preview / the mesh path)
-    /// until you press Continue, so you can sanity-check an intermediate before paying for the next
-    /// stage. All inputs are persisted in <see cref="EditorPrefs"/>.
+    /// until you press Continue, Retry (re-run that stage), or Cancel, so you can sanity-check an
+    /// intermediate before paying for the next stage. All inputs are persisted in <see cref="EditorPrefs"/>.
     /// </summary>
     public sealed class VoxelPipelineWindow : EditorWindow
     {
@@ -50,7 +50,7 @@ namespace Assembler.TextToVoxelPipeline
         // Review-gate state: while a stage is awaiting Continue, the window shows the intermediate.
         private enum ReviewStage { None, Image, Mesh }
         private ReviewStage _reviewStage = ReviewStage.None;
-        private TaskCompletionSource<bool>? _reviewGate;
+        private TaskCompletionSource<VoxelPipeline.ReviewDecision>? _reviewGate;
         private CancellationTokenRegistration _reviewRegistration;
         private string _reviewMeshPath = "";
 
@@ -362,7 +362,10 @@ namespace Assembler.TextToVoxelPipeline
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Continue ▶", GUILayout.Height(26)))
-                        ContinueReview();
+                        ResolveReview(VoxelPipeline.ReviewDecision.Continue);
+                    if (GUILayout.Button(new GUIContent($"↻ Retry {what}", $"Discard this {what} and run the stage again."),
+                            GUILayout.Height(26), GUILayout.Width(120)))
+                        ResolveReview(VoxelPipeline.ReviewDecision.Retry);
                     if (GUILayout.Button("Cancel", GUILayout.Height(26), GUILayout.Width(100)))
                         _cts?.Cancel();
                 }
@@ -426,36 +429,36 @@ namespace Assembler.TextToVoxelPipeline
             }
         }
 
-        private Task ImageReviewGate(ImageGenerationCore.Result image, CancellationToken ct)
+        private Task<VoxelPipeline.ReviewDecision> ImageReviewGate(ImageGenerationCore.Result image, CancellationToken ct)
         {
             LoadPreview(image.Image.Bytes);
             return BeginReview(ReviewStage.Image, ct);
         }
 
-        private Task MeshReviewGate(MeshyConversionCore.Result mesh, CancellationToken ct)
+        private Task<VoxelPipeline.ReviewDecision> MeshReviewGate(MeshyConversionCore.Result mesh, CancellationToken ct)
         {
             _reviewMeshPath = mesh.OutputPath;
             return BeginReview(ReviewStage.Mesh, ct);
         }
 
-        // Hand control to the user: park on a TaskCompletionSource the Continue button completes
+        // Hand control to the user: park on a TaskCompletionSource the Continue/Retry buttons complete
         // (Cancel cancels the run's token, which fails the gate the same way as throwing would).
-        private Task BeginReview(ReviewStage stage, CancellationToken ct)
+        private Task<VoxelPipeline.ReviewDecision> BeginReview(ReviewStage stage, CancellationToken ct)
         {
             _reviewStage = stage;
-            _reviewGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _reviewGate = new TaskCompletionSource<VoxelPipeline.ReviewDecision>(TaskCreationOptions.RunContinuationsAsynchronously);
             _reviewRegistration = ct.Register(() => _reviewGate?.TrySetCanceled(ct));
             Repaint();
             return _reviewGate.Task;
         }
 
-        private void ContinueReview()
+        private void ResolveReview(VoxelPipeline.ReviewDecision decision)
         {
             _reviewRegistration.Dispose();
             _reviewStage = ReviewStage.None;
             var gate = _reviewGate;
             _reviewGate = null;
-            gate?.TrySetResult(true);
+            gate?.TrySetResult(decision);
             Repaint();
         }
 

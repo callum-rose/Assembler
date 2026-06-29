@@ -26,9 +26,20 @@ namespace Assembler.TextToVoxelPipeline
     /// </summary>
     public static class VoxelPipeline
     {
-        /// <summary>A review gate: awaited after a stage so a caller can inspect <paramref name="stage"/>.
+        /// <summary>The reviewer's verdict on a just-completed stage.</summary>
+        public enum ReviewDecision
+        {
+            /// <summary>Accept the stage's output and move on to the next stage.</summary>
+            Continue,
+
+            /// <summary>Discard this output and run the same stage again.</summary>
+            Retry,
+        }
+
+        /// <summary>A review gate: awaited after a stage so a caller can inspect <paramref name="stage"/> and
+        /// decide whether to <see cref="ReviewDecision.Continue"/> or <see cref="ReviewDecision.Retry"/> it.
         /// Cancel via <paramref name="ct"/> (or by throwing) to abort the pipeline before the next stage.</summary>
-        public delegate Task ReviewGate<in T>(T stage, CancellationToken ct);
+        public delegate Task<ReviewDecision> ReviewGate<in T>(T stage, CancellationToken ct);
 
         /// <summary>The output of all three stages, for inspection or further chaining.</summary>
         public readonly struct Result
@@ -58,8 +69,8 @@ namespace Assembler.TextToVoxelPipeline
         /// <summary>
         /// Run the full text → voxel pipeline described by <paramref name="settings"/>.
         /// </summary>
-        /// <param name="reviewImage">Optional gate awaited after stage 1 — inspect the image, then continue.</param>
-        /// <param name="reviewMesh">Optional gate awaited after stage 2 — inspect the mesh, then continue.</param>
+        /// <param name="reviewImage">Optional gate awaited after stage 1 — inspect the image, then continue or retry it.</param>
+        /// <param name="reviewMesh">Optional gate awaited after stage 2 — inspect the mesh, then continue or retry it.</param>
         /// <param name="voxelProgress">Optional sink for stage 3's slow per-voxel pass; return false to cancel.</param>
         /// <param name="pipelineProgress">Optional <c>(stepName, fraction)</c> sink for stage 3 post-processing.</param>
         /// <param name="onStatus">Optional sink for human-readable progress (UI status line / log).</param>
@@ -83,32 +94,46 @@ namespace Assembler.TextToVoxelPipeline
 
             var baseName = ResolveBaseName(settings);
 
+            // Each gated stage runs in a loop: produce the output, let the optional review gate inspect it,
+            // and re-run the same stage if the reviewer chose Retry (overwriting the shared-base-name file).
+            // Continue (or no gate) breaks out with the accepted output; Cancel throws via the token.
+            async Task<T> RunStage<T>(
+                Func<Task<T>> run, ReviewGate<T>? review, string runStatus, string reviewStatus)
+            {
+                while (true)
+                {
+                    onStatus?.Invoke(runStatus);
+                    var result = await run();
+
+                    if (review is null)
+                        return result;
+
+                    onStatus?.Invoke(reviewStatus);
+                    var decision = await review(result, ct);
+                    ct.ThrowIfCancellationRequested();
+                    if (decision is ReviewDecision.Continue)
+                        return result;
+                }
+            }
+
             // Stage 1 — text → image.
-            onStatus?.Invoke("Stage 1/3 — generating image…");
-            var image = await ImageGenerationCore.GenerateAsync(
-                settings.ImageProvider, settings.ImageApiKey, settings.ImageModel,
-                settings.Prompt, settings.OutputDir, baseName, ct, onStatus);
+            var image = await RunStage(
+                () => ImageGenerationCore.GenerateAsync(
+                    settings.ImageProvider, settings.ImageApiKey, settings.ImageModel,
+                    settings.Prompt, settings.OutputDir, baseName, ct, onStatus),
+                reviewImage,
+                "Stage 1/3 — generating image…",
+                "Review the image, then continue or retry…");
 
-            if (reviewImage != null)
-            {
-                onStatus?.Invoke("Review the image, then continue…");
-                await reviewImage(image, ct);
-            }
-            ct.ThrowIfCancellationRequested();
-
-            // Stage 2 — image → mesh. The image we just wrote is this stage's input.
-            onStatus?.Invoke("Stage 2/3 — converting image to mesh…");
-            var mesh = await MeshyConversionCore.ConvertAsync(
-                settings.MeshyApiKey, image.OutputPath, settings.OutputDir, baseName,
-                settings.MeshFormat, settings.GenerateTexture, settings.EnablePbr,
-                settings.Remesh, settings.MeshAiModel, ct, onStatus);
-
-            if (reviewMesh != null)
-            {
-                onStatus?.Invoke("Review the mesh, then continue…");
-                await reviewMesh(mesh, ct);
-            }
-            ct.ThrowIfCancellationRequested();
+            // Stage 2 — image → mesh. The (possibly retried) image we just accepted is this stage's input.
+            var mesh = await RunStage(
+                () => MeshyConversionCore.ConvertAsync(
+                    settings.MeshyApiKey, image.OutputPath, settings.OutputDir, baseName,
+                    settings.MeshFormat, settings.GenerateTexture, settings.EnablePbr,
+                    settings.Remesh, settings.MeshAiModel, ct, onStatus),
+                reviewMesh,
+                "Stage 2/3 — converting image to mesh…",
+                "Review the mesh, then continue or retry…");
 
             // Stage 3 — mesh → voxels. The CPU-heavy voxelization runs on a background thread (only the
             // mesh import + final AssetDatabase touch stay on the main thread), so this must be awaited
