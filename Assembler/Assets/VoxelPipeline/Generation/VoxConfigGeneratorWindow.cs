@@ -48,6 +48,14 @@ namespace Assembler.VoxelPipeline.Generation
 
         private void OnGUI()
         {
+            // Word-wrapping variants of the editable text area and the read-only labels, so long
+            // prompts/settings wrap instead of running off the side. The whole window sits in one
+            // scroll view so it scrolls vertically once the content outgrows the window.
+            var wrapArea = new GUIStyle(EditorStyles.textArea) { wordWrap = true };
+            var wrapLabel = new GUIStyle(EditorStyles.label) { wordWrap = true };
+
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
+
             EditorGUILayout.LabelField("API key (stored in EditorPrefs)", EditorStyles.boldLabel);
             using (var scope = new EditorGUI.ChangeCheckScope())
             {
@@ -62,7 +70,7 @@ namespace Assembler.VoxelPipeline.Generation
             EditorGUILayout.LabelField("Shared art direction", EditorStyles.boldLabel);
             using (var scope = new EditorGUI.ChangeCheckScope())
             {
-                _artContext = EditorGUILayout.TextArea(_artContext, GUILayout.MinHeight(60));
+                _artContext = EditorGUILayout.TextArea(_artContext, wrapArea, GUILayout.MinHeight(60));
                 if (scope.changed)
                 {
                     EditorPrefs.SetString(ArtContextPref, _artContext);
@@ -73,7 +81,7 @@ namespace Assembler.VoxelPipeline.Generation
             EditorGUILayout.LabelField("Model description", EditorStyles.boldLabel);
             using (var scope = new EditorGUI.ChangeCheckScope())
             {
-                _description = EditorGUILayout.TextArea(_description, GUILayout.MinHeight(60));
+                _description = EditorGUILayout.TextArea(_description, wrapArea, GUILayout.MinHeight(60));
                 if (scope.changed)
                 {
                     EditorPrefs.SetString(DescriptionPref, _description);
@@ -105,24 +113,37 @@ namespace Assembler.VoxelPipeline.Generation
             if (_result is { } result)
             {
                 EditorGUILayout.Space();
-                _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
                 EditorGUILayout.LabelField("Image prompt", EditorStyles.boldLabel);
-                EditorGUILayout.SelectableLabel(result.ImagePrompt, EditorStyles.textArea, GUILayout.MinHeight(80));
+                DrawWrappedReadonly(result.ImagePrompt, wrapArea);
 
                 EditorGUILayout.LabelField("Applied rule ids", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(result.AppliedRuleIds.Count > 0
-                    ? string.Join(", ", result.AppliedRuleIds)
-                    : "(none)");
+                EditorGUILayout.LabelField(
+                    result.AppliedRuleIds.Count > 0 ? string.Join(", ", result.AppliedRuleIds) : "(none)",
+                    wrapLabel);
 
                 EditorGUILayout.LabelField("Preset", result.Preset.ToString());
                 EditorGUILayout.LabelField("Resolution", result.Resolution.ToString());
 
                 EditorGUILayout.LabelField("Resolved settings", EditorStyles.boldLabel);
-                EditorGUILayout.SelectableLabel(_settingsDump, EditorStyles.textArea, GUILayout.MinHeight(200));
+                DrawWrappedReadonly(_settingsDump, wrapArea);
 
-                EditorGUILayout.EndScrollView();
+                EditorGUILayout.HelpBox(
+                    "Saved for import — open \"Assembler ▸ Text to Voxels (pipeline)\" and click " +
+                    "\"Import last AI config\" to load this prompt and settings.",
+                    MessageType.Info);
             }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        // Read-only, word-wrapped text sized to its content height so it shows in full and the
+        // window's scroll view (not an inner one) handles any overflow.
+        private static void DrawWrappedReadonly(string text, GUIStyle wrapStyle)
+        {
+            var width = EditorGUIUtility.currentViewWidth - 40f;
+            var height = wrapStyle.CalcHeight(new GUIContent(text), width);
+            EditorGUILayout.SelectableLabel(text, wrapStyle, GUILayout.Height(height));
         }
 
         private void StartChoose()
@@ -155,6 +176,7 @@ namespace Assembler.VoxelPipeline.Generation
                 var result = await generator.ChooseAsync(_description, _artContext, ct);
                 _result = result;
                 _settingsDump = JsonUtility.ToJson(result.Settings, prettyPrint: true);
+                VoxModelConfigStore.Save(result);
                 _status = "Done.";
             }
             catch (OperationCanceledException)

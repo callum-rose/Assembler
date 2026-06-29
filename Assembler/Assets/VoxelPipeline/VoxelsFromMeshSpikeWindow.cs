@@ -38,7 +38,7 @@ namespace Assembler.VoxelPipeline
         {
             EditorGUILayout.HelpBox(
                 "Solid-fills a textured .obj or .fbx into a coloured MagicaVoxel .vox " +
-                "using a fast-winding-number occupancy test, then cleans it up. Standalone spike — safe to delete.",
+                "using a fast-winding-number occupancy test, then cleans it up.",
                 MessageType.Info);
 
             EditorGUILayout.Space();

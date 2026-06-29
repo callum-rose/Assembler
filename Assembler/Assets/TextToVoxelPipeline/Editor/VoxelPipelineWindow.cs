@@ -10,6 +10,7 @@ using Assembler.MeshyImageTo3D;
 using UnityEditor;
 using UnityEngine;
 using Assembler.VoxelPipeline;
+using Assembler.VoxelPipeline.Generation;
 
 namespace Assembler.TextToVoxelPipeline
 {
@@ -76,6 +77,8 @@ namespace Assembler.TextToVoxelPipeline
 
             using (new EditorGUI.DisabledScope(_running))
             {
+                DrawImportFromAi();
+                EditorGUILayout.Space();
                 DrawPromptStage();
                 EditorGUILayout.Space();
                 DrawMeshStage();
@@ -96,6 +99,45 @@ namespace Assembler.TextToVoxelPipeline
             DrawPreview();
 
             EditorGUILayout.EndScrollView();
+        }
+
+        // ---- Import from the AI Model Config window --------------------------
+
+        // Pulls the last config chosen in the AI Model Config window (prompt + preset + post-
+        // processing settings + resolution) so the whole text → voxel run can be driven from it.
+        private void DrawImportFromAi()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField(
+                    new GUIContent("AI config", "Generated in Window ▸ Voxels ▸ AI Model Config."),
+                    GUILayout.Width(70));
+                using (new EditorGUI.DisabledScope(!VoxModelConfigStore.HasStored))
+                {
+                    if (GUILayout.Button(new GUIContent("Import last AI config",
+                        "Load the prompt, preset, post-processing settings and resolution last produced by the AI Model Config window.")))
+                        ImportFromAi();
+                }
+            }
+        }
+
+        private void ImportFromAi()
+        {
+            if (!VoxModelConfigStore.TryLoad(out var config))
+            {
+                SetStatus("No AI config has been generated yet — run the AI Model Config window first.");
+                return;
+            }
+
+            _settings.Prompt = config.ImagePrompt;
+            _preset = config.Preset;
+            _settings.VoxSettings = config.Settings;
+            _settings.MaxDimVoxels = config.Resolution;
+
+            // Drop keyboard focus so the prompt text field repaints with the imported value.
+            GUI.FocusControl(null);
+            SaveState();
+            SetStatus($"Imported AI config — preset {config.Preset}, {config.Resolution} voxels.");
         }
 
         // ---- Stage 1: prompt → image ----------------------------------------
