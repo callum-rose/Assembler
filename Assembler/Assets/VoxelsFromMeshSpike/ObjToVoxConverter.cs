@@ -883,7 +883,16 @@ namespace VoxelsFromMeshSpike
                 if (line.StartsWith("mtllib", StringComparison.OrdinalIgnoreCase))
                 {
                     string name = line.Substring("mtllib".Length).Trim();
-                    return Path.IsPathRooted(name) ? name : Path.Combine(objDir, name);
+                    string referenced = Path.IsPathRooted(name) ? name : Path.Combine(objDir, name);
+                    // Use the OBJ's own mtllib only if it actually resolves on disk. Meshy bakes a
+                    // generic "mtllib model.mtl" into every OBJ, but the material library is saved
+                    // under the asset's base name — so the referenced file is usually absent and we
+                    // must fall through to the sibling rather than return a dead path.
+                    if (File.Exists(referenced))
+                    {
+                        return referenced;
+                    }
+                    break;
                 }
             }
             // Fallback: sibling file sharing the OBJ basename.
