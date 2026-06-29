@@ -69,10 +69,24 @@ namespace Assembler.ImageGeneration
             };
 
         public static string DefaultModelFor(ImageProvider provider) =>
+            AvailableModelsFor(provider) is { Length: > 0 } models ? models[0] : "";
+
+        /// <summary>
+        /// The model ids offered for a provider, newest/default first. Only models
+        /// the concrete client can actually drive are listed — for Gemini that's the
+        /// <c>generateContent</c> image family (the Imagen models use a different
+        /// endpoint this spike doesn't implement).
+        /// </summary>
+        public static string[] AvailableModelsFor(ImageProvider provider) =>
             provider switch
             {
-                ImageProvider.GoogleGemini => "gemini-2.5-flash-image",
-                _ => "",
+                ImageProvider.GoogleGemini => new[]
+                {
+                    "gemini-2.5-flash-image",
+                    "gemini-2.5-flash-image-preview",
+                    "gemini-2.0-flash-preview-image-generation",
+                },
+                _ => Array.Empty<string>(),
             };
     }
 

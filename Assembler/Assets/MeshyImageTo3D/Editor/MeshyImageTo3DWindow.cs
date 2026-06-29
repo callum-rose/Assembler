@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -18,12 +19,22 @@ namespace Assembler.MeshyImageTo3D
     {
         private const string ApiKeyPref = "Meshy.ImageTo3D.ApiKey";
         private const string ImagePathPref = "Meshy.ImageTo3D.ImagePath";
-        private const string OutputPathPref = "Meshy.ImageTo3D.OutputPath";
+        private const string OutputDirPref = "Meshy.ImageTo3D.OutputDir";
+        private const string OutputFilePref = "Meshy.ImageTo3D.OutputFile";
+        private const string AiModelPref = "Meshy.ImageTo3D.AiModel";
+        private const string TexturePref = "Meshy.ImageTo3D.Texture";
+
+        // The Meshy image-to-3D AI models, newest first.
+        private static readonly string[] AiModels = { "meshy-6", "meshy-5", "meshy-4" };
+        private const string DefaultAiModel = "meshy-6";
 
         private string _apiKey = "";
         private string _imagePath = "";
-        private string _outputPath = "";
+        private string _outputDir = "";
+        private string _outputFile = "";
         private ModelFormat _format = ModelFormat.Obj;
+        private string _aiModel = DefaultAiModel;
+        private bool _generateTexture = true;
         private bool _enablePbr = true;
         private bool _remesh = true;
 
@@ -31,10 +42,10 @@ namespace Assembler.MeshyImageTo3D
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
 
-        [MenuItem("Assembler/Meshy Image → 3D")]
+        [MenuItem("Assembler/Image to Mesh")]
         public static void Open()
         {
-            var window = GetWindow<MeshyImageTo3DWindow>("Meshy Image → 3D");
+            var window = GetWindow<MeshyImageTo3DWindow>("Image to Mesh");
             window.minSize = new Vector2(460, 320);
         }
 
@@ -42,14 +53,14 @@ namespace Assembler.MeshyImageTo3D
         {
             _apiKey = EditorPrefs.GetString(ApiKeyPref, "");
             _imagePath = EditorPrefs.GetString(ImagePathPref, "");
-            _outputPath = EditorPrefs.GetString(OutputPathPref, "Assets/MeshyOutput/model.obj");
+            _outputDir = EditorPrefs.GetString(OutputDirPref, "Assets/MeshyOutput");
+            _outputFile = EditorPrefs.GetString(OutputFilePref, "");
+            _aiModel = EditorPrefs.GetString(AiModelPref, DefaultAiModel);
+            _generateTexture = EditorPrefs.GetBool(TexturePref, true);
         }
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Meshy.ai · Image to 3D", EditorStyles.boldLabel);
-            EditorGUILayout.Space();
-
             using (new EditorGUI.DisabledScope(_running))
             {
                 DrawApiKey();
@@ -58,9 +69,15 @@ namespace Assembler.MeshyImageTo3D
                 DrawOutputPicker();
                 EditorGUILayout.Space();
 
+                DrawModel();
                 _format = (ModelFormat)EditorGUILayout.EnumPopup("Output Format", _format);
-                _enablePbr = EditorGUILayout.Toggle(
-                    new GUIContent("Enable PBR Maps", "Also generate metallic/roughness/normal maps."), _enablePbr);
+                _generateTexture = EditorGUILayout.Toggle(
+                    new GUIContent("Generate Texture", "Generate a texture for the model."), _generateTexture);
+                using (new EditorGUI.DisabledScope(!_generateTexture))
+                {
+                    _enablePbr = EditorGUILayout.Toggle(
+                        new GUIContent("Enable PBR Maps", "Also generate metallic/roughness/normal maps."), _enablePbr);
+                }
                 _remesh = EditorGUILayout.Toggle(
                     new GUIContent("Remesh", "Let Meshy clean up the topology."), _remesh);
             }
@@ -97,22 +114,34 @@ namespace Assembler.MeshyImageTo3D
             EditorGUILayout.EndHorizontal();
         }
 
+        private void DrawModel()
+        {
+            // Keep any saved id selectable even if it's not in the known list.
+            var options = Array.IndexOf(AiModels, _aiModel) >= 0 || string.IsNullOrEmpty(_aiModel)
+                ? AiModels
+                : new[] { _aiModel }.Concat(AiModels).ToArray();
+
+            var index = Mathf.Max(0, Array.IndexOf(options, _aiModel));
+            index = EditorGUILayout.Popup(
+                new GUIContent("AI Model", "Meshy generation model."), index, options.Select(m => new GUIContent(m)).ToArray());
+            _aiModel = options[index];
+        }
+
         private void DrawOutputPicker()
         {
             EditorGUILayout.BeginHorizontal();
-            _outputPath = EditorGUILayout.TextField("Output Model Path", _outputPath);
+            _outputDir = EditorGUILayout.TextField("Output Directory", _outputDir);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
-                var ext = _format == ModelFormat.Obj ? "obj" : "fbx";
-                var dir = GuessStartDir(_outputPath);
-                var name = string.IsNullOrEmpty(_outputPath)
-                    ? "model"
-                    : Path.GetFileNameWithoutExtension(_outputPath);
-                var picked = EditorUtility.SaveFilePanel("Output model", dir, name, ext);
+                var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_outputDir), "");
                 if (!string.IsNullOrEmpty(picked))
-                    _outputPath = picked;
+                    _outputDir = picked;
             }
             EditorGUILayout.EndHorizontal();
+
+            _outputFile = EditorGUILayout.TextField(
+                new GUIContent("File Name", "Leave blank to use the downloaded model's filename. The extension is set from the output format."),
+                _outputFile);
         }
 
         private void DrawActions()
@@ -136,7 +165,10 @@ namespace Assembler.MeshyImageTo3D
             // Persist inputs so the next session keeps them.
             EditorPrefs.SetString(ApiKeyPref, _apiKey);
             EditorPrefs.SetString(ImagePathPref, _imagePath);
-            EditorPrefs.SetString(OutputPathPref, _outputPath);
+            EditorPrefs.SetString(OutputDirPref, _outputDir);
+            EditorPrefs.SetString(OutputFilePref, _outputFile);
+            EditorPrefs.SetString(AiModelPref, _aiModel);
+            EditorPrefs.SetBool(TexturePref, _generateTexture);
 
             _running = true;
             _cts = new CancellationTokenSource();
@@ -144,18 +176,18 @@ namespace Assembler.MeshyImageTo3D
 
             try
             {
-                if (string.IsNullOrWhiteSpace(_outputPath))
-                    throw new MeshyException("Set an output model path.");
+                if (string.IsNullOrWhiteSpace(_outputDir))
+                    throw new MeshyException("Set an output directory.");
 
                 using var client = new MeshyApiClient(_apiKey);
                 var request = new MeshyRequest
                 {
                     ImagePath = _imagePath,
                     Format = _format,
-                    GenerateTexture = true,
-                    EnablePbr = _enablePbr,
+                    GenerateTexture = _generateTexture,
+                    EnablePbr = _generateTexture && _enablePbr,
                     Remesh = _remesh,
-                    AiModel = "meshy-5",
+                    AiModel = _aiModel,
                 };
 
                 SetStatus("Submitting image…");
@@ -165,10 +197,10 @@ namespace Assembler.MeshyImageTo3D
                 var task = await client.PollUntilCompleteAsync(
                     taskId, (p, s) => SetStatus($"{s} — {p}%"), ct);
 
-                await DownloadResultsAsync(client, task, ct);
+                var savedPath = await DownloadResultsAsync(client, task, ct);
 
-                SetStatus($"Done. Saved to {_outputPath}");
-                if (IsUnderAssets(_outputPath))
+                SetStatus($"Done. Saved to {savedPath}");
+                if (IsUnderAssets(savedPath))
                     AssetDatabase.Refresh();
             }
             catch (OperationCanceledException)
@@ -189,21 +221,23 @@ namespace Assembler.MeshyImageTo3D
             }
         }
 
-        private async Task DownloadResultsAsync(
+        private async Task<string> DownloadResultsAsync(
             MeshyApiClient client, MeshyApiClient.TaskResponse task, CancellationToken ct)
         {
             var urls = task.model_urls
                 ?? throw new MeshyException("Task succeeded but returned no model URLs.");
 
-            var dir = Path.GetDirectoryName(Path.GetFullPath(_outputPath))!;
-            var baseName = Path.GetFileNameWithoutExtension(_outputPath);
-
             var modelUrl = _format == ModelFormat.Obj ? urls.obj : urls.fbx;
             if (string.IsNullOrEmpty(modelUrl))
                 throw new MeshyException($"No {_format} URL in the result.");
 
+            var ext = _format == ModelFormat.Obj ? "obj" : "fbx";
+            var dir = Path.GetFullPath(_outputDir);
+            var baseName = ResolveBaseName(modelUrl!);
+            var outputPath = Path.Combine(dir, $"{baseName}.{ext}");
+
             SetStatus($"Downloading {_format} model…");
-            await client.DownloadAsync(modelUrl!, _outputPath, ct);
+            await client.DownloadAsync(modelUrl!, outputPath, ct);
 
             // OBJ ships its material library separately; keep it beside the model.
             if (_format == ModelFormat.Obj && !string.IsNullOrEmpty(urls.mtl))
@@ -222,6 +256,19 @@ namespace Assembler.MeshyImageTo3D
                     await SaveMapAsync(client, tex.normal, dir, $"{baseName}_normal", ct);
                 }
             }
+
+            return outputPath;
+        }
+
+        // The base filename for the downloaded model + its sidecar maps. An explicit
+        // file name wins; otherwise fall back to the name Meshy gave the model URL.
+        private string ResolveBaseName(string modelUrl)
+        {
+            if (!string.IsNullOrWhiteSpace(_outputFile))
+                return Path.GetFileNameWithoutExtension(_outputFile.Trim());
+
+            var fromUrl = Path.GetFileNameWithoutExtension(modelUrl.Split('?')[0]);
+            return string.IsNullOrEmpty(fromUrl) ? "model" : fromUrl;
         }
 
         private static async Task SaveMapAsync(
