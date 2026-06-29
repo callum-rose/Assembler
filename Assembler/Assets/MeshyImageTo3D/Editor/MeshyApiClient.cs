@@ -118,15 +118,57 @@ namespace Assembler.MeshyImageTo3D
         {
             var sb = new StringBuilder();
             sb.Append('{');
-            sb.Append($"\"image_url\":\"{dataUri}\",");
-            sb.Append($"\"should_remesh\":{Lower(request.Remesh)},");
-            sb.Append($"\"should_texture\":{Lower(request.GenerateTexture)},");
-            sb.Append($"\"enable_pbr\":{Lower(request.EnablePbr)},");
-            sb.Append($"\"ai_model\":\"{request.AiModel}\"");
+            sb.Append($"\"image_url\":\"{dataUri}\"");
+            AppendString(sb, "ai_model", request.AiModel);
+
+            // Texturing.
+            AppendBool(sb, "should_texture", request.GenerateTexture);
+            AppendBool(sb, "enable_pbr", request.EnablePbr);
+            AppendBool(sb, "hd_texture", request.HdTexture);
+
+            // Geometry / remeshing.
+            AppendBool(sb, "should_remesh", request.Remesh);
+            AppendString(sb, "topology", request.Topology == MeshyTopology.Quad ? "quad" : "triangle");
+            // decimation_mode and target_polycount are alternative ways to control the remeshed
+            // polycount and only apply when remeshing; emit whichever the caller set, else let Meshy default.
+            if (request.Remesh)
+            {
+                if (DecimationModeValue(request.Decimation) is { } mode)
+                    AppendInt(sb, "decimation_mode", mode);
+                if (request.TargetPolycount > 0)
+                    AppendInt(sb, "target_polycount", request.TargetPolycount);
+            }
+            AppendBool(sb, "save_pre_remeshed_model", request.SavePreRemeshedModel);
+
+            // Output presentation.
+            AppendBool(sb, "remove_lighting", request.RemoveLighting);
+            AppendBool(sb, "moderation", request.Moderation);
+            AppendBool(sb, "auto_size", request.AutoSize);
+            AppendString(sb, "origin_at", request.OriginAt == ModelOrigin.Center ? "center" : "bottom");
+            AppendBool(sb, "multi_view_thumbnails", request.MultiViewThumbnails);
+            AppendBool(sb, "alpha_thumbnail", request.AlphaThumbnail);
+
+            // Ask Meshy to generate exactly the format we download, keeping generation and download in sync.
+            var format = request.Format == ModelFormat.Fbx ? "fbx" : "obj";
+            sb.Append($",\"target_formats\":[\"{format}\"]");
+
             sb.Append('}');
             return sb.ToString();
 
-            static string Lower(bool b) => b ? "true" : "false";
+            static void AppendString(StringBuilder b, string key, string value) =>
+                b.Append($",\"{key}\":\"{value}\"");
+            static void AppendBool(StringBuilder b, string key, bool value) =>
+                b.Append($",\"{key}\":{(value ? "true" : "false")}");
+            static void AppendInt(StringBuilder b, string key, int value) =>
+                b.Append($",\"{key}\":{value}");
+            static int? DecimationModeValue(DecimationMode mode) => mode switch
+            {
+                DecimationMode.Low => 1,
+                DecimationMode.Medium => 2,
+                DecimationMode.High => 3,
+                DecimationMode.Ultra => 4,
+                _ => null,
+            };
         }
 
         // --- DTOs (snake_case fields to match JsonUtility name-based mapping) ---
@@ -185,15 +227,62 @@ namespace Assembler.MeshyImageTo3D
         Fbx,
     }
 
+    /// <summary>Mesh face topology Meshy targets when remeshing (<c>topology</c>).</summary>
+    public enum MeshyTopology
+    {
+        Triangle,
+        Quad,
+    }
+
+    /// <summary>Where the model's pivot/origin sits (<c>origin_at</c>).</summary>
+    public enum ModelOrigin
+    {
+        Bottom,
+        Center,
+    }
+
+    /// <summary>
+    /// Remesh decimation preset (<c>decimation_mode</c> 1–4 = low/medium/high/ultra). <see cref="None"/>
+    /// omits the field so Meshy uses its own default; an explicit <c>target_polycount</c> is the
+    /// alternative way to control the remeshed polycount.
+    /// </summary>
+    public enum DecimationMode
+    {
+        None,
+        Low,
+        Medium,
+        High,
+        Ultra,
+    }
+
     // Plain mutable struct (get/set, not init) because editor-only asmdefs in this
     // project don't have the IsExternalInit polyfill that init accessors require.
+    // NOTE: bool fields default to false, which differs from Meshy's API default for
+    // remove_lighting (true) — callers should set RemoveLighting explicitly.
     public struct MeshyRequest
     {
         public string ImagePath { get; set; }
         public ModelFormat Format { get; set; }
+        public string AiModel { get; set; }
+
+        // Texturing.
         public bool GenerateTexture { get; set; }
         public bool EnablePbr { get; set; }
+        public bool HdTexture { get; set; }
+
+        // Geometry / remeshing.
         public bool Remesh { get; set; }
-        public string AiModel { get; set; }
+        public MeshyTopology Topology { get; set; }
+        public DecimationMode Decimation { get; set; }
+        public int TargetPolycount { get; set; }
+        public bool SavePreRemeshedModel { get; set; }
+
+        // Output presentation.
+        public bool RemoveLighting { get; set; }
+        public bool Moderation { get; set; }
+        public bool AutoSize { get; set; }
+        public ModelOrigin OriginAt { get; set; }
+        public bool MultiViewThumbnails { get; set; }
+        public bool AlphaThumbnail { get; set; }
     }
 }

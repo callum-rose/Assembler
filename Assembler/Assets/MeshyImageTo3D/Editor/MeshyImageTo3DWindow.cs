@@ -17,12 +17,27 @@ namespace Assembler.MeshyImageTo3D
     /// </summary>
     public sealed class MeshyImageTo3DWindow : EditorWindow
     {
-        private const string ApiKeyPref = "Meshy.ImageTo3D.ApiKey";
-        private const string ImagePathPref = "Meshy.ImageTo3D.ImagePath";
-        private const string OutputDirPref = "Meshy.ImageTo3D.OutputDir";
-        private const string OutputFilePref = "Meshy.ImageTo3D.OutputFile";
-        private const string AiModelPref = "Meshy.ImageTo3D.AiModel";
-        private const string TexturePref = "Meshy.ImageTo3D.Texture";
+        private const string Pref = "Meshy.ImageTo3D.";
+        private const string ApiKeyPref = Pref + "ApiKey";
+        private const string ImagePathPref = Pref + "ImagePath";
+        private const string OutputDirPref = Pref + "OutputDir";
+        private const string OutputFilePref = Pref + "OutputFile";
+        private const string AiModelPref = Pref + "AiModel";
+        private const string FormatPref = Pref + "Format";
+        private const string TexturePref = Pref + "Texture";
+        private const string PbrPref = Pref + "Pbr";
+        private const string HdTexturePref = Pref + "HdTexture";
+        private const string RemeshPref = Pref + "Remesh";
+        private const string TopologyPref = Pref + "Topology";
+        private const string DecimationPref = Pref + "Decimation";
+        private const string PolycountPref = Pref + "Polycount";
+        private const string SavePreRemeshPref = Pref + "SavePreRemesh";
+        private const string RemoveLightingPref = Pref + "RemoveLighting";
+        private const string ModerationPref = Pref + "Moderation";
+        private const string AutoSizePref = Pref + "AutoSize";
+        private const string OriginAtPref = Pref + "OriginAt";
+        private const string MultiViewThumbsPref = Pref + "MultiViewThumbs";
+        private const string AlphaThumbPref = Pref + "AlphaThumb";
 
         // The Meshy image-to-3D AI models, newest first.
         private static readonly string[] AiModels = { "meshy-6", "meshy-5", "meshy-4" };
@@ -36,7 +51,18 @@ namespace Assembler.MeshyImageTo3D
         private string _aiModel = DefaultAiModel;
         private bool _generateTexture = true;
         private bool _enablePbr = true;
+        private bool _hdTexture;
         private bool _remesh = true;
+        private MeshyTopology _topology = MeshyTopology.Triangle;
+        private DecimationMode _decimation = DecimationMode.None;
+        private int _targetPolycount = 30000;
+        private bool _savePreRemeshedModel;
+        private bool _removeLighting = true;
+        private bool _moderation;
+        private bool _autoSize;
+        private ModelOrigin _originAt = ModelOrigin.Bottom;
+        private bool _multiViewThumbnails;
+        private bool _alphaThumbnail;
 
         private bool _running;
         private string _status = "Idle.";
@@ -46,7 +72,7 @@ namespace Assembler.MeshyImageTo3D
         public static void Open()
         {
             var window = GetWindow<MeshyImageTo3DWindow>("Image to Mesh");
-            window.minSize = new Vector2(460, 320);
+            window.minSize = new Vector2(460, 600);
         }
 
         private void OnEnable()
@@ -56,7 +82,21 @@ namespace Assembler.MeshyImageTo3D
             _outputDir = EditorPrefs.GetString(OutputDirPref, "Assets/MeshyOutput");
             _outputFile = EditorPrefs.GetString(OutputFilePref, "");
             _aiModel = EditorPrefs.GetString(AiModelPref, DefaultAiModel);
+            _format = (ModelFormat)EditorPrefs.GetInt(FormatPref, (int)ModelFormat.Obj);
             _generateTexture = EditorPrefs.GetBool(TexturePref, true);
+            _enablePbr = EditorPrefs.GetBool(PbrPref, true);
+            _hdTexture = EditorPrefs.GetBool(HdTexturePref, false);
+            _remesh = EditorPrefs.GetBool(RemeshPref, true);
+            _topology = (MeshyTopology)EditorPrefs.GetInt(TopologyPref, (int)MeshyTopology.Triangle);
+            _decimation = (DecimationMode)EditorPrefs.GetInt(DecimationPref, (int)DecimationMode.None);
+            _targetPolycount = EditorPrefs.GetInt(PolycountPref, 30000);
+            _savePreRemeshedModel = EditorPrefs.GetBool(SavePreRemeshPref, false);
+            _removeLighting = EditorPrefs.GetBool(RemoveLightingPref, true);
+            _moderation = EditorPrefs.GetBool(ModerationPref, false);
+            _autoSize = EditorPrefs.GetBool(AutoSizePref, false);
+            _originAt = (ModelOrigin)EditorPrefs.GetInt(OriginAtPref, (int)ModelOrigin.Bottom);
+            _multiViewThumbnails = EditorPrefs.GetBool(MultiViewThumbsPref, false);
+            _alphaThumbnail = EditorPrefs.GetBool(AlphaThumbPref, false);
         }
 
         private void OnGUI()
@@ -70,16 +110,55 @@ namespace Assembler.MeshyImageTo3D
                 EditorGUILayout.Space();
 
                 DrawModel();
-                _format = (ModelFormat)EditorGUILayout.EnumPopup("Output Format", _format);
+                _format = (ModelFormat)EditorGUILayout.EnumPopup(
+                    new GUIContent("Output Format", "Model format to generate and download (sent as target_formats)."), _format);
+
+                EditorGUILayout.LabelField("Texture", EditorStyles.boldLabel);
                 _generateTexture = EditorGUILayout.Toggle(
                     new GUIContent("Generate Texture", "Generate a texture for the model."), _generateTexture);
                 using (new EditorGUI.DisabledScope(!_generateTexture))
                 {
                     _enablePbr = EditorGUILayout.Toggle(
                         new GUIContent("Enable PBR Maps", "Also generate metallic/roughness/normal maps."), _enablePbr);
+                    _hdTexture = EditorGUILayout.Toggle(
+                        new GUIContent("HD Texture", "Generate a higher-resolution texture (hd_texture)."), _hdTexture);
                 }
+
+                EditorGUILayout.LabelField("Geometry", EditorStyles.boldLabel);
                 _remesh = EditorGUILayout.Toggle(
-                    new GUIContent("Remesh", "Let Meshy clean up the topology."), _remesh);
+                    new GUIContent("Remesh", "Let Meshy clean up the topology (should_remesh)."), _remesh);
+                using (new EditorGUI.DisabledScope(!_remesh))
+                {
+                    _topology = (MeshyTopology)EditorGUILayout.EnumPopup(
+                        new GUIContent("Topology", "Target face topology when remeshing (topology)."), _topology);
+                    _decimation = (DecimationMode)EditorGUILayout.EnumPopup(
+                        new GUIContent("Decimation", "Remesh decimation preset (decimation_mode). 'None' lets Meshy decide, or set a target polycount instead."),
+                        _decimation);
+                    // target_polycount is the alternative to a decimation preset, so only offer it when no preset is chosen.
+                    using (new EditorGUI.DisabledScope(_decimation != DecimationMode.None))
+                    {
+                        _targetPolycount = EditorGUILayout.IntSlider(
+                            new GUIContent("Target Polycount", "Target triangle count when remeshing (target_polycount, 100–300000)."),
+                            _targetPolycount, 100, 300000);
+                    }
+                    _savePreRemeshedModel = EditorGUILayout.Toggle(
+                        new GUIContent("Save Pre-Remeshed Model", "Also keep the model before remeshing (save_pre_remeshed_model)."),
+                        _savePreRemeshedModel);
+                }
+
+                EditorGUILayout.LabelField("Output", EditorStyles.boldLabel);
+                _removeLighting = EditorGUILayout.Toggle(
+                    new GUIContent("Remove Lighting", "Bake out baked-in lighting from the source image (remove_lighting)."), _removeLighting);
+                _autoSize = EditorGUILayout.Toggle(
+                    new GUIContent("Auto Size", "Auto-scale the model to a realistic size (auto_size)."), _autoSize);
+                _originAt = (ModelOrigin)EditorGUILayout.EnumPopup(
+                    new GUIContent("Origin At", "Where the model's pivot sits (origin_at)."), _originAt);
+                _moderation = EditorGUILayout.Toggle(
+                    new GUIContent("Moderation", "Run content moderation on the input (moderation)."), _moderation);
+                _multiViewThumbnails = EditorGUILayout.Toggle(
+                    new GUIContent("Multi-View Thumbnails", "Generate thumbnails from several angles (multi_view_thumbnails)."), _multiViewThumbnails);
+                _alphaThumbnail = EditorGUILayout.Toggle(
+                    new GUIContent("Alpha Thumbnail", "Generate a thumbnail with a transparent background (alpha_thumbnail)."), _alphaThumbnail);
             }
 
             EditorGUILayout.Space();
@@ -168,7 +247,21 @@ namespace Assembler.MeshyImageTo3D
             EditorPrefs.SetString(OutputDirPref, _outputDir);
             EditorPrefs.SetString(OutputFilePref, _outputFile);
             EditorPrefs.SetString(AiModelPref, _aiModel);
+            EditorPrefs.SetInt(FormatPref, (int)_format);
             EditorPrefs.SetBool(TexturePref, _generateTexture);
+            EditorPrefs.SetBool(PbrPref, _enablePbr);
+            EditorPrefs.SetBool(HdTexturePref, _hdTexture);
+            EditorPrefs.SetBool(RemeshPref, _remesh);
+            EditorPrefs.SetInt(TopologyPref, (int)_topology);
+            EditorPrefs.SetInt(DecimationPref, (int)_decimation);
+            EditorPrefs.SetInt(PolycountPref, _targetPolycount);
+            EditorPrefs.SetBool(SavePreRemeshPref, _savePreRemeshedModel);
+            EditorPrefs.SetBool(RemoveLightingPref, _removeLighting);
+            EditorPrefs.SetBool(ModerationPref, _moderation);
+            EditorPrefs.SetBool(AutoSizePref, _autoSize);
+            EditorPrefs.SetInt(OriginAtPref, (int)_originAt);
+            EditorPrefs.SetBool(MultiViewThumbsPref, _multiViewThumbnails);
+            EditorPrefs.SetBool(AlphaThumbPref, _alphaThumbnail);
 
             _running = true;
             _cts = new CancellationTokenSource();
@@ -178,9 +271,28 @@ namespace Assembler.MeshyImageTo3D
             {
                 // Core submit/poll/download lives in MeshyConversionCore so it can be driven
                 // headlessly or as one stage of the image → mesh → voxels pipeline.
+                var request = new MeshyRequest
+                {
+                    ImagePath = _imagePath,
+                    Format = _format,
+                    AiModel = _aiModel,
+                    GenerateTexture = _generateTexture,
+                    EnablePbr = _enablePbr,
+                    HdTexture = _hdTexture,
+                    Remesh = _remesh,
+                    Topology = _topology,
+                    Decimation = _decimation,
+                    TargetPolycount = _targetPolycount,
+                    SavePreRemeshedModel = _savePreRemeshedModel,
+                    RemoveLighting = _removeLighting,
+                    Moderation = _moderation,
+                    AutoSize = _autoSize,
+                    OriginAt = _originAt,
+                    MultiViewThumbnails = _multiViewThumbnails,
+                    AlphaThumbnail = _alphaThumbnail,
+                };
                 await MeshyConversionCore.ConvertAsync(
-                    _apiKey, _imagePath, _outputDir, _outputFile, _format,
-                    _generateTexture, _enablePbr, _remesh, _aiModel, ct, SetStatus);
+                    _apiKey, request, _outputDir, _outputFile, ct, SetStatus);
             }
             catch (OperationCanceledException)
             {
