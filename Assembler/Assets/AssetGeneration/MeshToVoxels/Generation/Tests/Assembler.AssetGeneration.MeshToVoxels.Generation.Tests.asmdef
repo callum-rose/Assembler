@@ -1,0 +1,30 @@
+{
+    "name": "Assembler.AssetGeneration.MeshToVoxels.Generation.Tests",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.AssetGeneration.VoxelPipeline.Generation",
+        "Assembler.AssetGeneration.VoxelPipeline",
+        "Assembler.Anthropic",
+        "Assembler.AssetGeneration.MeshyImageTo3D.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Assembler.AssetGeneration.MeshToVoxels.Generation",
+        "Assembler.AssetGeneration.MeshToVoxels",
+        "Assembler.AssetGeneration.ImageToMesh.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

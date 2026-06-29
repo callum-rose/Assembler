@@ -2,8 +2,8 @@
 #
 # Headless mesh -> VOX voxelizer: solid-fills a textured .obj/.fbx into a coloured MagicaVoxel .vox and
 # runs the post-processing pipeline over it, WITHOUT opening the editor window. It boots Unity in batch
-# mode and invokes VoxelsFromMeshSpike.VoxelsFromMeshSpikeBatch.Run — the same VoxConversion.Run the
-# "Window > Voxels > Mesh -> VOX (Spike)" window drives — so an automated harness (or an AI) can produce
+# mode and invokes Assembler.AssetGeneration.VoxelPipeline.MeshToVoxelsBatch.Run — the same VoxConversion.Run the
+# "Window > Voxels > Mesh to Voxels" window drives — so an automated harness (or an AI) can produce
 # a .vox and inspect the result. Exits non-zero on failure.
 #
 # Usage:
@@ -112,7 +112,7 @@ set +e
 "$UNITY" \
 	-batchmode -quit -nographics \
 	-projectPath "$PROJECT" \
-	-executeMethod VoxelsFromMeshSpike.VoxelsFromMeshSpikeBatch.Run \
+	-executeMethod Assembler.AssetGeneration.VoxelPipeline.MeshToVoxelsBatch.Run \
 	"${BATCH_ARGS[@]}" \
 	-logFile - > "$LOG" 2>&1
 RC=$?
@@ -120,7 +120,7 @@ set -e
 
 # Surface just the batch method's own lines from the (noisy) Unity log.
 echo
-grep -F "[VoxelsFromMeshSpikeBatch]" "$LOG" || true
+grep -F "[MeshToVoxelsBatch]" "$LOG" || true
 echo
 echo "Full Unity log: $LOG"
 
