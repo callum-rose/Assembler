@@ -52,7 +52,10 @@ project so Unity imports the result.
 
 ## Notes
 
-- Stage 3 (voxelization) is synchronous and CPU-heavy — the editor blocks while
-  it runs (a cancelable progress bar is shown). Keep **Max dimension** modest.
+- Stage 3 (voxelization) is CPU-heavy but runs on a background thread (only the
+  mesh import + final `AssetDatabase.Refresh` stay on the main thread), so the
+  editor stays responsive; a cancelable progress bar is shown. Keep **Max
+  dimension** modest regardless. `VoxelPipeline.RunAsync` awaits the async
+  `VoxConversion.Run`, so call it from the main thread.
 - Per-stage caveats (texture wiring, API retries, palette snapping) are inherited
   from each spike — see their READMEs.

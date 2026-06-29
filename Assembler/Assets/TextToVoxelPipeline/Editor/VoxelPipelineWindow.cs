@@ -155,7 +155,7 @@ namespace Assembler.TextToVoxelPipeline
             if (_settings.MaxDimVoxels >= 96)
             {
                 EditorGUILayout.HelpBox(
-                    "High resolutions run millions of winding-number queries and can take a while (synchronous — the editor will block).",
+                    "High resolutions run millions of winding-number queries and can take a while (runs on a background thread, with a cancelable progress bar).",
                     MessageType.Warning);
             }
 

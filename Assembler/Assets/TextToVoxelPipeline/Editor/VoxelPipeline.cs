@@ -110,10 +110,12 @@ namespace Assembler.TextToVoxelPipeline
             }
             ct.ThrowIfCancellationRequested();
 
-            // Stage 3 — mesh → voxels. Synchronous + CPU-heavy (runs on the calling thread).
+            // Stage 3 — mesh → voxels. The CPU-heavy voxelization runs on a background thread (only the
+            // mesh import + final AssetDatabase touch stay on the main thread), so this must be awaited
+            // from the main thread — which it is, called from the editor window.
             onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
             var voxPath = Path.Combine(settings.OutputDir, baseName + ".vox");
-            var voxels = VoxConversion.Run(
+            var voxels = await VoxConversion.Run(
                 mesh.OutputPath, voxPath, settings.MaxDimVoxels,
                 settings.VoxSettings, settings.Palette, voxelProgress, pipelineProgress);
 
