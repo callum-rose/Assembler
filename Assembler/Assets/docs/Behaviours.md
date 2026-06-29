@@ -2080,6 +2080,34 @@ Adds a realtime UnityEngine.Light to the entity so a 3D scene is lit
 | Range | float | Optional reach in world units for point/spot lights (defaults to 10). |
 | SpotAngle | float | Optional cone angle in degrees for spot lights (defaults to 30). |
 
+## `particle burst`
+Emits a one-shot spray of pooled particles when Executed (typically from a collision, death, or
+            movement trigger). The single configurable behaviour behind several "juice" effects — impact bursts, dust/
+            scuff puffs, and death debris — which differ only in their property values and the trigger that fires them.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Count | int | Particles emitted per burst (default 12). Re-read each fire. |
+| Direction | Vector3 | Axis the cone sprays along, world space (default (0,1,0) — up). Re-read each fire. |
+| Spread | float | Cone half-angle in degrees; 0 is a tight jet, 90 a flat disc (default 25). |
+| Speed | float | Launch speed in units/second (default 4). |
+| SpeedVariation | float | 0..1 fraction that randomises speed downward from Speed (default 0.4). |
+| InheritVelocity | Vector3 | World velocity added to every particle, e.g. the impactor's momentum (default zero). Re-read each fire. |
+| InheritFactor | float | Multiplier applied to InheritVelocity (default 1). Re-read each fire. |
+| Lifetime | float | Seconds each particle lives (default 0.6). |
+| StartColour | Color | Colour at birth (default white). |
+| EndColour | Color | Colour at death (default = StartColour faded to alpha 0, i.e. fade out). |
+| StartSize | float | Size at birth in world units (default 0.15). |
+| EndSize | float | Size at death (default 0, i.e. shrink away). |
+| Gravity | float | Gravity modifier; 0 floats, >0 falls, <0 rises (default 0). |
+| Drag | float | Linear drag that slows particles over their life (default 0). |
+| Shape | ParticleShape | How each particle renders — "billboard" (default), "cube", or "sphere" (3D meshes for debris chunks). |
+| Collision | bool | When true, mesh/billboard particles bounce off world colliders — chunky debris that settles (default false). |
+
 ## `audio source`
 Plays an audio clip when Executed (or on start, if configured).
 
