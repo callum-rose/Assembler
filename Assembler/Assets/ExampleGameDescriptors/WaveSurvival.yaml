@@ -450,7 +450,7 @@ Entities:
         Type: spawner
         Properties:
           TemplateId: bullet_template
-          Position: !entity { Id: player, Property: Position }
+          Position: !entity { Property: Position }
 
   # The defender's line: a wide trigger volume. Enemies that reach it are
   # detected (by the enemy) as crossing the line, costing a life.

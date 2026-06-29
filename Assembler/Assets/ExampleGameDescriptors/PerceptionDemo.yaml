@@ -165,7 +165,7 @@ Entities:
               mode: !var guard_mode
               target_pos: !var target_position
               last_known: !var last_known_position
-              self_pos: !entity { Id: guard, Property: Position }
+              self_pos: !entity { Property: Position }
 
       # Grid navigation toward the chosen goal (A* around the walls).
       move:
@@ -204,7 +204,7 @@ Entities:
               to: caught
               when: !expr
                 Do: within
-                With: { a: !entity { Id: guard, Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
             - from: chase
               to: search
               when: !expr { Do: negate, With: { flag: !var has_target } }
@@ -215,7 +215,7 @@ Entities:
               to: patrol
               when: !expr
                 Do: within
-                With: { a: !entity { Id: guard, Property: Position }, b: !var last_known_position, threshold: !var arrive eps }
+                With: { a: !entity { Property: Position }, b: !var last_known_position, threshold: !var arrive eps }
 
       set mode patrol:
         Type: int variable setter
