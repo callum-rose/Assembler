@@ -118,15 +118,20 @@ namespace Assembler.MeshyImageTo3D
             await client.DownloadAsync(modelUrl!, outputPath, ct);
 
             // OBJ ships its material library separately; keep it beside the model.
+            string? mtlPath = null;
             if (format == ModelFormat.Obj && !string.IsNullOrEmpty(urls.mtl))
-                await client.DownloadAsync(urls.mtl!, Path.Combine(dir, $"{baseName}.mtl"), ct);
+            {
+                mtlPath = Path.Combine(dir, $"{baseName}.mtl");
+                await client.DownloadAsync(urls.mtl!, mtlPath, ct);
+            }
 
             // Texture maps are delivered as separate files; download them alongside.
+            string? baseColorFile = null;
             var tex = task.texture_urls is { Length: > 0 } ? task.texture_urls[0] : null;
             if (tex != null)
             {
                 onStatus?.Invoke("Downloading texture maps…");
-                await SaveMapAsync(client, tex.base_color, dir, $"{baseName}_basecolor", ct);
+                baseColorFile = await SaveMapAsync(client, tex.base_color, dir, $"{baseName}_basecolor", ct);
                 if (enablePbr)
                 {
                     await SaveMapAsync(client, tex.metallic, dir, $"{baseName}_metallic", ct);
@@ -134,6 +139,13 @@ namespace Assembler.MeshyImageTo3D
                     await SaveMapAsync(client, tex.normal, dir, $"{baseName}_normal", ct);
                 }
             }
+
+            // Meshy's .mtl names its texture independently of how we save the base-colour map
+            // (its map_Kd is e.g. "texture_0.png"), so the referenced file doesn't exist on disk.
+            // Point map_Kd at the file we actually wrote, so the material carries the texture and
+            // the downstream voxelizer samples it instead of falling back to a flat untextured colour.
+            if (mtlPath != null && baseColorFile != null)
+                PointMtlAtTexture(mtlPath, baseColorFile);
 
             return outputPath;
         }
@@ -149,11 +161,13 @@ namespace Assembler.MeshyImageTo3D
             return string.IsNullOrEmpty(fromUrl) ? "model" : fromUrl;
         }
 
-        private static async Task SaveMapAsync(
+        // Downloads a texture map and returns the file name it was saved under (relative to
+        // <paramref name="dir"/>), or null if there was no URL — so the caller can wire it into the .mtl.
+        private static async Task<string?> SaveMapAsync(
             MeshyApiClient client, string? url, string dir, string baseName, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(url))
-                return;
+                return null;
 
             // Meshy serves PNGs; strip any query string before reading the extension.
             var clean = url!.Split('?')[0];
@@ -161,7 +175,34 @@ namespace Assembler.MeshyImageTo3D
             if (string.IsNullOrEmpty(ext))
                 ext = ".png";
 
-            await client.DownloadAsync(url, Path.Combine(dir, baseName + ext), ct);
+            var fileName = baseName + ext;
+            await client.DownloadAsync(url, Path.Combine(dir, fileName), ct);
+            return fileName;
+        }
+
+        // Rewrite the .mtl's map_Kd to reference the base-colour texture we downloaded (a sibling
+        // file, so a bare name suffices). Replaces every existing map_Kd line; if the material has
+        // none, appends one so the texture is still picked up.
+        private static void PointMtlAtTexture(string mtlPath, string textureFileName)
+        {
+            if (!File.Exists(mtlPath))
+                return;
+
+            var lines = File.ReadAllLines(mtlPath);
+            var rewritten = false;
+            for (var i = 0; i < lines.Length; i++)
+            {
+                if (lines[i].TrimStart().StartsWith("map_Kd", StringComparison.OrdinalIgnoreCase))
+                {
+                    lines[i] = $"map_Kd {textureFileName}";
+                    rewritten = true;
+                }
+            }
+
+            if (rewritten)
+                File.WriteAllLines(mtlPath, lines);
+            else
+                File.AppendAllText(mtlPath, $"{Environment.NewLine}map_Kd {textureFileName}{Environment.NewLine}");
         }
 
         public static bool IsUnderAssets(string path)
