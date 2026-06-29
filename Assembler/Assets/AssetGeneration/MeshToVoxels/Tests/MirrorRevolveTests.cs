@@ -150,10 +150,12 @@ namespace Assembler.AssetGeneration.MeshToVoxels.Tests
             }
             VoxResult result = model.ToResult();
 
-            // Expected VOX-space set per VoxWriter's documented handedness-preserving remap:
-            // vx = x, vy = gridZ-1-z, vz = y.
+            // Expected VOX-space set per VoxWriter's handedness-preserving remap:
+            // vx = gridX-1-x, vy = z, vz = y. That linear map has determinant +1 (a proper
+            // rotation — 180° about the vertical relative to a plain axis swap), so an
+            // asymmetric shape is rotated, never mirrored.
             var expected = new HashSet<(int x, int y, int z)>(
-                result.Cells.Select(c => (x: c.X, y: result.GridZ - 1 - c.Z, z: c.Y)));
+                result.Cells.Select(c => (x: result.GridX - 1 - c.X, y: c.Z, z: c.Y)));
 
             string path = Path.Combine(Application.temporaryCachePath, "anti_mirror_guard.vox");
             VoxWriter.Write(path, result);
