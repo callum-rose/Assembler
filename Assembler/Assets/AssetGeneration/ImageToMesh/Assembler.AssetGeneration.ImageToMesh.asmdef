@@ -1,12 +1,8 @@
 {
-    "name": "Assembler.AssetGeneration.ImageToMesh.Editor",
+    "name": "Assembler.AssetGeneration.ImageToMesh",
     "rootNamespace": "Assembler",
-    "references": [
-        "Assembler.AssetGeneration.ImageToMesh"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

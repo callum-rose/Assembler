@@ -1,5 +1,5 @@
 using System;
-using Assembler.AssetGeneration.ImageToMesh.Editor;
+using Assembler.AssetGeneration.ImageToMesh;
 using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxels.Generation

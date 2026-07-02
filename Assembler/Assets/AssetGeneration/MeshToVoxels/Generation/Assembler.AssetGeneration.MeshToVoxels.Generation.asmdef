@@ -6,7 +6,7 @@
         "Assembler.Anthropic",
         "Assembler.AssetGeneration.MeshyImageTo3D.Editor",
         "Assembler.AssetGeneration.MeshToVoxels",
-        "Assembler.AssetGeneration.ImageToMesh.Editor"
+        "Assembler.AssetGeneration.ImageToMesh"
     ],
     "includePlatforms": [
         "Editor"
