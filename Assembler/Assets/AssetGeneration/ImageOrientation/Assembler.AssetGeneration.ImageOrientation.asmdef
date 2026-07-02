@@ -1,13 +1,10 @@
 {
-    "name": "Assembler.AssetGeneration.ImageOrientation.Editor",
+    "name": "Assembler.AssetGeneration.ImageOrientation",
     "rootNamespace": "Assembler.AssetGeneration.ImageOrientation",
     "references": [
-        "Assembler.AssetGeneration.ImageOrientation",
         "Assembler.Anthropic"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

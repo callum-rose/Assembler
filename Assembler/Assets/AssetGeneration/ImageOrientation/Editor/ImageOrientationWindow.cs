@@ -305,11 +305,7 @@ namespace Assembler.AssetGeneration.ImageOrientation
             {
                 var bytes = File.ReadAllBytes(_imagePath);
                 var mediaType = AnthropicImage.MediaTypeFromExtension(Path.GetExtension(_imagePath));
-                var image = new AnthropicImage(mediaType, bytes);
-
-                using var client = new AnthropicClient(_apiKey, _model, maxTokens: 64);
-                var classifier = new OrientationClassifier(client);
-                _result = await classifier.ClassifyAsync(image, ct);
+                _result = await ImageFacingDirection.DetermineAsync(_apiKey, bytes, mediaType, _model, ct);
                 _status = _result.Direction is { } d ? $"Done — {d.ToCode()}." : "Done, but no code recognised.";
             }
             catch (OperationCanceledException)
