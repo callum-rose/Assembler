@@ -18,11 +18,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// entries) still count as one colour. Tolerance 0 is exact match. The colour-consensus gate is
     /// what keeps colour boundaries clean: a 3-neighbour corner where distinct colour regions meet
     /// has no consensus and fewer than 4 neighbours, so it is left alone rather than filled with an
-    /// arbitrary pick. Each pass reads a snapshot (order-independent). By default a single pass;
+    /// arbitrary pick. Cells flagged as real air gaps (fine gap fraction &gt; ¼) are protected from
+    /// the ≥3-consensus fill so leg gaps and handle holes stay open — but NOT from the ≥4 fill, since
+    /// a cell walled in on 4+ sides is an enclosed pocket, not a see-through gap, and boxing it out
+    /// is the whole point. Each pass reads a snapshot (order-independent). By default a single pass;
     /// <c>recursive</c> repeats until a pass fills nothing, so a fill that creates a new qualifying
-    /// corner is chased down. Cells flagged as real air gaps (fine gap fraction &gt; ¼) are skipped
-    /// every pass. Mutates <paramref name="grid"/> and <paramref name="colours"/> in place; returns
-    /// the total number filled.
+    /// corner is chased down. Mutates <paramref name="grid"/> and <paramref name="colours"/> in
+    /// place; returns the total number filled.
     /// </summary>
     public static class CornerFill
     {
@@ -85,10 +87,6 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                         {
                             continue;
                         }
-                        if (gapFraction != null && gapFraction[i] > GapFillLimit)
-                        {
-                            continue;
-                        }
 
                         int occupiedNeighbours = 0;
                         int clusters = 0;
@@ -142,8 +140,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             }
                         }
 
-                        // Fill on a clear colour consensus (≥3 similar) or a deep concavity (≥4 any).
-                        if (bestCount >= SameColourThreshold || occupiedNeighbours >= AnyColourThreshold)
+                        // A ≥4-neighbour cell is walled in on most sides — an enclosed pocket, not a
+                        // see-through gap — so the deep-concavity fill overrides the air-gap guard.
+                        // The shallower ≥3-same-colour fill still respects it, since a 3-neighbour
+                        // cell can sit on the edge of a real gap (leg gap, handle hole) we must keep.
+                        bool gapProtected = gapFraction != null && gapFraction[i] > GapFillLimit;
+                        bool fill = occupiedNeighbours >= AnyColourThreshold
+                            || (bestCount >= SameColourThreshold && !gapProtected);
+                        if (fill)
                         {
                             grid.Occupied[i] = true;
                             colours[i] = modal;

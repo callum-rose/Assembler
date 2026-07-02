@@ -354,7 +354,11 @@ word so the silhouette is guaranteed symmetric):
   "Share a colour" is a perceptual match within `CornerFillColourTolerance` (Oklab distance, window
   "Colour tolerance" slider, default 0.1) rather than exact RGB, so near-identical shades (Raw mode,
   near-duplicate palette entries) still form a consensus; 0 = exact. Neighbour colours are greedily
-  clustered (≤6 per cell), the largest cluster's seed is the fill colour.
+  clustered (≤6 per cell), the largest cluster's seed is the fill colour. The air-gap guard
+  (gapFraction > ¼) protects only the ≥3-consensus fill; the ≥4 deep-concavity fill overrides it,
+  because a cell walled in on 4+ sides is an enclosed pocket (e.g. a corgi's foot cavity, pinched on
+  two axes and so gap-flagged) rather than a see-through gap — real gaps/holes are open geometry with
+  few occupied neighbours and never reach ≥4.
   Each pass is a simultaneous snapshot; `SpikeSettings.FillCorners` (bool) does one pass,
   `FillCornersRecursive` (bool, nested "Recursive" toggle) repeats until stable so a fill that
   creates a new qualifying corner is chased down. Skips cells whose fine gap fraction > ¼ every pass

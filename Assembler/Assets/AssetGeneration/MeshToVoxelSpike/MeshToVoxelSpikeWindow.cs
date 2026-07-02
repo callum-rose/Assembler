@@ -300,7 +300,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                     + "6 face-neighbours share one colour (fill that colour) OR it has 4+ occupied neighbours "
                     + "(fill the modal colour). The colour-consensus gate keeps colour boundaries clean — a "
                     + "3-neighbour corner where regions meet has no clear colour and stays empty, avoiding stray "
-                    + "artifacts. Real air gaps (leg gaps, handle holes) are always skipped."),
+                    + "artifacts. Real air gaps (leg gaps, handle holes) are protected from the 3-neighbour fill, "
+                    + "but a 4+-neighbour pocket (walled in on most sides) fills anyway — it can't be a see-through "
+                    + "gap."),
                 _fillCorners);
             if (_fillCorners)
             {

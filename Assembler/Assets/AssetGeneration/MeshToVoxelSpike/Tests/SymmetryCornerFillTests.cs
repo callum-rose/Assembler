@@ -255,8 +255,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         }
 
         [Test]
-        public void CornerFill_SkipsFlaggedAirGap()
+        public void CornerFill_ConsensusFill_RespectsGapGuard()
         {
+            // A 3-same-colour consensus that would fill, but the cell is flagged as a real air gap
+            // (fine gap fraction > ¼) — the shallow consensus fill must leave it open.
             VoxelGrid grid = Grid(3, 3, 3);
             var colours = new Color32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
@@ -269,7 +271,29 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             int filled = CornerFill.Apply(grid, colours, gapFraction);
 
             Assert.AreEqual(0, filled);
-            Assert.IsFalse(grid.IsOccupied(1, 1, 1), "A flagged air gap is never corner-filled.");
+            Assert.IsFalse(grid.IsOccupied(1, 1, 1), "A 3-neighbour consensus respects the gap guard.");
+        }
+
+        [Test]
+        public void CornerFill_DeepConcavity_OverridesGapGuard()
+        {
+            // The corgi-foot case: an enclosed pocket with 4+ occupied neighbours, flagged as an air
+            // gap because it is pinched on two axes. It is walled in, not a see-through gap, so the
+            // ≥4 rule must fill it despite the flag.
+            VoxelGrid grid = Grid(3, 3, 3);
+            var colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 1, 1, Red);
+            Set(grid, colours, 2, 1, 1, Red);
+            Set(grid, colours, 1, 0, 1, Red);
+            Set(grid, colours, 1, 2, 1, Blue);
+
+            var gapFraction = new float[grid.Occupied.Length];
+            gapFraction[grid.Index(1, 1, 1)] = 1f;
+
+            int filled = CornerFill.Apply(grid, colours, gapFraction);
+
+            Assert.AreEqual(1, filled, "A 4-neighbour pocket fills even when gap-flagged.");
+            Assert.IsTrue(grid.IsOccupied(1, 1, 1));
         }
 
         [Test]
