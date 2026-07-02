@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.AssetGeneration.TextToImage.Editor
+namespace Assembler.AssetGeneration.TextToImage
 {
     /// <summary>
     /// Small helpers shared by the HTTP-based image providers (JSON escaping, downloading
