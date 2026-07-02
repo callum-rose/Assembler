@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Assembler.AssetGeneration.ImageToMesh.Editor
+namespace Assembler.AssetGeneration.ImageToMesh
 {
     /// <summary>
     /// Minimal client for the Meshy.ai "Image to 3D" OpenAPI v1 endpoint.

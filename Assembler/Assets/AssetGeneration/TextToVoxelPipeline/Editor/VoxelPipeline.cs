@@ -6,9 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.ImageToMesh.Editor;
+using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxels;
 using Assembler.AssetGeneration.TextToImage.Editor;
+using UnityEditor;
 using UnityEngine;
 
 namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
@@ -191,32 +192,40 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             MeshyConversionCore.Result mesh;
             try
             {
+                var meshRequest = new MeshyRequest
+                {
+                    ImagePath = image.OutputPath,
+                    Format = settings.MeshFormat,
+                    AiModel = settings.MeshAiModel,
+                    GenerateTexture = settings.GenerateTexture,
+                    EnablePbr = settings.EnablePbr,
+                    HdTexture = settings.HdTexture,
+                    Remesh = settings.Remesh,
+                    Topology = settings.Topology,
+                    Decimation = settings.Decimation,
+                    TargetPolycount = settings.TargetPolycount,
+                    SavePreRemeshedModel = settings.SavePreRemeshedModel,
+                    // remove_lighting is a meshy-6-only flag; mirror the window's guard so a
+                    // headless caller that left it true on another model doesn't send an invalid request.
+                    RemoveLighting = settings.RemoveLighting && settings.MeshAiModel == "meshy-6",
+                    Moderation = settings.Moderation,
+                    AutoSize = settings.AutoSize,
+                    OriginAt = settings.OriginAt,
+                    MultiViewThumbnails = settings.MultiViewThumbnails,
+                    AlphaThumbnail = settings.AlphaThumbnail,
+                };
                 mesh = await RunStage(
-                    () => MeshyConversionCore.ConvertAsync(
-                        settings.MeshyApiKey,
-                        new MeshyRequest
-                        {
-                            ImagePath = image.OutputPath,
-                            Format = settings.MeshFormat,
-                            AiModel = settings.MeshAiModel,
-                            GenerateTexture = settings.GenerateTexture,
-                            EnablePbr = settings.EnablePbr,
-                            HdTexture = settings.HdTexture,
-                            Remesh = settings.Remesh,
-                            Topology = settings.Topology,
-                            Decimation = settings.Decimation,
-                            TargetPolycount = settings.TargetPolycount,
-                            SavePreRemeshedModel = settings.SavePreRemeshedModel,
-                            // remove_lighting is a meshy-6-only flag; mirror the window's guard so a
-                            // headless caller that left it true on another model doesn't send an invalid request.
-                            RemoveLighting = settings.RemoveLighting && settings.MeshAiModel == "meshy-6",
-                            Moderation = settings.Moderation,
-                            AutoSize = settings.AutoSize,
-                            OriginAt = settings.OriginAt,
-                            MultiViewThumbnails = settings.MultiViewThumbnails,
-                            AlphaThumbnail = settings.AlphaThumbnail,
-                        },
-                        outputDir, baseName, ct, onStatus),
+                    async () =>
+                    {
+                        var result = await MeshyConversionCore.ConvertAsync(
+                            settings.MeshyApiKey, meshRequest, outputDir, baseName, ct, onStatus);
+                        // The Meshy core is runtime-only and no longer refreshes the AssetDatabase;
+                        // import an in-project mesh so the review gate can ping it and stage 3's FBX
+                        // load (AssetDatabase.LoadAssetAtPath) resolves it. Mirrors the image stage.
+                        if (MeshyConversionCore.IsUnderAssets(result.OutputPath))
+                            AssetDatabase.Refresh();
+                        return result;
+                    },
                     reviewMesh,
                     "Stage 2/3 — converting image to mesh…",
                     "Review the mesh, then continue or retry…");

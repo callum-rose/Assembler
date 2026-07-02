@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.ImageToMesh.Editor;
+using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxels;
 using Assembler.AssetGeneration.MeshToVoxels.Generation;
 using Assembler.AssetGeneration.TextToImage.Editor;

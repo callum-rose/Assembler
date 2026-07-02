@@ -10,7 +10,7 @@
         "UnityEditor.TestRunner",
         "Assembler.AssetGeneration.MeshToVoxels.Generation",
         "Assembler.AssetGeneration.MeshToVoxels",
-        "Assembler.AssetGeneration.ImageToMesh.Editor"
+        "Assembler.AssetGeneration.ImageToMesh"
     ],
     "includePlatforms": [
         "Editor"

@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Assembler.Anthropic;
-using Assembler.AssetGeneration.ImageToMesh.Editor;
+using Assembler.AssetGeneration.ImageToMesh;
 using NUnit.Framework;
 using UnityEngine;
 

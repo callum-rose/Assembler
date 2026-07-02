@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.ImageToMesh;
 using UnityEditor;
 using UnityEngine;
 
@@ -298,8 +299,13 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
                     MultiViewThumbnails = _multiViewThumbnails,
                     AlphaThumbnail = _alphaThumbnail,
                 };
-                await MeshyConversionCore.ConvertAsync(
+                var result = await MeshyConversionCore.ConvertAsync(
                     _apiKey, request, _outputDir, _outputFile, ct, SetStatus);
+
+                // The core is runtime-only and no longer touches the AssetDatabase; surface a
+                // download that landed inside the project ourselves so Unity imports it.
+                if (MeshyConversionCore.IsUnderAssets(result.OutputPath))
+                    AssetDatabase.Refresh();
             }
             catch (OperationCanceledException)
             {
