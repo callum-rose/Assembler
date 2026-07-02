@@ -22,7 +22,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             ObjToVoxConverter.LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
-            g3.CachingDenseGridTrilinearImplicit? field)
+            g3.DenseGridTrilinearImplicit? field)
         {
             var colours = new Color32[mesh.MaxVertexID];
             foreach (int vid in mesh.VertexIndices())
@@ -42,7 +42,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             ObjToVoxConverter.LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
-            g3.CachingDenseGridTrilinearImplicit? field)
+            g3.DenseGridTrilinearImplicit? field)
         {
             var colours = new Color32[occupancy.Occupied.Length];
             for (int z = 0; z < occupancy.NZ; z++)
@@ -68,7 +68,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             ObjToVoxConverter.LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
-            g3.CachingDenseGridTrilinearImplicit? field)
+            g3.DenseGridTrilinearImplicit? field)
         {
             ObjToVoxConverter.ColorSource colors = model.Colors;
             if (!colors.HasTexture || !model.HasUVs)
@@ -114,7 +114,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         private static bool IsWrongSide(
             g3.Vector3d v0, g3.Vector3d v1, g3.Vector3d v2, g3.Vector3d p,
-            g3.CachingDenseGridTrilinearImplicit field)
+            g3.DenseGridTrilinearImplicit field)
         {
             // Triangle normal (e1 × e2) and the outward SDF gradient, via explicit components to
             // avoid depending on Vector3d.Cross/Dot helpers.

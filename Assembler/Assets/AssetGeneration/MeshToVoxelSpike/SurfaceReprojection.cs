@@ -12,7 +12,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private const int Iterations = 2;
 
         /// <summary>Reproject <paramref name="mesh"/>'s vertices onto the zero level set of <paramref name="field"/> in place.</summary>
-        public static void Apply(g3.DMesh3 mesh, g3.CachingDenseGridTrilinearImplicit field)
+        public static void Apply(g3.DMesh3 mesh, g3.DenseGridTrilinearImplicit field)
         {
             foreach (int vid in mesh.VertexIndices())
             {

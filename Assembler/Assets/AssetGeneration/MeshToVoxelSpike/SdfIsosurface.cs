@@ -19,7 +19,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             public g3.DMesh3 Iso { get; init; }
 
             /// <summary>Trilinear-interpolated SDF, for marching cubes and gradient reprojection.</summary>
-            public g3.CachingDenseGridTrilinearImplicit Field { get; init; }
+            public g3.DenseGridTrilinearImplicit Field { get; init; }
 
             /// <summary>Boolean occupancy (<c>sign &lt; 0</c>) at the SDF grid resolution.</summary>
             public VoxelGrid Occupancy { get; init; }
@@ -49,14 +49,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             var sdf = new g3.MeshSignedDistanceGrid(mesh, cellSize)
             {
                 ComputeSigns = true,
-                InsideMode = g3.MeshSignedDistanceGrid.InsideModes.AnalyticWindingNumber,
+                InsideMode = g3.MeshSignedDistanceGrid.InsideModes.WindingNumber,
                 ComputeMode = g3.MeshSignedDistanceGrid.ComputeModes.NarrowBand_SpatialFloodFill,
                 UseParallel = true,
             };
             sdf.Compute();
 
             var origin = new g3.Vector3d(sdf.GridOrigin.x, sdf.GridOrigin.y, sdf.GridOrigin.z);
-            var field = new g3.CachingDenseGridTrilinearImplicit(sdf.Grid, origin, sdf.CellSize);
+            var field = new g3.DenseGridTrilinearImplicit(sdf.Grid, origin, sdf.CellSize);
 
             g3.DMesh3 iso = MarchingCubes(field, cellSize);
             VoxelGrid occupancy = BuildOccupancy(sdf, origin);
@@ -70,7 +70,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             };
         }
 
-        private static g3.DMesh3 MarchingCubes(g3.CachingDenseGridTrilinearImplicit field, double cellSize)
+        private static g3.DMesh3 MarchingCubes(g3.DenseGridTrilinearImplicit field, double cellSize)
         {
             g3.AxisAlignedBox3d bounds = field.Bounds();
             // Pad by a cell so a surface grazing the grid edge still closes into a watertight cap.
