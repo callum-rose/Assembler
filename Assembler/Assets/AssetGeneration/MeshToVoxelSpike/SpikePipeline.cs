@@ -30,7 +30,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             int sdfDim = settings.MaxDimVoxels * factor;
 
             progress?.Invoke(0.15f, "Signed distance field + marching cubes");
-            SdfIsosurface.Result sdf = SdfIsosurface.Build(model.Mesh, sdfDim);
+            SdfIsosurface.Result sdf = SdfIsosurface.Build(model.Mesh, tree, sdfDim);
 
             VoxelGrid occupancy = settings.FeatureAware
                 ? FeatureAwareDownsample.Apply(sdf.Occupancy, factor, settings.FeatureCoverage, forceThinFeatures: true)

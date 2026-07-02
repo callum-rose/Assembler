@@ -16,8 +16,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         public void UnitCube_YieldsInsideOccupancyNonEmptyIsoAndReprojectedColour()
         {
             g3.DMesh3 cube = UnitCube();
+            var tree = new g3.DMeshAABBTree3(cube);
+            tree.Build();
 
-            SdfIsosurface.Result result = SdfIsosurface.Build(cube, 8);
+            SdfIsosurface.Result result = SdfIsosurface.Build(cube, tree, 8);
 
             Assert.Greater(result.Occupancy.OccupiedCount, 0, "SDF should mark inside cells occupied.");
             Assert.Greater(result.Iso.TriangleCount, 0, "Marching cubes should produce a non-empty isosurface.");
@@ -28,8 +30,6 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             var red = new Color32(220, 40, 40, 255);
             var model = new ObjToVoxConverter.LoadedModel(
                 cube, hasUVs: false, new ObjToVoxConverter.ColorSource { FlatColor = red });
-            var tree = new g3.DMeshAABBTree3(cube);
-            tree.Build();
 
             Color32[] colours = ColourReprojector.SampleVoxels(occ, model, tree, normalConsistency: false, result.Field);
 

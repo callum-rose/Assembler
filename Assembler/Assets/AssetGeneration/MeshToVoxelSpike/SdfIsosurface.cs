@@ -29,9 +29,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         /// <summary>
         /// Build the SDF, isosurface and occupancy grid at <paramref name="maxDimVoxels"/> voxels
-        /// along the longest bounding-box axis.
+        /// along the longest bounding-box axis. <paramref name="tree"/> (a built
+        /// <see cref="g3.DMeshAABBTree3"/> over the same mesh) supplies the fast-winding-number
+        /// occupancy test.
         /// </summary>
-        public static Result Build(g3.DMesh3 mesh, int maxDimVoxels)
+        public static Result Build(g3.DMesh3 mesh, g3.DMeshAABBTree3 tree, int maxDimVoxels)
         {
             g3.AxisAlignedBox3d bounds = mesh.GetBounds();
             double maxDim = bounds.MaxDim;
@@ -42,14 +44,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             double cellSize = maxDim / Mathf.Max(1, maxDimVoxels);
 
-            // Generalized winding number as the inside test: robust to the topological garbage
-            // (non-manifold edges, flipped normals, interior ghosts, floaters) typical of Meshy
-            // output. Narrow-band exact distances + a full-grid sign flood-fill give correct
-            // occupancy everywhere and a clean field around the surface for marching cubes.
+            // This g3 build's MeshSignedDistanceGrid only offers crossing/parity inside tests (no
+            // winding-number mode), which are unreliable on messy Meshy topology. So the signed grid
+            // — used only for the smooth marching-cubes comparison mesh and the reprojection gradient
+            // — uses parity, while the occupancy grid that drives the primary blocky output is signed
+            // by the AABB tree's fast winding number instead (robust to non-watertight / self-
+            // intersecting / inverted geometry; same test the existing ObjToVoxConverter uses).
             var sdf = new g3.MeshSignedDistanceGrid(mesh, cellSize)
             {
                 ComputeSigns = true,
-                InsideMode = g3.MeshSignedDistanceGrid.InsideModes.WindingNumber,
+                InsideMode = g3.MeshSignedDistanceGrid.InsideModes.ParityCount,
                 ComputeMode = g3.MeshSignedDistanceGrid.ComputeModes.NarrowBand_SpatialFloodFill,
                 UseParallel = true,
             };
@@ -59,7 +63,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             var field = new g3.DenseGridTrilinearImplicit(sdf.Grid, origin, sdf.CellSize);
 
             g3.DMesh3 iso = MarchingCubes(field, cellSize);
-            VoxelGrid occupancy = BuildOccupancy(sdf, origin);
+            VoxelGrid occupancy = BuildOccupancy(sdf.Grid, origin, sdf.CellSize, tree);
 
             return new Result
             {
@@ -87,15 +91,18 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return mc.Mesh;
         }
 
-        private static VoxelGrid BuildOccupancy(g3.MeshSignedDistanceGrid sdf, g3.Vector3d origin)
+        // Occupancy is signed by the fast winding number at each SDF grid node, not by the parity
+        // sign of the distance field — so the primary blocky output stays robust on garbage meshes.
+        // Dimensions/origin come straight off the distance grid so the blocky model shares the exact
+        // frame of the marching-cubes mesh. |wn| > 0.5 (rather than wn > 0.5) keeps an inverted /
+        // inside-out mesh reading as solid, matching ObjToVoxConverter.
+        private static VoxelGrid BuildOccupancy(
+            g3.DenseGrid3f dense, g3.Vector3d origin, double cellSize, g3.DMeshAABBTree3 tree)
         {
-            // Read dimensions straight off the distance grid so the loop bounds and the indexer below
-            // can never disagree (nodes = cells + 1 padding included).
-            g3.DenseGrid3f dense = sdf.Grid;
             var grid = new VoxelGrid(dense.ni, dense.nj, dense.nk)
             {
                 Origin = origin,
-                CellSize = sdf.CellSize,
+                CellSize = cellSize,
             };
 
             for (int z = 0; z < dense.nk; z++)
@@ -104,7 +111,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 {
                     for (int x = 0; x < dense.ni; x++)
                     {
-                        grid.Occupied[grid.Index(x, y, z)] = dense[x, y, z] < 0f;
+                        var p = origin + new g3.Vector3d(x, y, z) * cellSize;
+                        double wn = tree.FastWindingNumber(p);
+                        grid.Occupied[grid.Index(x, y, z)] = wn > 0.5 || wn < -0.5;
                     }
                 }
             }
