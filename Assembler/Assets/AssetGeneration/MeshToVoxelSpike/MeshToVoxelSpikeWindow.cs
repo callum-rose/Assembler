@@ -104,29 +104,48 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Preview", EditorStyles.boldLabel);
             _revealIntermediates = EditorGUILayout.ToggleLeft(
-                new GUIContent("Reveal intermediates", "Lay every stage out in the scene, not just the blocky output."),
+                new GUIContent("Reveal intermediates",
+                    "On: lay the full progression out along +X — original → marching-cubes isosurface → Taubin "
+                    + "smoothed → (SDF reprojected) → smooth reprojected-colour → blocky voxel model — for A/B "
+                    + "judgement. Off: show only the primary blocky voxel model."),
                 _revealIntermediates);
             using (new EditorGUI.DisabledScope(!_revealIntermediates))
             {
                 _rowSpacing = EditorGUILayout.Slider(
-                    new GUIContent("Row spacing", "Gap between stages in the preview row."), _rowSpacing, 0.25f, 4f);
+                    new GUIContent("Row spacing",
+                        "Multiplier on the gap between stages in the preview row (scaled by each mesh's size). "
+                        + "Raise it if adjacent stages overlap. Only applies when intermediates are revealed."),
+                    _rowSpacing, 0.25f, 4f);
             }
 
             EditorGUILayout.Space();
             using (new EditorGUI.DisabledScope(_converting || string.IsNullOrEmpty(_meshPath)))
             {
-                if (GUILayout.Button(_converting ? "Converting…" : "Convert", GUILayout.Height(32)))
+                if (GUILayout.Button(
+                    new GUIContent(_converting ? "Converting…" : "Convert",
+                        "Run the pipeline on the selected mesh with the settings above and show the result in the "
+                        + "scene. Runs synchronously on the main thread — the editor blocks until it finishes."),
+                    GUILayout.Height(32)))
                 {
                     Convert(export: false);
                 }
-                if (GUILayout.Button(_converting ? "Converting…" : "Convert & Save .vox…", GUILayout.Height(32)))
+                if (GUILayout.Button(
+                    new GUIContent(_converting ? "Converting…" : "Convert & Save .vox…",
+                        "Run the pipeline and additionally write the blocky occupancy grid out as a MagicaVoxel "
+                        + ".vox at a path you pick. Asks for the destination before the (slow) run."),
+                    GUILayout.Height(32)))
                 {
                     Convert(export: true);
                 }
             }
             using (new EditorGUI.DisabledScope(_converting))
             {
-                if (GUILayout.Button("Run test set…", GUILayout.Height(24)))
+                if (GUILayout.Button(
+                    new GUIContent("Run test set…",
+                        "Batch-run the pipeline over every .obj/.fbx in a folder you pick (non-recursive), with "
+                        + "these same settings. Stacks one preview row per mesh and fills the metrics panel + CSV "
+                        + "for the consistency eval. Failures are logged and skipped."),
+                    GUILayout.Height(24)))
                 {
                     RunTestSet();
                 }
@@ -140,11 +159,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Mesh", GUILayout.Width(40));
+                EditorGUILayout.LabelField(
+                    new GUIContent("Mesh", "The source .obj/.fbx to voxelise — typically a messy textured Meshy export."),
+                    GUILayout.Width(40));
                 EditorGUILayout.SelectableLabel(
                     string.IsNullOrEmpty(_meshPath) ? "(none selected)" : _meshPath,
                     EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
-                if (GUILayout.Button("Browse…", GUILayout.Width(80)))
+                if (GUILayout.Button(
+                    new GUIContent("Browse…", "Pick the source mesh (.obj or .fbx) from disk. The choice is remembered between sessions."),
+                    GUILayout.Width(80)))
                 {
                     string picked = EditorUtility.OpenFilePanel("Select mesh", "", "obj,fbx");
                     if (!string.IsNullOrEmpty(picked))
@@ -158,7 +181,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private void DrawResolution()
         {
             _resolutionInput = (ResolutionInput)EditorGUILayout.EnumPopup(
-                new GUIContent("Input mode", "Set the voxel budget directly, or derive it from in-game size ÷ shared voxel size."),
+                new GUIContent("Input mode",
+                    "Max dim slider: set the voxel budget along the longest axis directly. World size: derive it "
+                    + "from the model's intended in-game size ÷ the shared global voxel size, so every asset shares "
+                    + "one voxel scale (the mode to use for a cohesive set)."),
                 _resolutionInput);
 
             using (new EditorGUI.IndentLevelScope())
@@ -166,15 +192,26 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 if (_resolutionInput == ResolutionInput.WorldSize)
                 {
                     _voxelWorldSize = EditorGUILayout.FloatField(
-                        new GUIContent("Voxel world size", "Shared global voxel edge length, world units."), _voxelWorldSize);
+                        new GUIContent("Voxel world size",
+                            "Edge length of one voxel in world units, shared across every asset. Smaller = finer/"
+                            + "more voxels. This is the global scale the whole set is quantised to."),
+                        _voxelWorldSize);
                     _targetWorldSize = EditorGUILayout.FloatField(
-                        new GUIContent("Target world size", "Intended in-game size of the model's longest axis."), _targetWorldSize);
-                    EditorGUILayout.LabelField(" ", $"→ {BuildSettings().ResolveMaxDimVoxels()} voxels (longest axis, clamped 4–96)");
+                        new GUIContent("Target world size",
+                            "How big this model's longest axis should be in-game, world units. Divided by the voxel "
+                            + "world size to pick the voxel budget — so a bigger prop gets more voxels."),
+                        _targetWorldSize);
+                    EditorGUILayout.LabelField(
+                        new GUIContent(" ", "The resulting voxel budget for the longest axis, after rounding and clamping to the supported 4–96 range."),
+                        new GUIContent($"→ {BuildSettings().ResolveMaxDimVoxels()} voxels (longest axis, clamped 4–96)"));
                 }
                 else
                 {
                     _maxDimVoxels = EditorGUILayout.IntSlider(
-                        new GUIContent("Max dimension (voxels)", "Longest axis gets this many voxels. Keep it low for the chunky stylised read."),
+                        new GUIContent("Max dimension (voxels)",
+                            "Voxels along the longest bounding-box axis; the other axes scale to match. Keep it low "
+                            + "(~10–16 for characters) for the chunky stylised read; the pipeline is designed to "
+                            + "behave across the whole 4–96 range."),
                         _maxDimVoxels, 4, 96);
                 }
             }
@@ -201,14 +238,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 using (new EditorGUI.DisabledScope(!_gridSearch))
                 {
                     _scaleFlex = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Scale flex", "Also snap model extents to whole voxel counts (stretch clamped ±10%)."),
+                        new GUIContent("Scale flex",
+                            "Let the search also stretch the voxel grid per-axis to snap the model's extent onto a "
+                            + "whole voxel count (a 7.5-voxel-long bar becomes exactly 7 or 8), clamped to ±10%. "
+                            + "Removes the ragged half-voxel at the end of a run. Needs the grid search on."),
                         _scaleFlex);
                 }
             }
 
             _thinFeatureKeep = EditorGUILayout.ToggleLeft(
                 new GUIContent("Thin-feature keep",
-                    "Force-keep sub-voxel silhouette features (legs, ears, antennae) that are connected to the main body; disconnected specks still die."),
+                    "Force-keep sub-voxel silhouette features (legs, ears, antennae, a mug handle) that a plain "
+                    + "coverage vote would erase — but only where they connect to the model's main body, so "
+                    + "disconnected specks still die. Builds the fine-grid analysis (see Fine factor)."),
                 _thinFeatureKeep);
 
             using (new EditorGUI.DisabledScope(!_gridSearch && !_thinFeatureKeep))
@@ -216,34 +258,68 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 using (new EditorGUI.IndentLevelScope())
                 {
                     _fineFactor = EditorGUILayout.IntSlider(
-                        new GUIContent("Fine factor", "Voxelise at this multiple of the target for the search/thin-keep analysis."),
+                        new GUIContent("Fine factor",
+                            "The grid search and thin-keep first voxelise at this multiple of the target resolution "
+                            + "to analyse features, then vote down. Higher = finer analysis but the fine grid grows "
+                            + "as factor³ — the main cost driver (watch the fine-grid-size warning above). Only used "
+                            + "when the search or thin-keep is on."),
                         _fineFactor, 2, 4);
                 }
             }
 
             _coverage = EditorGUILayout.Slider(
-                new GUIContent("Coverage threshold", "Block occupied-fraction needed to fill an output voxel (unless a thin feature forces it)."),
+                new GUIContent("Coverage threshold",
+                    "Fraction of a coarse voxel's fine cells that must be solid for it to fill (unless thin-keep "
+                    + "forces it). Higher trims jagged one-voxel slivers off diagonal surfaces for a boxier read; "
+                    + "lower keeps more bulk."),
                 _coverage, 0f, 1f);
 
             _removeFloaters = EditorGUILayout.ToggleLeft(
-                new GUIContent("Remove floaters", "Drop voxel islands whose fine support never touches the model's main component."),
+                new GUIContent("Remove floaters",
+                    "Drop disconnected voxel islands whose fine support never touches the model's main connected "
+                    + "component — the stray specks left by messy geometry. The largest island is always kept, so "
+                    + "the model can never vanish."),
                 _removeFloaters);
 
             _cleanupStrength = EditorGUILayout.IntSlider(
                 new GUIContent("Cleanup strength",
-                    "Morphological close→open radius: fills one-voxel notches and shaves lone bumps. Never erodes kept thin features, never welds real air gaps. 0 = off."),
+                    "Rank morphological close→open passes: close fills lone pits/notches, open shaves lone bumps/"
+                    + "spikes — flatter faces, cleaner silhouette. Corners and edges are left intact (unlike a "
+                    + "classic close→open). Never shaves kept thin features, never welds real air gaps, and "
+                    + "re-bridges anything it splits. 1 = one pass, 2 = stronger, 0 = off."),
                 _cleanupStrength, 0, 2);
 
-            _showAdvancedWeights = EditorGUILayout.Foldout(_showAdvancedWeights, "Advanced: search score weights", toggleOnLabelClick: true);
+            _showAdvancedWeights = EditorGUILayout.Foldout(
+                _showAdvancedWeights,
+                new GUIContent("Advanced: search score weights",
+                    "Relative weights of the terms the grid-placement search maximises. Defaults 1 / 1 / 2 / 0 are "
+                    + "tuned so merging air gaps (the fatal failure) costs most. Leave alone unless the geometry "
+                    + "terms aren't separating candidates."),
+                toggleOnLabelClick: true);
             if (_showAdvancedWeights)
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    _faceWeight = EditorGUILayout.Slider(new GUIContent("Face economy (S_face)"), _faceWeight, 0f, 4f);
-                    _iouWeight = EditorGUILayout.Slider(new GUIContent("Shape IoU (S_iou)"), _iouWeight, 0f, 4f);
-                    _gapWeight = EditorGUILayout.Slider(new GUIContent("Air-gap keep (S_gap)"), _gapWeight, 0f, 4f);
+                    _faceWeight = EditorGUILayout.Slider(
+                        new GUIContent("Face economy (S_face)",
+                            "Rewards placements with fewer exposed faces per voxel (equivalent-cube faces ÷ actual "
+                            + "faces) — favours chunky, axis-aligned blocks over stair-stepped diagonals. Default 1."),
+                        _faceWeight, 0f, 4f);
+                    _iouWeight = EditorGUILayout.Slider(
+                        new GUIContent("Shape IoU (S_iou)",
+                            "Rewards overlap between the coarse voxels and the fine occupancy — keeps the blocky "
+                            + "model faithful to the source silhouette. Default 1."),
+                        _iouWeight, 0f, 4f);
+                    _gapWeight = EditorGUILayout.Slider(
+                        new GUIContent("Air-gap keep (S_gap)",
+                            "Penalises covering air-gap cells (the space between a dog's four legs, a mug's handle "
+                            + "hole). Weighted 2× by default because merging a gap is the worst failure mode."),
+                        _gapWeight, 0f, 4f);
                     _colWeight = EditorGUILayout.Slider(
-                        new GUIContent("Colour-edge align (S_col)", "Speculative and costly (samples the fine surface's colours); 0 = skipped."),
+                        new GUIContent("Colour-edge align (S_col)",
+                            "Rewards placements whose block boundaries land on strong source colour edges. "
+                            + "Speculative and costly — it has to sample the whole fine surface's colours — so it "
+                            + "ships at 0 (skipped). Raise it only during tuning if the geometry terms aren't enough."),
                         _colWeight, 0f, 4f);
                 }
             }
@@ -252,39 +328,64 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private void DrawTaubin()
         {
             _taubinPasses = EditorGUILayout.IntSlider(
-                new GUIContent("Taubin passes", "λ/μ smoothing passes over the isosurface (smooth output only)."),
+                new GUIContent("Taubin passes",
+                    "λ/μ umbrella smoothing passes over the marching-cubes isosurface. Affects ONLY the smooth "
+                    + "comparison mesh — the blocky voxel output is built from the occupancy grid and is untouched "
+                    + "by this. More passes = smoother but softer."),
                 _taubinPasses, 0, 30);
             using (new EditorGUI.IndentLevelScope())
             {
-                _taubinLambda = EditorGUILayout.Slider(new GUIContent("λ (shrink)"), _taubinLambda, 0f, 1f);
-                _taubinMu = EditorGUILayout.Slider(new GUIContent("μ (inflate)", "Should exceed λ for volume preservation."), _taubinMu, 0f, 1f);
+                _taubinLambda = EditorGUILayout.Slider(
+                    new GUIContent("λ (shrink)",
+                        "The shrinking (positive) smoothing step per pass. Larger = more smoothing per pass but "
+                        + "more volume loss before μ inflates it back."),
+                    _taubinLambda, 0f, 1f);
+                _taubinMu = EditorGUILayout.Slider(
+                    new GUIContent("μ (inflate)",
+                        "The inflating (negative) step that counteracts λ's shrinkage each pass. Should exceed λ "
+                        + "so the mesh keeps its volume instead of collapsing."),
+                    _taubinMu, 0f, 1f);
             }
             _surfaceReproject = EditorGUILayout.ToggleLeft(
-                new GUIContent("SDF surface reprojection", "Nudge smoothed vertices back onto the iso=0 surface (smooth output only)."),
+                new GUIContent("SDF surface reprojection",
+                    "After smoothing, nudge each vertex back onto the SDF iso=0 surface along the gradient — "
+                    + "recovers detail the smoothing rounded off. Affects only the smooth comparison mesh, not the "
+                    + "blocky output."),
                 _surfaceReproject);
         }
 
         private void DrawColour()
         {
             _uvDilate = EditorGUILayout.ToggleLeft(
-                new GUIContent("UV island dilation", "Flood island colours into the texture gutters at load so samples can't land on Meshy's purple bleed."),
+                new GUIContent("UV island dilation",
+                    "At load, flood each UV island's colours outward into the surrounding texture gutter so a "
+                    + "nearest-surface sample can't land on Meshy's purple UV-gutter bleed. Rebuilds the texture "
+                    + "snapshot; the mesh itself is untouched."),
                 _uvDilate);
             if (_uvDilate)
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
                     _uvDilatePasses = EditorGUILayout.IntSlider(
-                        new GUIContent("Passes", "8-neighbour dilation passes (texels of reach into the gutter)."),
+                        new GUIContent("Passes",
+                            "How many texels of reach to flood island colour into the gutter (one 8-neighbour "
+                            + "dilation pass = one texel). 8 is plenty for typical bleed; raise it for wide gutters."),
                         _uvDilatePasses, 1, 32);
                 }
             }
 
             _multiSampleColour = EditorGUILayout.ToggleLeft(
-                new GUIContent("Multi-sample voxel colour", "Sample each surface voxel's exposed faces at several points and take the Oklab medoid — robust to speckle and stray texels."),
+                new GUIContent("Multi-sample voxel colour",
+                    "Colour each surface voxel from the centre plus several jittered samples per exposed face, then "
+                    + "take the Oklab medoid (the sample closest to all the others). A lone stray texel or AO "
+                    + "speckle loses the vote instead of tinting an average. Off = one centre sample per voxel."),
                 _multiSampleColour);
 
             _colourMode = (ColourMode)EditorGUILayout.EnumPopup(
-                new GUIContent("Colour mode", "Raw reprojected, per-model palette (k-means), or master-palette snap."),
+                new GUIContent("Colour mode",
+                    "Raw: the reprojected colours untouched (truest read). Per-model palette: cluster them down to "
+                    + "a few colours with Oklab k-means (the Crossy-Road flat-colour look). Master palette: snap "
+                    + "each to the nearest swatch of a shared palette for cross-asset cohesion."),
                 _colourMode);
             using (new EditorGUI.IndentLevelScope())
             {
@@ -292,11 +393,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 {
                     case ColourMode.PerModelPalette:
                         _paletteSize = EditorGUILayout.IntSlider(
-                            new GUIContent("Palette size", "Number of colours to cluster the model down to."), _paletteSize, 2, 32);
+                            new GUIContent("Palette size",
+                                "Target number of colours to cluster the model down to. Fewer = flatter, more "
+                                + "stylised; empty clusters are dropped, so the actual count may come out lower."),
+                            _paletteSize, 2, 32);
                         break;
                     case ColourMode.MasterPalette:
                         _masterPalette = (VoxMasterPalette?)EditorGUILayout.ObjectField(
-                            new GUIContent("Master palette", "Shared swatches to snap to. Empty = built-in starter palette."),
+                            new GUIContent("Master palette",
+                                "The shared swatch set to snap every colour to (Oklab nearest, with a chroma-gain "
+                                + "penalty so neutrals don't turn saturated). Empty = the built-in starter palette."),
                             _masterPalette, typeof(VoxMasterPalette), false);
                         break;
                 }
@@ -305,12 +411,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             using (new EditorGUI.DisabledScope(_colourMode == ColourMode.Raw))
             {
                 _pottsStrength = EditorGUILayout.Slider(
-                    new GUIContent("Potts smoothing", "Edge-aware label smoothing after palette assignment: kills AO speckle, pins real colour boundaries. 0 = off."),
+                    new GUIContent("Potts smoothing",
+                        "Edge-aware label smoothing after palette assignment: relabels each voxel toward its "
+                        + "neighbours' colour, but the penalty melts away where the source colours genuinely "
+                        + "disagree — so it erases AO-speckle faux-gradients while pinning real region boundaries. "
+                        + "The knob is normalised across models; 0 = off. Needs a palette (not Raw mode)."),
                     _pottsStrength, 0f, 2f);
             }
 
             _normalConsistency = EditorGUILayout.ToggleLeft(
-                new GUIContent("Normal-consistency reject", "Discard wrong-side thin-wall texel hits during reprojection (heuristic; off by default)."),
+                new GUIContent("Normal-consistency reject",
+                    "On a thin wall the nearest triangle can be the back face, whose texels carry the interior/AO "
+                    + "colour. This discards a sampled colour whose triangle faces away from the outward SDF "
+                    + "gradient, falling back to the flat colour. Heuristic; off by default."),
                 _normalConsistency);
         }
 
@@ -331,12 +444,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Copy CSV"))
+                if (GUILayout.Button(
+                    new GUIContent("Copy CSV",
+                        "Copy the metrics for the last run / test set to the clipboard as CSV (one row per mesh, "
+                        + "with a header) — paste it into a spreadsheet to compare runs.")))
                 {
                     EditorGUIUtility.systemCopyBuffer = _lastCsv;
                     ShowNotification(new GUIContent("Metrics CSV copied"));
                 }
-                if (GUILayout.Button("Log metrics"))
+                if (GUILayout.Button(
+                    new GUIContent("Log metrics", "Print each mesh's metrics line to the Console.")))
                 {
                     foreach (SpikeTestSetRunner.Entry entry in _lastEntries)
                     {
