@@ -101,6 +101,20 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 }
             }
 
+            // Boxiness / symmetry finishing passes, on the final coloured grid. Corner-fill first
+            // (fills concave notches with their neighbours' modal colour), then symmetry has the
+            // last word so the silhouette is guaranteed mirror-symmetric on the chosen axes.
+            if (settings.FillCorners)
+            {
+                progress?.Invoke(0.66f, "Filling corners");
+                CornerFill.Apply(occupancy, voxelColours, placement.GapFraction);
+            }
+            if (settings.Symmetry != SymmetryAxes.None)
+            {
+                progress?.Invoke(0.68f, "Forcing symmetry");
+                SymmetryEnforcer.Apply(occupancy, voxelColours, settings.Symmetry);
+            }
+
             Mesh blocky = BlockyVoxelMesher.Build(occupancy, voxelColours);
 
             // --- Comparison: smooth SDF remesh ---

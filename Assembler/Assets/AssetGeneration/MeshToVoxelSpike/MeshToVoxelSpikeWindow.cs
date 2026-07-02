@@ -37,6 +37,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private float _coverage = 0.5f;
         private bool _removeFloaters = true;
         private int _cleanupStrength = 1;
+        private bool _fillCorners;
+        private SymmetryAxes _symmetry = SymmetryAxes.None;
 
         private bool _showAdvancedWeights;
         private float _faceWeight = 1f;
@@ -288,6 +290,23 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                     + "classic close→open). Never shaves kept thin features, never welds real air gaps, and "
                     + "re-bridges anything it splits. 1 = one pass, 2 = stronger, 0 = off."),
                 _cleanupStrength, 0, 2);
+
+            _fillCorners = EditorGUILayout.ToggleLeft(
+                new GUIContent("Fill corners",
+                    "Fill any empty voxel that has 3 or more of its 6 face-neighbours occupied — the concave "
+                    + "corners and notches that make a silhouette look ragged — colouring each fill the modal "
+                    + "(most common) colour of those neighbours so it stays on-palette. One pass, so it can't run "
+                    + "away; real air gaps (leg gaps, handle holes) are skipped."),
+                _fillCorners);
+
+            _symmetry = (SymmetryAxes)EditorGUILayout.EnumFlagsField(
+                new GUIContent("Force symmetry",
+                    "Mirror the model across the centre of its occupied bounds on each ticked axis, by union (a "
+                    + "voxel is kept if it or its mirror is filled, so no feature is lost). Added voxels copy their "
+                    + "mirror's colour; voxels already on both sides keep their own, so asymmetric surface detail "
+                    + "survives. X/Y/Z are the grid axes (Y is up); pick whichever gives the intended left-right "
+                    + "symmetry. Applied last, so the silhouette is guaranteed symmetric."),
+                _symmetry);
 
             _showAdvancedWeights = EditorGUILayout.Foldout(
                 _showAdvancedWeights,
@@ -605,6 +624,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             Coverage = _coverage,
             RemoveFloaters = _removeFloaters,
             CleanupStrength = _cleanupStrength,
+            FillCorners = _fillCorners,
+            Symmetry = _symmetry,
             FaceWeight = _faceWeight,
             IouWeight = _iouWeight,
             GapWeight = _gapWeight,
@@ -642,6 +663,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             _coverage = EditorPrefs.GetFloat(PrefPrefix + "Coverage", _coverage);
             _removeFloaters = EditorPrefs.GetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             _cleanupStrength = EditorPrefs.GetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
+            _fillCorners = EditorPrefs.GetBool(PrefPrefix + "FillCorners", _fillCorners);
+            _symmetry = (SymmetryAxes)EditorPrefs.GetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             _iouWeight = EditorPrefs.GetFloat(PrefPrefix + "IouWeight", _iouWeight);
             _gapWeight = EditorPrefs.GetFloat(PrefPrefix + "GapWeight", _gapWeight);
@@ -683,6 +706,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorPrefs.SetFloat(PrefPrefix + "Coverage", _coverage);
             EditorPrefs.SetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             EditorPrefs.SetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
+            EditorPrefs.SetBool(PrefPrefix + "FillCorners", _fillCorners);
+            EditorPrefs.SetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             EditorPrefs.SetFloat(PrefPrefix + "IouWeight", _iouWeight);
             EditorPrefs.SetFloat(PrefPrefix + "GapWeight", _gapWeight);

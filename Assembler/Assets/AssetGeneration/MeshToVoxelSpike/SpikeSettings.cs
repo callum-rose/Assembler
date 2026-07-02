@@ -59,6 +59,12 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// <summary>Protected morphological close→open radius (0 = off, 1–2).</summary>
         public int CleanupStrength { get; init; }
 
+        /// <summary>Fill concave corner voxels (≥3 occupied face-neighbours) with the neighbours' modal colour.</summary>
+        public bool FillCorners { get; init; }
+
+        /// <summary>Force mirror-symmetry across these grid axes (union about the occupied centre).</summary>
+        public SymmetryAxes Symmetry { get; init; }
+
         /// <summary>The effective fine factor: 1 (no fine pass) unless the search or thin-keep needs one.</summary>
         public int ResolveFineFactor() =>
             GridSearch || ThinFeatureKeep ? Mathf.Clamp(FineFactor, 2, 4) : 1;
@@ -136,6 +142,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             Coverage = 0.5f,
             RemoveFloaters = true,
             CleanupStrength = 1,
+            FillCorners = false,
+            Symmetry = SymmetryAxes.None,
             FaceWeight = 1f,
             IouWeight = 1f,
             GapWeight = 2f,

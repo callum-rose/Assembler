@@ -339,6 +339,24 @@ colour** (toggle; off = single centre sample) → `ColourModes.AssignPalette` (p
 - Candidate widths are floor/ceil ONLY (not ∪ {unstretched}): a third per-axis width option cubes
   the candidate count (1728 at f=4) and floor/ceil brackets the unstretched width anyway.
 
+### Session 3 follow-up — symmetry + corner-fill finishing passes
+
+Two extra boxiness controls added after the initial drop, both opt-in, both running on the final
+coloured grid just before the blocky mesh is built (corner-fill first, then symmetry has the last
+word so the silhouette is guaranteed symmetric):
+
+- `CornerFill.cs` — fills any empty voxel with ≥3 of its 6 face-neighbours occupied and colours it
+  the modal (most common) neighbour colour, so concave notches box out and stay on-palette. One
+  simultaneous snapshot pass (no cascade); skips cells whose fine gap fraction > ¼ so leg gaps /
+  handle holes survive. `SpikeSettings.FillCorners` (bool), window "Fill corners" toggle.
+- `SymmetryEnforcer.cs` + `SymmetryAxes` ([Flags] None/X/Y/Z) — forces mirror symmetry across each
+  ticked grid axis by **union** about the occupied-bbox centre (mirror coord = lo+hi−a): a cell is
+  kept if it or its mirror is filled, added voxels copy the mirror's colour, cells already on both
+  sides keep their own colour (so asymmetric detail like lettering survives). Union across axes
+  commutes, so multi-axis is symmetric in each. `SpikeSettings.Symmetry`, window "Force symmetry"
+  `EnumFlagsField`. Both persisted to EditorPrefs and threaded through `BuildSettings`.
+- Tests: `Tests/SymmetryCornerFillTests.cs`.
+
 ### Status / verification
 
 - All EditMode tests written; the user's open editor is the compile/test authority (Tools/*.sh
