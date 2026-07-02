@@ -116,6 +116,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// <summary>Target colour count for <see cref="MeshToVoxelSpike.ColourMode.PerModelPalette"/>.</summary>
         public int PaletteSize { get; init; }
 
+        /// <summary>Oklab merge radius for <see cref="MeshToVoxelSpike.ColourMode.Consolidated"/> (0 = exact).</summary>
+        public float ConsolidateTolerance { get; init; }
+
         /// <summary>Swatches for <see cref="MeshToVoxelSpike.ColourMode.MasterPalette"/>.</summary>
         public IReadOnlyList<Color32>? MasterPalette { get; init; }
 
@@ -126,6 +129,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         {
             PaletteSize = PaletteSize,
             MasterPalette = MasterPalette,
+            ConsolidateTolerance = ConsolidateTolerance,
         };
 
         // ---- Smooth comparison path --------------------------------------------
@@ -166,6 +170,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             PottsStrength = 0.5f,
             ColourMode = ColourMode.PerModelPalette,
             PaletteSize = 8,
+            ConsolidateTolerance = 0.06f,
             TaubinPasses = 5,
             TaubinLambda = 0.5f,
             TaubinMu = 0.53f,

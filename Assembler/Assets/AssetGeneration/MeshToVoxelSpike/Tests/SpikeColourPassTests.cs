@@ -94,6 +94,42 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             Assert.AreEqual(Red.b, medoid.b);
         }
 
+        [Test]
+        public void Consolidate_MergesNearShadesButKeepsDistinctColours()
+        {
+            // Two near-identical reds, one near-identical blue, one distinct blue. A generous
+            // tolerance folds the reds together and the blues together → two fundamental colours.
+            var colours = new[]
+            {
+                new Color32(240, 40, 40, 255),
+                new Color32(236, 44, 42, 255), // ~red
+                new Color32(40, 40, 240, 255),
+                new Color32(44, 38, 236, 255), // ~blue
+            };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0.1f });
+
+            Assert.IsNotNull(merged.Palette);
+            Assert.AreEqual(2, merged.Palette!.Length, "Near shades collapse to two fundamental colours.");
+            Assert.AreEqual(merged.Colours[0], merged.Colours[1], "The two reds share one representative.");
+            Assert.AreEqual(merged.Colours[2], merged.Colours[3], "The two blues share one representative.");
+            Assert.AreNotEqual(merged.Colours[0], merged.Colours[2], "Red and blue stay distinct.");
+        }
+
+        [Test]
+        public void Consolidate_ZeroTolerance_KeepsEveryDistinctColour()
+        {
+            var colours = new[] { Red, Blue, new Color32(241, 41, 41, 255) };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0f });
+
+            Assert.AreEqual(3, merged.Palette!.Length, "Exact merging leaves every distinct colour intact.");
+        }
+
         private static VoxelGrid FilledGrid(int nx, int ny, int nz)
         {
             var grid = new VoxelGrid(nx, ny, nz) { Origin = g3.Vector3d.Zero, CellSize = 1.0 };
