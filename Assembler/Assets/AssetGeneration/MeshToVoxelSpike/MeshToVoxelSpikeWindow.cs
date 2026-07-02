@@ -56,6 +56,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private ColourMode _colourMode = ColourMode.PerModelPalette;
         private int _paletteSize = 8;
         private float _consolidateTolerance = 0.06f;
+        private int _consolidateMaxColours;
         private bool _normalConsistency;
 
         private int _taubinPasses = 5;
@@ -475,6 +476,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                                 + "same as Raw); raise it to fold more variation together. ~0.05–0.08 removes texture "
                                 + "noise without blurring real regions; too high and distinct colours merge."),
                             _consolidateTolerance, 0f, 0.3f);
+                        _consolidateMaxColours = EditorGUILayout.IntSlider(
+                            new GUIContent("Max colours",
+                                "Hard cap on the output colour count — locks the model to a known number. After the "
+                                + "tolerance merge, the nearest colours keep merging (frequency-weighted, so the "
+                                + "dominant shades survive — not the chromatic outliers a fixed-palette k-means "
+                                + "chases) until at most this many remain. Set it to the source image's palette size "
+                                + "(e.g. 5 for a 5-colour reference) to reproduce it. 0 = unlimited (tolerance only). "
+                                + "Fewer distinct colours than the cap yields fewer — it never invents colours."),
+                            _consolidateMaxColours, 0, 32);
                         break;
                 }
             }
@@ -696,6 +706,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             ColourMode = _colourMode,
             PaletteSize = _paletteSize,
             ConsolidateTolerance = _consolidateTolerance,
+            ConsolidateMaxColours = _consolidateMaxColours,
             MasterPalette = _colourMode == ColourMode.MasterPalette
                 ? (_masterPalette != null ? _masterPalette.ToColor32() : DefaultMasterPalette.Colors)
                 : null,
@@ -739,6 +750,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             _colourMode = (ColourMode)EditorPrefs.GetInt(PrefPrefix + "ColourMode", (int)_colourMode);
             _paletteSize = EditorPrefs.GetInt(PrefPrefix + "PaletteSize", _paletteSize);
             _consolidateTolerance = EditorPrefs.GetFloat(PrefPrefix + "ConsolidateTolerance", _consolidateTolerance);
+            _consolidateMaxColours = EditorPrefs.GetInt(PrefPrefix + "ConsolidateMaxColours", _consolidateMaxColours);
             _normalConsistency = EditorPrefs.GetBool(PrefPrefix + "NormalConsistency", _normalConsistency);
             _revealIntermediates = EditorPrefs.GetBool(PrefPrefix + "Reveal", _revealIntermediates);
             _rowSpacing = EditorPrefs.GetFloat(PrefPrefix + "RowSpacing", _rowSpacing);
@@ -786,6 +798,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorPrefs.SetInt(PrefPrefix + "ColourMode", (int)_colourMode);
             EditorPrefs.SetInt(PrefPrefix + "PaletteSize", _paletteSize);
             EditorPrefs.SetFloat(PrefPrefix + "ConsolidateTolerance", _consolidateTolerance);
+            EditorPrefs.SetInt(PrefPrefix + "ConsolidateMaxColours", _consolidateMaxColours);
             EditorPrefs.SetBool(PrefPrefix + "NormalConsistency", _normalConsistency);
             EditorPrefs.SetBool(PrefPrefix + "Reveal", _revealIntermediates);
             EditorPrefs.SetFloat(PrefPrefix + "RowSpacing", _rowSpacing);

@@ -52,19 +52,36 @@ multi-sample colour, Taubin 5 / λ 0.5 / μ 0.53, SDF surface reprojection on.
 ## New: `Consolidated` colour mode
 
 `Consolidated` samples colours exactly like `Raw` (so the read stays faithful), then **merges
-perceptually near-identical shades into the model's fundamental colours**. Unlike `Per-model
-palette`, it has **no fixed target count** — the number of output colours is emergent, driven by a
-**Merge tolerance** (Oklab distance):
+perceptually near-identical shades into the model's fundamental colours**. Two controls, either or
+both:
+
+**Merge tolerance** (Oklab distance) — collapse shades within this radius:
 
 - **0** = exact, no merging (identical to Raw).
 - **~0.05–0.08** = removes texture/sampling noise without blurring genuinely distinct regions
   (default 0.06).
 - **Too high** = distinct colours start merging.
 
+**Max colours** — a hard cap that **locks the output to a known colour count** (0 = unlimited):
+
+- Set it to the **source image's palette size** to reproduce that palette. E.g. the blocky giraffe
+  reference (`Giraffe.jpg`) is clearly 5 colours — yellow, brown, orange, white, black — so **Max
+  colours = 5** locks the voxel model to 5, even if the exact hues differ slightly.
+- Fewer distinct colours than the cap yields fewer — it **never invents colours**.
+- Pair it with a small/zero tolerance: tolerance 0 + Max colours 5 gives exactly the 5 dominant
+  fundamental colours.
+
+**Why this beats `Per-model palette` for matching a reference count:** Per-model palette's k-means
+seeds on the *most chromatic* colours and farthest points, so it spends swatches on saturated
+outliers (a stray highlight, an AO speckle) rather than the real fundamentals. Consolidated is
+**frequency-weighted** — the most common shades anchor the clusters and the cap merges the *nearest*
+colours first, so the surviving swatches are the dominant ones you actually see.
+
 How it works: the distinct sampled colours are leader-clustered in Oklab within the tolerance,
-most-frequent-first (so the dominant shades seed the clusters), and each voxel is repainted with its
-cluster's frequency-weighted mean. It produces a real palette + labels, so **Potts smoothing still
-applies** on top (it's disabled only for plain `Raw`).
+most-frequent-first (so the dominant shades seed the clusters); if a Max-colours cap is set and
+exceeded, the nearest clusters are then agglomeratively merged (frequency-weighted means) until the
+cap is met. Each voxel is repainted with its cluster's mean. It produces a real palette + labels, so
+**Potts smoothing still applies** on top (it's disabled only for plain `Raw`).
 
 ## Possible automation (not yet built)
 
