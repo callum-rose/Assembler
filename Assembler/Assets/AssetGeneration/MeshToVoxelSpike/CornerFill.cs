@@ -7,10 +7,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// Boxiness helper: fill any empty voxel with at least <see cref="NeighbourThreshold"/> of its
     /// six face-neighbours occupied — the concave corners and notches that make a blocky silhouette
     /// read ragged — and colour each fill the modal (most common) colour of those occupied
-    /// neighbours, so it stays on-palette. One simultaneous pass (reads a snapshot) so it can't run
-    /// away filling a whole cavity. Cells flagged as real air gaps (fine gap fraction &gt; ¼) are
-    /// skipped, so the space between legs and a mug-handle hole stay open. Mutates
-    /// <paramref name="grid"/> and <paramref name="colours"/> in place; returns the number filled.
+    /// neighbours, so it stays on-palette. Each pass reads a snapshot (order-independent). By
+    /// default a single pass, which can't run away filling a whole cavity; <c>recursive</c> repeats
+    /// until a pass fills nothing, so a fill that creates a new ≥-threshold corner is chased down
+    /// (deeper concavities box out, at the cost of more aggressive filling). Cells flagged as real
+    /// air gaps (fine gap fraction &gt; ¼) are skipped every pass, so the space between legs and a
+    /// mug-handle hole stay open regardless. Mutates <paramref name="grid"/> and
+    /// <paramref name="colours"/> in place; returns the total number filled.
     /// </summary>
     public static class CornerFill
     {
@@ -25,8 +28,25 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
         };
 
-        /// <summary><paramref name="gapFraction"/> (per-cell, <see cref="VoxelGrid.Index"/> layout) may be null to skip the gap guard.</summary>
-        public static int Apply(VoxelGrid grid, Color32[] colours, float[]? gapFraction)
+        /// <summary>
+        /// <paramref name="gapFraction"/> (per-cell, <see cref="VoxelGrid.Index"/> layout) may be
+        /// null to skip the gap guard. With <paramref name="recursive"/>, passes repeat until stable
+        /// (always terminates — each pass only adds cells to a finite grid).
+        /// </summary>
+        public static int Apply(VoxelGrid grid, Color32[] colours, float[]? gapFraction, bool recursive = false)
+        {
+            int total = 0;
+            int filledThisPass;
+            do
+            {
+                filledThisPass = SinglePass(grid, colours, gapFraction);
+                total += filledThisPass;
+            }
+            while (recursive && filledThisPass > 0);
+            return total;
+        }
+
+        private static int SinglePass(VoxelGrid grid, Color32[] colours, float[]? gapFraction)
         {
             var wasOccupied = (bool[])grid.Occupied.Clone();
             var counts = new Dictionary<int, int>();

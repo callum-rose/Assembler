@@ -346,9 +346,11 @@ coloured grid just before the blocky mesh is built (corner-fill first, then symm
 word so the silhouette is guaranteed symmetric):
 
 - `CornerFill.cs` — fills any empty voxel with ≥3 of its 6 face-neighbours occupied and colours it
-  the modal (most common) neighbour colour, so concave notches box out and stay on-palette. One
-  simultaneous snapshot pass (no cascade); skips cells whose fine gap fraction > ¼ so leg gaps /
-  handle holes survive. `SpikeSettings.FillCorners` (bool), window "Fill corners" toggle.
+  the modal (most common) neighbour colour, so concave notches box out and stay on-palette. Each
+  pass is a simultaneous snapshot; `SpikeSettings.FillCorners` (bool) does one pass,
+  `FillCornersRecursive` (bool, nested "Recursive" toggle) repeats until stable so a fill that
+  creates a new corner is chased down (deeper concavities/staircases, more aggressive). Skips cells
+  whose fine gap fraction > ¼ every pass so leg gaps / handle holes survive.
 - `SymmetryEnforcer.cs` + `SymmetryAxes` ([Flags] None/X/Y/Z) — forces mirror symmetry across each
   ticked grid axis by **union** about the occupied-bbox centre (mirror coord = lo+hi−a): a cell is
   kept if it or its mirror is filled, added voxels copy the mirror's colour, cells already on both

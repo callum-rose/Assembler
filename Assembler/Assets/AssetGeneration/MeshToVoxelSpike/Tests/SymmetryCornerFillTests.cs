@@ -152,22 +152,44 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         }
 
         [Test]
-        public void CornerFill_IsSinglePass_DoesNotCascade()
+        public void CornerFill_SinglePass_DoesNotCascade()
         {
-            // A 3-long empty channel where only the middle cell starts with 3 neighbours. A single
-            // pass fills just that one; it must not then cascade to fill the channel ends.
-            VoxelGrid grid = Grid(3, 3, 1);
-            var colours = new Color32[grid.Occupied.Length];
-            // Fill everything except the middle row's three cells, then knock the row's neighbours
-            // so only the centre has 3 occupied neighbours.
-            Set(grid, colours, 1, 0, 0, Red); // below centre
-            Set(grid, colours, 0, 1, 0, Red); // left of centre
-            Set(grid, colours, 2, 1, 0, Red); // right of centre
+            // (1,1) starts with 3 occupied neighbours; (2,1) starts with only 2 and would gain a
+            // third only after (1,1) fills. A single pass fills (1,1) but must leave (2,1) empty.
+            VoxelGrid grid = CascadeGrid(out Color32[] colours);
 
-            int filled = CornerFill.Apply(grid, colours, gapFraction: null);
+            int filled = CornerFill.Apply(grid, colours, gapFraction: null, recursive: false);
 
-            Assert.AreEqual(1, filled, "Only the centre qualifies on the snapshot.");
+            Assert.AreEqual(1, filled, "Only (1,1) qualifies on the first snapshot.");
             Assert.IsTrue(grid.IsOccupied(1, 1, 0));
+            Assert.IsFalse(grid.IsOccupied(2, 1, 0), "Single pass must not cascade into (2,1).");
+        }
+
+        [Test]
+        public void CornerFill_Recursive_ChasesTheCascade()
+        {
+            // Same setup: recursive keeps going, so filling (1,1) gives (2,1) its third neighbour
+            // and it fills on the next pass.
+            VoxelGrid grid = CascadeGrid(out Color32[] colours);
+
+            int filled = CornerFill.Apply(grid, colours, gapFraction: null, recursive: true);
+
+            Assert.AreEqual(2, filled, "Recursion fills (1,1) then (2,1).");
+            Assert.IsTrue(grid.IsOccupied(1, 1, 0));
+            Assert.IsTrue(grid.IsOccupied(2, 1, 0), "The cascaded corner fills on the second pass.");
+        }
+
+        // (1,1) has neighbours (0,1),(1,0),(1,2) occupied = 3; (2,1) has (2,0),(2,2) = 2 until (1,1) fills.
+        private static VoxelGrid CascadeGrid(out Color32[] colours)
+        {
+            VoxelGrid grid = Grid(3, 3, 1);
+            colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 1, 0, Red);
+            Set(grid, colours, 1, 0, 0, Red);
+            Set(grid, colours, 1, 2, 0, Red);
+            Set(grid, colours, 2, 0, 0, Red);
+            Set(grid, colours, 2, 2, 0, Red);
+            return grid;
         }
     }
 }

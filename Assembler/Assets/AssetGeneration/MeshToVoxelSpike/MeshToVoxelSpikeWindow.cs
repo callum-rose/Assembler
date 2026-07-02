@@ -38,6 +38,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private bool _removeFloaters = true;
         private int _cleanupStrength = 1;
         private bool _fillCorners;
+        private bool _fillCornersRecursive;
         private SymmetryAxes _symmetry = SymmetryAxes.None;
 
         private bool _showAdvancedWeights;
@@ -298,6 +299,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                     + "(most common) colour of those neighbours so it stays on-palette. One pass, so it can't run "
                     + "away; real air gaps (leg gaps, handle holes) are skipped."),
                 _fillCorners);
+            if (_fillCorners)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _fillCornersRecursive = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Recursive",
+                            "Repeat the fill until nothing new qualifies, so a filled corner that creates another "
+                            + "≥3-neighbour corner is chased down — deeper concavities and staircases box out fully. "
+                            + "More aggressive; off = a single pass. The gap guard still protects real air gaps every "
+                            + "pass."),
+                        _fillCornersRecursive);
+                }
+            }
 
             _symmetry = (SymmetryAxes)EditorGUILayout.EnumFlagsField(
                 new GUIContent("Force symmetry",
@@ -625,6 +639,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             RemoveFloaters = _removeFloaters,
             CleanupStrength = _cleanupStrength,
             FillCorners = _fillCorners,
+            FillCornersRecursive = _fillCornersRecursive,
             Symmetry = _symmetry,
             FaceWeight = _faceWeight,
             IouWeight = _iouWeight,
@@ -664,6 +679,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             _removeFloaters = EditorPrefs.GetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             _cleanupStrength = EditorPrefs.GetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             _fillCorners = EditorPrefs.GetBool(PrefPrefix + "FillCorners", _fillCorners);
+            _fillCornersRecursive = EditorPrefs.GetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             _symmetry = (SymmetryAxes)EditorPrefs.GetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             _iouWeight = EditorPrefs.GetFloat(PrefPrefix + "IouWeight", _iouWeight);
@@ -707,6 +723,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorPrefs.SetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             EditorPrefs.SetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             EditorPrefs.SetBool(PrefPrefix + "FillCorners", _fillCorners);
+            EditorPrefs.SetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             EditorPrefs.SetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             EditorPrefs.SetFloat(PrefPrefix + "IouWeight", _iouWeight);

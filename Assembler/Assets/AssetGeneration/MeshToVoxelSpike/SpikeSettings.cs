@@ -62,6 +62,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// <summary>Fill concave corner voxels (≥3 occupied face-neighbours) with the neighbours' modal colour.</summary>
         public bool FillCorners { get; init; }
 
+        /// <summary>Repeat the corner fill until stable (chases fills that create new corners) instead of one pass.</summary>
+        public bool FillCornersRecursive { get; init; }
+
         /// <summary>Force mirror-symmetry across these grid axes (union about the occupied centre).</summary>
         public SymmetryAxes Symmetry { get; init; }
 
@@ -143,6 +146,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             RemoveFloaters = true,
             CleanupStrength = 1,
             FillCorners = false,
+            FillCornersRecursive = false,
             Symmetry = SymmetryAxes.None,
             FaceWeight = 1f,
             IouWeight = 1f,
