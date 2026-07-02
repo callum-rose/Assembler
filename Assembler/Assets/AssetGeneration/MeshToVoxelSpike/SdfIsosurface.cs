@@ -13,6 +13,12 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// </summary>
     public static class SdfIsosurface
     {
+        // Cells of exact distance computed around the surface before the spatial flood-fill signs
+        // the rest of the grid. Marching cubes only needs the iso-0 crossing and SDF reprojection
+        // only walks vertices a cell or two, so a thin band is enough and keeps the compute fast.
+        private const int NarrowBandCells = 3;
+
+
         public readonly struct Result
         {
             /// <summary>Raw marching-cubes isosurface (before any smoothing).</summary>
@@ -55,6 +61,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 ComputeSigns = true,
                 InsideMode = g3.MeshSignedDistanceGrid.InsideModes.ParityCount,
                 ComputeMode = g3.MeshSignedDistanceGrid.ComputeModes.NarrowBand_SpatialFloodFill,
+                // NarrowBand_SpatialFloodFill computes exact distances only within the band and
+                // flood-fills the sign to the rest of the grid via the spatial tree — so both the
+                // tree and a positive band distance must be supplied or Compute() throws.
+                Spatial = tree,
+                NarrowBandMaxDistance = cellSize * NarrowBandCells,
                 UseParallel = true,
             };
             sdf.Compute();

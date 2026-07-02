@@ -76,6 +76,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 GridX = occupancy.NX,
                 GridY = occupancy.NY,
                 GridZ = occupancy.NZ,
+                Occupancy = occupancy,
+                VoxelColours = voxelColours,
             };
         }
 

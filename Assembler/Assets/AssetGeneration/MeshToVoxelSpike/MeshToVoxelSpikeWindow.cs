@@ -93,7 +93,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             {
                 if (GUILayout.Button(_converting ? "Converting…" : "Convert", GUILayout.Height(32)))
                 {
-                    Convert();
+                    Convert(export: false);
+                }
+                if (GUILayout.Button(_converting ? "Converting…" : "Convert & Save .vox…", GUILayout.Height(32)))
+                {
+                    Convert(export: true);
                 }
             }
         }
@@ -178,8 +182,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         }
 
         // async void: a UI event handler that can't return a Task. The whole body is wrapped in
-        // try/catch (house style) so an exception can't escape unhandled.
-        private async void Convert()
+        // try/catch (house style) so an exception can't escape unhandled. When export is true the run
+        // additionally writes the blocky occupancy grid out as a .vox at a user-picked path.
+        private async void Convert(bool export)
         {
             if (_converting)
             {
@@ -192,6 +197,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 {
                     EditorUtility.DisplayDialog("Mesh → Voxel Spike", $"Mesh not found:\n{_meshPath}", "OK");
                     return;
+                }
+
+                // Ask for the destination before the slow run so a cancelled save panel costs nothing.
+                string voxPath = "";
+                if (export)
+                {
+                    voxPath = EditorUtility.SaveFilePanel(
+                        "Save .vox", Path.GetDirectoryName(_meshPath) ?? "",
+                        Path.GetFileNameWithoutExtension(_meshPath), "vox");
+                    if (string.IsNullOrEmpty(voxPath))
+                    {
+                        return;
+                    }
                 }
 
                 _converting = true;
@@ -212,6 +230,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 {
                     SpikeStagePreviewer.ShowBlockyOnly(result);
                 }
+
+                if (export)
+                {
+                    int written = SpikeVoxExport.Write(voxPath, result.Occupancy, result.VoxelColours);
+                    RefreshIfInsideProject(voxPath);
+                    EditorUtility.DisplayDialog(
+                        "Mesh → Voxel Spike",
+                        $"Wrote {written:N0} voxels ({result.GridX}×{result.GridY}×{result.GridZ}) to:\n{voxPath}", "OK");
+                }
             }
             catch (Exception e)
             {
@@ -223,6 +250,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 _converting = false;
                 EditorUtility.ClearProgressBar();
                 Repaint();
+            }
+        }
+
+        // Surface a freshly-written .vox in the Project window when it lands inside Assets/.
+        private static void RefreshIfInsideProject(string voxPath)
+        {
+            string full = Path.GetFullPath(voxPath).Replace('\\', '/');
+            if (full.StartsWith(Application.dataPath.Replace('\\', '/')))
+            {
+                AssetDatabase.Refresh();
             }
         }
 

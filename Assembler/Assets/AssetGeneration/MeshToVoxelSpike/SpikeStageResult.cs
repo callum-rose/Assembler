@@ -34,5 +34,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public int GridX { get; init; }
         public int GridY { get; init; }
         public int GridZ { get; init; }
+
+        /// <summary>The (possibly downsampled) occupancy grid the blocky model was built from — the source for .vox export.</summary>
+        public VoxelGrid Occupancy { get; init; } = null!;
+
+        /// <summary>Flat reprojected per-voxel colours, indexed by <see cref="VoxelGrid.Index"/> — matches <see cref="Blocky"/>.</summary>
+        public Color32[] VoxelColours { get; init; } = null!;
     }
 }
