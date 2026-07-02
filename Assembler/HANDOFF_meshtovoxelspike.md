@@ -352,11 +352,15 @@ word so the silhouette is guaranteed symmetric):
   creates a new corner is chased down (deeper concavities/staircases, more aggressive). Skips cells
   whose fine gap fraction > ¼ every pass so leg gaps / handle holes survive.
 - `SymmetryEnforcer.cs` + `SymmetryAxes` ([Flags] None/X/Y/Z) — forces mirror symmetry across each
-  ticked grid axis by **union** about the occupied-bbox centre (mirror coord = lo+hi−a): a cell is
-  kept if it or its mirror is filled, added voxels copy the mirror's colour, cells already on both
-  sides keep their own colour (so asymmetric detail like lettering survives). Union across axes
-  commutes, so multi-axis is symmetric in each. `SpikeSettings.Symmetry`, window "Force symmetry"
-  `EnumFlagsField`. Both persisted to EditorPrefs and threaded through `BuildSettings`.
+  ticked grid axis about the occupied-bbox centre (mirror coord = lo+hi−a), in one of two modes:
+  **Union** (default) keeps a cell if it or its mirror is filled — added voxels copy the mirror's
+  colour, cells already on both sides keep their own (asymmetric detail like lettering survives);
+  geometry comes out symmetric, colour need not. **Force mirror** (`SpikeSettings.ForceMirror`,
+  nested "Force mirror (exact)" toggle) reflects the dominant half (more voxels; ties keep the low
+  side) onto the other, overriding it — an exact geometry AND colour mirror that discards the
+  input's asymmetry. Both operations commute across axes, so multi-axis is symmetric in each.
+  `SpikeSettings.Symmetry` + `ForceMirror`, window "Force symmetry" `EnumFlagsField`. Persisted to
+  EditorPrefs and threaded through `BuildSettings`.
 - Tests: `Tests/SymmetryCornerFillTests.cs`.
 
 ### Status / verification

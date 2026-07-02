@@ -68,6 +68,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// <summary>Force mirror-symmetry across these grid axes (union about the occupied centre).</summary>
         public SymmetryAxes Symmetry { get; init; }
 
+        /// <summary>Reflect the dominant half onto the other (exact geometry+colour mirror) instead of unioning.</summary>
+        public bool ForceMirror { get; init; }
+
         /// <summary>The effective fine factor: 1 (no fine pass) unless the search or thin-keep needs one.</summary>
         public int ResolveFineFactor() =>
             GridSearch || ThinFeatureKeep ? Mathf.Clamp(FineFactor, 2, 4) : 1;
@@ -148,6 +151,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             FillCorners = false,
             FillCornersRecursive = false,
             Symmetry = SymmetryAxes.None,
+            ForceMirror = false,
             FaceWeight = 1f,
             IouWeight = 1f,
             GapWeight = 2f,

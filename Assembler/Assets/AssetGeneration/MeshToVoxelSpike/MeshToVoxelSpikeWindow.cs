@@ -40,6 +40,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private bool _fillCorners;
         private bool _fillCornersRecursive;
         private SymmetryAxes _symmetry = SymmetryAxes.None;
+        private bool _forceMirror;
 
         private bool _showAdvancedWeights;
         private float _faceWeight = 1f;
@@ -315,12 +316,25 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             _symmetry = (SymmetryAxes)EditorGUILayout.EnumFlagsField(
                 new GUIContent("Force symmetry",
-                    "Mirror the model across the centre of its occupied bounds on each ticked axis, by union (a "
-                    + "voxel is kept if it or its mirror is filled, so no feature is lost). Added voxels copy their "
-                    + "mirror's colour; voxels already on both sides keep their own, so asymmetric surface detail "
-                    + "survives. X/Y/Z are the grid axes (Y is up); pick whichever gives the intended left-right "
-                    + "symmetry. Applied last, so the silhouette is guaranteed symmetric."),
+                    "Make the model symmetric across the centre of its occupied bounds on each ticked axis. X/Y/Z "
+                    + "are the grid axes (Y is up); pick whichever gives the intended left-right symmetry. Applied "
+                    + "last, so the silhouette is guaranteed symmetric. Default (Force mirror off) is a union — "
+                    + "keep a voxel if it or its mirror is filled, preserving both halves' features and asymmetric "
+                    + "colour where geometry already exists on both sides."),
                 _symmetry);
+            if (_symmetry != SymmetryAxes.None)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _forceMirror = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Force mirror (exact)",
+                            "Reflect the dominant half (the one with more voxels) onto the other, OVERRIDING what "
+                            + "was there — an exact mirror in both geometry and colour, discarding the input's "
+                            + "asymmetry. Use this when you want a guaranteed-clean symmetric result; leave off for "
+                            + "the union that keeps features and real colour from both sides."),
+                        _forceMirror);
+                }
+            }
 
             _showAdvancedWeights = EditorGUILayout.Foldout(
                 _showAdvancedWeights,
@@ -641,6 +655,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             FillCorners = _fillCorners,
             FillCornersRecursive = _fillCornersRecursive,
             Symmetry = _symmetry,
+            ForceMirror = _forceMirror,
             FaceWeight = _faceWeight,
             IouWeight = _iouWeight,
             GapWeight = _gapWeight,
@@ -681,6 +696,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             _fillCorners = EditorPrefs.GetBool(PrefPrefix + "FillCorners", _fillCorners);
             _fillCornersRecursive = EditorPrefs.GetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             _symmetry = (SymmetryAxes)EditorPrefs.GetInt(PrefPrefix + "Symmetry", (int)_symmetry);
+            _forceMirror = EditorPrefs.GetBool(PrefPrefix + "ForceMirror", _forceMirror);
             _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             _iouWeight = EditorPrefs.GetFloat(PrefPrefix + "IouWeight", _iouWeight);
             _gapWeight = EditorPrefs.GetFloat(PrefPrefix + "GapWeight", _gapWeight);
@@ -725,6 +741,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorPrefs.SetBool(PrefPrefix + "FillCorners", _fillCorners);
             EditorPrefs.SetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             EditorPrefs.SetInt(PrefPrefix + "Symmetry", (int)_symmetry);
+            EditorPrefs.SetBool(PrefPrefix + "ForceMirror", _forceMirror);
             EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);
             EditorPrefs.SetFloat(PrefPrefix + "IouWeight", _iouWeight);
             EditorPrefs.SetFloat(PrefPrefix + "GapWeight", _gapWeight);

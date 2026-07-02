@@ -102,6 +102,56 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         }
 
         [Test]
+        public void ForceMirror_ReflectsDominantHalf_OverridingTheOther()
+        {
+            // Occupied X extent [0,4] (centre 2). Low half {0,1} has 2 voxels, high half {3,4} has 1,
+            // and (4) is a wrong Blue. Force-mirror must reflect the low half over the high half:
+            // (3)&(4) become Red, the Blue is overridden, and the result is an exact mirror.
+            VoxelGrid grid = Grid(5, 1, 1);
+            var colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 0, 0, Red);
+            Set(grid, colours, 1, 0, 0, Red);
+            Set(grid, colours, 4, 0, 0, Blue);
+
+            SymmetryEnforcer.Apply(grid, colours, SymmetryAxes.X, forceMirror: true);
+
+            Assert.IsTrue(grid.IsOccupied(3, 0, 0), "Low half reflected onto (3).");
+            Assert.IsTrue(grid.IsOccupied(4, 0, 0));
+            Assert.AreEqual(Red.r, colours[grid.Index(4, 0, 0)].r, "The wrong Blue is overridden by the mirror.");
+            Assert.AreEqual(Red.b, colours[grid.Index(4, 0, 0)].b);
+            Assert.IsFalse(grid.IsOccupied(2, 0, 0), "Centre stays empty.");
+
+            for (int x = 0; x < 5; x++)
+            {
+                Assert.AreEqual(grid.IsOccupied(x, 0, 0), grid.IsOccupied(4 - x, 0, 0),
+                    $"Geometry must be an exact mirror at x={x}.");
+                if (grid.IsOccupied(x, 0, 0))
+                {
+                    Assert.AreEqual(colours[grid.Index(x, 0, 0)].r, colours[grid.Index(4 - x, 0, 0)].r,
+                        $"Colour must be an exact mirror at x={x}.");
+                }
+            }
+        }
+
+        [Test]
+        public void ForceMirror_KeepsTheHigherCountSide()
+        {
+            // Mirror image of the above: the high half {3,4} is dominant, so it is reflected onto the
+            // low half and (0)'s wrong Blue is overridden.
+            VoxelGrid grid = Grid(5, 1, 1);
+            var colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 0, 0, Blue);
+            Set(grid, colours, 3, 0, 0, Red);
+            Set(grid, colours, 4, 0, 0, Red);
+
+            SymmetryEnforcer.Apply(grid, colours, SymmetryAxes.X, forceMirror: true);
+
+            Assert.IsTrue(grid.IsOccupied(0, 0, 0));
+            Assert.IsTrue(grid.IsOccupied(1, 0, 0), "High half reflected onto (1).");
+            Assert.AreEqual(Red.r, colours[grid.Index(0, 0, 0)].r, "The wrong Blue is overridden.");
+        }
+
+        [Test]
         public void CornerFill_FillsCellWithThreeNeighbours_TakesModalColour()
         {
             // Centre (1,1,1) empty with 3 occupied face-neighbours: two red, one blue → fills red.

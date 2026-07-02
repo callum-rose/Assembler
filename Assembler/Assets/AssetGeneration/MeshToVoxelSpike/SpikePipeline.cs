@@ -112,7 +112,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             if (settings.Symmetry != SymmetryAxes.None)
             {
                 progress?.Invoke(0.68f, "Forcing symmetry");
-                SymmetryEnforcer.Apply(occupancy, voxelColours, settings.Symmetry);
+                SymmetryEnforcer.Apply(occupancy, voxelColours, settings.Symmetry, settings.ForceMirror);
             }
 
             Mesh blocky = BlockyVoxelMesher.Build(occupancy, voxelColours);
