@@ -345,12 +345,20 @@ Two extra boxiness controls added after the initial drop, both opt-in, both runn
 coloured grid just before the blocky mesh is built (corner-fill first, then symmetry has the last
 word so the silhouette is guaranteed symmetric):
 
-- `CornerFill.cs` — fills any empty voxel with ≥3 of its 6 face-neighbours occupied and colours it
-  the modal (most common) neighbour colour, so concave notches box out and stay on-palette. Each
-  pass is a simultaneous snapshot; `SpikeSettings.FillCorners` (bool) does one pass,
+- `CornerFill.cs` — fills concave notches so they box out, colouring each fill the modal neighbour
+  colour so it stays on-palette. An empty voxel fills when EITHER ≥3 of its 6 face-neighbours share
+  one colour (consensus → fill that colour) OR it has ≥4 occupied neighbours (deep concavity → fill
+  the modal). The colour-consensus gate replaced the original plain "≥3 occupied" rule because that
+  filled 3-neighbour corners where colour regions meet with an arbitrary modal pick, leaving stray
+  boundary artifacts; a mixed 3-corner now has no consensus and <4 neighbours, so it's left alone.
+  "Share a colour" is a perceptual match within `CornerFillColourTolerance` (Oklab distance, window
+  "Colour tolerance" slider, default 0.1) rather than exact RGB, so near-identical shades (Raw mode,
+  near-duplicate palette entries) still form a consensus; 0 = exact. Neighbour colours are greedily
+  clustered (≤6 per cell), the largest cluster's seed is the fill colour.
+  Each pass is a simultaneous snapshot; `SpikeSettings.FillCorners` (bool) does one pass,
   `FillCornersRecursive` (bool, nested "Recursive" toggle) repeats until stable so a fill that
-  creates a new corner is chased down (deeper concavities/staircases, more aggressive). Skips cells
-  whose fine gap fraction > ¼ every pass so leg gaps / handle holes survive.
+  creates a new qualifying corner is chased down. Skips cells whose fine gap fraction > ¼ every pass
+  so leg gaps / handle holes survive.
 - `SymmetryEnforcer.cs` + `SymmetryAxes` ([Flags] None/X/Y/Z) — forces mirror symmetry across each
   ticked grid axis about the occupied-bbox centre (mirror coord = lo+hi−a), in one of two modes:
   **Union** (default) keeps a cell if it or its mirror is filled — added voxels copy the mirror's

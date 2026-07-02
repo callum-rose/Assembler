@@ -107,7 +107,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             if (settings.FillCorners)
             {
                 progress?.Invoke(0.66f, "Filling corners");
-                CornerFill.Apply(occupancy, voxelColours, placement.GapFraction, settings.FillCornersRecursive);
+                CornerFill.Apply(
+                    occupancy, voxelColours, placement.GapFraction,
+                    settings.FillCornersRecursive, settings.CornerFillColourTolerance);
             }
             if (settings.Symmetry != SymmetryAxes.None)
             {

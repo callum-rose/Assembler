@@ -39,6 +39,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private int _cleanupStrength = 1;
         private bool _fillCorners;
         private bool _fillCornersRecursive;
+        private float _cornerFillColourTolerance = 0.1f;
         private SymmetryAxes _symmetry = SymmetryAxes.None;
         private bool _forceMirror;
 
@@ -295,19 +296,27 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             _fillCorners = EditorGUILayout.ToggleLeft(
                 new GUIContent("Fill corners",
-                    "Fill any empty voxel that has 3 or more of its 6 face-neighbours occupied — the concave "
-                    + "corners and notches that make a silhouette look ragged — colouring each fill the modal "
-                    + "(most common) colour of those neighbours so it stays on-palette. One pass, so it can't run "
-                    + "away; real air gaps (leg gaps, handle holes) are skipped."),
+                    "Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when 3+ of its "
+                    + "6 face-neighbours share one colour (fill that colour) OR it has 4+ occupied neighbours "
+                    + "(fill the modal colour). The colour-consensus gate keeps colour boundaries clean — a "
+                    + "3-neighbour corner where regions meet has no clear colour and stays empty, avoiding stray "
+                    + "artifacts. Real air gaps (leg gaps, handle holes) are always skipped."),
                 _fillCorners);
             if (_fillCorners)
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
+                    _cornerFillColourTolerance = EditorGUILayout.Slider(
+                        new GUIContent("Colour tolerance",
+                            "How close two neighbour colours must be (Oklab distance) to count as the same for the "
+                            + "3-same-colour consensus rule. 0 = exact match (too strict — near-identical shades read "
+                            + "as different); raise it so similar shades group and clean corners fill. Too high and "
+                            + "distinct regions merge, blurring boundaries. ~0.1 is a good start."),
+                        _cornerFillColourTolerance, 0f, 0.5f);
                     _fillCornersRecursive = EditorGUILayout.ToggleLeft(
                         new GUIContent("Recursive",
                             "Repeat the fill until nothing new qualifies, so a filled corner that creates another "
-                            + "≥3-neighbour corner is chased down — deeper concavities and staircases box out fully. "
+                            + "qualifying corner is chased down — deeper concavities and staircases box out fully. "
                             + "More aggressive; off = a single pass. The gap guard still protects real air gaps every "
                             + "pass."),
                         _fillCornersRecursive);
@@ -654,6 +663,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             CleanupStrength = _cleanupStrength,
             FillCorners = _fillCorners,
             FillCornersRecursive = _fillCornersRecursive,
+            CornerFillColourTolerance = _cornerFillColourTolerance,
             Symmetry = _symmetry,
             ForceMirror = _forceMirror,
             FaceWeight = _faceWeight,
@@ -695,6 +705,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             _cleanupStrength = EditorPrefs.GetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             _fillCorners = EditorPrefs.GetBool(PrefPrefix + "FillCorners", _fillCorners);
             _fillCornersRecursive = EditorPrefs.GetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
+            _cornerFillColourTolerance = EditorPrefs.GetFloat(PrefPrefix + "CornerFillTolerance", _cornerFillColourTolerance);
             _symmetry = (SymmetryAxes)EditorPrefs.GetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             _forceMirror = EditorPrefs.GetBool(PrefPrefix + "ForceMirror", _forceMirror);
             _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
@@ -740,6 +751,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             EditorPrefs.SetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             EditorPrefs.SetBool(PrefPrefix + "FillCorners", _fillCorners);
             EditorPrefs.SetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
+            EditorPrefs.SetFloat(PrefPrefix + "CornerFillTolerance", _cornerFillColourTolerance);
             EditorPrefs.SetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             EditorPrefs.SetBool(PrefPrefix + "ForceMirror", _forceMirror);
             EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);

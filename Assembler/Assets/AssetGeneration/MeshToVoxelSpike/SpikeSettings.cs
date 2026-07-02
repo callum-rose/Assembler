@@ -65,6 +65,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// <summary>Repeat the corner fill until stable (chases fills that create new corners) instead of one pass.</summary>
         public bool FillCornersRecursive { get; init; }
 
+        /// <summary>Oklab distance within which corner-fill neighbour colours count as the same (0 = exact).</summary>
+        public float CornerFillColourTolerance { get; init; }
+
         /// <summary>Force mirror-symmetry across these grid axes (union about the occupied centre).</summary>
         public SymmetryAxes Symmetry { get; init; }
 
@@ -150,6 +153,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             CleanupStrength = 1,
             FillCorners = false,
             FillCornersRecursive = false,
+            CornerFillColourTolerance = 0.1f,
             Symmetry = SymmetryAxes.None,
             ForceMirror = false,
             FaceWeight = 1f,

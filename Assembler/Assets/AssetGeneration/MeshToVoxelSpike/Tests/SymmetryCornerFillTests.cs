@@ -14,6 +14,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
     {
         private static readonly Color32 Red = new(240, 40, 40, 255);
         private static readonly Color32 Blue = new(40, 40, 240, 255);
+        private static readonly Color32 Green = new(40, 200, 40, 255);
 
         private static VoxelGrid Grid(int nx, int ny, int nz)
         {
@@ -152,9 +153,27 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         }
 
         [Test]
-        public void CornerFill_FillsCellWithThreeNeighbours_TakesModalColour()
+        public void CornerFill_FillsOnThreeSameColourNeighbours()
         {
-            // Centre (1,1,1) empty with 3 occupied face-neighbours: two red, one blue → fills red.
+            // Centre (1,1,1) has 3 occupied neighbours all red → clear colour consensus, fills red.
+            VoxelGrid grid = Grid(3, 3, 3);
+            var colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 1, 1, Red);
+            Set(grid, colours, 2, 1, 1, Red);
+            Set(grid, colours, 1, 0, 1, Red);
+
+            int filled = CornerFill.Apply(grid, colours, gapFraction: null);
+
+            Assert.AreEqual(1, filled);
+            Assert.IsTrue(grid.IsOccupied(1, 1, 1), "3 same-colour neighbours fill.");
+            Assert.AreEqual(Red.r, colours[grid.Index(1, 1, 1)].r, "Filled with the consensus colour.");
+        }
+
+        [Test]
+        public void CornerFill_LeavesMixedThreeNeighbourCornerAlone()
+        {
+            // The artifact case: 3 neighbours but no colour consensus (2 red, 1 blue) and fewer than
+            // 4 — must stay empty rather than fill with an arbitrary modal pick at the boundary.
             VoxelGrid grid = Grid(3, 3, 3);
             var colours = new Color32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
@@ -163,10 +182,62 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 
             int filled = CornerFill.Apply(grid, colours, gapFraction: null);
 
-            Assert.AreEqual(1, filled);
-            Assert.IsTrue(grid.IsOccupied(1, 1, 1), "3-neighbour corner fills.");
-            Assert.AreEqual(Red.r, colours[grid.Index(1, 1, 1)].r, "Fill takes the modal (red) colour.");
-            Assert.AreEqual(Red.b, colours[grid.Index(1, 1, 1)].b);
+            Assert.AreEqual(0, filled, "A mixed 3-neighbour corner has no consensus and too few neighbours.");
+            Assert.IsFalse(grid.IsOccupied(1, 1, 1));
+        }
+
+        [Test]
+        public void CornerFill_FillsOnFourNeighbours_RegardlessOfColour()
+        {
+            // 4 occupied neighbours with no 3-consensus (2 red, 1 blue, 1 green) — deep enough to box
+            // out, fills the modal (red) colour.
+            VoxelGrid grid = Grid(3, 3, 3);
+            var colours = new Color32[grid.Occupied.Length];
+            Set(grid, colours, 0, 1, 1, Red);
+            Set(grid, colours, 2, 1, 1, Red);
+            Set(grid, colours, 1, 0, 1, Blue);
+            Set(grid, colours, 1, 2, 1, Green);
+
+            int filled = CornerFill.Apply(grid, colours, gapFraction: null);
+
+            Assert.AreEqual(1, filled, "4 neighbours fills regardless of colour agreement.");
+            Assert.IsTrue(grid.IsOccupied(1, 1, 1));
+            Assert.AreEqual(Red.r, colours[grid.Index(1, 1, 1)].r, "Filled with the modal (red) colour.");
+        }
+
+        [Test]
+        public void CornerFill_ColourTolerance_GroupsNearIdenticalShades()
+        {
+            // Three near-identical reds (a few RGB units apart): exact-match sees three separate
+            // colours and won't fill (no ≥3 consensus, only 3 neighbours), but a small tolerance
+            // groups them into one consensus that fills.
+            var nearReds = new[]
+            {
+                new Color32(240, 40, 40, 255),
+                new Color32(236, 44, 42, 255),
+                new Color32(244, 37, 38, 255),
+            };
+
+            VoxelGrid exact = Grid(3, 3, 3);
+            var exactColours = new Color32[exact.Occupied.Length];
+            Set(exact, exactColours, 0, 1, 1, nearReds[0]);
+            Set(exact, exactColours, 2, 1, 1, nearReds[1]);
+            Set(exact, exactColours, 1, 0, 1, nearReds[2]);
+            Assert.AreEqual(0, CornerFill.Apply(exact, exactColours, gapFraction: null, recursive: false, colourTolerance: 0f),
+                "Exact match sees three distinct shades — no consensus, no fill.");
+
+            VoxelGrid tol = Grid(3, 3, 3);
+            var tolColours = new Color32[tol.Occupied.Length];
+            Set(tol, tolColours, 0, 1, 1, nearReds[0]);
+            Set(tol, tolColours, 2, 1, 1, nearReds[1]);
+            Set(tol, tolColours, 1, 0, 1, nearReds[2]);
+            int filled = CornerFill.Apply(tol, tolColours, gapFraction: null, recursive: false, colourTolerance: 0.1f);
+
+            Assert.AreEqual(1, filled, "A tolerance groups the near-reds into a consensus that fills.");
+            Assert.IsTrue(tol.IsOccupied(1, 1, 1));
+            Color32 fill = tolColours[tol.Index(1, 1, 1)];
+            Assert.IsTrue(System.Array.Exists(nearReds, c => c.r == fill.r && c.g == fill.g && c.b == fill.b),
+                "Filled with one of the clustered near-red neighbour colours.");
         }
 
         [Test]
@@ -180,7 +251,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             int filled = CornerFill.Apply(grid, colours, gapFraction: null);
 
             Assert.AreEqual(0, filled);
-            Assert.IsFalse(grid.IsOccupied(1, 1, 1), "2 neighbours is below the threshold.");
+            Assert.IsFalse(grid.IsOccupied(1, 1, 1), "2 neighbours is below both thresholds.");
         }
 
         [Test]
