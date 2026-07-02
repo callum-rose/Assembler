@@ -773,6 +773,12 @@ namespace Assembler.AssetGeneration.MeshToVoxels
                 _height = height;
             }
 
+            public int Width => _width;
+            public int Height => _height;
+
+            /// <summary>Copy of the linear-space pixel buffer (row-major, (0,0) bottom-left).</summary>
+            public Color[] CopyLinearPixels() => (Color[])_linearPixels.Clone();
+
             /// <summary>Snapshots <paramref name="tex"/> into a linear-space buffer. Main thread only.</summary>
             public static TextureSnapshot Capture(Texture2D tex)
             {
