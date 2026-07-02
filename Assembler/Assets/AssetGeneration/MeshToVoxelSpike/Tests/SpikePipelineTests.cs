@@ -1,4 +1,5 @@
 using Assembler.AssetGeneration.MeshToVoxels;
+using g3;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -71,9 +72,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             Assert.LessOrEqual(distinct.Count, 2, "Two well-separated clusters should collapse to at most two colours.");
         }
 
-        private static g3.DMesh3 UnitCube()
+        private static DMesh3 UnitCube()
         {
-            var generator = new g3.TrivialBox3Generator { Box = g3.Box3d.UnitZeroCentered };
+            var generator = new TrivialBox3Generator { Box = Box3d.UnitZeroCentered };
             generator.Generate();
             return generator.MakeDMesh();
         }

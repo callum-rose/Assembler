@@ -17,8 +17,22 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public static void Show(SpikeStageResult result, float rowSpacingScale)
         {
             ClearPrevious();
-
             var parent = new GameObject(ParentName);
+            BuildRow(parent.transform, result, rowSpacingScale);
+
+            Debug.Log(
+                $"[MeshToVoxelSpike] Preview built: {result.VoxelCount:N0} voxels " +
+                $"({result.GridX}×{result.GridY}×{result.GridZ}). See '{ParentName}' in the scene.");
+        }
+
+        /// <summary>
+        /// Lay one run's stages out as a row under <paramref name="parent"/> (used directly by the
+        /// test-set runner, which stacks a row per mesh). Returns the row root; the caller positions it.
+        /// </summary>
+        public static GameObject BuildRow(Transform parent, SpikeStageResult result, float rowSpacingScale)
+        {
+            var row = new GameObject("Row");
+            row.transform.SetParent(parent, false);
             Material coloured = ColouredMaterial();
             Material grey = GreyMaterial();
 
@@ -43,13 +57,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 float spacing = Mathf.Max(0.1f, Gap) * rowSpacingScale;
 
                 cursorX += halfWidth;
-                CreateStage(parent.transform, label, mesh, isColoured ? coloured : grey, cursorX, b);
+                CreateStage(row.transform, label, mesh, isColoured ? coloured : grey, cursorX, b);
                 cursorX += halfWidth + spacing;
             }
-
-            Debug.Log(
-                $"[MeshToVoxelSpike] Preview built: {result.VoxelCount:N0} voxels " +
-                $"({result.GridX}×{result.GridY}×{result.GridZ}). See '{ParentName}' in the scene.");
+            return row;
         }
 
         /// <summary>Show only the primary blocky voxel model (when intermediates are hidden).</summary>

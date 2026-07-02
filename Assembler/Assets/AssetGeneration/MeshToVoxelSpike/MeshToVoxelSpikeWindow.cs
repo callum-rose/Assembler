@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Assembler.AssetGeneration.MeshToVoxels;
@@ -9,35 +10,61 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
     /// Spike window for the SDF-remesh + colour-reprojection mesh → voxel path. Pick a messy Meshy
-    /// mesh (.obj/.fbx), tune the coarse voxel budget and colour mode, and Convert to reveal every
-    /// intermediate stage side by side in the scene — with the Crossy-Road blocky voxel model as the
-    /// primary output. Isolated from the existing <c>Window > Voxels > Mesh to Voxels</c> path so the
-    /// two can be A/B compared on the same asset.
+    /// mesh (.obj/.fbx), tune the resolution / placement-search / cleanup / colour passes — every
+    /// pass individually toggleable — and Convert to reveal every intermediate stage side by side in
+    /// the scene, with the Crossy-Road blocky voxel model as the primary output and an objective
+    /// metrics readout per run. "Run test set…" batch-runs a locked folder of meshes for the
+    /// consistency eval. Isolated from the existing <c>Window > Voxels > Mesh to Voxels</c> path so
+    /// the two can be A/B compared on the same asset.
     /// </summary>
     public sealed class MeshToVoxelSpikeWindow : EditorWindow
     {
         private const string PrefPrefix = "MeshToVoxelSpike.";
+        private const int FineNodeWarningDim = 120;
 
         private string _meshPath = "";
-        private int _maxDimVoxels = 24;
+        private string _testSetFolder = "";
 
-        private bool _featureAware;
-        private int _featureFactor = 2;
-        private float _featureCoverage = 0.5f;
+        private ResolutionInput _resolutionInput = ResolutionInput.MaxDimSlider;
+        private int _maxDimVoxels = 24;
+        private float _voxelWorldSize = 0.1f;
+        private float _targetWorldSize = 2f;
+
+        private bool _gridSearch = true;
+        private bool _scaleFlex = true;
+        private bool _thinFeatureKeep = true;
+        private int _fineFactor = 3;
+        private float _coverage = 0.5f;
+        private bool _removeFloaters = true;
+        private int _cleanupStrength = 1;
+
+        private bool _showAdvancedWeights;
+        private float _faceWeight = 1f;
+        private float _iouWeight = 1f;
+        private float _gapWeight = 2f;
+        private float _colWeight;
+
+        private bool _uvDilate = true;
+        private int _uvDilatePasses = UvIslandDilation.DefaultPasses;
+        private bool _multiSampleColour = true;
+        private float _pottsStrength = 0.5f;
+        private ColourMode _colourMode = ColourMode.PerModelPalette;
+        private int _paletteSize = 8;
+        private bool _normalConsistency;
 
         private int _taubinPasses = 5;
         private float _taubinLambda = 0.5f;
         private float _taubinMu = 0.53f;
         private bool _surfaceReproject;
 
-        private ColourMode _colourMode = ColourMode.PerModelPalette;
-        private int _paletteSize = 8;
-        private bool _normalConsistency;
-
         private bool _revealIntermediates = true;
         private float _rowSpacing = 1f;
 
         private bool _converting;
+        private Vector2 _scroll;
+
+        private readonly List<SpikeTestSetRunner.Entry> _lastEntries = new();
+        private string _lastCsv = "";
 
         [SerializeField] private VoxMasterPalette? _masterPalette;
 
@@ -50,27 +77,24 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         private void OnGUI()
         {
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
             EditorGUILayout.HelpBox(
-                "Remeshes a messy .obj/.fbx via a generalized-winding-number SDF + marching cubes, then " +
-                "reprojects colour from the original surface and flattens to a palette — producing a " +
-                "Crossy-Road blocky voxel model plus a smooth comparison.",
+                "Remeshes a messy .obj/.fbx via a generalized-winding-number SDF + marching cubes, votes the "
+                + "occupancy onto a searched grid placement, cleans it up, then reprojects colour from the "
+                + "original surface and flattens to a smoothed palette — producing a Crossy-Road blocky voxel "
+                + "model plus a smooth comparison.",
                 MessageType.Info);
 
             EditorGUILayout.Space();
             DrawMeshPicker();
 
             EditorGUILayout.Space();
-            _maxDimVoxels = EditorGUILayout.IntSlider(
-                new GUIContent("Max dimension (voxels)", "Longest axis gets this many voxels. Keep it low for the chunky stylised read."),
-                _maxDimVoxels, 4, 96);
-            if (_maxDimVoxels >= 64)
-            {
-                EditorGUILayout.HelpBox("High resolutions run synchronously and can take a while.", MessageType.Warning);
-            }
+            EditorGUILayout.LabelField("Resolution", EditorStyles.boldLabel);
+            DrawResolution();
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Shape", EditorStyles.boldLabel);
-            DrawFeatureAware();
+            DrawShape();
             DrawTaubin();
 
             EditorGUILayout.Space();
@@ -100,6 +124,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                     Convert(export: true);
                 }
             }
+            using (new EditorGUI.DisabledScope(_converting))
+            {
+                if (GUILayout.Button("Run test set…", GUILayout.Height(24)))
+                {
+                    RunTestSet();
+                }
+            }
+
+            DrawMetrics();
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawMeshPicker()
@@ -121,22 +155,96 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
         }
 
-        private void DrawFeatureAware()
+        private void DrawResolution()
         {
-            _featureAware = EditorGUILayout.ToggleLeft(
-                new GUIContent("Feature-aware downsample",
-                    "Voxelise finer then downres to the target, force-keeping thin silhouette features (legs, ears, antennae) a plain coverage vote would erase."),
-                _featureAware);
-            if (_featureAware)
+            _resolutionInput = (ResolutionInput)EditorGUILayout.EnumPopup(
+                new GUIContent("Input mode", "Set the voxel budget directly, or derive it from in-game size ÷ shared voxel size."),
+                _resolutionInput);
+
+            using (new EditorGUI.IndentLevelScope())
+            {
+                if (_resolutionInput == ResolutionInput.WorldSize)
+                {
+                    _voxelWorldSize = EditorGUILayout.FloatField(
+                        new GUIContent("Voxel world size", "Shared global voxel edge length, world units."), _voxelWorldSize);
+                    _targetWorldSize = EditorGUILayout.FloatField(
+                        new GUIContent("Target world size", "Intended in-game size of the model's longest axis."), _targetWorldSize);
+                    EditorGUILayout.LabelField(" ", $"→ {BuildSettings().ResolveMaxDimVoxels()} voxels (longest axis, clamped 4–96)");
+                }
+                else
+                {
+                    _maxDimVoxels = EditorGUILayout.IntSlider(
+                        new GUIContent("Max dimension (voxels)", "Longest axis gets this many voxels. Keep it low for the chunky stylised read."),
+                        _maxDimVoxels, 4, 96);
+                }
+            }
+
+            SpikeSettings settings = BuildSettings();
+            int fineDim = settings.ResolveMaxDimVoxels() * settings.ResolveFineFactor();
+            if (fineDim > FineNodeWarningDim)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Fine grid is ~{fineDim}³ nodes — the fast-winding-number occupancy pass will take tens of "
+                    + "seconds. Lower the resolution or the fine factor.",
+                    MessageType.Warning);
+            }
+        }
+
+        private void DrawShape()
+        {
+            _gridSearch = EditorGUILayout.ToggleLeft(
+                new GUIContent("Grid placement search",
+                    "Score candidate grid phases/scales against the fine grid (face economy, IoU, air-gap preservation) and voxelise on the winner. Off = today's fixed placement."),
+                _gridSearch);
+            using (new EditorGUI.IndentLevelScope())
+            {
+                using (new EditorGUI.DisabledScope(!_gridSearch))
+                {
+                    _scaleFlex = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Scale flex", "Also snap model extents to whole voxel counts (stretch clamped ±10%)."),
+                        _scaleFlex);
+                }
+            }
+
+            _thinFeatureKeep = EditorGUILayout.ToggleLeft(
+                new GUIContent("Thin-feature keep",
+                    "Force-keep sub-voxel silhouette features (legs, ears, antennae) that are connected to the main body; disconnected specks still die."),
+                _thinFeatureKeep);
+
+            using (new EditorGUI.DisabledScope(!_gridSearch && !_thinFeatureKeep))
             {
                 using (new EditorGUI.IndentLevelScope())
                 {
-                    _featureFactor = EditorGUILayout.IntSlider(
-                        new GUIContent("Factor", "Voxelise at this multiple of the target, then collapse each factor³ block."),
-                        _featureFactor, 2, 4);
-                    _featureCoverage = EditorGUILayout.Slider(
-                        new GUIContent("Coverage threshold", "Block occupied-fraction needed to fill an output voxel (unless a thin feature forces it)."),
-                        _featureCoverage, 0f, 1f);
+                    _fineFactor = EditorGUILayout.IntSlider(
+                        new GUIContent("Fine factor", "Voxelise at this multiple of the target for the search/thin-keep analysis."),
+                        _fineFactor, 2, 4);
+                }
+            }
+
+            _coverage = EditorGUILayout.Slider(
+                new GUIContent("Coverage threshold", "Block occupied-fraction needed to fill an output voxel (unless a thin feature forces it)."),
+                _coverage, 0f, 1f);
+
+            _removeFloaters = EditorGUILayout.ToggleLeft(
+                new GUIContent("Remove floaters", "Drop voxel islands whose fine support never touches the model's main component."),
+                _removeFloaters);
+
+            _cleanupStrength = EditorGUILayout.IntSlider(
+                new GUIContent("Cleanup strength",
+                    "Morphological close→open radius: fills one-voxel notches and shaves lone bumps. Never erodes kept thin features, never welds real air gaps. 0 = off."),
+                _cleanupStrength, 0, 2);
+
+            _showAdvancedWeights = EditorGUILayout.Foldout(_showAdvancedWeights, "Advanced: search score weights", toggleOnLabelClick: true);
+            if (_showAdvancedWeights)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _faceWeight = EditorGUILayout.Slider(new GUIContent("Face economy (S_face)"), _faceWeight, 0f, 4f);
+                    _iouWeight = EditorGUILayout.Slider(new GUIContent("Shape IoU (S_iou)"), _iouWeight, 0f, 4f);
+                    _gapWeight = EditorGUILayout.Slider(new GUIContent("Air-gap keep (S_gap)"), _gapWeight, 0f, 4f);
+                    _colWeight = EditorGUILayout.Slider(
+                        new GUIContent("Colour-edge align (S_col)", "Speculative and costly (samples the fine surface's colours); 0 = skipped."),
+                        _colWeight, 0f, 4f);
                 }
             }
         }
@@ -158,6 +266,23 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         private void DrawColour()
         {
+            _uvDilate = EditorGUILayout.ToggleLeft(
+                new GUIContent("UV island dilation", "Flood island colours into the texture gutters at load so samples can't land on Meshy's purple bleed."),
+                _uvDilate);
+            if (_uvDilate)
+            {
+                using (new EditorGUI.IndentLevelScope())
+                {
+                    _uvDilatePasses = EditorGUILayout.IntSlider(
+                        new GUIContent("Passes", "8-neighbour dilation passes (texels of reach into the gutter)."),
+                        _uvDilatePasses, 1, 32);
+                }
+            }
+
+            _multiSampleColour = EditorGUILayout.ToggleLeft(
+                new GUIContent("Multi-sample voxel colour", "Sample each surface voxel's exposed faces at several points and take the Oklab medoid — robust to speckle and stray texels."),
+                _multiSampleColour);
+
             _colourMode = (ColourMode)EditorGUILayout.EnumPopup(
                 new GUIContent("Colour mode", "Raw reprojected, per-model palette (k-means), or master-palette snap."),
                 _colourMode);
@@ -176,9 +301,49 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                         break;
                 }
             }
+
+            using (new EditorGUI.DisabledScope(_colourMode == ColourMode.Raw))
+            {
+                _pottsStrength = EditorGUILayout.Slider(
+                    new GUIContent("Potts smoothing", "Edge-aware label smoothing after palette assignment: kills AO speckle, pins real colour boundaries. 0 = off."),
+                    _pottsStrength, 0f, 2f);
+            }
+
             _normalConsistency = EditorGUILayout.ToggleLeft(
                 new GUIContent("Normal-consistency reject", "Discard wrong-side thin-wall texel hits during reprojection (heuristic; off by default)."),
                 _normalConsistency);
+        }
+
+        private void DrawMetrics()
+        {
+            if (_lastEntries.Count == 0)
+            {
+                return;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Metrics", EditorStyles.boldLabel);
+            foreach (SpikeTestSetRunner.Entry entry in _lastEntries)
+            {
+                EditorGUILayout.LabelField(entry.Name, EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField(entry.Metrics.ToLogString(), EditorStyles.wordWrappedMiniLabel);
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Copy CSV"))
+                {
+                    EditorGUIUtility.systemCopyBuffer = _lastCsv;
+                    ShowNotification(new GUIContent("Metrics CSV copied"));
+                }
+                if (GUILayout.Button("Log metrics"))
+                {
+                    foreach (SpikeTestSetRunner.Entry entry in _lastEntries)
+                    {
+                        Debug.Log($"[MeshToVoxelSpike] {entry.Name}: {entry.Metrics.ToLogString()}");
+                    }
+                }
+            }
         }
 
         // async void: a UI event handler that can't return a Task. The whole body is wrapped in
@@ -231,6 +396,12 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                     SpikeStagePreviewer.ShowBlockyOnly(result);
                 }
 
+                string name = Path.GetFileNameWithoutExtension(_meshPath);
+                _lastEntries.Clear();
+                _lastEntries.Add(new SpikeTestSetRunner.Entry { Name = name, Metrics = result.Metrics });
+                _lastCsv = SpikeTestSetRunner.BuildCsv(_lastEntries);
+                Debug.Log($"[MeshToVoxelSpike] {name}: {result.Metrics.ToLogString()}");
+
                 if (export)
                 {
                     int written = SpikeVoxExport.Write(voxPath, result.Occupancy, result.VoxelColours);
@@ -253,6 +424,47 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
         }
 
+        // async void event handler; body wrapped in try/catch per house style.
+        private async void RunTestSet()
+        {
+            if (_converting)
+            {
+                return;
+            }
+
+            try
+            {
+                string folder = EditorUtility.OpenFolderPanel(
+                    "Select test-set folder",
+                    string.IsNullOrEmpty(_testSetFolder) ? "" : _testSetFolder, "");
+                if (string.IsNullOrEmpty(folder))
+                {
+                    return;
+                }
+                _testSetFolder = folder;
+
+                _converting = true;
+                Repaint();
+                await Task.Yield();
+
+                SpikeTestSetRunner.BatchResult batch = SpikeTestSetRunner.Run(folder, BuildSettings(), _rowSpacing);
+                _lastEntries.Clear();
+                _lastEntries.AddRange(batch.Entries);
+                _lastCsv = batch.Csv;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                EditorUtility.DisplayDialog("Mesh → Voxel Spike", $"Test-set run failed:\n{e.Message}", "OK");
+            }
+            finally
+            {
+                _converting = false;
+                EditorUtility.ClearProgressBar();
+                Repaint();
+            }
+        }
+
         // Surface a freshly-written .vox in the Project window when it lands inside Assets/.
         private static void RefreshIfInsideProject(string voxPath)
         {
@@ -265,10 +477,25 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         private SpikeSettings BuildSettings() => new()
         {
+            ResolutionInput = _resolutionInput,
             MaxDimVoxels = _maxDimVoxels,
-            FeatureAware = _featureAware,
-            FeatureFactor = _featureFactor,
-            FeatureCoverage = _featureCoverage,
+            VoxelWorldSize = _voxelWorldSize,
+            TargetWorldSize = _targetWorldSize,
+            GridSearch = _gridSearch,
+            ScaleFlex = _scaleFlex,
+            ThinFeatureKeep = _thinFeatureKeep,
+            FineFactor = _fineFactor,
+            Coverage = _coverage,
+            RemoveFloaters = _removeFloaters,
+            CleanupStrength = _cleanupStrength,
+            FaceWeight = _faceWeight,
+            IouWeight = _iouWeight,
+            GapWeight = _gapWeight,
+            ColWeight = _colWeight,
+            UvDilate = _uvDilate,
+            UvDilatePasses = _uvDilatePasses,
+            MultiSampleColour = _multiSampleColour,
+            PottsStrength = _pottsStrength,
             TaubinPasses = _taubinPasses,
             TaubinLambda = _taubinLambda,
             TaubinMu = _taubinMu,
@@ -286,10 +513,26 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private void LoadState()
         {
             _meshPath = EditorPrefs.GetString(PrefPrefix + "MeshPath", _meshPath);
+            _testSetFolder = EditorPrefs.GetString(PrefPrefix + "TestSetFolder", _testSetFolder);
+            _resolutionInput = (ResolutionInput)EditorPrefs.GetInt(PrefPrefix + "ResolutionInput", (int)_resolutionInput);
             _maxDimVoxels = EditorPrefs.GetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
-            _featureAware = EditorPrefs.GetBool(PrefPrefix + "FeatureAware", _featureAware);
-            _featureFactor = EditorPrefs.GetInt(PrefPrefix + "FeatureFactor", _featureFactor);
-            _featureCoverage = EditorPrefs.GetFloat(PrefPrefix + "FeatureCoverage", _featureCoverage);
+            _voxelWorldSize = EditorPrefs.GetFloat(PrefPrefix + "VoxelWorldSize", _voxelWorldSize);
+            _targetWorldSize = EditorPrefs.GetFloat(PrefPrefix + "TargetWorldSize", _targetWorldSize);
+            _gridSearch = EditorPrefs.GetBool(PrefPrefix + "GridSearch", _gridSearch);
+            _scaleFlex = EditorPrefs.GetBool(PrefPrefix + "ScaleFlex", _scaleFlex);
+            _thinFeatureKeep = EditorPrefs.GetBool(PrefPrefix + "ThinFeatureKeep", _thinFeatureKeep);
+            _fineFactor = EditorPrefs.GetInt(PrefPrefix + "FineFactor", _fineFactor);
+            _coverage = EditorPrefs.GetFloat(PrefPrefix + "Coverage", _coverage);
+            _removeFloaters = EditorPrefs.GetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
+            _cleanupStrength = EditorPrefs.GetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
+            _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
+            _iouWeight = EditorPrefs.GetFloat(PrefPrefix + "IouWeight", _iouWeight);
+            _gapWeight = EditorPrefs.GetFloat(PrefPrefix + "GapWeight", _gapWeight);
+            _colWeight = EditorPrefs.GetFloat(PrefPrefix + "ColWeight", _colWeight);
+            _uvDilate = EditorPrefs.GetBool(PrefPrefix + "UvDilate", _uvDilate);
+            _uvDilatePasses = EditorPrefs.GetInt(PrefPrefix + "UvDilatePasses", _uvDilatePasses);
+            _multiSampleColour = EditorPrefs.GetBool(PrefPrefix + "MultiSample", _multiSampleColour);
+            _pottsStrength = EditorPrefs.GetFloat(PrefPrefix + "PottsStrength", _pottsStrength);
             _taubinPasses = EditorPrefs.GetInt(PrefPrefix + "TaubinPasses", _taubinPasses);
             _taubinLambda = EditorPrefs.GetFloat(PrefPrefix + "TaubinLambda", _taubinLambda);
             _taubinMu = EditorPrefs.GetFloat(PrefPrefix + "TaubinMu", _taubinMu);
@@ -311,10 +554,26 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         private void SaveState()
         {
             EditorPrefs.SetString(PrefPrefix + "MeshPath", _meshPath);
+            EditorPrefs.SetString(PrefPrefix + "TestSetFolder", _testSetFolder);
+            EditorPrefs.SetInt(PrefPrefix + "ResolutionInput", (int)_resolutionInput);
             EditorPrefs.SetInt(PrefPrefix + "MaxDim", _maxDimVoxels);
-            EditorPrefs.SetBool(PrefPrefix + "FeatureAware", _featureAware);
-            EditorPrefs.SetInt(PrefPrefix + "FeatureFactor", _featureFactor);
-            EditorPrefs.SetFloat(PrefPrefix + "FeatureCoverage", _featureCoverage);
+            EditorPrefs.SetFloat(PrefPrefix + "VoxelWorldSize", _voxelWorldSize);
+            EditorPrefs.SetFloat(PrefPrefix + "TargetWorldSize", _targetWorldSize);
+            EditorPrefs.SetBool(PrefPrefix + "GridSearch", _gridSearch);
+            EditorPrefs.SetBool(PrefPrefix + "ScaleFlex", _scaleFlex);
+            EditorPrefs.SetBool(PrefPrefix + "ThinFeatureKeep", _thinFeatureKeep);
+            EditorPrefs.SetInt(PrefPrefix + "FineFactor", _fineFactor);
+            EditorPrefs.SetFloat(PrefPrefix + "Coverage", _coverage);
+            EditorPrefs.SetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
+            EditorPrefs.SetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
+            EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);
+            EditorPrefs.SetFloat(PrefPrefix + "IouWeight", _iouWeight);
+            EditorPrefs.SetFloat(PrefPrefix + "GapWeight", _gapWeight);
+            EditorPrefs.SetFloat(PrefPrefix + "ColWeight", _colWeight);
+            EditorPrefs.SetBool(PrefPrefix + "UvDilate", _uvDilate);
+            EditorPrefs.SetInt(PrefPrefix + "UvDilatePasses", _uvDilatePasses);
+            EditorPrefs.SetBool(PrefPrefix + "MultiSample", _multiSampleColour);
+            EditorPrefs.SetFloat(PrefPrefix + "PottsStrength", _pottsStrength);
             EditorPrefs.SetInt(PrefPrefix + "TaubinPasses", _taubinPasses);
             EditorPrefs.SetFloat(PrefPrefix + "TaubinLambda", _taubinLambda);
             EditorPrefs.SetFloat(PrefPrefix + "TaubinMu", _taubinMu);

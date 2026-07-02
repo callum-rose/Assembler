@@ -34,27 +34,43 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             public IReadOnlyList<Color32>? MasterPalette { get; init; }
         }
 
+        /// <summary>
+        /// A palette assignment: the snapped colours plus the palette and per-entry labels the Potts
+        /// smoother works on. <see cref="Palette"/>/<see cref="Labels"/> are null for
+        /// <see cref="ColourMode.Raw"/> (no palette to relabel against); labels are −1 for entries
+        /// outside the validity mask.
+        /// </summary>
+        public readonly struct PaletteAssignment
+        {
+            public Color32[] Colours { get; init; }
+            public Color32[]? Palette { get; init; }
+            public int[]? Labels { get; init; }
+        }
+
         // Mirrors PaletteSnap: penalise snapping a near-neutral colour onto a saturated swatch so hull
         // panels don't turn pink. Only ADDED chroma is charged; desaturating is free.
         private const float ChromaGainPenalty = 8f;
 
         public static Color32[] Apply(Color32[] colours, bool[]? mask, ColourMode mode, Options options) =>
+            AssignPalette(colours, mask, mode, options).Colours;
+
+        public static PaletteAssignment AssignPalette(Color32[] colours, bool[]? mask, ColourMode mode, Options options) =>
             mode switch
             {
                 ColourMode.PerModelPalette => PerModelPalette(colours, mask, Mathf.Max(1, options.PaletteSize)),
                 ColourMode.MasterPalette => MasterPaletteSnap(colours, mask, options.MasterPalette),
-                _ => (Color32[])colours.Clone(),
+                _ => new PaletteAssignment { Colours = (Color32[])colours.Clone() },
             };
 
         // ---- Per-model palette (deterministic k-means in Oklab) --------------
 
-        private static Color32[] PerModelPalette(Color32[] colours, bool[]? mask, int k)
+        private static PaletteAssignment PerModelPalette(Color32[] colours, bool[]? mask, int k)
         {
             var result = (Color32[])colours.Clone();
             List<int> valid = ValidIndices(colours, mask);
             if (valid.Count == 0)
             {
-                return result;
+                return new PaletteAssignment { Colours = result };
             }
 
             var labs = new OklabColor[valid.Count];
@@ -83,12 +99,39 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 }
             }
 
-            Color32[] representatives = ClusterRgbMeans(colours, valid, assignment, clusters);
+            // Compact empty clusters away (duplicate seeds leave them when PaletteSize exceeds the
+            // separable colours) so the palette never carries a mid-grey placeholder swatch that the
+            // Potts smoother could assign to voxels despite appearing nowhere in the model.
+            var memberCounts = new int[clusters];
             for (int i = 0; i < valid.Count; i++)
             {
-                result[valid[i]] = representatives[assignment[i]];
+                memberCounts[assignment[i]]++;
             }
-            return result;
+            var remap = new int[clusters];
+            int used = 0;
+            for (int c = 0; c < clusters; c++)
+            {
+                remap[c] = memberCounts[c] > 0 ? used++ : -1;
+            }
+
+            Color32[] allRepresentatives = ClusterRgbMeans(colours, valid, assignment, clusters);
+            var representatives = new Color32[used];
+            for (int c = 0; c < clusters; c++)
+            {
+                if (remap[c] >= 0)
+                {
+                    representatives[remap[c]] = allRepresentatives[c];
+                }
+            }
+
+            int[] labels = UnassignedLabels(colours.Length);
+            for (int i = 0; i < valid.Count; i++)
+            {
+                int label = remap[assignment[i]];
+                result[valid[i]] = representatives[label];
+                labels[valid[i]] = label;
+            }
+            return new PaletteAssignment { Colours = result, Palette = representatives, Labels = labels };
         }
 
         // Deterministic farthest-point (k-means++ without the randomness): first seed is the most
@@ -220,34 +263,48 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // ---- Master-palette snap --------------------------------------------
 
-        private static Color32[] MasterPaletteSnap(Color32[] colours, bool[]? mask, IReadOnlyList<Color32>? palette)
+        private static PaletteAssignment MasterPaletteSnap(Color32[] colours, bool[]? mask, IReadOnlyList<Color32>? palette)
         {
             var result = (Color32[])colours.Clone();
             if (palette == null || palette.Count == 0)
             {
-                return result;
+                return new PaletteAssignment { Colours = result };
             }
 
+            var swatches = new Color32[palette.Count];
             var paletteLab = new OklabColor[palette.Count];
             for (int i = 0; i < palette.Count; i++)
             {
+                swatches[i] = palette[i];
                 paletteLab[i] = OklabColor.FromColor32(palette[i]);
             }
 
-            var cache = new Dictionary<int, Color32>();
+            var cache = new Dictionary<int, int>();
+            int[] labels = UnassignedLabels(colours.Length);
             List<int> valid = ValidIndices(colours, mask);
             foreach (int index in valid)
             {
                 Color32 c = colours[index];
                 int key = (c.r << 16) | (c.g << 8) | c.b;
-                if (!cache.TryGetValue(key, out Color32 snapped))
+                if (!cache.TryGetValue(key, out int swatch))
                 {
-                    snapped = palette[NearestSwatch(OklabColor.FromColor32(c), paletteLab)];
-                    cache[key] = snapped;
+                    swatch = NearestSwatch(OklabColor.FromColor32(c), paletteLab);
+                    cache[key] = swatch;
                 }
-                result[index] = snapped;
+                result[index] = swatches[swatch];
+                labels[index] = swatch;
             }
-            return result;
+            return new PaletteAssignment { Colours = result, Palette = swatches, Labels = labels };
+        }
+
+        private static int[] UnassignedLabels(int length)
+        {
+            var labels = new int[length];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                labels[i] = -1;
+            }
+            return labels;
         }
 
         private static int NearestSwatch(OklabColor c, OklabColor[] paletteLab)

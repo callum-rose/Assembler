@@ -5,15 +5,20 @@ using UnityEngine;
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
-    /// UI-free orchestration of the spike: load → SDF/marching-cubes (+ optional feature-aware
-    /// downres) → Taubin → optional SDF reprojection → colour reproject → colour mode → build the
-    /// smooth-comparison and blocky Unity meshes. Returns a <see cref="SpikeStageResult"/> bundle
-    /// holding every intermediate for the previewer. Runs synchronously — fine at the coarse voxel
-    /// budgets the stylised look targets — with a coarse-grained progress callback, and must run on
-    /// the main thread because it builds <see cref="Mesh"/> objects.
+    /// UI-free orchestration of the spike: load (+ UV island dilation) → fine SDF → fine-grid
+    /// analysis → scored grid-placement search (or the identity placement) → floater removal →
+    /// protected morphology → multi-sample colour reprojection → palette + Potts smoothing → the
+    /// blocky mesh, plus the smooth-comparison path and a metrics readout. Returns a
+    /// <see cref="SpikeStageResult"/> bundle holding every intermediate for the previewer. Runs
+    /// synchronously — fine at the coarse voxel budgets the stylised look targets — with a
+    /// coarse-grained progress callback, and must run on the main thread because it builds
+    /// <see cref="Mesh"/> objects.
     /// </summary>
     public static class SpikePipeline
     {
+        /// <summary>Strong-edge threshold (Oklab) for the S_col plumbing; only used when ColWeight &gt; 0.</summary>
+        private const float ColourEdgeThreshold = 0.1f;
+
         /// <summary>
         /// Run the full pipeline for <paramref name="meshPath"/> (.obj/.fbx). <paramref name="progress"/>
         /// receives <c>(fraction, stageName)</c> at stage boundaries.
@@ -23,35 +28,90 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             progress?.Invoke(0.02f, "Importing mesh");
             ObjToVoxConverter.LoadedModel model = ObjToVoxConverter.LoadScene(meshPath);
 
+            if (settings.UvDilate)
+            {
+                progress?.Invoke(0.06f, "Dilating UV islands");
+                model = UvIslandDilation.Apply(model, settings.UvDilatePasses);
+            }
+
             var tree = new g3.DMeshAABBTree3(model.Mesh);
             tree.Build();
 
-            int factor = settings.FeatureAware ? Mathf.Max(1, settings.FeatureFactor) : 1;
-            int sdfDim = settings.MaxDimVoxels * factor;
+            int maxDim = settings.ResolveMaxDimVoxels();
+            int factor = settings.ResolveFineFactor();
 
             progress?.Invoke(0.15f, "Signed distance field + marching cubes");
-            SdfIsosurface.Result sdf = SdfIsosurface.Build(model.Mesh, tree, sdfDim);
+            SdfIsosurface.Result sdf = SdfIsosurface.Build(model.Mesh, tree, maxDim * factor);
+            VoxelGrid fine = sdf.Occupancy;
+            var fineDims = new Vector3Int(fine.NX, fine.NY, fine.NZ);
 
-            VoxelGrid occupancy = settings.FeatureAware
-                ? FeatureAwareDownsample.Apply(sdf.Occupancy, factor, settings.FeatureCoverage, forceThinFeatures: true)
-                : sdf.Occupancy;
+            progress?.Invoke(0.35f, "Analysing fine grid");
+            var analysis = FineGridAnalysis.Build(fine, factor);
+
+            GridPlacementSearch.Options searchOptions = settings.SearchOptions;
+            System.Collections.Generic.List<GridPlacementSearch.ColourEdge>? colourEdges = null;
+            if (settings.GridSearch && searchOptions.ColWeight > 0f)
+            {
+                // S_col plumbing: per-fine-voxel colours are expensive, so only when the weight is live.
+                Color32[] fineColours = ColourReprojector.SampleVoxels(
+                    fine, model, tree, settings.NormalConsistency, sdf.Field);
+                colourEdges = GridPlacementSearch.ExtractStrongColourEdges(fine, fineColours, ColourEdgeThreshold);
+            }
+
+            progress?.Invoke(0.4f, settings.GridSearch ? "Searching grid placements" : "Voting occupancy");
+            GridPlacementSearch.Placement placement = settings.GridSearch
+                ? GridPlacementSearch.Run(analysis, searchOptions, colourEdges)
+                : GridPlacementSearch.Materialise(analysis, GridPlacementSearch.IdentityCandidate(analysis), searchOptions);
+
+            VoxelGrid occupancy = placement.Grid;
+
+            progress?.Invoke(0.5f, "Cleaning occupancy");
+            int floatersRemoved = settings.RemoveFloaters
+                ? OccupancyCleanup.RemoveFloaters(occupancy, placement.TouchesMain)
+                : 0;
+            if (settings.CleanupStrength > 0)
+            {
+                bool[] protectedMask = OccupancyCleanup.BuildProtectedMask(
+                    placement.ThinKept, occupancy.NX, occupancy.NY, occupancy.NZ);
+                OccupancyCleanup.CloseOpen(occupancy, protectedMask, placement.GapFraction, settings.CleanupStrength);
+            }
 
             // --- Primary: Crossy-Road blocky voxel model ---
-            progress?.Invoke(0.45f, "Reprojecting voxel colours");
-            Color32[] voxelColours = ColourReprojector.SampleVoxels(
-                occupancy, model, tree, settings.NormalConsistency, sdf.Field);
-            voxelColours = ColourModes.Apply(voxelColours, occupancy.Occupied, settings.ColourMode, settings.ColourOptions);
+            progress?.Invoke(0.55f, "Reprojecting voxel colours");
+            Color32[] sampledColours = settings.MultiSampleColour
+                ? MultiSampleColour.Sample(occupancy, model, tree, settings.NormalConsistency, sdf.Field)
+                : ColourReprojector.SampleVoxels(occupancy, model, tree, settings.NormalConsistency, sdf.Field);
+
+            ColourModes.PaletteAssignment assignment = ColourModes.AssignPalette(
+                sampledColours, occupancy.Occupied, settings.ColourMode, settings.ColourOptions);
+            Color32[] voxelColours = assignment.Colours;
+
+            if (settings.PottsStrength > 0f && assignment.Palette is { Length: > 1 } && assignment.Labels is not null)
+            {
+                progress?.Invoke(0.62f, "Potts label smoothing");
+                int[] labels = PottsLabelSmoother.Smooth(
+                    occupancy, sampledColours, assignment.Labels, assignment.Palette, settings.PottsStrength);
+                voxelColours = (Color32[])voxelColours.Clone();
+                for (int i = 0; i < labels.Length; i++)
+                {
+                    if (labels[i] >= 0)
+                    {
+                        voxelColours[i] = assignment.Palette[labels[i]];
+                    }
+                }
+            }
+
             Mesh blocky = BlockyVoxelMesher.Build(occupancy, voxelColours);
 
             // --- Comparison: smooth SDF remesh ---
-            progress?.Invoke(0.65f, "Taubin smoothing");
+            progress?.Invoke(0.7f, "Taubin smoothing");
             g3.DMesh3 smooth = TaubinSmoother.Apply(sdf.Iso, settings.TaubinPasses, settings.TaubinLambda, settings.TaubinMu);
 
             g3.DMesh3 finalSmooth = smooth;
             Mesh? reprojectedPreview = null;
             if (settings.SurfaceReproject)
             {
-                progress?.Invoke(0.75f, "SDF surface reprojection");
+                progress?.Invoke(0.78f, "SDF surface reprojection");
                 finalSmooth = new g3.DMesh3(smooth);
                 SurfaceReprojection.Apply(finalSmooth, sdf.Field);
                 reprojectedPreview = G3MeshConversion.ToUnity(finalSmooth, null);
@@ -78,6 +138,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 GridZ = occupancy.NZ,
                 Occupancy = occupancy,
                 VoxelColours = voxelColours,
+                Metrics = SpikeMetrics.Compute(occupancy, voxelColours, placement, floatersRemoved, fineDims),
             };
         }
 

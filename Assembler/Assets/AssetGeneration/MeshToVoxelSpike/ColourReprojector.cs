@@ -28,7 +28,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             foreach (int vid in mesh.VertexIndices())
             {
                 g3.Vector3d p = mesh.GetVertex(vid);
-                colours[vid] = Sample(p, model, tree, normalConsistency, field);
+                colours[vid] = SamplePoint(p, model, tree, normalConsistency, field);
             }
             return colours;
         }
@@ -56,14 +56,18 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                         {
                             continue;
                         }
-                        colours[i] = Sample(occupancy.Center(x, y, z), model, tree, normalConsistency, field);
+                        colours[i] = SamplePoint(occupancy.Center(x, y, z), model, tree, normalConsistency, field);
                     }
                 }
             }
             return colours;
         }
 
-        private static Color32 Sample(
+        /// <summary>
+        /// The shared point sampler: nearest original-surface triangle → barycentric UV → texture
+        /// sample (flat colour when untextured). Also used by the multi-sample colour pass.
+        /// </summary>
+        internal static Color32 SamplePoint(
             g3.Vector3d p,
             ObjToVoxConverter.LoadedModel model,
             g3.DMeshAABBTree3 tree,

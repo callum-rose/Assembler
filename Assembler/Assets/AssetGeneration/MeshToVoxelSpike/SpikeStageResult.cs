@@ -40,5 +40,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         /// <summary>Flat reprojected per-voxel colours, indexed by <see cref="VoxelGrid.Index"/> — matches <see cref="Blocky"/>.</summary>
         public Color32[] VoxelColours { get; init; } = null!;
+
+        /// <summary>The objective per-run readout (counts, chosen placement, score terms).</summary>
+        public SpikeMetrics Metrics { get; init; }
     }
 }
