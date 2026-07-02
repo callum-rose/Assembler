@@ -2,12 +2,13 @@
 
 Continuation notes for picking this up in a fresh (local) Claude Code chat. Everything below
 reflects the state of branch **`claude/new-feature-impl-t6pw16`** (PR **#413**), through commit
-**`cba9a5d`**.
+**`ad13711`**.
 
 > This document supersedes the original `HANDOFFmeshtovoxelspike.md`. It preserves all of that
-> earlier content and folds in a second work session (SDF compute-mode fix, `.vox` export, and a
-> boxiness/geometry investigation). Statements the second session made obsolete have been updated
-> inline; brand-new material is called out in **Session 2** sections.
+> earlier content and folds in later work sessions. Statements later sessions made obsolete have
+> been updated inline; brand-new material is called out in the **Session 2** and **Session 3**
+> sections — **Session 3 (from the "consistently-good Crossy-Road output" drop onward) is the
+> current state**; read it and its follow-up first.
 
 ## What this is
 
@@ -361,8 +362,7 @@ word so the silhouette is guaranteed symmetric):
   few occupied neighbours and never reach ≥4.
   Each pass is a simultaneous snapshot; `SpikeSettings.FillCorners` (bool) does one pass,
   `FillCornersRecursive` (bool, nested "Recursive" toggle) repeats until stable so a fill that
-  creates a new qualifying corner is chased down. Skips cells whose fine gap fraction > ¼ every pass
-  so leg gaps / handle holes survive.
+  creates a new qualifying corner is chased down.
 - `SymmetryEnforcer.cs` + `SymmetryAxes` ([Flags] None/X/Y/Z) — forces mirror symmetry across each
   ticked grid axis about the occupied-bbox centre (mirror coord = lo+hi−a), in one of two modes:
   **Union** (default) keeps a cell if it or its mirror is filled — added voxels copy the mirror's
@@ -375,11 +375,35 @@ word so the silhouette is guaranteed symmetric):
   EditorPrefs and threaded through `BuildSettings`.
 - Tests: `Tests/SymmetryCornerFillTests.cs`.
 
+Also in the follow-up: every window control was given a **detailed tooltip** (the three advanced
+score-weight sliders and Taubin λ had none; mesh picker, buttons and the world-size readout were
+bare) — see `MeshToVoxelSpikeWindow.cs`.
+
+### Corner-fill rule — final shape (after several refinements)
+
+The corner-fill decision landed on this exact rule (an empty coarse voxel, per pass):
+
+    gapProtected = gapFraction[i] > 0.25          // real-air-gap flag from the fine grid
+    fill = occupiedNeighbours >= 4                // deep concavity — overrides the gap guard
+           || (bestCluster >= 3 && !gapProtected) // ≥3 similar-colour neighbours, gap-guarded
+    colour = the largest colour-cluster's seed    // clustered within CornerFillColourTolerance (Oklab)
+
+Why each piece exists (each was a real bug/artifact fixed in turn): the ≥3 rule was a **colour
+consensus** not a plain occupancy count, because plain "≥3 occupied" filled boundary corners with an
+arbitrary modal pick (colour artifacts). "Same colour" is a **tolerance** match, not exact RGB,
+because exact never found a consensus among near-identical shades (Raw mode / near-dupe palette).
+The ≥4 branch **overrides the gap guard**, because enclosed pockets (corgi feet) are pinched on ≥2
+axes → gap-flagged → were wrongly skipped despite 5 occupied neighbours.
+
 ### Status / verification
 
-- All EditMode tests written; the user's open editor is the compile/test authority (Tools/*.sh
-  can't run against a checkout an open editor holds — use a detached temp worktree if headless
-  checks are needed).
+- **41 EditMode tests, all passing.** Every follow-up change was compiled + run headlessly in a
+  **detached temp worktree** (the user's editor holds the branch, so `Tools/*.sh` can't run against
+  this checkout directly — `git worktree add --detach <scratch> HEAD`, rsync the working-tree
+  `MeshToVoxelSpike/` + `ObjToVoxConverter.cs` over it, run `Tools/run-tests.sh
+  Assembler.AssetGeneration.MeshToVoxelSpike.Tests`, remove the worktree). The user's open editor is
+  still the ultimate compile authority.
 - Acceptance = the user's "Run test set…" over the locked Meshy test-set folder (12-model spread
   from the plan; minimum viable subset: dog, crab, rocket, oak tree), tuning geometry toggles
-  first, then Potts strength, with the metrics table alongside.
+  first, then Potts strength, with the metrics table alongside. The corgi (`Assets/MeshyImports/`)
+  is the first real model run through it — the foot-cavity fix above came from that .vox.
