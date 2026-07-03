@@ -306,6 +306,19 @@ namespace Assembler.AssetGeneration.EyePlacement
                 DrawPickMarkers(rect, result);
             }
 
+            if (result.RenderPng is { Length: > 0 } renderPng && GUILayout.Button("Save render PNG..."))
+            {
+                string defaultName = string.IsNullOrEmpty(_voxPath)
+                    ? "render.png"
+                    : Path.GetFileNameWithoutExtension(_voxPath) + "_render.png";
+                string savePath = EditorUtility.SaveFilePanel("Save eye-placement render", string.Empty, defaultName, "png");
+                if (!string.IsNullOrEmpty(savePath))
+                {
+                    File.WriteAllBytes(savePath, renderPng);
+                    _status = "Render saved to " + savePath;
+                }
+            }
+
             DrawCandidateGrid();
 
             EditorGUILayout.Space();
