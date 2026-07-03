@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler.AssetGeneration.EyePlacement",
     "references": [
         "Assembler.Anthropic",
-        "Assembler.Voxels"
+        "Assembler.Voxels",
+        "Assembler.AssetGeneration.ImageOrientation"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

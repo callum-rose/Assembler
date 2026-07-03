@@ -143,5 +143,26 @@ namespace Assembler.AssetGeneration.EyePlacement
             origin = _view.Right * u + _view.Up * v + _view.Forward * (_depthMin - 1f);
             direction = _view.Forward;
         }
+
+        /// <summary>Half-height an orthographic camera needs to frame the model exactly as this projection maps it.</summary>
+        public float OrthographicSize => _worldPerNorm * 0.5f;
+
+        /// <summary>The world-space centre of the framed volume (reconstructed from the orthonormal basis).</summary>
+        public Vector3 CentreWorld =>
+            _view.Right * _uCentre + _view.Up * _vCentre + _view.Forward * ((_depthMin + _depthMax) * 0.5f);
+
+        /// <summary>
+        /// Placement for a real orthographic Unity camera that reproduces <see cref="WorldToNormalized"/>
+        /// pixel-for-pixel (square aspect, size = <see cref="OrthographicSize"/>), so a pick on its render
+        /// reprojects correctly. <paramref name="margin"/> is the clearance in front of the near face.
+        /// </summary>
+        public void GetCamera(out Vector3 position, out Quaternion rotation, out float nearClip, out float farClip, float margin = 1f)
+        {
+            float depthHalf = (_depthMax - _depthMin) * 0.5f;
+            position = CentreWorld - _view.Forward * (depthHalf + margin);
+            rotation = Quaternion.LookRotation(_view.Forward, _view.Up);
+            nearClip = 0.01f;
+            farClip = (_depthMax - _depthMin) + 2f * margin + 1f;
+        }
     }
 }

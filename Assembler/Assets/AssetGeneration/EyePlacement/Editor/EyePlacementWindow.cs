@@ -33,9 +33,10 @@ namespace Assembler.AssetGeneration.EyePlacement
 
         private readonly List<string> _models = new();
 
+        private bool _autoOrient = true;
         private ViewPreset _view = ViewPreset.Isometric;
         private int _eyeCount = 2;
-        private int _imageSize = 512;
+        private int _imageSize = 1024;
         private float _surfaceOffset = 0.5f;
 
         private VoxelModel? _model3d;
@@ -88,9 +89,16 @@ namespace Assembler.AssetGeneration.EyePlacement
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Options", EditorStyles.boldLabel);
-            _view = (ViewPreset)EditorGUILayout.EnumPopup("View", _view);
+            _autoOrient = EditorGUILayout.Toggle(
+                new GUIContent("Auto-orient (detect front)",
+                    "Runs a top-down vision pass to find the model's front, then looks at it three-quarter. Costs one extra Claude call."),
+                _autoOrient);
+            using (new EditorGUI.DisabledScope(_autoOrient))
+            {
+                _view = (ViewPreset)EditorGUILayout.EnumPopup("View", _view);
+            }
             _eyeCount = Mathf.Max(1, EditorGUILayout.IntField("Eye count", _eyeCount));
-            _imageSize = Mathf.Clamp(EditorGUILayout.IntField("Render size (px)", _imageSize), 64, 2048);
+            _imageSize = Mathf.Clamp(EditorGUILayout.IntField("Render size (px)", _imageSize), 64, 4096);
             _surfaceOffset = EditorGUILayout.FloatField("Surface offset (voxels)", _surfaceOffset);
 
             EditorGUILayout.Space();
@@ -345,7 +353,6 @@ namespace Assembler.AssetGeneration.EyePlacement
             try
             {
                 var options = BuildOptions();
-                _resultProjection = new VoxelViewProjection(options.View, model);
 
                 EyePlacementResult result;
                 if (!string.IsNullOrEmpty(_imagePath) && File.Exists(_imagePath))
@@ -360,8 +367,11 @@ namespace Assembler.AssetGeneration.EyePlacement
                 }
 
                 _result = result;
+                // Reproject markers with the view actually used (auto-orient may have changed it).
+                _resultProjection = new VoxelViewProjection(result.View, model);
                 LoadResultPreview(result);
-                _status = $"Done — {result.Eyes.Count} eye(s) placed.";
+                var front = result.FrontCode is { } code ? $" (front {code})" : string.Empty;
+                _status = $"Done — {result.Eyes.Count} eye(s) placed{front}.";
             }
             catch (OperationCanceledException)
             {
@@ -391,10 +401,10 @@ namespace Assembler.AssetGeneration.EyePlacement
             try
             {
                 var options = BuildOptions();
-                _resultProjection = new VoxelViewProjection(options.View, _model3d);
                 _result = EyePlacer.PlaceGeometric(_model3d, options);
+                _resultProjection = new VoxelViewProjection(_result.View, _model3d);
                 // The geometric path doesn't render, so give the preview a render for context.
-                byte[] png = VoxelIsometricRenderer.RenderPng(_model3d, _resultProjection, options.ImageSize);
+                byte[] png = VoxelRender.ToPng(_model3d, _resultProjection, options.ImageSize, options.Msaa);
                 LoadResultPreview(_result with { RenderPng = png });
                 _status = $"Done (geometric) — {_result.Eyes.Count} eye(s) placed.";
             }
@@ -410,6 +420,7 @@ namespace Assembler.AssetGeneration.EyePlacement
 
         private EyePlacementOptions BuildOptions() => new()
         {
+            AutoOrient = _autoOrient,
             View = ViewFor(_view),
             EyeCount = _eyeCount,
             ImageSize = _imageSize,

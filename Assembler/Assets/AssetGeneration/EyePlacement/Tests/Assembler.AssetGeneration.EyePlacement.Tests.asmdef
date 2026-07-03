@@ -3,6 +3,7 @@
     "rootNamespace": "Assembler",
     "references": [
         "Assembler.AssetGeneration.EyePlacement",
+        "Assembler.AssetGeneration.ImageOrientation",
         "Assembler.Voxels",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
