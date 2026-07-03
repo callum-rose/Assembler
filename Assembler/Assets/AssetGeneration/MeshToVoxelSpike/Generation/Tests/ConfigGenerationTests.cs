@@ -148,7 +148,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation.Tests
             Assert.That(config.Settings.Coverage, Is.EqualTo(0.8f).Within(1e-5f), "override applied");
             Assert.That(config.Settings.GridSearch, Is.EqualTo(Settings.Defaults.GridSearch), "untouched field keeps default");
             Assert.That(config.Settings.MultiSampleColour, Is.EqualTo(Settings.Defaults.MultiSampleColour), "untouched field keeps default");
-            // ToSettings always resolves the direct max-dimension slider path.
+            // Resolution defaults to the direct max-dimension slider when the AI omits the resolution fields.
             Assert.That(config.Settings.ResolutionInput, Is.EqualTo(ResolutionInput.MaxDimSlider));
         }
 
@@ -209,15 +209,73 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation.Tests
                 () => ConfigParser.Parse("Sorry, I could not produce a config.", Rules()));
         }
 
+        // --- Parser: world-size resolution ---------------------------------
+
+        [Test]
+        public void Parse_WorldSizeResolutionFields_AreApplied_AndDriveVoxelCount()
+        {
+            var config = ConfigParser.Parse(
+                Wrap("{\"settings\":{\"ResolutionInput\":\"WorldSize\",\"VoxelWorldSize\":0.2,\"TargetWorldSize\":5}}"),
+                Rules());
+
+            Assert.That(config.Settings.ResolutionInput, Is.EqualTo(ResolutionInput.WorldSize), "enum by name");
+            Assert.That(config.Settings.VoxelWorldSize, Is.EqualTo(0.2f).Within(1e-5f));
+            Assert.That(config.Settings.TargetWorldSize, Is.EqualTo(5f).Within(1e-5f));
+            // 5 m ÷ 0.2 m/voxel = 25 voxels along the longest axis.
+            Assert.That(config.Settings.ResolveMaxDimVoxels(), Is.EqualTo(25));
+        }
+
+        // --- Settings rules ------------------------------------------------
+
+        [Test]
+        public void SettingsRules_LoadFromResource_HasSeededRules()
+        {
+            var rules = SettingsRules.Load();
+
+            Assert.That(rules.Rules, Is.Not.Empty);
+            Assert.That(rules.IsKnown("fine-factor"), Is.True);
+            foreach (var rule in rules.Rules)
+            {
+                Assert.That(rule.id, Is.Not.Empty);
+                Assert.That(rule.text, Is.Not.Empty);
+                Assert.That(rule.appliesWhen, Is.Not.Empty);
+            }
+        }
+
+        [Test]
+        public void Parse_UnknownSettingsRuleIds_AreDropped_KnownSurvive()
+        {
+            var config = ConfigParser.Parse(
+                Wrap("{\"appliedSettingsRuleIds\":[\"fine-factor\",\"bogus\",\"fine-factor\"]}"),
+                Rules(),
+                SettingsRuleSet("fine-factor", "consolidated-colour"));
+
+            Assert.That(config.AppliedSettingsRuleIds, Is.EquivalentTo(new[] { "fine-factor" }));
+        }
+
+        [Test]
+        public void PromptBuilder_IncludesSettingsRules_WhenSupplied()
+        {
+            var prompt = ConfigPromptBuilder.Build(
+                Rules("no-eyes"),
+                SettingsRuleSet("fine-factor"));
+
+            StringAssert.Contains("# Settings rules", prompt);
+            StringAssert.Contains("fine-factor", prompt);
+            StringAssert.Contains("appliedSettingsRuleIds", prompt);
+        }
+
         // --- Helpers -------------------------------------------------------
 
         private static string Wrap(string json) => "Config:\n```json\n" + json + "\n```";
 
-        private static StyleRules Rules(params string[] ids)
-        {
-            var entries = string.Join(",", ids.Select(id =>
-                $"{{\"id\":\"{id}\",\"text\":\"t\",\"appliesWhen\":\"w\"}}"));
-            return StyleRules.Parse("{\"rules\":[" + entries + "]}");
-        }
+        private static StyleRules Rules(params string[] ids) =>
+            StyleRules.Parse("{\"rules\":[" + RuleEntries(ids) + "]}");
+
+        private static SettingsRules SettingsRuleSet(params string[] ids) =>
+            SettingsRules.Parse("{\"rules\":[" + RuleEntries(ids) + "]}");
+
+        private static string RuleEntries(string[] ids) =>
+            string.Join(",", ids.Select(id => $"{{\"id\":\"{id}\",\"text\":\"t\",\"appliesWhen\":\"w\"}}"));
     }
 }

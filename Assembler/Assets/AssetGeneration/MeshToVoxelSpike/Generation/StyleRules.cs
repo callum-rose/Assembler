@@ -1,62 +1,24 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
 {
     /// <summary>
-    /// The loaded set of shared art-direction rules. Rules live in a JSON resource so they can be
-    /// extended without a recompile. A missing or malformed resource is a hard, clearly-described
-    /// error rather than a silent empty set.
+    /// The shared art-direction rules that constrain a model's appearance — the model folds the
+    /// applicable ones into the image prompt. Loaded from a JSON resource (see <see cref="RuleSet"/>).
     /// </summary>
-    public sealed class StyleRules
+    public sealed class StyleRules : RuleSet
     {
-        private const string ResourcePath = "GenerationPrompts/VoxelStyleRules";
+        /// <summary>Resources-relative path (no extension) of the style-rules JSON.</summary>
+        public const string ResourcePath = "GenerationPrompts/VoxelStyleRules";
 
-        private readonly HashSet<string> _ids;
-
-        public IReadOnlyList<StyleRule> Rules { get; }
-        public IReadOnlyCollection<string> Ids => _ids;
-
-        private StyleRules(IReadOnlyList<StyleRule> rules)
+        private StyleRules(IReadOnlyList<StyleRule> rules) : base(rules)
         {
-            Rules = rules;
-            _ids = new HashSet<string>(rules.Select(rule => rule.id));
         }
 
         /// <summary>Loads the rules from <c>Resources/GenerationPrompts/VoxelStyleRules.json</c>.</summary>
-        public static StyleRules Load()
-        {
-            var asset = Resources.Load<TextAsset>(ResourcePath);
-            return asset != null
-                ? Parse(asset.text)
-                : throw new FileNotFoundException(
-                    $"Voxel style-rules resource '{ResourcePath}' is missing.");
-        }
+        public static StyleRules Load() => new(LoadRules(ResourcePath, "style-rules"));
 
         /// <summary>Parses rules from a JSON string (no Resources lookup — used by tests).</summary>
-        public static StyleRules Parse(string json)
-        {
-            StyleRuleSet? set;
-            try
-            {
-                set = JsonUtility.FromJson<StyleRuleSet>(json);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidDataException("Voxel style-rules JSON is malformed.", e);
-            }
-
-            if (set?.rules is not { } rules)
-            {
-                throw new InvalidDataException("Voxel style-rules JSON is malformed or has no 'rules' array.");
-            }
-
-            return new StyleRules(rules);
-        }
-
-        public bool IsKnown(string id) => _ids.Contains(id);
+        public static StyleRules Parse(string json) => new(ParseRules(json, "style-rules"));
     }
 }

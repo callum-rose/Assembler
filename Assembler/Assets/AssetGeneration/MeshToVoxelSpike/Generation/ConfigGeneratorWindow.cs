@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Assembler.Anthropic;
 using UnityEditor;
@@ -15,12 +16,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
     {
         // Shared with the descriptor generator window so the key is entered once.
         private const string ApiKeyPref = "Assembler.Generation.ApiKey";
+        private const string ModelPref = "Assembler.AssetGeneration.MeshToVoxelSpike.Generation.Model";
         private const string ArtContextPref = "Assembler.AssetGeneration.MeshToVoxelSpike.Generation.ArtContext";
         private const string DescriptionPref = "Assembler.AssetGeneration.MeshToVoxelSpike.Generation.Description";
 
+        // Config generation benefits from the strongest model; the picker can override it.
+        private const string DefaultModel = "claude-opus-4-8";
+
         private string _apiKey = string.Empty;
+        private string _model = DefaultModel;
         private string _artContext = string.Empty;
         private string _description = string.Empty;
+
+        private readonly List<string> _models = new();
 
         private string _status = string.Empty;
         private ModelConfig? _result;
@@ -42,6 +50,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
         private void OnEnable()
         {
             _apiKey = EditorPrefs.GetString(ApiKeyPref, string.Empty);
+            _model = EditorPrefs.GetString(ModelPref, DefaultModel);
             _artContext = EditorPrefs.GetString(ArtContextPref, string.Empty);
             _description = EditorPrefs.GetString(DescriptionPref, string.Empty);
         }
@@ -69,6 +78,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             }
 
             EditorGUILayout.Space();
+            DrawModelSelector();
+
+            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Shared art direction", EditorStyles.boldLabel);
             using (var scope = new EditorGUI.ChangeCheckScope())
             {
@@ -77,6 +89,30 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 {
                     EditorPrefs.SetString(ArtContextPref, _artContext);
                 }
+            }
+
+            EditorGUILayout.Space();
+            var wrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+
+            EditorGUILayout.LabelField("Style rules", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Appearance rules the model folds into the image prompt (VoxelStyleRules JSON). " +
+                "Edit them and re-run Choose to pick up changes.",
+                wrapMiniLabel);
+            if (GUILayout.Button("Edit style rules (JSON)"))
+            {
+                OpenStyleRulesJson();
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Settings rules", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Rules for how the voxel/pipeline settings are chosen per object type " +
+                "(VoxelSettingsRules JSON). Edit them and re-run Choose to pick up changes.",
+                wrapMiniLabel);
+            if (GUILayout.Button("Edit settings rules (JSON)"))
+            {
+                OpenSettingsRulesJson();
             }
 
             EditorGUILayout.Space();
@@ -123,9 +159,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 EditorGUILayout.LabelField(
                     string.IsNullOrEmpty(result.BaseName) ? "(none)" : result.BaseName, wrapLabel);
 
-                EditorGUILayout.LabelField("Applied rule ids", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Applied style rule ids", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(
                     result.AppliedRuleIds.Count > 0 ? string.Join(", ", result.AppliedRuleIds) : "(none)",
+                    wrapLabel);
+
+                EditorGUILayout.LabelField("Applied settings rule ids", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    result.AppliedSettingsRuleIds.Count > 0 ? string.Join(", ", result.AppliedSettingsRuleIds) : "(none)",
                     wrapLabel);
 
                 EditorGUILayout.LabelField("Resolved voxel settings", EditorStyles.boldLabel);
@@ -151,6 +192,89 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawModelSelector()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("AI model", EditorStyles.boldLabel);
+                if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+                {
+                    RefreshModels();
+                }
+            }
+
+            // Popup over whatever models we know about; always include the current selection so a
+            // stored/typed id stays selectable before any Refresh has run.
+            var options = _models.Count > 0 ? new List<string>(_models) : new List<string>();
+            if (!options.Contains(_model))
+            {
+                options.Insert(0, _model);
+            }
+
+            var index = options.IndexOf(_model);
+            using (var scope = new EditorGUI.ChangeCheckScope())
+            {
+                var picked = EditorGUILayout.Popup(index, options.ToArray());
+                if (scope.changed && picked >= 0 && picked < options.Count)
+                {
+                    _model = options[picked];
+                    EditorPrefs.SetString(ModelPref, _model);
+                }
+            }
+        }
+
+        private void OpenStyleRulesJson() => OpenRulesJson(StyleRules.ResourcePath, "style rules");
+
+        private void OpenSettingsRulesJson() => OpenRulesJson(SettingsRules.ResourcePath, "settings rules");
+
+        // Opens a shared rules JSON in the project's configured script editor (Preferences > External
+        // Tools) so the rules can be edited without leaving the flow.
+        private void OpenRulesJson(string resourcePath, string what)
+        {
+            var asset = Resources.Load<TextAsset>(resourcePath);
+            if (asset == null)
+            {
+                _status = $"ERROR: {what} resource '{resourcePath}' not found.";
+                return;
+            }
+
+            if (!AssetDatabase.OpenAsset(asset))
+            {
+                _status = $"Couldn't open the {what} JSON in the external editor.";
+                return;
+            }
+
+            _status = $"Opened {what} in your editor.";
+        }
+
+        private async void RefreshModels()
+        {
+            if (string.IsNullOrWhiteSpace(_apiKey))
+            {
+                _status = "ERROR: enter an API key before refreshing models.";
+                Repaint();
+                return;
+            }
+
+            try
+            {
+                _status = "Fetching available models...";
+                Repaint();
+                var ids = await AnthropicClient.ListModelsAsync(_apiKey);
+                _models.Clear();
+                _models.AddRange(ids);
+                _status = _models.Count > 0 ? $"Loaded {_models.Count} models." : "No models returned.";
+            }
+            catch (Exception ex)
+            {
+                _status = "Error fetching models: " + ex.Message;
+            }
+            finally
+            {
+                Repaint();
+            }
         }
 
         // Read-only, word-wrapped text sized to its content height so it shows in full and the
@@ -187,7 +311,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
         {
             try
             {
-                using var client = new AnthropicClient(_apiKey);
+                using var client = new AnthropicClient(_apiKey, _model);
                 var generator = new ModelConfigGenerator(client);
                 var result = await generator.ChooseAsync(_description, _artContext, ct);
                 _result = result;

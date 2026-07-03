@@ -24,21 +24,23 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
     {
         /// <summary>
         /// Parses a full assistant reply: extracts its fenced <c>```json</c> block (a missing block
-        /// is the one hard failure) and parses it. <paramref name="rules"/> is optional — when
-        /// supplied, unknown applied-rule ids are dropped; when null, they are kept as-is.
+        /// is the one hard failure) and parses it. <paramref name="rules"/> and
+        /// <paramref name="settingsRules"/> are optional — when supplied, unknown applied-rule ids
+        /// (style and settings respectively) are dropped; when null, they are kept as-is.
         /// </summary>
-        public static ModelConfig Parse(string rawText, StyleRules? rules = null)
+        public static ModelConfig Parse(string rawText, StyleRules? rules = null, SettingsRules? settingsRules = null)
         {
             var json = ConfigExtractor.Extract(rawText)
                 ?? throw new AnthropicRequestException(200, "AI model-config response contained no ```json block.");
-            return ParseJson(json, rules, rawText);
+            return ParseJson(json, rules, rawText, settingsRules);
         }
 
         /// <summary>
         /// Parses an already-extracted JSON config object (no fenced block needed). Used by callers
         /// that paste the config json directly. Same lenient rules as <see cref="Parse"/>.
         /// </summary>
-        public static ModelConfig ParseJson(string json, StyleRules? rules = null, string? rawText = null)
+        public static ModelConfig ParseJson(
+            string json, StyleRules? rules = null, string? rawText = null, SettingsRules? settingsRules = null)
         {
             JsonDocument doc;
             try
@@ -68,7 +70,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                     .Distinct()
                     .ToList();
 
-                return new ModelConfig(rawText ?? json, imagePrompt, baseName, appliedRuleIds, settings.ToSettings(), meshy);
+                var appliedSettingsRuleIds = GetStringArray(root, "appliedSettingsRuleIds")
+                    .Where(id => settingsRules == null || settingsRules.IsKnown(id))
+                    .Distinct()
+                    .ToList();
+
+                return new ModelConfig(
+                    rawText ?? json, imagePrompt, baseName, appliedRuleIds, appliedSettingsRuleIds,
+                    settings.ToSettings(), meshy);
             }
         }
 
