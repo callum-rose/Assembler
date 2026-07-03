@@ -1,12 +1,8 @@
 {
-    "name": "Assembler.TextToVoxelPipeline.Editor",
+    "name": "Assembler.AssetGeneration.MeshToVoxel.Editor",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.AssetGeneration.TextToImage",
-        "Assembler.AssetGeneration.ImageToMesh",
         "Assembler.AssetGeneration.MeshToVoxel",
-        "Assembler.AssetGeneration.MeshToVoxel.Editor",
-        "Assembler.AssetGeneration.MeshToVoxel.Generation",
         "Assembler.AssetGeneration.MeshToVoxels"
     ],
     "includePlatforms": [

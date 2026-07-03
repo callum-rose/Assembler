@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.AssetGeneration.ImageToMesh;
-using Assembler.AssetGeneration.MeshToVoxelSpike;
+using Assembler.AssetGeneration.MeshToVoxel;
 using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 
@@ -237,7 +237,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
             // Stage 3 — mesh → voxels. Runs synchronously on the main thread (mesh import + texture
             // decode need the editor, and the engine-free voxeliser is called straight through),
-            // mirroring the standalone Mesh → Voxel Spike window. Blocks the editor for the duration.
+            // mirroring the standalone Mesh → Voxel window. Blocks the editor for the duration.
             VoxelizationSummary voxels;
             try
             {
@@ -245,7 +245,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 var voxPath = Path.Combine(outputDir, baseName + ".vox");
                 var model = ModelLoader.Load(mesh.OutputPath);
                 var voxel = MeshVoxeliser.Voxelise(model, settings.Vox, voxelProgress);
-                SpikeVoxExport.Write(voxPath, voxel.Occupancy, voxel.VoxelColours);
+                VoxExport.Write(voxPath, voxel.Occupancy, voxel.VoxelColours);
                 // Import the freshly-written .vox so it shows in the Project window (mirrors the earlier stages).
                 if (MeshyConversionCore.IsUnderAssets(voxPath))
                     AssetDatabase.Refresh();
@@ -341,7 +341,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         public bool AlphaThumbnail = false;
 
         // Stage 3 — mesh → voxels. The full engine-free voxeliser settings; the window assembles it
-        // from the spike control set (resolving MasterPalette when the colour mode needs it).
+        // from the mesh-to-voxel control set (resolving MasterPalette when the colour mode needs it).
         public Settings Vox = Settings.Defaults;
 
         // Shared output. A blank base name is derived from the prompt; all three stages share it.
