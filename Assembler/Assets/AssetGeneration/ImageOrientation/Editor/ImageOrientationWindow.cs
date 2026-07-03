@@ -107,16 +107,22 @@ namespace Assembler.AssetGeneration.ImageOrientation
                 var bigCode = new GUIStyle(EditorStyles.boldLabel) { fontSize = 28, alignment = TextAnchor.MiddleCenter };
                 EditorGUILayout.LabelField(result.Code, bigCode, GUILayout.Height(40));
 
-                if (result.Direction is { } direction)
+                switch (result.Outcome)
                 {
-                    var caption = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter };
-                    EditorGUILayout.LabelField($"The front is {direction.Describe()}.", caption);
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox(
-                        "Claude's reply didn't contain a recognisable code. Raw response below.",
-                        MessageType.Warning);
+                    case OrientationOutcome.Resolved when result.Direction is { } direction:
+                        var caption = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter };
+                        EditorGUILayout.LabelField($"The front is {direction.Describe()}.", caption);
+                        break;
+                    case OrientationOutcome.Unsure:
+                        EditorGUILayout.HelpBox(
+                            "Claude was unsure which direction the front is facing.",
+                            MessageType.Info);
+                        break;
+                    default:
+                        EditorGUILayout.HelpBox(
+                            "Claude's reply didn't contain a recognisable code. Raw response below.",
+                            MessageType.Warning);
+                        break;
                 }
 
                 EditorGUILayout.Space();
@@ -306,7 +312,12 @@ namespace Assembler.AssetGeneration.ImageOrientation
                 var bytes = File.ReadAllBytes(_imagePath);
                 var mediaType = AnthropicImage.MediaTypeFromExtension(Path.GetExtension(_imagePath));
                 _result = await ImageFacingDirection.DetermineAsync(_apiKey, bytes, mediaType, _model, ct);
-                _status = _result.Direction is { } d ? $"Done — {d.ToCode()}." : "Done, but no code recognised.";
+                _status = _result.Outcome switch
+                {
+                    OrientationOutcome.Resolved when _result.Direction is { } d => $"Done — {d.ToCode()}.",
+                    OrientationOutcome.Unsure => "Done — Claude was unsure.",
+                    _ => "Done, but no code recognised.",
+                };
             }
             catch (OperationCanceledException)
             {
