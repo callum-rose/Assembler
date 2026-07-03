@@ -42,6 +42,22 @@ namespace Assembler.AssetGeneration.EyePlacement
         /// </summary>
         public float SurfaceOffset { get; init; } = 0.5f;
 
+        /// <summary>
+        /// Assume the creature's eyes are bilaterally symmetric: place the best-observed eye and
+        /// mirror it across the model's symmetry plane for the other, so one reliable pick is
+        /// enough and the pair is symmetric by construction. Only applies when <see cref="EyeCount"/>
+        /// is 2; other counts snap each pick independently. See <see cref="EyeReprojection"/>.
+        /// </summary>
+        public bool AssumeSymmetry { get; init; } = true;
+
+        /// <summary>
+        /// Radius, in voxels, of the neighbourhood searched around each 2D pick when snapping it to
+        /// a real surface voxel. Larger tolerates a less precise pick and recovers picks that graze
+        /// the silhouette (which a single ray would drop), at the cost of a few more raycasts. 0
+        /// casts only the exact pick.
+        /// </summary>
+        public float SurfaceSnapRadius { get; init; } = 2f;
+
         /// <summary>Vision model id; null/blank falls back to <see cref="ImageEyePlacer.DefaultModel"/>.</summary>
         public string? Model { get; init; }
     }

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
 using Assembler.Voxels;
 
 namespace Assembler.AssetGeneration.EyePlacement
@@ -88,16 +87,7 @@ namespace Assembler.AssetGeneration.EyePlacement
             EyePicks picks = await ImageEyePlacer.DetermineAsync(
                 apiKey, imageData, mediaType, options.EyeCount, options.Model, cancellationToken);
 
-            var anchors = new List<EyeAnchor>(picks.Points.Count);
-            foreach (Vector2 pick in picks.Points)
-            {
-                projection.NormalizedToRay(pick, out Vector3 origin, out Vector3 direction);
-                if (VoxelRaycaster.TryRaycast(model, origin, direction, projection.RayLength,
-                        out Vector3Int hit, out Vector3 normal))
-                {
-                    anchors.Add(new EyeAnchor((Vector3)hit + normal * options.SurfaceOffset, normal));
-                }
-            }
+            IReadOnlyList<EyeAnchor> anchors = EyeReprojection.BuildAnchors(model, projection, options, picks.Points);
 
             return new EyePlacementResult(anchors, picks.RawResponse, imageData, projection.View, frontCode, candidates);
         }
