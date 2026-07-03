@@ -94,6 +94,78 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             Assert.AreEqual(Red.b, medoid.b);
         }
 
+        [Test]
+        public void Consolidate_MergesNearShadesButKeepsDistinctColours()
+        {
+            // Two near-identical reds, one near-identical blue, one distinct blue. A generous
+            // tolerance folds the reds together and the blues together → two fundamental colours.
+            var colours = new[]
+            {
+                new Color32(240, 40, 40, 255),
+                new Color32(236, 44, 42, 255), // ~red
+                new Color32(40, 40, 240, 255),
+                new Color32(44, 38, 236, 255), // ~blue
+            };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0.1f });
+
+            Assert.IsNotNull(merged.Palette);
+            Assert.AreEqual(2, merged.Palette!.Length, "Near shades collapse to two fundamental colours.");
+            Assert.AreEqual(merged.Colours[0], merged.Colours[1], "The two reds share one representative.");
+            Assert.AreEqual(merged.Colours[2], merged.Colours[3], "The two blues share one representative.");
+            Assert.AreNotEqual(merged.Colours[0], merged.Colours[2], "Red and blue stay distinct.");
+        }
+
+        [Test]
+        public void Consolidate_ZeroTolerance_KeepsEveryDistinctColour()
+        {
+            var colours = new[] { Red, Blue, new Color32(241, 41, 41, 255) };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0f });
+
+            Assert.AreEqual(3, merged.Palette!.Length, "Exact merging leaves every distinct colour intact.");
+        }
+
+        [Test]
+        public void Consolidate_MaxColours_LocksToTheCapAndKeepsDominantColours()
+        {
+            // Five well-separated colours, zero tolerance (nothing merges on distance). The cap must
+            // agglomerate down to exactly three, and — merging nearest pairs — the two orange-ish
+            // shades collapse while the dominant red/green/blue endpoints survive.
+            var green = new Color32(40, 200, 40, 255);
+            var orange = new Color32(230, 140, 20, 255);
+            var orange2 = new Color32(210, 120, 30, 255);
+            var colours = new[] { Red, green, Blue, orange, orange2 };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0f, ConsolidateMaxColours = 3 });
+
+            Assert.AreEqual(3, merged.Palette!.Length, "The cap locks the output to three colours.");
+            // Every voxel's colour is one of the three palette entries, and the two oranges now agree.
+            foreach (Color32 c in merged.Colours)
+            {
+                CollectionAssert.Contains(merged.Palette, c);
+            }
+            Assert.AreEqual(merged.Colours[3], merged.Colours[4], "The two nearest (orange) shades merged.");
+        }
+
+        [Test]
+        public void Consolidate_MaxColours_NeverInventsColoursBeyondWhatExists()
+        {
+            var colours = new[] { Red, Blue };
+
+            ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
+                colours, mask: null, ColourMode.Consolidated,
+                new ColourModes.Options { ConsolidateTolerance = 0f, ConsolidateMaxColours = 8 });
+
+            Assert.AreEqual(2, merged.Palette!.Length, "A cap above the distinct-colour count yields fewer, not more.");
+        }
+
         private static VoxelGrid FilledGrid(int nx, int ny, int nz)
         {
             var grid = new VoxelGrid(nx, ny, nz) { Origin = g3.Vector3d.Zero, CellSize = 1.0 };

@@ -15,6 +15,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         /// <summary>Snap each colour to the nearest swatch of a shared master palette (Oklab) for cross-asset cohesion.</summary>
         MasterPalette,
+
+        /// <summary>Keep Raw's faithful colours but merge perceptually-near shades (Oklab tolerance) into the
+        /// model's fundamental colours — the output count is emergent, not a fixed target.</summary>
+        Consolidated,
     }
 
     /// <summary>
@@ -32,6 +36,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             /// <summary>Swatches for <see cref="ColourMode.MasterPalette"/>.</summary>
             public IReadOnlyList<Color32>? MasterPalette { get; init; }
+
+            /// <summary>Oklab merge radius for <see cref="ColourMode.Consolidated"/> (0 = exact — no merging).</summary>
+            public float ConsolidateTolerance { get; init; }
+
+            /// <summary>Hard cap on <see cref="ColourMode.Consolidated"/>'s output colours (0 = unlimited —
+            /// let the tolerance decide). When set, the model is guaranteed to use at most this many colours.</summary>
+            public int ConsolidateMaxColours { get; init; }
         }
 
         /// <summary>
@@ -59,6 +70,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             {
                 ColourMode.PerModelPalette => PerModelPalette(colours, mask, Mathf.Max(1, options.PaletteSize)),
                 ColourMode.MasterPalette => MasterPaletteSnap(colours, mask, options.MasterPalette),
+                ColourMode.Consolidated => Consolidate(
+                    colours, mask, Mathf.Max(0f, options.ConsolidateTolerance), Mathf.Max(0, options.ConsolidateMaxColours)),
                 _ => new PaletteAssignment { Colours = (Color32[])colours.Clone() },
             };
 
@@ -285,7 +298,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             foreach (int index in valid)
             {
                 Color32 c = colours[index];
-                int key = (c.r << 16) | (c.g << 8) | c.b;
+                int key = ColourKey(c);
                 if (!cache.TryGetValue(key, out int swatch))
                 {
                     swatch = NearestSwatch(OklabColor.FromColor32(c), paletteLab);
@@ -296,6 +309,197 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
             return new PaletteAssignment { Colours = result, Palette = swatches, Labels = labels };
         }
+
+        // ---- Consolidated (Raw fidelity, tolerance-merged into fundamental colours) ----
+
+        // A run of near-identical source shades: a fixed seed (the distance yardstick) plus a
+        // frequency-weighted RGB accumulator whose mean becomes the representative swatch.
+        private struct ColourCluster
+        {
+            public OklabColor Seed;
+            public long R;
+            public long G;
+            public long B;
+            public int Count;
+        }
+
+        // Raw sampling keeps the truest colours but scatters a solid region across dozens of
+        // near-duplicate shades. This collapses that variation to the model's *fundamental* colours:
+        // leader-cluster the distinct colours in Oklab within <paramref name="tolerance"/>, then — when
+        // <paramref name="maxColours"/> is set — agglomeratively merge the nearest clusters down to that
+        // hard cap, so the model is locked to a known colour count. Each voxel is repainted with its
+        // cluster's frequency-weighted mean.
+        private static PaletteAssignment Consolidate(Color32[] colours, bool[]? mask, float tolerance, int maxColours)
+        {
+            var result = (Color32[])colours.Clone();
+            List<int> valid = ValidIndices(colours, mask);
+            if (valid.Count == 0)
+            {
+                return new PaletteAssignment { Colours = result };
+            }
+
+            // Distinct source colours with occurrence counts, so the merge is frequency-weighted:
+            // the most common shades seed clusters first and dominate each representative mean.
+            var counts = new Dictionary<int, int>();
+            foreach (int index in valid)
+            {
+                int key = ColourKey(colours[index]);
+                counts[key] = counts.TryGetValue(key, out int n) ? n + 1 : 1;
+            }
+
+            // Most-frequent-first, ties broken by the colour key, so the seed choice is deterministic.
+            var ordered = new List<KeyValuePair<int, int>>(counts);
+            ordered.Sort((x, y) => y.Value != x.Value ? y.Value.CompareTo(x.Value) : x.Key.CompareTo(y.Key));
+
+            // Leader clustering: assign each colour to the nearest seed within tolerance, else start a
+            // new cluster. Comparing against the fixed seed (not a drifting centroid) bounds every
+            // cluster to `tolerance` of its seed, so genuinely distinct fundamentals never chain-merge.
+            float tolSqr = tolerance * tolerance;
+            var clusters = new List<ColourCluster>();
+            var clusterOfKey = new Dictionary<int, int>(ordered.Count);
+            foreach (KeyValuePair<int, int> entry in ordered)
+            {
+                Color32 c = FromColourKey(entry.Key);
+                OklabColor lab = OklabColor.FromColor32(c);
+
+                int best = -1;
+                float bestSqr = tolSqr;
+                for (int i = 0; i < clusters.Count; i++)
+                {
+                    float d = lab.SquaredDistanceTo(clusters[i].Seed);
+                    if (d <= bestSqr)
+                    {
+                        bestSqr = d;
+                        best = i;
+                    }
+                }
+                if (best < 0)
+                {
+                    best = clusters.Count;
+                    clusters.Add(new ColourCluster { Seed = lab });
+                }
+
+                ColourCluster cl = clusters[best];
+                cl.R += (long)c.r * entry.Value;
+                cl.G += (long)c.g * entry.Value;
+                cl.B += (long)c.b * entry.Value;
+                cl.Count += entry.Value;
+                clusters[best] = cl;
+                clusterOfKey[entry.Key] = best;
+            }
+
+            // Lock to the requested colour count: merge the closest clusters until the cap is met. When
+            // it isn't set (or already satisfied) leader indices pass through unchanged.
+            int[]? remap = maxColours > 0 && clusters.Count > maxColours
+                ? MergeToCount(clusters, maxColours)
+                : null;
+
+            var palette = new Color32[clusters.Count];
+            for (int i = 0; i < clusters.Count; i++)
+            {
+                palette[i] = MeanColour(clusters[i]);
+            }
+
+            int[] labels = UnassignedLabels(colours.Length);
+            foreach (int index in valid)
+            {
+                int leaderLabel = clusterOfKey[ColourKey(colours[index])];
+                int label = remap?[leaderLabel] ?? leaderLabel;
+                result[index] = palette[label];
+                labels[index] = label;
+            }
+            return new PaletteAssignment { Colours = result, Palette = palette, Labels = labels };
+        }
+
+        // Agglomeratively merge the two nearest clusters (Oklab distance between their frequency-weighted
+        // means) until at most <paramref name="target"/> survive — the hard cap that locks the model to a
+        // known colour count. Anchoring on the accumulated means keeps the survivors the dominant colours,
+        // not the chromatic outliers a farthest-point seeding would chase. Compacts <paramref name="clusters"/>
+        // to the survivors and returns remap[oldIndex] = newIndex.
+        private static int[] MergeToCount(List<ColourCluster> clusters, int target)
+        {
+            int n = clusters.Count;
+            var parent = new int[n];
+            var means = new OklabColor[n];
+            var alive = new List<int>(n);
+            for (int i = 0; i < n; i++)
+            {
+                parent[i] = i;
+                means[i] = MeanLab(clusters[i]);
+                alive.Add(i);
+            }
+
+            while (alive.Count > target)
+            {
+                int mergeI = 0;
+                int mergeJ = 1;
+                float bestSqr = float.MaxValue;
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    for (int j = i + 1; j < alive.Count; j++)
+                    {
+                        float d = means[alive[i]].SquaredDistanceTo(means[alive[j]]);
+                        if (d < bestSqr)
+                        {
+                            bestSqr = d;
+                            mergeI = i;
+                            mergeJ = j;
+                        }
+                    }
+                }
+
+                int a = alive[mergeI];
+                int b = alive[mergeJ];
+                ColourCluster ca = clusters[a];
+                ColourCluster cb = clusters[b];
+                ca.R += cb.R;
+                ca.G += cb.G;
+                ca.B += cb.B;
+                ca.Count += cb.Count;
+                clusters[a] = ca;
+                means[a] = MeanLab(ca);
+                parent[b] = a;
+                alive.RemoveAt(mergeJ);
+            }
+
+            var finalIndex = new int[n];
+            var survivors = new List<ColourCluster>(alive.Count);
+            for (int i = 0; i < alive.Count; i++)
+            {
+                finalIndex[alive[i]] = i;
+                survivors.Add(clusters[alive[i]]);
+            }
+
+            var remap = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                remap[i] = finalIndex[Find(parent, i)];
+            }
+
+            clusters.Clear();
+            clusters.AddRange(survivors);
+            return remap;
+        }
+
+        private static int Find(int[] parent, int i)
+        {
+            while (parent[i] != i)
+            {
+                parent[i] = parent[parent[i]]; // path-halving keeps the union-find near-flat
+                i = parent[i];
+            }
+            return i;
+        }
+
+        private static Color32 MeanColour(ColourCluster c) =>
+            new((byte)(c.R / c.Count), (byte)(c.G / c.Count), (byte)(c.B / c.Count), 255);
+
+        private static OklabColor MeanLab(ColourCluster c) => OklabColor.FromColor32(MeanColour(c));
+
+        private static int ColourKey(Color32 c) => (c.r << 16) | (c.g << 8) | c.b;
+
+        private static Color32 FromColourKey(int key) =>
+            new((byte)((key >> 16) & 0xFF), (byte)((key >> 8) & 0xFF), (byte)(key & 0xFF), 255);
 
         private static int[] UnassignedLabels(int length)
         {
