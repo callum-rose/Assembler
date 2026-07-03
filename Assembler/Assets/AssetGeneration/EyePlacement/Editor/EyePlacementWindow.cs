@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -29,6 +30,8 @@ namespace Assembler.AssetGeneration.EyePlacement
         private string _model = ImageEyePlacer.DefaultModel;
         private string _voxPath = string.Empty;
         private string _imagePath = string.Empty;
+
+        private readonly List<string> _models = new();
 
         private ViewPreset _view = ViewPreset.Isometric;
         private int _eyeCount = 2;
@@ -77,14 +80,8 @@ namespace Assembler.AssetGeneration.EyePlacement
                     EditorPrefs.SetString(ApiKeyPref, _apiKey);
                 }
             }
-            using (var scope = new EditorGUI.ChangeCheckScope())
-            {
-                _model = EditorGUILayout.TextField("Vision model", _model);
-                if (scope.changed)
-                {
-                    EditorPrefs.SetString(ModelPref, _model);
-                }
-            }
+            EditorGUILayout.Space();
+            DrawModelSelector();
 
             EditorGUILayout.Space();
             DrawVoxSelector();
@@ -128,6 +125,65 @@ namespace Assembler.AssetGeneration.EyePlacement
             DrawResult(wrapLabel);
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawModelSelector()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("Vision model", EditorStyles.boldLabel);
+                if (GUILayout.Button("Refresh", GUILayout.Width(70)))
+                {
+                    RefreshModels();
+                }
+            }
+
+            // Popup over whatever models we know about; always include the current
+            // selection so a stored/typed id stays selectable before any Refresh.
+            var options = _models.Count > 0 ? new List<string>(_models) : new List<string>();
+            if (!options.Contains(_model))
+            {
+                options.Insert(0, _model);
+            }
+
+            var index = options.IndexOf(_model);
+            using (var scope = new EditorGUI.ChangeCheckScope())
+            {
+                var picked = EditorGUILayout.Popup(index, options.ToArray());
+                if (scope.changed && picked >= 0 && picked < options.Count)
+                {
+                    _model = options[picked];
+                    EditorPrefs.SetString(ModelPref, _model);
+                }
+            }
+        }
+
+        private async void RefreshModels()
+        {
+            if (string.IsNullOrWhiteSpace(_apiKey))
+            {
+                _status = "ERROR: enter an API key before refreshing models.";
+                Repaint();
+                return;
+            }
+
+            try
+            {
+                _status = "Fetching available models...";
+                Repaint();
+                var ids = await AnthropicClient.ListModelsAsync(_apiKey);
+                _models.Clear();
+                _models.AddRange(ids);
+                _status = _models.Count > 0 ? $"Loaded {_models.Count} models." : "No models returned.";
+            }
+            catch (Exception ex)
+            {
+                _status = "Error fetching models: " + ex.Message;
+            }
+            finally
+            {
+                Repaint();
+            }
         }
 
         private void DrawVoxSelector()
