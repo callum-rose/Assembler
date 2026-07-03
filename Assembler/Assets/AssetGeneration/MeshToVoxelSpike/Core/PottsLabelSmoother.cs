@@ -1,6 +1,3 @@
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -28,7 +25,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// against the voxels' sampled colours. Returns new labels; strength 0 short-circuits to a copy.
         /// </summary>
         public static int[] Smooth(
-            VoxelGrid grid, Color32[] sampledColours, int[] labels, Color32[] palette, float strength)
+            VoxelGrid grid, Rgba32[] sampledColours, int[] labels, Rgba32[] palette, float strength)
         {
             var result = (int[])labels.Clone();
             if (strength <= 0f || palette.Length <= 1)
@@ -163,7 +160,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 }
 
                 float d = sampleLab[i].DistanceTo(sampleLab[n]) / EdgeSigma;
-                energy += beta * Mathf.Exp(-d * d);
+                energy += beta * FMath.Exp(-d * d);
             }
             return energy;
         }

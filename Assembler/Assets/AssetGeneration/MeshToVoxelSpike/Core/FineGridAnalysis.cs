@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -37,8 +35,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public IntegralVolume MainIntegral { get; private init; } = null!;
 
         /// <summary>Inclusive occupied bounding box, per axis. Zero-extent when the grid is empty.</summary>
-        public Vector3Int OccupiedMin { get; private init; }
-        public Vector3Int OccupiedMax { get; private init; }
+        public g3.Vector3i OccupiedMin { get; private init; }
+        public g3.Vector3i OccupiedMax { get; private init; }
 
         public bool IsEmpty => OccupancyIntegral.Total == 0;
 
@@ -46,7 +44,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         public static FineGridAnalysis Build(VoxelGrid fine, int factor)
         {
-            factor = Mathf.Max(1, factor);
+            factor = FMath.Max(1, factor);
             int[] thickness = ThicknessMap(fine, factor);
 
             var thickMask = new bool[fine.Occupied.Length];
@@ -58,7 +56,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             int[] labels = OccupancyCleanup.LabelComponents(fine.Occupied, fine.NX, fine.NY, fine.NZ, out int componentCount);
             bool[] mainMask = LargestComponentMask(fine.Occupied, labels, componentCount);
             bool[] gapMask = BuildGapMask(fine);
-            (Vector3Int min, Vector3Int max) = OccupiedBounds(fine);
+            (g3.Vector3i min, g3.Vector3i max) = OccupiedBounds(fine);
 
             return new FineGridAnalysis
             {
@@ -239,10 +237,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return false;
         }
 
-        private static (Vector3Int min, Vector3Int max) OccupiedBounds(VoxelGrid grid)
+        private static (g3.Vector3i min, g3.Vector3i max) OccupiedBounds(VoxelGrid grid)
         {
-            var min = new Vector3Int(int.MaxValue, int.MaxValue, int.MaxValue);
-            var max = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+            var min = new g3.Vector3i(int.MaxValue, int.MaxValue, int.MaxValue);
+            var max = new g3.Vector3i(int.MinValue, int.MinValue, int.MinValue);
             bool any = false;
 
             for (int z = 0; z < grid.NZ; z++)
@@ -256,13 +254,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             continue;
                         }
                         any = true;
-                        min = Vector3Int.Min(min, new Vector3Int(x, y, z));
-                        max = Vector3Int.Max(max, new Vector3Int(x, y, z));
+                        // g3's g3.Vector3i has no static Min/Max, so track the bounds component-wise.
+                        min = new g3.Vector3i(System.Math.Min(min.x, x), System.Math.Min(min.y, y), System.Math.Min(min.z, z));
+                        max = new g3.Vector3i(System.Math.Max(max.x, x), System.Math.Max(max.y, y), System.Math.Max(max.z, z));
                     }
                 }
             }
 
-            return any ? (min, max) : (Vector3Int.zero, Vector3Int.zero);
+            return any ? (min, max) : (new g3.Vector3i(0, 0, 0), new g3.Vector3i(0, 0, 0));
         }
     }
 }

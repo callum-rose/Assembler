@@ -1,5 +1,4 @@
 using System.IO;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -48,7 +47,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 throw new InvalidDataException("Mesh has zero extent; nothing to voxelize.");
             }
 
-            double cellSize = maxDim / Mathf.Max(1, maxDimVoxels);
+            double cellSize = maxDim / FMath.Max(1, maxDimVoxels);
 
             // This g3 build's MeshSignedDistanceGrid only offers crossing/parity inside tests (no
             // winding-number mode), which are unreliable on messy Meshy topology. So the signed grid

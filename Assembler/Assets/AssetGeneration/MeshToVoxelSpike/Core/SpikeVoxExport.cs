@@ -1,16 +1,12 @@
 using System.Collections.Generic;
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
     /// Writes the spike's blocky occupancy grid out as a MagicaVoxel <c>.vox</c>. Bridges the spike's
-    /// <see cref="VoxelGrid"/> + flat per-voxel colours into the shared
-    /// <see cref="Assembler.AssetGeneration.MeshToVoxels.VoxWriter"/>, which owns palette-building
-    /// (exact ≤254 colours, else median-cut), the reserved-slot handling, and the g3→MagicaVoxel
-    /// axis remap — so the exported model matches the <c>Window &gt; Voxels &gt; Mesh to Voxels</c>
-    /// output's orientation and colour handling.
+    /// <see cref="VoxelGrid"/> + flat per-voxel colours into <see cref="VoxWriter"/>, which owns
+    /// palette-building (exact ≤254 colours, else median-cut), the reserved-slot handling, and the
+    /// g3→MagicaVoxel axis remap. Engine-free (part of the portable core).
     /// </summary>
     public static class SpikeVoxExport
     {
@@ -19,7 +15,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// (coloured by <paramref name="colours"/>, indexed by <see cref="VoxelGrid.Index"/>) and
         /// write it to <paramref name="path"/>. Returns the number of voxels written.
         /// </summary>
-        public static int Write(string path, VoxelGrid grid, Color32[] colours)
+        public static int Write(string path, VoxelGrid grid, Rgba32[] colours)
         {
             var cells = new List<VoxCell>(grid.OccupiedCount);
             for (int z = 0; z < grid.NZ; z++)

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -162,7 +161,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// </summary>
         public static void CloseOpen(VoxelGrid grid, bool[] protectedMask, float[] gapFraction, int strength)
         {
-            int passes = Mathf.Clamp(strength, 0, 2);
+            int passes = FMath.Clamp(strength, 0, 2);
             if (passes == 0)
             {
                 return;
