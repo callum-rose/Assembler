@@ -115,6 +115,27 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation.Tests
             Assert.That(ConfigExtractor.Extract("no fenced block here"), Is.Null);
         }
 
+        // --- Parser: image prompt + base name ------------------------------
+
+        [Test]
+        public void Parse_ImagePromptAndBaseName_AreExtracted()
+        {
+            var config = ConfigParser.Parse(
+                Wrap("{\"imagePrompt\":\"a red dragon\",\"baseName\":\"red_dragon\"}"),
+                Rules());
+
+            Assert.That(config.ImagePrompt, Is.EqualTo("a red dragon"));
+            Assert.That(config.BaseName, Is.EqualTo("red_dragon"));
+        }
+
+        [Test]
+        public void Parse_MissingBaseName_IsEmpty()
+        {
+            var config = ConfigParser.Parse(Wrap("{\"imagePrompt\":\"a red dragon\"}"), Rules());
+
+            Assert.That(config.BaseName, Is.Empty);
+        }
+
         // --- Parser: lenient overwrite -------------------------------------
 
         [Test]

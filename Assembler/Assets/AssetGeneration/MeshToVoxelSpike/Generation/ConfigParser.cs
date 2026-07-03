@@ -55,6 +55,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 var root = doc.RootElement;
 
                 var imagePrompt = GetString(root, "imagePrompt") ?? string.Empty;
+                var baseName = GetString(root, "baseName") ?? string.Empty;
 
                 var settings = SettingsConfig.Seeded();
                 ApplyPartialObject(settings, root, "settings");
@@ -67,7 +68,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                     .Distinct()
                     .ToList();
 
-                return new ModelConfig(rawText ?? json, imagePrompt, appliedRuleIds, settings.ToSettings(), meshy);
+                return new ModelConfig(rawText ?? json, imagePrompt, baseName, appliedRuleIds, settings.ToSettings(), meshy);
             }
         }
 

@@ -184,6 +184,8 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
                 if (!string.IsNullOrEmpty(config.ImagePrompt))
                     _settings.Prompt = config.ImagePrompt;
+                if (!string.IsNullOrEmpty(config.BaseName))
+                    _settings.BaseName = config.BaseName;
 
                 // Mesh → voxel settings map onto the individual stage-3 knobs (the master palette is the
                 // window's, never the AI's).

@@ -36,6 +36,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 "art direction and any style rules you decide apply (see below).");
             sb.AppendLine();
 
+            sb.AppendLine("# Base name");
+            sb.AppendLine(
+                "Write `baseName`: a short, filesystem-safe identifier for this asset that names its " +
+                "output files (the shared base for the .png / .obj / .vox). Use lowercase words joined " +
+                "by underscores, no spaces or punctuation, ideally 1–3 words — e.g. `red_dragon`, " +
+                "`wooden_crate`, `steam_locomotive`.");
+            sb.AppendLine();
+
             sb.AppendLine("# Settings overrides");
             sb.AppendLine(
                 "The pipeline has sensible defaults. In `settings`, include ONLY the fields you want to " +
@@ -84,6 +92,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             sb.AppendLine("```json");
             sb.AppendLine("{");
             sb.AppendLine("  \"imagePrompt\": \"...\",");
+            sb.AppendLine("  \"baseName\": \"...\",");
             sb.AppendLine("  \"appliedRuleIds\": [\"rule-id\", ...],");
             sb.AppendLine("  \"settings\": { },");
             sb.AppendLine("  \"meshy\": { }");

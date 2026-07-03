@@ -119,6 +119,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 EditorGUILayout.LabelField("Image prompt", EditorStyles.boldLabel);
                 DrawWrappedReadonly(result.ImagePrompt, wrapArea);
 
+                EditorGUILayout.LabelField("Base name", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    string.IsNullOrEmpty(result.BaseName) ? "(none)" : result.BaseName, wrapLabel);
+
                 EditorGUILayout.LabelField("Applied rule ids", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(
                     result.AppliedRuleIds.Count > 0 ? string.Join(", ", result.AppliedRuleIds) : "(none)",
