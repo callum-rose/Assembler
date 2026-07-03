@@ -82,6 +82,32 @@ Entities:
 		}
 
 		[Test]
+		public void Listener_MapsOutputTheOwningTriggerDoesNotEmit_Throws()
+		{
+			// 'collision enter trigger' emits contact_point/contact_normal/other_velocity/other_position;
+			// 'contact_pont' is a typo that WithRenamed would silently drop at runtime, so flag it here.
+			var yaml = @"
+Entities:
+  ball:
+    Behaviours:
+      hit:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ wall ] }
+        Listeners:
+          - BehaviourId: react
+            Outputs:
+              contact_pont: p
+      react:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0, Z: 0 } }
+";
+
+			var ex = AssertThrows(yaml);
+			StringAssert.Contains("contact_pont", ex.Message);
+			StringAssert.Contains("contact_point", ex.Message);
+		}
+
+		[Test]
 		public void SetBehaviourEnabled_TargetsUnknownEntity_Throws()
 		{
 			var yaml = @"
@@ -245,6 +271,54 @@ Entities:
       v:
         Type: velocity
         Properties: { Velocity: !vec { X: 1, Y: 0 } }
+";
+
+			Assert.DoesNotThrow(() => Transform(yaml));
+		}
+
+		[Test]
+		public void Listener_MapsOutputTheOwningTriggerEmits_DoesNotThrow()
+		{
+			var yaml = @"
+Entities:
+  ball:
+    Behaviours:
+      hit:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ wall ] }
+        Listeners:
+          - BehaviourId: react
+            Outputs:
+              contact_point: hit_point
+              other_position: wall_position
+      react:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0, Z: 0 } }
+";
+
+			Assert.DoesNotThrow(() => Transform(yaml));
+		}
+
+		[Test]
+		public void Listener_OnRelayThatDeclaresNoOutputs_DoesNotThrow()
+		{
+			// A condition gate forwards its upstream trigger's context unchanged and declares no outputs of its
+			// own, so an Outputs: mapping on its listener names upstream keys that aren't knowable here. With no
+			// declared output set to check against, the pass must leave it alone rather than flag every key.
+			var yaml = @"
+Entities:
+  e:
+    Behaviours:
+      gate:
+        Type: condition gate
+        Properties: { Condition: true }
+        Listeners:
+          - BehaviourId: react
+            Outputs:
+              contact_point: hit_point
+      react:
+        Type: translate
+        Properties: { Displacement: !vec { X: 0, Y: 0, Z: 0 } }
 ";
 
 			Assert.DoesNotThrow(() => Transform(yaml));

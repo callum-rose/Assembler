@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("position", "hold_duration")]
 	public record LongPressTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

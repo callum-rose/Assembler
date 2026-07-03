@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("center", "distance", "delta", "scale", "angle", "angle_delta")]
 	public record PinchAndRotateTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners) : BehaviourInfo(Id, Listeners)
 	{
 		public static PinchAndRotateTriggerInfo Create(string id,

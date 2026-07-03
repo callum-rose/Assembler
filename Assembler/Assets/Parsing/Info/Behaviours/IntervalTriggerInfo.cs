@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("iteration_index", "iteration_count")]
 	public record IntervalTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

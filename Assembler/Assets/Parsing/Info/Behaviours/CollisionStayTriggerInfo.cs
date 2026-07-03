@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("contact_point", "contact_normal", "other_velocity", "other_position")]
 	public record CollisionStayTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

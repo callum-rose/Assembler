@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("start", "position", "delta")]
 	public record DragTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

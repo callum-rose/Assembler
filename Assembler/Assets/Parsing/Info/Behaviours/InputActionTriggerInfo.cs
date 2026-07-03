@@ -8,6 +8,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	/// phase, and the live Unity <c>InputAction</c>, are resolved at build time from the controls — this record
 	/// only carries the action name, so the parsing assembly needs no Input System reference.
 	/// </summary>
+	[TriggerOutputs("axis", "x", "y")]
 	public record InputActionTriggerInfo(string Id, IReadOnlyList<ListenerInfo> Listeners, ValueSource<string> Action)
 		: BehaviourInfo(Id, Listeners)
 	{

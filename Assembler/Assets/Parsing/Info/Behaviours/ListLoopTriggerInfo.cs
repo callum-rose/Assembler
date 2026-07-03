@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("item", "index")]
 	public record ListLoopTriggerInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

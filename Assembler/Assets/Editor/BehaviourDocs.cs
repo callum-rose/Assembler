@@ -98,8 +98,10 @@ namespace Editor
 				var summary = FindSummary(monoType, membersByKey);
 				var (propsDocs, outputsDocs) = FindRemarksSections(monoType, membersByKey);
 				var infoProps = GetInfoProperties(infoType);
+				var declaredOutputs = Assembler.Parsing.TriggerOutputs.Declared(infoType);
 
 				ValidateProps(name, infoType, monoType, infoProps, propsDocs, warnings);
+				ValidateOutputs(name, infoType, monoType, declaredOutputs, outputsDocs, warnings);
 
 				sb.AppendLine($"## `{name}`");
 				if (!string.IsNullOrWhiteSpace(summary))
@@ -135,14 +137,20 @@ namespace Editor
 					sb.AppendLine();
 				}
 
-				if (outputsDocs.Count > 0)
+				// The declared outputs (the TriggerOutputs attribute on the *Info record) are the source of
+				// truth for which outputs exist — the same set ReferenceValidator enforces. The table is driven
+				// by them, in declaration order; type and prose come from the hand-authored Outputs: remarks
+				// block, and ValidateOutputs above has already warned on any name mismatch between the two.
+				if (declaredOutputs.Count > 0)
 				{
+					var outDocsByName = outputsDocs.ToDictionary(o => o.Name, o => o.Doc);
 					sb.AppendLine("### Outputs");
 					sb.AppendLine();
 					sb.AppendLine("| Name | Type | Description |");
 					sb.AppendLine("|------|------|-------------|");
-					foreach (var (outName, outDoc) in outputsDocs)
+					foreach (var outName in declaredOutputs)
 					{
+						var outDoc = outDocsByName.TryGetValue(outName, out var d) ? d : new PropDoc(null, null);
 						sb.AppendLine($"| {outName} | {outDoc.TypeOverride ?? ""} | {outDoc.Description ?? ""} |");
 					}
 					sb.AppendLine();
@@ -407,6 +415,33 @@ namespace Editor
 			{
 				warnings.Add(
 					$"`{behaviourName}`: `{monoType.Name}` documents `{extra}` in its `Properties:` block but `{infoType.Name}` has no such property.");
+			}
+		}
+
+		// Keeps the machine-readable output registry (the TriggerOutputs attribute on the Info record, which
+		// ReferenceValidator enforces) and the hand-authored Outputs: doc block from drifting: warn if either
+		// names an output the other omits. Mirrors ValidateProps for properties.
+		private static void ValidateOutputs(
+			string behaviourName,
+			Type infoType,
+			Type monoType,
+			IReadOnlyList<string> declaredOutputs,
+			IReadOnlyList<(string Name, PropDoc Doc)> outputsDocs,
+			List<string> warnings)
+		{
+			var declaredNames = new HashSet<string>(declaredOutputs);
+			var docNames = new HashSet<string>(outputsDocs.Select(o => o.Name));
+
+			foreach (var missing in declaredNames.Except(docNames))
+			{
+				warnings.Add(
+					$"`{behaviourName}`: output `{missing}` declared by `{infoType.Name}`'s `[TriggerOutputs]` is missing from `{monoType.Name}`'s `Outputs:` block.");
+			}
+
+			foreach (var extra in docNames.Except(declaredNames))
+			{
+				warnings.Add(
+					$"`{behaviourName}`: `{monoType.Name}` documents output `{extra}` in its `Outputs:` block but `{infoType.Name}`'s `[TriggerOutputs]` does not declare it.");
 			}
 		}
 	}

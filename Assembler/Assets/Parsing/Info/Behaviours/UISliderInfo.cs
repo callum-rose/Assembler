@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("value")]
 	public record UISliderInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

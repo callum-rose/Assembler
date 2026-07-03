@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("value", "previous")]
 	public record VariableChangedTriggerInfo<T>(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

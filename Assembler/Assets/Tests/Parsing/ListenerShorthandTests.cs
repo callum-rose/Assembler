@@ -143,7 +143,7 @@ Entities:
   player:
     Behaviours:
       hit:
-        Type: trigger enter trigger
+        Type: collision enter trigger
         Properties: { TagsToDetect: [ wall ] }
         Listeners:
           - BehaviourId: react

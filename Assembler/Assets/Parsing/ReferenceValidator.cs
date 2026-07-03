@@ -51,8 +51,37 @@ namespace Assembler.Parsing
 				{
 					foreach (var listener in behaviour.Listeners.Concat(behaviour.NestedListeners))
 					{
+						// An Outputs: mapping renames the keys of the context the *owning* behaviour emits, so it
+						// is checked against that behaviour's declared outputs — independent of which listener kind
+						// or target this is.
+						ValidateOutputMapping(entity.Id, behaviour, listener);
 						ValidateListener(entity.Id, behaviour.Id, listener, entityBehaviours, knownEntityIds, placementIds);
 					}
+				}
+			}
+		}
+
+		// The Outputs: block on a listener renames outputs the owning behaviour emits when it fires. A key that
+		// the owning behaviour never emits is a dead rename (WithRenamed silently drops it at runtime), almost
+		// always a typo — so flag it, but only when the owning behaviour actually declares its outputs. A relay
+		// (condition gate, throttle, …) forwards an upstream trigger's context unchanged and declares none; its
+		// emitted keys are only knowable from upstream, so leaving them undeclared means "not checkable here".
+		private static void ValidateOutputMapping(string entityId, BehaviourInfo behaviour, ListenerInfo listener)
+		{
+			if (listener.OutputMapping.Count == 0 || !TriggerOutputs.Declares(behaviour.GetType()))
+			{
+				return;
+			}
+
+			var declaredOutputs = TriggerOutputs.Declared(behaviour);
+
+			foreach (var mappedOutput in listener.OutputMapping.Keys)
+			{
+				if (!declaredOutputs.Contains(mappedOutput))
+				{
+					throw new ParsingException(
+						$"Behaviour '{behaviour.Id}' on entity '{entityId}'{At(listener)} maps output '{mappedOutput}' which " +
+						$"it does not emit (declared outputs: {string.Join(", ", declaredOutputs)}).");
 				}
 			}
 		}

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("other_position")]
 	public record TriggerStayTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace Assembler.Parsing.Info.Behaviours
 {
+	[TriggerOutputs("position")]
 	public record DoubleTapTriggerInfo(
 		string Id,
 		IReadOnlyList<ListenerInfo> Listeners,
