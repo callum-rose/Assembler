@@ -18,8 +18,9 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
     /// <summary>
     /// Headless core logic: asks Claude which direction the front of the main object
-    /// in an image is facing, constrained to the eight <see cref="FacingDirection"/>
-    /// codes (L, R, U, D, LU, LD, RU, RD) or an explicit "unsure" answer when it cannot
+    /// in an image is facing, constrained to the ten <see cref="FacingDirection"/>
+    /// codes (the eight in-plane ones L, R, U, D, LU, LD, RU, RD plus T/A for towards
+    /// and away from the viewer) or an explicit "unsure" answer when it cannot
     /// tell (<see cref="OrientationOutcome.Unsure"/>). Every input arrives as an argument and the
     /// result is returned — there is no editor or shared state — so it runs equally
     /// from an editor window, batch mode, a test, or a player build.
@@ -30,8 +31,9 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
         private const string SystemPrompt =
             "You are a vision assistant that identifies which direction the FRONT of the main object " +
-            "in an image is facing, within the flat 2D plane of the image as the viewer sees it.\n\n" +
-            "Directions are relative to the image edges:\n" +
+            "in an image is facing.\n\n" +
+            "Most directions lie in the flat 2D plane of the image and are relative to the image edges " +
+            "as the viewer sees them:\n" +
             "  L  = front points toward the left edge\n" +
             "  R  = front points toward the right edge\n" +
             "  U  = front points toward the top edge\n" +
@@ -40,12 +42,15 @@ namespace Assembler.AssetGeneration.ImageOrientation
             "  LD = front points toward the bottom-left corner\n" +
             "  RU = front points toward the top-right corner\n" +
             "  RD = front points toward the bottom-right corner\n\n" +
-            "For example, if the image shows a car whose front points at the bottom-left corner, answer LD.\n\n" +
+            "Two more codes cover the axis perpendicular to the image, toward or away from the viewer:\n" +
+            "  T  = front points out of the screen, toward the viewer (e.g. a person looking straight at the camera)\n" +
+            "  A  = front points into the screen, away from the viewer (e.g. the back of a person walking away)\n\n" +
+            "For example, if the image shows a car whose front points at the bottom-left corner, answer LD; " +
+            "if it shows a face looking straight at you, answer T.\n\n" +
             "If you genuinely cannot tell which way the front faces — e.g. the object has no clear front, " +
-            "faces straight toward or away from the viewer, or the image is too ambiguous — reply UNSURE " +
-            "instead of guessing.\n\n" +
+            "or the image is too ambiguous — reply UNSURE instead of guessing.\n\n" +
             "Pick the single closest code. Respond with EXACTLY that code and nothing else — no punctuation, " +
-            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD, UNSURE.";
+            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD, T, A, UNSURE.";
 
         private const string Instruction =
             "Which direction is the front of the main object in this image facing? " +
