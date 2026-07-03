@@ -1,0 +1,34 @@
+{
+  "rules": [
+    {
+      "id": "fill-corners",
+      "text": "Turn FillCorners and FillCornersRecursive on so concave corners box out.",
+      "appliesWhen": "all assets except ones deliberately meant to keep a natural, organic shape (rocks, terrain, foliage, clouds)"
+    },
+    {
+      "id": "creature-symmetry",
+      "text": "Set Symmetry to X and leave ForceMirror off, so the geometry is mirror-symmetric across the left/right axis while colour is not forced to match across it.",
+      "appliesWhen": "humans, animals, and other creatures, unless the description implies a deliberately asymmetric feature (an eyepatch, a raised paw, a one-sided marking)"
+    },
+    {
+      "id": "consolidated-colour",
+      "text": "Set ColourMode to Consolidated and set ConsolidateMaxColours to the number of distinct colours the description implies.",
+      "appliesWhen": "all assets"
+    },
+    {
+      "id": "fine-factor",
+      "text": "Set FineFactor to 3 for small objects with fine features, otherwise 2.",
+      "appliesWhen": "all assets"
+    },
+    {
+      "id": "colour-edge-align",
+      "text": "Set ColWeight to 2 for objects with strong colour detail or hard colour boundaries, otherwise 1.",
+      "appliesWhen": "all assets"
+    },
+    {
+      "id": "world-size-resolution",
+      "text": "Set ResolutionInput to WorldSize with VoxelWorldSize 0.1, and set TargetWorldSize to your best estimate of the object's longest real-world dimension in metres (a mug ~0.12, a chair ~1, a car ~4, a house ~8).",
+      "appliesWhen": "all assets"
+    }
+  ]
+}

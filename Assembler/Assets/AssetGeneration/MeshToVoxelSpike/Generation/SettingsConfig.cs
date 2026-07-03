@@ -13,18 +13,30 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
     /// a partial object onto; <see cref="ToSettings"/> then builds the struct the pipeline runs.
     ///
     /// It mirrors every tunable field of <see cref="Settings"/> except the master palette (supplied by
-    /// the window's palette asset, never by the AI) and the world-size resolution plumbing
-    /// (<see cref="Settings.ResolutionInput"/> is fixed to <see cref="ResolutionInput.MaxDimSlider"/>,
-    /// so the resolution is just <see cref="MaxDimVoxels"/>).
+    /// the window's palette asset, never by the AI). The resolution can be driven either directly via
+    /// <see cref="MaxDimVoxels"/> or from physical scale via <see cref="ResolutionInput"/> =
+    /// <see cref="MeshToVoxelSpike.ResolutionInput.WorldSize"/> with <see cref="VoxelWorldSize"/> /
+    /// <see cref="TargetWorldSize"/>.
     /// </summary>
     [Serializable]
     public sealed class SettingsConfig
     {
         // ---- Resolution -------------------------------------------------------
 
+        [Tooltip("How the coarse resolution is chosen. MaxDimSlider uses MaxDimVoxels directly. WorldSize instead derives it from TargetWorldSize ÷ VoxelWorldSize (clamped to 4–96), so the object's physical scale drives the voxel count.")]
+        public ResolutionInput ResolutionInput = ResolutionInput.MaxDimSlider;
+
         [Range(4, 96)]
-        [Tooltip("Voxels along the longest bounding-box axis; the other axes scale to match. Keep it low (~10–16 for characters) for the chunky stylised read; the pipeline behaves across the whole 4–96 range.")]
+        [Tooltip("MaxDimSlider mode: voxels along the longest bounding-box axis; the other axes scale to match. Keep it low (~10–16 for characters) for the chunky stylised read; the pipeline behaves across the whole 4–96 range.")]
         public int MaxDimVoxels = 24;
+
+        [Range(0.01f, 1f)]
+        [Tooltip("WorldSize mode: the edge length of one voxel in world metres. With TargetWorldSize this sets the resolution — e.g. a 2 m object at 0.1 gives 20 voxels along its longest axis.")]
+        public float VoxelWorldSize = 0.1f;
+
+        [Range(0.1f, 100f)]
+        [Tooltip("WorldSize mode: your best estimate of the object's longest real-world dimension in metres (a mug ~0.12, a chair ~1, a car ~4, a house ~8). Ignored in MaxDimSlider mode.")]
+        public float TargetWorldSize = 2f;
 
         // ---- Geometry ---------------------------------------------------------
 
@@ -144,7 +156,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             Settings d = Settings.Defaults;
             return new SettingsConfig
             {
+                ResolutionInput = d.ResolutionInput,
                 MaxDimVoxels = d.MaxDimVoxels,
+                VoxelWorldSize = d.VoxelWorldSize,
+                TargetWorldSize = d.TargetWorldSize,
                 GridSearch = d.GridSearch,
                 ScaleFlex = d.ScaleFlex,
                 ThinFeatureKeep = d.ThinFeatureKeep,
@@ -181,7 +196,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
         /// serialising a resolved <see cref="Settings"/> back to JSON (the struct itself can't be).</summary>
         public static SettingsConfig From(Settings s) => new()
         {
+            ResolutionInput = s.ResolutionInput,
             MaxDimVoxels = s.MaxDimVoxels,
+            VoxelWorldSize = s.VoxelWorldSize,
+            TargetWorldSize = s.TargetWorldSize,
             GridSearch = s.GridSearch,
             ScaleFlex = s.ScaleFlex,
             ThinFeatureKeep = s.ThinFeatureKeep,
@@ -214,12 +232,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
         };
 
         /// <summary>Builds the engine-free <see cref="Settings"/> struct the pipeline runs. The master
-        /// palette is left null (the window supplies it) and the resolution is always the direct
-        /// max-dimension slider.</summary>
+        /// palette is left null (the window supplies it); the resolution follows whichever
+        /// <see cref="ResolutionInput"/> mode the AI chose.</summary>
         public Settings ToSettings() => Settings.Defaults with
         {
-            ResolutionInput = ResolutionInput.MaxDimSlider,
+            ResolutionInput = this.ResolutionInput,
             MaxDimVoxels = MaxDimVoxels,
+            VoxelWorldSize = VoxelWorldSize,
+            TargetWorldSize = TargetWorldSize,
             GridSearch = GridSearch,
             ScaleFlex = ScaleFlex,
             ThinFeatureKeep = ThinFeatureKeep,

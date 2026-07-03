@@ -13,7 +13,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
     /// </summary>
     public static class ConfigPromptBuilder
     {
-        public static string Build(StyleRules rules)
+        public static string Build(StyleRules rules, SettingsRules? settingsRules = null)
         {
             if (rules == null)
             {
@@ -47,10 +47,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             sb.AppendLine("# Settings overrides");
             sb.AppendLine(
                 "The pipeline has sensible defaults. In `settings`, include ONLY the fields you want to " +
-                "change from those defaults — omit everything else. `MaxDimVoxels` is the resolution: " +
-                "the longest bounding-box axis in voxels (4–96), the other axes scaling proportionally. " +
-                "Keep it low (~10–24) for a chunky stylised read; higher captures more detail but costs " +
-                "much more to convert, so only go high for assets that genuinely need it. Available fields:");
+                "change from those defaults — omit everything else. By default `MaxDimVoxels` is the " +
+                "resolution: the longest bounding-box axis in voxels (4–96), the other axes scaling " +
+                "proportionally. Keep it low (~10–24) for a chunky stylised read; higher captures more " +
+                "detail but costs much more to convert, so only go high for assets that genuinely need " +
+                "it. Alternatively set `ResolutionInput` to `WorldSize` and give `TargetWorldSize` (the " +
+                "object's longest real-world dimension in metres) and `VoxelWorldSize` (metres per " +
+                "voxel); the resolution is then their ratio, clamped to 4–96. Available fields:");
             foreach (var field in SettingsFields())
             {
                 sb.AppendLine(DescribeField(field));
@@ -63,6 +66,21 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 "implies no deliberate one-sided feature (an eyepatch, a raised paw, a logo on one side); " +
                 "the axis is usually X (left/right). When in doubt, leave it None.");
             sb.AppendLine();
+
+            if (settingsRules is { Rules: { Count: > 0 } settingsRuleList })
+            {
+                sb.AppendLine("# Settings rules");
+                sb.AppendLine(
+                    "These shared rules tell you HOW to choose the settings above for the kind of object " +
+                    "being made. Apply a rule ONLY when it is relevant to this asset; when it applies, set " +
+                    "the settings fields it names in `settings`, and list the ids you applied in " +
+                    "`appliedSettingsRuleIds`. These drive the voxel settings, not the image prompt.");
+                foreach (var rule in settingsRuleList)
+                {
+                    sb.AppendLine($"- {rule.id} — {rule.text} (apply when: {rule.appliesWhen})");
+                }
+                sb.AppendLine();
+            }
 
             sb.AppendLine("# Mesh generation (Meshy)");
             sb.AppendLine(
@@ -94,6 +112,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             sb.AppendLine("  \"imagePrompt\": \"...\",");
             sb.AppendLine("  \"baseName\": \"...\",");
             sb.AppendLine("  \"appliedRuleIds\": [\"rule-id\", ...],");
+            if (settingsRules is { Rules: { Count: > 0 } })
+            {
+                sb.AppendLine("  \"appliedSettingsRuleIds\": [\"rule-id\", ...],");
+            }
             sb.AppendLine("  \"settings\": { },");
             sb.AppendLine("  \"meshy\": { }");
             sb.AppendLine("}");

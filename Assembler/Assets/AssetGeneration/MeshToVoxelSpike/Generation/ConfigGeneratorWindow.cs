@@ -92,15 +92,27 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             }
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Style rules", EditorStyles.boldLabel);
             var wrapMiniLabel = new GUIStyle(EditorStyles.miniLabel) { wordWrap = true };
+
+            EditorGUILayout.LabelField("Style rules", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
-                "The per-object-type rules that guide settings and prompt choices live in the " +
-                "VoxelStyleRules JSON. Edit them there and re-run Choose to pick up changes.",
+                "Appearance rules the model folds into the image prompt (VoxelStyleRules JSON). " +
+                "Edit them and re-run Choose to pick up changes.",
                 wrapMiniLabel);
             if (GUILayout.Button("Edit style rules (JSON)"))
             {
                 OpenStyleRulesJson();
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Settings rules", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Rules for how the voxel/pipeline settings are chosen per object type " +
+                "(VoxelSettingsRules JSON). Edit them and re-run Choose to pick up changes.",
+                wrapMiniLabel);
+            if (GUILayout.Button("Edit settings rules (JSON)"))
+            {
+                OpenSettingsRulesJson();
             }
 
             EditorGUILayout.Space();
@@ -147,9 +159,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
                 EditorGUILayout.LabelField(
                     string.IsNullOrEmpty(result.BaseName) ? "(none)" : result.BaseName, wrapLabel);
 
-                EditorGUILayout.LabelField("Applied rule ids", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Applied style rule ids", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField(
                     result.AppliedRuleIds.Count > 0 ? string.Join(", ", result.AppliedRuleIds) : "(none)",
+                    wrapLabel);
+
+                EditorGUILayout.LabelField("Applied settings rule ids", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    result.AppliedSettingsRuleIds.Count > 0 ? string.Join(", ", result.AppliedSettingsRuleIds) : "(none)",
                     wrapLabel);
 
                 EditorGUILayout.LabelField("Resolved voxel settings", EditorStyles.boldLabel);
@@ -208,24 +225,28 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
             }
         }
 
-        // Opens the shared style-rules JSON in the project's configured script editor (Preferences >
-        // External Tools) so the rules can be edited without leaving the flow.
-        private void OpenStyleRulesJson()
+        private void OpenStyleRulesJson() => OpenRulesJson(StyleRules.ResourcePath, "style rules");
+
+        private void OpenSettingsRulesJson() => OpenRulesJson(SettingsRules.ResourcePath, "settings rules");
+
+        // Opens a shared rules JSON in the project's configured script editor (Preferences > External
+        // Tools) so the rules can be edited without leaving the flow.
+        private void OpenRulesJson(string resourcePath, string what)
         {
-            var asset = Resources.Load<TextAsset>(StyleRules.ResourcePath);
+            var asset = Resources.Load<TextAsset>(resourcePath);
             if (asset == null)
             {
-                _status = $"ERROR: style-rules resource '{StyleRules.ResourcePath}' not found.";
+                _status = $"ERROR: {what} resource '{resourcePath}' not found.";
                 return;
             }
 
             if (!AssetDatabase.OpenAsset(asset))
             {
-                _status = "Couldn't open the style-rules JSON in the external editor.";
+                _status = $"Couldn't open the {what} JSON in the external editor.";
                 return;
             }
 
-            _status = "Opened style rules in your editor.";
+            _status = $"Opened {what} in your editor.";
         }
 
         private async void RefreshModels()
