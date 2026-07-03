@@ -370,7 +370,7 @@ namespace Assembler.AssetGeneration.EyePlacement
                 // Reproject markers with the view actually used (auto-orient may have changed it).
                 _resultProjection = new VoxelViewProjection(result.View, model);
                 LoadResultPreview(result);
-                var front = result.FrontCode is { } code ? $" (front {code})" : string.Empty;
+                var front = result.FrontCode is { } code ? $" — oriented to {code}" : string.Empty;
                 _status = $"Done — {result.Eyes.Count} eye(s) placed{front}.";
             }
             catch (OperationCanceledException)

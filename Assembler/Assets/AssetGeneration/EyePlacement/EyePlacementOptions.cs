@@ -14,18 +14,18 @@ namespace Assembler.AssetGeneration.EyePlacement
         public OrthographicView View { get; init; } = OrthographicView.Isometric;
 
         /// <summary>
-        /// When true, a top-down vision pass detects which way the model's front faces and the
-        /// eye-placement camera is turned to look at that front three-quarter, so eyes land on the
-        /// actual face rather than whichever side happened to point at a fixed camera. Costs one
-        /// extra vision call. Uses <see cref="ImageOrientation.FacingDirection"/>.
+        /// When true, a ring of isometric views is rendered and a vision pass picks the one that best
+        /// shows the model's front; that view is then used for eye placement, so eyes land on the
+        /// actual face rather than whichever side happened to point at a fixed camera. Costs one extra
+        /// vision call (over all candidates). See <see cref="ModelOrientation"/>.
         /// </summary>
         public bool AutoOrient { get; init; } = true;
 
-        /// <summary>Downward tilt of the eye-placement camera (degrees). Used for the auto-oriented view.</summary>
+        /// <summary>Downward tilt of the eye-placement / candidate camera (degrees).</summary>
         public float PitchDegrees { get; init; } = 30f;
 
-        /// <summary>Yaw offset off dead-front (degrees) so the auto-oriented view shows a side too.</summary>
-        public float YawOffsetDegrees { get; init; } = 45f;
+        /// <summary>How many isometric candidate views to render around the model for front detection.</summary>
+        public int OrientationViewCount { get; init; } = 8;
 
         /// <summary>How many eyes to place.</summary>
         public int EyeCount { get; init; } = 2;

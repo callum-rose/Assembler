@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using Assembler.Voxels;
-using Assembler.AssetGeneration.ImageOrientation;
 
 namespace Assembler.AssetGeneration.EyePlacement
 {
@@ -33,20 +32,19 @@ namespace Assembler.AssetGeneration.EyePlacement
             CancellationToken cancellationToken = default)
         {
             OrthographicView view = options.View;
-            FacingDirection? front = null;
+            string? frontLabel = null;
             if (options.AutoOrient)
             {
                 OrientationOutcome outcome = await ModelOrientation.DetermineAsync(
-                    apiKey, model, options.PitchDegrees, options.YawOffsetDegrees, options.Model, cancellationToken);
-                front = outcome.Front;
+                    apiKey, model, options.PitchDegrees, options.OrientationViewCount, options.Model, cancellationToken);
                 view = outcome.View;
+                frontLabel = outcome.Label;
             }
 
             var projection = new VoxelViewProjection(view, model);
             byte[] png = VoxelRender.ToPng(model, projection, options.ImageSize, options.Msaa);
-            string? frontCode = front is { } f ? f.ToCode() : null;
             return await PlaceInternalAsync(
-                apiKey, model, options, projection, png, "image/png", frontCode, cancellationToken);
+                apiKey, model, options, projection, png, "image/png", frontLabel, cancellationToken);
         }
 
         /// <summary>

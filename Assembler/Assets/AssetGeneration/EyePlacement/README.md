@@ -12,18 +12,23 @@ coordinate you need the model's occupancy, so the **`.vox` is the source of trut
 and the image is only the vision cue. The flow:
 
 ```
-.vox ─► VoxReader ─► VoxelModel ─► [detect front, top-down] ─┐
-                                                             ▼
+.vox ─► VoxReader ─► VoxelModel ─► [detect front: ring of iso views → pick best] ─┐
+                                                                                  ▼
         build mesh ─► high-res camera screenshot (PNG) ─► Claude vision ─► 2D picks (u,v)
                                  └──────────────► ray-march the same view ─► Vector3 position + normal
 ```
 
 **Orientation first.** The model's front (its face) might point anywhere. Before
-placing eyes, a top-down render is run through `ImageFacingDirection` — looking
-straight down the up axis removes the toward/away ambiguity a side view has, so the
-eight-way compass code fully determines the front's yaw. The eye-placement camera is
-then turned to look at that front three-quarter, so eyes land on the face. Toggle off
-with `AutoOrient = false` to use a fixed `View`.
+placing eyes, a ring of isometric views is rendered around the up axis and
+`ImageFacingDirection.SelectViewAsync` picks the one that best shows the front. Iso
+candidates carry far more shape information than a flat view, and choosing from concrete
+rendered angles sidesteps the toward/away ambiguity a single in-plane compass read has —
+each candidate *is* a real yaw, and the winner is used directly as the eye-placement
+render. Toggle off with `AutoOrient = false` to use a fixed `View`.
+
+`ImageFacingDirection` returns an `OrientationAnswer` discriminated union — either a
+`Facing(FacingDirection)` (single-image compass, the original mode) or a `ViewIndex(int)`
+(which of several candidates shows the front).
 
 **Real screenshot.** The render is a proper high-resolution camera shot of the shaded
 voxel mesh (`Camera.SubmitRenderRequest`, URP), not a flat splat — far easier for the
@@ -38,7 +43,7 @@ back to a deterministic CPU render.
 | Type | Role |
 |------|------|
 | `OrthographicView` / `VoxelViewProjection` | Camera basis + invertible 2D↔ray mapping; also configures a real ortho camera |
-| `ModelOrientation` | Top-down `ImageFacingDirection` pass → a front-facing view |
+| `ModelOrientation` | Renders a ring of iso views, picks the front via `ImageFacingDirection.SelectViewAsync` |
 | `VoxelPreviewMesh` | Culled-face cube mesh with shading baked into vertex colours |
 | `VoxelCameraRenderer` | High-res camera screenshot (URP `SubmitRenderRequest`, built-in fallback) |
 | `VoxelIsometricRenderer` / `VoxelRender` | CPU splat fallback + the facade that picks camera-else-CPU |

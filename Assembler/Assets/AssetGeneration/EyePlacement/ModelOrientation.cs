@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -6,16 +7,17 @@ using Assembler.AssetGeneration.ImageOrientation;
 
 namespace Assembler.AssetGeneration.EyePlacement
 {
-    /// <summary>The detected front (null when unread) and the eye-placement view chosen for it.</summary>
-    public sealed record OrientationOutcome(FacingDirection? Front, OrthographicView View);
+    /// <summary>The eye-placement view chosen to face the model's front, plus a human-readable label.</summary>
+    public sealed record OrientationOutcome(OrthographicView View, string Label);
 
     /// <summary>
     /// Works out which way a voxel model's front faces and returns an isometric view that looks at
-    /// that front, so eye placement always sees the face. It renders the model <b>top-down</b> and
-    /// runs <see cref="ImageFacingDirection"/> on it: looking straight down the up axis removes the
-    /// toward/away ambiguity a side view has, so the eight-way compass code fully determines the
-    /// front's yaw on the ground plane. That yaw is turned into a three-quarter camera pointed at
-    /// the front.
+    /// that front, so eye placement always sees the face. It renders a ring of isometric views around
+    /// the up axis and asks <see cref="ImageFacingDirection.SelectViewAsync"/> which one best shows the
+    /// front. Isometric candidates carry far more shape information than a single flat view, and
+    /// picking from concrete rendered angles sidesteps the toward/away ambiguity a single in-plane
+    /// compass read suffers — each candidate <i>is</i> a real yaw, and the winner is used directly as
+    /// the eye-placement render.
     /// </summary>
     public static class ModelOrientation
     {
@@ -25,51 +27,43 @@ namespace Assembler.AssetGeneration.EyePlacement
             string apiKey,
             VoxelModel model,
             float pitchDegrees,
-            float yawOffsetDegrees,
+            int viewCount,
             string? visionModel = null,
             CancellationToken cancellationToken = default)
         {
-            var topProjection = new VoxelViewProjection(OrthographicView.Top, model);
-            byte[] topPng = VoxelRender.ToPng(model, topProjection, DetectionImageSize);
-
-            OrientationResult result = await ImageFacingDirection.DetermineAsync(
-                apiKey, topPng, "image/png", visionModel, cancellationToken);
-
-            return new OrientationOutcome(result.Direction, ViewFacingFront(result.Direction, pitchDegrees, yawOffsetDegrees));
-        }
-
-        /// <summary>
-        /// The world yaw (degrees, about the up axis) the front points along, from a top-down
-        /// compass code. The top view is set up with image-right = +X and image-up = +Y, so
-        /// <see cref="FacingDirection.Right"/> is +X (0°), <see cref="FacingDirection.Up"/> is +Y (90°).
-        /// </summary>
-        public static float FrontYawDegrees(FacingDirection front) => front switch
-        {
-            FacingDirection.Right => 0f,
-            FacingDirection.RightUp => 45f,
-            FacingDirection.Up => 90f,
-            FacingDirection.LeftUp => 135f,
-            FacingDirection.Left => 180f,
-            FacingDirection.LeftDown => 225f,
-            FacingDirection.Down => 270f,
-            FacingDirection.RightDown => 315f,
-            _ => 0f,
-        };
-
-        /// <summary>
-        /// A three-quarter view that looks at the given front. The camera stands on the front side
-        /// (yaw + 180°) with a yaw offset so a side is visible too. An unreadable front falls back
-        /// to the default <see cref="OrthographicView.Isometric"/> (no reorientation).
-        /// </summary>
-        public static OrthographicView ViewFacingFront(FacingDirection? front, float pitchDegrees, float yawOffsetDegrees)
-        {
-            if (front is not { } f)
+            IReadOnlyList<float> yaws = CandidateYaws(viewCount);
+            var views = new List<OrthographicView>(yaws.Count);
+            var images = new List<byte[]>(yaws.Count);
+            foreach (float yaw in yaws)
             {
-                return OrthographicView.Isometric;
+                var view = OrthographicView.FromZUpAngles(yaw, pitchDegrees);
+                views.Add(view);
+                var projection = new VoxelViewProjection(view, model);
+                images.Add(VoxelRender.ToPng(model, projection, DetectionImageSize));
             }
 
-            float cameraYaw = FrontYawDegrees(f) + 180f + yawOffsetDegrees;
-            return OrthographicView.FromZUpAngles(cameraYaw, pitchDegrees);
+            OrientationResult result = await ImageFacingDirection.SelectViewAsync(
+                apiKey, images, "image/png", visionModel, cancellationToken);
+
+            int index = ResolveIndex(result.Index, yaws.Count);
+            return new OrientationOutcome(views[index], $"view {index} (yaw {yaws[index]:0}°)");
         }
+
+        /// <summary>An even ring of yaw candidates (degrees) around the up axis, starting at 0.</summary>
+        public static IReadOnlyList<float> CandidateYaws(int count)
+        {
+            count = Mathf.Clamp(count, 1, 16);
+            var yaws = new List<float>(count);
+            for (int i = 0; i < count; i++)
+            {
+                yaws.Add(i * (360f / count));
+            }
+
+            return yaws;
+        }
+
+        /// <summary>Clamps a model-chosen index into range, falling back to 0 when it's missing or out of range.</summary>
+        public static int ResolveIndex(int? index, int count) =>
+            index is { } i && i >= 0 && i < count ? i : 0;
     }
 }
