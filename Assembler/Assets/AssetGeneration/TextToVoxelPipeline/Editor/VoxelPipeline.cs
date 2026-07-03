@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.MeshToVoxel.Editor;
 using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 
