@@ -4,18 +4,19 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEditor;
-using UnityEngine;
 
-namespace Assembler.AssetGeneration.TextToImage.Editor
+namespace Assembler.AssetGeneration.TextToImage
 {
     /// <summary>
-    /// UI-free core of the text → image stage: generate an image from a prompt and write it to disk.
-    /// Shared by the editor window (<see cref="ImageGenerationWindow"/>) and any headless / pipeline
-    /// caller, so both drive an identical path. No EditorPrefs, preview textures, or window state lives
-    /// here — callers supply an optional status sink and read the output path off the returned
-    /// <see cref="Result"/>. Mirrors <c>VoxConversion</c> so the three stages can be chained:
-    /// this stage's <see cref="Result.OutputPath"/> is the next stage's input image.
+    /// UI-free, editor-free core of the text → image stage: generate an image from a prompt and
+    /// write it to disk. Lives in a runtime assembly so it can be driven headlessly (batch mode, a
+    /// CLI, a player build) as well as from the editor window. The method is pure with respect to
+    /// editor and UI state — no EditorPrefs, no <c>AssetDatabase</c>, no window state; its only inputs
+    /// are its arguments plus the remote provider, and its only outputs are the file it writes to the
+    /// caller-supplied directory and the returned <see cref="Result"/>. Editor callers that want the
+    /// freshly-written file surfaced in the Project view call <c>AssetDatabase.Refresh</c> themselves.
+    /// Mirrors <c>VoxConversion</c> so the three stages can be chained: this stage's
+    /// <see cref="Result.OutputPath"/> is the next stage's input image.
     /// </summary>
     public static class ImageGenerationCore
     {
@@ -87,10 +88,6 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
 
             onStatus?.Invoke($"Done ({image.Bytes.Length / 1024} KB). Saved to {path}");
 
-            // Surface a freshly-written image to the project view when it lands inside Assets/.
-            if (IsUnderAssets(path))
-                AssetDatabase.Refresh();
-
             return new Result(path, image);
         }
 
@@ -126,13 +123,6 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                 _ => ".png",
             };
             return path + ext;
-        }
-
-        public static bool IsUnderAssets(string path)
-        {
-            var full = Path.GetFullPath(path);
-            var assets = Path.GetFullPath(Application.dataPath);
-            return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -1,12 +1,8 @@
 {
-    "name": "Assembler.AssetGeneration.ImageGeneration.Editor",
+    "name": "Assembler.AssetGeneration.TextToImage",
     "rootNamespace": "Assembler",
-    "references": [
-        "GUID:1a8aa96a7e52410286024cc6a8c50740"
-    ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "references": [],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

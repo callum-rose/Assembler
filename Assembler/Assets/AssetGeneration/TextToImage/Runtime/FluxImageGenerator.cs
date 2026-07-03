@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.AssetGeneration.TextToImage.Editor
+namespace Assembler.AssetGeneration.TextToImage
 {
     /// <summary>
     /// Client for Black Forest Labs' FLUX API. BFL is asynchronous: POST the prompt to the

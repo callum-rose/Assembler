@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.AssetGeneration.TextToImage.Editor
+namespace Assembler.AssetGeneration.TextToImage
 {
     /// <summary>
     /// Provider-agnostic image generator. Implement this once per backend

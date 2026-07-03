@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 using UnityEngine;
 
@@ -267,6 +268,11 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                     _provider, _apiKey, _model, _prompt, _outputDir, _outputFile, ct, SetStatus,
                     string.IsNullOrWhiteSpace(_referenceImage) ? null : _referenceImage);
 
+                // The core is editor-agnostic, so surfacing the freshly-written file in the Project
+                // view is the window's job (only when it lands inside Assets/).
+                if (IsUnderAssets(result.OutputPath))
+                    AssetDatabase.Refresh();
+
                 LoadPreview(result.Image.Bytes);
             }
             catch (OperationCanceledException)
@@ -308,6 +314,13 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                 return Application.dataPath;
             var dir = Path.GetDirectoryName(path);
             return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
+        }
+
+        private static bool IsUnderAssets(string path)
+        {
+            var full = Path.GetFullPath(path);
+            var assets = Path.GetFullPath(Application.dataPath);
+            return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

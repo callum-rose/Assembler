@@ -2,7 +2,7 @@
     "name": "Assembler.TextToVoxelPipeline.Editor",
     "rootNamespace": "Assembler",
     "references": [
-        "GUID:f694439fe97b143379fafb560f57b62a",
+        "Assembler.AssetGeneration.TextToImage",
         "Assembler.AssetGeneration.ImageToMesh",
         "GUID:3dfd5c7cd1ee24872ac47f969b992bf8",
         "GUID:9cb227eb9bbda487798a7b5516f65ead"

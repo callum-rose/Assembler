@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Assembler.AssetGeneration.TextToImage.Editor
+namespace Assembler.AssetGeneration.TextToImage
 {
     /// <summary>
     /// Client for Recraft's image API. Text-to-image posts JSON to <c>/v1/images/generations</c>
