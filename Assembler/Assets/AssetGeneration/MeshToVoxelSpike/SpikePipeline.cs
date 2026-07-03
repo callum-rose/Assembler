@@ -20,7 +20,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// and build the full preview bundle. <paramref name="progress"/> receives
         /// <c>(fraction, stageName)</c> at stage boundaries.
         /// </summary>
-        public static SpikeStageResult Run(string meshPath, SpikeSettings settings, Action<float, string>? progress = null)
+        public static SpikeStageResult Run(string meshPath, Settings settings, Action<float, string>? progress = null)
         {
             progress?.Invoke(0.02f, "Importing mesh");
             LoadedModel model = ModelLoader.Load(meshPath);

@@ -223,7 +223,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 }
             }
 
-            SpikeSettings settings = BuildSettings();
+            Settings settings = BuildSettings();
             int fineDim = settings.ResolveMaxDimVoxels() * settings.ResolveFineFactor();
             if (fineDim > FineNodeWarningDim)
             {
@@ -580,7 +580,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 // Let the "Converting…" button state paint before the synchronous run blocks the thread.
                 await Task.Yield();
 
-                SpikeSettings settings = BuildSettings();
+                Settings settings = BuildSettings();
                 SpikeStageResult result = SpikePipeline.Run(
                     _meshPath, settings,
                     (fraction, stage) => EditorUtility.DisplayProgressBar("Mesh → Voxel Spike", stage + "…", fraction));
@@ -673,7 +673,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
         }
 
-        private SpikeSettings BuildSettings() => new()
+        private Settings BuildSettings() => new()
         {
             ResolutionInput = _resolutionInput,
             MaxDimVoxels = _maxDimVoxels,
@@ -714,7 +714,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         };
 
         // The master-palette swatches come from Unity-side types (VoxMasterPalette / DefaultMasterPalette);
-        // the engine-free SpikeSettings takes the core Rgba32, so convert at this boundary.
+        // the engine-free Settings takes the core Rgba32, so convert at this boundary.
         private static Rgba32[] ToCorePalette(IReadOnlyList<Color32> colours)
         {
             var result = new Rgba32[colours.Count];

@@ -6,7 +6,7 @@ produces a MagicaVoxel `.vox`:
 ```
 prompt ──▶ image ──▶ mesh ──▶ voxels
         (1)       (2)       (3)
-   ImageGenerationCore  MeshyConversionCore  VoxConversion
+   ImageGenerationCore  MeshyConversionCore  MeshVoxeliser
 ```
 
 Each stage drives the *existing* core of its module — nothing is reimplemented —
@@ -55,10 +55,14 @@ project so Unity imports the result.
 
 ## Notes
 
-- Stage 3 (voxelization) is CPU-heavy but runs on a background thread (only the
-  mesh import + final `AssetDatabase.Refresh` stay on the main thread), so the
-  editor stays responsive; a cancelable progress bar is shown. Keep **Max
-  dimension** modest regardless. `VoxelPipeline.RunAsync` awaits the async
-  `VoxConversion.Run`, so call it from the main thread.
+- Stage 3 (voxelization) mirrors the standalone **Mesh → Voxel Spike** window's
+  full control set and runs **synchronously on the main thread** (mesh import +
+  texture decode need the editor, and the engine-free `MeshVoxeliser` is called
+  straight through), so the editor blocks while it runs; a progress bar is shown.
+  Keep **Max dimension** / **Fine factor** modest to keep it quick. Because it
+  blocks the main thread, `VoxelPipeline.RunAsync` must be called from it.
+- The AI Model Config layer (**Window → Voxels → AI Model Config**) emits a JSON
+  config that fully configures this pipeline — paste it into the **Import AI
+  config** box. It targets the same `Settings` the stage-3 controls expose.
 - Per-stage caveats (texture wiring, API retries, palette snapping) are inherited
   from each stage — see their READMEs.
