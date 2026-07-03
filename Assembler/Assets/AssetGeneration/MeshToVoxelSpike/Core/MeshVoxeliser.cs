@@ -7,7 +7,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// grid-placement search (or the identity placement) → floater removal → protected morphology →
     /// multi-sample colour reprojection → palette + Potts smoothing → corner-fill/symmetry finishing
     /// — producing the blocky occupancy grid + flat per-voxel colours. Pure: it takes a pre-loaded
-    /// <see cref="LoadedModel"/> and a <see cref="SpikeSettings"/> and returns a
+    /// <see cref="LoadedModel"/> and a <see cref="Settings"/> and returns a
     /// <see cref="VoxelResult"/>, with no file IO and no <c>UnityEngine</c> dependency, so it can run
     /// headlessly (batch mode) or outside Unity entirely. Loading the mesh (.obj/.fbx, texture
     /// decode) and building renderable <c>UnityEngine.Mesh</c> previews are the editor layer's job.
@@ -25,7 +25,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// Voxelise <paramref name="model"/> to the lean occupancy + colours + metrics.
         /// <paramref name="progress"/> receives <c>(fraction, stageName)</c> at stage boundaries.
         /// </summary>
-        public static VoxelResult Voxelise(LoadedModel model, SpikeSettings settings, Action<float, string>? progress = null)
+        public static VoxelResult Voxelise(LoadedModel model, Settings settings, Action<float, string>? progress = null)
             => RunVoxelStage(model, settings, progress).Result;
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// meshes for the previewer. Does the extra smooth-path work the lean <see cref="Voxelise"/>
         /// skips.
         /// </summary>
-        public static VoxelPreview VoxeliseWithPreview(LoadedModel model, SpikeSettings settings, Action<float, string>? progress = null)
+        public static VoxelPreview VoxeliseWithPreview(LoadedModel model, Settings settings, Action<float, string>? progress = null)
         {
             Stage stage = RunVoxelStage(model, settings, progress);
 
@@ -80,7 +80,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             public SdfIsosurface.Result Sdf { get; init; }
         }
 
-        private static Stage RunVoxelStage(LoadedModel model, SpikeSettings settings, Action<float, string>? progress)
+        private static Stage RunVoxelStage(LoadedModel model, Settings settings, Action<float, string>? progress)
         {
             if (settings.UvDilate)
             {

@@ -33,7 +33,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         }
 
         /// <summary>Run every mesh in <paramref name="folder"/> (non-recursive, sorted by name).</summary>
-        public static BatchResult Run(string folder, SpikeSettings settings, float rowSpacing)
+        public static BatchResult Run(string folder, Settings settings, float rowSpacing)
         {
             string[] meshPaths = Directory.GetFiles(folder)
                 .Where(p => p.EndsWith(".obj", StringComparison.OrdinalIgnoreCase)

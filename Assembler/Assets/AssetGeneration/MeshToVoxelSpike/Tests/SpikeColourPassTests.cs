@@ -272,7 +272,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             try
             {
                 // Every pass switched on ("with"-expressions on structs need C# 10, so spelled out).
-                var settings = new SpikeSettings
+                var settings = new Settings
                 {
                     ResolutionInput = ResolutionInput.MaxDimSlider,
                     MaxDimVoxels = 8,
