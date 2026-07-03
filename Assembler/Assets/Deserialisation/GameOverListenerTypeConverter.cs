@@ -12,8 +12,12 @@ namespace Assembler.Deserialisation
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
+			var position = parser.Current is { } current
+				? new SourcePosition((int)current.Start.Line, (int)current.Start.Column)
+				: SourcePosition.None;
+
 			parser.Consume<Scalar>();
-			return new GameOverListenerDto();
+			return new GameOverListenerDto { Position = position };
 		}
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>

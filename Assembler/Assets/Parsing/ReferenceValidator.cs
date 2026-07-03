@@ -84,6 +84,7 @@ namespace Assembler.Parsing
 			}
 
 			var targetId = literal.Id;
+			var at = At(direct);
 
 			// A runtime-spawned entity's id is only minted at spawn time; the prefix marks it as valid here.
 			if (targetId.StartsWith(SpawnedIdPrefix))
@@ -97,7 +98,7 @@ namespace Assembler.Parsing
 				if (direct.BehaviourId != GameOverBehaviourId)
 				{
 					throw new ParsingException(
-						$"Behaviour '{behaviourId}' on entity '{entityId}' targets '{GameOverEntityId}' but behaviour " +
+						$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets '{GameOverEntityId}' but behaviour " +
 						$"'{direct.BehaviourId}' — the only game-over behaviour is '{GameOverBehaviourId}'.");
 				}
 
@@ -114,7 +115,7 @@ namespace Assembler.Parsing
 			if (!knownEntityIds.Contains(targetId))
 			{
 				throw new ParsingException(
-					$"Behaviour '{behaviourId}' on entity '{entityId}' targets unknown entity '{targetId}'.");
+					$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets unknown entity '{targetId}'.");
 			}
 
 			// A known child id (present in the set but not the top-level behaviour map) can't have its
@@ -127,10 +128,15 @@ namespace Assembler.Parsing
 			if (!declaredBehaviours.Contains(direct.BehaviourId))
 			{
 				throw new ParsingException(
-					$"Behaviour '{behaviourId}' on entity '{entityId}' targets behaviour '{direct.BehaviourId}' which " +
+					$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets behaviour '{direct.BehaviourId}' which " +
 					$"does not exist on entity '{targetId}' (declared behaviours: {string.Join(", ", declaredBehaviours)}).");
 			}
 		}
+
+		// A " (at line L, column C)" suffix when the listener's source position is known, else empty — so
+		// messages stay clean for synthesised listeners (nested hooks, template expansions) that lack one.
+		private static string At(ListenerInfo listener) =>
+			listener.Position.IsKnown ? $" (at {listener.Position})" : string.Empty;
 
 		// True when id is '{placementId}_{n}' for a non-negative integer n.
 		private static bool IsPlacementInstance(string id, string placementId)

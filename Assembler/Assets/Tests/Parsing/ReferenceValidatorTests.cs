@@ -100,6 +100,26 @@ Entities:
 			StringAssert.Contains("ghostentity", ex.Message);
 		}
 
+		[Test]
+		public void UnknownReference_MessageCitesSourceLine()
+		{
+			// The listener is authored on line 9 of the descriptor (line 1 is the verbatim string's
+			// leading newline); the error must point back at it, not just name the bad id.
+			var yaml = @"
+Entities:
+  source:
+    Behaviours:
+      trig:
+        Type: interval trigger
+        Properties: { Interval: 1.0 }
+        Listeners:
+          - { EntityId: nonexistent, BehaviourId: b }
+";
+
+			var ex = AssertThrows(yaml);
+			StringAssert.Contains("line 9", ex.Message);
+		}
+
 		// ---- Must NOT throw (false-positive guards) ---------------------------------------------
 
 		[Test]
