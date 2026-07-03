@@ -33,18 +33,20 @@ namespace Assembler.AssetGeneration.EyePlacement
         {
             OrthographicView view = options.View;
             string? frontLabel = null;
+            IReadOnlyList<OrientationCandidate> candidates = System.Array.Empty<OrientationCandidate>();
             if (options.AutoOrient)
             {
                 OrientationOutcome outcome = await ModelOrientation.DetermineAsync(
                     apiKey, model, options.PitchDegrees, options.OrientationViewCount, options.Model, cancellationToken);
                 view = outcome.View;
                 frontLabel = outcome.Label;
+                candidates = outcome.Candidates;
             }
 
             var projection = new VoxelViewProjection(view, model);
             byte[] png = VoxelRender.ToPng(model, projection, options.ImageSize, options.Msaa);
             return await PlaceInternalAsync(
-                apiKey, model, options, projection, png, "image/png", frontLabel, cancellationToken);
+                apiKey, model, options, projection, png, "image/png", frontLabel, candidates, cancellationToken);
         }
 
         /// <summary>
@@ -62,12 +64,15 @@ namespace Assembler.AssetGeneration.EyePlacement
             CancellationToken cancellationToken = default)
         {
             var projection = new VoxelViewProjection(options.View, model);
-            return PlaceInternalAsync(apiKey, model, options, projection, imageData, mediaType, null, cancellationToken);
+            return PlaceInternalAsync(
+                apiKey, model, options, projection, imageData, mediaType, null,
+                System.Array.Empty<OrientationCandidate>(), cancellationToken);
         }
 
         /// <summary>Offline geometric placement — no render, no network. See <see cref="GeometricEyePlacer"/>.</summary>
         public static EyePlacementResult PlaceGeometric(VoxelModel model, EyePlacementOptions options) =>
-            new(GeometricEyePlacer.Place(model, options), "(geometric — no model call)", null, options.View, null);
+            new(GeometricEyePlacer.Place(model, options), "(geometric — no model call)", null, options.View, null,
+                System.Array.Empty<OrientationCandidate>());
 
         private static async Task<EyePlacementResult> PlaceInternalAsync(
             string apiKey,
@@ -77,6 +82,7 @@ namespace Assembler.AssetGeneration.EyePlacement
             byte[] imageData,
             string mediaType,
             string? frontCode,
+            IReadOnlyList<OrientationCandidate> candidates,
             CancellationToken cancellationToken)
         {
             EyePicks picks = await ImageEyePlacer.DetermineAsync(
@@ -93,7 +99,7 @@ namespace Assembler.AssetGeneration.EyePlacement
                 }
             }
 
-            return new EyePlacementResult(anchors, picks.RawResponse, imageData, projection.View, frontCode);
+            return new EyePlacementResult(anchors, picks.RawResponse, imageData, projection.View, frontCode, candidates);
         }
     }
 }

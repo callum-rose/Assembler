@@ -7,8 +7,15 @@ using Assembler.AssetGeneration.ImageOrientation;
 
 namespace Assembler.AssetGeneration.EyePlacement
 {
-    /// <summary>The eye-placement view chosen to face the model's front, plus a human-readable label.</summary>
-    public sealed record OrientationOutcome(OrthographicView View, string Label);
+    /// <summary>One rendered candidate view considered during front detection.</summary>
+    public sealed record OrientationCandidate(OrthographicView View, byte[] Png, float Yaw, bool Chosen);
+
+    /// <summary>
+    /// The eye-placement view chosen to face the model's front, a human-readable label, and all the
+    /// candidate views that were weighed (with their renders) so a UI can show the full set.
+    /// </summary>
+    public sealed record OrientationOutcome(
+        OrthographicView View, string Label, IReadOnlyList<OrientationCandidate> Candidates);
 
     /// <summary>
     /// Works out which way a voxel model's front faces and returns an isometric view that looks at
@@ -46,7 +53,13 @@ namespace Assembler.AssetGeneration.EyePlacement
                 apiKey, images, "image/png", visionModel, cancellationToken);
 
             int index = ResolveIndex(result.Index, yaws.Count);
-            return new OrientationOutcome(views[index], $"view {index} (yaw {yaws[index]:0}°)");
+            var candidates = new List<OrientationCandidate>(yaws.Count);
+            for (int i = 0; i < yaws.Count; i++)
+            {
+                candidates.Add(new OrientationCandidate(views[i], images[i], yaws[i], i == index));
+            }
+
+            return new OrientationOutcome(views[index], $"view {index} (yaw {yaws[index]:0}°)", candidates);
         }
 
         /// <summary>An even ring of yaw candidates (degrees) around the up axis, starting at 0.</summary>

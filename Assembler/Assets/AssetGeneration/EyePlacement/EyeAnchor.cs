@@ -28,5 +28,6 @@ namespace Assembler.AssetGeneration.EyePlacement
         string RawResponse,
         byte[]? RenderPng,
         OrthographicView View,
-        string? FrontCode);
+        string? FrontCode,
+        IReadOnlyList<OrientationCandidate> Candidates);
 }

@@ -43,6 +43,19 @@ namespace Assembler.AssetGeneration.EyePlacement
         private Texture2D? _resultPreview;
         private EyePlacementResult? _result;
         private VoxelViewProjection? _resultProjection;
+        private readonly List<CandidateView> _candidateViews = new();
+
+        private static readonly Color VisibleColour = new(0.2f, 0.9f, 0.3f);
+        private static readonly Color MaskedColour = new(0.95f, 0.3f, 0.2f);
+
+        // One candidate render plus, per eye, where it lands in that view and whether it's occluded.
+        private sealed class CandidateView
+        {
+            public Texture2D? Texture;
+            public float Yaw;
+            public bool Chosen;
+            public readonly List<(Vector2 Uv, bool Masked)> Eyes = new();
+        }
 
         private string _status = string.Empty;
         private Vector2 _scroll;
@@ -65,7 +78,11 @@ namespace Assembler.AssetGeneration.EyePlacement
             LoadModel();
         }
 
-        private void OnDisable() => _cts?.Cancel();
+        private void OnDisable()
+        {
+            _cts?.Cancel();
+            ClearCandidateViews();
+        }
 
         private void OnGUI()
         {
@@ -289,9 +306,127 @@ namespace Assembler.AssetGeneration.EyePlacement
                 DrawPickMarkers(rect, result);
             }
 
+            DrawCandidateGrid();
+
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Raw response", EditorStyles.miniBoldLabel);
             EditorGUILayout.SelectableLabel(result.RawResponse, wrapLabel, GUILayout.Height(40));
+        }
+
+        // The full set of candidate views considered during auto-orient, each with the resolved eyes
+        // drawn on it and coloured by whether that view can actually see them (green) or they're
+        // masked/occluded (red). The chosen view is boxed in yellow.
+        private void DrawCandidateGrid()
+        {
+            if (_candidateViews.Count == 0)
+            {
+                return;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField($"Candidate views ({_candidateViews.Count})", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Eyes drawn on each — green = visible, red = masked (occluded). ★ / yellow box = chosen.",
+                EditorStyles.miniLabel);
+
+            const float cell = 120f;
+            const float pad = 4f;
+            int columns = Mathf.Max(1, Mathf.FloorToInt((EditorGUIUtility.currentViewWidth - 20f) / (cell + pad)));
+
+            for (int i = 0; i < _candidateViews.Count;)
+            {
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    for (int c = 0; c < columns && i < _candidateViews.Count; c++, i++)
+                    {
+                        DrawCandidateCell(_candidateViews[i], cell);
+                    }
+                }
+            }
+        }
+
+        private static void DrawCandidateCell(CandidateView view, float size)
+        {
+            var rect = GUILayoutUtility.GetRect(size, size, GUILayout.Width(size), GUILayout.Height(size));
+            if (view.Texture != null)
+            {
+                GUI.DrawTexture(rect, view.Texture, ScaleMode.ScaleToFit);
+            }
+            else
+            {
+                EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f));
+            }
+
+            // Candidate renders are square and drawn into a square cell, so no letterbox to correct.
+            const float r = 3.5f;
+            foreach (var (uv, masked) in view.Eyes)
+            {
+                float px = rect.x + uv.x * rect.width;
+                float py = rect.y + uv.y * rect.height;
+                EditorGUI.DrawRect(new Rect(px - r, py - r, r * 2f, r * 2f), masked ? MaskedColour : VisibleColour);
+            }
+
+            EditorGUI.DropShadowLabel(
+                new Rect(rect.x, rect.y + 2f, rect.width, 16f), view.Chosen ? $"★ {view.Yaw:0}°" : $"{view.Yaw:0}°");
+            if (view.Chosen)
+            {
+                DrawOutline(rect, Color.yellow, 2f);
+            }
+        }
+
+        private static void DrawOutline(Rect rect, Color colour, float t)
+        {
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, t), colour);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.yMax - t, rect.width, t), colour);
+            EditorGUI.DrawRect(new Rect(rect.x, rect.y, t, rect.height), colour);
+            EditorGUI.DrawRect(new Rect(rect.xMax - t, rect.y, t, rect.height), colour);
+        }
+
+        private void RebuildCandidateViews(EyePlacementResult result)
+        {
+            ClearCandidateViews();
+            if (_model3d is not { } model)
+            {
+                return;
+            }
+
+            foreach (var candidate in result.Candidates)
+            {
+                var display = new CandidateView { Yaw = candidate.Yaw, Chosen = candidate.Chosen };
+                if (candidate.Png is { Length: > 0 } png)
+                {
+                    var texture = new Texture2D(2, 2);
+                    if (texture.LoadImage(png))
+                    {
+                        display.Texture = texture;
+                    }
+                    else
+                    {
+                        UnityEngine.Object.DestroyImmediate(texture);
+                    }
+                }
+
+                var projection = new VoxelViewProjection(candidate.View, model);
+                foreach (var eye in result.Eyes)
+                {
+                    display.Eyes.Add((projection.WorldToNormalized(eye.Position), EyeVisibility.IsMasked(model, eye, projection)));
+                }
+
+                _candidateViews.Add(display);
+            }
+        }
+
+        private void ClearCandidateViews()
+        {
+            foreach (var view in _candidateViews)
+            {
+                if (view.Texture != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(view.Texture);
+                }
+            }
+
+            _candidateViews.Clear();
         }
 
         // Overlay each resolved anchor on the render by reprojecting it through the same view,
@@ -324,7 +459,8 @@ namespace Assembler.AssetGeneration.EyePlacement
                 Vector2 n01 = projection.WorldToNormalized(eye.Position);
                 float px = fitted.x + n01.x * fitted.width;
                 float py = fitted.y + n01.y * fitted.height;
-                EditorGUI.DrawRect(new Rect(px - r, py - r, r * 2f, r * 2f), Color.red);
+                bool masked = _model3d is { } m && EyeVisibility.IsMasked(m, eye, projection);
+                EditorGUI.DrawRect(new Rect(px - r, py - r, r * 2f, r * 2f), masked ? MaskedColour : VisibleColour);
             }
         }
 
@@ -370,6 +506,7 @@ namespace Assembler.AssetGeneration.EyePlacement
                 // Reproject markers with the view actually used (auto-orient may have changed it).
                 _resultProjection = new VoxelViewProjection(result.View, model);
                 LoadResultPreview(result);
+                RebuildCandidateViews(result);
                 var front = result.FrontCode is { } code ? $" — oriented to {code}" : string.Empty;
                 _status = $"Done — {result.Eyes.Count} eye(s) placed{front}.";
             }
@@ -406,6 +543,7 @@ namespace Assembler.AssetGeneration.EyePlacement
                 // The geometric path doesn't render, so give the preview a render for context.
                 byte[] png = VoxelRender.ToPng(_model3d, _resultProjection, options.ImageSize, options.Msaa);
                 LoadResultPreview(_result with { RenderPng = png });
+                RebuildCandidateViews(_result);
                 _status = $"Done (geometric) — {_result.Eyes.Count} eye(s) placed.";
             }
             catch (Exception ex)
