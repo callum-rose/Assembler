@@ -13,7 +13,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Generation
     /// </summary>
     public sealed class StyleRules
     {
-        private const string ResourcePath = "GenerationPrompts/VoxelStyleRules";
+        /// <summary>Resources-relative path (no extension) of the style-rules JSON.</summary>
+        public const string ResourcePath = "GenerationPrompts/VoxelStyleRules";
 
         private readonly HashSet<string> _ids;
 
