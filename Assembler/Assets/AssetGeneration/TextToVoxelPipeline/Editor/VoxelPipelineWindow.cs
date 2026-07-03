@@ -8,8 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxels;
-using Assembler.AssetGeneration.MeshToVoxelSpike;
-using Assembler.AssetGeneration.MeshToVoxelSpike.Generation;
+using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.MeshToVoxel.Generation;
 using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 using UnityEngine;
@@ -23,7 +23,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
     /// / "Review mesh" and the run pauses after that stage (showing the image preview / the mesh path)
     /// until you press Continue, Retry (re-run that stage), or Cancel, so you can sanity-check an
     /// intermediate before paying for the next stage. Stage 3 mirrors the standalone Mesh → Voxel
-    /// Spike window's full control set. All inputs are persisted in <see cref="EditorPrefs"/>.
+    /// Mesh to Voxel window's full control set. All inputs are persisted in <see cref="EditorPrefs"/>.
     /// </summary>
     public sealed class VoxelPipelineWindow : EditorWindow
     {
@@ -37,7 +37,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
         private readonly VoxelPipelineSettings _settings = new();
 
-        // ---- Stage-3 (mesh → voxel) spike controls, held as window fields and assembled into
+        // ---- Stage-3 (mesh → voxel) controls, held as window fields and assembled into
         //      _settings.Vox at run time. Seeded from the core's defaults. ----
 
         private ResolutionInput _resolutionInput = ResolutionInput.MaxDimSlider;
@@ -346,7 +346,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 new GUIContent("Alpha Thumbnail", "Generate a thumbnail with a transparent background (alpha_thumbnail)."), _settings.AlphaThumbnail);
         }
 
-        // ---- Stage 3: mesh → voxels (the full Mesh → Voxel Spike control set) ----
+        // ---- Stage 3: mesh → voxels (the full Mesh → Voxel control set) ----
 
         private void DrawVoxelStage()
         {
