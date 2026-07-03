@@ -1,15 +1,14 @@
 using System.Collections.Generic;
-using Assembler.AssetGeneration.MeshToVoxels;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
-    /// Converts g3 meshes to <see cref="UnityEngine.Mesh"/> for the previewer, carrying optional
-    /// per-vertex reprojected colours. Meshes stay in the g3 (right-handed) frame; triangle winding
-    /// is reversed so front faces point outward when placed into Unity's left-handed space. Colour
-    /// arrays are indexed by g3 vertex id.
+    /// Converts the voxel core's portable <see cref="g3.DMesh3"/> meshes to <see cref="UnityEngine.Mesh"/>
+    /// for the previewer, carrying optional per-vertex reprojected colours (<see cref="Rgba32"/>, indexed
+    /// by g3 vertex id). Meshes stay in the g3 (right-handed) frame; triangle winding is reversed so
+    /// front faces point outward when placed into Unity's left-handed space.
     /// </summary>
     public static class G3MeshConversion
     {
@@ -17,7 +16,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// g3 → Unity, with optional per-vertex colours (indexed by g3 vertex id). Colourless stages
         /// still get a white colour stream so a single vertex-colour material can tint them grey.
         /// </summary>
-        public static Mesh ToUnity(g3.DMesh3 mesh, Color32[]? vertexColoursByVid)
+        public static Mesh ToUnity(g3.DMesh3 mesh, Rgba32[]? vertexColoursByVid)
         {
             var white = (Color32)Color.white;
             var vertices = new List<Vector3>(mesh.VertexCount);
@@ -30,7 +29,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 g3.Vector3d p = mesh.GetVertex(vid);
                 vertices.Add(new Vector3((float)p.x, (float)p.y, (float)p.z));
                 colours.Add(vertexColoursByVid != null && vid < vertexColoursByVid.Length
-                    ? vertexColoursByVid[vid]
+                    ? vertexColoursByVid[vid].ToUnity()
                     : white);
             }
 
@@ -53,10 +52,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// texture at its own UV (a textured-looking A/B reference), or the flat material colour when
         /// untextured.
         /// </summary>
-        public static Mesh OriginalToUnity(ObjToVoxConverter.LoadedModel model)
+        public static Mesh OriginalToUnity(LoadedModel model)
         {
             g3.DMesh3 mesh = model.Mesh;
-            ObjToVoxConverter.ColorSource colors = model.Colors;
+            ColorSource colors = model.Colors;
             bool textured = colors.HasTexture && model.HasUVs;
 
             var vertices = new List<Vector3>(mesh.VertexCount);
@@ -72,11 +71,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 if (textured)
                 {
                     g3.Vector2f uv = mesh.GetVertexUV(vid);
-                    colours.Add(colors.Texture!.SampleBilinear(uv.x, uv.y).gamma);
+                    colours.Add(colors.Texture!.SampleBilinear(uv.x, uv.y).ToGamma32().ToUnity());
                 }
                 else
                 {
-                    colours.Add(colors.FlatColor);
+                    colours.Add(colors.FlatColor.ToUnity());
                 }
             }
 

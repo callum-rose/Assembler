@@ -708,10 +708,22 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             ConsolidateTolerance = _consolidateTolerance,
             ConsolidateMaxColours = _consolidateMaxColours,
             MasterPalette = _colourMode == ColourMode.MasterPalette
-                ? (_masterPalette != null ? _masterPalette.ToColor32() : DefaultMasterPalette.Colors)
+                ? ToCorePalette(_masterPalette != null ? _masterPalette.ToColor32() : DefaultMasterPalette.Colors)
                 : null,
             NormalConsistency = _normalConsistency,
         };
+
+        // The master-palette swatches come from Unity-side types (VoxMasterPalette / DefaultMasterPalette);
+        // the engine-free SpikeSettings takes the core Rgba32, so convert at this boundary.
+        private static Rgba32[] ToCorePalette(IReadOnlyList<Color32> colours)
+        {
+            var result = new Rgba32[colours.Count];
+            for (int i = 0; i < colours.Count; i++)
+            {
+                result[i] = colours[i].ToCore();
+            }
+            return result;
+        }
 
         // ---- EditorPrefs persistence ----------------------------------------
 

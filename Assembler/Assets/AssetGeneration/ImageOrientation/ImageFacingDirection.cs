@@ -10,9 +10,9 @@ namespace Assembler.AssetGeneration.ImageOrientation
 {
     /// <summary>
     /// The parsed outcome of an orientation request: the <see cref="OrientationAnswer"/> discriminated
-    /// union (a compass direction or a view index) plus the raw model text for display/logging. The
-    /// <see cref="Direction"/>/<see cref="Index"/>/<see cref="Code"/> helpers are conveniences over the
-    /// union for the common cases.
+    /// union (a facing direction, a deliberate "unsure", or — in multi-image mode — a chosen view index)
+    /// plus the raw model text for display/logging. The <see cref="Direction"/>/<see cref="Index"/>/
+    /// <see cref="Code"/> helpers are conveniences over the union for the common cases.
     /// </summary>
     public sealed record OrientationResult(OrientationAnswer Answer, string RawResponse)
     {
@@ -26,16 +26,24 @@ namespace Assembler.AssetGeneration.ImageOrientation
         {
             OrientationAnswer.Facing f => f.Direction.ToCode(),
             OrientationAnswer.ViewIndex v => $"#{v.Index}",
+            OrientationAnswer.Unsure => "?",
             _ => "(unrecognised)",
         };
     }
 
     /// <summary>
-    /// Headless core logic: asks Claude which direction the front of the main object
-    /// in an image is facing, constrained to the eight <see cref="FacingDirection"/>
-    /// codes (L, R, U, D, LU, LD, RU, RD). Every input arrives as an argument and the
-    /// result is returned — there is no editor or shared state — so it runs equally
-    /// from an editor window, batch mode, a test, or a player build.
+    /// Headless core logic. Two modes, both returning an <see cref="OrientationResult"/> over the
+    /// <see cref="OrientationAnswer"/> union:
+    /// <list type="bullet">
+    /// <item><see cref="DetermineAsync(AnthropicClient, AnthropicImage, CancellationToken)"/> asks which
+    /// direction the front of the object in a single image faces — the ten <see cref="FacingDirection"/>
+    /// codes (eight in-plane L/R/U/D + diagonals, plus T/A for towards/away) or an explicit "unsure".</item>
+    /// <item><see cref="SelectViewAsync(AnthropicClient, IReadOnlyList{AnthropicImage}, CancellationToken)"/>
+    /// is given several candidate images of the same object and picks which one best shows the front,
+    /// yielding a view index.</item>
+    /// </list>
+    /// Every input arrives as an argument and the result is returned — no editor or shared state — so it
+    /// runs equally from an editor window, batch mode, a test, or a player build.
     /// </summary>
     public static class ImageFacingDirection
     {
@@ -43,8 +51,9 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
         private const string SystemPrompt =
             "You are a vision assistant that identifies which direction the FRONT of the main object " +
-            "in an image is facing, within the flat 2D plane of the image as the viewer sees it.\n\n" +
-            "Directions are relative to the image edges:\n" +
+            "in an image is facing.\n\n" +
+            "Most directions lie in the flat 2D plane of the image and are relative to the image edges " +
+            "as the viewer sees them:\n" +
             "  L  = front points toward the left edge\n" +
             "  R  = front points toward the right edge\n" +
             "  U  = front points toward the top edge\n" +
@@ -53,13 +62,19 @@ namespace Assembler.AssetGeneration.ImageOrientation
             "  LD = front points toward the bottom-left corner\n" +
             "  RU = front points toward the top-right corner\n" +
             "  RD = front points toward the bottom-right corner\n\n" +
-            "For example, if the image shows a car whose front points at the bottom-left corner, answer LD.\n\n" +
+            "Two more codes cover the axis perpendicular to the image, toward or away from the viewer:\n" +
+            "  T  = front points out of the screen, toward the viewer (e.g. a person looking straight at the camera)\n" +
+            "  A  = front points into the screen, away from the viewer (e.g. the back of a person walking away)\n\n" +
+            "For example, if the image shows a car whose front points at the bottom-left corner, answer LD; " +
+            "if it shows a face looking straight at you, answer T.\n\n" +
+            "If you genuinely cannot tell which way the front faces — e.g. the object has no clear front, " +
+            "or the image is too ambiguous — reply UNSURE instead of guessing.\n\n" +
             "Pick the single closest code. Respond with EXACTLY that code and nothing else — no punctuation, " +
-            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD.";
+            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD, T, A, UNSURE.";
 
         private const string Instruction =
             "Which direction is the front of the main object in this image facing? " +
-            "Answer with one code only.";
+            "Answer with one code only, or UNSURE if you cannot tell.";
 
         private const string SelectViewSystemPrompt =
             "You are a vision assistant that picks which rendered view best shows the FRONT (the face) " +
@@ -119,10 +134,7 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
             var message = new AnthropicMessage("user", Instruction, new[] { image });
             var response = await client.SendAsync(SystemPrompt, new[] { message }, cancellationToken);
-            OrientationAnswer answer = FacingDirectionExtensions.Parse(response) is { } direction
-                ? new OrientationAnswer.Facing(direction)
-                : new OrientationAnswer.Unrecognised();
-            return new OrientationResult(answer, response.Trim());
+            return new OrientationResult(FacingDirectionExtensions.Classify(response), response.Trim());
         }
 
         /// <summary>

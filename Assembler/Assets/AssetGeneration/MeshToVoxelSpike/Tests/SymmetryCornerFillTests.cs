@@ -1,6 +1,5 @@
 using System;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 {
@@ -12,16 +11,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
     /// </summary>
     public sealed class SymmetryCornerFillTests
     {
-        private static readonly Color32 Red = new(240, 40, 40, 255);
-        private static readonly Color32 Blue = new(40, 40, 240, 255);
-        private static readonly Color32 Green = new(40, 200, 40, 255);
+        private static readonly Rgba32 Red = new(240, 40, 40, 255);
+        private static readonly Rgba32 Blue = new(40, 40, 240, 255);
+        private static readonly Rgba32 Green = new(40, 200, 40, 255);
 
         private static VoxelGrid Grid(int nx, int ny, int nz)
         {
             return new VoxelGrid(nx, ny, nz) { Origin = g3.Vector3d.Zero, CellSize = 1.0 };
         }
 
-        private static void Set(VoxelGrid grid, Color32[] colours, int x, int y, int z, Color32 colour)
+        private static void Set(VoxelGrid grid, Rgba32[] colours, int x, int y, int z, Rgba32 colour)
         {
             int i = grid.Index(x, y, z);
             grid.Occupied[i] = true;
@@ -32,7 +31,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         public void Symmetry_None_IsNoOp()
         {
             VoxelGrid grid = Grid(4, 2, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 1, 1, 0, Red);
 
             SymmetryEnforcer.Apply(grid, colours, SymmetryAxes.None);
@@ -46,7 +45,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Occupied X extent is [1,3] (centre 2). A lone bump at (1,1) must mirror to (3,1) and
             // copy its colour; the base row is already symmetric.
             VoxelGrid grid = Grid(5, 2, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 1, 0, 0, Blue);
             Set(grid, colours, 2, 0, 0, Blue);
             Set(grid, colours, 3, 0, 0, Blue);
@@ -74,7 +73,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             // Both sides already occupied but with different colours: neither is overwritten.
             VoxelGrid grid = Grid(3, 1, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 0, 0, Red);
             Set(grid, colours, 2, 0, 0, Blue);
 
@@ -90,7 +89,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Two opposite corners set the occupied extent to [0,2] on both axes (centre (1,1)); X+Y
             // symmetry must then populate all four corners.
             VoxelGrid grid = Grid(3, 3, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 0, 0, Red);
             Set(grid, colours, 2, 2, 0, Blue);
 
@@ -109,7 +108,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // and (4) is a wrong Blue. Force-mirror must reflect the low half over the high half:
             // (3)&(4) become Red, the Blue is overridden, and the result is an exact mirror.
             VoxelGrid grid = Grid(5, 1, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 0, 0, Red);
             Set(grid, colours, 1, 0, 0, Red);
             Set(grid, colours, 4, 0, 0, Blue);
@@ -140,7 +139,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Mirror image of the above: the high half {3,4} is dominant, so it is reflected onto the
             // low half and (0)'s wrong Blue is overridden.
             VoxelGrid grid = Grid(5, 1, 1);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 0, 0, Blue);
             Set(grid, colours, 3, 0, 0, Red);
             Set(grid, colours, 4, 0, 0, Red);
@@ -157,7 +156,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             // Centre (1,1,1) has 3 occupied neighbours all red → clear colour consensus, fills red.
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
             Set(grid, colours, 1, 0, 1, Red);
@@ -175,7 +174,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // The artifact case: 3 neighbours but no colour consensus (2 red, 1 blue) and fewer than
             // 4 — must stay empty rather than fill with an arbitrary modal pick at the boundary.
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
             Set(grid, colours, 1, 0, 1, Blue);
@@ -192,7 +191,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // 4 occupied neighbours with no 3-consensus (2 red, 1 blue, 1 green) — deep enough to box
             // out, fills the modal (red) colour.
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
             Set(grid, colours, 1, 0, 1, Blue);
@@ -213,13 +212,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // groups them into one consensus that fills.
             var nearReds = new[]
             {
-                new Color32(240, 40, 40, 255),
-                new Color32(236, 44, 42, 255),
-                new Color32(244, 37, 38, 255),
+                new Rgba32(240, 40, 40, 255),
+                new Rgba32(236, 44, 42, 255),
+                new Rgba32(244, 37, 38, 255),
             };
 
             VoxelGrid exact = Grid(3, 3, 3);
-            var exactColours = new Color32[exact.Occupied.Length];
+            var exactColours = new Rgba32[exact.Occupied.Length];
             Set(exact, exactColours, 0, 1, 1, nearReds[0]);
             Set(exact, exactColours, 2, 1, 1, nearReds[1]);
             Set(exact, exactColours, 1, 0, 1, nearReds[2]);
@@ -227,7 +226,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
                 "Exact match sees three distinct shades — no consensus, no fill.");
 
             VoxelGrid tol = Grid(3, 3, 3);
-            var tolColours = new Color32[tol.Occupied.Length];
+            var tolColours = new Rgba32[tol.Occupied.Length];
             Set(tol, tolColours, 0, 1, 1, nearReds[0]);
             Set(tol, tolColours, 2, 1, 1, nearReds[1]);
             Set(tol, tolColours, 1, 0, 1, nearReds[2]);
@@ -235,7 +234,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 
             Assert.AreEqual(1, filled, "A tolerance groups the near-reds into a consensus that fills.");
             Assert.IsTrue(tol.IsOccupied(1, 1, 1));
-            Color32 fill = tolColours[tol.Index(1, 1, 1)];
+            Rgba32 fill = tolColours[tol.Index(1, 1, 1)];
             Assert.IsTrue(System.Array.Exists(nearReds, c => c.r == fill.r && c.g == fill.g && c.b == fill.b),
                 "Filled with one of the clustered near-red neighbour colours.");
         }
@@ -244,7 +243,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         public void CornerFill_LeavesTwoNeighbourCellAlone()
         {
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
 
@@ -260,7 +259,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // A 3-same-colour consensus that would fill, but the cell is flagged as a real air gap
             // (fine gap fraction > ¼) — the shallow consensus fill must leave it open.
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
             Set(grid, colours, 1, 0, 1, Red);
@@ -281,7 +280,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // gap because it is pinched on two axes. It is walled in, not a see-through gap, so the
             // ≥4 rule must fill it despite the flag.
             VoxelGrid grid = Grid(3, 3, 3);
-            var colours = new Color32[grid.Occupied.Length];
+            var colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 1, Red);
             Set(grid, colours, 2, 1, 1, Red);
             Set(grid, colours, 1, 0, 1, Red);
@@ -301,7 +300,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             // (1,1) starts with 3 occupied neighbours; (2,1) starts with only 2 and would gain a
             // third only after (1,1) fills. A single pass fills (1,1) but must leave (2,1) empty.
-            VoxelGrid grid = CascadeGrid(out Color32[] colours);
+            VoxelGrid grid = CascadeGrid(out Rgba32[] colours);
 
             int filled = CornerFill.Apply(grid, colours, gapFraction: null, recursive: false);
 
@@ -315,7 +314,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             // Same setup: recursive keeps going, so filling (1,1) gives (2,1) its third neighbour
             // and it fills on the next pass.
-            VoxelGrid grid = CascadeGrid(out Color32[] colours);
+            VoxelGrid grid = CascadeGrid(out Rgba32[] colours);
 
             int filled = CornerFill.Apply(grid, colours, gapFraction: null, recursive: true);
 
@@ -325,10 +324,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         }
 
         // (1,1) has neighbours (0,1),(1,0),(1,2) occupied = 3; (2,1) has (2,0),(2,2) = 2 until (1,1) fills.
-        private static VoxelGrid CascadeGrid(out Color32[] colours)
+        private static VoxelGrid CascadeGrid(out Rgba32[] colours)
         {
             VoxelGrid grid = Grid(3, 3, 1);
-            colours = new Color32[grid.Occupied.Length];
+            colours = new Rgba32[grid.Occupied.Length];
             Set(grid, colours, 0, 1, 0, Red);
             Set(grid, colours, 1, 0, 0, Red);
             Set(grid, colours, 1, 2, 0, Red);

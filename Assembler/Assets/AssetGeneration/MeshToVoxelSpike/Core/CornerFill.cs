@@ -1,6 +1,3 @@
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -50,7 +47,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// only adds cells to a finite grid).
         /// </summary>
         public static int Apply(
-            VoxelGrid grid, Color32[] colours, float[]? gapFraction,
+            VoxelGrid grid, Rgba32[] colours, float[]? gapFraction,
             bool recursive = false, float colourTolerance = 0f)
         {
             int total = 0;
@@ -64,7 +61,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return total;
         }
 
-        private static int SinglePass(VoxelGrid grid, Color32[] colours, float[]? gapFraction, float colourTolerance)
+        private static int SinglePass(VoxelGrid grid, Rgba32[] colours, float[]? gapFraction, float colourTolerance)
         {
             var wasOccupied = (bool[])grid.Occupied.Clone();
             float toleranceSqr = colourTolerance * colourTolerance;
@@ -72,7 +69,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             // A voxel has ≤6 face-neighbours, so its colours group into at most 6 perceptual
             // clusters. Reuse these across cells to avoid per-cell allocation.
             var clusterLab = new OklabColor[6];
-            var clusterColour = new Color32[6];
+            var clusterColour = new Rgba32[6];
             var clusterCount = new int[6];
             int filled = 0;
 
@@ -100,7 +97,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             }
 
                             occupiedNeighbours++;
-                            Color32 c = colours[grid.Index(nx, ny, nz)];
+                            Rgba32 c = colours[grid.Index(nx, ny, nz)];
                             OklabColor lab = OklabColor.FromColor32(c);
 
                             // Add to the first cluster within tolerance, else seed a new one. The
@@ -130,7 +127,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                         // Largest cluster: its size is the consensus count, its seed the fill colour.
                         // First-in-scan-order wins ties (strict >), so the result is deterministic.
                         int bestCount = 0;
-                        Color32 modal = default;
+                        Rgba32 modal = default;
                         for (int k = 0; k < clusters; k++)
                         {
                             if (clusterCount[k] > bestCount)

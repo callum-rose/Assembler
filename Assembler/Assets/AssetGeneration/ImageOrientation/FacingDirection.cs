@@ -5,11 +5,13 @@ using System.Linq;
 namespace Assembler.AssetGeneration.ImageOrientation
 {
     /// <summary>
-    /// The direction the front of an object faces within the 2D plane of an image,
-    /// expressed as one of eight compass-style codes (L, R, U, D and the four
-    /// diagonals). Left/Right/Up/Down are relative to the image edges as seen by
-    /// the viewer, so a car whose front points at the bottom-left corner is
-    /// <see cref="LeftDown"/> (code "LD").
+    /// The direction the front of an object faces. Eight of the codes lie within the
+    /// 2D plane of the image (L, R, U, D and the four diagonals), relative to the image
+    /// edges as seen by the viewer — so a car whose front points at the bottom-left
+    /// corner is <see cref="LeftDown"/> (code "LD"). Two more codes cover the axis
+    /// perpendicular to the image: <see cref="Towards"/> (front points out of the screen,
+    /// toward the viewer; code "T") and <see cref="Away"/> (front points into the screen,
+    /// away from the viewer; code "A").
     /// </summary>
     public enum FacingDirection
     {
@@ -21,10 +23,15 @@ namespace Assembler.AssetGeneration.ImageOrientation
         LeftDown,
         RightUp,
         RightDown,
+        Towards,
+        Away,
     }
 
     public static class FacingDirectionExtensions
     {
+        /// <summary>Sentinel the model is asked to reply with when it cannot tell the facing direction.</summary>
+        public const string UnsureCode = "UNSURE";
+
         // Ordered longest-code-first so parsing prefers the two-letter diagonals
         // over a single-letter prefix (e.g. "LD" isn't read as "L").
         private static readonly IReadOnlyList<(string Code, FacingDirection Direction)> Codes = new[]
@@ -37,6 +44,8 @@ namespace Assembler.AssetGeneration.ImageOrientation
             ("R", FacingDirection.Right),
             ("U", FacingDirection.Up),
             ("D", FacingDirection.Down),
+            ("T", FacingDirection.Towards),
+            ("A", FacingDirection.Away),
         };
 
         public static string ToCode(this FacingDirection direction) => direction switch
@@ -49,6 +58,8 @@ namespace Assembler.AssetGeneration.ImageOrientation
             FacingDirection.LeftDown => "LD",
             FacingDirection.RightUp => "RU",
             FacingDirection.RightDown => "RD",
+            FacingDirection.Towards => "T",
+            FacingDirection.Away => "A",
             _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null),
         };
 
@@ -62,33 +73,43 @@ namespace Assembler.AssetGeneration.ImageOrientation
             FacingDirection.LeftDown => "facing down and to the left",
             FacingDirection.RightUp => "facing up and to the right",
             FacingDirection.RightDown => "facing down and to the right",
+            FacingDirection.Towards => "facing toward the viewer (out of the screen)",
+            FacingDirection.Away => "facing away from the viewer (into the screen)",
             _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null),
         };
 
         /// <summary>
-        /// Extracts a <see cref="FacingDirection"/> from a model response. The model
-        /// is asked to reply with just the code, but this tolerates surrounding
-        /// prose/punctuation by scanning the uppercased letters for the first valid
-        /// code (diagonals first). Returns null when no recognisable code is present.
+        /// Classifies a single-image model response into the <see cref="OrientationAnswer"/> union:
+        /// a <see cref="OrientationAnswer.Facing"/> direction, a deliberate
+        /// <see cref="OrientationAnswer.Unsure"/>, or an <see cref="OrientationAnswer.Unrecognised"/>
+        /// reply. The model is asked to reply with just a code, but this tolerates surrounding
+        /// prose/punctuation by scanning the uppercased letters. The <see cref="UnsureCode"/> sentinel
+        /// is checked first because the word "UNSURE" itself contains letters (U, R) that would
+        /// otherwise match a direction code.
         /// </summary>
-        public static FacingDirection? Parse(string response)
+        public static OrientationAnswer Classify(string response)
         {
             if (string.IsNullOrWhiteSpace(response))
             {
-                return null;
+                return new OrientationAnswer.Unrecognised();
             }
 
             var letters = new string(response.Where(char.IsLetter).ToArray()).ToUpperInvariant();
+
+            if (letters.Contains(UnsureCode))
+            {
+                return new OrientationAnswer.Unsure();
+            }
 
             foreach (var (code, direction) in Codes)
             {
                 if (letters.Contains(code))
                 {
-                    return direction;
+                    return new OrientationAnswer.Facing(direction);
                 }
             }
 
-            return null;
+            return new OrientationAnswer.Unrecognised();
         }
     }
 }

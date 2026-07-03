@@ -33,7 +33,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         };
 
         /// <summary>Build the flat-shaded blocky cube mesh; <paramref name="voxelColours"/> is indexed by <see cref="VoxelGrid.Index"/>.</summary>
-        public static Mesh Build(VoxelGrid grid, Color32[] voxelColours)
+        public static Mesh Build(VoxelGrid grid, Rgba32[] voxelColours)
         {
             var vertices = new List<Vector3>();
             var colours = new List<Color32>();
@@ -55,7 +55,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             continue;
                         }
 
-                        Color32 colour = voxelColours[i];
+                        Color32 colour = voxelColours[i].ToUnity();
                         for (int face = 0; face < 6; face++)
                         {
                             Vector3Int n = FaceNormals[face];

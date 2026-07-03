@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -35,7 +33,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             public int PaletteSize { get; init; }
 
             /// <summary>Swatches for <see cref="ColourMode.MasterPalette"/>.</summary>
-            public IReadOnlyList<Color32>? MasterPalette { get; init; }
+            public IReadOnlyList<Rgba32>? MasterPalette { get; init; }
 
             /// <summary>Oklab merge radius for <see cref="ColourMode.Consolidated"/> (0 = exact — no merging).</summary>
             public float ConsolidateTolerance { get; init; }
@@ -53,8 +51,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// </summary>
         public readonly struct PaletteAssignment
         {
-            public Color32[] Colours { get; init; }
-            public Color32[]? Palette { get; init; }
+            public Rgba32[] Colours { get; init; }
+            public Rgba32[]? Palette { get; init; }
             public int[]? Labels { get; init; }
         }
 
@@ -62,24 +60,24 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         // panels don't turn pink. Only ADDED chroma is charged; desaturating is free.
         private const float ChromaGainPenalty = 8f;
 
-        public static Color32[] Apply(Color32[] colours, bool[]? mask, ColourMode mode, Options options) =>
+        public static Rgba32[] Apply(Rgba32[] colours, bool[]? mask, ColourMode mode, Options options) =>
             AssignPalette(colours, mask, mode, options).Colours;
 
-        public static PaletteAssignment AssignPalette(Color32[] colours, bool[]? mask, ColourMode mode, Options options) =>
+        public static PaletteAssignment AssignPalette(Rgba32[] colours, bool[]? mask, ColourMode mode, Options options) =>
             mode switch
             {
-                ColourMode.PerModelPalette => PerModelPalette(colours, mask, Mathf.Max(1, options.PaletteSize)),
+                ColourMode.PerModelPalette => PerModelPalette(colours, mask, FMath.Max(1, options.PaletteSize)),
                 ColourMode.MasterPalette => MasterPaletteSnap(colours, mask, options.MasterPalette),
                 ColourMode.Consolidated => Consolidate(
-                    colours, mask, Mathf.Max(0f, options.ConsolidateTolerance), Mathf.Max(0, options.ConsolidateMaxColours)),
-                _ => new PaletteAssignment { Colours = (Color32[])colours.Clone() },
+                    colours, mask, FMath.Max(0f, options.ConsolidateTolerance), FMath.Max(0, options.ConsolidateMaxColours)),
+                _ => new PaletteAssignment { Colours = (Rgba32[])colours.Clone() },
             };
 
         // ---- Per-model palette (deterministic k-means in Oklab) --------------
 
-        private static PaletteAssignment PerModelPalette(Color32[] colours, bool[]? mask, int k)
+        private static PaletteAssignment PerModelPalette(Rgba32[] colours, bool[]? mask, int k)
         {
-            var result = (Color32[])colours.Clone();
+            var result = (Rgba32[])colours.Clone();
             List<int> valid = ValidIndices(colours, mask);
             if (valid.Count == 0)
             {
@@ -92,7 +90,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 labs[i] = OklabColor.FromColor32(colours[valid[i]]);
             }
 
-            int clusters = Mathf.Min(k, valid.Count);
+            int clusters = FMath.Min(k, valid.Count);
             int[] seeds = FarthestPointSeeds(labs, clusters);
             var centroids = new OklabColor[clusters];
             for (int c = 0; c < clusters; c++)
@@ -127,8 +125,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 remap[c] = memberCounts[c] > 0 ? used++ : -1;
             }
 
-            Color32[] allRepresentatives = ClusterRgbMeans(colours, valid, assignment, clusters);
-            var representatives = new Color32[used];
+            Rgba32[] allRepresentatives = ClusterRgbMeans(colours, valid, assignment, clusters);
+            var representatives = new Rgba32[used];
             for (int c = 0; c < clusters; c++)
             {
                 if (remap[c] >= 0)
@@ -247,7 +245,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // Each cluster's output colour is the mean RGB of its members — avoids an inverse-Oklab
         // transform and keeps the palette swatch a real average of the source colours.
-        private static Color32[] ClusterRgbMeans(Color32[] colours, List<int> valid, int[] assignment, int clusters)
+        private static Rgba32[] ClusterRgbMeans(Rgba32[] colours, List<int> valid, int[] assignment, int clusters)
         {
             var r = new long[clusters];
             var g = new long[clusters];
@@ -256,7 +254,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             for (int i = 0; i < valid.Count; i++)
             {
-                Color32 c = colours[valid[i]];
+                Rgba32 c = colours[valid[i]];
                 int k = assignment[i];
                 r[k] += c.r;
                 g[k] += c.g;
@@ -264,27 +262,27 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 n[k]++;
             }
 
-            var means = new Color32[clusters];
+            var means = new Rgba32[clusters];
             for (int k = 0; k < clusters; k++)
             {
                 means[k] = n[k] > 0
-                    ? new Color32((byte)(r[k] / n[k]), (byte)(g[k] / n[k]), (byte)(b[k] / n[k]), 255)
-                    : new Color32(128, 128, 128, 255);
+                    ? new Rgba32((byte)(r[k] / n[k]), (byte)(g[k] / n[k]), (byte)(b[k] / n[k]), 255)
+                    : new Rgba32(128, 128, 128, 255);
             }
             return means;
         }
 
         // ---- Master-palette snap --------------------------------------------
 
-        private static PaletteAssignment MasterPaletteSnap(Color32[] colours, bool[]? mask, IReadOnlyList<Color32>? palette)
+        private static PaletteAssignment MasterPaletteSnap(Rgba32[] colours, bool[]? mask, IReadOnlyList<Rgba32>? palette)
         {
-            var result = (Color32[])colours.Clone();
+            var result = (Rgba32[])colours.Clone();
             if (palette == null || palette.Count == 0)
             {
                 return new PaletteAssignment { Colours = result };
             }
 
-            var swatches = new Color32[palette.Count];
+            var swatches = new Rgba32[palette.Count];
             var paletteLab = new OklabColor[palette.Count];
             for (int i = 0; i < palette.Count; i++)
             {
@@ -297,7 +295,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             List<int> valid = ValidIndices(colours, mask);
             foreach (int index in valid)
             {
-                Color32 c = colours[index];
+                Rgba32 c = colours[index];
                 int key = ColourKey(c);
                 if (!cache.TryGetValue(key, out int swatch))
                 {
@@ -329,9 +327,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         // <paramref name="maxColours"/> is set — agglomeratively merge the nearest clusters down to that
         // hard cap, so the model is locked to a known colour count. Each voxel is repainted with its
         // cluster's frequency-weighted mean.
-        private static PaletteAssignment Consolidate(Color32[] colours, bool[]? mask, float tolerance, int maxColours)
+        private static PaletteAssignment Consolidate(Rgba32[] colours, bool[]? mask, float tolerance, int maxColours)
         {
-            var result = (Color32[])colours.Clone();
+            var result = (Rgba32[])colours.Clone();
             List<int> valid = ValidIndices(colours, mask);
             if (valid.Count == 0)
             {
@@ -359,7 +357,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             var clusterOfKey = new Dictionary<int, int>(ordered.Count);
             foreach (KeyValuePair<int, int> entry in ordered)
             {
-                Color32 c = FromColourKey(entry.Key);
+                Rgba32 c = FromColourKey(entry.Key);
                 OklabColor lab = OklabColor.FromColor32(c);
 
                 int best = -1;
@@ -394,7 +392,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 ? MergeToCount(clusters, maxColours)
                 : null;
 
-            var palette = new Color32[clusters.Count];
+            var palette = new Rgba32[clusters.Count];
             for (int i = 0; i < clusters.Count; i++)
             {
                 palette[i] = MeanColour(clusters[i]);
@@ -491,14 +489,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return i;
         }
 
-        private static Color32 MeanColour(ColourCluster c) =>
+        private static Rgba32 MeanColour(ColourCluster c) =>
             new((byte)(c.R / c.Count), (byte)(c.G / c.Count), (byte)(c.B / c.Count), 255);
 
         private static OklabColor MeanLab(ColourCluster c) => OklabColor.FromColor32(MeanColour(c));
 
-        private static int ColourKey(Color32 c) => (c.r << 16) | (c.g << 8) | c.b;
+        private static int ColourKey(Rgba32 c) => (c.r << 16) | (c.g << 8) | c.b;
 
-        private static Color32 FromColourKey(int key) =>
+        private static Rgba32 FromColourKey(int key) =>
             new((byte)((key >> 16) & 0xFF), (byte)((key >> 8) & 0xFF), (byte)(key & 0xFF), 255);
 
         private static int[] UnassignedLabels(int length)
@@ -517,7 +515,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             float bestSqr = float.MaxValue;
             for (int i = 0; i < paletteLab.Length; i++)
             {
-                float gain = Mathf.Max(0f, paletteLab[i].Chroma - c.Chroma);
+                float gain = FMath.Max(0f, paletteLab[i].Chroma - c.Chroma);
                 float d = c.SquaredDistanceTo(paletteLab[i]) + ChromaGainPenalty * gain * gain;
                 if (d < bestSqr)
                 {
@@ -528,7 +526,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return best;
         }
 
-        private static List<int> ValidIndices(Color32[] colours, bool[]? mask)
+        private static List<int> ValidIndices(Rgba32[] colours, bool[]? mask)
         {
             var valid = new List<int>();
             for (int i = 0; i < colours.Length; i++)

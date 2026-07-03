@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -27,9 +25,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         public VoxelGrid(int nx, int ny, int nz)
         {
-            NX = Mathf.Max(0, nx);
-            NY = Mathf.Max(0, ny);
-            NZ = Mathf.Max(0, nz);
+            NX = FMath.Max(0, nx);
+            NY = FMath.Max(0, ny);
+            NZ = FMath.Max(0, nz);
             Occupied = new bool[NX * NY * NZ];
         }
 
