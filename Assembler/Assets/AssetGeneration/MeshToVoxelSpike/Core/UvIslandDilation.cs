@@ -1,6 +1,3 @@
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -10,16 +7,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// uncovered gutters with iterative 8-neighbour toroidal dilation. After enough passes every
     /// texel a bilinear sample can touch near an island edge holds a real island colour instead of
     /// the gutter fill, so nearest-surface samples can no longer land purple. Returns a rebuilt
-    /// <see cref="ObjToVoxConverter.LoadedModel"/> with the dilated snapshot; the mesh is untouched.
+    /// <see cref="LoadedModel"/> with the dilated snapshot; the mesh is untouched.
     /// </summary>
     public static class UvIslandDilation
     {
         public const int DefaultPasses = 8;
 
         /// <summary>No-op (same model back) when the model has no texture or no UVs.</summary>
-        public static ObjToVoxConverter.LoadedModel Apply(ObjToVoxConverter.LoadedModel model, int passes)
+        public static LoadedModel Apply(LoadedModel model, int passes)
         {
-            ObjToVoxConverter.TextureSnapshot? texture = model.Colors.Texture;
+            TextureSnapshot? texture = model.Colors.Texture;
             if (texture is null || !model.HasUVs)
             {
                 return model;
@@ -32,14 +29,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 return model;
             }
 
-            Color[] pixels = texture.CopyLinearPixels();
+            ColorF[] pixels = texture.CopyLinearPixels();
             bool[] covered = RasteriseCoverage(model.Mesh, width, height);
-            Dilate(pixels, covered, width, height, Mathf.Max(1, passes));
+            Dilate(pixels, covered, width, height, FMath.Max(1, passes));
 
-            var dilated = new ObjToVoxConverter.TextureSnapshot(pixels, width, height);
-            return new ObjToVoxConverter.LoadedModel(
+            var dilated = new TextureSnapshot(pixels, width, height);
+            return new LoadedModel(
                 model.Mesh, model.HasUVs,
-                new ObjToVoxConverter.ColorSource { Texture = dilated, FlatColor = model.Colors.FlatColor });
+                new ColorSource { Texture = dilated, FlatColor = model.Colors.FlatColor });
         }
 
         /// <summary>
@@ -63,15 +60,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 float cx = uv2.x * width - 0.5f, cy = uv2.y * height - 0.5f;
 
                 float area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-                if (Mathf.Abs(area) < 1e-8f)
+                if (FMath.Abs(area) < 1e-8f)
                 {
                     continue; // degenerate UV triangle — nothing to rasterise
                 }
 
-                int minX = Mathf.FloorToInt(Mathf.Min(ax, bx, cx));
-                int maxX = Mathf.CeilToInt(Mathf.Max(ax, bx, cx));
-                int minY = Mathf.FloorToInt(Mathf.Min(ay, by, cy));
-                int maxY = Mathf.CeilToInt(Mathf.Max(ay, by, cy));
+                int minX = FMath.FloorToInt(FMath.Min(ax, bx, cx));
+                int maxX = FMath.CeilToInt(FMath.Max(ax, bx, cx));
+                int minY = FMath.FloorToInt(FMath.Min(ay, by, cy));
+                int maxY = FMath.CeilToInt(FMath.Max(ay, by, cy));
 
                 for (int y = minY; y <= maxY; y++)
                 {
@@ -104,7 +101,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         // Iterative 8-neighbour toroidal flood: each pass, every uncovered texel adjacent to
         // covered texels takes their average colour and joins the covered set. Double-buffered so a
         // pass reads only the previous pass's frontier.
-        private static void Dilate(Color[] pixels, bool[] covered, int width, int height, int passes)
+        private static void Dilate(ColorF[] pixels, bool[] covered, int width, int height, int passes)
         {
             var next = new bool[covered.Length];
             for (int pass = 0; pass < passes; pass++)
@@ -122,7 +119,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             continue;
                         }
 
-                        var sum = Color.clear;
+                        var sum = ColorF.Clear;
                         int count = 0;
                         for (int dy = -1; dy <= 1; dy++)
                         {

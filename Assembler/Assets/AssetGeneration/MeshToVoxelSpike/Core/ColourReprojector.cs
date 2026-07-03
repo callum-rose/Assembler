@@ -1,6 +1,3 @@
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
-
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
     /// <summary>
@@ -17,14 +14,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// Per-vertex reprojected colour for a remeshed <paramref name="mesh"/>, indexed by g3 vertex
         /// id (array length <c>MaxVertexID</c>; only valid ids are written).
         /// </summary>
-        public static Color32[] SampleVertices(
+        public static Rgba32[] SampleVertices(
             g3.DMesh3 mesh,
-            ObjToVoxConverter.LoadedModel model,
+            LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
             g3.DenseGridTrilinearImplicit? field)
         {
-            var colours = new Color32[mesh.MaxVertexID];
+            var colours = new Rgba32[mesh.MaxVertexID];
             foreach (int vid in mesh.VertexIndices())
             {
                 g3.Vector3d p = mesh.GetVertex(vid);
@@ -37,14 +34,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// Per-voxel reprojected colour for an occupancy grid, indexed by <see cref="VoxelGrid.Index"/>.
         /// Each occupied voxel is coloured from the nearest original-surface point to its centre.
         /// </summary>
-        public static Color32[] SampleVoxels(
+        public static Rgba32[] SampleVoxels(
             VoxelGrid occupancy,
-            ObjToVoxConverter.LoadedModel model,
+            LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
             g3.DenseGridTrilinearImplicit? field)
         {
-            var colours = new Color32[occupancy.Occupied.Length];
+            var colours = new Rgba32[occupancy.Occupied.Length];
             for (int z = 0; z < occupancy.NZ; z++)
             {
                 for (int y = 0; y < occupancy.NY; y++)
@@ -67,14 +64,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// The shared point sampler: nearest original-surface triangle → barycentric UV → texture
         /// sample (flat colour when untextured). Also used by the multi-sample colour pass.
         /// </summary>
-        internal static Color32 SamplePoint(
+        internal static Rgba32 SamplePoint(
             g3.Vector3d p,
-            ObjToVoxConverter.LoadedModel model,
+            LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
             g3.DenseGridTrilinearImplicit? field)
         {
-            ObjToVoxConverter.ColorSource colors = model.Colors;
+            ColorSource colors = model.Colors;
             if (!colors.HasTexture || !model.HasUVs)
             {
                 return colors.FlatColor;
@@ -113,7 +110,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             // The snapshot samples in linear space (mirroring the GPU sampler); re-encode to gamma so
             // the stored vertex colour isn't darkened, matching the existing converter.
-            return colors.Texture!.SampleBilinear(u, v).gamma;
+            return colors.Texture!.SampleBilinear(u, v).ToGamma32();
         }
 
         private static bool IsWrongSide(

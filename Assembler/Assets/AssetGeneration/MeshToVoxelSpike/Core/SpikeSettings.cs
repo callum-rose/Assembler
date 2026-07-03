@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -30,9 +29,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public float TargetWorldSize { get; init; }
 
         /// <summary>The effective max-dimension voxel count for this run, clamped to the supported 4–96 range.</summary>
-        public int ResolveMaxDimVoxels() => Mathf.Clamp(
+        public int ResolveMaxDimVoxels() => FMath.Clamp(
             ResolutionInput == ResolutionInput.WorldSize && VoxelWorldSize > 0f
-                ? Mathf.RoundToInt(TargetWorldSize / VoxelWorldSize)
+                ? FMath.RoundToInt(TargetWorldSize / VoxelWorldSize)
                 : MaxDimVoxels,
             4, 96);
 
@@ -76,7 +75,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         /// <summary>The effective fine factor: 1 (no fine pass) unless the search or thin-keep needs one.</summary>
         public int ResolveFineFactor() =>
-            GridSearch || ThinFeatureKeep ? Mathf.Clamp(FineFactor, 2, 4) : 1;
+            GridSearch || ThinFeatureKeep ? FMath.Clamp(FineFactor, 2, 4) : 1;
 
         // ---- Search score weights (advanced) -----------------------------------
 
@@ -123,7 +122,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public int ConsolidateMaxColours { get; init; }
 
         /// <summary>Swatches for <see cref="MeshToVoxelSpike.ColourMode.MasterPalette"/>.</summary>
-        public IReadOnlyList<Color32>? MasterPalette { get; init; }
+        public IReadOnlyList<Rgba32>? MasterPalette { get; init; }
 
         /// <summary>Reject wrong-side thin-wall texel hits during colour reprojection.</summary>
         public bool NormalConsistency { get; init; }

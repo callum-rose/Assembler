@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
-using Assembler.AssetGeneration.MeshToVoxels;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 {
@@ -13,9 +11,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
     /// </summary>
     public sealed class SpikeColourPassTests
     {
-        private static readonly Color32 Red = new(240, 40, 40, 255);
-        private static readonly Color32 Blue = new(40, 40, 240, 255);
-        private static readonly Color32 Purple = new(255, 0, 255, 255);
+        private static readonly Rgba32 Red = new(240, 40, 40, 255);
+        private static readonly Rgba32 Blue = new(40, 40, 240, 255);
+        private static readonly Rgba32 Purple = new(255, 0, 255, 255);
 
         // One triangle covering the lower-left UV half (u + v ≤ 1), built the same way the OBJ
         // importer builds meshes (EnableVertexUVs + NewVertexInfo).
@@ -54,25 +52,25 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Red island (over-painted past the coverage boundary so no covered texel is purple),
             // purple gutter. After dilation a sample in the far gutter corner must read red.
             const int size = 8;
-            var pixels = new Color[size * size];
+            var pixels = new ColorF[size * size];
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    pixels[x + size * y] = x + y <= size ? (Color)Red : (Color)Purple;
+                    pixels[x + size * y] = x + y <= size ? (ColorF)Red : (ColorF)Purple;
                 }
             }
-            var model = new ObjToVoxConverter.LoadedModel(
+            var model = new LoadedModel(
                 UvTriangleMesh(), hasUVs: true,
-                new ObjToVoxConverter.ColorSource
+                new ColorSource
                 {
-                    Texture = new ObjToVoxConverter.TextureSnapshot(pixels, size, size),
+                    Texture = new TextureSnapshot(pixels, size, size),
                 });
 
-            ObjToVoxConverter.LoadedModel dilated = UvIslandDilation.Apply(model, UvIslandDilation.DefaultPasses);
+            LoadedModel dilated = UvIslandDilation.Apply(model, UvIslandDilation.DefaultPasses);
 
             Assert.AreNotSame(model, dilated);
-            Color corner = dilated.Colors.Texture!.SampleBilinear(7.5f / size, 7.5f / size);
+            ColorF corner = dilated.Colors.Texture!.SampleBilinear(7.5f / size, 7.5f / size);
             Assert.Less(corner.b, 0.2f, "Gutter purple must be flooded away (blue channel gone).");
             Assert.Greater(corner.r, 0.5f, "Gutter takes the island's red.");
         }
@@ -80,14 +78,14 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         [Test]
         public void OklabMedoid_RejectsMinorityOutlier()
         {
-            var samples = new List<Color32>();
+            var samples = new List<Rgba32>();
             for (int i = 0; i < 8; i++)
             {
                 samples.Add(Red);
             }
             samples.Insert(4, Purple); // the 1-in-9 purple
 
-            Color32 medoid = MultiSampleColour.OklabMedoid(samples);
+            Rgba32 medoid = MultiSampleColour.OklabMedoid(samples);
 
             Assert.AreEqual(Red.r, medoid.r);
             Assert.AreEqual(Red.g, medoid.g);
@@ -101,10 +99,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // tolerance folds the reds together and the blues together → two fundamental colours.
             var colours = new[]
             {
-                new Color32(240, 40, 40, 255),
-                new Color32(236, 44, 42, 255), // ~red
-                new Color32(40, 40, 240, 255),
-                new Color32(44, 38, 236, 255), // ~blue
+                new Rgba32(240, 40, 40, 255),
+                new Rgba32(236, 44, 42, 255), // ~red
+                new Rgba32(40, 40, 240, 255),
+                new Rgba32(44, 38, 236, 255), // ~blue
             };
 
             ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
@@ -121,7 +119,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         [Test]
         public void Consolidate_ZeroTolerance_KeepsEveryDistinctColour()
         {
-            var colours = new[] { Red, Blue, new Color32(241, 41, 41, 255) };
+            var colours = new[] { Red, Blue, new Rgba32(241, 41, 41, 255) };
 
             ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
                 colours, mask: null, ColourMode.Consolidated,
@@ -136,9 +134,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Five well-separated colours, zero tolerance (nothing merges on distance). The cap must
             // agglomerate down to exactly three, and — merging nearest pairs — the two orange-ish
             // shades collapse while the dominant red/green/blue endpoints survive.
-            var green = new Color32(40, 200, 40, 255);
-            var orange = new Color32(230, 140, 20, 255);
-            var orange2 = new Color32(210, 120, 30, 255);
+            var green = new Rgba32(40, 200, 40, 255);
+            var orange = new Rgba32(230, 140, 20, 255);
+            var orange2 = new Rgba32(210, 120, 30, 255);
             var colours = new[] { Red, green, Blue, orange, orange2 };
 
             ColourModes.PaletteAssignment merged = ColourModes.AssignPalette(
@@ -147,7 +145,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 
             Assert.AreEqual(3, merged.Palette!.Length, "The cap locks the output to three colours.");
             // Every voxel's colour is one of the three palette entries, and the two oranges now agree.
-            foreach (Color32 c in merged.Colours)
+            foreach (Rgba32 c in merged.Colours)
             {
                 CollectionAssert.Contains(merged.Palette, c);
             }
@@ -181,7 +179,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             VoxelGrid grid = FilledGrid(3, 3, 1);
             var palette = new[] { Red, Blue };
-            var sampled = new Color32[grid.Occupied.Length];
+            var sampled = new Rgba32[grid.Occupied.Length];
             var labels = new int[grid.Occupied.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -201,8 +199,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // Every voxel sampled the same red, but the centre carries a speckle mis-label. The
             // smoother must flip it back to the region's label.
             VoxelGrid grid = FilledGrid(3, 3, 1);
-            var palette = new[] { Red, new Color32(120, 20, 20, 255) };
-            var sampled = new Color32[grid.Occupied.Length];
+            var palette = new[] { Red, new Rgba32(120, 20, 20, 255) };
+            var sampled = new Rgba32[grid.Occupied.Length];
             var labels = new int[grid.Occupied.Length];
             for (int i = 0; i < labels.Length; i++)
             {
@@ -223,7 +221,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             // even a heavy strength must not move the boundary.
             VoxelGrid grid = FilledGrid(4, 3, 1);
             var palette = new[] { Red, Blue };
-            var sampled = new Color32[grid.Occupied.Length];
+            var sampled = new Rgba32[grid.Occupied.Length];
             var labels = new int[grid.Occupied.Length];
             for (int z = 0; z < 1; z++)
             {
@@ -252,12 +250,12 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
                 analysis, GridPlacementSearch.IdentityCandidate(analysis),
                 new GridPlacementSearch.Options { Coverage = 0.5f, FaceWeight = 1f, IouWeight = 1f, GapWeight = 2f });
 
-            var colours = new Color32[placement.Grid.Occupied.Length];
+            var colours = new Rgba32[placement.Grid.Occupied.Length];
             colours[placement.Grid.Index(0, 0, 0)] = Red;
             colours[placement.Grid.Index(1, 0, 0)] = Blue;
 
             SpikeMetrics metrics = SpikeMetrics.Compute(
-                placement.Grid, colours, placement, floatersRemoved: 3, new Vector3Int(2, 1, 1));
+                placement.Grid, colours, placement, floatersRemoved: 3, new g3.Vector3i(2, 1, 1));
 
             Assert.AreEqual(2, metrics.VoxelCount);
             Assert.AreEqual(10, metrics.ExposedFaces, "Two joined cubes expose 10 faces.");

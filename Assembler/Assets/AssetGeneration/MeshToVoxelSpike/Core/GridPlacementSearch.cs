@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -27,19 +25,19 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public readonly struct Candidate
         {
             /// <summary>Per-axis lattice offset in fine cells, ∈ [0, factor).</summary>
-            public Vector3Int Phase { get; init; }
+            public g3.Vector3i Phase { get; init; }
 
             /// <summary>Coarse voxel count per axis.</summary>
-            public Vector3Int Counts { get; init; }
+            public g3.Vector3i Counts { get; init; }
 
             /// <summary>Block width in fine cells per axis (factor when unstretched).</summary>
-            public Vector3 Width { get; init; }
+            public g3.Vector3f Width { get; init; }
 
             /// <summary>Lattice start in fine-cell space per axis (may be negative).</summary>
-            public Vector3 Start { get; init; }
+            public g3.Vector3f Start { get; init; }
 
             /// <summary>Per-axis stretch (Width / factor); 1 = no stretch.</summary>
-            public Vector3 Scale { get; init; }
+            public g3.Vector3f Scale { get; init; }
         }
 
         /// <summary>All score terms ∈ [0,1], higher = better. <see cref="Col"/> is −1 when not evaluated.</summary>
@@ -102,11 +100,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             VoxelGrid fine = analysis.Fine;
             return new Candidate
             {
-                Phase = Vector3Int.zero,
-                Counts = new Vector3Int(CeilDiv(fine.NX, f), CeilDiv(fine.NY, f), CeilDiv(fine.NZ, f)),
-                Width = new Vector3(f, f, f),
-                Start = Vector3.zero,
-                Scale = Vector3.one,
+                Phase = new g3.Vector3i(0, 0, 0),
+                Counts = new g3.Vector3i(CeilDiv(fine.NX, f), CeilDiv(fine.NY, f), CeilDiv(fine.NZ, f)),
+                Width = new g3.Vector3f(f, f, f),
+                Start = new g3.Vector3f(0f, 0f, 0f),
+                Scale = new g3.Vector3f(1f, 1f, 1f),
             };
         }
 
@@ -150,7 +148,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                                 for (int pz = 0; pz < f; pz++)
                                 {
                                     candidates.Add(MakeCandidate(
-                                        analysis, new Vector3Int(px, py, pz), new Vector3(wx, wy, wz)));
+                                        analysis, new g3.Vector3i(px, py, pz), new g3.Vector3f(wx, wy, wz)));
                                 }
                             }
                         }
@@ -214,7 +212,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             int[] yB = Boundaries(candidate.Start.y, candidate.Width.y, ny);
             int[] zB = Boundaries(candidate.Start.z, candidate.Width.z, nz);
 
-            float coverage = Mathf.Clamp01(options.Coverage);
+            float coverage = FMath.Clamp01(options.Coverage);
             long intersection = 0, fillOnly = 0, coveredGap = 0;
 
             for (int oz = 0; oz < nz; oz++)
@@ -282,7 +280,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// non-zero.
         /// </summary>
         public static List<ColourEdge> ExtractStrongColourEdges(
-            VoxelGrid fine, Color32[] fineColours, float oklabThreshold)
+            VoxelGrid fine, Rgba32[] fineColours, float oklabThreshold)
         {
             var edges = new List<ColourEdge>();
             for (int z = 0; z < fine.NZ; z++)
@@ -309,15 +307,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // ---- Internals -------------------------------------------------------
 
-        private static Candidate MakeCandidate(FineGridAnalysis analysis, Vector3Int phase, Vector3 width)
+        private static Candidate MakeCandidate(FineGridAnalysis analysis, g3.Vector3i phase, g3.Vector3f width)
         {
             int f = analysis.Factor;
-            var start = new Vector3(
+            var start = new g3.Vector3f(
                 analysis.OccupiedMin.x - phase.x,
                 analysis.OccupiedMin.y - phase.y,
                 analysis.OccupiedMin.z - phase.z);
 
-            var counts = new Vector3Int(
+            var counts = new g3.Vector3i(
                 CountFor(analysis.OccupiedMax.x, start.x, width.x),
                 CountFor(analysis.OccupiedMax.y, start.y, width.y),
                 CountFor(analysis.OccupiedMax.z, start.z, width.z));
@@ -328,13 +326,13 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 Counts = counts,
                 Width = width,
                 Start = start,
-                Scale = new Vector3(width.x / f, width.y / f, width.z / f),
+                Scale = new g3.Vector3f(width.x / f, width.y / f, width.z / f),
             };
         }
 
         // Enough blocks that the last one covers the occupied max cell (fine cell max spans [max, max+1)).
         private static int CountFor(int occupiedMax, float start, float width) =>
-            Mathf.Max(1, Mathf.CeilToInt((occupiedMax + 1 - start) / width));
+            FMath.Max(1, FMath.CeilToInt((occupiedMax + 1 - start) / width));
 
         // Per-axis block widths: the floor/ceil voxel-count snaps over the occupied extent, deduped,
         // stretch clamped to ±10% of the unstretched factor. Deliberately NOT factor ∪ {floor, ceil}:
@@ -348,11 +346,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
 
             var widths = new List<float>();
-            int nFloor = Mathf.Max(1, Mathf.FloorToInt((float)extent / factor));
-            int nCeil = Mathf.Max(1, Mathf.CeilToInt((float)extent / factor));
+            int nFloor = FMath.Max(1, FMath.FloorToInt((float)extent / factor));
+            int nCeil = FMath.Max(1, FMath.CeilToInt((float)extent / factor));
             foreach (int n in nFloor == nCeil ? new[] { nFloor } : new[] { nFloor, nCeil })
             {
-                float w = Mathf.Clamp((float)extent / n, factor * (1f - MaxScaleFlex), factor * (1f + MaxScaleFlex));
+                float w = FMath.Clamp((float)extent / n, factor * (1f - MaxScaleFlex), factor * (1f + MaxScaleFlex));
                 if (!ContainsApprox(widths, w))
                 {
                     widths.Add(w);
@@ -365,7 +363,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         {
             foreach (float existing in values)
             {
-                if (Mathf.Abs(existing - v) < 1e-4f)
+                if (FMath.Abs(existing - v) < 1e-4f)
                 {
                     return true;
                 }
@@ -380,16 +378,16 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             var bounds = new int[count + 1];
             for (int i = 0; i <= count; i++)
             {
-                bounds[i] = Mathf.FloorToInt(start + i * width + 0.5f);
+                bounds[i] = FMath.FloorToInt(start + i * width + 0.5f);
             }
             return bounds;
         }
 
         private static int ClippedVolume(int lo, int hi, int max)
         {
-            int a = Mathf.Max(0, lo);
-            int b = Mathf.Min(max, hi);
-            return Mathf.Max(0, b - a);
+            int a = FMath.Max(0, lo);
+            int b = FMath.Min(max, hi);
+            return FMath.Max(0, b - a);
         }
 
         private static ScoreBreakdown Score(
@@ -401,7 +399,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
             float sFace = filled == 0
                 ? 0f
-                : Mathf.Min(1f, 6f * Mathf.Pow(filled, 2f / 3f) / exposedFaces);
+                : FMath.Min(1f, 6f * FMath.Pow(filled, 2f / 3f) / exposedFaces);
 
             long union = analysis.OccupancyIntegral.Total + fillOnly;
             float sIou = union > 0 ? (float)intersection / union : 0f;
@@ -462,8 +460,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 float width = candidate.Width[edge.Axis];
                 int count = candidate.Counts[edge.Axis];
 
-                int nearest = Mathf.Clamp(Mathf.RoundToInt((edge.Boundary - start) / width), 0, count);
-                int boundary = Mathf.FloorToInt(start + nearest * width + 0.5f);
+                int nearest = FMath.Clamp(FMath.RoundToInt((edge.Boundary - start) / width), 0, count);
+                int boundary = FMath.FloorToInt(start + nearest * width + 0.5f);
                 if (boundary == edge.Boundary)
                 {
                     aligned++;
@@ -497,8 +495,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             return devA < devB - epsilon;
         }
 
-        private static float ScaleDeviation(Vector3 scale) =>
-            Mathf.Abs(scale.x - 1f) + Mathf.Abs(scale.y - 1f) + Mathf.Abs(scale.z - 1f);
+        private static float ScaleDeviation(g3.Vector3f scale) =>
+            FMath.Abs(scale.x - 1f) + FMath.Abs(scale.y - 1f) + FMath.Abs(scale.z - 1f);
 
         private static bool IsSurface(VoxelGrid grid, int x, int y, int z) =>
             grid.IsOccupied(x, y, z)
@@ -507,7 +505,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 || !grid.IsOccupied(x, y, z + 1) || !grid.IsOccupied(x, y, z - 1));
 
         private static void AddEdgeIfStrong(
-            VoxelGrid fine, Color32[] colours, List<ColourEdge> edges, OklabColor here,
+            VoxelGrid fine, Rgba32[] colours, List<ColourEdge> edges, OklabColor here,
             int nx, int ny, int nz, int axis, int boundary, float threshold)
         {
             if (!IsSurface(fine, nx, ny, nz))

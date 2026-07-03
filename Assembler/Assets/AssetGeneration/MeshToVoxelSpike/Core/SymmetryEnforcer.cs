@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -30,7 +29,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// </summary>
     public static class SymmetryEnforcer
     {
-        public static void Apply(VoxelGrid grid, Color32[] colours, SymmetryAxes axes, bool forceMirror = false)
+        public static void Apply(VoxelGrid grid, Rgba32[] colours, SymmetryAxes axes, bool forceMirror = false)
         {
             // Both operations across distinct axes commute and preserve one another's symmetry, so
             // the result is symmetric in every selected axis regardless of order.
@@ -48,7 +47,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
             }
         }
 
-        private static void MirrorAxis(VoxelGrid grid, Color32[] colours, int axis, bool forceMirror)
+        private static void MirrorAxis(VoxelGrid grid, Rgba32[] colours, int axis, bool forceMirror)
         {
             if (!TryOccupiedExtent(grid, axis, out int lo, out int hi))
             {
@@ -68,7 +67,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // Union: fill each cell if it or its mirror was filled; added cells copy their source colour,
         // cells already present keep their own.
-        private static void UnionAxis(VoxelGrid grid, Color32[] colours, int axis, int sum)
+        private static void UnionAxis(VoxelGrid grid, Rgba32[] colours, int axis, int sum)
         {
             var wasOccupied = (bool[])grid.Occupied.Clone();
             for (int z = 0; z < grid.NZ; z++)
@@ -96,10 +95,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // Force mirror: keep the dominant half (plus the centre plane), overwrite the other half with
         // the dominant half's reflection — exact geometric AND colour symmetry, overriding the input.
-        private static void ForceMirrorAxis(VoxelGrid grid, Color32[] colours, int axis, int sum)
+        private static void ForceMirrorAxis(VoxelGrid grid, Rgba32[] colours, int axis, int sum)
         {
             var wasOccupied = (bool[])grid.Occupied.Clone();
-            var wasColours = (Color32[])colours.Clone();
+            var wasColours = (Rgba32[])colours.Clone();
             bool keepLow = DominantIsLow(grid, wasOccupied, axis, sum);
 
             for (int z = 0; z < grid.NZ; z++)

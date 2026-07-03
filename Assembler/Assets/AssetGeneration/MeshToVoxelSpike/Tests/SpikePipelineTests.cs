@@ -1,7 +1,5 @@
-using Assembler.AssetGeneration.MeshToVoxels;
 using g3;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
 {
@@ -28,11 +26,11 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
             VoxelGrid occ = result.Occupancy;
             Assert.IsTrue(occ.IsOccupied(occ.NX / 2, occ.NY / 2, occ.NZ / 2), "Cube centre should be inside.");
 
-            var red = new Color32(220, 40, 40, 255);
-            var model = new ObjToVoxConverter.LoadedModel(
-                cube, hasUVs: false, new ObjToVoxConverter.ColorSource { FlatColor = red });
+            var red = new Rgba32(220, 40, 40, 255);
+            var model = new LoadedModel(
+                cube, hasUVs: false, new ColorSource { FlatColor = red });
 
-            Color32[] colours = ColourReprojector.SampleVoxels(occ, model, tree, normalConsistency: false, result.Field);
+            Rgba32[] colours = ColourReprojector.SampleVoxels(occ, model, tree, normalConsistency: false, result.Field);
 
             int centre = occ.Index(occ.NX / 2, occ.NY / 2, occ.NZ / 2);
             Assert.AreEqual(red.r, colours[centre].r);
@@ -43,9 +41,9 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         [Test]
         public void ColourModes_Raw_ReturnsUnchangedCopy()
         {
-            var colours = new[] { new Color32(10, 20, 30, 255), new Color32(200, 100, 50, 255) };
+            var colours = new[] { new Rgba32(10, 20, 30, 255), new Rgba32(200, 100, 50, 255) };
 
-            Color32[] result = ColourModes.Apply(colours, mask: null, ColourMode.Raw, default);
+            Rgba32[] result = ColourModes.Apply(colours, mask: null, ColourMode.Raw, default);
 
             Assert.AreNotSame(colours, result);
             Assert.AreEqual(colours[0].r, result[0].r);
@@ -57,15 +55,15 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike.Tests
         {
             var colours = new[]
             {
-                new Color32(240, 20, 20, 255), new Color32(235, 30, 25, 255), // reds
-                new Color32(20, 20, 240, 255), new Color32(25, 30, 235, 255), // blues
+                new Rgba32(240, 20, 20, 255), new Rgba32(235, 30, 25, 255), // reds
+                new Rgba32(20, 20, 240, 255), new Rgba32(25, 30, 235, 255), // blues
             };
 
-            Color32[] result = ColourModes.Apply(
+            Rgba32[] result = ColourModes.Apply(
                 colours, mask: null, ColourMode.PerModelPalette, new ColourModes.Options { PaletteSize = 2 });
 
             var distinct = new System.Collections.Generic.HashSet<int>();
-            foreach (Color32 c in result)
+            foreach (Rgba32 c in result)
             {
                 distinct.Add((c.r << 16) | (c.g << 8) | c.b);
             }

@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Assembler.AssetGeneration.MeshToVoxels;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -14,7 +12,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
     /// </summary>
     public static class MultiSampleColour
     {
-        private static readonly Vector3Int[] FaceNormals =
+        private static readonly g3.Vector3i[] FaceNormals =
         {
             new(1, 0, 0), new(-1, 0, 0),
             new(0, 1, 0), new(0, -1, 0),
@@ -23,21 +21,21 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
 
         // Deterministic in-face jitter (fractions of the cell size along the two face tangents).
         // Deliberately not at ±½ so samples stay inside this voxel's face, away from its edges.
-        private static readonly Vector2[] FaceJitter =
+        private static readonly g3.Vector2f[] FaceJitter =
         {
             new(-0.3f, -0.3f), new(0.3f, -0.3f), new(-0.3f, 0.3f), new(0.3f, 0.3f),
         };
 
         /// <summary>Per-voxel medoid-aggregated colours, indexed by <see cref="VoxelGrid.Index"/>.</summary>
-        public static Color32[] Sample(
+        public static Rgba32[] Sample(
             VoxelGrid grid,
-            ObjToVoxConverter.LoadedModel model,
+            LoadedModel model,
             g3.DMeshAABBTree3 tree,
             bool normalConsistency,
             g3.DenseGridTrilinearImplicit? field)
         {
-            var colours = new Color32[grid.Occupied.Length];
-            var samples = new List<Color32>(25);
+            var colours = new Rgba32[grid.Occupied.Length];
+            var samples = new List<Rgba32>(25);
 
             for (int z = 0; z < grid.NZ; z++)
             {
@@ -56,7 +54,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                         samples.Add(ColourReprojector.SamplePoint(centre, model, tree, normalConsistency, field));
 
                         double half = grid.CellSize * 0.5;
-                        foreach (Vector3Int n in FaceNormals)
+                        foreach (g3.Vector3i n in FaceNormals)
                         {
                             if (grid.IsOccupied(x + n.x, y + n.y, z + n.z))
                             {
@@ -67,7 +65,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             (g3.Vector3d tangentU, g3.Vector3d tangentV) = FaceTangents(n);
                             g3.Vector3d faceCentre = centre + normal * half;
 
-                            foreach (Vector2 jitter in FaceJitter)
+                            foreach (g3.Vector2f jitter in FaceJitter)
                             {
                                 g3.Vector3d p = faceCentre
                                     + tangentU * (jitter.x * grid.CellSize)
@@ -87,7 +85,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         /// The member colour with the smallest summed Oklab distance to all others (ties → lowest
         /// index). Robust to a minority of outliers, unlike a mean.
         /// </summary>
-        public static Color32 OklabMedoid(IReadOnlyList<Color32> colours)
+        public static Rgba32 OklabMedoid(IReadOnlyList<Rgba32> colours)
         {
             if (colours.Count == 1)
             {
@@ -119,7 +117,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         }
 
         // The two axes perpendicular to a face normal, picked deterministically.
-        private static (g3.Vector3d u, g3.Vector3d v) FaceTangents(Vector3Int normal) =>
+        private static (g3.Vector3d u, g3.Vector3d v) FaceTangents(g3.Vector3i normal) =>
             normal.x != 0
                 ? (new g3.Vector3d(0, 1, 0), new g3.Vector3d(0, 0, 1))
                 : normal.y != 0

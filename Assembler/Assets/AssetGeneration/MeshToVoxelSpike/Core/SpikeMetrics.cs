@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using UnityEngine;
 
 namespace Assembler.AssetGeneration.MeshToVoxelSpike
 {
@@ -17,10 +16,10 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public int ExposedFaces { get; init; }
         public int FloatersRemoved { get; init; }
         public int DistinctColours { get; init; }
-        public Vector3Int GridDims { get; init; }
-        public Vector3Int FineDims { get; init; }
-        public Vector3Int Phase { get; init; }
-        public Vector3 Scale { get; init; }
+        public g3.Vector3i GridDims { get; init; }
+        public g3.Vector3i FineDims { get; init; }
+        public g3.Vector3i Phase { get; init; }
+        public g3.Vector3f Scale { get; init; }
         public int CandidatesEvaluated { get; init; }
         public float Score { get; init; }
         public float SFace { get; init; }
@@ -31,8 +30,8 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
         public float SCol { get; init; }
 
         public static SpikeMetrics Compute(
-            VoxelGrid grid, Color32[] voxelColours, GridPlacementSearch.Placement placement,
-            int floatersRemoved, Vector3Int fineDims)
+            VoxelGrid grid, Rgba32[] voxelColours, GridPlacementSearch.Placement placement,
+            int floatersRemoved, g3.Vector3i fineDims)
         {
             int voxels = 0, faces = 0;
             var distinct = new HashSet<int>();
@@ -48,7 +47,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                             continue;
                         }
                         voxels++;
-                        Color32 c = voxelColours[i];
+                        Rgba32 c = voxelColours[i];
                         distinct.Add((c.r << 16) | (c.g << 8) | c.b);
 
                         if (!grid.IsOccupied(x + 1, y, z)) { faces++; }
@@ -67,7 +66,7 @@ namespace Assembler.AssetGeneration.MeshToVoxelSpike
                 ExposedFaces = faces,
                 FloatersRemoved = floatersRemoved,
                 DistinctColours = distinct.Count,
-                GridDims = new Vector3Int(grid.NX, grid.NY, grid.NZ),
+                GridDims = new g3.Vector3i(grid.NX, grid.NY, grid.NZ),
                 FineDims = fineDims,
                 Phase = placement.Candidate.Phase,
                 Scale = placement.Candidate.Scale,
