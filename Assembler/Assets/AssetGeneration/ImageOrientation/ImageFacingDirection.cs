@@ -6,15 +6,21 @@ using Assembler.Anthropic;
 namespace Assembler.AssetGeneration.ImageOrientation
 {
     /// <summary>The parsed outcome of an orientation request, keeping the raw model text for display/logging.</summary>
-    public sealed record OrientationResult(FacingDirection? Direction, string RawResponse)
+    public sealed record OrientationResult(FacingDirection? Direction, OrientationOutcome Outcome, string RawResponse)
     {
-        public string Code => Direction is { } direction ? direction.ToCode() : "(unrecognised)";
+        public string Code => Outcome switch
+        {
+            OrientationOutcome.Resolved when Direction is { } direction => direction.ToCode(),
+            OrientationOutcome.Unsure => "?",
+            _ => "(unrecognised)",
+        };
     }
 
     /// <summary>
     /// Headless core logic: asks Claude which direction the front of the main object
     /// in an image is facing, constrained to the eight <see cref="FacingDirection"/>
-    /// codes (L, R, U, D, LU, LD, RU, RD). Every input arrives as an argument and the
+    /// codes (L, R, U, D, LU, LD, RU, RD) or an explicit "unsure" answer when it cannot
+    /// tell (<see cref="OrientationOutcome.Unsure"/>). Every input arrives as an argument and the
     /// result is returned — there is no editor or shared state — so it runs equally
     /// from an editor window, batch mode, a test, or a player build.
     /// </summary>
@@ -35,12 +41,15 @@ namespace Assembler.AssetGeneration.ImageOrientation
             "  RU = front points toward the top-right corner\n" +
             "  RD = front points toward the bottom-right corner\n\n" +
             "For example, if the image shows a car whose front points at the bottom-left corner, answer LD.\n\n" +
+            "If you genuinely cannot tell which way the front faces — e.g. the object has no clear front, " +
+            "faces straight toward or away from the viewer, or the image is too ambiguous — reply UNSURE " +
+            "instead of guessing.\n\n" +
             "Pick the single closest code. Respond with EXACTLY that code and nothing else — no punctuation, " +
-            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD.";
+            "no explanation. Your entire reply must be one of: L, R, U, D, LU, LD, RU, RD, UNSURE.";
 
         private const string Instruction =
             "Which direction is the front of the main object in this image facing? " +
-            "Answer with one code only.";
+            "Answer with one code only, or UNSURE if you cannot tell.";
 
         /// <summary>
         /// Determines the facing direction from raw image bytes, building (and disposing)
@@ -87,7 +96,8 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
             var message = new AnthropicMessage("user", Instruction, new[] { image });
             var response = await client.SendAsync(SystemPrompt, new[] { message }, cancellationToken);
-            return new OrientationResult(FacingDirectionExtensions.Parse(response), response.Trim());
+            var (direction, outcome) = FacingDirectionExtensions.Classify(response);
+            return new OrientationResult(direction, outcome, response.Trim());
         }
     }
 }
