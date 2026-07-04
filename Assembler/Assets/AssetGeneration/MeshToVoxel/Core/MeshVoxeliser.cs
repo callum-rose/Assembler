@@ -163,7 +163,8 @@ namespace Assembler.AssetGeneration.MeshToVoxel
                 progress?.Invoke(0.66f, "Filling corners");
                 CornerFill.Apply(
                     occupancy, voxelColours, placement.GapFraction,
-                    settings.FillCornersRecursive, settings.CornerFillColourTolerance);
+                    settings.CornerFillColourTolerance, settings.CornerFillNeighbourThreshold,
+                    settings.CornerFillRequireMajority);
             }
             if (settings.Symmetry != SymmetryAxes.None)
             {
