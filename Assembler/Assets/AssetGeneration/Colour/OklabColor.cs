@@ -1,4 +1,4 @@
-namespace Assembler.AssetGeneration.MeshToVoxel
+namespace Assembler.AssetGeneration.Colour
 {
     /// <summary>
     /// A colour in <b>Oklab</b> perceptual space (L = lightness, a/b = chroma axes).

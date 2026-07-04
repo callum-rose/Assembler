@@ -1,15 +1,19 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Colour;
 using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxel;
 using Assembler.AssetGeneration.MeshToVoxel.Editor;
+using Assembler.AssetGeneration.PaletteExtraction;
 using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
+using UnityEngine;
 
 namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 {
@@ -244,8 +248,18 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             {
                 onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
                 var voxPath = Path.Combine(outputDir, baseName + ".vox");
+                // Derive the model's fundamental colours from the accepted source image (background
+                // ignored) and snap the voxel colours to them — replacing the per-model clustering, and
+                // cleaning de-light noise for free. Falls back to the caller's colour mode if the image
+                // can't be read or yields no palette.
+                var vox = settings.Vox;
+                var masterPalette = ExtractMasterPalette(image.OutputPath, onStatus);
+                if (masterPalette.Count > 0)
+                {
+                    vox = vox.WithMasterPalette(masterPalette);
+                }
                 var model = ModelLoader.Load(mesh.OutputPath);
-                var voxel = MeshVoxeliser.Voxelise(model, settings.Vox, voxelProgress);
+                var voxel = MeshVoxeliser.Voxelise(model, vox, voxelProgress);
                 VoxExport.Write(voxPath, voxel.Occupancy, voxel.VoxelColours);
                 // Import the freshly-written .vox so it shows in the Project window (mirrors the earlier stages).
                 if (MeshyConversionCore.IsUnderAssets(voxPath))
@@ -263,6 +277,52 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
             onStatus?.Invoke($"Done. {voxels}");
             return new Result.Success(image, mesh, voxels);
+        }
+
+        // Decode the accepted source image and extract its fundamental colours (background ignored) as the
+        // master palette the voxeliser snaps to. Runs on the main thread (the Texture2D decode needs the
+        // editor). Returns an empty list — leaving the caller's colour mode untouched — if the image is
+        // missing, undecodable, or yields no palette, so a colour hiccup never fails the whole run.
+        private static IReadOnlyList<Rgba32> ExtractMasterPalette(string imagePath, Action<string>? onStatus)
+        {
+            Texture2D? texture = null;
+            try
+            {
+                if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
+                {
+                    return Array.Empty<Rgba32>();
+                }
+
+                texture = new Texture2D(2, 2, TextureFormat.RGBA32, mipChain: false);
+                if (!texture.LoadImage(File.ReadAllBytes(imagePath)))
+                {
+                    return Array.Empty<Rgba32>();
+                }
+
+                Color32[] c = texture.GetPixels32();
+                var pixels = new Rgba32[c.Length];
+                for (int i = 0; i < c.Length; i++)
+                {
+                    pixels[i] = new Rgba32(c[i].r, c[i].g, c[i].b, c[i].a);
+                }
+
+                PaletteResult result =
+                    PaletteExtractor.Extract(pixels, texture.width, texture.height, PaletteExtractionOptions.Default);
+                onStatus?.Invoke($"Extracted a {result.Palette.Count}-colour master palette from the image.");
+                return result.Palette;
+            }
+            catch (Exception e)
+            {
+                onStatus?.Invoke($"Palette extraction skipped ({e.Message}); using the configured colour mode.");
+                return Array.Empty<Rgba32>();
+            }
+            finally
+            {
+                if (texture != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(texture);
+                }
+            }
         }
 
         // An explicit base name wins; otherwise the prompt is slugged into one. The same base name

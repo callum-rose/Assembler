@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel.Generation
 {

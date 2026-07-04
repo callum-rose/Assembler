@@ -1,5 +1,13 @@
 # Palette Extraction — build handoff
 
+> ✅ **BUILT.** The whole plan below is implemented; see [`README.md`](README.md) for the as-built module
+> docs, the tuned `PaletteExtractionOptions.Default`, and how to run the window/tests. This file is kept
+> as the design record (locked decisions + rationale). Build notes: the colour primitives were promoted
+> to a new `Assembler.AssetGeneration.Colour` assembly (step 1); the defaults were tuned against the
+> corpus to pass all 16 images (a Python replica of the pipeline searched the parameter space fast, then
+> the constants were transplanted and confirmed in-editor).
+
+
 Extract the **fundamental colours** of an object from an AI-generated image (ignoring the
 background), producing a small representative palette that **replaces** the voxeliser's current
 per-model colour clustering. Part of the fully-automated `text → image → mesh → voxel` pipeline,

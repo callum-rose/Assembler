@@ -2,7 +2,9 @@
     "name": "Assembler.AssetGeneration.PaletteExtraction.Editor",
     "rootNamespace": "Assembler.AssetGeneration.PaletteExtraction",
     "references": [
-        "GUID:1a8aa96a7e52410286024cc6a8c50740"
+        "GUID:1a8aa96a7e52410286024cc6a8c50740",
+        "Assembler.AssetGeneration.PaletteExtraction",
+        "Assembler.AssetGeneration.Colour"
     ],
     "includePlatforms": [
         "Editor"

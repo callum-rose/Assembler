@@ -2,6 +2,8 @@
     "name": "Assembler.TextToVoxelPipeline.Editor",
     "rootNamespace": "Assembler",
     "references": [
+        "Assembler.AssetGeneration.Colour",
+        "Assembler.AssetGeneration.PaletteExtraction",
         "Assembler.AssetGeneration.TextToImage",
         "Assembler.AssetGeneration.ImageToMesh",
         "Assembler.AssetGeneration.MeshToVoxel",

@@ -4,6 +4,7 @@ using Assembler.Anthropic;
 using Assembler.AssetGeneration.ImageToMesh;
 using NUnit.Framework;
 using UnityEngine;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel.Generation.Tests
 {

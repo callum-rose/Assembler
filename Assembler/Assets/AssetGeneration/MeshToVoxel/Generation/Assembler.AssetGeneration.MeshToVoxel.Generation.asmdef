@@ -2,6 +2,7 @@
     "name": "Assembler.AssetGeneration.MeshToVoxel.Generation",
     "rootNamespace": "Assembler",
     "references": [
+        "Assembler.AssetGeneration.Colour",
         "Assembler.AssetGeneration.MeshToVoxel",
         "Assembler.AssetGeneration.ImageToMesh",
         "Assembler.Anthropic"

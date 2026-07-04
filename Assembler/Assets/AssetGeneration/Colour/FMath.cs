@@ -1,6 +1,6 @@
 using System;
 
-namespace Assembler.AssetGeneration.MeshToVoxel
+namespace Assembler.AssetGeneration.Colour
 {
     /// <summary>
     /// Engine-free float-math helpers — the portable stand-in for the handful of <c>UnityEngine.Mathf</c>

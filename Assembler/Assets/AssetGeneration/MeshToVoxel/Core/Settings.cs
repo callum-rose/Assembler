@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel
 {
@@ -112,16 +113,16 @@ namespace Assembler.AssetGeneration.MeshToVoxel
 
         public ColourMode ColourMode { get; init; }
 
-        /// <summary>Target colour count for <see cref="MeshToVoxel.ColourMode.PerModelPalette"/>.</summary>
+        /// <summary>Target colour count for <see cref="ColourMode.PerModelPalette"/>.</summary>
         public int PaletteSize { get; init; }
 
-        /// <summary>Oklab merge radius for <see cref="MeshToVoxel.ColourMode.Consolidated"/> (0 = exact).</summary>
+        /// <summary>Oklab merge radius for <see cref="ColourMode.Consolidated"/> (0 = exact).</summary>
         public float ConsolidateTolerance { get; init; }
 
-        /// <summary>Hard cap on <see cref="MeshToVoxel.ColourMode.Consolidated"/>'s colours (0 = unlimited).</summary>
+        /// <summary>Hard cap on <see cref="ColourMode.Consolidated"/>'s colours (0 = unlimited).</summary>
         public int ConsolidateMaxColours { get; init; }
 
-        /// <summary>Swatches for <see cref="MeshToVoxel.ColourMode.MasterPalette"/>.</summary>
+        /// <summary>Swatches for <see cref="ColourMode.MasterPalette"/>.</summary>
         public IReadOnlyList<Rgba32>? MasterPalette { get; init; }
 
         /// <summary>Reject wrong-side thin-wall texel hits during colour reprojection.</summary>
@@ -143,6 +144,50 @@ namespace Assembler.AssetGeneration.MeshToVoxel
 
         /// <summary>Nudge smoothed vertices back onto the SDF iso surface (smooth output only).</summary>
         public bool SurfaceReproject { get; init; }
+
+        /// <summary>
+        /// A copy of these settings switched to <see cref="ColourMode.MasterPalette"/> with the given
+        /// swatches — the palette-extraction pipeline calls this to snap voxel colours to the clean
+        /// image-derived palette, replacing the per-model clustering. Every other knob is preserved.
+        /// (A hand-written copy rather than a <c>with</c> expression: this assembly compiles at C# 9.)
+        /// </summary>
+        public Settings WithMasterPalette(IReadOnlyList<Rgba32> masterPalette) => new()
+        {
+            ResolutionInput = ResolutionInput,
+            MaxDimVoxels = MaxDimVoxels,
+            VoxelWorldSize = VoxelWorldSize,
+            TargetWorldSize = TargetWorldSize,
+            GridSearch = GridSearch,
+            ScaleFlex = ScaleFlex,
+            ThinFeatureKeep = ThinFeatureKeep,
+            FineFactor = FineFactor,
+            Coverage = Coverage,
+            RemoveFloaters = RemoveFloaters,
+            CleanupStrength = CleanupStrength,
+            FillCorners = FillCorners,
+            FillCornersRecursive = FillCornersRecursive,
+            CornerFillColourTolerance = CornerFillColourTolerance,
+            Symmetry = Symmetry,
+            ForceMirror = ForceMirror,
+            FaceWeight = FaceWeight,
+            IouWeight = IouWeight,
+            GapWeight = GapWeight,
+            ColWeight = ColWeight,
+            UvDilate = UvDilate,
+            UvDilatePasses = UvDilatePasses,
+            MultiSampleColour = MultiSampleColour,
+            PottsStrength = PottsStrength,
+            PaletteSize = PaletteSize,
+            ConsolidateTolerance = ConsolidateTolerance,
+            ConsolidateMaxColours = ConsolidateMaxColours,
+            NormalConsistency = NormalConsistency,
+            TaubinPasses = TaubinPasses,
+            TaubinLambda = TaubinLambda,
+            TaubinMu = TaubinMu,
+            SurfaceReproject = SurfaceReproject,
+            ColourMode = ColourMode.MasterPalette,
+            MasterPalette = masterPalette,
+        };
 
         /// <summary>Sensible starting point matching the plan's defaults; the window overrides from EditorPrefs.</summary>
         public static Settings Defaults => new()
