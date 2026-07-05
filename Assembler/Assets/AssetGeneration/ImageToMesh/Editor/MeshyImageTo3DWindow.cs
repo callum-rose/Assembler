@@ -69,7 +69,7 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
 
-        [MenuItem("Assembler/Image to Mesh")]
+        [MenuItem("Assembler/Voxelisation/Image to Mesh")]
         public static void Open()
         {
             var window = GetWindow<MeshyImageTo3DWindow>("Image to Mesh");

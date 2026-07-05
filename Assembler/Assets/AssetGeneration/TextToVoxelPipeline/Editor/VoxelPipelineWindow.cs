@@ -101,7 +101,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         private CancellationTokenRegistration _reviewRegistration;
         private string _reviewMeshPath = "";
 
-        [MenuItem("Assembler/Text to Voxels (pipeline)")]
+        [MenuItem("Assembler/Voxelisation/Text to Voxels (pipeline)")]
         public static void Open()
         {
             var window = GetWindow<VoxelPipelineWindow>("Text to Voxels");

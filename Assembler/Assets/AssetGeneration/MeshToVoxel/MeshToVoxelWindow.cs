@@ -75,7 +75,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
 
         [SerializeField] private VoxMasterPalette? _masterPalette;
 
-        [MenuItem("Window/Voxels/Mesh to Voxel")]
+        [MenuItem("Assembler/Voxelisation/Mesh to Voxel")]
         private static void Open() => GetWindow<MeshToVoxelWindow>("Mesh → Voxel");
 
         private void OnEnable() => LoadState();
