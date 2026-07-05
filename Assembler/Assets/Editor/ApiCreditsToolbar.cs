@@ -1,17 +1,18 @@
 #nullable enable
 
 using System;
-using System.Reflection;
+using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.UIElements;
 
 namespace Assembler.EditorTools
 {
     /// <summary>
-    /// Adds a small credit-balance readout to the main editor toolbar, immediately
-    /// to the right of the play / pause / step controls.
+    /// Adds a small credit-balance readout to the main editor toolbar, in the middle
+    /// dock next to the play / pause / step controls, using the supported
+    /// <see cref="MainToolbarElementAttribute"/> API (Unity 6.1+).
     ///
     /// Only <b>Meshy</b> exposes an API that returns a remaining credit balance
     /// (<c>GET https://api.meshy.ai/openapi/v1/balance</c> → <c>{"balance": N}</c>),
@@ -27,9 +28,11 @@ namespace Assembler.EditorTools
     /// The Meshy key is read from the same <see cref="EditorPrefs"/> entry the
     /// "Image to 3D" window stores, so no extra configuration is needed.
     /// </summary>
-    [InitializeOnLoad]
     internal static class ApiCreditsToolbar
     {
+        // Unique identifier for the toolbar element (used by MainToolbar.Refresh).
+        private const string ElementId = "Assembler/ApiCredits";
+
         // Reused from Assembler.AssetGeneration.ImageToMesh.MeshyImageTo3DWindow.
         private const string MeshyApiKeyPref = "Meshy.ImageTo3D.ApiKey";
 
@@ -39,16 +42,6 @@ namespace Assembler.EditorTools
 
         // How often the Meshy balance auto-refreshes while the editor is open.
         private const double AutoRefreshSeconds = 300; // 5 minutes
-        // How often we retry injecting into the toolbar when it isn't attached yet.
-        private const double InjectRetrySeconds = 0.5;
-
-        private static readonly Type? ToolbarType =
-            typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.Toolbar");
-
-        private static VisualElement? _container;
-        private static Label? _meshyLabel;
-        private static double _nextInjectAttempt;
-        private static bool _warned;
 
         // Meshy request state (all touched on the main thread only).
         private static UnityWebRequest? _meshyRequest;
@@ -58,104 +51,48 @@ namespace Assembler.EditorTools
         private static bool _refreshing;
         private static double _lastRefreshTime = double.NegativeInfinity;
 
-        static ApiCreditsToolbar()
+        [InitializeOnLoadMethod]
+        private static void Init()
         {
-            EditorApplication.update += Tick;
+            // Drives the periodic auto-refresh; the first tick fetches immediately
+            // (_lastRefreshTime starts at -inf), which also defers the initial
+            // network call until the editor has finished loading.
+            EditorApplication.update += AutoRefreshTick;
         }
 
-        private static void Tick()
+        [MainToolbarElement(ElementId, defaultDockPosition = MainToolbarDockPosition.Middle)]
+        private static IEnumerable<MainToolbarElement> Create()
         {
-            if (_container != null && _container.parent != null)
-            {
-                MaybeAutoRefresh();
-                return;
-            }
-
-            if (EditorApplication.timeSinceStartup < _nextInjectAttempt)
-                return;
-            _nextInjectAttempt = EditorApplication.timeSinceStartup + InjectRetrySeconds;
-
-            TryInject();
-        }
-
-        private static void TryInject()
-        {
-            if (ToolbarType == null)
-            {
-                WarnOnce("UnityEditor.Toolbar type not found — API credits toolbar disabled.");
-                return;
-            }
-
-            var toolbars = Resources.FindObjectsOfTypeAll(ToolbarType);
-            if (toolbars.Length == 0)
-                return; // toolbar not created yet (e.g. maximized play mode)
-
-            var rootField = GetFieldRecursive(ToolbarType, "m_Root");
-            if (rootField == null)
-            {
-                WarnOnce("UnityEditor.Toolbar.m_Root not found — API credits toolbar disabled.");
-                return;
-            }
-
-            if (rootField.GetValue(toolbars[0]) is not VisualElement root)
-                return;
-
-            // Zone immediately to the right of the play/pause/step controls.
-            var zone = root.Q("ToolbarZoneRightAlign");
-            if (zone == null)
-                return;
-
-            _container = BuildUi();
-            zone.Insert(0, _container);
-            UpdateMeshyLabel();
-            RequestMeshyRefresh();
-        }
-
-        private static VisualElement BuildUi()
-        {
-            var row = new VisualElement();
-            row.style.flexDirection = FlexDirection.Row;
-            row.style.alignItems = Align.Center;
-            row.style.marginRight = 6;
-
-            _meshyLabel = new Label("Meshy: …")
-            {
-                tooltip = "Meshy credit balance (live). Click to refresh."
-            };
-            _meshyLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            _meshyLabel.style.marginLeft = 4;
-            _meshyLabel.style.marginRight = 6;
-            _meshyLabel.RegisterCallback<MouseDownEvent>(_ => RequestMeshyRefresh());
-            row.Add(_meshyLabel);
+            yield return new MainToolbarButton(MeshyContent(), RequestMeshyRefresh);
 
             // Anthropic and Gemini have no balance API — link to their billing pages.
-            row.Add(MakeLinkButton(
-                "Claude ↗",
-                "Anthropic has no credit-balance API. Opens the Console billing page.",
-                AnthropicBillingUrl));
-            row.Add(MakeLinkButton(
-                "Gemini ↗",
-                "Gemini has no credit-balance API. Opens the AI Studio billing page.",
-                GeminiBillingUrl));
+            yield return new MainToolbarButton(
+                new MainToolbarContent(
+                    "Claude ↗",
+                    "Anthropic has no credit-balance API. Opens the Console billing page."),
+                () => Application.OpenURL(AnthropicBillingUrl));
 
-            return row;
+            yield return new MainToolbarButton(
+                new MainToolbarContent(
+                    "Gemini ↗",
+                    "Gemini has no credit-balance API. Opens the AI Studio billing page."),
+                () => Application.OpenURL(GeminiBillingUrl));
         }
 
-        private static Button MakeLinkButton(string text, string tooltip, string url)
+        private static MainToolbarContent MeshyContent()
         {
-            var button = new Button(() => Application.OpenURL(url))
-            {
-                text = text,
-                tooltip = tooltip
-            };
-            button.style.marginLeft = 2;
-            button.style.marginRight = 2;
-            button.style.paddingLeft = 6;
-            button.style.paddingRight = 6;
-            return button;
+            if (_refreshing)
+                return new MainToolbarContent("Meshy: …", "Refreshing Meshy balance…");
+            if (_meshyError != null)
+                return new MainToolbarContent("Meshy: !", "Meshy: " + _meshyError + "\n(click to retry)");
+            if (_meshyBalance.HasValue)
+                return new MainToolbarContent(
+                    $"Meshy: {_meshyBalance.Value:N0}",
+                    $"Meshy credits (live). Updated {DateTime.Now:HH:mm:ss}. Click to refresh.");
+            return new MainToolbarContent("Meshy: —", "Click to fetch the Meshy balance.");
         }
 
-        private static void MaybeAutoRefresh()
+        private static void AutoRefreshTick()
         {
             if (_refreshing || EditorApplication.isCompiling)
                 return;
@@ -176,13 +113,13 @@ namespace Assembler.EditorTools
             {
                 _meshyBalance = null;
                 _meshyError = "No Meshy API key set — configure it in the Image to 3D window.";
-                UpdateMeshyLabel();
+                RefreshToolbar();
                 return;
             }
 
             _refreshing = true;
             _meshyError = null;
-            UpdateMeshyLabel();
+            RefreshToolbar();
 
             var request = UnityWebRequest.Get(MeshyBalanceUrl);
             request.SetRequestHeader("Authorization", "Bearer " + key.Trim());
@@ -239,72 +176,26 @@ namespace Assembler.EditorTools
                 _meshyRequest = null;
                 _meshyOp = null;
                 _refreshing = false;
-                UpdateMeshyLabel();
+                RefreshToolbar();
             }
         }
 
-        private static void UpdateMeshyLabel()
+        private static void RefreshToolbar()
         {
-            if (_meshyLabel == null)
-                return;
-
-            if (_refreshing)
+            // Re-queries Create() so the Meshy button rebuilds with the latest state.
+            // Guarded because it may run before the toolbar element exists (on load).
+            try
             {
-                _meshyLabel.text = "Meshy: …";
-                _meshyLabel.tooltip = "Refreshing Meshy balance…";
-                SetLabelColour(null);
+                MainToolbar.Refresh(ElementId);
             }
-            else if (_meshyError != null)
+            catch
             {
-                _meshyLabel.text = "Meshy: !";
-                _meshyLabel.tooltip = "Meshy: " + _meshyError + "\n(click to retry)";
-                SetLabelColour(new Color(0.90f, 0.45f, 0.40f));
+                // Toolbar not built yet — the element reads current state when created.
             }
-            else if (_meshyBalance.HasValue)
-            {
-                _meshyLabel.text = $"Meshy: {_meshyBalance.Value:N0}";
-                _meshyLabel.tooltip =
-                    $"Meshy credits (live). Updated {DateTime.Now:HH:mm:ss}. Click to refresh.";
-                SetLabelColour(null);
-            }
-            else
-            {
-                _meshyLabel.text = "Meshy: —";
-                _meshyLabel.tooltip = "Click to fetch the Meshy balance.";
-                SetLabelColour(null);
-            }
-        }
-
-        private static void SetLabelColour(Color? colour)
-        {
-            if (_meshyLabel == null)
-                return;
-            _meshyLabel.style.color = colour.HasValue
-                ? new StyleColor(colour.Value)
-                : new StyleColor(StyleKeyword.Null);
-        }
-
-        private static FieldInfo? GetFieldRecursive(Type type, string name)
-        {
-            for (var current = type; current != null; current = current.BaseType)
-            {
-                var field = current.GetField(name, BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null)
-                    return field;
-            }
-            return null;
         }
 
         private static string Truncate(string value, int max) =>
             string.IsNullOrEmpty(value) || value.Length <= max ? value : value.Substring(0, max) + "…";
-
-        private static void WarnOnce(string message)
-        {
-            if (_warned)
-                return;
-            _warned = true;
-            Debug.LogWarning("[ApiCreditsToolbar] " + message);
-        }
 
         [Serializable]
         private class BalanceResponse
