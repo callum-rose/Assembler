@@ -37,7 +37,7 @@ namespace Assembler.AssetGeneration.ImageOrientation
         private bool _isRunning;
         private CancellationTokenSource? _cts;
 
-        [MenuItem("Assembler/Image Facing Direction")]
+        [MenuItem("Assembler/Voxelisation/Image Facing Direction")]
         public static void Open()
         {
             var window = GetWindow<ImageOrientationWindow>("Image Facing Direction");

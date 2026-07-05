@@ -155,7 +155,7 @@ namespace Assembler.Voxelization.Editor
 		private GUIStyle? _infoStyle;
 		private GUIStyle? _wrappedTextArea;
 
-		[MenuItem("Assembler/Voxel Set Review")]
+		[MenuItem("Assembler/Voxelisation/Archive/Voxel Set Review")]
 		public static void Open()
 		{
 			var window = GetWindow<VoxelSetReviewWindow>("Voxel Set Review");

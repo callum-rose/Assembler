@@ -44,7 +44,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         private string _referencePreviewPath = "";
         private Vector2 _windowScroll;
 
-        [MenuItem("Assembler/Text to Image")]
+        [MenuItem("Assembler/Voxelisation/Text to Image")]
         public static void Open()
         {
             var window = GetWindow<ImageGenerationWindow>("Text to Image");

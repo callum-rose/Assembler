@@ -27,7 +27,7 @@ namespace Assembler.AssetGeneration.MeshToVoxels
         [SerializeField] private VoxPipelineSettings _settings = VoxPipelinePresets.For(VoxPipelinePreset.Creature);
         [SerializeField] private VoxMasterPalette? _palette;
 
-        [MenuItem("Window/Voxels/Mesh to Voxels")]
+        [MenuItem("Assembler/Voxelisation/Archive/Mesh to Voxels")]
         private static void Open() => GetWindow<MeshToVoxelsWindow>("Mesh to Voxels");
 
         private void OnEnable() => LoadState();
