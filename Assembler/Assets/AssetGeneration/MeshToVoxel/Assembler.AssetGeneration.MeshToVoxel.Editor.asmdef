@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler",
     "references": [
         "Assembler.AssetGeneration.MeshToVoxel",
-        "Assembler.AssetGeneration.MeshToVoxels"
+        "Assembler.AssetGeneration.MeshToVoxels",
+        "Assembler.AssetGeneration.Editor.Common"
     ],
     "includePlatforms": [
         "Editor"

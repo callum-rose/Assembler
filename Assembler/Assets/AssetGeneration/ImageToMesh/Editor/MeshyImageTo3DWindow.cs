@@ -1,10 +1,10 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.ImageToMesh;
 using UnityEditor;
 using UnityEngine;
@@ -190,15 +190,17 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         private void DrawImagePicker()
         {
             EditorGUILayout.BeginHorizontal();
-            _imagePath = EditorGUILayout.TextField("Reference Image", _imagePath);
+            _imagePath = EditorGUILayout.TextField(
+                new GUIContent("Reference Image", "Drag an image asset here, or browse for a file on disk."), _imagePath);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
                 var picked = EditorUtility.OpenFilePanel(
-                    "Select reference image", GuessStartDir(_imagePath), "png,jpg,jpeg,webp");
+                    "Select reference image", PathField.GuessStartDir(_imagePath), "png,jpg,jpeg,webp");
                 if (!string.IsNullOrEmpty(picked))
                     _imagePath = picked;
             }
             EditorGUILayout.EndHorizontal();
+            _imagePath = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _imagePath);
         }
 
         private void DrawModel()
@@ -220,11 +222,12 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
             _outputDir = EditorGUILayout.TextField("Output Directory", _outputDir);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
-                var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_outputDir), "");
+                var picked = EditorUtility.OpenFolderPanel("Output directory", PathField.GuessStartDir(_outputDir), "");
                 if (!string.IsNullOrEmpty(picked))
                     _outputDir = picked;
             }
             EditorGUILayout.EndHorizontal();
+            _outputDir = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _outputDir, wantFolder: true);
 
             _outputFile = EditorGUILayout.TextField(
                 new GUIContent("File Name", "Leave blank to use the downloaded model's filename. The extension is set from the output format."),
@@ -329,14 +332,6 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         {
             _status = message;
             Repaint();
-        }
-
-        private static string GuessStartDir(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return Application.dataPath;
-            var dir = Path.GetDirectoryName(path);
-            return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
         }
     }
 }

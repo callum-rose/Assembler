@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using Assembler.AssetGeneration.EditorCommon;
 using UnityEditor;
 using UnityEngine;
 
@@ -187,7 +188,7 @@ namespace Assembler.AssetGeneration.ImageOrientation
                 if (GUILayout.Button("Browse..."))
                 {
                     var path = EditorUtility.OpenFilePanel(
-                        "Select image", string.Empty, "png,jpg,jpeg,gif,webp");
+                        "Select image", PathField.GuessStartDir(_imagePath), "png,jpg,jpeg,gif,webp");
                     if (!string.IsNullOrEmpty(path))
                     {
                         SetImagePath(path);

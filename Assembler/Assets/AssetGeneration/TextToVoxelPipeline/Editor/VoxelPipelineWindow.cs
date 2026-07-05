@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxels;
 using Assembler.AssetGeneration.MeshToVoxel;
@@ -703,11 +704,13 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 _settings.OutputDir = EditorGUILayout.TextField("Output Directory", _settings.OutputDir);
                 if (GUILayout.Button("Browse", GUILayout.Width(70)))
                 {
-                    var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_settings.OutputDir), "");
+                    var picked = EditorUtility.OpenFolderPanel("Output directory", PathField.GuessStartDir(_settings.OutputDir), "");
                     if (!string.IsNullOrEmpty(picked))
                         _settings.OutputDir = picked;
                 }
             }
+
+            _settings.OutputDir = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _settings.OutputDir, wantFolder: true);
             _settings.BaseName = EditorGUILayout.TextField(
                 new GUIContent("Base Name", "Shared by all three files (image/mesh/.vox). Leave blank to slug it from the prompt."),
                 _settings.BaseName);
@@ -999,14 +1002,6 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             var full = Path.GetFullPath(path).Replace('\\', '/');
             var project = Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/') + "/";
             return full.StartsWith(project, StringComparison.OrdinalIgnoreCase) ? full[project.Length..] : path;
-        }
-
-        private static string GuessStartDir(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return Application.dataPath;
-            var dir = Path.GetDirectoryName(path);
-            return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
         }
 
         // ---- EditorPrefs persistence ----------------------------------------

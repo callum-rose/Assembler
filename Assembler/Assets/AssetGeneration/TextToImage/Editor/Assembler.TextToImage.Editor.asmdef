@@ -2,7 +2,8 @@
     "name": "Assembler.AssetGeneration.ImageGeneration.Editor",
     "rootNamespace": "Assembler",
     "references": [
-        "GUID:1a8aa96a7e52410286024cc6a8c50740"
+        "GUID:1a8aa96a7e52410286024cc6a8c50740",
+        "Assembler.AssetGeneration.Editor.Common"
     ],
     "includePlatforms": [
         "Editor"

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.MeshToVoxels;
 using UnityEditor;
 using UnityEngine;
@@ -167,7 +168,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.LabelField(
-                    new GUIContent("Mesh", "The source .obj/.fbx to voxelise — typically a messy textured Meshy export."),
+                    new GUIContent("Mesh", "The source .obj/.fbx to voxelise — typically a messy textured Meshy export. Drag a mesh asset onto this row, or browse for a file."),
                     GUILayout.Width(40));
                 EditorGUILayout.SelectableLabel(
                     string.IsNullOrEmpty(_meshPath) ? "(none selected)" : _meshPath,
@@ -176,13 +177,15 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
                     new GUIContent("Browse…", "Pick the source mesh (.obj or .fbx) from disk. The choice is remembered between sessions."),
                     GUILayout.Width(80)))
                 {
-                    string picked = EditorUtility.OpenFilePanel("Select mesh", "", "obj,fbx");
+                    string picked = EditorUtility.OpenFilePanel("Select mesh", PathField.GuessStartDir(_meshPath), "obj,fbx");
                     if (!string.IsNullOrEmpty(picked))
                     {
                         _meshPath = picked;
                     }
                 }
             }
+
+            _meshPath = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _meshPath);
         }
 
         private void DrawResolution()
