@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler.AssetGeneration.ImageOrientation",
     "references": [
         "Assembler.AssetGeneration.ImageOrientation",
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Assembler.AssetGeneration.Editor.Common"
     ],
     "includePlatforms": [
         "Editor"
