@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -39,26 +40,66 @@ namespace Assembler.AssetGeneration.ImageToMesh
             var dataUri = BuildImageDataUri(request.ImagePath);
             var body = BuildRequestJson(dataUri, request);
 
-            // A paid submit: only retry when the server explicitly rejected it (429/503) so a resend can't
-            // double-charge; a lost response after a connection drop fails fast rather than risk resubmitting.
-            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            // Snapshot (with a skew buffer) the moment before submitting, so recovery below can recognise a
+            // task this call created if the response is lost.
+            var submittedAfterUnixMs = DateTimeOffset.UtcNow
+                .AddSeconds(-CreateRecoveryClockSkewSeconds).ToUnixTimeMilliseconds();
+
+            string json;
+            try
             {
-                using var content = new StringContent(body, Encoding.UTF8, "application/json");
-                using var response = await _http.PostAsync(BaseUrl, content, token);
-                var payload = await response.Content.ReadAsStringAsync();
+                // A paid submit: only retry when the server explicitly rejected it (429/503) so a resend can't
+                // double-charge; a lost response (connection drop / timeout) is handled by recovery below.
+                json = await HttpResilience.Submit.ExecuteAsync(async token =>
+                {
+                    using var content = new StringContent(body, Encoding.UTF8, "application/json");
+                    using var response = await _http.PostAsync(BaseUrl, content, token);
+                    var payload = await response.Content.ReadAsStringAsync();
 
-                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
-                if (!response.IsSuccessStatusCode)
-                    throw new MeshyException($"Create task failed ({(int)response.StatusCode}): {payload}");
+                    HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                    if (!response.IsSuccessStatusCode)
+                        throw new MeshyException($"Create task failed ({(int)response.StatusCode}): {payload}");
 
-                return payload;
-            }, ct);
+                    return payload;
+                }, ct);
+            }
+            catch (Exception e) when (IsConnectionLoss(e, ct))
+            {
+                // The request may have reached Meshy and started a (charged) job before the connection dropped.
+                // Rather than fail — or blindly resubmit and risk a second charge (Meshy has no idempotency key)
+                // — look for a task this call just created and adopt it.
+                var recovered = await TryRecoverRecentlyCreatedTaskAsync(submittedAfterUnixMs, ct);
+                if (recovered != null)
+                    return recovered;
+                throw;
+            }
 
             var parsed = JsonUtility.FromJson<CreateResponse>(json);
             if (parsed == null || string.IsNullOrEmpty(parsed.result))
                 throw new MeshyException($"Create task returned no id: {json}");
 
             return parsed.result!;
+        }
+
+        /// <summary>Retrieve a task's current state by id. A free read — use it to resume or monitor a job
+        /// whose id you already hold (e.g. after a run was interrupted mid-generation).</summary>
+        public async Task<TaskResponse> GetTaskAsync(string taskId, CancellationToken ct)
+        {
+            var json = await FetchJsonAsync($"{BaseUrl}/{taskId}", ct);
+            return JsonUtility.FromJson<TaskResponse>(json)
+                ?? throw new MeshyException($"Could not parse task status: {json}");
+        }
+
+        /// <summary>List this account's most recent image-to-3D tasks, newest first. A free read; used to
+        /// recover the id of a task whose create response was lost.</summary>
+        public async Task<TaskResponse[]> ListRecentTasksAsync(CancellationToken ct, int pageSize = 20)
+        {
+            var url = $"{BaseUrl}?page_num=1&page_size={pageSize}&sort_by=-created_at";
+            var json = await FetchJsonAsync(url, ct);
+
+            // Meshy returns a bare JSON array; JsonUtility can't parse a top-level array, so wrap it first.
+            var wrapper = JsonUtility.FromJson<TaskListWrapper>("{\"items\":" + json + "}");
+            return wrapper?.items ?? Array.Empty<TaskResponse>();
         }
 
         /// <summary>Poll a task until it succeeds or fails, reporting progress 0..100.</summary>
@@ -69,24 +110,9 @@ namespace Assembler.AssetGeneration.ImageToMesh
             {
                 ct.ThrowIfCancellationRequested();
 
-                // Polling is a safe, repeatable read: retry connection blips and transient statuses so a
-                // momentary hiccup doesn't abandon an in-progress (paid) generation that's still running.
-                var json = await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
-                {
-                    using var response = await _http.GetAsync($"{BaseUrl}/{taskId}", token);
-                    var payload = await response.Content.ReadAsStringAsync();
-
-                    HttpResilience.ThrowIfTransient((int)response.StatusCode);
-                    if (!response.IsSuccessStatusCode)
-                        throw new MeshyException($"Poll failed ({(int)response.StatusCode}): {payload}");
-
-                    return payload;
-                }, ct);
-
-                var task = JsonUtility.FromJson<TaskResponse>(json);
-                if (task == null)
-                    throw new MeshyException($"Could not parse task status: {json}");
-
+                // Each poll is a safe, repeatable read (retried internally against connection blips and
+                // transient statuses), so a momentary hiccup doesn't abandon an in-progress (paid) generation.
+                var task = await GetTaskAsync(taskId, ct);
                 onProgress(task.progress, task.status ?? "");
 
                 switch (task.status)
@@ -96,7 +122,7 @@ namespace Assembler.AssetGeneration.ImageToMesh
                     case "FAILED":
                     case "CANCELED":
                     case "EXPIRED":
-                        throw new MeshyException(
+                        throw new MeshyTaskFailedException(
                             $"Task {task.status}: {task.task_error?.message ?? "no detail"}");
                     default:
                         await Task.Delay(TimeSpan.FromSeconds(3), ct);
@@ -122,6 +148,58 @@ namespace Assembler.AssetGeneration.ImageToMesh
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             File.WriteAllBytes(destinationPath, bytes);
         }
+
+        // Buffer subtracted from the pre-submit timestamp when recognising a recovered task, to absorb
+        // client/server clock skew (the created_at we compare against is Meshy's server clock).
+        private const double CreateRecoveryClockSkewSeconds = 30;
+
+        // A connection-level failure (drop / DNS / socket) or an HttpClient timeout — where the request may
+        // have reached the server. Deliberately NOT a user cancellation (ct fired).
+        private static bool IsConnectionLoss(Exception e, CancellationToken ct) =>
+            !ct.IsCancellationRequested && e is HttpRequestException or IOException or TaskCanceledException;
+
+        private async Task<string?> TryRecoverRecentlyCreatedTaskAsync(long createdAfterUnixMs, CancellationToken ct)
+        {
+            try
+            {
+                var recent = await ListRecentTasksAsync(ct);
+                // Listed newest-first: adopt the most recent task plausibly from this submit that is still
+                // alive (queued/running) or already done — never a terminally failed one.
+                var candidate = recent.FirstOrDefault(t =>
+                    t is { id: { Length: > 0 } } &&
+                    t.created_at >= createdAfterUnixMs &&
+                    t.status is "PENDING" or "IN_PROGRESS" or "SUCCEEDED");
+
+                if (candidate?.id is { } id)
+                {
+                    Debug.LogWarning(
+                        $"[Meshy] Create response was lost; adopted recently-created task {id} instead of " +
+                        "resubmitting (avoids a double charge). Verify it matches your request.");
+                    return id;
+                }
+            }
+            catch
+            {
+                // Best-effort: if listing also fails, fall through to surfacing the original create failure.
+            }
+
+            return null;
+        }
+
+        // Resilient GET returning the raw body: retries connection blips and transient statuses so a momentary
+        // hiccup doesn't abort a read; a hard non-2xx (e.g. 404) throws a fatal MeshyException that won't retry.
+        private async Task<string> FetchJsonAsync(string url, CancellationToken ct) =>
+            await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
+            {
+                using var response = await _http.GetAsync(url, token);
+                var payload = await response.Content.ReadAsStringAsync();
+
+                HttpResilience.ThrowIfTransient((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new MeshyException($"Request failed ({(int)response.StatusCode}) for {url}: {payload}");
+
+                return payload;
+            }, ct);
 
         private static string BuildImageDataUri(string imagePath)
         {
@@ -214,9 +292,18 @@ namespace Assembler.AssetGeneration.ImageToMesh
             public string? id;
             public string? status;
             public int progress;
+            public long created_at; // Unix milliseconds — used to recognise a task we just created.
             public ModelUrls? model_urls;
             public TextureUrl[]? texture_urls;
             public TaskError? task_error;
+        }
+
+        // List Tasks returns a bare JSON array; JsonUtility only parses a top-level object, so the array
+        // is wrapped as {"items":[...]} before parsing.
+        [Serializable]
+        private sealed class TaskListWrapper
+        {
+            public TaskResponse[]? items;
         }
 
         [Serializable]
@@ -245,9 +332,18 @@ namespace Assembler.AssetGeneration.ImageToMesh
         }
     }
 
-    public sealed class MeshyException : Exception
+    public class MeshyException : Exception
     {
         public MeshyException(string message) : base(message) { }
+    }
+
+    /// <summary>
+    /// A Meshy task reached a terminal non-success state (FAILED / CANCELED / EXPIRED) server-side — distinct
+    /// from a transient transport error, so a caller can treat a persisted task id as dead and stop resuming it.
+    /// </summary>
+    public sealed class MeshyTaskFailedException : MeshyException
+    {
+        public MeshyTaskFailedException(string message) : base(message) { }
     }
 
     public enum ModelFormat
