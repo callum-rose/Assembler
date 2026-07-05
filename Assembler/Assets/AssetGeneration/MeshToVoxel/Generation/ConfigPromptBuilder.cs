@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
@@ -134,7 +135,38 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
         {
             var tooltip = field.GetCustomAttribute<TooltipAttribute>()?.tooltip ?? string.Empty;
             var range = field.GetCustomAttribute<RangeAttribute>();
-            return $"- {field.Name} ({DescribeType(field.FieldType, range)}): {tooltip}";
+            var suffix = string.IsNullOrEmpty(tooltip) ? string.Empty : $": {tooltip}";
+            return $"- {field.Name} ({DescribeType(field.FieldType, range)}, default {DescribeDefault(field)}){suffix}";
+        }
+
+        private static string DescribeDefault(FieldInfo field)
+        {
+            // A fresh instance carries each field's initializer value — the true default the AI
+            // should assume when it omits a field. Cache per declaring type to avoid re-allocating.
+            var instance = DefaultInstance(field.DeclaringType);
+            var value = field.GetValue(instance);
+            return value switch
+            {
+                bool b => b ? "true" : "false",
+                null => "null",
+                _ => value.ToString()
+            };
+        }
+
+        private static readonly Dictionary<Type, object> DefaultInstances = new();
+
+        private static object DefaultInstance(Type type)
+        {
+            if (!DefaultInstances.TryGetValue(type, out var instance))
+            {
+                // SettingsConfig's authoritative defaults come from Settings.Defaults via Seeded(),
+                // not its field initializers (which could drift); everything else uses its own.
+                instance = type == typeof(SettingsConfig)
+                    ? SettingsConfig.Seeded()
+                    : Activator.CreateInstance(type);
+                DefaultInstances[type] = instance;
+            }
+            return instance;
         }
 
         private static string DescribeType(Type type, RangeAttribute? range)
