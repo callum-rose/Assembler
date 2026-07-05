@@ -31,6 +31,10 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         private const string Pref = "Assembler.TextToVoxel.";
         private const int FineNodeWarningDim = 120;
 
+        // SessionState (survives a domain reload, wiped on editor restart) key for the in-progress-run
+        // manifest that drives the "Resume run" button — see ResumeManifest / DrawResume.
+        private const string ResumeKey = Pref + "ResumeManifest";
+
         private static readonly string[] MeshyModels = { "meshy-6", "meshy-5", "meshy-4" };
 
         // API keys are stored per provider so swapping providers keeps each key.
@@ -747,12 +751,43 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 using (new EditorGUI.DisabledScope(_running))
                 {
                     if (GUILayout.Button("Run pipeline", GUILayout.Height(30)))
-                        _ = RunAsync();
+                        _ = RunAsync(resume: false);
                 }
                 using (new EditorGUI.DisabledScope(!_running))
                 {
                     if (GUILayout.Button("Cancel", GUILayout.Height(30), GUILayout.Width(100)))
                         _cts?.Cancel();
+                }
+            }
+
+            DrawResume();
+        }
+
+        // A domain reload (script edit, entering Play mode) mid-run tears down the AppDomain and silently
+        // kills the fire-and-forget run — but the run's output folder is pinned in a SessionState manifest
+        // that survives the reload. If one is present and nothing is running, offer to resume: re-invoke
+        // the unchanged pipeline reusing that folder, so stage 2's paid Meshy task resumes from its
+        // .meshy-task-id sidecar (the only irreversible cost) while stages 1/3 re-run locally.
+        private void DrawResume()
+        {
+            if (_running || !TryLoadResumeManifest(out var manifest))
+                return;
+
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(
+                $"A previous run was interrupted (domain reload) with partial output in\n{manifest.ResolvedDir}\n\n"
+                + "Resume re-runs the pipeline reusing that folder: the paid Meshy task resumes from its "
+                + "sidecar, while the image is regenerated and the mesh re-voxelised. Review gates are skipped.",
+                MessageType.Warning);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Resume run", GUILayout.Height(26)))
+                    _ = RunAsync(resume: true);
+                if (GUILayout.Button(new GUIContent("Discard", "Forget the interrupted run without resuming."),
+                        GUILayout.Height(26), GUILayout.Width(90)))
+                {
+                    ClearResumeManifest();
+                    SetStatus("Discarded the interrupted run.");
                 }
             }
         }
@@ -806,17 +841,48 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
         // ---- Run -------------------------------------------------------------
 
-        private async Task RunAsync()
+        // A single run. resume=false is a fresh Run-pipeline press; resume=true re-kicks an interrupted run
+        // from its SessionState manifest (see DrawResume). The output folder is pinned for the run so a
+        // resume reuses the same directory (and therefore the same .meshy-task-id sidecar): ResolveOutputDir
+        // uses DateTime.Now, so a naive re-run would otherwise compute a *different* timestamped folder and
+        // miss the partials. The pin is in-memory only and restored in finally; SaveState() persists the
+        // user's original OutputDir/BaseName first, so a mid-run domain reload leaves prefs untouched.
+        private async Task RunAsync(bool resume)
         {
             SaveState();
             _settings.Vox = BuildVoxSettings();
+
+            var originalOutputDir = _settings.OutputDir;
+            var originalBaseName = _settings.BaseName;
+            var originalAutoSubfolder = _settings.AutoSubfolderPerRun;
+
+            string resolvedDir;
+            string baseName;
+            if (resume && TryLoadResumeManifest(out var manifest))
+            {
+                resolvedDir = manifest.ResolvedDir;
+                baseName = manifest.BaseName;
+            }
+            else
+            {
+                baseName = VoxelPipeline.ResolveBaseName(_settings);
+                resolvedDir = VoxelPipeline.ResolveOutputDir(_settings, baseName, DateTime.Now);
+            }
+
+            // Pin the resolved folder + base name so VoxelPipeline.RunAsync writes exactly here on a resume.
+            _settings.OutputDir = resolvedDir;
+            _settings.BaseName = baseName;
+            _settings.AutoSubfolderPerRun = false;
+            SaveResumeManifest(new ResumeManifest { ResolvedDir = resolvedDir, BaseName = baseName });
 
             _running = true;
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
 
-            VoxelPipeline.ReviewGate<ImageGenerationCore.Result>? imageGate = _reviewImage ? ImageReviewGate : null;
-            VoxelPipeline.ReviewGate<MeshyConversionCore.Result>? meshGate = _reviewMesh ? MeshReviewGate : null;
+            // On resume the interactive review gates can't be restored across the reload, so skip them and
+            // run straight through (the earlier stages just re-produce their outputs).
+            VoxelPipeline.ReviewGate<ImageGenerationCore.Result>? imageGate = !resume && _reviewImage ? ImageReviewGate : null;
+            VoxelPipeline.ReviewGate<MeshyConversionCore.Result>? meshGate = !resume && _reviewMesh ? MeshReviewGate : null;
 
             try
             {
@@ -852,11 +918,44 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             {
                 EditorUtility.ClearProgressBar();
                 EndReview();
+                // The run finished (or errored/cancelled) without a reload, so there is nothing to resume.
+                // A domain reload mid-run never reaches here, leaving the manifest in place for DrawResume.
+                ClearResumeManifest();
+                _settings.OutputDir = originalOutputDir;
+                _settings.BaseName = originalBaseName;
+                _settings.AutoSubfolderPerRun = originalAutoSubfolder;
                 _running = false;
                 _cts?.Dispose();
                 _cts = null;
                 Repaint();
             }
+        }
+
+        // ---- Resume manifest (SessionState, survives a domain reload) --------
+
+        [Serializable]
+        private struct ResumeManifest
+        {
+            public string ResolvedDir;
+            public string BaseName;
+        }
+
+        private static void SaveResumeManifest(ResumeManifest manifest) =>
+            SessionState.SetString(ResumeKey, JsonUtility.ToJson(manifest));
+
+        private static void ClearResumeManifest() => SessionState.EraseString(ResumeKey);
+
+        private static bool TryLoadResumeManifest(out ResumeManifest manifest)
+        {
+            var json = SessionState.GetString(ResumeKey, "");
+            if (string.IsNullOrEmpty(json))
+            {
+                manifest = default;
+                return false;
+            }
+
+            manifest = JsonUtility.FromJson<ResumeManifest>(json);
+            return !string.IsNullOrEmpty(manifest.ResolvedDir);
         }
 
         private Task<VoxelPipeline.ReviewDecision> ImageReviewGate(ImageGenerationCore.Result image, CancellationToken ct)
