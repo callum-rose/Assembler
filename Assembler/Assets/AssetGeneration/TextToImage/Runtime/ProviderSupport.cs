@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 
 namespace Assembler.AssetGeneration.TextToImage
 {
@@ -44,13 +45,21 @@ namespace Assembler.AssetGeneration.TextToImage
         /// </summary>
         public static async Task<GeneratedImage> DownloadImageAsync(HttpClient http, string url, CancellationToken ct)
         {
-            using var response = await http.GetAsync(url, ct);
-            if (!response.IsSuccessStatusCode)
-                throw new ImageGenerationException(
-                    $"Failed to download generated image ({(int)response.StatusCode}).");
+            // Fetching the finished image is an idempotent GET: retry connection faults and transient statuses
+            // so a blip doesn't lose an already-generated (paid) result before its signed URL expires.
+            var (bytes, contentType) = await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
+            {
+                using var response = await http.GetAsync(url, token);
+                HttpResilience.ThrowIfTransient((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new ImageGenerationException(
+                        $"Failed to download generated image ({(int)response.StatusCode}).");
 
-            var bytes = await response.Content.ReadAsByteArrayAsync();
-            var mime = response.Content.Headers.ContentType?.MediaType;
+                var data = await response.Content.ReadAsByteArrayAsync();
+                return (data, response.Content.Headers.ContentType?.MediaType);
+            }, ct);
+
+            var mime = contentType;
             if (string.IsNullOrEmpty(mime) || !mime!.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 mime = GuessMimeFromUrl(url);
             return new GeneratedImage(bytes, mime);

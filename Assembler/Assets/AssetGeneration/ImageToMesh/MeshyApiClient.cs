@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 using UnityEngine;
 
 namespace Assembler.AssetGeneration.ImageToMesh
@@ -38,12 +39,20 @@ namespace Assembler.AssetGeneration.ImageToMesh
             var dataUri = BuildImageDataUri(request.ImagePath);
             var body = BuildRequestJson(dataUri, request);
 
-            using var content = new StringContent(body, Encoding.UTF8, "application/json");
-            using var response = await _http.PostAsync(BaseUrl, content, ct);
-            var json = await response.Content.ReadAsStringAsync();
+            // A paid submit: only retry when the server explicitly rejected it (429/503) so a resend can't
+            // double-charge; a lost response after a connection drop fails fast rather than risk resubmitting.
+            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            {
+                using var content = new StringContent(body, Encoding.UTF8, "application/json");
+                using var response = await _http.PostAsync(BaseUrl, content, token);
+                var payload = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new MeshyException($"Create task failed ({(int)response.StatusCode}): {json}");
+                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new MeshyException($"Create task failed ({(int)response.StatusCode}): {payload}");
+
+                return payload;
+            }, ct);
 
             var parsed = JsonUtility.FromJson<CreateResponse>(json);
             if (parsed == null || string.IsNullOrEmpty(parsed.result))
@@ -60,11 +69,19 @@ namespace Assembler.AssetGeneration.ImageToMesh
             {
                 ct.ThrowIfCancellationRequested();
 
-                using var response = await _http.GetAsync($"{BaseUrl}/{taskId}", ct);
-                var json = await response.Content.ReadAsStringAsync();
+                // Polling is a safe, repeatable read: retry connection blips and transient statuses so a
+                // momentary hiccup doesn't abandon an in-progress (paid) generation that's still running.
+                var json = await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
+                {
+                    using var response = await _http.GetAsync($"{BaseUrl}/{taskId}", token);
+                    var payload = await response.Content.ReadAsStringAsync();
 
-                if (!response.IsSuccessStatusCode)
-                    throw new MeshyException($"Poll failed ({(int)response.StatusCode}): {json}");
+                    HttpResilience.ThrowIfTransient((int)response.StatusCode);
+                    if (!response.IsSuccessStatusCode)
+                        throw new MeshyException($"Poll failed ({(int)response.StatusCode}): {payload}");
+
+                    return payload;
+                }, ct);
 
                 var task = JsonUtility.FromJson<TaskResponse>(json);
                 if (task == null)
@@ -90,7 +107,17 @@ namespace Assembler.AssetGeneration.ImageToMesh
 
         public async Task DownloadAsync(string url, string destinationPath, CancellationToken ct)
         {
-            var bytes = await _http.GetByteArrayAsync(url);
+            // Downloads are idempotent GETs: retry connection faults and transient statuses so a blip mid-
+            // download doesn't discard the completed model/texture. A hard 4xx (e.g. an expired URL) fails fast.
+            var bytes = await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
+            {
+                using var response = await _http.GetAsync(url, token);
+                HttpResilience.ThrowIfTransient((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new MeshyException($"Download failed ({(int)response.StatusCode}) for {url}.");
+                return await response.Content.ReadAsByteArrayAsync();
+            }, ct);
+
             ct.ThrowIfCancellationRequested();
             Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             File.WriteAllBytes(destinationPath, bytes);
