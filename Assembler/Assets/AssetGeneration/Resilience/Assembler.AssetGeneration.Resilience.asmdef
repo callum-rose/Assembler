@@ -1,9 +1,7 @@
 {
-    "name": "Assembler.AssetGeneration.ImageToMesh",
+    "name": "Assembler.AssetGeneration.Resilience",
     "rootNamespace": "Assembler",
-    "references": [
-        "Assembler.AssetGeneration.Resilience"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

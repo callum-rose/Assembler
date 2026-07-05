@@ -65,15 +65,46 @@ namespace Assembler.AssetGeneration.ImageToMesh
 
             using var client = new MeshyApiClient(apiKey);
 
-            onStatus?.Invoke("Submitting image…");
-            var taskId = await client.CreateTaskAsync(request, ct);
+            // A generation is paid on submit but lives server-side and is free to re-query, so persist its id
+            // the moment we have one. If a previous run into this same directory was interrupted after
+            // submitting (network drop, crash, cancel), resume that task instead of paying for a new one; the
+            // marker is cleared once the task terminates (success or terminal failure).
+            var sidecar = Path.Combine(Path.GetFullPath(outputDir), TaskSidecarFileName);
+            var resumeId = TryReadTaskSidecar(sidecar);
 
-            onStatus?.Invoke($"Queued (task {taskId}). Generating…");
-            var task = await client.PollUntilCompleteAsync(
-                taskId, (p, s) => onStatus?.Invoke($"{s} — {p}%"), ct);
+            string taskId;
+            if (resumeId != null)
+            {
+                onStatus?.Invoke($"Resuming existing Meshy task {resumeId}…");
+                taskId = resumeId;
+            }
+            else
+            {
+                onStatus?.Invoke("Submitting image…");
+                taskId = await client.CreateTaskAsync(request, ct);
+                WriteTaskSidecar(sidecar, taskId);
+            }
+
+            MeshyApiClient.TaskResponse task;
+            try
+            {
+                onStatus?.Invoke($"Queued (task {taskId}). Generating…");
+                task = await client.PollUntilCompleteAsync(
+                    taskId, (p, s) => onStatus?.Invoke($"{s} — {p}%"), ct);
+            }
+            catch (MeshyTaskFailedException)
+            {
+                // The task is dead server-side; drop the marker so a rerun starts fresh rather than resuming it.
+                // A transient/network failure or cancellation instead leaves the marker in place to resume.
+                TryDeleteTaskSidecar(sidecar);
+                throw;
+            }
 
             var savedPath = await DownloadResultsAsync(
                 client, task, outputDir, outputFile, request.Format, request.EnablePbr, ct, onStatus);
+
+            // Outputs are on disk and the task succeeded — the resume marker is no longer needed.
+            TryDeleteTaskSidecar(sidecar);
 
             onStatus?.Invoke($"Done. Saved to {savedPath}");
             return new Result(savedPath, task);
@@ -197,6 +228,51 @@ namespace Assembler.AssetGeneration.ImageToMesh
             var full = Path.GetFullPath(path);
             var assets = Path.GetFullPath(Application.dataPath);
             return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // A dotfile so Unity ignores it (no .meta churn) and it stays out of the way; one per output
+        // directory, holding the in-flight Meshy task id so an interrupted run can resume rather than re-pay.
+        private const string TaskSidecarFileName = ".meshy-task-id";
+
+        private static string? TryReadTaskSidecar(string path)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                    return null;
+                var id = File.ReadAllText(path).Trim();
+                return string.IsNullOrEmpty(id) ? null : id;
+            }
+            catch
+            {
+                return null; // Unreadable marker → just start fresh.
+            }
+        }
+
+        private static void WriteTaskSidecar(string path, string taskId)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, taskId);
+            }
+            catch
+            {
+                // Non-fatal: persistence is a resilience nicety, not required for the run to complete.
+            }
+        }
+
+        private static void TryDeleteTaskSidecar(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch
+            {
+                // Ignore — a stale marker only costs a redundant resume attempt on the next run.
+            }
         }
     }
 }

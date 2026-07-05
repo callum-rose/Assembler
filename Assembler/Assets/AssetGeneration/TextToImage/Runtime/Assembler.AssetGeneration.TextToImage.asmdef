@@ -1,7 +1,9 @@
 {
     "name": "Assembler.AssetGeneration.TextToImage",
     "rootNamespace": "Assembler",
-    "references": [],
+    "references": [
+        "Assembler.AssetGeneration.Resilience"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
