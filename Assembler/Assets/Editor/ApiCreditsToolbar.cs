@@ -43,7 +43,7 @@ namespace Assembler.EditorTools
         private const double InjectRetrySeconds = 0.5;
 
         private static readonly Type? ToolbarType =
-            typeof(Editor).Assembly.GetType("UnityEditor.Toolbar");
+            typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.Toolbar");
 
         private static VisualElement? _container;
         private static Label? _meshyLabel;
