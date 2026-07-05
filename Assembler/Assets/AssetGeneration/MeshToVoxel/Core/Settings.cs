@@ -58,14 +58,17 @@ namespace Assembler.AssetGeneration.MeshToVoxel
         /// <summary>Protected morphological close→open radius (0 = off, 1–2).</summary>
         public int CleanupStrength { get; init; }
 
-        /// <summary>Fill concave corner voxels (≥3 occupied face-neighbours) with the neighbours' modal colour.</summary>
+        /// <summary>Fill concave corner voxels (same-colour vertex corner, or a deep pocket) with the neighbours' colour.</summary>
         public bool FillCorners { get; init; }
-
-        /// <summary>Repeat the corner fill until stable (chases fills that create new corners) instead of one pass.</summary>
-        public bool FillCornersRecursive { get; init; }
 
         /// <summary>Oklab distance within which corner-fill neighbour colours count as the same (0 = exact).</summary>
         public float CornerFillColourTolerance { get; init; }
+
+        /// <summary>Occupied face-neighbour count that triggers the any-colour deep-pocket fill (4–6).</summary>
+        public int CornerFillNeighbourThreshold { get; init; }
+
+        /// <summary>Deep-pocket fill only fires when the modal colour is a strict majority of the neighbours.</summary>
+        public bool CornerFillRequireMajority { get; init; }
 
         /// <summary>Force mirror-symmetry across these grid axes (union about the occupied centre).</summary>
         public SymmetryAxes Symmetry { get; init; }
@@ -159,8 +162,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel
             RemoveFloaters = true,
             CleanupStrength = 1,
             FillCorners = false,
-            FillCornersRecursive = false,
             CornerFillColourTolerance = 0.1f,
+            CornerFillNeighbourThreshold = CornerFill.DefaultNeighbourThreshold,
+            CornerFillRequireMajority = true,
             Symmetry = SymmetryAxes.None,
             ForceMirror = false,
             FaceWeight = 1f,
