@@ -26,6 +26,7 @@ Favour modern C# and a functional style. These are preferences, not absolutes �
 
 - **Use modern language features** available on this Unity/C# version rather than older equivalents.
 - **Records** for immutable data types (e.g. the Info records) — prefer them over hand-written classes where a value type fits. Update with `with` expressions, not mutation.
+- **C# 9 only — no record `struct`s.** This project targets C# 9, so `record struct` / `readonly record struct` (a C# 10 feature) are unavailable and won't compile. Use a `record` (reference type) for immutable data, or a plain `struct` where a value type is required — but a `struct` can't use `with`, so hand-copy fields instead.
 - **Null object pattern over nullable types** — prefer a sentinel/null-object (the existing `None<T>` / `NullValueProvider<T>` pattern) to returning or branching on `null`. Nullable reference types stay enabled and must be honoured where `null` genuinely crosses a boundary, but design to avoid that where practical.
 - **Switch expressions** over switch statements and if/else chains; lean on **pattern matching** generally (property, relational, and `is` patterns), not just type switches.
 - **Functional style** — prefer pure functions and LINQ pipelines over imperative loops and mutable accumulation; avoid hidden side effects.
