@@ -1,0 +1,22 @@
+{
+    "name": "Assembler.Remote",
+    "rootNamespace": "Assembler.Remote",
+    "references": [
+        "Assembler.Building",
+        "Assembler.Deserialisation",
+        "Assembler.Input",
+        "Assembler.Extensions",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -2,7 +2,7 @@
   "rules": [
     {
       "id": "fill-corners",
-      "text": "Turn FillCorners and FillCornersRecursive on so concave corners box out.",
+      "text": "Turn FillCorners on so concave corners box out, and leave CornerFillRequireMajority on so colour boundaries are not smeared.",
       "appliesWhen": "all assets except ones deliberately meant to keep a natural, organic shape (rocks, terrain, foliage, clouds)"
     },
     {

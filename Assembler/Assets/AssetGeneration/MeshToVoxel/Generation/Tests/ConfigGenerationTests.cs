@@ -87,7 +87,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation.Tests
             Assert.That(config.Meshy.MeshFormat, Is.EqualTo(ModelFormat.Fbx), "enum by name");
             Assert.That(config.Meshy.Decimation, Is.EqualTo(DecimationMode.High), "enum by name");
             Assert.That(config.Meshy.TargetPolycount, Is.EqualTo(300000), "int range clamped");
-            Assert.That(config.Meshy.Remesh, Is.True, "untouched field keeps default");
+            Assert.That(config.Meshy.Remesh, Is.False, "untouched field keeps default");
         }
 
         [Test]

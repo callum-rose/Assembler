@@ -39,7 +39,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
         private bool _isRunning;
         private CancellationTokenSource? _cts;
 
-        [MenuItem("Window/Voxels/AI Model Config")]
+        [MenuItem("Assembler/Voxelisation/AI Model Config")]
         public static void Open()
         {
             var window = GetWindow<ConfigGeneratorWindow>("AI Model Config");

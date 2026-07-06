@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.MeshToVoxels;
 using UnityEditor;
 using UnityEngine;
@@ -39,8 +40,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
         private bool _removeFloaters = true;
         private int _cleanupStrength = 1;
         private bool _fillCorners;
-        private bool _fillCornersRecursive;
         private float _cornerFillColourTolerance = 0.1f;
+        private int _cornerFillNeighbourThreshold = CornerFill.DefaultNeighbourThreshold;
+        private bool _cornerFillRequireMajority = true;
         private SymmetryAxes _symmetry = SymmetryAxes.None;
         private bool _forceMirror;
 
@@ -76,7 +78,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
 
         [SerializeField] private VoxMasterPalette? _masterPalette;
 
-        [MenuItem("Window/Voxels/Mesh to Voxel")]
+        [MenuItem("Assembler/Voxelisation/Mesh to Voxel")]
         private static void Open() => GetWindow<MeshToVoxelWindow>("Mesh → Voxel");
 
         private void OnEnable() => LoadState();
@@ -168,7 +170,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
             using (new EditorGUILayout.HorizontalScope())
             {
                 EditorGUILayout.LabelField(
-                    new GUIContent("Mesh", "The source .obj/.fbx to voxelise — typically a messy textured Meshy export."),
+                    new GUIContent("Mesh", "The source .obj/.fbx to voxelise — typically a messy textured Meshy export. Drag a mesh asset onto this row, or browse for a file."),
                     GUILayout.Width(40));
                 EditorGUILayout.SelectableLabel(
                     string.IsNullOrEmpty(_meshPath) ? "(none selected)" : _meshPath,
@@ -177,13 +179,15 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
                     new GUIContent("Browse…", "Pick the source mesh (.obj or .fbx) from disk. The choice is remembered between sessions."),
                     GUILayout.Width(80)))
                 {
-                    string picked = EditorUtility.OpenFilePanel("Select mesh", "", "obj,fbx");
+                    string picked = EditorUtility.OpenFilePanel("Select mesh", PathField.GuessStartDir(_meshPath), "obj,fbx");
                     if (!string.IsNullOrEmpty(picked))
                     {
                         _meshPath = picked;
                     }
                 }
             }
+
+            _meshPath = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _meshPath);
         }
 
         private void DrawResolution()
@@ -299,13 +303,13 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
 
             _fillCorners = EditorGUILayout.ToggleLeft(
                 new GUIContent("Fill corners",
-                    "Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when 3+ of its "
-                    + "6 face-neighbours share one colour (fill that colour) OR it has 4+ occupied neighbours "
-                    + "(fill the modal colour). The colour-consensus gate keeps colour boundaries clean — a "
-                    + "3-neighbour corner where regions meet has no clear colour and stays empty, avoiding stray "
-                    + "artifacts. Real air gaps (leg gaps, handle holes) are protected from the 3-neighbour fill, "
-                    + "but a 4+-neighbour pocket (walled in on most sides) fills anyway — it can't be a see-through "
-                    + "gap."),
+                    "Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when three "
+                    + "same-colour face-neighbours meet it at a shared vertex (a genuine concave corner — fill that "
+                    + "colour) OR it is walled in by a deep-enough pocket of occupied neighbours (fill the modal "
+                    + "colour). The shared-vertex gate avoids inappropriate fills — a same-colour straddle across a "
+                    + "thin sheet spans only two axes and is left alone. Real air gaps (leg gaps, handle holes) are "
+                    + "protected from the corner fill, but a deep pocket (walled in on most sides) fills anyway — it "
+                    + "can't be a see-through gap. Repeats until nothing new qualifies."),
                 _fillCorners);
             if (_fillCorners)
             {
@@ -314,17 +318,22 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
                     _cornerFillColourTolerance = EditorGUILayout.Slider(
                         new GUIContent("Colour tolerance",
                             "How close two neighbour colours must be (Oklab distance) to count as the same for the "
-                            + "3-same-colour consensus rule. 0 = exact match (too strict — near-identical shades read "
+                            + "same-colour corner rule. 0 = exact match (too strict — near-identical shades read "
                             + "as different); raise it so similar shades group and clean corners fill. Too high and "
                             + "distinct regions merge, blurring boundaries. ~0.1 is a good start."),
                         _cornerFillColourTolerance, 0f, 0.5f);
-                    _fillCornersRecursive = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Recursive",
-                            "Repeat the fill until nothing new qualifies, so a filled corner that creates another "
-                            + "qualifying corner is chased down — deeper concavities and staircases box out fully. "
-                            + "More aggressive; off = a single pass. The gap guard still protects real air gaps every "
-                            + "pass."),
-                        _fillCornersRecursive);
+                    _cornerFillNeighbourThreshold = EditorGUILayout.IntSlider(
+                        new GUIContent("Pocket threshold",
+                            "How many of the 6 face-neighbours must be occupied to fill a cell regardless of colour "
+                            + "(the deep-pocket rule). Higher = more conservative, fewer pockets filled: 6 fills only "
+                            + "fully-enclosed holes, 4 also boxes out shallow dents. 5 is a good start."),
+                        _cornerFillNeighbourThreshold, 4, 6);
+                    _cornerFillRequireMajority = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Require colour majority",
+                            "Only fill a deep pocket when its modal (most common) neighbour colour is a strict "
+                            + "majority. Stops a pocket where two colour regions meet from being smeared with an "
+                            + "arbitrary side. Off = always fill a deep pocket with whichever colour is modal."),
+                        _cornerFillRequireMajority);
                 }
             }
 
@@ -688,8 +697,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
             RemoveFloaters = _removeFloaters,
             CleanupStrength = _cleanupStrength,
             FillCorners = _fillCorners,
-            FillCornersRecursive = _fillCornersRecursive,
             CornerFillColourTolerance = _cornerFillColourTolerance,
+            CornerFillNeighbourThreshold = _cornerFillNeighbourThreshold,
+            CornerFillRequireMajority = _cornerFillRequireMajority,
             Symmetry = _symmetry,
             ForceMirror = _forceMirror,
             FaceWeight = _faceWeight,
@@ -744,8 +754,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
             _removeFloaters = EditorPrefs.GetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             _cleanupStrength = EditorPrefs.GetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             _fillCorners = EditorPrefs.GetBool(PrefPrefix + "FillCorners", _fillCorners);
-            _fillCornersRecursive = EditorPrefs.GetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             _cornerFillColourTolerance = EditorPrefs.GetFloat(PrefPrefix + "CornerFillTolerance", _cornerFillColourTolerance);
+            _cornerFillNeighbourThreshold = EditorPrefs.GetInt(PrefPrefix + "CornerFillNeighbourThreshold", _cornerFillNeighbourThreshold);
+            _cornerFillRequireMajority = EditorPrefs.GetBool(PrefPrefix + "CornerFillRequireMajority", _cornerFillRequireMajority);
             _symmetry = (SymmetryAxes)EditorPrefs.GetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             _forceMirror = EditorPrefs.GetBool(PrefPrefix + "ForceMirror", _forceMirror);
             _faceWeight = EditorPrefs.GetFloat(PrefPrefix + "FaceWeight", _faceWeight);
@@ -792,8 +803,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Editor
             EditorPrefs.SetBool(PrefPrefix + "RemoveFloaters", _removeFloaters);
             EditorPrefs.SetInt(PrefPrefix + "CleanupStrength", _cleanupStrength);
             EditorPrefs.SetBool(PrefPrefix + "FillCorners", _fillCorners);
-            EditorPrefs.SetBool(PrefPrefix + "FillCornersRecursive", _fillCornersRecursive);
             EditorPrefs.SetFloat(PrefPrefix + "CornerFillTolerance", _cornerFillColourTolerance);
+            EditorPrefs.SetInt(PrefPrefix + "CornerFillNeighbourThreshold", _cornerFillNeighbourThreshold);
+            EditorPrefs.SetBool(PrefPrefix + "CornerFillRequireMajority", _cornerFillRequireMajority);
             EditorPrefs.SetInt(PrefPrefix + "Symmetry", (int)_symmetry);
             EditorPrefs.SetBool(PrefPrefix + "ForceMirror", _forceMirror);
             EditorPrefs.SetFloat(PrefPrefix + "FaceWeight", _faceWeight);

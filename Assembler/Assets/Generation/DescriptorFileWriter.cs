@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Text;
+using Assembler.Extensions;
 using UnityEngine;
 
 namespace Assembler.Generation
@@ -33,7 +33,7 @@ namespace Assembler.Generation
 
 		public static string BuildFileName(string? title)
 		{
-			var sanitised = Sanitise(title);
+			var sanitised = FileNameSanitiser.Sanitise(title);
 
 			if (string.IsNullOrEmpty(sanitised))
 			{
@@ -41,38 +41,6 @@ namespace Assembler.Generation
 			}
 
 			return sanitised + ".yaml";
-		}
-
-		public static string Sanitise(string? title)
-		{
-			if (string.IsNullOrWhiteSpace(title))
-			{
-				return string.Empty;
-			}
-
-			var invalid = Path.GetInvalidFileNameChars();
-			var sb = new StringBuilder(title.Length);
-			var prevWasSeparator = false;
-
-			foreach (var c in title)
-			{
-				if (Array.IndexOf(invalid, c) >= 0 || c == '/' || c == '\\' || c == ':' || char.IsWhiteSpace(c))
-				{
-					if (!prevWasSeparator && sb.Length > 0)
-					{
-						sb.Append('-');
-						prevWasSeparator = true;
-					}
-
-					continue;
-				}
-
-				sb.Append(c);
-				prevWasSeparator = false;
-			}
-
-			var result = sb.ToString().Trim('-', '.', ' ');
-			return result;
 		}
 	}
 }

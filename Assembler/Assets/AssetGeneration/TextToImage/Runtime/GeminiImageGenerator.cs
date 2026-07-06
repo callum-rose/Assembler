@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 
 namespace Assembler.AssetGeneration.TextToImage
 {
@@ -46,17 +47,25 @@ namespace Assembler.AssetGeneration.TextToImage
             var url = $"{BaseUrl}/{model}:generateContent";
             var body = BuildRequestJson(request.Prompt, request.ReferenceImage);
 
-            using var content = new StringContent(body, Encoding.UTF8, "application/json");
-            using var message = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-            // Key goes in a header rather than the query string so it stays out of logs.
-            message.Headers.Add("x-goog-api-key", _apiKey);
+            // Paid submit: retry only on a server-reject (429/503) where nothing was generated; a connection
+            // drop after sending fails fast rather than risk a second (charged) generation.
+            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            {
+                using var content = new StringContent(body, Encoding.UTF8, "application/json");
+                using var message = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
+                // Key goes in a header rather than the query string so it stays out of logs.
+                message.Headers.Add("x-goog-api-key", _apiKey);
 
-            using var response = await _http.SendAsync(message, ct);
-            var json = await response.Content.ReadAsStringAsync();
+                using var response = await _http.SendAsync(message, token);
+                var payload = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new ImageGenerationException(
-                    $"Gemini request failed ({(int)response.StatusCode}): {Truncate(json)}");
+                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new ImageGenerationException(
+                        $"Gemini request failed ({(int)response.StatusCode}): {Truncate(payload)}");
+
+                return payload;
+            }, ct);
 
             return ExtractImage(json);
         }

@@ -94,7 +94,7 @@ namespace Assembler.Parsing
 				? expressions.Concat(ctx.InlineExpressions.Expressions).ToArray()
 				: expressions;
 
-			return new GameInfo(info,
+			var gameInfo = new GameInfo(info,
 				world,
 				physics,
 				assets,
@@ -105,6 +105,12 @@ namespace Assembler.Parsing
 				entities,
 				placements)
 			{ ParseContext = ctx, Navigation = CreateNavigationInfo(gameDto.Navigation, values) };
+
+			// Fail fast on a typo'd entity/behaviour reference in a listener, naming the bad id and the
+			// listener that referenced it — instead of an opaque build-time KeyNotFoundException later.
+			ReferenceValidator.Validate(gameInfo);
+
+			return gameInfo;
 
 			PlacementInfo CreatePlacementInfo(string placementId, PlacementDto dto)
 			{

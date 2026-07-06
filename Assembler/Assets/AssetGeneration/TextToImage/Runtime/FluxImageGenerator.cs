@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 
 namespace Assembler.AssetGeneration.TextToImage
 {
@@ -61,13 +62,23 @@ namespace Assembler.AssetGeneration.TextToImage
                 sb.Append(",\"input_image\":\"").Append(Convert.ToBase64String(reference.Bytes)).Append('"');
             sb.Append('}');
 
-            using var content = new StringContent(sb.ToString(), Encoding.UTF8, "application/json");
-            using var response = await _http.PostAsync($"{BaseUrl}/{model}", content, ct);
-            var json = await response.Content.ReadAsStringAsync();
+            var payloadJson = sb.ToString();
 
-            if (!response.IsSuccessStatusCode)
-                throw new ImageGenerationException(
-                    $"FLUX submit failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(json)}");
+            // Paid submit: retry only on a server-reject (429/503) so a resend can't trigger a second charged
+            // generation; a connection drop after sending fails fast. Poll + download below are resilient GETs.
+            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            {
+                using var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
+                using var response = await _http.PostAsync($"{BaseUrl}/{model}", content, token);
+                var payload = await response.Content.ReadAsStringAsync();
+
+                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new ImageGenerationException(
+                        $"FLUX submit failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(payload)}");
+
+                return payload;
+            }, ct);
 
             var submit = UnityEngine.JsonUtility.FromJson<SubmitResponse>(json);
             if (submit is null || string.IsNullOrEmpty(submit.polling_url))
@@ -83,12 +94,20 @@ namespace Assembler.AssetGeneration.TextToImage
             {
                 await Task.Delay(PollInterval, ct);
 
-                using var response = await _http.GetAsync(pollingUrl, ct);
-                var json = await response.Content.ReadAsStringAsync();
+                // Polling is a safe, repeatable read: retry connection blips and transient statuses so a
+                // momentary hiccup doesn't abandon an in-progress (paid) generation still running server-side.
+                var json = await HttpResilience.IdempotentGet.ExecuteAsync(async token =>
+                {
+                    using var response = await _http.GetAsync(pollingUrl, token);
+                    var payload = await response.Content.ReadAsStringAsync();
 
-                if (!response.IsSuccessStatusCode)
-                    throw new ImageGenerationException(
-                        $"FLUX poll failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(json)}");
+                    HttpResilience.ThrowIfTransient((int)response.StatusCode);
+                    if (!response.IsSuccessStatusCode)
+                        throw new ImageGenerationException(
+                            $"FLUX poll failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(payload)}");
+
+                    return payload;
+                }, ct);
 
                 var result = UnityEngine.JsonUtility.FromJson<PollResponse>(json);
                 switch (result?.status)

@@ -5,6 +5,7 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.Spawners;
 using Assembler.Behaviours.UI;
+using Assembler.Core;
 using Assembler.Extensions;
 using Assembler.Parsing;
 using Assembler.Parsing.Controls;
@@ -18,7 +19,7 @@ namespace Assembler.Building
 {
 	public class GameEntityFactory : IEntitySpawner
 	{
-		private const string SpawnedIdPrefix = "$spawn$";
+		private const string SpawnedIdPrefix = ReservedIds.SpawnedIdPrefix;
 
 		private readonly VariableRegistry _variables;
 		private readonly CompiledExpressionsRegistry _expressions;

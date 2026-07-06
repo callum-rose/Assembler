@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 
 namespace Assembler.AssetGeneration.TextToImage
 {
@@ -44,17 +45,25 @@ namespace Assembler.AssetGeneration.TextToImage
 
             var model = string.IsNullOrWhiteSpace(request.Model) ? DefaultModel : request.Model.Trim();
 
-            // A reference image routes to the multipart edits endpoint; otherwise plain JSON generation.
-            using var message = request.ReferenceImage is { } reference
-                ? BuildEditRequest(model, request.Prompt, reference)
-                : BuildGenerateRequest(model, request.Prompt);
+            // Paid submit: retry only on a server-reject (429/503) — the request is rebuilt each attempt
+            // (an HttpRequestMessage can't be resent), and a connection drop after sending fails fast.
+            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            {
+                // A reference image routes to the multipart edits endpoint; otherwise plain JSON generation.
+                using var message = request.ReferenceImage is { } reference
+                    ? BuildEditRequest(model, request.Prompt, reference)
+                    : BuildGenerateRequest(model, request.Prompt);
 
-            using var response = await _http.SendAsync(message, ct);
-            var json = await response.Content.ReadAsStringAsync();
+                using var response = await _http.SendAsync(message, token);
+                var payload = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new ImageGenerationException(
-                    $"OpenAI request failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(json)}");
+                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new ImageGenerationException(
+                        $"OpenAI request failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(payload)}");
+
+                return payload;
+            }, ct);
 
             return ExtractImage(json);
         }

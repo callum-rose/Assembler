@@ -1,29 +1,49 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
 
 namespace Assembler.AssetGeneration.ImageOrientation
 {
-    /// <summary>The parsed outcome of an orientation request, keeping the raw model text for display/logging.</summary>
-    public sealed record OrientationResult(FacingDirection? Direction, OrientationOutcome Outcome, string RawResponse)
+    /// <summary>
+    /// The parsed outcome of an orientation request: the <see cref="OrientationAnswer"/> discriminated
+    /// union (a facing direction, a deliberate "unsure", or — in multi-image mode — a chosen view index)
+    /// plus the raw model text for display/logging. The <see cref="Direction"/>/<see cref="Index"/>/
+    /// <see cref="Code"/> helpers are conveniences over the union for the common cases.
+    /// </summary>
+    public sealed record OrientationResult(OrientationAnswer Answer, string RawResponse)
     {
-        public string Code => Outcome switch
+        /// <summary>The compass direction when the answer was a <see cref="OrientationAnswer.Facing"/>, else null.</summary>
+        public FacingDirection? Direction => Answer is OrientationAnswer.Facing f ? f.Direction : null;
+
+        /// <summary>The chosen view index when the answer was a <see cref="OrientationAnswer.ViewIndex"/>, else null.</summary>
+        public int? Index => Answer is OrientationAnswer.ViewIndex v ? v.Index : null;
+
+        public string Code => Answer switch
         {
-            OrientationOutcome.Resolved when Direction is { } direction => direction.ToCode(),
-            OrientationOutcome.Unsure => "?",
+            OrientationAnswer.Facing f => f.Direction.ToCode(),
+            OrientationAnswer.ViewIndex v => $"#{v.Index}",
+            OrientationAnswer.Unsure => "?",
             _ => "(unrecognised)",
         };
     }
 
     /// <summary>
-    /// Headless core logic: asks Claude which direction the front of the main object
-    /// in an image is facing, constrained to the ten <see cref="FacingDirection"/>
-    /// codes (the eight in-plane ones L, R, U, D, LU, LD, RU, RD plus T/A for towards
-    /// and away from the viewer) or an explicit "unsure" answer when it cannot
-    /// tell (<see cref="OrientationOutcome.Unsure"/>). Every input arrives as an argument and the
-    /// result is returned — there is no editor or shared state — so it runs equally
-    /// from an editor window, batch mode, a test, or a player build.
+    /// Headless core logic. Two modes, both returning an <see cref="OrientationResult"/> over the
+    /// <see cref="OrientationAnswer"/> union:
+    /// <list type="bullet">
+    /// <item><see cref="DetermineAsync(AnthropicClient, AnthropicImage, CancellationToken)"/> asks which
+    /// direction the front of the object in a single image faces — the ten <see cref="FacingDirection"/>
+    /// codes (eight in-plane L/R/U/D + diagonals, plus T/A for towards/away) or an explicit "unsure".</item>
+    /// <item><see cref="SelectViewAsync(AnthropicClient, IReadOnlyList{AnthropicImage}, CancellationToken)"/>
+    /// is given several candidate images of the same object and picks which one best shows the front,
+    /// yielding a view index.</item>
+    /// </list>
+    /// Every input arrives as an argument and the result is returned — no editor or shared state — so it
+    /// runs equally from an editor window, batch mode, a test, or a player build.
     /// </summary>
     public static class ImageFacingDirection
     {
@@ -55,6 +75,19 @@ namespace Assembler.AssetGeneration.ImageOrientation
         private const string Instruction =
             "Which direction is the front of the main object in this image facing? " +
             "Answer with one code only, or UNSURE if you cannot tell.";
+
+        private const string SelectViewSystemPrompt =
+            "You are a vision assistant that picks which rendered view best shows the FRONT (the face) " +
+            "of the main creature or character. You are given several images of the same object from " +
+            "different angles, provided in order and numbered starting at 0 (the first image is 0, the " +
+            "next is 1, and so on).\n\n" +
+            "Choose the single image in which the face / front is most clearly visible and facing toward " +
+            "the viewer. Respond with EXACTLY that image's number and nothing else — no words, no " +
+            "punctuation, just one integer.";
+
+        private const string SelectViewInstruction =
+            "The images above are numbered 0 to N-1 in order. Reply with the number of the one that best " +
+            "shows the front/face. One integer only.";
 
         /// <summary>
         /// Determines the facing direction from raw image bytes, building (and disposing)
@@ -101,8 +134,71 @@ namespace Assembler.AssetGeneration.ImageOrientation
 
             var message = new AnthropicMessage("user", Instruction, new[] { image });
             var response = await client.SendAsync(SystemPrompt, new[] { message }, cancellationToken);
-            var (direction, outcome) = FacingDirectionExtensions.Classify(response);
-            return new OrientationResult(direction, outcome, response.Trim());
+            return new OrientationResult(FacingDirectionExtensions.Classify(response), response.Trim());
+        }
+
+        /// <summary>
+        /// Given several candidate images of the same object (e.g. a ring of isometric views), asks
+        /// Claude which one best shows the front/face and returns its index as an
+        /// <see cref="OrientationAnswer.ViewIndex"/>. Builds and disposes its own client.
+        /// </summary>
+        /// <param name="images">Candidate images, in order; index 0 is the first.</param>
+        public static async Task<OrientationResult> SelectViewAsync(
+            string apiKey,
+            IReadOnlyList<byte[]> images,
+            string mediaType = "image/png",
+            string? model = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                throw new ArgumentException("API key is required.", nameof(apiKey));
+            }
+
+            var resolvedModel = string.IsNullOrWhiteSpace(model) ? DefaultModel : model!;
+            using var client = new AnthropicClient(apiKey, resolvedModel, maxTokens: 16);
+            var anthropicImages = images.Select(bytes => new AnthropicImage(mediaType, bytes)).ToList();
+            return await SelectViewAsync(client, anthropicImages, cancellationToken);
+        }
+
+        /// <summary>Selects the best-front view using a caller-owned client. See the apiKey overload.</summary>
+        public static async Task<OrientationResult> SelectViewAsync(
+            AnthropicClient client,
+            IReadOnlyList<AnthropicImage> images,
+            CancellationToken cancellationToken = default)
+        {
+            if (client is null)
+            {
+                throw new ArgumentNullException(nameof(client));
+            }
+
+            var usable = images.Where(image => !image.IsEmpty).ToList();
+            if (usable.Count == 0)
+            {
+                throw new ArgumentException("At least one image is required.", nameof(images));
+            }
+
+            var message = new AnthropicMessage("user", SelectViewInstruction, usable);
+            var response = await client.SendAsync(SelectViewSystemPrompt, new[] { message }, cancellationToken);
+            OrientationAnswer answer = ParseIndex(response) is { } index
+                ? new OrientationAnswer.ViewIndex(index)
+                : new OrientationAnswer.Unrecognised();
+            return new OrientationResult(answer, response.Trim());
+        }
+
+        /// <summary>
+        /// Reads the first integer out of a model reply (tolerating surrounding prose), for the
+        /// view-index mode. Returns null when there is no integer. Callers clamp to their range.
+        /// </summary>
+        public static int? ParseIndex(string response)
+        {
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return null;
+            }
+
+            Match match = Regex.Match(response, @"-?\d+");
+            return match.Success && int.TryParse(match.Value, out int index) ? index : null;
         }
     }
 }

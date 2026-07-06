@@ -34,7 +34,7 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
         public bool HdTexture = false;
 
         [Tooltip("Let Meshy clean up the topology.")]
-        public bool Remesh = true;
+        public bool Remesh = false;
 
         [Tooltip("Target face topology when remeshing. Only matters when Remesh is on.")]
         public MeshyTopology Topology = MeshyTopology.Triangle;

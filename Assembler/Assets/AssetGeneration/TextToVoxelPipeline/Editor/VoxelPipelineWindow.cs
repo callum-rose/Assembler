@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.ImageToMesh;
 using Assembler.AssetGeneration.MeshToVoxels;
 using Assembler.AssetGeneration.MeshToVoxel;
@@ -31,6 +32,10 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         private const string Pref = "Assembler.TextToVoxel.";
         private const int FineNodeWarningDim = 120;
 
+        // SessionState (survives a domain reload, wiped on editor restart) key for the in-progress-run
+        // manifest that drives the "Resume run" button — see ResumeManifest / DrawResume.
+        private const string ResumeKey = Pref + "ResumeManifest";
+
         private static readonly string[] MeshyModels = { "meshy-6", "meshy-5", "meshy-4" };
 
         // API keys are stored per provider so swapping providers keeps each key.
@@ -54,8 +59,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         private bool _removeFloaters = true;
         private int _cleanupStrength = 1;
         private bool _fillCorners;
-        private bool _fillCornersRecursive;
         private float _cornerFillColourTolerance = 0.1f;
+        private int _cornerFillNeighbourThreshold = CornerFill.DefaultNeighbourThreshold;
+        private bool _cornerFillRequireMajority = true;
         private SymmetryAxes _symmetry = SymmetryAxes.None;
         private bool _forceMirror;
 
@@ -102,7 +108,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         private CancellationTokenRegistration _reviewRegistration;
         private string _reviewMeshPath = "";
 
-        [MenuItem("Assembler/Text to Voxels (pipeline)")]
+        [MenuItem("Assembler/Voxelisation/Text to Voxels (pipeline)")]
         public static void Open()
         {
             var window = GetWindow<VoxelPipelineWindow>("Text to Voxels");
@@ -203,8 +209,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 _removeFloaters = v.RemoveFloaters;
                 _cleanupStrength = v.CleanupStrength;
                 _fillCorners = v.FillCorners;
-                _fillCornersRecursive = v.FillCornersRecursive;
                 _cornerFillColourTolerance = v.CornerFillColourTolerance;
+                _cornerFillNeighbourThreshold = v.CornerFillNeighbourThreshold;
+                _cornerFillRequireMajority = v.CornerFillRequireMajority;
                 _symmetry = v.Symmetry;
                 _forceMirror = v.ForceMirror;
                 _faceWeight = v.FaceWeight;
@@ -482,13 +489,13 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
             _fillCorners = EditorGUILayout.ToggleLeft(
                 new GUIContent("Fill corners",
-                    "Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when 3+ of its "
-                    + "6 face-neighbours share one colour (fill that colour) OR it has 4+ occupied neighbours "
-                    + "(fill the modal colour). The colour-consensus gate keeps colour boundaries clean — a "
-                    + "3-neighbour corner where regions meet has no clear colour and stays empty, avoiding stray "
-                    + "artifacts. Real air gaps (leg gaps, handle holes) are protected from the 3-neighbour fill, "
-                    + "but a 4+-neighbour pocket (walled in on most sides) fills anyway — it can't be a see-through "
-                    + "gap."),
+                    "Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when three "
+                    + "same-colour face-neighbours meet it at a shared vertex (a genuine concave corner — fill that "
+                    + "colour) OR it is walled in by a deep-enough pocket of occupied neighbours (fill the modal "
+                    + "colour). The shared-vertex gate avoids inappropriate fills — a same-colour straddle across a "
+                    + "thin sheet spans only two axes and is left alone. Real air gaps (leg gaps, handle holes) are "
+                    + "protected from the corner fill, but a deep pocket (walled in on most sides) fills anyway — it "
+                    + "can't be a see-through gap. Repeats until nothing new qualifies."),
                 _fillCorners);
             if (_fillCorners)
             {
@@ -497,17 +504,22 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                     _cornerFillColourTolerance = EditorGUILayout.Slider(
                         new GUIContent("Colour tolerance",
                             "How close two neighbour colours must be (Oklab distance) to count as the same for the "
-                            + "3-same-colour consensus rule. 0 = exact match (too strict — near-identical shades read "
+                            + "same-colour corner rule. 0 = exact match (too strict — near-identical shades read "
                             + "as different); raise it so similar shades group and clean corners fill. Too high and "
                             + "distinct regions merge, blurring boundaries. ~0.1 is a good start."),
                         _cornerFillColourTolerance, 0f, 0.5f);
-                    _fillCornersRecursive = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Recursive",
-                            "Repeat the fill until nothing new qualifies, so a filled corner that creates another "
-                            + "qualifying corner is chased down — deeper concavities and staircases box out fully. "
-                            + "More aggressive; off = a single pass. The gap guard still protects real air gaps every "
-                            + "pass."),
-                        _fillCornersRecursive);
+                    _cornerFillNeighbourThreshold = EditorGUILayout.IntSlider(
+                        new GUIContent("Pocket threshold",
+                            "How many of the 6 face-neighbours must be occupied to fill a cell regardless of colour "
+                            + "(the deep-pocket rule). Higher = more conservative, fewer pockets filled: 6 fills only "
+                            + "fully-enclosed holes, 4 also boxes out shallow dents. 5 is a good start."),
+                        _cornerFillNeighbourThreshold, 4, 6);
+                    _cornerFillRequireMajority = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Require colour majority",
+                            "Only fill a deep pocket when its modal (most common) neighbour colour is a strict "
+                            + "majority. Stops a pocket where two colour regions meet from being smeared with an "
+                            + "arbitrary side. Off = always fill a deep pocket with whichever colour is modal."),
+                        _cornerFillRequireMajority);
                 }
             }
 
@@ -704,11 +716,13 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 _settings.OutputDir = EditorGUILayout.TextField("Output Directory", _settings.OutputDir);
                 if (GUILayout.Button("Browse", GUILayout.Width(70)))
                 {
-                    var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_settings.OutputDir), "");
+                    var picked = EditorUtility.OpenFolderPanel("Output directory", PathField.GuessStartDir(_settings.OutputDir), "");
                     if (!string.IsNullOrEmpty(picked))
                         _settings.OutputDir = picked;
                 }
             }
+
+            _settings.OutputDir = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _settings.OutputDir, wantFolder: true);
             _settings.BaseName = EditorGUILayout.TextField(
                 new GUIContent("Base Name", "Shared by all three files (image/mesh/.vox). Leave blank to slug it from the prompt."),
                 _settings.BaseName);
@@ -738,12 +752,43 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 using (new EditorGUI.DisabledScope(_running))
                 {
                     if (GUILayout.Button("Run pipeline", GUILayout.Height(30)))
-                        _ = RunAsync();
+                        _ = RunAsync(resume: false);
                 }
                 using (new EditorGUI.DisabledScope(!_running))
                 {
                     if (GUILayout.Button("Cancel", GUILayout.Height(30), GUILayout.Width(100)))
                         _cts?.Cancel();
+                }
+            }
+
+            DrawResume();
+        }
+
+        // A domain reload (script edit, entering Play mode) mid-run tears down the AppDomain and silently
+        // kills the fire-and-forget run — but the run's output folder is pinned in a SessionState manifest
+        // that survives the reload. If one is present and nothing is running, offer to resume: re-invoke
+        // the unchanged pipeline reusing that folder, so stage 2's paid Meshy task resumes from its
+        // .meshy-task-id sidecar (the only irreversible cost) while stages 1/3 re-run locally.
+        private void DrawResume()
+        {
+            if (_running || !TryLoadResumeManifest(out var manifest))
+                return;
+
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(
+                $"A previous run was interrupted (domain reload) with partial output in\n{manifest.ResolvedDir}\n\n"
+                + "Resume re-runs the pipeline reusing that folder: the paid Meshy task resumes from its "
+                + "sidecar, while the image is regenerated and the mesh re-voxelised. Review gates are skipped.",
+                MessageType.Warning);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Resume run", GUILayout.Height(26)))
+                    _ = RunAsync(resume: true);
+                if (GUILayout.Button(new GUIContent("Discard", "Forget the interrupted run without resuming."),
+                        GUILayout.Height(26), GUILayout.Width(90)))
+                {
+                    ClearResumeManifest();
+                    SetStatus("Discarded the interrupted run.");
                 }
             }
         }
@@ -797,17 +842,48 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
         // ---- Run -------------------------------------------------------------
 
-        private async Task RunAsync()
+        // A single run. resume=false is a fresh Run-pipeline press; resume=true re-kicks an interrupted run
+        // from its SessionState manifest (see DrawResume). The output folder is pinned for the run so a
+        // resume reuses the same directory (and therefore the same .meshy-task-id sidecar): ResolveOutputDir
+        // uses DateTime.Now, so a naive re-run would otherwise compute a *different* timestamped folder and
+        // miss the partials. The pin is in-memory only and restored in finally; SaveState() persists the
+        // user's original OutputDir/BaseName first, so a mid-run domain reload leaves prefs untouched.
+        private async Task RunAsync(bool resume)
         {
             SaveState();
             _settings.Vox = BuildVoxSettings();
+
+            var originalOutputDir = _settings.OutputDir;
+            var originalBaseName = _settings.BaseName;
+            var originalAutoSubfolder = _settings.AutoSubfolderPerRun;
+
+            string resolvedDir;
+            string baseName;
+            if (resume && TryLoadResumeManifest(out var manifest))
+            {
+                resolvedDir = manifest.ResolvedDir;
+                baseName = manifest.BaseName;
+            }
+            else
+            {
+                baseName = VoxelPipeline.ResolveBaseName(_settings);
+                resolvedDir = VoxelPipeline.ResolveOutputDir(_settings, baseName, DateTime.Now);
+            }
+
+            // Pin the resolved folder + base name so VoxelPipeline.RunAsync writes exactly here on a resume.
+            _settings.OutputDir = resolvedDir;
+            _settings.BaseName = baseName;
+            _settings.AutoSubfolderPerRun = false;
+            SaveResumeManifest(new ResumeManifest { ResolvedDir = resolvedDir, BaseName = baseName });
 
             _running = true;
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
 
-            VoxelPipeline.ReviewGate<ImageGenerationCore.Result>? imageGate = _reviewImage ? ImageReviewGate : null;
-            VoxelPipeline.ReviewGate<MeshyConversionCore.Result>? meshGate = _reviewMesh ? MeshReviewGate : null;
+            // On resume the interactive review gates can't be restored across the reload, so skip them and
+            // run straight through (the earlier stages just re-produce their outputs).
+            VoxelPipeline.ReviewGate<ImageGenerationCore.Result>? imageGate = !resume && _reviewImage ? ImageReviewGate : null;
+            VoxelPipeline.ReviewGate<MeshyConversionCore.Result>? meshGate = !resume && _reviewMesh ? MeshReviewGate : null;
 
             try
             {
@@ -843,11 +919,44 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             {
                 EditorUtility.ClearProgressBar();
                 EndReview();
+                // The run finished (or errored/cancelled) without a reload, so there is nothing to resume.
+                // A domain reload mid-run never reaches here, leaving the manifest in place for DrawResume.
+                ClearResumeManifest();
+                _settings.OutputDir = originalOutputDir;
+                _settings.BaseName = originalBaseName;
+                _settings.AutoSubfolderPerRun = originalAutoSubfolder;
                 _running = false;
                 _cts?.Dispose();
                 _cts = null;
                 Repaint();
             }
+        }
+
+        // ---- Resume manifest (SessionState, survives a domain reload) --------
+
+        [Serializable]
+        private struct ResumeManifest
+        {
+            public string ResolvedDir;
+            public string BaseName;
+        }
+
+        private static void SaveResumeManifest(ResumeManifest manifest) =>
+            SessionState.SetString(ResumeKey, JsonUtility.ToJson(manifest));
+
+        private static void ClearResumeManifest() => SessionState.EraseString(ResumeKey);
+
+        private static bool TryLoadResumeManifest(out ResumeManifest manifest)
+        {
+            var json = SessionState.GetString(ResumeKey, "");
+            if (string.IsNullOrEmpty(json))
+            {
+                manifest = default;
+                return false;
+            }
+
+            manifest = JsonUtility.FromJson<ResumeManifest>(json);
+            return !string.IsNullOrEmpty(manifest.ResolvedDir);
         }
 
         private Task<VoxelPipeline.ReviewDecision> ImageReviewGate(ImageGenerationCore.Result image, CancellationToken ct)
@@ -920,8 +1029,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             RemoveFloaters = _removeFloaters,
             CleanupStrength = _cleanupStrength,
             FillCorners = _fillCorners,
-            FillCornersRecursive = _fillCornersRecursive,
             CornerFillColourTolerance = _cornerFillColourTolerance,
+            CornerFillNeighbourThreshold = _cornerFillNeighbourThreshold,
+            CornerFillRequireMajority = _cornerFillRequireMajority,
             Symmetry = _symmetry,
             ForceMirror = _forceMirror,
             FaceWeight = _faceWeight,
@@ -1002,14 +1112,6 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             return full.StartsWith(project, StringComparison.OrdinalIgnoreCase) ? full[project.Length..] : path;
         }
 
-        private static string GuessStartDir(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return Application.dataPath;
-            var dir = Path.GetDirectoryName(path);
-            return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
-        }
-
         // ---- EditorPrefs persistence ----------------------------------------
 
         private void LoadState()
@@ -1049,8 +1151,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             _removeFloaters = EditorPrefs.GetBool(Pref + "RemoveFloaters", _removeFloaters);
             _cleanupStrength = EditorPrefs.GetInt(Pref + "CleanupStrength", _cleanupStrength);
             _fillCorners = EditorPrefs.GetBool(Pref + "FillCorners", _fillCorners);
-            _fillCornersRecursive = EditorPrefs.GetBool(Pref + "FillCornersRecursive", _fillCornersRecursive);
             _cornerFillColourTolerance = EditorPrefs.GetFloat(Pref + "CornerFillTolerance", _cornerFillColourTolerance);
+            _cornerFillNeighbourThreshold = EditorPrefs.GetInt(Pref + "CornerFillNeighbourThreshold", _cornerFillNeighbourThreshold);
+            _cornerFillRequireMajority = EditorPrefs.GetBool(Pref + "CornerFillRequireMajority", _cornerFillRequireMajority);
             _symmetry = (SymmetryAxes)EditorPrefs.GetInt(Pref + "Symmetry", (int)_symmetry);
             _forceMirror = EditorPrefs.GetBool(Pref + "ForceMirror", _forceMirror);
             _faceWeight = EditorPrefs.GetFloat(Pref + "FaceWeight", _faceWeight);
@@ -1122,8 +1225,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             EditorPrefs.SetBool(Pref + "RemoveFloaters", _removeFloaters);
             EditorPrefs.SetInt(Pref + "CleanupStrength", _cleanupStrength);
             EditorPrefs.SetBool(Pref + "FillCorners", _fillCorners);
-            EditorPrefs.SetBool(Pref + "FillCornersRecursive", _fillCornersRecursive);
             EditorPrefs.SetFloat(Pref + "CornerFillTolerance", _cornerFillColourTolerance);
+            EditorPrefs.SetInt(Pref + "CornerFillNeighbourThreshold", _cornerFillNeighbourThreshold);
+            EditorPrefs.SetBool(Pref + "CornerFillRequireMajority", _cornerFillRequireMajority);
             EditorPrefs.SetInt(Pref + "Symmetry", (int)_symmetry);
             EditorPrefs.SetBool(Pref + "ForceMirror", _forceMirror);
             EditorPrefs.SetFloat(Pref + "FaceWeight", _faceWeight);

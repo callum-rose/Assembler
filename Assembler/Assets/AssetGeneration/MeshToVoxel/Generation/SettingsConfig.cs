@@ -65,15 +65,19 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
         [Tooltip("Ranked morphological close→open passes: close fills lone pits/notches, open shaves lone bumps/spikes — flatter faces, cleaner silhouette. Never shaves kept thin features, never welds real air gaps. 1 = one pass, 2 = stronger, 0 = off.")]
         public int CleanupStrength = 1;
 
-        [Tooltip("Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when 3+ of its 6 face-neighbours share one colour, or it has 4+ occupied neighbours. Real air gaps are protected from the 3-neighbour fill.")]
+        [Tooltip("Fill concave corners/notches so the silhouette boxes out. An empty voxel fills when three same-colour neighbours meet it at a shared vertex, or it is walled in by a deep-enough pocket of occupied neighbours. Real air gaps are protected from the corner fill. Repeats until stable.")]
         public bool FillCorners = false;
 
-        [Tooltip("Repeat the corner fill until nothing new qualifies, so a filled corner that creates another qualifying corner is chased down — deeper concavities box out fully. More aggressive; off = a single pass.")]
-        public bool FillCornersRecursive = false;
-
         [Range(0f, 0.5f)]
-        [Tooltip("How close two neighbour colours must be (Oklab distance) to count as the same for the corner-fill 3-same-colour rule. 0 = exact match; ~0.1 is a good start. Too high and distinct regions merge.")]
+        [Tooltip("How close two neighbour colours must be (Oklab distance) to count as the same for the corner-fill same-colour rule. 0 = exact match; ~0.1 is a good start. Too high and distinct regions merge.")]
         public float CornerFillColourTolerance = 0.1f;
+
+        [Range(4, 6)]
+        [Tooltip("How many occupied face-neighbours (out of 6) wall a cell in enough to fill it regardless of colour. Higher = more conservative (fewer pockets filled). 5 is a good start.")]
+        public int CornerFillNeighbourThreshold = CornerFill.DefaultNeighbourThreshold;
+
+        [Tooltip("Only fill a deep pocket when its modal (most common) neighbour colour is a strict majority, so a pocket where two colour regions meet is left open rather than smeared with an arbitrary side.")]
+        public bool CornerFillRequireMajority = true;
 
         [Tooltip("Force mirror-symmetry across the centre of the occupied bounds on each ticked axis (X/Y/Z grid axes, Y is up). Applied last, so the silhouette is guaranteed symmetric. Comma-separated names, e.g. \"X\" or \"X,Y\"; None = off. Default (ForceMirror off) unions both halves' features.")]
         public SymmetryAxes Symmetry = SymmetryAxes.None;
@@ -169,8 +173,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
                 RemoveFloaters = d.RemoveFloaters,
                 CleanupStrength = d.CleanupStrength,
                 FillCorners = d.FillCorners,
-                FillCornersRecursive = d.FillCornersRecursive,
                 CornerFillColourTolerance = d.CornerFillColourTolerance,
+                CornerFillNeighbourThreshold = d.CornerFillNeighbourThreshold,
+                CornerFillRequireMajority = d.CornerFillRequireMajority,
                 Symmetry = d.Symmetry,
                 ForceMirror = d.ForceMirror,
                 FaceWeight = d.FaceWeight,
@@ -209,8 +214,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
             RemoveFloaters = s.RemoveFloaters,
             CleanupStrength = s.CleanupStrength,
             FillCorners = s.FillCorners,
-            FillCornersRecursive = s.FillCornersRecursive,
             CornerFillColourTolerance = s.CornerFillColourTolerance,
+            CornerFillNeighbourThreshold = s.CornerFillNeighbourThreshold,
+            CornerFillRequireMajority = s.CornerFillRequireMajority,
             Symmetry = s.Symmetry,
             ForceMirror = s.ForceMirror,
             FaceWeight = s.FaceWeight,
@@ -249,8 +255,9 @@ namespace Assembler.AssetGeneration.MeshToVoxel.Generation
             RemoveFloaters = RemoveFloaters,
             CleanupStrength = CleanupStrength,
             FillCorners = FillCorners,
-            FillCornersRecursive = FillCornersRecursive,
             CornerFillColourTolerance = CornerFillColourTolerance,
+            CornerFillNeighbourThreshold = CornerFillNeighbourThreshold,
+            CornerFillRequireMajority = CornerFillRequireMajority,
             Symmetry = Symmetry,
             ForceMirror = ForceMirror,
             FaceWeight = FaceWeight,

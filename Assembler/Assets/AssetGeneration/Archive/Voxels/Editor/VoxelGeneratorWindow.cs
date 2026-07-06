@@ -70,7 +70,7 @@ namespace Assembler.Voxels.Editor
 		private Mesh? _previewMesh;
 		private UnityEditor.Editor? _previewEditor;
 
-		[MenuItem("Assembler/Generate Voxel Mesh")]
+		[MenuItem("Assembler/Voxelisation/Archive/Generate Voxel Mesh")]
 		public static void Open()
 		{
 			var window = GetWindow<VoxelGeneratorWindow>("Generate Voxel");
