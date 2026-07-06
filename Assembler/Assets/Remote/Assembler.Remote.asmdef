@@ -1,9 +1,14 @@
 {
-    "name": "Assembler.Generation",
-    "rootNamespace": "Assembler",
+    "name": "Assembler.Remote",
+    "rootNamespace": "Assembler.Remote",
     "references": [
-        "Assembler.Anthropic",
-        "Assembler.Extensions"
+        "Assembler.Building",
+        "Assembler.Deserialisation",
+        "Assembler.Input",
+        "Assembler.Extensions",
+        "Unity.InputSystem",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

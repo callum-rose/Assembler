@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Assembler.Anthropic;
+using Assembler.Extensions;
 
 namespace Assembler.Generation.Verification.Editor
 {
@@ -73,7 +74,7 @@ namespace Assembler.Generation.Verification.Editor
 					continue;
 				}
 
-				var id = DescriptorFileWriter.Sanitise(rawId);
+				var id = FileNameSanitiser.Sanitise(rawId);
 				if (string.IsNullOrEmpty(id))
 				{
 					continue;
@@ -102,7 +103,7 @@ namespace Assembler.Generation.Verification.Editor
 			var clean = new List<string>();
 			foreach (var seg in segments)
 			{
-				var s = DescriptorFileWriter.Sanitise(seg);
+				var s = FileNameSanitiser.Sanitise(seg);
 				if (!string.IsNullOrEmpty(s))
 				{
 					clean.Add(s);
