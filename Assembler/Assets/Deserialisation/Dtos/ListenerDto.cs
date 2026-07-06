@@ -11,9 +11,9 @@ namespace Assembler.Deserialisation.Dtos
 		public Dictionary<string, string>? Outputs { get; init; }
 
 		/// <summary>Where this listener was authored in the source YAML, threaded forward so a later
-		/// reference-validation error can point at the offending line. <see cref="SourcePosition.None"/>
+		/// reference-validation error can point at the offending line. <see cref="SourcePosition.Unknown"/>
 		/// when the converter couldn't capture it.</summary>
-		public SourcePosition Position { get; init; } = SourcePosition.None;
+		public SourcePosition Position { get; init; } = SourcePosition.Unknown;
 	}
 
 	/// <summary>Marker listener produced by the <c>!gameover</c> tag; targets the implicit end-game behaviour.</summary>

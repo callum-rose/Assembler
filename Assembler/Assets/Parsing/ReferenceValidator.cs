@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Parsing
@@ -20,11 +21,6 @@ namespace Assembler.Parsing
 	/// </remarks>
 	public static class ReferenceValidator
 	{
-		// Kept in step with the Building assembly's constants (GameOverController.EntityId/EndBehaviourId and
-		// GameEntityFactory.SpawnedIdPrefix), which Parsing cannot reference. Duplicated as literals here.
-		private const string GameOverEntityId = "$gameover$";
-		private const string GameOverBehaviourId = "end";
-		private const string SpawnedIdPrefix = "$spawn$";
 
 		public static void Validate(GameInfo gameInfo)
 		{
@@ -35,7 +31,7 @@ namespace Assembler.Parsing
 
 			// Every id that could legitimately be targeted: top-level entities, their composed child ids
 			// ({parentId}/{childSuffix}, matching GameEntityFactory), and the implicit game-over entity.
-			var knownEntityIds = new HashSet<string> { GameOverEntityId };
+			var knownEntityIds = new HashSet<string> { ReservedIds.GameOverEntityId };
 
 			foreach (var entity in gameInfo.Entities)
 			{
@@ -84,22 +80,22 @@ namespace Assembler.Parsing
 			}
 
 			var targetId = literal.Id;
-			var at = At(direct);
+			var at = direct.SourceSuffix();
 
 			// A runtime-spawned entity's id is only minted at spawn time; the prefix marks it as valid here.
-			if (targetId.StartsWith(SpawnedIdPrefix))
+			if (targetId.StartsWith(ReservedIds.SpawnedIdPrefix))
 			{
 				return;
 			}
 
 			// The implicit game-over entity exposes exactly one behaviour: 'end'.
-			if (targetId == GameOverEntityId)
+			if (targetId == ReservedIds.GameOverEntityId)
 			{
-				if (direct.BehaviourId != GameOverBehaviourId)
+				if (direct.BehaviourId != ReservedIds.GameOverBehaviourId)
 				{
 					throw new ParsingException(
-						$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets '{GameOverEntityId}' but behaviour " +
-						$"'{direct.BehaviourId}' — the only game-over behaviour is '{GameOverBehaviourId}'.");
+						$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets '{ReservedIds.GameOverEntityId}' but behaviour " +
+						$"'{direct.BehaviourId}' — the only game-over behaviour is '{ReservedIds.GameOverBehaviourId}'.");
 				}
 
 				return;
@@ -132,11 +128,6 @@ namespace Assembler.Parsing
 					$"does not exist on entity '{targetId}' (declared behaviours: {string.Join(", ", declaredBehaviours)}).");
 			}
 		}
-
-		// A " (at line L, column C)" suffix when the listener's source position is known, else empty — so
-		// messages stay clean for synthesised listeners (nested hooks, template expansions) that lack one.
-		private static string At(ListenerInfo listener) =>
-			listener.Position.IsKnown ? $" (at {listener.Position})" : string.Empty;
 
 		// True when id is '{placementId}_{n}' for a non-negative integer n.
 		private static bool IsPlacementInstance(string id, string placementId)

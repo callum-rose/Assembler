@@ -92,8 +92,8 @@ namespace Assembler.Deserialisation
 
 		private static SourcePosition PositionOf(IParser parser) =>
 			parser.Current is { } current
-				? new SourcePosition((int)current.Start.Line, (int)current.Start.Column)
-				: SourcePosition.None;
+				? SourcePosition.At((int)current.Start.Line, (int)current.Start.Column)
+				: SourcePosition.Unknown;
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>
 			throw new NotSupportedException();

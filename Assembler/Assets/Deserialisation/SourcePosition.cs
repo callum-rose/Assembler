@@ -1,17 +1,26 @@
 namespace Assembler.Deserialisation
 {
 	/// <summary>
-	/// A node's 1-based line/column in the source YAML, captured during deserialisation so parse-time
-	/// errors raised further down the pipeline (e.g. <c>ReferenceValidator</c>) can cite where in the
-	/// file the offending node was authored. <see cref="None"/> is the null-object for an unknown
-	/// position (a node synthesised after deserialisation, or one whose converter didn't capture it).
+	/// Where a node was authored in the source YAML, threaded from deserialisation so parse-time errors
+	/// raised further down the pipeline (e.g. <c>ReferenceValidator</c>) can cite the offending location.
+	/// A discriminated union: <see cref="KnownSourcePosition"/> carries a 1-based line/column, while
+	/// <see cref="Unknown"/> stands in for a node synthesised after deserialisation, or one whose converter
+	/// didn't capture a position. Consumers match on the case rather than branching on a flag.
 	/// </summary>
-	public sealed record SourcePosition(int Line, int Column)
+	public abstract record SourcePosition
 	{
-		public static readonly SourcePosition None = new(0, 0);
+		public static readonly SourcePosition Unknown = new UnknownSourcePosition();
 
-		public bool IsKnown => Line > 0;
+		public static SourcePosition At(int line, int column) => new KnownSourcePosition(line, column);
+	}
 
-		public override string ToString() => IsKnown ? $"line {Line}, column {Column}" : "unknown position";
+	public sealed record KnownSourcePosition(int Line, int Column) : SourcePosition
+	{
+		public override string ToString() => $"line {Line}, column {Column}";
+	}
+
+	public sealed record UnknownSourcePosition : SourcePosition
+	{
+		public override string ToString() => "unknown position";
 	}
 }
