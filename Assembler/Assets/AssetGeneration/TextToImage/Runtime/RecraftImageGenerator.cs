@@ -6,6 +6,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.Resilience;
 
 namespace Assembler.AssetGeneration.TextToImage
 {
@@ -49,16 +50,24 @@ namespace Assembler.AssetGeneration.TextToImage
 
             var model = string.IsNullOrWhiteSpace(request.Model) ? DefaultModel : request.Model.Trim();
 
-            using var message = request.ReferenceImage is { } reference
-                ? BuildImageToImage(model, request.Prompt, reference)
-                : BuildGenerate(model, request.Prompt);
+            // Paid submit: retry only on a server-reject (429/503); the request is rebuilt each attempt and a
+            // connection drop after sending fails fast. The follow-up image fetch is a resilient idempotent GET.
+            var json = await HttpResilience.Submit.ExecuteAsync(async token =>
+            {
+                using var message = request.ReferenceImage is { } reference
+                    ? BuildImageToImage(model, request.Prompt, reference)
+                    : BuildGenerate(model, request.Prompt);
 
-            using var response = await _http.SendAsync(message, ct);
-            var json = await response.Content.ReadAsStringAsync();
+                using var response = await _http.SendAsync(message, token);
+                var payload = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new ImageGenerationException(
-                    $"Recraft request failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(json)}");
+                HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
+                if (!response.IsSuccessStatusCode)
+                    throw new ImageGenerationException(
+                        $"Recraft request failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(payload)}");
+
+                return payload;
+            }, ct);
 
             var url = ExtractUrl(json);
             return await ProviderSupport.DownloadImageAsync(_http, url, ct);
