@@ -82,8 +82,10 @@ ASSEMBLER_STORE_REPO=<you>/assembler-games assembler-remote daemon
 Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash:
 
 1. Build once (see [Build](#build)) so the launcher exists.
-2. Edit `com.assembler.generation-daemon.plist` (replace `REPLACE_ME` / `REPLACE_OWNER` and check `PATH`).
-3. `cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/`
+2. `cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/`
+3. Edit the **copy** — `~/Library/LaunchAgents/com.assembler.generation-daemon.plist` — replacing
+   `REPLACE_ME` / `REPLACE_OWNER` and checking `PATH`. (Edit the copy, not the tracked template, so your
+   home path and username never get committed.)
 4. `launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
 
 The daemon generates → validates → publishes → comments the result on the issue → closes it. Failures

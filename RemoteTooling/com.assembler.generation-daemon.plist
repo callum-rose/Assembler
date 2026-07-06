@@ -3,10 +3,11 @@
   launchd LaunchAgent for the Assembler generation daemon.
 
   Setup:
-    1. Build the tool once:  dotnet build -c Release RemoteTooling
+    1. Build the tool once:  dotnet build -c Release RemoteTooling/Assembler.RemoteTooling.csproj
        (this produces the native launcher referenced below).
-    2. Edit the paths and the ASSEMBLER_STORE_REPO value in this file to match your machine.
-    3. cp this file to  ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+    2. cp this file to  ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+    3. Edit the COPY under ~/Library/LaunchAgents (not this tracked template): set the paths and the
+       ASSEMBLER_STORE_REPO value to match your machine, so your home path/username aren't committed.
     4. launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
     To stop:  launchctl unload -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
     Logs:     ~/Library/Logs/assembler-generation-daemon.{out,err}.log
