@@ -1300,7 +1300,12 @@ Entities:
         Type: light
         Properties: { Type: point, Colour: !var portal colour, Intensity: 2.2, Range: 4.5 }
 
+  # Also the camera pivot: `camera follow` tag targets resolve through the live
+  # BEHAVIOUR registry, so the tag must sit on an entity that owns at least one
+  # behaviour - a bare tagged entity is never registered and the vcam would have
+  # no target. The ground slab is centred on the board, so it doubles perfectly.
   ground:
+    Tags: [ pivot ]
     Position: !vec { X: 0, Y: -0.05, Z: 0 }
     Behaviours:
       slab:
@@ -1389,10 +1394,6 @@ Entities:
       key light:
         Type: light
         Properties: { Type: directional, Colour: !colour { R: 0.75, G: 0.78, B: 0.9, A: 1 }, Intensity: 0.75 }
-
-  board pivot:
-    Tags: [ pivot ]
-    Position: !vec { X: 0, Y: 0, Z: 0 }
 
   camera:
     Position: !vec { X: 0, Y: 12, Z: -9 }
