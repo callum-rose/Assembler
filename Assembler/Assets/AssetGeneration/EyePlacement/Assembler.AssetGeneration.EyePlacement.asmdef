@@ -1,0 +1,18 @@
+{
+    "name": "Assembler.AssetGeneration.EyePlacement",
+    "rootNamespace": "Assembler.AssetGeneration.EyePlacement",
+    "references": [
+        "Assembler.Anthropic",
+        "Assembler.Voxels",
+        "Assembler.AssetGeneration.ImageOrientation"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

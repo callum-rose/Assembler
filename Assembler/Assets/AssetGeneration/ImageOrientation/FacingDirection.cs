@@ -27,22 +27,6 @@ namespace Assembler.AssetGeneration.ImageOrientation
         Away,
     }
 
-    /// <summary>
-    /// How a model reply was classified: a recognised direction, a deliberate
-    /// "I can't tell" from the model, or an unrecognisable reply.
-    /// </summary>
-    public enum OrientationOutcome
-    {
-        /// <summary>A facing direction was recognised (see <see cref="FacingDirection"/>).</summary>
-        Resolved,
-
-        /// <summary>The model explicitly reported it could not tell which way the front faces.</summary>
-        Unsure,
-
-        /// <summary>The reply contained no code or sentinel we could recognise.</summary>
-        Unrecognised,
-    }
-
     public static class FacingDirectionExtensions
     {
         /// <summary>Sentinel the model is asked to reply with when it cannot tell the facing direction.</summary>
@@ -95,37 +79,37 @@ namespace Assembler.AssetGeneration.ImageOrientation
         };
 
         /// <summary>
-        /// Classifies a model response into a <see cref="FacingDirection"/>, a deliberate
-        /// "unsure" answer, or an unrecognisable reply. The model is asked to reply with
-        /// just a code, but this tolerates surrounding prose/punctuation by scanning the
-        /// uppercased letters. The <see cref="UnsureCode"/> sentinel is checked first
-        /// because the word "UNSURE" itself contains letters (U, R) that would otherwise
-        /// match a direction code. <see cref="OrientationOutcome.Resolved"/> is the only
-        /// outcome that yields a non-null direction.
+        /// Classifies a single-image model response into the <see cref="OrientationAnswer"/> union:
+        /// a <see cref="OrientationAnswer.Facing"/> direction, a deliberate
+        /// <see cref="OrientationAnswer.Unsure"/>, or an <see cref="OrientationAnswer.Unrecognised"/>
+        /// reply. The model is asked to reply with just a code, but this tolerates surrounding
+        /// prose/punctuation by scanning the uppercased letters. The <see cref="UnsureCode"/> sentinel
+        /// is checked first because the word "UNSURE" itself contains letters (U, R) that would
+        /// otherwise match a direction code.
         /// </summary>
-        public static (FacingDirection? Direction, OrientationOutcome Outcome) Classify(string response)
+        public static OrientationAnswer Classify(string response)
         {
             if (string.IsNullOrWhiteSpace(response))
             {
-                return (null, OrientationOutcome.Unrecognised);
+                return new OrientationAnswer.Unrecognised();
             }
 
             var letters = new string(response.Where(char.IsLetter).ToArray()).ToUpperInvariant();
 
             if (letters.Contains(UnsureCode))
             {
-                return (null, OrientationOutcome.Unsure);
+                return new OrientationAnswer.Unsure();
             }
 
             foreach (var (code, direction) in Codes)
             {
                 if (letters.Contains(code))
                 {
-                    return (direction, OrientationOutcome.Resolved);
+                    return new OrientationAnswer.Facing(direction);
                 }
             }
 
-            return (null, OrientationOutcome.Unrecognised);
+            return new OrientationAnswer.Unrecognised();
         }
     }
 }

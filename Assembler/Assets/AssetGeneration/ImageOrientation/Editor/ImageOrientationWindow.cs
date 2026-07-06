@@ -108,13 +108,13 @@ namespace Assembler.AssetGeneration.ImageOrientation
                 var bigCode = new GUIStyle(EditorStyles.boldLabel) { fontSize = 28, alignment = TextAnchor.MiddleCenter };
                 EditorGUILayout.LabelField(result.Code, bigCode, GUILayout.Height(40));
 
-                switch (result.Outcome)
+                switch (result.Answer)
                 {
-                    case OrientationOutcome.Resolved when result.Direction is { } direction:
+                    case OrientationAnswer.Facing { Direction: var direction }:
                         var caption = new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleCenter };
                         EditorGUILayout.LabelField($"The front is {direction.Describe()}.", caption);
                         break;
-                    case OrientationOutcome.Unsure:
+                    case OrientationAnswer.Unsure:
                         EditorGUILayout.HelpBox(
                             "Claude was unsure which direction the front is facing.",
                             MessageType.Info);
@@ -313,10 +313,10 @@ namespace Assembler.AssetGeneration.ImageOrientation
                 var bytes = File.ReadAllBytes(_imagePath);
                 var mediaType = AnthropicImage.MediaTypeFromExtension(Path.GetExtension(_imagePath));
                 _result = await ImageFacingDirection.DetermineAsync(_apiKey, bytes, mediaType, _model, ct);
-                _status = _result.Outcome switch
+                _status = _result.Answer switch
                 {
-                    OrientationOutcome.Resolved when _result.Direction is { } d => $"Done — {d.ToCode()}.",
-                    OrientationOutcome.Unsure => "Done — Claude was unsure.",
+                    OrientationAnswer.Facing { Direction: var d } => $"Done — {d.ToCode()}.",
+                    OrientationAnswer.Unsure => "Done — Claude was unsure.",
                     _ => "Done, but no code recognised.",
                 };
             }
