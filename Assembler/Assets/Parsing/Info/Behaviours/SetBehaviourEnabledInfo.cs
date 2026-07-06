@@ -8,6 +8,10 @@ namespace Assembler.Parsing.Info.Behaviours
 		IReadOnlyList<ListenerInfo> Targets,
 		ValueSource<bool> Enabled) : BehaviourInfo(Id, Listeners)
 	{
+		// The behaviours this one enables/disables are listener sites too, so expose them for whole-descriptor
+		// listener scans (reference validation, the game-over reachability guard).
+		public override IEnumerable<ListenerInfo> NestedListeners => Targets;
+
 		public static SetBehaviourEnabledInfo Create(string id,
 			IReadOnlyList<ListenerInfo> listeners,
 			IReadOnlyDictionary<string, AssemblerValue> props,
