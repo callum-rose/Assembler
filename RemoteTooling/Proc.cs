@@ -31,6 +31,40 @@ public static class Proc
 		return new Result(p.ExitCode, so.ToString(), se.ToString());
 	}
 
+	/// <summary>
+	/// Run to completion, buffering stdout (the payload) while streaming each stderr line to
+	/// <paramref name="onStderr"/> as it arrives — so a long-running child shows progress live
+	/// instead of looking frozen. Stderr is buffered too, for the returned <see cref="Result"/>.
+	/// </summary>
+	public static Result CaptureStreamingErr(
+		string file,
+		IReadOnlyList<string> args,
+		IReadOnlyDictionary<string, string?>? env,
+		Action<string> onStderr)
+	{
+		using var p = new Process { StartInfo = Psi(file, args, workingDir: null, env, redirect: true) };
+		var so = new StringBuilder();
+		var se = new StringBuilder();
+		var gate = new object();
+		p.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (gate) { so.AppendLine(e.Data); } } };
+		p.ErrorDataReceived += (_, e) =>
+		{
+			if (e.Data is not null)
+			{
+				lock (gate)
+				{
+					se.AppendLine(e.Data);
+					onStderr(e.Data);
+				}
+			}
+		};
+		p.Start();
+		p.BeginOutputReadLine();
+		p.BeginErrorReadLine();
+		p.WaitForExit();
+		return new Result(p.ExitCode, so.ToString(), se.ToString());
+	}
+
 	/// <summary>Run to completion, delivering each stdout/stderr line to <paramref name="onLine"/> as it arrives.</summary>
 	public static int Stream(
 		string file,

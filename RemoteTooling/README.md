@@ -17,37 +17,51 @@ the old `Tools/remote/*.sh` bash scripts (`setup-store.sh` → `setup`, `publish
 
 ## Build
 
+From the **repo root**, build the console app (pointing at the `.csproj` so it works regardless of your
+current directory):
+
 ```sh
-dotnet build -c Release RemoteTooling
+dotnet build -c Release RemoteTooling/Assembler.RemoteTooling.csproj
 ```
 
 This produces a native launcher at `RemoteTooling/bin/Release/net10.0/assembler-remote`. The examples
 below call `assembler-remote`; either put that on your PATH, use the full path, or run via
-`dotnet run --project RemoteTooling -- <command>`.
+`dotnet run --project RemoteTooling -- <command>` from the repo root.
 
 ## One-time setup
 
 1. **Install deps:** `brew install gh` and `gh auth login`, plus the .NET SDK (`brew install dotnet`).
    The `claude` CLI must be on PATH (generation is billed to your Claude subscription — no API key needed).
-2. **Create the store repo:**
+2. **Create the store repo** — run `setup` with no arguments:
    ```sh
-   assembler-remote setup            # creates ~/Developer/assembler-games + the GitHub repo + the "generate" label
+   assembler-remote setup
    ```
-   It prints your **Manifest URL** (e.g. `https://raw.githubusercontent.com/<you>/assembler-games/main/manifest.json`).
+   This creates `~/Developer/assembler-games`, the public GitHub repo behind it, and the `generate`
+   label, then prints your **Manifest URL** (e.g.
+   `https://raw.githubusercontent.com/<you>/assembler-games/main/manifest.json`). Pass a name —
+   `assembler-remote setup my-store` — to use a different repo. (Don't paste a trailing `# comment`
+   after the command: an interactive zsh prompt passes the `#` as an argument.)
 3. **Point the app at it:** open the `Bootstrap` scene in Unity, select the boot GameObject, and set
    **GameShelf → Manifest Url** to that URL. (See "Wiring the app" below — the `GameShelf` component
    replaces `GameBootstrap`.)
 
 ## Daily use
 
+Generate a new game from a brief, validate it, and publish it:
+
 ```sh
-# Generate a new game from a brief, validate it, publish it:
 assembler-remote publish "a top-down game where you dodge falling rocks"
+```
 
-# Publish/refresh an existing local descriptor:
+Publish/refresh an existing local descriptor:
+
+```sh
 assembler-remote publish Assembler/Assets/ExampleGameDescriptors/Pong.yaml
+```
 
-# Refine a published game and bump its version (clients re-download):
+Refine a published game and bump its version (clients re-download):
+
+```sh
 assembler-remote refine dodge-falling-rocks "make the rocks faster and add a score"
 ```
 
@@ -59,16 +73,18 @@ Each publish commits + pushes to the store; the app shows the new/updated game o
 Run the daemon so you can queue games from anywhere by opening a GitHub issue labelled `generate`
 (via the GitHub mobile app or an iOS Shortcut). The issue title/body is the brief.
 
-```sh
-# Foreground (testing):
-ASSEMBLER_STORE_REPO=<you>/assembler-games assembler-remote daemon
+Foreground (testing):
 
-# Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash:
-#   1. Build once (see above) so the launcher exists.
-#   2. Edit com.assembler.generation-daemon.plist  (replace REPLACE_ME / REPLACE_OWNER and check PATH)
-#   3. cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/
-#   4. launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+```sh
+ASSEMBLER_STORE_REPO=<you>/assembler-games assembler-remote daemon
 ```
+
+Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash:
+
+1. Build once (see [Build](#build)) so the launcher exists.
+2. Edit `com.assembler.generation-daemon.plist` (replace `REPLACE_ME` / `REPLACE_OWNER` and check `PATH`).
+3. `cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/`
+4. `launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
 
 The daemon generates → validates → publishes → comments the result on the issue → closes it. Failures
 leave the issue open (with the label removed) and a comment explaining why. It holds a single-flight lock

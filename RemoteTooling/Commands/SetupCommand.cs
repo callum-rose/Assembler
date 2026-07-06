@@ -13,6 +13,15 @@ public static class SetupCommand
 		try
 		{
 			var repoName = args.Count > 0 ? args[0] : "assembler-games";
+			if (!IsValidRepoName(repoName))
+			{
+				throw new AppException(
+					$"invalid store repo name '{repoName}' — use only letters, digits, '.', '_' or '-'. "
+					+ "If you copied the example with its trailing '# …' note, an interactive zsh prompt "
+					+ "passes the '#' as an argument (comments are off by default) — run `assembler-remote setup` "
+					+ "with no arguments to use the default 'assembler-games'.");
+			}
+
 			var storeDir = Config.StoreDir(repoName);
 			var label = Config.GenLabel;
 
@@ -84,6 +93,12 @@ public static class SetupCommand
 			return 1;
 		}
 	}
+
+	// GitHub repo names (and our local store dir) allow only these characters; anything else — most
+	// commonly a stray '#' from a pasted comment — would create junk like ~/Developer/# and a repo
+	// GitHub silently renames to '-'.
+	private static bool IsValidRepoName(string name) =>
+		name.Length > 0 && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-');
 
 	private static string StoreReadme(string repoName, string label) =>
 		$"""

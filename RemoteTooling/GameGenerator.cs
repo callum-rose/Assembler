@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Assembler.RemoteTooling;
 
 /// <summary>
@@ -13,21 +15,23 @@ public static class GameGenerator
 		["ANTHROPIC_AUTH_TOKEN"] = null,
 	};
 
-	public static string GenerateNew(string brief) => Invoke(
+	public static string GenerateNew(string brief, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to author a complete, runnable Assembler game descriptor "
 		+ $"for this idea: \"{brief}\". Hard constraint: the game must use ONLY built-in primitive renderers — "
 		+ "it must NOT declare a top-level Assets: block or reference any voxel/sprite/audio assets. "
 		+ "It must declare a reachable !gameover path. Output ONLY the final YAML document, with no prose, "
-		+ "no code fences, and nothing before or after it.");
+		+ "no code fences, and nothing before or after it.",
+		log);
 
-	public static string Refine(string change, string currentDescriptor) => Invoke(
+	public static string Refine(string change, string currentDescriptor, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to revise an existing Assembler game descriptor. "
 		+ $"Apply this change: \"{change}\". Keep everything else intact. Hard constraints unchanged: "
 		+ "built-in primitive renderers only (no Assets: block), and a reachable !gameover path must remain. "
 		+ "Output ONLY the full revised YAML document — no prose, no code fences.\n\n"
-		+ $"Current descriptor:\n{currentDescriptor}");
+		+ $"Current descriptor:\n{currentDescriptor}",
+		log);
 
-	private static string Invoke(string prompt)
+	private static string Invoke(string prompt, Logger log)
 	{
 		var claude = Config.ClaudeBin;
 		if (!Proc.Which(claude))
@@ -35,12 +39,26 @@ public static class GameGenerator
 			throw new AppException($"claude CLI not found (set CLAUDE_CLI_PATH; looked for '{claude}')");
 		}
 
-		var result = Proc.Capture(claude, ["-p", "--output-format", "text", prompt], env: PlanBilled);
+		// Generation is a slow (minute-scale) call with no output until it finishes, which reads as a
+		// frozen terminal. Stream claude's own stderr through live, and tick a heartbeat so it's clearly
+		// still working.
+		log.Info("Calling claude (plan-billed) — this can take a minute or two…");
+		var stopwatch = Stopwatch.StartNew();
+		using var heartbeat = new Timer(
+			_ => log.Info($"  …still generating ({stopwatch.Elapsed.TotalSeconds:F0}s elapsed)"),
+			state: null,
+			dueTime: TimeSpan.FromSeconds(10),
+			period: TimeSpan.FromSeconds(10));
+
+		var result = Proc.CaptureStreamingErr(claude, ["-p", "--output-format", "text", prompt], PlanBilled, log.Raw);
+		heartbeat.Dispose();
+
 		if (result.ExitCode != 0)
 		{
 			throw new AppException($"claude generation failed (exit {result.ExitCode}): {result.StdErr.Trim()}");
 		}
 
+		log.Info($"claude finished in {stopwatch.Elapsed.TotalSeconds:F0}s.");
 		return result.StdOut;
 	}
 }

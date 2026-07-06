@@ -26,7 +26,7 @@ public static class RefineCommand
 			}
 
 			log.Info($"Refining '{id}': {change}");
-			var revised = GameGenerator.Refine(change, File.ReadAllText(current));
+			var revised = GameGenerator.Refine(change, File.ReadAllText(current), log);
 			if (string.IsNullOrWhiteSpace(revised))
 			{
 				throw new AppException("refinement produced an empty descriptor");

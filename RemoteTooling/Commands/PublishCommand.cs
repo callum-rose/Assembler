@@ -72,7 +72,7 @@ public static class PublishCommand
 			{
 				title = input;
 				log.Info($"Generating descriptor for: {input}");
-				File.WriteAllText(descriptor, GameGenerator.GenerateNew(input));
+				File.WriteAllText(descriptor, GameGenerator.GenerateNew(input, log));
 				if (new FileInfo(descriptor).Length == 0)
 				{
 					throw new AppException("generation produced an empty descriptor");
