@@ -1,10 +1,11 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
+using Assembler.AssetGeneration.ImageToMesh;
 using UnityEditor;
 using UnityEngine;
 
@@ -68,7 +69,7 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         private string _status = "Idle.";
         private CancellationTokenSource? _cts;
 
-        [MenuItem("Assembler/Image to Mesh")]
+        [MenuItem("Assembler/Voxelisation/Image to Mesh")]
         public static void Open()
         {
             var window = GetWindow<MeshyImageTo3DWindow>("Image to Mesh");
@@ -189,15 +190,17 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         private void DrawImagePicker()
         {
             EditorGUILayout.BeginHorizontal();
-            _imagePath = EditorGUILayout.TextField("Reference Image", _imagePath);
+            _imagePath = EditorGUILayout.TextField(
+                new GUIContent("Reference Image", "Drag an image asset here, or browse for a file on disk."), _imagePath);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
                 var picked = EditorUtility.OpenFilePanel(
-                    "Select reference image", GuessStartDir(_imagePath), "png,jpg,jpeg,webp");
+                    "Select reference image", PathField.GuessStartDir(_imagePath), "png,jpg,jpeg,webp");
                 if (!string.IsNullOrEmpty(picked))
                     _imagePath = picked;
             }
             EditorGUILayout.EndHorizontal();
+            _imagePath = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _imagePath);
         }
 
         private void DrawModel()
@@ -219,11 +222,12 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
             _outputDir = EditorGUILayout.TextField("Output Directory", _outputDir);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
-                var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_outputDir), "");
+                var picked = EditorUtility.OpenFolderPanel("Output directory", PathField.GuessStartDir(_outputDir), "");
                 if (!string.IsNullOrEmpty(picked))
                     _outputDir = picked;
             }
             EditorGUILayout.EndHorizontal();
+            _outputDir = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _outputDir, wantFolder: true);
 
             _outputFile = EditorGUILayout.TextField(
                 new GUIContent("File Name", "Leave blank to use the downloaded model's filename. The extension is set from the output format."),
@@ -298,8 +302,13 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
                     MultiViewThumbnails = _multiViewThumbnails,
                     AlphaThumbnail = _alphaThumbnail,
                 };
-                await MeshyConversionCore.ConvertAsync(
+                var result = await MeshyConversionCore.ConvertAsync(
                     _apiKey, request, _outputDir, _outputFile, ct, SetStatus);
+
+                // The core is runtime-only and no longer touches the AssetDatabase; surface a
+                // download that landed inside the project ourselves so Unity imports it.
+                if (MeshyConversionCore.IsUnderAssets(result.OutputPath))
+                    AssetDatabase.Refresh();
             }
             catch (OperationCanceledException)
             {
@@ -323,14 +332,6 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
         {
             _status = message;
             Repaint();
-        }
-
-        private static string GuessStartDir(string path)
-        {
-            if (string.IsNullOrEmpty(path))
-                return Application.dataPath;
-            var dir = Path.GetDirectoryName(path);
-            return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
         }
     }
 }

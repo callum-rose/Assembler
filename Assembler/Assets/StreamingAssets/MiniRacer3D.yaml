@@ -163,7 +163,7 @@ Expressions:
   #    drift, recovering at `rearGrip` once you straighten up.
   # `omega`'s heading: Rotate2D turns +Y into a (sin,cos) pair mapped onto the XZ
   # plane for the forward unit vector; `right` is its in-plane perpendicular.
-  drive velocity:
+  driveVelocity:
     ArgumentTypes: [ vector, vector, vector, float, float, float, float, float, float, float, float ]
     ArgumentNames: [ rotation, velocity, angVel, throttle, top, reverse, accel, brake, b, rearGrip, dt ]
     ReturnType: vector
@@ -192,7 +192,7 @@ Expressions:
   # steers the intuitive way in reverse (it backs into the turn) rather than swinging
   # the wrong way. Set as a steady state every frame so steering is smooth; `drive
   # velocity` reads this same yaw rate to keep the turn pivot at the rear axle.
-  steer yaw:
+  steerYaw:
     ArgumentTypes: [ float, vector, vector, float, float ]
     ArgumentNames: [ steer, rotation, velocity, rate, gripSpeed ]
     ReturnType: vector
@@ -205,14 +205,14 @@ Expressions:
       var direction = forwardSpeed < 0f ? -1f : 1f;
       return new Vector3(0f, steer * rate * authority * direction, 0f);
 
-  next lap:
+  nextLap:
     ArgumentTypes: [ int ]
     ArgumentNames: [ current ]
     ReturnType: int
     Expression: |
       return current + 1;
 
-  is finished:
+  isFinished:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ laps, target ]
     ReturnType: bool
@@ -224,7 +224,7 @@ Expressions:
   # corner sits in the middle of the ring channel — between the infield (|X|<=12, |Z|<=14)
   # and the outer walls (~|axis|=19.5) — at the cars' ride height (Y=0.35). Returned by
   # index so a rival just tracks an int `wp` that cycles 0->1->2->3->0.
-  corner at:
+  cornerAt:
     ArgumentTypes: [ int ]
     ArgumentNames: [ i ]
     ReturnType: vector
@@ -236,7 +236,7 @@ Expressions:
            : new Vector3(-16f, 0.35f, -16.5f);
 
   # Advance to the next corner, wrapping after the fourth — the rivals lap forever.
-  advance corner:
+  advanceCorner:
     ArgumentTypes: [ int ]
     ArgumentNames: [ i ]
     ReturnType: int
@@ -263,7 +263,7 @@ Expressions:
   # normalised heading) is what lets a rival actually pull out and go around a car ahead instead
   # of nosing into it. Because the corridor only ever sees cars AHEAD, a big gain is safe: it
   # can't swing a rival perpendicular at a car beside or behind it the way a raw `Separate` could.
-  ai steer:
+  aiSteer:
     ArgumentTypes: [ vector, vector, vector, vector, vector, vector, float, float, float ]
     ArgumentNames: [ rotation, self, navDir, a, b, c, lookAhead, avoidRadius, avoidStrength ]
     ReturnType: float
@@ -329,7 +329,7 @@ Entities:
         Type: set velocity
         Properties:
           Velocity: !expr
-            Do: drive velocity
+            Do: driveVelocity
             With:
               - !entity { Id: car, Property: Rotation }
               - !rigidbody { Id: car, Property: Velocity }
@@ -346,7 +346,7 @@ Entities:
         Type: set angular velocity
         Properties:
           AngularVelocity: !expr
-            Do: steer yaw
+            Do: steerYaw
             With:
               - !output x
               - !entity { Id: car, Property: Rotation }
@@ -405,7 +405,7 @@ Entities:
       drive:
         Type: navigate
         Properties:
-          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Target: !expr { Do: cornerAt, With: [ !var wp ] }
           Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
@@ -422,10 +422,10 @@ Entities:
         Type: set angular velocity
         Properties:
           AngularVelocity: !expr
-            Do: steer yaw
+            Do: steerYaw
             With:
               - !expr
-                  Do: ai steer
+                  Do: aiSteer
                   With:
                     - !entity { Id: rival 1, Property: Rotation }
                     - !entity { Id: rival 1, Property: Position }
@@ -444,7 +444,7 @@ Entities:
         Type: set velocity
         Properties:
           Velocity: !expr
-            Do: drive velocity
+            Do: driveVelocity
             With:
               - !entity { Id: rival 1, Property: Rotation }
               - !rigidbody { Id: rival 1, Property: Velocity }
@@ -468,14 +468,14 @@ Entities:
             ArgumentTypes: [ vector, vector, float ]
             With:
               - !entity { Id: rival 1, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr { Do: cornerAt, With: [ !var wp ] }
               - !var rival reach
         Listeners: [ { EntityId: rival 1, BehaviourId: advance } ]
       advance:
         Type: int variable setter
         Properties:
           VariableId: !var wp
-          Value: !expr { Do: advance corner, With: [ !var wp ] }
+          Value: !expr { Do: advanceCorner, With: [ !var wp ] }
     Children:
       roof:
         Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
@@ -512,7 +512,7 @@ Entities:
       drive:
         Type: navigate
         Properties:
-          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Target: !expr { Do: cornerAt, With: [ !var wp ] }
           Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
@@ -527,10 +527,10 @@ Entities:
         Type: set angular velocity
         Properties:
           AngularVelocity: !expr
-            Do: steer yaw
+            Do: steerYaw
             With:
               - !expr
-                  Do: ai steer
+                  Do: aiSteer
                   With:
                     - !entity { Id: rival 2, Property: Rotation }
                     - !entity { Id: rival 2, Property: Position }
@@ -549,7 +549,7 @@ Entities:
         Type: set velocity
         Properties:
           Velocity: !expr
-            Do: drive velocity
+            Do: driveVelocity
             With:
               - !entity { Id: rival 2, Property: Rotation }
               - !rigidbody { Id: rival 2, Property: Velocity }
@@ -573,14 +573,14 @@ Entities:
             ArgumentTypes: [ vector, vector, float ]
             With:
               - !entity { Id: rival 2, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr { Do: cornerAt, With: [ !var wp ] }
               - !var rival reach
         Listeners: [ { EntityId: rival 2, BehaviourId: advance } ]
       advance:
         Type: int variable setter
         Properties:
           VariableId: !var wp
-          Value: !expr { Do: advance corner, With: [ !var wp ] }
+          Value: !expr { Do: advanceCorner, With: [ !var wp ] }
     Children:
       roof:
         Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
@@ -617,7 +617,7 @@ Entities:
       drive:
         Type: navigate
         Properties:
-          Target: !expr { Do: corner at, With: [ !var wp ] }
+          Target: !expr { Do: cornerAt, With: [ !var wp ] }
           Speed: 1
           SlowingRadius: !var rival slowing
           Recompute: !var rival recompute
@@ -632,10 +632,10 @@ Entities:
         Type: set angular velocity
         Properties:
           AngularVelocity: !expr
-            Do: steer yaw
+            Do: steerYaw
             With:
               - !expr
-                  Do: ai steer
+                  Do: aiSteer
                   With:
                     - !entity { Id: rival 3, Property: Rotation }
                     - !entity { Id: rival 3, Property: Position }
@@ -654,7 +654,7 @@ Entities:
         Type: set velocity
         Properties:
           Velocity: !expr
-            Do: drive velocity
+            Do: driveVelocity
             With:
               - !entity { Id: rival 3, Property: Rotation }
               - !rigidbody { Id: rival 3, Property: Velocity }
@@ -678,14 +678,14 @@ Entities:
             ArgumentTypes: [ vector, vector, float ]
             With:
               - !entity { Id: rival 3, Property: Position }
-              - !expr { Do: corner at, With: [ !var wp ] }
+              - !expr { Do: cornerAt, With: [ !var wp ] }
               - !var rival reach
         Listeners: [ { EntityId: rival 3, BehaviourId: advance } ]
       advance:
         Type: int variable setter
         Properties:
           VariableId: !var wp
-          Value: !expr { Do: advance corner, With: [ !var wp ] }
+          Value: !expr { Do: advanceCorner, With: [ !var wp ] }
     Children:
       roof:
         Position: !vec { X: 0, Y: 0.45, Z: -0.1 }
@@ -862,7 +862,7 @@ Entities:
         Properties:
           VariableId: !var laps
           Value: !expr
-            Do: next lap
+            Do: nextLap
             With:
               - !var laps
       disarm lap:
@@ -879,7 +879,7 @@ Entities:
         Type: condition gate
         Properties:
           Condition: !expr
-            Do: is finished
+            Do: isFinished
             With:
               - !var laps
               - !var lap target

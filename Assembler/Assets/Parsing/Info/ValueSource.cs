@@ -58,16 +58,25 @@ namespace Assembler.Parsing.Info
 	/// <c>!entity</c> tag (resolved live each read). <typeparamref name="T"/> must be <c>Vector3</c>.
 	/// <see cref="EntityId"/> is a <see cref="ParameterisableEntityId"/>, so an id written as
 	/// <c>!parameter &lt;name&gt;</c> stays pending until <see cref="SubstituteParameters"/> fills in the
-	/// resolved entity id at template instantiation.</summary>
+	/// resolved entity id at template instantiation, and an omitted id (a <see cref="SelfEntityId"/>) binds
+	/// to the enclosing entity at the same point.</summary>
 	public sealed record EntityPropertySource<T>(ParameterisableEntityId EntityId, EntityProperty Property)
 		: ValueSource<T>
 	{
 		public override ValueSource<T> SubstituteParameters(TransformContext ctx) =>
-			EntityId.Resolve(ctx.Parameters) switch
+			EntityId switch
 			{
-				LiteralEntityId resolved => this with { EntityId = resolved },
-				var pending => throw new ParsingException(
-					$"!entity Id parameter '{pending.PendingParameter}' is missing or not a string during template instantiation")
+				// An omitted-Id !entity binds to the entity being instantiated. EnclosingEntityId is set only
+				// when substituting that entity's own behaviours, so a child's self reference (substituted under
+				// the parent with no EnclosingEntityId) stays pending until the child's own instantiation.
+				SelfEntityId when ctx.EnclosingEntityId is { } self => this with { EntityId = new LiteralEntityId(self) },
+				SelfEntityId => this,
+				_ => EntityId.Resolve(ctx.Parameters) switch
+				{
+					LiteralEntityId resolved => this with { EntityId = resolved },
+					var pending => throw new ParsingException(
+						$"!entity Id parameter '{pending.PendingParameter}' is missing or not a string during template instantiation")
+				}
 			};
 	}
 

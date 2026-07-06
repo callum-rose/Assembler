@@ -914,6 +914,15 @@ Unit forward direction for a full set of euler angles in degrees, equivalent to 
 
 **Returns** (Vector3): The unit forward vector.
 
+### `Vector3 ForwardFromRotation2D(float degrees)`
+Unit forward direction for a 2D top-down entity from its Z-axis rotation, in the XY plane. Rotation 0 faces +Y (up), 90 faces -X — the convention for a sprite drawn pointing up, matching Quaternion.Euler(0, 0, degrees) * Vector3.up. Feed it an entity's Rotation.z to get its facing direction; drops the sin/cos boilerplate every top-down shooter ("thrust along facing") would otherwise hand-roll. This is the +Y-up counterpart to the +X-forward Heading2D/LookRotation2D convention in SteeringMath.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| degrees | float | Z-axis rotation in degrees (counter-clockwise). |
+
+**Returns** (Vector3): The unit forward vector (-sin(degrees), cos(degrees), 0).
+
 ### `Vector3 ForwardFromYaw(float yawDegrees)`
 Unit forward direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane. Yaw 0 faces +Z, yaw 90 faces +X — matching Quaternion.Euler(0, yaw, 0) * Vector3.forward. Replaces hand-rolled sin/cos forward vectors when building first-person / 3D directional movement ("move forward relative to facing").
 
@@ -971,6 +980,15 @@ Unit right direction for a full set of euler angles in degrees, equivalent to Qu
 | eulerAngles | Vector3 | Euler angles in degrees (x = pitch, y = yaw, z = roll). |
 
 **Returns** (Vector3): The unit right vector.
+
+### `Vector3 RightFromRotation2D(float degrees)`
+Unit right direction for a 2D top-down entity from its Z-axis rotation, in the XY plane — 90 degrees clockwise of Single). Rotation 0 gives +X (right), 90 gives +Y. Use for strafing or lateral offsets relative to facing.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| degrees | float | Z-axis rotation in degrees (counter-clockwise). |
+
+**Returns** (Vector3): The unit right vector (cos(degrees), sin(degrees), 0).
 
 ### `Vector3 RightFromYaw(float yawDegrees)`
 Unit right direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane — 90 degrees clockwise of Single), matching Quaternion.Euler(0, yaw, 0) * Vector3.right. Use for strafing.

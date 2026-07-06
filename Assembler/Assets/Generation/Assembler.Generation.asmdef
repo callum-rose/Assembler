@@ -2,7 +2,8 @@
     "name": "Assembler.Generation",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Assembler.Extensions"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

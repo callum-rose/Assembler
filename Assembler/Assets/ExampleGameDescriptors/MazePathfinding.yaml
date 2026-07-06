@@ -137,7 +137,7 @@ Entities:
             Do: 'Distance(agent_pos, goal_pos) < radius'
             ArgumentTypes: [ vector, vector, float ]
             With:
-              agent_pos: !entity { Id: agent, Property: Position }
+              agent_pos: !entity { Property: Position }
               goal_pos: !var goal position
               radius: !var reach radius
         Listeners: [ !gameover ]

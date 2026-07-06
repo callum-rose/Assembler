@@ -1,0 +1,16 @@
+{
+    "name": "Assembler.AssetGeneration.ImageOrientation",
+    "rootNamespace": "Assembler.AssetGeneration.ImageOrientation",
+    "references": [
+        "Assembler.Anthropic"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

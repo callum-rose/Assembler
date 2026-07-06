@@ -18,6 +18,9 @@ namespace Assembler.Resolving
 				EntityPropertySource<T> { EntityId: { PendingParameter: { } param } } => throw new ResolveException(
 					$"Unsubstituted !entity Id parameter '{param}' reached resolve time — " +
 					"it should have been substituted during template instantiation."),
+				EntityPropertySource<T> { EntityId: SelfEntityId } => throw new ResolveException(
+					"An omitted-Id !entity (self reference) reached resolve time unbound — " +
+					"it should have been resolved to the enclosing entity during instantiation."),
 				EntityPropertySource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPropertyProvider(ctx.EntityTransforms.Get(ep.EntityId.Id), ep.Property),
 				RigidbodyPropertySource<T> rb when typeof(T) == typeof(Vector3) =>

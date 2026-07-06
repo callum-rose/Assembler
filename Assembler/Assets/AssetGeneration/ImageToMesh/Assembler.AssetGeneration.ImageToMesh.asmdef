@@ -1,0 +1,16 @@
+{
+    "name": "Assembler.AssetGeneration.ImageToMesh",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.AssetGeneration.Resilience"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -36,14 +36,19 @@ namespace Assembler.Parsing
 
 			var instanceCtx = ctx.WithParameters(augmentedParameters);
 
-			var inheritedBehaviours = template.Behaviours.Select(b => SubstituteBehaviour(b, instanceCtx));
+			// Substitute under a context that resolves an omitted-Id !entity (a SelfEntityId value source) to
+			// this entity's concrete id. Both the template's inherited behaviours and the entity's own
+			// additional behaviours belong to this entity, so both are self-resolved here. SubstituteChild,
+			// below, uses instanceCtx (no EnclosingEntityId), so a child's self reference stays pending until
+			// the child's own Instantiate runs.
+			var selfCtx = instanceCtx.WithEnclosingEntityId(entityId);
 
 			// Resolve self-targeting listeners (SelfEntityId) to this entity's concrete id. This is the single
 			// point where every entity gets its final id, so it covers hand-authored, templated, child, placed
-			// and spawned entities alike. Children keep their own SelfEntityId until their own Instantiate runs
-			// (additionalBehaviours flow straight through SubstituteChild, which leaves the sentinel intact).
-			var behaviours = inheritedBehaviours
+			// and spawned entities alike.
+			var behaviours = template.Behaviours
 				.Concat(additionalBehaviours.EmptyIfNull())
+				.Select(b => SubstituteBehaviour(b, selfCtx))
 				.Select(b => ResolveSelfListeners(b, entityId))
 				.ToArray();
 
@@ -55,11 +60,11 @@ namespace Assembler.Parsing
 
 			var resolvedPosition = position is not None<Vector3>
 				? position
-				: template.InitialPosition.SubstituteParameters(instanceCtx);
+				: template.InitialPosition.SubstituteParameters(selfCtx);
 
 			var resolvedRotation = rotation is not None<Vector3>
 				? rotation
-				: template.InitialRotation.SubstituteParameters(instanceCtx);
+				: template.InitialRotation.SubstituteParameters(selfCtx);
 
 			var inheritedVariables = template.Variables.Select(v => new ValueInfo(v.Id,
 				FlattenAssemblerValue(Transformer.SubstituteAssemblerValue(v.Value, instanceCtx.Parameters), instanceCtx.Values)));

@@ -83,14 +83,14 @@ Controls:
       Size:   { X: 360, Y: 360 }
 
 Expressions:
-  apply input:
+  applyInput:
     ArgumentTypes: [ vector, float, float ]
     ArgumentNames: [ vel, moveX, speed ]
     ReturnType: vector
     Expression: |
       return new UnityEngine.Vector3(moveX * speed, vel.y, 0f);
 
-  integrate position:
+  integratePosition:
     ArgumentTypes: [ vector, vector, float, float ]
     ArgumentNames: [ pos, vel, halfW, dt ]
     ReturnType: vector
@@ -101,7 +101,7 @@ Expressions:
       if (nx < -halfW) nx = nx + 2f * halfW;
       return new UnityEngine.Vector3(nx, p.y, 0f);
 
-  random platform position:
+  randomPlatformPosition:
     ArgumentTypes: [ float, float ]
     ArgumentNames: [ y, halfW ]
     ReturnType: vector
@@ -109,7 +109,7 @@ Expressions:
       float x = RandomFloat(-halfW, halfW);
       return new UnityEngine.Vector3(x, y, 0f);
 
-  format score:
+  formatScore:
     ArgumentTypes: [ float ]
     ArgumentNames: [ y ]
     ReturnType: string
@@ -209,7 +209,7 @@ Entities:
         Properties:
           VariableId: !var player velocity
           Value: !expr
-            Do: apply input
+            Do: applyInput
             With:
               vel: !var player velocity
               moveX: !var move x
@@ -220,7 +220,7 @@ Entities:
         Properties:
           VariableId: !var player position
           Value: !expr
-            Do: integrate position
+            Do: integratePosition
             With:
               pos: !var player position
               vel: !var player velocity
@@ -329,7 +329,7 @@ Entities:
         Properties:
           TemplateId: platform_template
           Position: !expr
-            Do: random platform position
+            Do: randomPlatformPosition
             With:
               y: !var next platform y
               halfW: !var world half width
@@ -375,7 +375,7 @@ Entities:
         Type: text label
         Properties:
           Text: !expr
-            Do: format score
+            Do: formatScore
             With:
               y: !var max height
           FontSize: 32

@@ -68,7 +68,7 @@ Templates:
         Properties:
           VariableId: !var bubbles popped
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var bubbles popped
               b: !var one
@@ -76,7 +76,7 @@ Templates:
         Type: destroy
 
 Expressions:
-  int add:
+  intAdd:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int
@@ -136,7 +136,7 @@ Entities:
         Properties:
           VariableId: !var bubbles spawned
           Value: !expr
-            Do: int add
+            Do: intAdd
             With:
               a: !var bubbles spawned
               b: !var one

@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.MeshToVoxels;
-using Assembler.AssetGeneration.TextToImage.Editor;
+using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.TextToImage;
 using Assembler.Voxels.Scripting;
-using UnityEngine;
 
 namespace Assembler.Generation.Verification.Editor
 {
@@ -36,24 +35,21 @@ namespace Assembler.Generation.Verification.Editor
 	/// Config for the full text→image→Meshy→voxel pipeline driven by
 	/// <see cref="PipelineVoxelMeshAssetGenerator"/>. API keys are caller-supplied — the pipeline
 	/// never looks them up itself — so <see cref="Default"/> leaves them blank for the window to fill.
+	/// <see cref="MaxDimVoxels"/> overrides that one knob on the voxel stage's <see cref="Settings.Defaults"/>.
 	/// </summary>
 	public sealed record PipelineAssetOptions(
 		ImageProvider ImageProvider,
 		string ImageApiKey,
 		string ImageModel,
 		string MeshyApiKey,
-		int MaxDimVoxels,
-		VoxPipelinePreset VoxPreset,
-		IReadOnlyList<Color32> Palette)
+		int MaxDimVoxels)
 	{
 		public static PipelineAssetOptions Default { get; } = new(
 			ImageProvider.GoogleGemini,
 			string.Empty,
 			ImageGeneratorFactory.DefaultModelFor(ImageProvider.GoogleGemini),
 			string.Empty,
-			32,
-			VoxPipelinePreset.Creature,
-			DefaultMasterPalette.Colors);
+			Settings.Defaults.MaxDimVoxels);
 	}
 
 	/// <summary>Which concrete "mesh" generator the orchestrator wires up.</summary>

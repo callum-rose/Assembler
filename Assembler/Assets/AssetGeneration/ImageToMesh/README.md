@@ -6,7 +6,21 @@ model (OBJ or FBX) back on disk.
 
 This is independent of the bundled `Assets/Plugins/ai.meshy` "Bridge" plugin
 (which pushes models *from* the website). Everything here lives in its own
-folder and assembly (`Assembler.AssetGeneration.MeshyImageTo3D.Editor`).
+folder, split across two assemblies:
+
+- **`Assembler.AssetGeneration.ImageToMesh`** (runtime, all platforms) — the
+  UI-free core: `MeshyApiClient` (submit / poll / download) and
+  `MeshyConversionCore.ConvertAsync`, a pure method that takes every input as an
+  argument (API key, `MeshyRequest`, output dir/file, cancellation token,
+  optional status sink) and returns a `Result` (written model path + the
+  completed Meshy task). It has no editor dependency, so it can run headlessly
+  (batch, player build, or as one stage of the image → mesh → voxels pipeline).
+  It does **not** touch the `AssetDatabase` — surfacing a download that landed
+  under `Assets/` is the caller's job (check `MeshyConversionCore.IsUnderAssets`
+  then `AssetDatabase.Refresh()`).
+- **`Assembler.AssetGeneration.ImageToMesh.Editor`** (`Editor/`) — the
+  `MeshyImageTo3DWindow` front-end that gathers inputs from `EditorPrefs`/GUI,
+  drives the core, and refreshes the `AssetDatabase`.
 
 ## Usage
 

@@ -79,7 +79,7 @@ Each stage has its own assembly (`.asmdef`) and namespace under `Assembler.*`.
 | `Assembler.Time` | `Assembler.Time` | Game clock abstraction (`IGameClock`, `RealtimeGameClock`, `FixedStepGameClock`) driving deterministic time |
 | `Assembler.Libraries` | `Assembler.Libraries` | Static helper libraries callable from expressions (`VectorMath`, `RandomMath`, `ColorMath`, `GridMath`, `HexMath`, `NumberMath`, etc.) |
 | `Assembler.Validation` | `Assembler.Validation` | Runtime YAML structure validator (`YamlStructureValidator`); platform-agnostic so a player build can validate descriptors |
-| `Assembler.Extensions` | `Assembler.Extensions` | Shared extension methods (`VectorExtensions`, `EnumerableExtensions`, `GameObjectExtensions`, `StringExtensions`) |
+| `Assembler.Extensions` | `Assembler.Extensions` | Shared extension methods (`VectorExtensions`, `EnumerableExtensions`, `GameObjectExtensions`) |
 | `Assembler.Voxels` | `Assembler.Voxels` | Goxel `.txt` voxel format parsing/writing and coordinate conversion |
 | `Assembler.Anthropic` | `Assembler.Anthropic` | Minimal HTTP client for the Anthropic Messages API |
 | `Assembler.Generation` | `Assembler.Generation` | LLM-driven YAML game-descriptor generation; wraps `AnthropicClient` with a system prompt built from the behaviour catalogue |

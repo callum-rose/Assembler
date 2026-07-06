@@ -129,7 +129,7 @@ physical keys.
 Named code snippets that can be called via `!expr { Do: <name>, … }`. Each entry:
 
 ```yaml
-expression name:
+expressionName:                              # must be a valid identifier — see note below
   ArgumentTypes:   [ int, int ]              # optional, omit if no args
   ArgumentNames:   [ a, b ]                  # optional, must match ArgumentTypes length
   ReturnType:      int                       # required: int | float | bool | string | vector | colour
@@ -137,6 +137,11 @@ expression name:
   RegisterTypeStatics: [ UnityEngine.Random ]# optional; lets the body call statics without the type prefix
   Expression: "a + b;"                       # the method body
 ```
+
+Unlike entity/behaviour ids, an expression's name (its id, and any `CallableAs` alias) is the literal
+name other expression bodies call it by, so it **must be a valid identifier**: letters, digits and
+underscores only, not starting with a digit (e.g. `expressionName` or `expression_name`, never
+`expression name`). A space or other illegal character is rejected at parse time.
 
 The `Expression:` field is code. **Always invoke the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 skill when authoring it.** It is a strict procedural subset of C#; ordinary C# will fail to parse.

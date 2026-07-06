@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Compiler.Compiler;
 using Assembler.Core;
-using Assembler.Extensions;
 using Assembler.Libraries;
 using Assembler.Parsing.Info;
 
@@ -284,8 +283,12 @@ namespace Assembler.Resolving
 			return ordered;
 		}
 
+		// An expression is callable from other expression bodies by the literal name it's registered with:
+		// its CallableAs alias when set, otherwise its id verbatim. No hidden transform — the parsing layer
+		// guarantees both are valid identifiers (see Transformer), so the registered name always matches the
+		// name an author writes at the call site.
 		private static string GetCallableName(ExpressionInfo info) =>
-			string.IsNullOrWhiteSpace(info.CallableAlias) ? info.Id.ToCamelCase() : info.CallableAlias!;
+			string.IsNullOrWhiteSpace(info.CallableAlias) ? info.Id : info.CallableAlias!;
 
 		// Extracts the bare names invoked as calls (`name(`) in an expression body, for cross-expression
 		// dependency detection. Walks the lexer's tokens rather than scanning source text, so names inside

@@ -1,0 +1,20 @@
+{
+    "name": "Assembler.AssetGeneration.MeshToVoxel.Editor",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.AssetGeneration.MeshToVoxel",
+        "Assembler.AssetGeneration.MeshToVoxels",
+        "Assembler.AssetGeneration.Editor.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

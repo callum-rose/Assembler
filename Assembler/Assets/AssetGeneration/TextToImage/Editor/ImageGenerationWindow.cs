@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.EditorCommon;
+using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 using UnityEngine;
 
@@ -43,7 +45,7 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
         private string _referencePreviewPath = "";
         private Vector2 _windowScroll;
 
-        [MenuItem("Assembler/Text to Image")]
+        [MenuItem("Assembler/Voxelisation/Text to Image")]
         public static void Open()
         {
             var window = GetWindow<ImageGenerationWindow>("Text to Image");
@@ -146,18 +148,19 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             EditorGUILayout.Space();
             EditorGUILayout.BeginHorizontal();
             _referenceImage = EditorGUILayout.TextField(
-                new GUIContent("Reference Image", "Optional image to condition generation on (style reference / edit). Leave blank for pure text-to-image."),
+                new GUIContent("Reference Image", "Optional image to condition generation on (style reference / edit). Drag an image asset here, browse for a file, or leave blank for pure text-to-image."),
                 _referenceImage);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
                 var picked = EditorUtility.OpenFilePanel(
-                    "Reference image", GuessStartDir(_referenceImage), "png,jpg,jpeg,webp");
+                    "Reference image", PathField.GuessStartDir(_referenceImage), "png,jpg,jpeg,webp");
                 if (!string.IsNullOrEmpty(picked))
                     _referenceImage = picked;
             }
             if (!string.IsNullOrEmpty(_referenceImage) && GUILayout.Button("Clear", GUILayout.Width(50)))
                 _referenceImage = "";
             EditorGUILayout.EndHorizontal();
+            _referenceImage = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _referenceImage);
 
             DrawReferencePreview();
         }
@@ -203,11 +206,12 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             _outputDir = EditorGUILayout.TextField("Output Directory", _outputDir);
             if (GUILayout.Button("Browse", GUILayout.Width(70)))
             {
-                var picked = EditorUtility.OpenFolderPanel("Output directory", GuessStartDir(_outputDir), "");
+                var picked = EditorUtility.OpenFolderPanel("Output directory", PathField.GuessStartDir(_outputDir), "");
                 if (!string.IsNullOrEmpty(picked))
                     _outputDir = picked;
             }
             EditorGUILayout.EndHorizontal();
+            _outputDir = PathField.HandleDrop(GUILayoutUtility.GetLastRect(), _outputDir, wantFolder: true);
 
             _outputFile = EditorGUILayout.TextField(
                 new GUIContent("File Name", "Leave blank to use a default name. The extension is set from the returned image type."),
@@ -267,6 +271,11 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
                     _provider, _apiKey, _model, _prompt, _outputDir, _outputFile, ct, SetStatus,
                     string.IsNullOrWhiteSpace(_referenceImage) ? null : _referenceImage);
 
+                // The core is editor-agnostic, so surfacing the freshly-written file in the Project
+                // view is the window's job (only when it lands inside Assets/).
+                if (IsUnderAssets(result.OutputPath))
+                    AssetDatabase.Refresh();
+
                 LoadPreview(result.Image.Bytes);
             }
             catch (OperationCanceledException)
@@ -302,12 +311,11 @@ namespace Assembler.AssetGeneration.TextToImage.Editor
             Repaint();
         }
 
-        private static string GuessStartDir(string path)
+        private static bool IsUnderAssets(string path)
         {
-            if (string.IsNullOrEmpty(path))
-                return Application.dataPath;
-            var dir = Path.GetDirectoryName(path);
-            return string.IsNullOrEmpty(dir) ? Application.dataPath : dir;
+            var full = Path.GetFullPath(path);
+            var assets = Path.GetFullPath(Application.dataPath);
+            return full.StartsWith(assets, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -3,8 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.MeshToVoxels;
-using Assembler.AssetGeneration.TextToImage.Editor;
+using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -39,8 +39,7 @@ namespace Assembler.Generation.Verification.Editor
 		private string _imageApiKey = string.Empty;
 		private string _imageModel = string.Empty;
 		private string _meshyApiKey = string.Empty;
-		private int _maxDimVoxels = 32;
-		private VoxPipelinePreset _voxPreset = VoxPipelinePreset.Creature;
+		private int _maxDimVoxels = Settings.Defaults.MaxDimVoxels;
 
 		private static string ImageApiKeyPref(ImageProvider provider) => $"{PipelinePref}ImageApiKey.{provider}";
 		private static string ImageModelPref(ImageProvider provider) => $"{PipelinePref}ImageModel.{provider}";
@@ -79,8 +78,7 @@ namespace Assembler.Generation.Verification.Editor
 			_imageApiKey = EditorPrefs.GetString(ImageApiKeyPref(_imageProvider), string.Empty);
 			_imageModel = EditorPrefs.GetString(ImageModelPref(_imageProvider), ImageGeneratorFactory.DefaultModelFor(_imageProvider));
 			_meshyApiKey = EditorPrefs.GetString(PipelinePref + "MeshyApiKey", string.Empty);
-			_maxDimVoxels = Mathf.Clamp(EditorPrefs.GetInt(PipelinePref + "MaxDim", 32), 1, 256);
-			_voxPreset = (VoxPipelinePreset)EditorPrefs.GetInt(PipelinePref + "Preset", (int)VoxPipelinePreset.Creature);
+			_maxDimVoxels = Mathf.Clamp(EditorPrefs.GetInt(PipelinePref + "MaxDim", Settings.Defaults.MaxDimVoxels), 4, 96);
 		}
 
 		private void OnDisable()
@@ -232,16 +230,7 @@ namespace Assembler.Generation.Verification.Editor
 
 				using (var scope = new EditorGUI.ChangeCheckScope())
 				{
-					_voxPreset = (VoxPipelinePreset)EditorGUILayout.EnumPopup("Voxel preset", _voxPreset);
-					if (scope.changed)
-					{
-						EditorPrefs.SetInt(PipelinePref + "Preset", (int)_voxPreset);
-					}
-				}
-
-				using (var scope = new EditorGUI.ChangeCheckScope())
-				{
-					_maxDimVoxels = EditorGUILayout.IntSlider("Max voxel dimension", _maxDimVoxels, 1, 256);
+					_maxDimVoxels = EditorGUILayout.IntSlider("Max voxel dimension", _maxDimVoxels, 4, 96);
 					if (scope.changed)
 					{
 						EditorPrefs.SetInt(PipelinePref + "MaxDim", _maxDimVoxels);
@@ -355,7 +344,6 @@ namespace Assembler.Generation.Verification.Editor
 						ImageModel = _imageModel,
 						MeshyApiKey = _meshyApiKey,
 						MaxDimVoxels = _maxDimVoxels,
-						VoxPreset = _voxPreset,
 					},
 				}
 				: AssetGenerationOptions.Default;

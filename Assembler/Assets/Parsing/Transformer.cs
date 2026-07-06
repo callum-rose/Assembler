@@ -94,7 +94,7 @@ namespace Assembler.Parsing
 				? expressions.Concat(ctx.InlineExpressions.Expressions).ToArray()
 				: expressions;
 
-			return new GameInfo(info,
+			var gameInfo = new GameInfo(info,
 				world,
 				physics,
 				assets,
@@ -105,6 +105,12 @@ namespace Assembler.Parsing
 				entities,
 				placements)
 			{ ParseContext = ctx, Navigation = CreateNavigationInfo(gameDto.Navigation, values) };
+
+			// Fail fast on a typo'd entity/behaviour reference in a listener, naming the bad id and the
+			// listener that referenced it — instead of an opaque build-time KeyNotFoundException later.
+			ReferenceValidator.Validate(gameInfo);
+
+			return gameInfo;
 
 			PlacementInfo CreatePlacementInfo(string placementId, PlacementDto dto)
 			{
@@ -128,8 +134,19 @@ namespace Assembler.Parsing
 					dto.Tags?.ToArray() ?? Array.Empty<string>());
 			}
 
-			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp) =>
-				new(kvp.Key,
+			ExpressionInfo CreateExpressionInfo(KeyValuePair<string, ExpressionDto> kvp)
+			{
+				// An expression is registered (and so callable from other expression bodies) under its
+				// literal id, or its CallableAs alias when set — no hidden camelCasing. That only works if
+				// the name is a legal identifier, so reject anything the compiler couldn't lex as a call.
+				ValidateExpressionName(kvp.Key, "id", kvp.Key);
+
+				if (kvp.Value.CallableAs is { } alias)
+				{
+					ValidateExpressionName(alias, "CallableAs alias", kvp.Key);
+				}
+
+				return new ExpressionInfo(kvp.Key,
 					kvp.Value.ArgumentTypes.EmptyIfNull()
 						.Zip(kvp.Value.ArgumentNames.EmptyIfNull(), (type, name) => (type, name)).ToArray(),
 					kvp.Value.ReturnType ?? string.Empty,
@@ -137,6 +154,7 @@ namespace Assembler.Parsing
 					kvp.Value.RegisterTypeStatics ?? Array.Empty<string>(),
 					kvp.Value.Expression ?? string.Empty,
 					kvp.Value.CallableAs);
+			}
 
 			ConcreteEntityInfo CreateEntityInfo(string entityId, EntityDto entityDto)
 			{
@@ -173,6 +191,31 @@ namespace Assembler.Parsing
 					additionalChildren: children);
 			}
 		}
+
+		// An expression name (its id, or its CallableAs alias) is the exact name it's callable by from other
+		// expression bodies, with no hidden normalisation, so it must lex as a single call identifier. Reject
+		// anything that wouldn't — a space or other illegal character would otherwise be silently uncallable.
+		private static void ValidateExpressionName(string name, string role, string expressionId)
+		{
+			if (IsValidIdentifier(name))
+			{
+				return;
+			}
+
+			throw new ParsingException(
+				$"Expression '{expressionId}' has an invalid {role} '{name}'. An expression name is the exact " +
+				"name it is callable by from other expressions, so it must be a valid identifier: letters, " +
+				"digits and underscores only, not starting with a digit (e.g. 'bulletVelocity', not " +
+				"'bullet velocity').");
+		}
+
+		// Mirrors the compiler lexer's identifier rule (Lexer.ReadIdentifier): a leading letter or
+		// underscore, then letters, digits or underscores. Kept in step so a name that passes here always
+		// lexes as a single call identifier downstream.
+		private static bool IsValidIdentifier(string name) =>
+			name.Length > 0
+			&& (char.IsLetter(name[0]) || name[0] == '_')
+			&& name.All(c => char.IsLetterOrDigit(c) || c == '_');
 
 		// Children are a keyed mapping (id -> child), matching how top-level Entities are keyed, so the
 		// key is the child's relative id. Mapping order is preserved, which keeps sibling order stable.

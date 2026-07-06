@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.MeshToVoxels;
+using Assembler.AssetGeneration.MeshToVoxel;
 using Assembler.AssetGeneration.TextToVoxelPipeline.Editor;
 using UnityEngine;
 
@@ -52,10 +52,8 @@ namespace Assembler.Generation.Verification.Editor
 				// Stage 2 — image → mesh (Meshy defaults from VoxelPipelineSettings are fine).
 				MeshyApiKey = p.MeshyApiKey,
 
-				// Stage 3 — mesh → voxels.
-				MaxDimVoxels = p.MaxDimVoxels,
-				VoxSettings = VoxPipelinePresets.For(p.VoxPreset),
-				Palette = p.Palette,
+				// Stage 3 — mesh → voxels. Start from the voxeliser defaults, overriding only the resolution.
+				Vox = Settings.Defaults with { MaxDimVoxels = p.MaxDimVoxels },
 
 				// Generate-then-copy: write intermediates straight into the scratch dir, no per-run subfolder.
 				OutputDir = scratchDir,

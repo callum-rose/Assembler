@@ -547,6 +547,39 @@ namespace Tests.Compiler
 			Assert.That(func(5), Is.EqualTo(5));
 		}
 
+		// A registered static method is callable by its type-qualified name (`Mathf.Sin(x)`), as in regular
+		// C#, not only by its bare name. RegisterStaticMethods registers the type so the qualified form
+		// resolves through the static-member-access path (issue #402).
+		[Test]
+		public void RegisteredStaticMethodCallableByTypeQualifiedName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Mathf));
+			var func = compiler.CompileFunc<float, float>("return Mathf.Sin(x);", "x");
+			Assert.That(func(0f), Is.EqualTo(0f).Within(1e-4f));
+			Assert.That(func(Mathf.PI / 2f), Is.EqualTo(1f).Within(1e-4f));
+		}
+
+		// The fully-qualified name (`UnityEngine.Mathf.Sin(x)`) also resolves.
+		[Test]
+		public void RegisteredStaticMethodCallableByFullyQualifiedName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Mathf));
+			var func = compiler.CompileFunc<float, float>("return UnityEngine.Mathf.Sin(x);", "x");
+			Assert.That(func(Mathf.PI / 2f), Is.EqualTo(1f).Within(1e-4f));
+		}
+
+		// The bare-name form keeps working alongside the qualified form.
+		[Test]
+		public void RegisteredStaticMethodStillCallableByBareName()
+		{
+			var compiler = new ExpressionMethodCompiler();
+			compiler.RegisterStaticMethods(typeof(Mathf));
+			var func = compiler.CompileFunc<float, float>("return Sin(x);", "x");
+			Assert.That(func(Mathf.PI / 2f), Is.EqualTo(1f).Within(1e-4f));
+		}
+
 		// Complex integration tests
 		[Test]
 		public void FibonacciSequence()

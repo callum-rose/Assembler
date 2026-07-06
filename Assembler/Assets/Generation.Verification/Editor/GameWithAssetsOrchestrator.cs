@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using Assembler.Extensions;
 
 namespace Assembler.Generation.Verification.Editor
 {
@@ -192,7 +193,7 @@ namespace Assembler.Generation.Verification.Editor
 
 		private static string BuildSlug(string userPrompt)
 		{
-			var slug = DescriptorFileWriter.Sanitise(userPrompt);
+			var slug = FileNameSanitiser.Sanitise(userPrompt);
 			if (!string.IsNullOrEmpty(slug) && slug.Length > MaxSlugLength)
 			{
 				slug = slug[..MaxSlugLength].Trim('-');

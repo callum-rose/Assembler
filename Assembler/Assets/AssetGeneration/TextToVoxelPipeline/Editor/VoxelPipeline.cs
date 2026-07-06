@@ -1,22 +1,22 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Assembler.AssetGeneration.ImageToMesh.Editor;
-using Assembler.AssetGeneration.MeshToVoxels;
-using Assembler.AssetGeneration.TextToImage.Editor;
-using UnityEngine;
+using Assembler.AssetGeneration.ImageToMesh;
+using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.MeshToVoxel.Editor;
+using Assembler.AssetGeneration.TextToImage;
+using UnityEditor;
 
 namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 {
     /// <summary>
     /// UI-free core that chains the three asset-generation stages end to end —
     /// text → image (<see cref="ImageGenerationCore"/>) → mesh (<see cref="MeshyConversionCore"/>)
-    /// → voxels (<see cref="VoxConversion"/>) — driving each stage's existing core so this and
+    /// → voxels (<see cref="MeshVoxeliser"/>) — driving each stage's existing core so this and
     /// the editor window (<see cref="VoxelPipelineWindow"/>) run an identical path. No EditorPrefs,
     /// preview textures, or window state lives here: callers pass a <see cref="VoxelPipelineSettings"/>,
     /// an optional status sink, and optional per-stage <i>review gates</i> awaited between stages so a
@@ -72,7 +72,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             public sealed record Success(
                 ImageGenerationCore.Result Image,
                 MeshyConversionCore.Result Mesh,
-                VoxConversion.Summary Voxels) : Result
+                VoxelizationSummary Voxels) : Result
             {
                 public override string ToString() => Voxels.ToString();
             }
@@ -114,8 +114,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         /// </summary>
         /// <param name="reviewImage">Optional gate awaited after stage 1 — inspect the image, then continue or retry it.</param>
         /// <param name="reviewMesh">Optional gate awaited after stage 2 — inspect the mesh, then continue or retry it.</param>
-        /// <param name="voxelProgress">Optional sink for stage 3's slow per-voxel pass; return false to cancel.</param>
-        /// <param name="pipelineProgress">Optional <c>(stepName, fraction)</c> sink for stage 3 post-processing.</param>
+        /// <param name="voxelProgress">Optional <c>(fraction, stageName)</c> sink for stage 3's voxelisation pass.</param>
         /// <param name="onStatus">Optional sink for human-readable progress (UI status line / log).</param>
         /// <returns>A <see cref="Result"/> describing exactly how the run ended — <see cref="Result.Success"/>
         /// or one of the failure cases. Stage failures and cancellation are reported through the result
@@ -126,8 +125,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             Action<string>? onStatus = null,
             ReviewGate<ImageGenerationCore.Result>? reviewImage = null,
             ReviewGate<MeshyConversionCore.Result>? reviewMesh = null,
-            IProgressReporter? voxelProgress = null,
-            Action<string, float>? pipelineProgress = null)
+            Action<float, string>? voxelProgress = null)
         {
             if (settings is null)
                 throw new ArgumentNullException(nameof(settings));
@@ -191,32 +189,40 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
             MeshyConversionCore.Result mesh;
             try
             {
+                var meshRequest = new MeshyRequest
+                {
+                    ImagePath = image.OutputPath,
+                    Format = settings.MeshFormat,
+                    AiModel = settings.MeshAiModel,
+                    GenerateTexture = settings.GenerateTexture,
+                    EnablePbr = settings.EnablePbr,
+                    HdTexture = settings.HdTexture,
+                    Remesh = settings.Remesh,
+                    Topology = settings.Topology,
+                    Decimation = settings.Decimation,
+                    TargetPolycount = settings.TargetPolycount,
+                    SavePreRemeshedModel = settings.SavePreRemeshedModel,
+                    // remove_lighting is a meshy-6-only flag; mirror the window's guard so a
+                    // headless caller that left it true on another model doesn't send an invalid request.
+                    RemoveLighting = settings.RemoveLighting && settings.MeshAiModel == "meshy-6",
+                    Moderation = settings.Moderation,
+                    AutoSize = settings.AutoSize,
+                    OriginAt = settings.OriginAt,
+                    MultiViewThumbnails = settings.MultiViewThumbnails,
+                    AlphaThumbnail = settings.AlphaThumbnail,
+                };
                 mesh = await RunStage(
-                    () => MeshyConversionCore.ConvertAsync(
-                        settings.MeshyApiKey,
-                        new MeshyRequest
-                        {
-                            ImagePath = image.OutputPath,
-                            Format = settings.MeshFormat,
-                            AiModel = settings.MeshAiModel,
-                            GenerateTexture = settings.GenerateTexture,
-                            EnablePbr = settings.EnablePbr,
-                            HdTexture = settings.HdTexture,
-                            Remesh = settings.Remesh,
-                            Topology = settings.Topology,
-                            Decimation = settings.Decimation,
-                            TargetPolycount = settings.TargetPolycount,
-                            SavePreRemeshedModel = settings.SavePreRemeshedModel,
-                            // remove_lighting is a meshy-6-only flag; mirror the window's guard so a
-                            // headless caller that left it true on another model doesn't send an invalid request.
-                            RemoveLighting = settings.RemoveLighting && settings.MeshAiModel == "meshy-6",
-                            Moderation = settings.Moderation,
-                            AutoSize = settings.AutoSize,
-                            OriginAt = settings.OriginAt,
-                            MultiViewThumbnails = settings.MultiViewThumbnails,
-                            AlphaThumbnail = settings.AlphaThumbnail,
-                        },
-                        outputDir, baseName, ct, onStatus),
+                    async () =>
+                    {
+                        var result = await MeshyConversionCore.ConvertAsync(
+                            settings.MeshyApiKey, meshRequest, outputDir, baseName, ct, onStatus);
+                        // The Meshy core is runtime-only and no longer refreshes the AssetDatabase;
+                        // import an in-project mesh so the review gate can ping it and stage 3's FBX
+                        // load (AssetDatabase.LoadAssetAtPath) resolves it. Mirrors the image stage.
+                        if (MeshyConversionCore.IsUnderAssets(result.OutputPath))
+                            AssetDatabase.Refresh();
+                        return result;
+                    },
                     reviewMesh,
                     "Stage 2/3 — converting image to mesh…",
                     "Review the mesh, then continue or retry…");
@@ -230,17 +236,21 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
                 return new Result.MeshFailed(image, e);
             }
 
-            // Stage 3 — mesh → voxels. The CPU-heavy voxelization runs on a background thread (only the
-            // mesh import + final AssetDatabase touch stay on the main thread), so this must be awaited
-            // from the main thread — which it is, called from the editor window.
-            VoxConversion.Summary voxels;
+            // Stage 3 — mesh → voxels. Runs synchronously on the main thread (mesh import + texture
+            // decode need the editor, and the engine-free voxeliser is called straight through),
+            // mirroring the standalone Mesh → Voxel window. Blocks the editor for the duration.
+            VoxelizationSummary voxels;
             try
             {
                 onStatus?.Invoke("Stage 3/3 — voxelizing mesh…");
                 var voxPath = Path.Combine(outputDir, baseName + ".vox");
-                voxels = await VoxConversion.Run(
-                    mesh.OutputPath, voxPath, settings.MaxDimVoxels,
-                    settings.VoxSettings, settings.Palette, voxelProgress, pipelineProgress);
+                var model = ModelLoader.Load(mesh.OutputPath);
+                var voxel = MeshVoxeliser.Voxelise(model, settings.Vox, voxelProgress);
+                VoxExport.Write(voxPath, voxel.Occupancy, voxel.VoxelColours);
+                // Import the freshly-written .vox so it shows in the Project window (mirrors the earlier stages).
+                if (MeshyConversionCore.IsUnderAssets(voxPath))
+                    AssetDatabase.Refresh();
+                voxels = new VoxelizationSummary(voxel.VoxelCount, voxel.GridX, voxel.GridY, voxel.GridZ, voxPath);
             }
             catch (OperationCanceledException)
             {
@@ -288,9 +298,20 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
     }
 
     /// <summary>
+    /// A completed stage-3 voxelisation, summarised for status/logging: the occupied voxel count, the
+    /// output grid dimensions, and the written <c>.vox</c> path. Built from the voxeliser's
+    /// <see cref="VoxelResult"/> — the replacement for the archived pipeline's summary type.
+    /// </summary>
+    public sealed record VoxelizationSummary(int VoxelCount, int GridX, int GridY, int GridZ, string OutputPath)
+    {
+        public override string ToString() =>
+            $"Wrote {VoxelCount:N0} voxels ({GridX}×{GridY}×{GridZ}) to {OutputPath}";
+    }
+
+    /// <summary>
     /// All inputs for the three pipeline stages plus the shared output target. Mutable plain fields so
-    /// the editor window can bind directly to it; <see cref="VoxSettings"/> reuses the voxel stage's own
-    /// per-step settings, and <see cref="Palette"/> the shared master palette.
+    /// the editor window can bind directly to it; <see cref="Vox"/> is the engine-free voxeliser's full
+    /// settings struct (the window assembles it, resolving a master palette when the colour mode needs one).
     /// </summary>
     public sealed class VoxelPipelineSettings
     {
@@ -320,10 +341,9 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
         public bool MultiViewThumbnails = false;
         public bool AlphaThumbnail = false;
 
-        // Stage 3 — mesh → voxels.
-        public int MaxDimVoxels = 32;
-        public VoxPipelineSettings VoxSettings = VoxPipelinePresets.For(VoxPipelinePreset.Creature);
-        public IReadOnlyList<Color32> Palette = DefaultMasterPalette.Colors;
+        // Stage 3 — mesh → voxels. The full engine-free voxeliser settings; the window assembles it
+        // from the mesh-to-voxel control set (resolving MasterPalette when the colour mode needs it).
+        public Settings Vox = Settings.Defaults;
 
         // Shared output. A blank base name is derived from the prompt; all three stages share it.
         public string OutputDir = "Assets/TextToVoxel";

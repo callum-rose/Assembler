@@ -75,6 +75,35 @@ Entities:
 		}
 
 		[Test]
+		public void TemplateBehaviourCanReferenceOwnTransformViaOmittedId()
+		{
+			// !entity with the Id omitted is the self shorthand — equivalent to Id: !parameter self_id but
+			// without the parameter plumbing — and binds to the instantiated entity's id (issue #400).
+			var yaml = @"
+Templates:
+  mover_template:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Property: Position }
+Entities:
+  mover:
+    Template: { Id: mover_template }
+";
+
+			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+
+			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
+			var source = (EntityPropertySource<Vector3>)translate.Displacement;
+
+			Assert.AreEqual("mover", source.EntityId.Id);
+			Assert.IsInstanceOf<LiteralEntityId>(source.EntityId);
+			Assert.IsNull(source.EntityId.PendingParameter);
+			Assert.AreEqual(EntityProperty.Position, source.Property);
+		}
+
+		[Test]
 		public void TemplateBehaviourEntityParameterResolvesToSuppliedId()
 		{
 			// !entity { Id: !parameter ... } also threads a non-self parameter through, resolved from
