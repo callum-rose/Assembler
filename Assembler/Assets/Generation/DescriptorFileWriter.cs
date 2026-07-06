@@ -33,7 +33,7 @@ namespace Assembler.Generation
 
 		public static string BuildFileName(string? title)
 		{
-			var sanitised = Sanitise(title);
+			var sanitised = FileNameSanitiser.Sanitise(title);
 
 			if (string.IsNullOrEmpty(sanitised))
 			{
@@ -42,11 +42,5 @@ namespace Assembler.Generation
 
 			return sanitised + ".yaml";
 		}
-
-		/// <summary>
-		/// Delegates to <see cref="FileNameSanitiser.Sanitise"/>. Kept as a public passthrough so existing
-		/// callers (e.g. AssetManifestExtractor) don't need to take a dependency on Assembler.Extensions.
-		/// </summary>
-		public static string Sanitise(string? title) => FileNameSanitiser.Sanitise(title);
 	}
 }

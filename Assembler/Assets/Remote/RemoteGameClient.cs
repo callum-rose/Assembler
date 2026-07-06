@@ -34,21 +34,21 @@ namespace Assembler.Remote
 					break;
 
 				case UnityWebRequest.Result.ProtocolError:
-					onError(new RemoteError(RemoteErrorKind.Http, request.responseCode, request.error));
+					onError(new RemoteError.Http(request.responseCode, request.error));
 					break;
 
 				case UnityWebRequest.Result.DataProcessingError:
-					onError(new RemoteError(RemoteErrorKind.Parse, request.responseCode, request.error));
+					onError(new RemoteError.Parse(request.error));
 					break;
 
 				// UnityWebRequest reports a timed-out request as a ConnectionError; tease it apart by message
 				// so the UI can say "timed out" vs "offline".
 				case UnityWebRequest.Result.ConnectionError when IsTimeout(request.error):
-					onError(new RemoteError(RemoteErrorKind.Timeout, 0, request.error));
+					onError(new RemoteError.Timeout(request.error));
 					break;
 
 				default:
-					onError(new RemoteError(RemoteErrorKind.Offline, 0, request.error));
+					onError(new RemoteError.Offline(request.error));
 					break;
 			}
 		}

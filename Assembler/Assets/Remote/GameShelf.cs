@@ -21,6 +21,10 @@ namespace Assembler.Remote
 	///
 	/// The UI is built programmatically (no authored scene), matching how <see cref="Builder"/> builds in-game UI.
 	/// The canvas and EventSystem live under this (persistent) boot GameObject, so they survive game teardown.
+	///
+	/// NOTE: this dynamically-built UI is interim test scaffolding. The intent is to replace it with a purpose-built
+	/// shelf scene, keeping only the fetch/cache/guard/launch flow here; treat the UI-construction methods below as
+	/// throwaway.
 	/// </summary>
 	public sealed class GameShelf : MonoBehaviour
 	{
@@ -65,7 +69,7 @@ namespace Assembler.Remote
 				onText: raw =>
 				{
 					_cache.WriteManifest(raw);
-					Populate(GameManifest.Parse(raw));
+					Populate(GameManifestParser.Parse(raw));
 				},
 				onError: OnManifestError);
 		}
@@ -77,12 +81,12 @@ namespace Assembler.Remote
 
 			if (!string.IsNullOrEmpty(cached))
 			{
-				Populate(GameManifest.Parse(cached!));
-				ShowToast($"Offline — showing saved games ({error.Kind}).");
+				Populate(GameManifestParser.Parse(cached!));
+				ShowToast("Offline — showing saved games.");
 				return;
 			}
 
-			ShowStatus($"Couldn't load games.\n{error}", showRetry: true);
+			ShowStatus($"Couldn't load games.\n{Describe(error)}", showRetry: true);
 		}
 
 		private void Populate(GameManifest manifest)
@@ -128,7 +132,7 @@ namespace Assembler.Remote
 
 				if (yaml == null)
 				{
-					ShowStatus($"Couldn't download “{entry.Title}”.\n{fetchError}", showRetry: true);
+					ShowStatus($"Couldn't download “{entry.Title}”.\n{Describe(fetchError)}", showRetry: true);
 					yield break;
 				}
 
@@ -147,10 +151,9 @@ namespace Assembler.Remote
 				yield break;
 			}
 
-			var guard = RemoteGameGuard.Validate(dto);
-			if (!guard.Allowed)
+			if (RemoteGameGuard.Validate(dto) is GuardResult.Rejected rejected)
 			{
-				ShowStatus(guard.Reason!, showRetry: true);
+				ShowStatus(rejected.Reason, showRetry: true);
 				yield break;
 			}
 
@@ -402,5 +405,16 @@ namespace Assembler.Remote
 				return null;
 			}
 		}
+
+		// Player-facing one-liner for a fetch failure. Pattern-matches the RemoteError union so the HTTP status
+		// is only referenced on the case that has one.
+		private static string Describe(RemoteError? error) => error switch
+		{
+			RemoteError.Offline => "You appear to be offline.",
+			RemoteError.Timeout => "The request timed out.",
+			RemoteError.Http http => $"Server returned {http.Status}.",
+			RemoteError.Parse => "The response couldn't be read.",
+			_ => "Unknown error.",
+		};
 	}
 }

@@ -4,6 +4,7 @@
     "references": [
         "Assembler.Generation",
         "Assembler.Generation.Editor",
+        "Assembler.Extensions",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
