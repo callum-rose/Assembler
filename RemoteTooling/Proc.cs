@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Assembler.RemoteTooling;
@@ -32,37 +33,28 @@ public static class Proc
 	}
 
 	/// <summary>
-	/// Run to completion, buffering stdout (the payload) while streaming each stderr line to
-	/// <paramref name="onStderr"/> as it arrives — so a long-running child shows progress live
-	/// instead of looking frozen. Stderr is buffered too, for the returned <see cref="Result"/>.
+	/// Run to completion, delivering each stdout line to <paramref name="onStdout"/> and each stderr
+	/// line to <paramref name="onStderr"/> as they arrive — kept separate so a caller can parse a
+	/// structured stdout stream (e.g. claude's <c>stream-json</c>) live while still surfacing stderr.
+	/// The child is killed if this process is interrupted, so it never orphans.
 	/// </summary>
-	public static Result CaptureStreamingErr(
+	public static int StreamLines(
 		string file,
 		IReadOnlyList<string> args,
 		IReadOnlyDictionary<string, string?>? env,
-		Action<string> onStderr)
+		Action<string> onStdout,
+		Action<string>? onStderr = null)
 	{
 		using var p = new Process { StartInfo = Psi(file, args, workingDir: null, env, redirect: true) };
-		var so = new StringBuilder();
-		var se = new StringBuilder();
+		using var _ = KillOnExit(p);
 		var gate = new object();
-		p.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (gate) { so.AppendLine(e.Data); } } };
-		p.ErrorDataReceived += (_, e) =>
-		{
-			if (e.Data is not null)
-			{
-				lock (gate)
-				{
-					se.AppendLine(e.Data);
-					onStderr(e.Data);
-				}
-			}
-		};
+		p.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (gate) { onStdout(e.Data); } } };
+		p.ErrorDataReceived += (_, e) => { if (e.Data is not null && onStderr is not null) { lock (gate) { onStderr(e.Data); } } };
 		p.Start();
 		p.BeginOutputReadLine();
 		p.BeginErrorReadLine();
 		p.WaitForExit();
-		return new Result(p.ExitCode, so.ToString(), se.ToString());
+		return p.ExitCode;
 	}
 
 	/// <summary>Run to completion, delivering each stdout/stderr line to <paramref name="onLine"/> as it arrives.</summary>
@@ -74,6 +66,7 @@ public static class Proc
 		Action<string> onLine)
 	{
 		using var p = new Process { StartInfo = Psi(file, args, workingDir, env, redirect: true) };
+		using var _ = KillOnExit(p);
 		var gate = new object();
 		void Emit(string? line) { if (line is not null) { lock (gate) { onLine(line); } } }
 		p.OutputDataReceived += (_, e) => Emit(e.Data);
@@ -109,6 +102,59 @@ public static class Proc
 		var path = Environment.GetEnvironmentVariable("PATH") ?? "";
 		return path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
 			.Any(dir => File.Exists(Path.Combine(dir, name)));
+	}
+
+	// Ensure a long-running child (claude, or validate-game.sh booting Unity) is torn down if this
+	// process is interrupted (Ctrl-C / SIGINT) or terminated (SIGTERM, e.g. `launchctl unload`), rather
+	// than leaking as an orphan that keeps running. PosixSignalRegistration handlers run synchronously
+	// before the default terminate action, so the child is killed before we exit — AppDomain.ProcessExit
+	// doesn't reliably fire (or finish) under a blocking WaitForExit on SIGTERM. Returns a handle that
+	// unregisters on Dispose.
+	private static IDisposable KillOnExit(Process p)
+	{
+		void Kill()
+		{
+			try
+			{
+				if (!p.HasExited)
+				{
+					p.Kill(entireProcessTree: true);
+				}
+			}
+			catch { /* already gone / racing exit */ }
+		}
+
+		var registrations = new List<IDisposable>();
+		foreach (var signal in new[] { PosixSignal.SIGINT, PosixSignal.SIGTERM, PosixSignal.SIGQUIT })
+		{
+			try
+			{
+				// Leave ctx.Cancel = false so the default terminate action still proceeds after we kill.
+				registrations.Add(PosixSignalRegistration.Create(signal, _ => Kill()));
+			}
+			catch (Exception ex) when (ex is PlatformNotSupportedException or ArgumentException)
+			{
+				// Signal not supported on this platform — skip it.
+			}
+		}
+
+		// Backstop for a normal / unexpected-exception exit path.
+		EventHandler onExit = (_, _) => Kill();
+		AppDomain.CurrentDomain.ProcessExit += onExit;
+
+		return new Deregister(() =>
+		{
+			AppDomain.CurrentDomain.ProcessExit -= onExit;
+			foreach (var registration in registrations)
+			{
+				registration.Dispose();
+			}
+		});
+	}
+
+	private sealed class Deregister(Action dispose) : IDisposable
+	{
+		public void Dispose() => dispose();
 	}
 
 	private static ProcessStartInfo Psi(
