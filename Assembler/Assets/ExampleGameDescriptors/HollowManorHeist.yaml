@@ -96,8 +96,8 @@ Constants:
   play max: !vec { X: 11.4, Y: 0.9, Z: 8.4 }
 
   # --- Guards ---
-  guard patrol speed: 2.0
-  guard chase speed: 3.4
+  guard patrol speed: 1.6
+  guard chase speed: 2.6
   guard detect range: 6.5
   guard cone: 110.0
   earshot: 9.0
@@ -122,6 +122,7 @@ Constants:
   torch search: !colour { R: 1.0, G: 0.55, B: 0.1, A: 1 }
   torch investigate: !colour { R: 1.0, G: 0.9, B: 0.2, A: 1 }
 
+  cctv tilt: 35.0
   cam idle colour: !colour { R: 0.2, G: 0.9, B: 0.4, A: 1 }
   cam spotted colour: !colour { R: 1.0, G: 0.1, B: 0.1, A: 1 }
   cam dead colour: !colour { R: 0.35, G: 0.35, B: 0.4, A: 1 }
@@ -247,7 +248,7 @@ Expressions:
     ArgumentTypes: [ float, int ]
     ArgumentNames: [ speed, alarm ]
     ReturnType: float
-    Expression: 'return speed * (1f + 0.22f * alarm);'
+    Expression: 'return speed * (1f + 0.15f * alarm);'
 
   yawEuler:
     ArgumentTypes: [ vector ]
@@ -579,13 +580,16 @@ Templates:
     Behaviours:
       head:
         Type: primitive
-        Properties: { Shape: cube, Size: !vec { X: 0.55, Y: 0.35, Z: 0.55 }, Colour: !colour { R: 0.15, G: 0.15, B: 0.2, A: 1 } }
+        Properties: { Shape: cube, Size: !vec { X: 0.7, Y: 0.45, Z: 0.7 }, Colour: !colour { R: 0.15, G: 0.15, B: 0.2, A: 1 } }
 
-      # Status lamp: green idle, red while it sees you, grey once the breaker is cut.
-      status lamp:
+      # The surveillance beam: a spot light matched to the perception cone (same angle,
+      # same reach), pitched down with the head so its lit patch sweeps across the floor —
+      # the visible pool of light IS the watched area. Green idle, red while it sees you,
+      # grey once the breaker is cut.
+      beam:
         Type: light
         Properties:
-          Type: point
+          Type: spot
           Colour: !expr
             Do: camLight
             With:
@@ -594,10 +598,12 @@ Templates:
               dead_colour: !var cam dead colour
               spotted_colour: !var cam spotted colour
               idle_colour: !var cam idle colour
-          Intensity: 2
-          Range: 4.5
+          Intensity: 4
+          Range: 9
+          SpotAngle: 65
 
-      # The sweep: an endless yoyo rotate between the two parameterised yaws.
+      # The sweep: an endless yoyo rotate between the two parameterised yaws, pitched
+      # down so both the beam and the vision cone rake the floor.
       boot:
         Type: on start trigger
         Listeners: [ sweep ]
@@ -609,15 +615,15 @@ Templates:
           Steps:
             - Animate: rotate
               Start: !expr
-                Do: 'new UnityEngine.Vector3(0f, a, 0f)'
-                ArgumentTypes: [ float ]
+                Do: 'new UnityEngine.Vector3(tilt, a, 0f)'
+                ArgumentTypes: [ float, float ]
                 ReturnType: vector
-                With: { a: !parameter yaw_a }
+                With: { tilt: !var cctv tilt, a: !parameter yaw_a }
               End: !expr
-                Do: 'new UnityEngine.Vector3(0f, b, 0f)'
-                ArgumentTypes: [ float ]
+                Do: 'new UnityEngine.Vector3(tilt, b, 0f)'
+                ArgumentTypes: [ float, float ]
                 ReturnType: vector
-                With: { b: !parameter yaw_b }
+                With: { tilt: !var cctv tilt, b: !parameter yaw_b }
               Duration: 4.5
               Easing: InOutSine
 
@@ -1263,9 +1269,10 @@ Entities:
           Intensity: 1.8
           Range: 30
 
-  # Output camera + two competing Cinemachine rigs. The pursuit rig's Priority is an
-  # expression over the alarm, so the brain blends to the tight handheld cam the
-  # moment the manor goes to alert — and back out as it decays.
+  # Output camera + two competing Cinemachine rigs. The alert rig's Priority is an
+  # expression over the alarm, so the brain blends OUT to a wider, higher, slightly
+  # shaky vantage the moment the manor goes to alert — you need situational awareness
+  # to plan an escape, not a close-up — and blends back in as the alarm decays.
   camera:
     Position: !vec { X: 0, Y: 12, Z: -10 }
     Behaviours:
@@ -1287,7 +1294,7 @@ Entities:
           Damping: 1
           FollowOffset: !vec { X: 0, Y: 13, Z: -8 }
 
-  vcam pursuit:
+  vcam alert:
     Position: !vec { X: 0, Y: 0, Z: 0 }
     Behaviours:
       rig:
@@ -1297,12 +1304,12 @@ Entities:
           LookAt: { Tag: player }
           Mode: "3d"
           Priority: !expr { Do: camPriority, With: { alarm: !var alarm level } }
-          Lens: 35
-          Damping: 0.4
-          FollowOffset: !vec { X: 0, Y: 5.5, Z: -4.5 }
+          Lens: 50
+          Damping: 0.6
+          FollowOffset: !vec { X: 0, Y: 17, Z: -10.5 }
       jitter:
         Type: camera noise
-        Properties: { Profile: "Handheld_normal_mild", Amplitude: 0.8, Frequency: 1 }
+        Properties: { Profile: "Handheld_normal_mild", Amplitude: 0.5, Frequency: 1 }
 
   # ============================ HUD ============================
   ui:
