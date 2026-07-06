@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Assembler.Core;
 using Assembler.Parsing.Info;
 
 namespace Assembler.Parsing
@@ -20,11 +21,6 @@ namespace Assembler.Parsing
 	/// </remarks>
 	public static class ReferenceValidator
 	{
-		// Kept in step with the Building assembly's constants (GameOverController.EntityId/EndBehaviourId and
-		// GameEntityFactory.SpawnedIdPrefix), which Parsing cannot reference. Duplicated as literals here.
-		private const string GameOverEntityId = "$gameover$";
-		private const string GameOverBehaviourId = "end";
-		private const string SpawnedIdPrefix = "$spawn$";
 
 		public static void Validate(GameInfo gameInfo)
 		{
@@ -35,7 +31,7 @@ namespace Assembler.Parsing
 
 			// Every id that could legitimately be targeted: top-level entities, their composed child ids
 			// ({parentId}/{childSuffix}, matching GameEntityFactory), and the implicit game-over entity.
-			var knownEntityIds = new HashSet<string> { GameOverEntityId };
+			var knownEntityIds = new HashSet<string> { ReservedIds.GameOverEntityId };
 
 			foreach (var entity in gameInfo.Entities)
 			{
@@ -84,21 +80,22 @@ namespace Assembler.Parsing
 			}
 
 			var targetId = literal.Id;
+			var at = direct.SourceSuffix();
 
 			// A runtime-spawned entity's id is only minted at spawn time; the prefix marks it as valid here.
-			if (targetId.StartsWith(SpawnedIdPrefix))
+			if (targetId.StartsWith(ReservedIds.SpawnedIdPrefix))
 			{
 				return;
 			}
 
 			// The implicit game-over entity exposes exactly one behaviour: 'end'.
-			if (targetId == GameOverEntityId)
+			if (targetId == ReservedIds.GameOverEntityId)
 			{
-				if (direct.BehaviourId != GameOverBehaviourId)
+				if (direct.BehaviourId != ReservedIds.GameOverBehaviourId)
 				{
 					throw new ParsingException(
-						$"Behaviour '{behaviourId}' on entity '{entityId}' targets '{GameOverEntityId}' but behaviour " +
-						$"'{direct.BehaviourId}' — the only game-over behaviour is '{GameOverBehaviourId}'.");
+						$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets '{ReservedIds.GameOverEntityId}' but behaviour " +
+						$"'{direct.BehaviourId}' — the only game-over behaviour is '{ReservedIds.GameOverBehaviourId}'.");
 				}
 
 				return;
@@ -114,7 +111,7 @@ namespace Assembler.Parsing
 			if (!knownEntityIds.Contains(targetId))
 			{
 				throw new ParsingException(
-					$"Behaviour '{behaviourId}' on entity '{entityId}' targets unknown entity '{targetId}'.");
+					$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets unknown entity '{targetId}'.");
 			}
 
 			// A known child id (present in the set but not the top-level behaviour map) can't have its
@@ -127,7 +124,7 @@ namespace Assembler.Parsing
 			if (!declaredBehaviours.Contains(direct.BehaviourId))
 			{
 				throw new ParsingException(
-					$"Behaviour '{behaviourId}' on entity '{entityId}' targets behaviour '{direct.BehaviourId}' which " +
+					$"Behaviour '{behaviourId}' on entity '{entityId}'{at} targets behaviour '{direct.BehaviourId}' which " +
 					$"does not exist on entity '{targetId}' (declared behaviours: {string.Join(", ", declaredBehaviours)}).");
 			}
 		}

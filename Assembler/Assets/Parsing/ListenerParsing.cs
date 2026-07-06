@@ -19,10 +19,11 @@ namespace Assembler.Parsing
 				.Select(l =>
 				{
 					var outputs = l.Outputs ?? new Dictionary<string, string>();
+					var position = l.Position;
 
 					if (l is GameOverListenerDto)
 					{
-						return new GameOverListenerInfo { OutputMapping = outputs };
+						return new GameOverListenerInfo { OutputMapping = outputs, Position = position };
 					}
 
 					if (l is { EntityTag: not null, BehaviourTag: not null })
@@ -41,7 +42,7 @@ namespace Assembler.Parsing
 						// A null BehaviourId is preserved (not coerced to ""): it means "fan out to every
 						// behaviour on entities carrying this tag", per CLAUDE.md's "optionally filtered by
 						// behaviour ID". The wiring picks GetByEntityTag vs GetByEntityTagAndBehaviourId on it.
-						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId) { OutputMapping = outputs };
+						return new EntityTaggedListenerInfo(entityTag, l.BehaviourId) { OutputMapping = outputs, Position = position };
 					}
 
 					if (l.BehaviourTag != null)
@@ -49,7 +50,7 @@ namespace Assembler.Parsing
 						var behaviourTag = ValueSourceFactory.CreateValueSource<string>(ctx,
 							AssemblerValueConverter.ToAssemblerValue(l.BehaviourTag));
 
-						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs };
+						return (ListenerInfo)new BehaviourTaggedListenerInfo(behaviourTag) { OutputMapping = outputs, Position = position };
 					}
 
 					var entityId = l.EntityId switch
@@ -64,7 +65,7 @@ namespace Assembler.Parsing
 						_ => throw new ParsingException($"Cannot get Id for listener {l.EntityId}")
 					};
 
-					return new DirectListenerInfo(entityId, l.BehaviourId ?? string.Empty) { OutputMapping = outputs };
+					return new DirectListenerInfo(entityId, l.BehaviourId ?? string.Empty) { OutputMapping = outputs, Position = position };
 				})
 				.ToArray();
 
