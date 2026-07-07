@@ -2,6 +2,14 @@
 
 A Unity 6 framework for defining and running games **declaratively from YAML**. Instead of writing C#, you describe a game as a set of entities composed from reusable behaviours, and a multi-stage pipeline turns that description into a live, playable Unity scene. An LLM can author these descriptors, so the longer-term goal is a mobile app that loads and runs remotely-generated games.
 
+- **Create anything:** any game can be generated in minutes. Smaller games are the focus now; large scale games will come later.
+- **Fast iteration:** AI can create games and make edits at runtime, no recompilation or program restarts needed.
+- **Dynamic code execution:** a C# subset and a custom runtime compiler allow for complex logic.
+- **Generate assets:** describe any object and a 3D voxel model will be created.
+- **Play anywhere:** all games are automatically localised and handle multi-platform input.
+
+This project is under development. If you would like a demo please contact me at callumrosecodes@gmail.com
+
 ```yaml
 Game:
   Title: Simple Pong Game
