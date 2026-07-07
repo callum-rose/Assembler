@@ -7,13 +7,16 @@ Game:
     drift, weave and bulldoze toward it. Every verb is a pointer gesture, and
     every verb's payload is carried by trigger outputs.
 
-    THE SIX VERBS (mouse on desktop, finger on mobile - the pointer triggers
+    THE FIVE VERBS (mouse on desktop, finger on mobile - the pointer triggers
     read whichever device acted last):
       TAP        - fire a bolt from the well toward the tap point. The tap's
                    screen position rides the listener edge into the spawner's
                    velocity parameter (position -> screenToWorld -> Seek).
+                   Taps are free - spam away.
       DRAG       - steer the deflector paddle; every drag frame's position
-                   output re-targets the paddle's smooth-move spring.
+                   output re-targets the paddle's smooth-move spring. The
+                   paddle keeps itself tangential to the well - on top it
+                   faces up, on the right it faces right.
       FLING      - a fast drag-release is a swipe: it launches a surge wave
                    from the paddle. direction AND distance outputs set its
                    heading and its speed - flinging harder throws it faster.
@@ -21,9 +24,6 @@ Game:
                    (a deferred trigger); KEEP holding through the second
                    long-press threshold and the same fuse arms it HEAVY
                    instead (condition-gate pair picks the payload template).
-      DOUBLE TAP - detonate a nova at the tapped point, debounced onto a
-                   cooldown. The position output crosses the debounce and the
-                   energy gate untouched - context forwards through the chain.
       PINCH      - two fingers resize the orbiter ring (scale output) and spin
                    it (angle_delta output). Desktop parity: the scroll wheel
                    (a Controls value action) converges on the SAME variable.
@@ -39,8 +39,8 @@ Game:
 
     WAVES ARE A RECORD TABLE (drifters / weavers / bulwarks / health / speed /
     bounty / gap per surge). Drifters split, weavers steer away from your
-    bolts (perceive + steering), bulwarks shrug off taps and must be mined,
-    surged or novaed. Kills feed a decaying combo that multiplies bounty.
+    bolts (perceive + steering), bulwarks shrug off taps and must be mined
+    or surged. Kills feed a decaying combo that multiplies bounty.
 
     Desktop: mouse gestures + scroll ring + Esc quit. Mobile: identical, plus
     pinch. Survive every surge or watch the well collapse.
@@ -95,7 +95,6 @@ Constants:
   energy per kill: 4
   surge cost: 20
   mine cost: 30
-  nova cost: 45
   combo window: 2.5
 
   # --- Bolt (tap) ---
@@ -116,11 +115,6 @@ Constants:
   blast damage: 4
   heavy blast damage: 9
   blast knockback: 6.5
-
-  # --- Nova (double tap) ---
-  nova damage: 6
-  nova cooldown: 1.5
-  nova knockback: 8.0
 
   # --- Orbiter ring (pinch / scroll) ---
   ring min radius: 1.2
@@ -143,7 +137,6 @@ Constants:
   surge colour: !colour { R: 0.3, G: 0.95, B: 0.75, A: 1 }
   mine colour: !colour { R: 0.95, G: 0.7, B: 0.2, A: 1 }
   heavy mine colour: !colour { R: 0.95, G: 0.3, B: 0.2, A: 1 }
-  nova colour: !colour { R: 0.85, G: 0.9, B: 1.0, A: 1 }
   orbiter colour: !colour { R: 0.7, G: 0.4, B: 0.95, A: 1 }
   drifter colour: !colour { R: 0.9, G: 0.3, B: 0.4, A: 1 }
   shard colour: !colour { R: 0.95, G: 0.5, B: 0.35, A: 1 }
@@ -229,6 +222,17 @@ Expressions:
     ReturnType: vector
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: "return IntegratePosition(center, Rotate2D(new Vector3(radius, 0f, 0f), angle + phase), 1f);"
+
+  # Tangential paddle facing: the bar's long axis stays perpendicular to the
+  # spoke from the well, so on top it faces up, on the right it faces right.
+  # Heading2D is degrees CCW from +x; +90 maps "radially outward" onto the
+  # bar's default horizontal pose (it starts at the bottom of the arena).
+  paddleFacing:
+    ArgumentTypes: [ vector, vector ]
+    ArgumentNames: [ center, pos ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(0f, 0f, Heading2D(center, pos) + 90f);"
 
   ringClamp:
     ArgumentTypes: [ float, float, float ]
@@ -340,7 +344,7 @@ Localisation:
     en:
       hud.title: "RIFTWELL"
       hud.help1: "Tap: bolt   Drag: deflector   Fling it: surge wave"
-      hud.help2: "Hold: plant mine (keep holding = heavy)   Double-tap: nova"
+      hud.help2: "Hold: plant mine (keep holding = heavy)"
       hud.help3: "Pinch / scroll: orbiter ring"
       hud.integrity: "Well integrity: {0}"
       hud.energy: "Energy: {0} / {1}"
@@ -493,31 +497,6 @@ Templates:
             Do: 'health - damage'
             ArgumentTypes: [ int, int ]
             With: { health: !var health, damage: !var heavy blast damage }
-
-      nova hit:
-        Type: trigger enter trigger
-        Properties: { TagsToDetect: [ nova ] }
-        Listeners:
-          - { BehaviourId: take nova damage }
-          - { BehaviourId: nova shove, Outputs: { other_position: shover_pos } }
-          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
-      take nova damage:
-        Type: int variable setter
-        Properties:
-          VariableId: !var health
-          Value: !expr
-            Do: 'health - damage'
-            ArgumentTypes: [ int, int ]
-            With: { health: !var health, damage: !var nova damage }
-      nova shove:
-        Type: add impulse
-        Properties:
-          Impulse: !expr
-            Do: knockAway
-            With:
-              self: !entity { Property: Position }
-              from: !output shover_pos
-              power: !var nova knockback
 
       orbiter hit:
         Type: trigger enter trigger
@@ -745,7 +724,7 @@ Templates:
             With: { health: !var health, damage: !var surge damage }
       blast hit:
         Type: trigger enter trigger
-        Properties: { TagsToDetect: [ blast, heavyblast, nova ] }
+        Properties: { TagsToDetect: [ blast, heavyblast ] }
         Listeners:
           - { BehaviourId: take blast damage }
           - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
@@ -961,7 +940,7 @@ Templates:
             With: { health: !var health, damage: !var surge damage }
       blast hit:
         Type: trigger enter trigger
-        Properties: { TagsToDetect: [ blast, heavyblast, nova ] }
+        Properties: { TagsToDetect: [ blast, heavyblast ] }
         Listeners:
           - { BehaviourId: take blast damage }
           - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
@@ -1056,9 +1035,9 @@ Templates:
         Type: destroy
 
   # ---------------------------------------------------------------------------
-  # BULWARK - armoured mass. NO bolt detector: taps do nothing to it. Mines,
-  # the nova and (weakly) the surge wave are the only answers. Heavy enough
-  # that paddle deflections barely move it.
+  # BULWARK - armoured mass. NO bolt detector: taps do nothing to it. Mines
+  # and (weakly) the surge wave are the only answers. Heavy enough that
+  # paddle deflections barely move it.
   # ---------------------------------------------------------------------------
   bulwark_template:
     Tags: [ enemy, bulwark ]
@@ -1152,21 +1131,6 @@ Templates:
             Do: 'health - damage'
             ArgumentTypes: [ int, int ]
             With: { health: !var health, damage: !var heavy blast damage }
-      nova hit:
-        Type: trigger enter trigger
-        Properties: { TagsToDetect: [ nova ] }
-        Listeners:
-          - { BehaviourId: take nova damage }
-          - { BehaviourId: death check }
-      take nova damage:
-        Type: int variable setter
-        Properties:
-          VariableId: !var health
-          Value: !expr
-            Do: 'health - damage'
-            ArgumentTypes: [ int, int ]
-            With: { health: !var health, damage: !var nova damage }
-
       death check:
         Type: condition gate
         Properties:
@@ -1397,29 +1361,6 @@ Templates:
       vanish:
         Type: destroy
 
-  # Nova: the double-tap payload - a wide flash at the tapped point.
-  nova_template:
-    Tags: [ nova ]
-    Behaviours:
-      body:
-        Type: primitive
-        Properties: { Shape: sphere, Size: !vec { X: 5.2, Y: 5.2, Z: 5.2 }, Colour: !var nova colour }
-      flash:
-        Type: light
-        Properties: { Type: point, Colour: !var nova colour, Intensity: 4.5, Range: 7.0 }
-      zone:
-        Type: sphere collider
-        Properties: { Radius: 2.6, IsTrigger: true }
-      rb:
-        Type: rigidbody
-        Properties: { UseGravity: false, IsKinematic: true }
-      fade:
-        Type: timer trigger
-        Properties: { Delay: 0.4, AutoStart: true }
-        Listeners: [ vanish ]
-      vanish:
-        Type: destroy
-
   # Deflection spark: spawned AT the collision's contact_point output.
   spark_template:
     Behaviours:
@@ -1522,8 +1463,9 @@ Entities:
 
   # =========================================================================
   # THE DEFLECTOR PADDLE - dragged around by the pointer; a kinematic body
-  # husks carom off. The collision outputs feed a spark at the exact contact
-  # point and a camera clang scaled to the impact speed.
+  # husks carom off. It keeps itself tangential to the well (on top it faces
+  # up, on the right it faces right). The collision outputs feed a spark at
+  # the exact contact point and a camera clang scaled to the impact speed.
   # =========================================================================
   paddle:
     Tags: [ paddle ]
@@ -1547,6 +1489,17 @@ Entities:
       corral:
         Type: clamp position
         Properties: { Min: !var paddle min, Max: !var paddle max }
+      orient tick:
+        Type: every frame trigger
+        Listeners: [ orient ]
+      orient:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: paddleFacing
+            With:
+              center: !var well position
+              pos: !entity { Property: Position }
       steer:
         Type: vector variable setter
         Properties:
@@ -1597,45 +1550,6 @@ Entities:
                 ortho: !var camera size
                 origin: !var well position
                 speed: !var bolt speed
-
-      # ---- DOUBLE TAP: nova at the point, debounced onto a cooldown.
-      #      The position output crosses the debounce AND the energy gate. ----
-      double tap:
-        Type: double tap trigger
-        Properties: { MaxInterval: 0.28, MaxMovement: 24 }
-        Listeners:
-          - { BehaviourId: nova cool, Outputs: { position: nova_pos } }
-      nova cool:
-        Type: debounced trigger
-        Properties: { Interval: !var nova cooldown }
-        Listeners: [ nova gate ]
-      nova gate:
-        Type: condition gate
-        Properties:
-          Condition: !expr
-            Do: 'energy >= cost'
-            With: { energy: !var energy, cost: !var nova cost }
-        Listeners: [ drop nova, pay nova, nova shake ]
-      drop nova:
-        Type: spawner
-        Properties:
-          TemplateId: nova_template
-          Position: !expr
-            Do: screenToWorld
-            With:
-              screen_pos: !output nova_pos
-              cam_pos: !var camera position
-              ortho: !var camera size
-      pay nova:
-        Type: int variable setter
-        Properties:
-          VariableId: !var energy
-          Value: !expr
-            Do: 'energy - cost'
-            With: { energy: !var energy, cost: !var nova cost }
-      nova shake:
-        Type: camera shake
-        Properties: { Force: 1.8, Duration: 0.45, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
 
       # ---- HOLD: the arming-fuse mine. Threshold one records the press
       #      point and lights the fuse; threshold two (still holding) flips
