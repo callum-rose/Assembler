@@ -76,21 +76,23 @@ Constants:
   paddle max: !vec { X: 8.2, Y: 4.4, Z: 0 }
 
   # --- The campaign ---
+  # Remember every drifter splits into two shards, so a wave's true head
+  # count is roughly 3x its drifter entry - keep these numbers modest.
   surge table: !record [
-    { Type: Wave, drifters: 5,  weavers: 0, bulwarks: 0, health: 3,  speed: 1.6, bounty: 5,  gap: 1.1 },
-    { Type: Wave, drifters: 7,  weavers: 2, bulwarks: 0, health: 4,  speed: 1.8, bounty: 6,  gap: 1.0 },
-    { Type: Wave, drifters: 8,  weavers: 3, bulwarks: 1, health: 5,  speed: 1.9, bounty: 7,  gap: 0.9 },
-    { Type: Wave, drifters: 6,  weavers: 5, bulwarks: 2, health: 7,  speed: 2.1, bounty: 8,  gap: 0.85 },
-    { Type: Wave, drifters: 10, weavers: 4, bulwarks: 2, health: 8,  speed: 2.3, bounty: 9,  gap: 0.7 },
-    { Type: Wave, drifters: 8,  weavers: 6, bulwarks: 3, health: 10, speed: 2.5, bounty: 10, gap: 0.65 },
-    { Type: Wave, drifters: 12, weavers: 8, bulwarks: 4, health: 12, speed: 2.8, bounty: 12, gap: 0.55 } ]
+    { Type: Wave, drifters: 3, weavers: 0, bulwarks: 0, health: 2, speed: 1.1, bounty: 5,  gap: 1.6 },
+    { Type: Wave, drifters: 4, weavers: 1, bulwarks: 0, health: 3, speed: 1.2, bounty: 6,  gap: 1.5 },
+    { Type: Wave, drifters: 5, weavers: 2, bulwarks: 1, health: 3, speed: 1.3, bounty: 7,  gap: 1.4 },
+    { Type: Wave, drifters: 4, weavers: 3, bulwarks: 1, health: 4, speed: 1.5, bounty: 8,  gap: 1.3 },
+    { Type: Wave, drifters: 6, weavers: 3, bulwarks: 2, health: 5, speed: 1.6, bounty: 9,  gap: 1.2 },
+    { Type: Wave, drifters: 6, weavers: 4, bulwarks: 2, health: 6, speed: 1.8, bounty: 10, gap: 1.1 },
+    { Type: Wave, drifters: 8, weavers: 5, bulwarks: 3, health: 8, speed: 2.0, bounty: 12, gap: 1.0 } ]
   max wave: 7
 
   # --- Economy ---
   start integrity: 25
   energy cap: 100
   start energy: 70
-  energy regen: 3
+  energy regen: 4
   regen tick: 0.5
   energy per kill: 4
   surge cost: 20
@@ -126,7 +128,7 @@ Constants:
   orbiter knockback: 4.0
 
   # --- Combat tuning ---
-  impact damage factor: 0.8
+  impact damage factor: 0.6
   shard kick: 5.0
   weaver evade radius: 2.6
 
