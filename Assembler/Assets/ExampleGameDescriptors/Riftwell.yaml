@@ -1,0 +1,2371 @@
+Game:
+  Title: "Riftwell: Gesture Bastion"
+  Description: |
+    A single-screen arcade defence built to stress the TOUCH-GESTURE triggers and
+    the TRIGGER-OUTPUT (!output) plumbing harder than any other descriptor. You
+    guard the Riftwell - a wellspring of rift energy - from waves of husks that
+    drift, weave and bulldoze toward it. Every verb is a pointer gesture, and
+    every verb's payload is carried by trigger outputs.
+
+    THE SIX VERBS (mouse on desktop, finger on mobile - the pointer triggers
+    read whichever device acted last):
+      TAP        - fire a bolt from the well toward the tap point. The tap's
+                   screen position rides the listener edge into the spawner's
+                   velocity parameter (position -> screenToWorld -> Seek).
+      DRAG       - steer the deflector paddle; every drag frame's position
+                   output re-targets the paddle's smooth-move spring.
+      FLING      - a fast drag-release is a swipe: it launches a surge wave
+                   from the paddle. direction AND distance outputs set its
+                   heading and its speed - flinging harder throws it faster.
+      HOLD       - plant a mine at the press point. The mine arms on a fuse
+                   (a deferred trigger); KEEP holding through the second
+                   long-press threshold and the same fuse arms it HEAVY
+                   instead (condition-gate pair picks the payload template).
+      DOUBLE TAP - detonate a nova at the tapped point, debounced onto a
+                   cooldown. The position output crosses the debounce and the
+                   energy gate untouched - context forwards through the chain.
+      PINCH      - two fingers resize the orbiter ring (scale output) and spin
+                   it (angle_delta output). Desktop parity: the scroll wheel
+                   (a Controls value action) converges on the SAME variable.
+
+    OUTPUT-DRIVEN COMBAT. Deflections read the collision's contact_point and
+    other_velocity outputs (spark at the point, camera clang scaled by impact
+    speed). The well's wounds scale with the intruder's impact velocity. A
+    dying drifter splits into shards KICKED AWAY FROM ITS KILLER - the hit
+    detector binds the projectile's other_position, and the death gate forwards
+    it into the shard spawners' kick parameters. Score and integrity are
+    watched by variable-changed triggers whose value/previous outputs drive the
+    "+N" strike readout and a damage-scaled camera shake.
+
+    WAVES ARE A RECORD TABLE (drifters / weavers / bulwarks / health / speed /
+    bounty / gap per surge). Drifters split, weavers steer away from your
+    bolts (perceive + steering), bulwarks shrug off taps and must be mined,
+    surged or novaed. Kills feed a decaying combo that multiplies bounty.
+
+    Desktop: mouse gestures + scroll ring + Esc quit. Mobile: identical, plus
+    pinch. Survive every surge or watch the well collapse.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#05060f"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# One surge of the assault per record, listed in `surge table`.
+Records:
+  Wave:
+    drifters: { Type: int,   Default: 0 }
+    weavers:  { Type: int,   Default: 0 }
+    bulwarks: { Type: int,   Default: 0 }
+    health:   { Type: int,   Default: 3 }
+    speed:    { Type: float, Default: 1.6 }
+    bounty:   { Type: int,   Default: 5 }
+    gap:      { Type: float, Default: 1.0 }
+
+Constants:
+  # --- Camera / screen->world mapping (the camera must NOT move or zoom:
+  #     every gesture converts screen space to the z=0 plane through these) ---
+  camera position: !vec { X: 0, Y: 0, Z: -14 }
+  camera size: 5.0
+
+  # --- Arena ---
+  well position: !vec { X: 0, Y: 0, Z: 0 }
+  spawn radius: 7.6
+  paddle min: !vec { X: -8.2, Y: -4.4, Z: 0 }
+  paddle max: !vec { X: 8.2, Y: 4.4, Z: 0 }
+
+  # --- The campaign ---
+  surge table: !record [
+    { Type: Wave, drifters: 5,  weavers: 0, bulwarks: 0, health: 3,  speed: 1.6, bounty: 5,  gap: 1.1 },
+    { Type: Wave, drifters: 7,  weavers: 2, bulwarks: 0, health: 4,  speed: 1.8, bounty: 6,  gap: 1.0 },
+    { Type: Wave, drifters: 8,  weavers: 3, bulwarks: 1, health: 5,  speed: 1.9, bounty: 7,  gap: 0.9 },
+    { Type: Wave, drifters: 6,  weavers: 5, bulwarks: 2, health: 7,  speed: 2.1, bounty: 8,  gap: 0.85 },
+    { Type: Wave, drifters: 10, weavers: 4, bulwarks: 2, health: 8,  speed: 2.3, bounty: 9,  gap: 0.7 },
+    { Type: Wave, drifters: 8,  weavers: 6, bulwarks: 3, health: 10, speed: 2.5, bounty: 10, gap: 0.65 },
+    { Type: Wave, drifters: 12, weavers: 8, bulwarks: 4, health: 12, speed: 2.8, bounty: 12, gap: 0.55 } ]
+  max wave: 7
+
+  # --- Economy ---
+  start integrity: 25
+  energy cap: 100
+  start energy: 70
+  energy regen: 3
+  regen tick: 0.5
+  energy per kill: 4
+  surge cost: 20
+  mine cost: 30
+  nova cost: 45
+  combo window: 2.5
+
+  # --- Bolt (tap) ---
+  bolt speed: 14.0
+  bolt damage: 2
+  bolt life: 1.2
+
+  # --- Surge wave (fling) ---
+  surge base speed: 9.0
+  surge damage: 3
+  surge bulwark damage: 2
+  surge knockback: 5.0
+  surge life: 0.9
+
+  # --- Mines (hold) ---
+  mine fuse: 0.85
+  mine life: 15.0
+  blast damage: 4
+  heavy blast damage: 9
+  blast knockback: 6.5
+
+  # --- Nova (double tap) ---
+  nova damage: 6
+  nova cooldown: 1.5
+  nova knockback: 8.0
+
+  # --- Orbiter ring (pinch / scroll) ---
+  ring min radius: 1.2
+  ring max radius: 4.2
+  ring base spin: 55.0
+  ring twist factor: 1.6
+  scroll step: 0.4
+  orbiter damage: 2
+  orbiter knockback: 4.0
+
+  # --- Combat tuning ---
+  impact damage factor: 0.8
+  shard kick: 5.0
+  weaver evade radius: 2.6
+
+  # --- Palette ---
+  well colour: !colour { R: 0.25, G: 0.9, B: 0.95, A: 1 }
+  paddle colour: !colour { R: 0.55, G: 0.75, B: 1.0, A: 1 }
+  bolt colour: !colour { R: 0.4, G: 0.95, B: 1.0, A: 1 }
+  surge colour: !colour { R: 0.3, G: 0.95, B: 0.75, A: 1 }
+  mine colour: !colour { R: 0.95, G: 0.7, B: 0.2, A: 1 }
+  heavy mine colour: !colour { R: 0.95, G: 0.3, B: 0.2, A: 1 }
+  nova colour: !colour { R: 0.85, G: 0.9, B: 1.0, A: 1 }
+  orbiter colour: !colour { R: 0.7, G: 0.4, B: 0.95, A: 1 }
+  drifter colour: !colour { R: 0.9, G: 0.3, B: 0.4, A: 1 }
+  shard colour: !colour { R: 0.95, G: 0.5, B: 0.35, A: 1 }
+  weaver colour: !colour { R: 0.95, G: 0.75, B: 0.25, A: 1 }
+  bulwark colour: !colour { R: 0.55, G: 0.6, B: 0.7, A: 1 }
+  spark colour: !colour { R: 1.0, G: 0.95, B: 0.8, A: 1 }
+  health full colour: !colour { R: 0.25, G: 0.95, B: 0.4, A: 1 }
+  health low colour: !colour { R: 1.0, G: 0.15, B: 0.1, A: 1 }
+
+Variables:
+  integrity: !var start integrity
+  energy: !var start energy
+  score: 0
+  kills: 0
+  combo: 0
+  last kill time: -100.0
+  last gain: 0
+
+  # Surge-loop state (the director rolls wave 0 -> 1 on the first frame).
+  wave: 0
+  drifters to spawn: 0
+  weavers to spawn: 0
+  bulwarks to spawn: 0
+  husks alive: 0
+  spawn gap: 1.0
+
+  # Verb state.
+  paddle target: !vec { X: 0, Y: -3, Z: 0 }
+  ring radius: 2.2
+  ring angle: 0.0
+  mine pending: false
+  mine heavy: false
+  mine pos: !vec { X: 0, Y: 0, Z: 0 }
+
+Expressions:
+  # Screen-space pointer -> world point on the z=0 plane for the FIXED
+  # orthographic camera (the FlockingDemo mapping; self-contained, no Camera.main).
+  screenToWorld:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ screen_pos, cam_pos, ortho ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Screen, UnityEngine.Vector3 ]
+    Expression: |
+      var w = UnityEngine.Screen.width * 1f;
+      var h = UnityEngine.Screen.height * 1f;
+      var aspect = w / h;
+      var x = cam_pos.x + (screen_pos.x / w - 0.5f) * 2f * ortho * aspect;
+      var y = cam_pos.y + (screen_pos.y / h - 0.5f) * 2f * ortho;
+      return new Vector3(x, y, 0f);
+
+  # Bolt launch velocity: from the well toward the (screen-space) tap point.
+  shotVelocity:
+    ArgumentTypes: [ vector, vector, float, vector, float ]
+    ArgumentNames: [ target_screen, cam_pos, ortho, origin, speed ]
+    ReturnType: vector
+    Expression: "return Seek(origin, screenToWorld(target_screen, cam_pos, ortho), speed);"
+
+  # Surge wave velocity: swipe direction scaled by how hard the fling was.
+  shockVelocity:
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ dir, dist, base_speed ]
+    ReturnType: vector
+    Expression: "return ScaleVector(Normalize(dir), base_speed * Clamp(dist / 300f, 0.9f, 2.2f));"
+
+  # Push a body directly away from a world point.
+  knockAway:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ self, from, power ]
+    ReturnType: vector
+    Expression: "return ScaleVector(Normalize(SubtractVector(self, from)), power);"
+
+  # Shard launch: away from the killer, with an angular scatter.
+  shardKick:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ self, from, power ]
+    ReturnType: vector
+    Expression: "return Rotate2D(knockAway(self, from, power), RandomFloat(-40f, 40f));"
+
+  # A point on the orbit ring: centre + a radius vector swung to angle+phase.
+  orbitPos:
+    ArgumentTypes: [ vector, float, float, float ]
+    ArgumentNames: [ center, radius, angle, phase ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return IntegratePosition(center, Rotate2D(new Vector3(radius, 0f, 0f), angle + phase), 1f);"
+
+  ringClamp:
+    ArgumentTypes: [ float, float, float ]
+    ArgumentNames: [ r, lo, hi ]
+    ReturnType: float
+    Expression: "return Clamp(r, lo, hi);"
+
+  # Integer add-with-ceiling for the energy pool.
+  energyGain:
+    ArgumentTypes: [ int, int, int ]
+    ArgumentNames: [ energy, gain, cap ]
+    ReturnType: int
+    Expression: |
+      var e = energy + gain;
+      return e > cap ? cap : e;
+
+  # Wound size from an intruder's impact velocity (always at least 1).
+  impactDamage:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ vel, k ]
+    ReturnType: int
+    Expression: "return (int)Max(1f, Ceil(Magnitude(vel) * k));"
+
+  # Bounty through the combo multiplier: x1 at no combo, +25% per combo step.
+  comboScore:
+    ArgumentTypes: [ int, int, int ]
+    ArgumentNames: [ score, bounty, combo ]
+    ReturnType: int
+    Expression: "return score + bounty * (4 + combo) / 4;"
+
+  gainOf:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ value, previous ]
+    ReturnType: int
+    Expression: "return value - previous;"
+
+  # Camera shake amplitude from how much integrity a hit removed.
+  hurtShake:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ previous, value ]
+    ReturnType: float
+    Expression: "return Clamp((previous - value) * 0.3f, 0.2f, 2.5f);"
+
+  # Camera clang amplitude from a deflected body's impact speed.
+  impactShake:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ vel ]
+    ReturnType: float
+    Expression: "return Clamp(Magnitude(vel) * 0.12f, 0.1f, 1.2f);"
+
+  healthGlow:
+    ArgumentTypes: [ int, int, colour, colour ]
+    ArgumentNames: [ health, max_health, full, hurt ]
+    ReturnType: colour
+    Expression: "return LerpColor(hurt, full, max_health > 0 ? (float)health / (float)max_health : 0f);"
+
+  # ---------- Surge-table lookups ----------
+  waveInt:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, wave, field ]
+    ReturnType: int
+    Expression: "return wave >= 1 && wave <= table.Count() ? GetInt(table[wave - 1], field) : 0;"
+
+  waveFloat:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, wave, field ]
+    ReturnType: float
+    Expression: "return wave >= 1 && wave <= table.Count() ? GetFloat(table[wave - 1], field) : 1f;"
+
+  # ---------- Husk brains ----------
+  seekWell:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ pos, target, speed ]
+    ReturnType: vector
+    Expression: "return Seek(pos, target, speed);"
+
+  # Weavers duck sideways when a bolt closes in.
+  evadeShots:
+    ArgumentTypes: [ vector, vector, bool, float, float ]
+    ArgumentNames: [ pos, threat, near, radius, max ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return near && Distance(pos, threat) < radius ? Flee(pos, threat, max) : new Vector3(0f, 0f, 0f);"
+
+  shardHealth:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ max_health ]
+    ReturnType: int
+    Expression: "return (max_health + 2) / 3;"
+
+Controls:
+  Actions:
+    # Desktop stand-in for the pinch: scroll resizes the orbiter ring. The
+    # pinch trigger and this action converge on the SAME `ring radius` variable.
+    ring-adjust: { Type: value, ValueType: vector2 }
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      ring-adjust: [ "<Mouse>/scroll" ]
+      quit: [ "<Keyboard>/escape" ]
+    mobile:
+      ring-adjust: [ "<Gamepad>/rightStick" ]
+      quit: [ "<Gamepad>/start" ]
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "RIFTWELL"
+      hud.help1: "Tap: bolt   Drag: deflector   Fling it: surge wave"
+      hud.help2: "Hold: plant mine (keep holding = heavy)   Double-tap: nova"
+      hud.help3: "Pinch / scroll: orbiter ring"
+      hud.integrity: "Well integrity: {0}"
+      hud.energy: "Energy: {0} / {1}"
+      hud.wave: "Surge: {0} / {1}"
+      hud.score: "Score: {0}"
+      hud.combo: "Combo x{0}"
+      hud.gain: "Last strike: +{0}"
+      hud.final: "!!  FINAL SURGE  !!"
+      btn.quit: "Collapse the Well"
+
+Templates:
+  # ---------------------------------------------------------------------------
+  # DRIFTER - dumb mass. Re-aims at the well on a cadence, so paddle bounces
+  # and knockbacks send it flying before it corrects course. On death it
+  # splits into two shards kicked away from whatever killed it: every hit
+  # detector binds the striker's other_position, and the death gate forwards
+  # that context into the shard spawners' kick parameter.
+  # ---------------------------------------------------------------------------
+  drifter_template:
+    Tags: [ enemy, drifter ]
+    Variables:
+      health: !parameter health
+      max health: !parameter health
+      base speed: !parameter speed
+      bounty: !parameter bounty
+      dead: false
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.62, Y: 0.62, Z: 0.62 }, Colour: !var drifter colour }
+      glow:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var health
+              max_health: !var max health
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 1.2
+          Range: 2.0
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.32 }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          Mass: 1.0
+          LinearDamping: 0.6
+          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+
+      # Physics-friendly homing: periodically reset velocity toward the well,
+      # so deflections are real but never permanent.
+      steer clock:
+        Type: interval trigger
+        Properties: { Interval: 0.25, AutoStart: true }
+        Listeners: [ aim at well ]
+      aim at well:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: seekWell
+            With:
+              pos: !entity { Property: Position }
+              target: !var well position
+              speed: !var base speed
+
+      # ---- Hit detectors: each binds the striker's position for the shards ----
+      bolt hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ bolt ] }
+        Listeners:
+          - { BehaviourId: take bolt damage }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take bolt damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var bolt damage }
+
+      surge hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ wavefront ] }
+        Listeners:
+          - { BehaviourId: take surge damage }
+          - { BehaviourId: surge shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take surge damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var surge damage }
+      surge shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var surge knockback
+
+      blast hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ blast ] }
+        Listeners:
+          - { BehaviourId: take blast damage }
+          - { BehaviourId: blast shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take blast damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var blast damage }
+      blast shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var blast knockback
+
+      heavy hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ heavyblast ] }
+        Listeners:
+          - { BehaviourId: take heavy damage }
+          - { BehaviourId: blast shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take heavy damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var heavy blast damage }
+
+      nova hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ nova ] }
+        Listeners:
+          - { BehaviourId: take nova damage }
+          - { BehaviourId: nova shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take nova damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var nova damage }
+      nova shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var nova knockback
+
+      orbiter hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ orbiter ] }
+        Listeners:
+          - { BehaviourId: take orbiter damage }
+          - { BehaviourId: orbiter shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check, Outputs: { other_position: killer_pos } }
+      take orbiter damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var orbiter damage }
+      orbiter shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var orbiter knockback
+
+      # ---- Death path 1: destroyed. The killer_pos output bound on the hit
+      #      edge crosses this gate into the shard kick expressions. ----
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'health <= 0 && !dead'
+            ArgumentTypes: [ int, bool ]
+            With: { health: !var health, dead: !var dead }
+        Listeners:
+          - { BehaviourId: pay score }
+          - { BehaviourId: tally kill }
+          - { BehaviourId: refund energy }
+          - { BehaviourId: mark dead }
+          - { BehaviourId: raise alive for shards }
+          - { BehaviourId: split a }
+          - { BehaviourId: split b }
+          - { BehaviourId: drop alive }
+          - { BehaviourId: vanish }
+      pay score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: comboScore
+            With: { score: !var score, bounty: !var bounty, combo: !var combo }
+      tally kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'kills + 1'
+            With: { kills: !var kills }
+      refund energy:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: energyGain
+            With: { energy: !var energy, gain: !var energy per kill, cap: !var energy cap }
+      raise alive for shards:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive + 2'
+            With: { alive: !var husks alive }
+      split a:
+        Type: spawner
+        Properties:
+          TemplateId: shard_template
+          Position: !entity { Property: Position }
+          Parameters:
+            health: !expr { Do: shardHealth, With: { max_health: !var max health } }
+            speed: !expr
+              Do: 'speed * 1.4f'
+              ArgumentTypes: [ float ]
+              ReturnType: float
+              With: { speed: !var base speed }
+            bounty: !expr
+              Do: 'bounty / 2'
+              ArgumentTypes: [ int ]
+              ReturnType: int
+              With: { bounty: !var bounty }
+            kick: !expr
+              Do: shardKick
+              With:
+                self: !entity { Property: Position }
+                from: !output killer_pos
+                power: !var shard kick
+      split b:
+        Type: spawner
+        Properties:
+          TemplateId: shard_template
+          Position: !entity { Property: Position }
+          Parameters:
+            health: !expr { Do: shardHealth, With: { max_health: !var max health } }
+            speed: !expr
+              Do: 'speed * 1.4f'
+              ArgumentTypes: [ float ]
+              ReturnType: float
+              With: { speed: !var base speed }
+            bounty: !expr
+              Do: 'bounty / 2'
+              ArgumentTypes: [ int ]
+              ReturnType: int
+              With: { bounty: !var bounty }
+            kick: !expr
+              Do: shardKick
+              With:
+                self: !entity { Property: Position }
+                from: !output killer_pos
+                power: !var shard kick
+
+      # ---- Death path 2: reached the well (physics collision, not trigger) ----
+      breach:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ well ] }
+        Listeners: [ breach check ]
+      breach check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!dead'
+            ArgumentTypes: [ bool ]
+            With: { dead: !var dead }
+        Listeners: [ mark dead, drop alive, vanish ]
+
+      # ---- Shared death plumbing ----
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      drop alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive - 1'
+            With: { alive: !var husks alive }
+      vanish:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # SHARD - a drifter fragment. Spawned mid-death with a kick velocity that
+  # was computed FROM THE KILLING BLOW'S other_position output; it re-aims at
+  # the well after the kick decays. Does not split again.
+  # ---------------------------------------------------------------------------
+  shard_template:
+    Tags: [ enemy, shard ]
+    Variables:
+      health: !parameter health
+      max health: !parameter health
+      base speed: !parameter speed
+      bounty: !parameter bounty
+      dead: false
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.34, Y: 0.34, Z: 0.34 }, Colour: !var shard colour }
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.18 }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          Mass: 0.5
+          LinearDamping: 0.5
+          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+      launch:
+        Type: on start trigger
+        Listeners: [ take kick ]
+      take kick:
+        Type: set velocity
+        Properties: { Velocity: !parameter kick }
+      steer clock:
+        Type: interval trigger
+        Properties: { Interval: 0.7, AutoStart: true }
+        Listeners: [ aim at well ]
+      aim at well:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: seekWell
+            With:
+              pos: !entity { Property: Position }
+              target: !var well position
+              speed: !var base speed
+
+      bolt hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ bolt ] }
+        Listeners:
+          - { BehaviourId: take bolt damage }
+          - { BehaviourId: death check }
+      take bolt damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var bolt damage }
+      surge hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ wavefront ] }
+        Listeners:
+          - { BehaviourId: take surge damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take surge damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var surge damage }
+      blast hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ blast, heavyblast, nova ] }
+        Listeners:
+          - { BehaviourId: take blast damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take blast damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var blast damage }
+      orbiter hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ orbiter ] }
+        Listeners:
+          - { BehaviourId: take orbiter damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take orbiter damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var orbiter damage }
+      shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var surge knockback
+
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'health <= 0 && !dead'
+            ArgumentTypes: [ int, bool ]
+            With: { health: !var health, dead: !var dead }
+        Listeners: [ pay score, tally kill, refund energy, mark dead, drop alive, vanish ]
+      pay score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: comboScore
+            With: { score: !var score, bounty: !var bounty, combo: !var combo }
+      tally kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'kills + 1'
+            With: { kills: !var kills }
+      refund energy:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: energyGain
+            With: { energy: !var energy, gain: !var energy per kill, cap: !var energy cap }
+
+      breach:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ well ] }
+        Listeners: [ breach check ]
+      breach check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!dead'
+            ArgumentTypes: [ bool ]
+            With: { dead: !var dead }
+        Listeners: [ mark dead, drop alive, vanish ]
+
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      drop alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive - 1'
+            With: { alive: !var husks alive }
+      vanish:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # WEAVER - watches for incoming bolts with `perceive` and blends a Seek
+  # toward the well with a Flee from the nearest bolt (steering -> blackboard
+  # velocity -> set velocity, so it stays a real physics body the paddle can
+  # smack). Taps still hurt it - if you can land one.
+  # ---------------------------------------------------------------------------
+  weaver_template:
+    Tags: [ enemy, weaver ]
+    Variables:
+      health: !parameter health
+      max health: !parameter health
+      base speed: !parameter speed
+      bounty: !parameter bounty
+      dead: false
+      desired velocity: !vec { X: 0, Y: 0, Z: 0 }
+      nearest bolt: !vec { X: 1000, Y: 1000, Z: 0 }
+      bolt near: false
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: capsule, Size: !vec { X: 0.45, Y: 0.45, Z: 0.45 }, Colour: !var weaver colour }
+      glow:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var health
+              max_health: !var max health
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 1.0
+          Range: 1.8
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.28 }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          Mass: 0.8
+          LinearDamping: 0.6
+          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+
+      bolt sense:
+        Type: perceive
+        Properties:
+          Tag: bolt
+          Radius: !var weaver evade radius
+          Interval: 0.05
+          TargetPosition: !var nearest bolt
+          HasTarget: !var bolt near
+      weave:
+        Type: steering
+        Properties:
+          MaxSpeed: !expr
+            Do: 'speed * 1.15f'
+            ArgumentTypes: [ float ]
+            ReturnType: float
+            With: { speed: !var base speed }
+          Output: !var desired velocity
+          Forces:
+            - Force: !expr
+                Do: seekWell
+                With:
+                  pos: !entity { Property: Position }
+                  target: !var well position
+                  speed: !var base speed
+              Weight: 1.0
+            - Force: !expr
+                Do: evadeShots
+                With:
+                  pos: !entity { Property: Position }
+                  threat: !var nearest bolt
+                  near: !var bolt near
+                  radius: !var weaver evade radius
+                  max: !expr
+                    Do: 'speed * 2.2f'
+                    ArgumentTypes: [ float ]
+                    ReturnType: float
+                    With: { speed: !var base speed }
+              Weight: 2.4
+      drive:
+        Type: every frame trigger
+        Listeners: [ apply velocity ]
+      apply velocity:
+        Type: set velocity
+        Properties: { Velocity: !var desired velocity }
+
+      bolt hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ bolt ] }
+        Listeners:
+          - { BehaviourId: take bolt damage }
+          - { BehaviourId: death check }
+      take bolt damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var bolt damage }
+      surge hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ wavefront ] }
+        Listeners:
+          - { BehaviourId: take surge damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take surge damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var surge damage }
+      blast hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ blast, heavyblast, nova ] }
+        Listeners:
+          - { BehaviourId: take blast damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take blast damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var blast damage }
+      orbiter hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ orbiter ] }
+        Listeners:
+          - { BehaviourId: take orbiter damage }
+          - { BehaviourId: shove, Outputs: { other_position: shover_pos } }
+          - { BehaviourId: death check }
+      take orbiter damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var orbiter damage }
+      shove:
+        Type: add impulse
+        Properties:
+          Impulse: !expr
+            Do: knockAway
+            With:
+              self: !entity { Property: Position }
+              from: !output shover_pos
+              power: !var surge knockback
+
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'health <= 0 && !dead'
+            ArgumentTypes: [ int, bool ]
+            With: { health: !var health, dead: !var dead }
+        Listeners: [ pay score, tally kill, refund energy, mark dead, drop alive, vanish ]
+      pay score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: comboScore
+            With: { score: !var score, bounty: !var bounty, combo: !var combo }
+      tally kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'kills + 1'
+            With: { kills: !var kills }
+      refund energy:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: energyGain
+            With: { energy: !var energy, gain: !var energy per kill, cap: !var energy cap }
+
+      breach:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ well ] }
+        Listeners: [ breach check ]
+      breach check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!dead'
+            ArgumentTypes: [ bool ]
+            With: { dead: !var dead }
+        Listeners: [ mark dead, drop alive, vanish ]
+
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      drop alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive - 1'
+            With: { alive: !var husks alive }
+      vanish:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # BULWARK - armoured mass. NO bolt detector: taps do nothing to it. Mines,
+  # the nova and (weakly) the surge wave are the only answers. Heavy enough
+  # that paddle deflections barely move it.
+  # ---------------------------------------------------------------------------
+  bulwark_template:
+    Tags: [ enemy, bulwark ]
+    Variables:
+      health: !parameter health
+      max health: !parameter health
+      base speed: !parameter speed
+      bounty: !parameter bounty
+      dead: false
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.85, Y: 0.85, Z: 0.85 }, Colour: !var bulwark colour }
+      glow:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var health
+              max_health: !var max health
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 1.1
+          Range: 2.2
+      hull:
+        Type: box collider
+        Properties: { Size: !vec { X: 0.8, Y: 0.8, Z: 0.8 } }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          Mass: 6.0
+          LinearDamping: 1.2
+          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+      steer clock:
+        Type: interval trigger
+        Properties: { Interval: 0.4, AutoStart: true }
+        Listeners: [ aim at well ]
+      aim at well:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: seekWell
+            With:
+              pos: !entity { Property: Position }
+              target: !var well position
+              speed: !var base speed
+
+      surge hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ wavefront ] }
+        Listeners:
+          - { BehaviourId: take surge damage }
+          - { BehaviourId: death check }
+      take surge damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var surge bulwark damage }
+      blast hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ blast ] }
+        Listeners:
+          - { BehaviourId: take blast damage }
+          - { BehaviourId: death check }
+      take blast damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var blast damage }
+      heavy hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ heavyblast ] }
+        Listeners:
+          - { BehaviourId: take heavy damage }
+          - { BehaviourId: death check }
+      take heavy damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var heavy blast damage }
+      nova hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ nova ] }
+        Listeners:
+          - { BehaviourId: take nova damage }
+          - { BehaviourId: death check }
+      take nova damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With: { health: !var health, damage: !var nova damage }
+
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'health <= 0 && !dead'
+            ArgumentTypes: [ int, bool ]
+            With: { health: !var health, dead: !var dead }
+        Listeners: [ pay score, tally kill, refund energy, mark dead, drop alive, vanish ]
+      pay score:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: comboScore
+            With: { score: !var score, bounty: !var bounty, combo: !var combo }
+      tally kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'kills + 1'
+            With: { kills: !var kills }
+      refund energy:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: energyGain
+            With: { energy: !var energy, gain: !var energy per kill, cap: !var energy cap }
+
+      breach:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ well ] }
+        Listeners: [ breach check ]
+      breach check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!dead'
+            ArgumentTypes: [ bool ]
+            With: { dead: !var dead }
+        Listeners: [ mark dead, drop alive, vanish ]
+
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      drop alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive - 1'
+            With: { alive: !var husks alive }
+      vanish:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # PROJECTILES & PAYLOADS. Husks own the damage (detector per tag class);
+  # these just fly, announce their class via Tags, and vanish.
+  # ---------------------------------------------------------------------------
+
+  # Tap bolt: velocity comes from the tap position output at the spawn site.
+  bolt_template:
+    Tags: [ bolt ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.2, Y: 0.2, Z: 0.2 }, Colour: !var bolt colour }
+      flare:
+        Type: light
+        Properties: { Type: point, Colour: !var bolt colour, Intensity: 1.1, Range: 1.6 }
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.14, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter velocity }
+      hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ enemy ] }
+        Listeners: [ vanish ]
+      expire:
+        Type: timer trigger
+        Properties: { Delay: !var bolt life, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Surge wave: a travelling pressure front flung off the paddle. Its speed
+  # was computed from the swipe's distance output; it passes through husks
+  # (their own detectors take the damage) and dies by timer.
+  surge_wave_template:
+    Tags: [ wavefront ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 1.3, Y: 1.3, Z: 1.3 }, Colour: !var surge colour }
+      flare:
+        Type: light
+        Properties: { Type: point, Colour: !var surge colour, Intensity: 2.2, Range: 3.2 }
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.66, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter velocity }
+      expire:
+        Type: timer trigger
+        Properties: { Delay: !var surge life, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Mine ghost: feedback while the fuse runs; expires exactly at arming time.
+  mine_ghost_template:
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.28, Y: 0.28, Z: 0.28 }, Colour: !var mine colour }
+      dim:
+        Type: light
+        Properties: { Type: point, Colour: !var mine colour, Intensity: 0.6, Range: 1.2 }
+      expire:
+        Type: timer trigger
+        Properties: { Delay: !var mine fuse, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # The armed mine. `payload` names which blast template it detonates into -
+  # the standard/heavy decision was made by the gesture chain's gate pair.
+  mine_template:
+    Tags: [ mine ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.4, Y: 0.4, Z: 0.4 }, Colour: !parameter tint }
+      pulse:
+        Type: animation
+        Properties:
+          Animate: scale
+          End: !vec { X: 1.35, Y: 1.35, Z: 1.35 }
+          Duration: 0.45
+          Loops: -1
+          LoopType: yoyo
+      arm light:
+        Type: light
+        Properties: { Type: point, Colour: !parameter tint, Intensity: 1.4, Range: 2.4 }
+      proximity:
+        Type: sphere collider
+        Properties: { Radius: 0.75, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      tripwire:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ enemy ] }
+        Listeners: [ boom, vanish ]
+      boom:
+        Type: spawner
+        Properties:
+          TemplateId: !parameter payload
+          Position: !entity { Property: Position }
+      stale:
+        Type: timer trigger
+        Properties: { Delay: !var mine life, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Blast volumes: short-lived trigger spheres; every husk inside raises its
+  # own matching detector once.
+  blast_std_template:
+    Tags: [ blast ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 2.4, Y: 2.4, Z: 2.4 }, Colour: !var mine colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var mine colour, Intensity: 3.2, Range: 4.0 }
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 1.2, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      thump:
+        Type: on start trigger
+        Listeners:
+          - { EntityId: fx, BehaviourId: blast thump }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.3, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  blast_heavy_template:
+    Tags: [ heavyblast ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 4.4, Y: 4.4, Z: 4.4 }, Colour: !var heavy mine colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var heavy mine colour, Intensity: 4.2, Range: 6.0 }
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 2.2, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      thump:
+        Type: on start trigger
+        Listeners:
+          - { EntityId: fx, BehaviourId: heavy thump }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.35, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Nova: the double-tap payload - a wide flash at the tapped point.
+  nova_template:
+    Tags: [ nova ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 5.2, Y: 5.2, Z: 5.2 }, Colour: !var nova colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var nova colour, Intensity: 4.5, Range: 7.0 }
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 2.6, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.4, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Deflection spark: spawned AT the collision's contact_point output.
+  spark_template:
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.22, Y: 0.22, Z: 0.22 }, Colour: !var spark colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var spark colour, Intensity: 2.0, Range: 1.8 }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.18, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # One orbiter, phase-offset around the shared ring. Position is a pure
+  # expression of the ring variables the pinch/scroll inputs drive.
+  orbiter_template:
+    Tags: [ orbiter ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.42, Y: 0.42, Z: 0.42 }, Colour: !var orbiter colour }
+      glow:
+        Type: light
+        Properties: { Type: point, Colour: !var orbiter colour, Intensity: 1.3, Range: 2.0 }
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 0.3, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      tick:
+        Type: every frame trigger
+        Listeners: [ place ]
+      place:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: orbitPos
+            With:
+              center: !var well position
+              radius: !var ring radius
+              angle: !var ring angle
+              phase: !parameter phase
+
+Entities:
+  # =========================================================================
+  # THE WELL - what you defend. A physics collision (not a trigger): the
+  # intruder's impact velocity rides the collision output into the wound
+  # size, so a bulldozing bulwark hurts more than a drifting shard.
+  # =========================================================================
+  well:
+    Tags: [ well ]
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      heart:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 1.1, Y: 1.1, Z: 1.1 }, Colour: !var well colour }
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 0, Z: 40 } }
+      lamp:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var integrity
+              max_health: !var start integrity
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 2.6
+          Range: 5.5
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.6 }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      breach sensor:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ enemy ] }
+        Listeners:
+          - { BehaviourId: wound, Outputs: { other_velocity: impact_vel } }
+      wound:
+        Type: int variable setter
+        Properties:
+          VariableId: !var integrity
+          Value: !expr
+            Do: 'integrity - impactDamage(vel, k)'
+            ArgumentTypes: [ int, vector, float ]
+            ReturnType: int
+            With:
+              integrity: !var integrity
+              vel: !output impact_vel
+              k: !var impact damage factor
+
+  # =========================================================================
+  # THE DEFLECTOR PADDLE - dragged around by the pointer; a kinematic body
+  # husks carom off. The collision outputs feed a spark at the exact contact
+  # point and a camera clang scaled to the impact speed.
+  # =========================================================================
+  paddle:
+    Tags: [ paddle ]
+    Position: !vec { X: 0, Y: -3, Z: 0 }
+    Behaviours:
+      bar:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 2.1, Y: 0.32, Z: 0.6 }, Colour: !var paddle colour }
+      sheen:
+        Type: light
+        Properties: { Type: point, Colour: !var paddle colour, Intensity: 1.0, Range: 2.4 }
+      hull:
+        Type: box collider
+        Properties: { Size: !vec { X: 2.1, Y: 0.32, Z: 0.6 } }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      glide:
+        Type: smooth move
+        Properties: { Target: !var paddle target, SmoothTime: 0.06 }
+      corral:
+        Type: clamp position
+        Properties: { Min: !var paddle min, Max: !var paddle max }
+      steer:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var paddle target
+          Value: !expr
+            Do: screenToWorld
+            With:
+              screen_pos: !output drag_pos
+              cam_pos: !var camera position
+              ortho: !var camera size
+      deflect sensor:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ enemy ] }
+        Listeners:
+          - { BehaviourId: spark, Outputs: { contact_point: hit_point } }
+          - { EntityId: fx, BehaviourId: clang, Outputs: { other_velocity: impact_vel } }
+      spark:
+        Type: spawner
+        Properties:
+          TemplateId: spark_template
+          Position: !output hit_point
+
+  # =========================================================================
+  # GESTURE DECK - every pointer verb lives here. Each chain is gesture
+  # trigger -> (debounce / gates) -> payload, with the gesture's outputs
+  # riding the forwarded TriggerContext the whole way down.
+  # =========================================================================
+  gesture deck:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      # ---- TAP: free bolt toward the tap point ----
+      tap:
+        Type: tap trigger
+        Properties: { MaxDuration: 0.25, MaxMovement: 20 }
+        Listeners:
+          - { BehaviourId: fire bolt, Outputs: { position: tap_pos } }
+      fire bolt:
+        Type: spawner
+        Properties:
+          TemplateId: bolt_template
+          Position: !var well position
+          Parameters:
+            velocity: !expr
+              Do: shotVelocity
+              With:
+                target_screen: !output tap_pos
+                cam_pos: !var camera position
+                ortho: !var camera size
+                origin: !var well position
+                speed: !var bolt speed
+
+      # ---- DOUBLE TAP: nova at the point, debounced onto a cooldown.
+      #      The position output crosses the debounce AND the energy gate. ----
+      double tap:
+        Type: double tap trigger
+        Properties: { MaxInterval: 0.28, MaxMovement: 24 }
+        Listeners:
+          - { BehaviourId: nova cool, Outputs: { position: nova_pos } }
+      nova cool:
+        Type: debounced trigger
+        Properties: { Interval: !var nova cooldown }
+        Listeners: [ nova gate ]
+      nova gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'energy >= cost'
+            With: { energy: !var energy, cost: !var nova cost }
+        Listeners: [ drop nova, pay nova, nova shake ]
+      drop nova:
+        Type: spawner
+        Properties:
+          TemplateId: nova_template
+          Position: !expr
+            Do: screenToWorld
+            With:
+              screen_pos: !output nova_pos
+              cam_pos: !var camera position
+              ortho: !var camera size
+      pay nova:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: 'energy - cost'
+            With: { energy: !var energy, cost: !var nova cost }
+      nova shake:
+        Type: camera shake
+        Properties: { Force: 1.8, Duration: 0.45, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+
+      # ---- HOLD: the arming-fuse mine. Threshold one records the press
+      #      point and lights the fuse; threshold two (still holding) flips
+      #      the same pending mine to HEAVY. When the fuse fires, the gate
+      #      pair picks which payload template to plant. ----
+      hold arm:
+        Type: long press trigger
+        Properties: { Duration: 0.45, MaxMovement: 22 }
+        Listeners:
+          - { BehaviourId: arm gate, Outputs: { position: press_pos } }
+      arm gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!pending && energy >= cost'
+            ArgumentTypes: [ bool, int, int ]
+            With:
+              pending: !var mine pending
+              energy: !var energy
+              cost: !var mine cost
+        Listeners: [ record mine pos, mark pending, reset heavy, pay mine, drop ghost, fuse ]
+      record mine pos:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var mine pos
+          Value: !expr
+            Do: screenToWorld
+            With:
+              screen_pos: !output press_pos
+              cam_pos: !var camera position
+              ortho: !var camera size
+      mark pending:
+        Type: bool variable setter
+        Properties: { VariableId: !var mine pending, Value: true }
+      reset heavy:
+        Type: bool variable setter
+        Properties: { VariableId: !var mine heavy, Value: false }
+      pay mine:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: 'energy - cost'
+            With: { energy: !var energy, cost: !var mine cost }
+      drop ghost:
+        Type: spawner
+        Properties:
+          TemplateId: mine_ghost_template
+          Position: !var mine pos
+
+      hold overcharge:
+        Type: long press trigger
+        Properties: { Duration: 1.2, MaxMovement: 22 }
+        Listeners: [ overcharge gate ]
+      overcharge gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'pending'
+            ArgumentTypes: [ bool ]
+            With: { pending: !var mine pending }
+        Listeners: [ mark heavy ]
+      mark heavy:
+        Type: bool variable setter
+        Properties: { VariableId: !var mine heavy, Value: true }
+
+      # The fuse outlives the overcharge threshold (0.45 + 0.85 > 1.2), so a
+      # held press always upgrades before the payload is chosen.
+      fuse:
+        Type: deferred trigger
+        Properties: { Delay: !var mine fuse }
+        Listeners: [ plant standard gate, plant heavy gate, clear pending ]
+      plant standard gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!heavy'
+            ArgumentTypes: [ bool ]
+            With: { heavy: !var mine heavy }
+        Listeners: [ plant standard ]
+      plant standard:
+        Type: spawner
+        Properties:
+          TemplateId: mine_template
+          Position: !var mine pos
+          Parameters:
+            payload: blast_std_template
+            tint: !var mine colour
+      plant heavy gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'heavy'
+            ArgumentTypes: [ bool ]
+            With: { heavy: !var mine heavy }
+        Listeners: [ plant heavy ]
+      plant heavy:
+        Type: spawner
+        Properties:
+          TemplateId: mine_template
+          Position: !var mine pos
+          Parameters:
+            payload: blast_heavy_template
+            tint: !var heavy mine colour
+      clear pending:
+        Type: bool variable setter
+        Properties: { VariableId: !var mine pending, Value: false }
+
+      # ---- FLING (swipe): launch a surge wave from the paddle. direction
+      #      sets its heading, distance sets its speed - two outputs from one
+      #      gesture crossing one energy gate together. ----
+      fling:
+        Type: swipe trigger
+        Properties: { MinDistance: 110, MaxDuration: 0.45 }
+        Listeners:
+          - { BehaviourId: surge gate, Outputs: { direction: swipe_dir, distance: swipe_len } }
+      surge gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'energy >= cost'
+            With: { energy: !var energy, cost: !var surge cost }
+        Listeners: [ launch surge, pay surge ]
+      launch surge:
+        Type: spawner
+        Properties:
+          TemplateId: surge_wave_template
+          Position: !entity { Id: paddle, Property: Position }
+          Parameters:
+            velocity: !expr
+              Do: shockVelocity
+              With:
+                dir: !output swipe_dir
+                dist: !output swipe_len
+                base_speed: !var surge base speed
+      pay surge:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: 'energy - cost'
+            With: { energy: !var energy, cost: !var surge cost }
+
+      # ---- DRAG: steer the paddle. Fires every moved frame; each frame's
+      #      position output re-targets the paddle spring. ----
+      drag:
+        Type: drag trigger
+        Properties: { Threshold: 18 }
+        Listeners:
+          - { EntityId: paddle, BehaviourId: steer, Outputs: { position: drag_pos } }
+
+      # ---- PINCH: two outputs onto two ring variables (mobile only) ----
+      pinch:
+        Type: pinch and rotate trigger
+        Listeners:
+          - { BehaviourId: resize ring, Outputs: { scale: pinch_scale } }
+          - { BehaviourId: twist ring, Outputs: { angle_delta: pinch_twist } }
+      resize ring:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ring radius
+          Value: !expr
+            Do: ringClamp
+            With:
+              r: !expr
+                Do: 'radius * s'
+                ArgumentTypes: [ float, float ]
+                ReturnType: float
+                With: { radius: !var ring radius, s: !output pinch_scale }
+              lo: !var ring min radius
+              hi: !var ring max radius
+      twist ring:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ring angle
+          Value: !expr
+            Do: 'angle + twist * factor'
+            ArgumentTypes: [ float, float, float ]
+            With:
+              angle: !var ring angle
+              twist: !output pinch_twist
+              factor: !var ring twist factor
+
+      # ---- SCROLL: the desktop stand-in for the pinch, converging on the
+      #      same `ring radius` variable through the Controls layer. ----
+      scroll:
+        Type: input action
+        Properties: { Action: ring-adjust }
+        Listeners:
+          - { BehaviourId: scroll resize, Outputs: { y: scroll_y } }
+      scroll resize:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ring radius
+          Value: !expr
+            Do: ringClamp
+            With:
+              r: !expr
+                Do: 'radius + y * step'
+                ArgumentTypes: [ float, float, float ]
+                ReturnType: float
+                With:
+                  radius: !var ring radius
+                  y: !output scroll_y
+                  step: !var scroll step
+              lo: !var ring min radius
+              hi: !var ring max radius
+
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # The shared ring clock: base spin all the time; pinch twist adds on top.
+  ring driver:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ advance ]
+      advance:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ring angle
+          Value: !expr
+            Do: 'angle + spin * dt'
+            With:
+              angle: !var ring angle
+              spin: !var ring base spin
+              dt: !clock deltaTime
+
+  orbiter a:
+    Template: { Id: orbiter_template, Parameters: { phase: 0.0 } }
+    Position: !vec { X: 2.2, Y: 0, Z: 0 }
+  orbiter b:
+    Template: { Id: orbiter_template, Parameters: { phase: 120.0 } }
+    Position: !vec { X: -1.1, Y: 1.9, Z: 0 }
+  orbiter c:
+    Template: { Id: orbiter_template, Parameters: { phase: 240.0 } }
+    Position: !vec { X: -1.1, Y: -1.9, Z: 0 }
+
+  # =========================================================================
+  # SURGE DIRECTOR - rolls the wave when the previous one is fully spawned
+  # AND fully cleared, refilling all three archetype budgets from the table.
+  # =========================================================================
+  surge director:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ advance gate ]
+      advance gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'd <= 0 && w <= 0 && b <= 0 && alive <= 0 && wave <= max_wave'
+            With:
+              d: !var drifters to spawn
+              w: !var weavers to spawn
+              b: !var bulwarks to spawn
+              alive: !var husks alive
+              wave: !var wave
+              max_wave: !var max wave
+        Listeners: [ next wave, refill drifters, refill weavers, refill bulwarks, set cadence ]
+      next wave:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wave
+          Value: !expr
+            Do: 'wave + 1'
+            With: { wave: !var wave }
+      refill drifters:
+        Type: int variable setter
+        Properties:
+          VariableId: !var drifters to spawn
+          Value: !expr
+            Do: waveInt
+            With: { table: !var surge table, wave: !var wave, field: "drifters" }
+      refill weavers:
+        Type: int variable setter
+        Properties:
+          VariableId: !var weavers to spawn
+          Value: !expr
+            Do: waveInt
+            With: { table: !var surge table, wave: !var wave, field: "weavers" }
+      refill bulwarks:
+        Type: int variable setter
+        Properties:
+          VariableId: !var bulwarks to spawn
+          Value: !expr
+            Do: waveInt
+            With: { table: !var surge table, wave: !var wave, field: "bulwarks" }
+      set cadence:
+        Type: float variable setter
+        Properties:
+          VariableId: !var spawn gap
+          Value: !expr
+            Do: waveFloat
+            With: { table: !var surge table, wave: !var wave, field: "gap" }
+
+  # =========================================================================
+  # HUSK FACTORY - one drip clock, three budget gates; every husk spawns on
+  # the rim of a circle around the well.
+  # =========================================================================
+  husk factory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      drip:
+        Type: interval trigger
+        Properties: { Interval: !var spawn gap, AutoStart: true }
+        Listeners: [ drifter gate, weaver gate, bulwark gate ]
+
+      drifter gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n > 0'
+            With: { n: !var drifters to spawn }
+        Listeners: [ release drifter, use drifter budget, count alive ]
+      release drifter:
+        Type: spawner
+        Properties:
+          TemplateId: drifter_template
+          Position: !expr
+            Do: 'RandomOnCircle(r)'
+            ArgumentTypes: [ float ]
+            ReturnType: vector
+            With: { r: !var spawn radius }
+          Parameters:
+            health: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "health" } }
+            speed: !expr { Do: waveFloat, With: { table: !var surge table, wave: !var wave, field: "speed" } }
+            bounty: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "bounty" } }
+      use drifter budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var drifters to spawn
+          Value: !expr
+            Do: 'n - 1'
+            With: { n: !var drifters to spawn }
+
+      weaver gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n > 0'
+            With: { n: !var weavers to spawn }
+        Listeners: [ release weaver, use weaver budget, count alive ]
+      release weaver:
+        Type: spawner
+        Properties:
+          TemplateId: weaver_template
+          Position: !expr
+            Do: 'RandomOnCircle(r)'
+            ArgumentTypes: [ float ]
+            ReturnType: vector
+            With: { r: !var spawn radius }
+          Parameters:
+            health: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "health" } }
+            speed: !expr { Do: waveFloat, With: { table: !var surge table, wave: !var wave, field: "speed" } }
+            bounty: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "bounty" } }
+      use weaver budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var weavers to spawn
+          Value: !expr
+            Do: 'n - 1'
+            With: { n: !var weavers to spawn }
+
+      bulwark gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n > 0'
+            With: { n: !var bulwarks to spawn }
+        Listeners: [ release bulwark, use bulwark budget, count alive ]
+      release bulwark:
+        Type: spawner
+        Properties:
+          TemplateId: bulwark_template
+          Position: !expr
+            Do: 'RandomOnCircle(r)'
+            ArgumentTypes: [ float ]
+            ReturnType: vector
+            With: { r: !var spawn radius }
+          Parameters:
+            health: !expr
+              Do: 'h * 3'
+              ArgumentTypes: [ int ]
+              ReturnType: int
+              With:
+                h: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "health" } }
+            speed: !expr
+              Do: 's * 0.55f'
+              ArgumentTypes: [ float ]
+              ReturnType: float
+              With:
+                s: !expr { Do: waveFloat, With: { table: !var surge table, wave: !var wave, field: "speed" } }
+            bounty: !expr
+              Do: 'b * 3'
+              ArgumentTypes: [ int ]
+              ReturnType: int
+              With:
+                b: !expr { Do: waveInt, With: { table: !var surge table, wave: !var wave, field: "bounty" } }
+      use bulwark budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var bulwarks to spawn
+          Value: !expr
+            Do: 'n - 1'
+            With: { n: !var bulwarks to spawn }
+
+      count alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var husks alive
+          Value: !expr
+            Do: 'alive + 1'
+            With: { alive: !var husks alive }
+
+  # =========================================================================
+  # SCOREKEEPER - the variable-changed triggers. Their value/previous output
+  # pairs drive the "+N" readout and the combo, and the combo decays on a
+  # polled timeout.
+  # =========================================================================
+  scorekeeper:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      score watch:
+        Type: int variable changed trigger
+        Properties: { VariableId: !var score }
+        Listeners:
+          - { BehaviourId: note gain, Outputs: { value: new_score, previous: old_score } }
+      note gain:
+        Type: int variable setter
+        Properties:
+          VariableId: !var last gain
+          Value: !expr
+            Do: gainOf
+            With: { value: !output new_score, previous: !output old_score }
+
+      kill watch:
+        Type: int variable changed trigger
+        Properties: { VariableId: !var kills }
+        Listeners: [ bump combo, stamp kill time ]
+      bump combo:
+        Type: int variable setter
+        Properties:
+          VariableId: !var combo
+          Value: !expr
+            Do: 'combo + 1'
+            With: { combo: !var combo }
+      stamp kill time:
+        Type: float variable setter
+        Properties:
+          VariableId: !var last kill time
+          Value: !clock time
+
+      cool tick:
+        Type: every frame trigger
+        Listeners: [ combo decay gate ]
+      combo decay gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'combo > 0 && t - last_kill > window'
+            With:
+              combo: !var combo
+              t: !clock time
+              last_kill: !var last kill time
+              window: !var combo window
+        Listeners: [ reset combo ]
+      reset combo:
+        Type: int variable setter
+        Properties: { VariableId: !var combo, Value: 0 }
+
+  # Energy trickle.
+  reactor:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      regen clock:
+        Type: interval trigger
+        Properties: { Interval: !var regen tick, AutoStart: true }
+        Listeners: [ regen ]
+      regen:
+        Type: int variable setter
+        Properties:
+          VariableId: !var energy
+          Value: !expr
+            Do: energyGain
+            With: { energy: !var energy, gain: !var energy regen, cap: !var energy cap }
+
+  # =========================================================================
+  # FX RACK - every shake in one place. `clang` and `hurt shake` read their
+  # Force from trigger outputs at fire time.
+  # =========================================================================
+  fx:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      clang:
+        Type: camera shake
+        Properties:
+          Force: !expr
+            Do: impactShake
+            With: { vel: !output impact_vel }
+          Duration: 0.2
+          Velocity: !vec { X: 0, Y: -1, Z: 0 }
+      blast thump:
+        Type: camera shake
+        Properties: { Force: 0.8, Duration: 0.25, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      heavy thump:
+        Type: camera shake
+        Properties: { Force: 1.6, Duration: 0.4, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+
+      hurt watch:
+        Type: int variable changed trigger
+        Properties: { VariableId: !var integrity }
+        Listeners:
+          - { BehaviourId: hurt shake, Outputs: { value: new_integrity, previous: old_integrity } }
+      hurt shake:
+        Type: camera shake
+        Properties:
+          Force: !expr
+            Do: hurtShake
+            With: { previous: !output old_integrity, value: !output new_integrity }
+          Duration: 0.35
+          Velocity: !vec { X: 0, Y: -1, Z: 0 }
+
+  # =========================================================================
+  # REFEREE - one poll for both endings: the well collapses, or the table is
+  # exhausted (the director rolls `wave` past `max wave` only when the final
+  # surge is fully spawned and cleared).
+  # =========================================================================
+  referee:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ end gate ]
+      end gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'integrity <= 0 || wave > max_wave'
+            With:
+              integrity: !var integrity
+              wave: !var wave
+              max_wave: !var max wave
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # LIGHT & CAMERA - fixed orthographic view of the z=0 plane. The camera
+  # must never move or zoom: every gesture's screen->world conversion assumes
+  # this exact position and size.
+  # =========================================================================
+  sun:
+    Position: !vec { X: 0, Y: 8, Z: -6 }
+    Rotation: !vec { X: 35, Y: 0, Z: 0 }
+    Behaviours:
+      key light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.7, G: 0.72, B: 0.85, A: 1 }, Intensity: 0.6 }
+
+  camera:
+    Position: !vec { X: 0, Y: 0, Z: -14 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size, DefaultBlend: 0 }
+
+  vcam:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Tag: well }
+          Mode: "2d"
+          Priority: 10
+          Lens: !var camera size
+          CameraDistance: 14
+          Damping: 0
+
+  # =========================================================================
+  # HUD
+  # =========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 6
+              Padding: 22
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 34
+                  PreferredWidth: 720
+                  PreferredHeight: 46
+          help1:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.help1
+                  FontSize: 16
+                  PreferredWidth: 780
+                  PreferredHeight: 26
+          help2:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.help2
+                  FontSize: 16
+                  PreferredWidth: 780
+                  PreferredHeight: 26
+          help3:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.help3
+                  FontSize: 16
+                  PreferredWidth: 780
+                  PreferredHeight: 26
+          integrity:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.integrity, Arguments: [ !var integrity ] }
+                  FontSize: 26
+                  PreferredWidth: 460
+                  PreferredHeight: 38
+          energy:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.energy, Arguments: [ !var energy, !var energy cap ] }
+                  FontSize: 24
+                  PreferredWidth: 460
+                  PreferredHeight: 36
+          wave:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.wave, Arguments: [ !var wave, !var max wave ] }
+                  FontSize: 24
+                  PreferredWidth: 460
+                  PreferredHeight: 36
+          score:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.score, Arguments: [ !var score ] }
+                  FontSize: 24
+                  PreferredWidth: 460
+                  PreferredHeight: 36
+          combo:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'combo > 1 ? label : blank'
+                    ArgumentTypes: [ int, string, string ]
+                    With:
+                      combo: !var combo
+                      label: !text { Key: hud.combo, Arguments: [ !var combo ] }
+                      blank: ""
+                  FontSize: 22
+                  PreferredWidth: 460
+                  PreferredHeight: 34
+          gain:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'gain > 0 ? label : blank'
+                    ArgumentTypes: [ int, string, string ]
+                    With:
+                      gain: !var last gain
+                      label: !text { Key: hud.gain, Arguments: [ !var last gain ] }
+                      blank: ""
+                  FontSize: 20
+                  PreferredWidth: 460
+                  PreferredHeight: 32
+          banner:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'wave == final ? msg : blank'
+                    ArgumentTypes: [ int, int, string, string ]
+                    With:
+                      wave: !var wave
+                      final: !var max wave
+                      msg: !text hud.final
+                      blank: ""
+                  FontSize: 30
+                  PreferredWidth: 560
+                  PreferredHeight: 44
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 240
+                  PreferredHeight: 46
+                Listeners:
+                  - !gameover
