@@ -58,18 +58,15 @@ namespace Assembler.Behaviours.Visual
 			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
 
 			// Live-bind the colour so a !var/!expr re-tints the primitive at runtime (matching Size and the
-			// light behaviour). Omitted colour leaves the shared material's own colour untouched, so guard the
-			// null case rather than forcing a fallback tint — preserving the previous UseIfValueExists behaviour.
-			if (data.Colour is not NullValueProvider<Color>)
+			// light behaviour). The no-fallback overload leaves an omitted colour untouched, so the primitive
+			// keeps the shared material's own colour — preserving the previous UseIfValueExists behaviour.
+			var block = new MaterialPropertyBlock();
+			data.Colour.BindLive(this, colour =>
 			{
-				var block = new MaterialPropertyBlock();
-				data.Colour.BindLive(this, colour =>
-				{
-					block.SetColor(BaseColorId, colour);
-					block.SetColor(ColorId, colour);
-					renderer.SetPropertyBlock(block);
-				}, Color.white);
-			}
+				block.SetColor(BaseColorId, colour);
+				block.SetColor(ColorId, colour);
+				renderer.SetPropertyBlock(block);
+			});
 		}
 	}
 }
