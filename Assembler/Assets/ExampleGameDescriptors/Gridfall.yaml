@@ -1,0 +1,1562 @@
+Game:
+  Title: "Gridfall: Tower Defence"
+  Description: |
+    A systems-dense 3D tower defence built to stress-test the engine's data-driven
+    limits. Creeps march a fixed lane toward your power core; you place and upgrade
+    towers on the surrounding grid to stop them.
+
+    THE BOARD IS DERIVED, NOT HAND-PAINTED. The lane is authored once as a handful
+    of waypoints. On start, an expression WALKS the waypoint segments cell-by-cell
+    (for-loops + PositionList) to derive the set of path cells; that one list then
+    drives BOTH the visible path tiles (a list-loop trigger spawning a tile per
+    cell) and the build-blocking rule (you cannot build on the lane).
+
+    BUILD CURSOR. A grid-snapped cursor stepped by WASD/arrows (or the on-screen
+    d-pad): a vector2 input action feeds a magnitude gate and a throttled trigger,
+    so holding a direction auto-repeats in whole-cell steps. The cursor tile's
+    colour is a live expression of the build rules: green = buildable, amber =
+    buildable but unaffordable, red = blocked (lane, occupied, or off-grid).
+
+    ONE TOWER TEMPLATE, THREE WEAPONS. Towers are a single template parameterised
+    by range / fire rate / colour / projectile template id:
+      1 PULSE  - cheap, fast single-target darts
+      2 FROST  - bolts that chill (creeps carry a slow-until timestamp their
+                 patrol Speed expression reads against the game clock)
+      3 CANNON - slow shells that detonate into a splash blast on impact
+    Damage classes are tag-based: creeps carry one detector per projectile tag.
+
+    UPGRADES BY BROADCAST. Pressing U broadcasts to EVERY tower (entity-tag
+    listener); each tower's own condition gate checks "is the cursor on my cell,
+    is there gold, am I below max level" so exactly the tower under the cursor
+    levels up - faster fire, longer reach, brighter body.
+
+    WAVES ARE A RECORD TABLE. Each wave is a `Wave` record { count, health,
+    speed, bounty, gap, boss }; the wave director polls "fully spawned and fully
+    cleared", rolls the wave counter, and refills the spawn budget by indexing
+    the table. The final wave is a TITAN: its arrival fires a slow-motion pulse
+    and camera shake. Leaked creeps shake the camera and drain the core, whose
+    lamp fades green to red with your remaining integrity.
+
+    Desktop: WASD/arrows cursor, 1/2/3 build, U upgrade, F fast-forward, Esc quit.
+    Mobile: on-screen d-pad + build/upgrade buttons.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#070912"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# Each wave of the assault is one of these records, listed in `wave table`.
+Records:
+  Wave:
+    count:  { Type: int,   Default: 0 }
+    health: { Type: int,   Default: 1 }
+    speed:  { Type: float, Default: 1.0 }
+    bounty: { Type: int,   Default: 5 }
+    gap:    { Type: float, Default: 1.0 }
+    boss:   { Type: bool,  Default: false }
+
+Constants:
+  # --- The build grid: 16 x 10 cells of size 1, cell (0,0) centred at the origin ---
+  grid cols: 16
+  grid rows: 10
+  grid origin x: -7.5
+  grid origin z: -4.5
+
+  # --- The lane: authored as waypoints; path cells are DERIVED from these on start.
+  #     Segments must stay axis-aligned for the cell walk (and for clean visuals). ---
+  creep route: !vec [ { X: -9.2, Y: 0.55, Z: 2.5 }, { X: -2.5, Y: 0.55, Z: 2.5 }, { X: -2.5, Y: 0.55, Z: -2.5 }, { X: 2.5, Y: 0.55, Z: -2.5 }, { X: 2.5, Y: 0.55, Z: 1.5 }, { X: 9.0, Y: 0.55, Z: 1.5 } ]
+  spawn point: !vec { X: -9.2, Y: 0.55, Z: 2.5 }
+
+  # --- The campaign: escalating counts/health/speed, a tank wave, a swarm wave,
+  #     and the closing titan. `max wave` must match the table length. ---
+  wave table: !record [
+    { Type: Wave, count: 6,  health: 4,   speed: 1.2, bounty: 6,   gap: 1.1 },
+    { Type: Wave, count: 9,  health: 6,   speed: 1.3, bounty: 6,   gap: 1.0 },
+    { Type: Wave, count: 12, health: 9,   speed: 1.4, bounty: 7,   gap: 0.9 },
+    { Type: Wave, count: 8,  health: 16,  speed: 1.1, bounty: 9,   gap: 1.2 },
+    { Type: Wave, count: 16, health: 10,  speed: 1.8, bounty: 7,   gap: 0.55 },
+    { Type: Wave, count: 14, health: 18,  speed: 1.5, bounty: 8,   gap: 0.8 },
+    { Type: Wave, count: 20, health: 24,  speed: 1.6, bounty: 9,   gap: 0.55 },
+    { Type: Wave, count: 1,  health: 420, speed: 0.75, bounty: 250, gap: 1.0, boss: true } ]
+  max wave: 8
+
+  # --- Economy ---
+  start gold: 110
+  start lives: 10
+  wave clear bonus: 30
+  upgrade cost: 60
+  max tower level: 3
+
+  # --- Tower stats (parameters fed into the one tower template) ---
+  pulse cost: 40
+  pulse range: 3.2
+  pulse fire interval: 0.5
+  pulse colour: !colour { R: 0.95, G: 0.8, B: 0.25, A: 1 }
+  frost cost: 50
+  frost range: 2.8
+  frost fire interval: 0.85
+  frost colour: !colour { R: 0.35, G: 0.8, B: 1.0, A: 1 }
+  cannon cost: 70
+  cannon range: 3.6
+  cannon fire interval: 1.6
+  cannon colour: !colour { R: 0.95, G: 0.45, B: 0.2, A: 1 }
+  upgrade interval factor: 0.68
+  upgrade range step: 0.9
+
+  # --- Projectiles / damage classes ---
+  dart damage: 2
+  dart speed: 9.5
+  frost damage: 1
+  frost bolt speed: 8.0
+  frost slow factor: 0.45
+  frost slow duration: 1.8
+  shell speed: 6.0
+  blast damage: 4
+
+  # --- Creep look ---
+  creep size: !vec { X: 0.55, Y: 0.62, Z: 0.55 }
+  titan size: !vec { X: 1.15, Y: 1.35, Z: 1.15 }
+  creep colour: !colour { R: 0.9, G: 0.3, B: 0.35, A: 1 }
+  titan colour: !colour { R: 0.7, G: 0.25, B: 0.95, A: 1 }
+  chill tint: !colour { R: 0.5, G: 0.85, B: 1.0, A: 1 }
+  health full colour: !colour { R: 0.25, G: 0.95, B: 0.4, A: 1 }
+  health low colour: !colour { R: 1.0, G: 0.15, B: 0.1, A: 1 }
+
+  # --- Cursor / board look ---
+  cursor y: 0.09
+  tower y: 0.5
+  tile y: 0.035
+  cursor ok colour: !colour { R: 0.25, G: 0.95, B: 0.45, A: 1 }
+  cursor poor colour: !colour { R: 0.95, G: 0.75, B: 0.2, A: 1 }
+  cursor blocked colour: !colour { R: 0.95, G: 0.2, B: 0.15, A: 1 }
+  path colour: !colour { R: 0.3, G: 0.32, B: 0.45, A: 1 }
+  ground colour: !colour { R: 0.13, G: 0.15, B: 0.2, A: 1 }
+  core colour: !colour { R: 0.3, G: 0.9, B: 0.95, A: 1 }
+  portal colour: !colour { R: 0.75, G: 0.3, B: 0.95, A: 1 }
+
+Variables:
+  gold: !var start gold
+  lives: !var start lives
+  kills: 0
+
+  # Wave-loop state (the director rolls wave 0 -> 1 on the first frame).
+  wave: 0
+  creeps to spawn: 0
+  creeps alive: 0
+  spawn gap: 1.1
+
+  # Build state.
+  cursor cell: !vec { X: 3, Y: 5 }        # (col, row)
+  cursor input: !vec { X: 0, Y: 0 }
+  occupied cells: !vec []                  # cells towers already sit on
+  path cells: !vec []                      # derived from `creep route` on start
+
+  fast forward: false
+
+Expressions:
+  # ---------- Grid plumbing ----------
+  cellWorld:
+    ArgumentTypes: [ vector, float, float, float ]
+    ArgumentNames: [ cell, ox, oz, y ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: 'return new Vector3(ox + cell.x, y, oz + cell.y);'
+
+  # One whole-cell step per trigger, per-axis deadzoned, clamped to the board.
+  stepCell:
+    ArgumentTypes: [ vector, vector, int, int ]
+    ArgumentNames: [ cell, input, cols, rows ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      float dx = Abs(input.x) > 0.5f ? Sign(input.x) : 0f;
+      float dy = Abs(input.y) > 0.5f ? Sign(input.y) : 0f;
+      return new Vector3(Clamp(cell.x + dx, 0f, cols - 1f), Clamp(cell.y + dy, 0f, rows - 1f), 0f);
+
+  # Walk each axis-aligned waypoint segment cell-by-cell and collect the unique
+  # (col, row) cells the lane covers. Authoring lives in the waypoints; the
+  # tiles and the build-block rule both read this derived list.
+  pathCells:
+    ArgumentTypes: [ vector list, float, float ]
+    ArgumentNames: [ wps, ox, oz ]
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var cells = new PositionList();
+      int n = wps.Count();
+      for (int i = 0; i + 1 < n; i++)
+      {
+          var a = wps[i];
+          var b = wps[i + 1];
+          float ac = Round(a.x - ox);
+          float ar = Round(a.z - oz);
+          float bc = Round(b.x - ox);
+          float br = Round(b.z - oz);
+          int steps = (int)(Abs(bc - ac) + Abs(br - ar));
+          for (int s = 0; s <= steps; s++)
+          {
+              float t = steps == 0 ? 0f : (float)s / (float)steps;
+              float c = Round(Lerp(ac, bc, t));
+              float r = Round(Lerp(ar, br, t));
+              if (!IsOccupied(cells.ToList(), c, r))
+              {
+                  cells.Add(new Vector3(c, r, 0f));
+              }
+          }
+      }
+      return cells.ToList();
+
+  # ---------- Build rules ----------
+  canPlace:
+    ArgumentTypes: [ vector, vector list, vector list, int, int ]
+    ArgumentNames: [ cell, occupied, path, cols, rows ]
+    ReturnType: bool
+    Expression: 'return InBounds(cell.x, cell.y, cols, rows) && !IsOccupied(occupied, cell.x, cell.y) && !IsOccupied(path, cell.x, cell.y);'
+
+  canBuild:
+    ArgumentTypes: [ vector, vector list, vector list, int, int, int, int ]
+    ArgumentNames: [ cell, occupied, path, cols, rows, gold, cost ]
+    ReturnType: bool
+    Expression: 'return canPlace(cell, occupied, path, cols, rows) && gold >= cost;'
+
+  cursorColour:
+    ArgumentTypes: [ vector, vector list, vector list, int, int, int, int, colour, colour, colour ]
+    ArgumentNames: [ cell, occupied, path, cols, rows, gold, cheapest, ready, poor, blocked ]
+    ReturnType: colour
+    Expression: |
+      if (!canPlace(cell, occupied, path, cols, rows))
+      {
+          return blocked;
+      }
+      return gold >= cheapest ? ready : poor;
+
+  # ---------- Wave-table lookups ----------
+  waveInt:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, wave, field ]
+    ReturnType: int
+    Expression: 'return wave >= 1 && wave <= table.Count() ? GetInt(table[wave - 1], field) : 0;'
+
+  waveFloat:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, wave, field ]
+    ReturnType: float
+    Expression: 'return wave >= 1 && wave <= table.Count() ? GetFloat(table[wave - 1], field) : 1f;'
+
+  waveBool:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, wave, field ]
+    ReturnType: bool
+    Expression: 'return wave >= 1 && wave <= table.Count() ? GetBool(table[wave - 1], field) : false;'
+
+  # ---------- Creeps ----------
+  effectiveSpeed:
+    ArgumentTypes: [ float, float, float, float ]
+    ArgumentNames: [ base, until, t, factor ]
+    ReturnType: float
+    Expression: 'return t < until ? base * factor : base;'
+
+  chillColour:
+    ArgumentTypes: [ float, float, colour, colour ]
+    ArgumentNames: [ t, until, base, frost ]
+    ReturnType: colour
+    Expression: 'return t < until ? frost : base;'
+
+  healthGlow:
+    ArgumentTypes: [ int, int, colour, colour ]
+    ArgumentNames: [ health, max_health, full, hurt ]
+    ReturnType: colour
+    Expression: 'return LerpColor(hurt, full, max_health > 0 ? (float)health / (float)max_health : 0f);'
+
+  pickSize:
+    ArgumentTypes: [ bool, vector, vector ]
+    ArgumentNames: [ boss, big, small ]
+    ReturnType: vector
+    Expression: 'return boss ? big : small;'
+
+  pickColour:
+    ArgumentTypes: [ bool, colour, colour ]
+    ArgumentNames: [ boss, boss_colour, normal_colour ]
+    ReturnType: colour
+    Expression: 'return boss ? boss_colour : normal_colour;'
+
+  # ---------- Towers ----------
+  aimVelocity:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ from, to, speed ]
+    ReturnType: vector
+    Expression: 'return Seek(from, to, speed);'
+
+  muzzle:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ p ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: 'return new Vector3(p.x, p.y + 0.45f, p.z);'
+
+  canUpgrade:
+    ArgumentTypes: [ vector, vector, int, int, int, int ]
+    ArgumentNames: [ my_cell, cursor, gold, cost, level, max ]
+    ReturnType: bool
+    Expression: 'return Distance(my_cell, cursor) < 0.1f && gold >= cost && level < max;'
+
+  towerTint:
+    ArgumentTypes: [ colour, int ]
+    ArgumentNames: [ base, level ]
+    ReturnType: colour
+    Expression: 'return Brighten(base, 0.22f * (level - 1));'
+
+  glowIntensity:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ level ]
+    ReturnType: float
+    Expression: 'return 0.9f + 0.7f * (level - 1);'
+
+  # ---------- Misc ----------
+  negate:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ flag ]
+    ReturnType: bool
+    Expression: 'return !flag;'
+
+  pace:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ fast ]
+    ReturnType: float
+    Expression: 'return fast ? 2f : 1f;'
+
+Controls:
+  Actions:
+    cursor-move:  { Type: value, ValueType: vector2 }
+    build-pulse:  { Type: button, Phase: down }
+    build-frost:  { Type: button, Phase: down }
+    build-cannon: { Type: button, Phase: down }
+    upgrade:      { Type: button, Phase: down }
+    speed:        { Type: button, Phase: down }
+    quit:         { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      cursor-move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+      build-pulse:  [ "<Keyboard>/1" ]
+      build-frost:  [ "<Keyboard>/2" ]
+      build-cannon: [ "<Keyboard>/3" ]
+      upgrade:      [ "<Keyboard>/u" ]
+      speed:        [ "<Keyboard>/f" ]
+      quit:         [ "<Keyboard>/escape" ]
+    mobile:
+      cursor-move:  [ "<Gamepad>/dpad" ]
+      build-pulse:  [ "<Gamepad>/buttonSouth" ]
+      build-frost:  [ "<Gamepad>/buttonWest" ]
+      build-cannon: [ "<Gamepad>/buttonNorth" ]
+      upgrade:      [ "<Gamepad>/buttonEast" ]
+      speed:        [ "<Gamepad>/rightShoulder" ]
+      quit:         [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - Type: dpad
+      Action: cursor-move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 340, Y: 340 }
+    - Type: button
+      Action: build-pulse
+      Label: Pulse
+      Anchor: lower-right
+      Offset: { X: 420, Y: 160 }
+      Size:   { X: 170, Y: 170 }
+    - Type: button
+      Action: build-frost
+      Label: Frost
+      Anchor: lower-right
+      Offset: { X: 240, Y: 160 }
+      Size:   { X: 170, Y: 170 }
+    - Type: button
+      Action: build-cannon
+      Label: Cannon
+      Anchor: lower-right
+      Offset: { X: 60, Y: 160 }
+      Size:   { X: 170, Y: 170 }
+    - Type: button
+      Action: upgrade
+      Label: Upgrade
+      Anchor: lower-right
+      Offset: { X: 150, Y: 340 }
+      Size:   { X: 170, Y: 170 }
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "GRIDFALL"
+      hud.help1: "Cursor: WASD / arrows   Build: [1] Pulse {0}g  [2] Frost {1}g  [3] Cannon {2}g"
+      hud.help2: "[U] upgrade {0}g   [F] fast-forward   green tile = buildable"
+      hud.gold: "Gold: {0}"
+      hud.lives: "Core integrity: {0}"
+      hud.wave: "Wave: {0} / {1}"
+      hud.left: "Hostiles: {0}"
+      hud.kills: "Kills: {0}"
+      hud.boss: "!!  TITAN INBOUND  !!"
+      btn.speed.normal: "Speed x1"
+      btn.speed.fast: "Speed x2"
+      btn.quit: "Abandon Run"
+
+Templates:
+  # ---------------------------------------------------------------------------
+  # THE TOWER. One template covers all three weapons - the spawner parameterises
+  # range, fire cadence, colour, projectile template id and projectile speed.
+  # perceive tracks the nearest creep in range; `look at` swings the barrel onto
+  # it; an interval trigger (its cadence a per-tower variable, so upgrades take
+  # effect live) fires whenever a target is held. The upgrade gate answers the
+  # global U broadcast only when the build cursor sits on this tower's cell.
+  # ---------------------------------------------------------------------------
+  tower_template:
+    Tags: [ tower ]
+    Variables:
+      level: 1
+      fire interval: !parameter fire_interval
+      range: !parameter range
+      my cell: !parameter cell
+      has target: false
+      target id: ""
+      target position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      base:
+        Type: primitive
+        Properties:
+          Shape: cylinder
+          Size: !vec { X: 0.72, Y: 0.26, Z: 0.72 }
+          Colour: !expr { Do: towerTint, With: { base: !parameter tint, level: !var level } }
+      barrel:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.16, Y: 0.16, Z: 0.95 }
+          Colour: !expr { Do: towerTint, With: { base: !parameter tint, level: !var level } }
+      lamp:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !parameter tint
+          Intensity: !expr { Do: glowIntensity, With: { level: !var level } }
+          Range: 2.6
+
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: creep
+          Radius: !var range
+          Interval: 0.1
+          TargetId: !var target id
+          TargetPosition: !var target position
+          HasTarget: !var has target
+      aim:
+        Type: look at
+        Properties:
+          Target: !var target position
+          TurnRate: 540
+
+      fire clock:
+        Type: interval trigger
+        Properties:
+          Interval: !var fire interval
+          AutoStart: true
+        Listeners: [ fire gate ]
+      fire gate:
+        Type: condition gate
+        Properties:
+          Condition: !var has target
+        Listeners: [ launch ]
+      launch:
+        Type: spawner
+        Properties:
+          TemplateId: !parameter shot
+          Position: !expr { Do: muzzle, With: { p: !entity { Property: Position } } }
+          Parameters:
+            velocity: !expr
+              Do: aimVelocity
+              With:
+                from: !entity { Property: Position }
+                to: !var target position
+                speed: !parameter shot_speed
+
+      # Answers the global upgrade broadcast; only the tower under the cursor passes.
+      upgrade gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: canUpgrade
+            With:
+              my_cell: !var my cell
+              cursor: !var cursor cell
+              gold: !var gold
+              cost: !var upgrade cost
+              level: !var level
+              max: !var max tower level
+        Listeners: [ advance level, hasten fire, extend reach, pay upgrade ]
+      advance level:
+        Type: int variable setter
+        Properties:
+          VariableId: !var level
+          Value: !expr
+            Do: 'level + 1'
+            ArgumentTypes: [ int ]
+            With: { level: !var level }
+      hasten fire:
+        Type: float variable setter
+        Properties:
+          VariableId: !var fire interval
+          Value: !expr
+            Do: 'interval * factor'
+            ArgumentTypes: [ float, float ]
+            With:
+              interval: !var fire interval
+              factor: !var upgrade interval factor
+      extend reach:
+        Type: float variable setter
+        Properties:
+          VariableId: !var range
+          Value: !expr
+            Do: 'range + step'
+            ArgumentTypes: [ float, float ]
+            With:
+              range: !var range
+              step: !var upgrade range step
+      pay upgrade:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'gold - cost'
+            With:
+              gold: !var gold
+              cost: !var upgrade cost
+
+  # ---------------------------------------------------------------------------
+  # THE CREEP. Marches the shared route via `patrol`; its Speed is a live
+  # expression that halves while the game clock is inside the frost `slow until`
+  # window, and its body tints icy for the same window. One damage detector per
+  # projectile tag class; both death paths (shot down / reached the core) are
+  # guarded by a dead-once flag so the wave counter never double-decrements.
+  # ---------------------------------------------------------------------------
+  creep_template:
+    Tags: [ creep ]
+    Variables:
+      health: !parameter health
+      max health: !parameter health
+      base speed: !parameter speed
+      bounty: !parameter bounty
+      slow until: 0.0
+      dead: false
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: capsule
+          Size: !parameter size
+          Colour: !expr
+            Do: chillColour
+            With:
+              t: !clock time
+              until: !var slow until
+              base: !parameter tint
+              frost: !var chill tint
+      glow:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var health
+              max_health: !var max health
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 1.3
+          Range: 2.2
+      collider:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 0.65, Y: 1.0, Z: 0.65 }
+          IsTrigger: true
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+      march:
+        Type: patrol
+        Properties:
+          Waypoints: !var creep route
+          Loop: false
+          ArriveRadius: 0.2
+          Speed: !expr
+            Do: effectiveSpeed
+            With:
+              base: !var base speed
+              until: !var slow until
+              t: !clock time
+              factor: !var frost slow factor
+
+      # ---- Damage class: pulse darts ----
+      dart hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ dart ] }
+        Listeners: [ take dart damage, death check ]
+      take dart damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With:
+              health: !var health
+              damage: !var dart damage
+
+      # ---- Damage class: frost bolts (damage + chill window) ----
+      frost hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ frost ] }
+        Listeners: [ take frost damage, chill, death check ]
+      take frost damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With:
+              health: !var health
+              damage: !var frost damage
+      chill:
+        Type: float variable setter
+        Properties:
+          VariableId: !var slow until
+          Value: !expr
+            Do: 't + duration'
+            With:
+              t: !clock time
+              duration: !var frost slow duration
+
+      # ---- Damage class: cannon splash ----
+      blast hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ blast ] }
+        Listeners: [ take blast damage, death check ]
+      take blast damage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var health
+          Value: !expr
+            Do: 'health - damage'
+            ArgumentTypes: [ int, int ]
+            With:
+              health: !var health
+              damage: !var blast damage
+
+      # ---- Death path 1: shot down ----
+      death check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'health <= 0 && !dead'
+            ArgumentTypes: [ int, bool ]
+            With:
+              health: !var health
+              dead: !var dead
+        Listeners: [ pay bounty, tally kill, mark dead, drop alive, self destruct ]
+      pay bounty:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'gold + bounty'
+            ArgumentTypes: [ int, int ]
+            With:
+              gold: !var gold
+              bounty: !var bounty
+      tally kill:
+        Type: int variable setter
+        Properties:
+          VariableId: !var kills
+          Value: !expr
+            Do: 'kills + 1'
+            With: { kills: !var kills }
+
+      # ---- Death path 2: reached the power core ----
+      core breach:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ basecore ] }
+        Listeners: [ breach check ]
+      breach check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: negate
+            With: { flag: !var dead }
+        Listeners:
+          - sap life
+          - mark dead
+          - drop alive
+          - { EntityId: fx, BehaviourId: breach shake }
+          - self destruct
+      sap life:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lives
+          Value: !expr
+            Do: 'lives - 1'
+            With: { lives: !var lives }
+
+      # ---- Shared death effects ----
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      drop alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var creeps alive
+          Value: !expr
+            Do: 'alive - 1'
+            With: { alive: !var creeps alive }
+      self destruct:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # PROJECTILES. Straight-shot bodies aimed at the target's position at launch;
+  # the creep side owns the damage (one detector per tag class), so a projectile
+  # only has to fly, announce its class via Tags, and vanish on contact.
+  # ---------------------------------------------------------------------------
+  dart_template:
+    Tags: [ shot, dart ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.18, Y: 0.18, Z: 0.18 }, Colour: !var pulse colour }
+      collider:
+        Type: sphere collider
+        Properties: { Radius: 0.13, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter velocity }
+      hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ creep ] }
+        Listeners: [ vanish ]
+      expire:
+        Type: timer trigger
+        Properties: { Delay: 1.3, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  frost_template:
+    Tags: [ shot, frost ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.2, Y: 0.2, Z: 0.2 }, Colour: !var frost colour }
+      collider:
+        Type: sphere collider
+        Properties: { Radius: 0.14, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter velocity }
+      hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ creep ] }
+        Listeners: [ vanish ]
+      expire:
+        Type: timer trigger
+        Properties: { Delay: 1.5, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # The shell detonates into a blast entity on impact; the blast does the damage.
+  shell_template:
+    Tags: [ shot, shell ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.3, Y: 0.3, Z: 0.3 }, Colour: !var cannon colour }
+      collider:
+        Type: sphere collider
+        Properties: { Radius: 0.2, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter velocity }
+      hit:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ creep ] }
+        Listeners: [ detonate, vanish ]
+      detonate:
+        Type: spawner
+        Properties:
+          TemplateId: blast_template
+          Position: !entity { Property: Position }
+      expire:
+        Type: timer trigger
+        Properties: { Delay: 2.0, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # The splash: a short-lived glowing sphere whose trigger volume is the damage
+  # area - every creep inside raises its own `blast hit` detector once.
+  blast_template:
+    Tags: [ blast ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 2.3, Y: 2.3, Z: 2.3 }, Colour: !var cannon colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var cannon colour, Intensity: 3.5, Range: 4.5 }
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 1.15, IsTrigger: true }
+      thump:
+        Type: on start trigger
+        Listeners:
+          - { EntityId: fx, BehaviourId: blast thump }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.3, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # One visible tile per derived path cell.
+  path_tile_template:
+    Behaviours:
+      slab:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.94, Y: 0.05, Z: 0.94 }, Colour: !var path colour }
+
+Entities:
+  # =========================================================================
+  # LEVEL BUILDER - derives the lane's cell list from the waypoints, then lays
+  # a visible tile on every derived cell. Data flows: waypoints -> pathCells
+  # expression -> `path cells` list -> tiles + build blocking.
+  # =========================================================================
+  level builder:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      boot:
+        Type: on start trigger
+        Listeners: [ derive path cells, lay tiles ]
+      derive path cells:
+        Type: vector list set
+        Properties:
+          List: !var path cells
+          Value: !expr
+            Do: pathCells
+            With:
+              wps: !var creep route
+              ox: !var grid origin x
+              oz: !var grid origin z
+      lay tiles:
+        Type: vector list loop trigger
+        Properties: { List: !var path cells }
+        Listeners: [ place tile ]
+      place tile:
+        Type: spawner
+        Properties:
+          TemplateId: path_tile_template
+          Position: !expr
+            Do: cellWorld
+            With:
+              cell: !output item
+              ox: !var grid origin x
+              oz: !var grid origin z
+              y: !var tile y
+
+  # =========================================================================
+  # WAVE DIRECTOR - rolls the wave counter whenever the current wave is fully
+  # spawned AND fully cleared, refills the spawn budget and cadence from the
+  # record table, pays the clear bonus, and choreographs the titan's entrance.
+  # =========================================================================
+  wave director:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ advance gate ]
+      advance gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'to_spawn <= 0 && alive <= 0 && wave <= max_wave'
+            With:
+              to_spawn: !var creeps to spawn
+              alive: !var creeps alive
+              wave: !var wave
+              max_wave: !var max wave
+        Listeners: [ next wave, refill budget, set cadence, clear income, titan gate ]
+      next wave:
+        Type: int variable setter
+        Properties:
+          VariableId: !var wave
+          Value: !expr
+            Do: 'wave + 1'
+            With: { wave: !var wave }
+      refill budget:
+        # Reads the already-incremented wave; past the table it stays 0 and the
+        # referee declares the win.
+        Type: int variable setter
+        Properties:
+          VariableId: !var creeps to spawn
+          Value: !expr
+            Do: waveInt
+            With: { table: !var wave table, wave: !var wave, field: "count" }
+      set cadence:
+        Type: float variable setter
+        Properties:
+          VariableId: !var spawn gap
+          Value: !expr
+            Do: waveFloat
+            With: { table: !var wave table, wave: !var wave, field: "gap" }
+      clear income:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'wave > 1 ? gold + bonus : gold'
+            With:
+              wave: !var wave
+              gold: !var gold
+              bonus: !var wave clear bonus
+      titan gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: waveBool
+            With: { table: !var wave table, wave: !var wave, field: "boss" }
+        Listeners:
+          - { EntityId: fx, BehaviourId: boss slow }
+          - { EntityId: fx, BehaviourId: boss restore delay }
+          - { EntityId: fx, BehaviourId: boss shake }
+
+  # =========================================================================
+  # CREEP FACTORY - drips creeps out of the portal while the wave's budget
+  # lasts, seeding every stat (and the titan's size/colour) from the table.
+  # =========================================================================
+  creep factory:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      drip:
+        Type: interval trigger
+        Properties: { Interval: !var spawn gap, AutoStart: true }
+        Listeners: [ spawn gate ]
+      spawn gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'to_spawn > 0'
+            With: { to_spawn: !var creeps to spawn }
+        Listeners: [ release creep, use budget, count alive ]
+      release creep:
+        Type: spawner
+        Properties:
+          TemplateId: creep_template
+          Position: !var spawn point
+          Parameters:
+            health: !expr { Do: waveInt, With: { table: !var wave table, wave: !var wave, field: "health" } }
+            speed: !expr { Do: waveFloat, With: { table: !var wave table, wave: !var wave, field: "speed" } }
+            bounty: !expr { Do: waveInt, With: { table: !var wave table, wave: !var wave, field: "bounty" } }
+            size: !expr
+              Do: pickSize
+              With:
+                boss: !expr { Do: waveBool, With: { table: !var wave table, wave: !var wave, field: "boss" } }
+                big: !var titan size
+                small: !var creep size
+            tint: !expr
+              Do: pickColour
+              With:
+                boss: !expr { Do: waveBool, With: { table: !var wave table, wave: !var wave, field: "boss" } }
+                boss_colour: !var titan colour
+                normal_colour: !var creep colour
+      use budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var creeps to spawn
+          Value: !expr
+            Do: 'to_spawn - 1'
+            With: { to_spawn: !var creeps to spawn }
+      count alive:
+        Type: int variable setter
+        Properties:
+          VariableId: !var creeps alive
+          Value: !expr
+            Do: 'alive + 1'
+            With: { alive: !var creeps alive }
+
+  # =========================================================================
+  # BUILD CURSOR - a grid-snapped tile stepped by the cursor-move action
+  # (magnitude gate -> throttle -> whole-cell step) that glides between cells,
+  # shows buildability as a live colour, and owns the three build actions plus
+  # the upgrade broadcast.
+  # =========================================================================
+  build cursor:
+    Position: !vec { X: -4.5, Y: 0.09, Z: 0.5 }
+    Behaviours:
+      plate:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.95, Y: 0.12, Z: 0.95 }
+          Colour: !expr
+            Do: cursorColour
+            With:
+              cell: !var cursor cell
+              occupied: !var occupied cells
+              path: !var path cells
+              cols: !var grid cols
+              rows: !var grid rows
+              gold: !var gold
+              cheapest: !var pulse cost
+              ready: !var cursor ok colour
+              poor: !var cursor poor colour
+              blocked: !var cursor blocked colour
+      halo:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: cursorColour
+            With:
+              cell: !var cursor cell
+              occupied: !var occupied cells
+              path: !var path cells
+              cols: !var grid cols
+              rows: !var grid rows
+              gold: !var gold
+              cheapest: !var pulse cost
+              ready: !var cursor ok colour
+              poor: !var cursor poor colour
+              blocked: !var cursor blocked colour
+          Intensity: 1.6
+          Range: 2.5
+      glide:
+        Type: smooth move
+        Properties:
+          Target: !expr
+            Do: cellWorld
+            With:
+              cell: !var cursor cell
+              ox: !var grid origin x
+              oz: !var grid origin z
+              y: !var cursor y
+          SmoothTime: 0.07
+
+      # Stepping pipeline: stash the axis, gate on deflection, auto-repeat via
+      # throttle, then take one clamped whole-cell step.
+      move input:
+        Type: input action
+        Properties: { Action: cursor-move }
+        Listeners: [ stash input, step gate ]
+      stash input:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var cursor input
+          Value: !output axis
+      step gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'Magnitude(input) > 0.5f'
+            ArgumentTypes: [ vector ]
+            With: { input: !var cursor input }
+        Listeners: [ step repeat ]
+      step repeat:
+        Type: throttled trigger
+        Properties: { Rate: 7 }
+        Listeners: [ do step ]
+      do step:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var cursor cell
+          Value: !expr
+            Do: stepCell
+            With:
+              cell: !var cursor cell
+              input: !var cursor input
+              cols: !var grid cols
+              rows: !var grid rows
+
+      # ---- Build: PULSE ----
+      pulse action:
+        Type: input action
+        Properties: { Action: build-pulse }
+        Listeners: [ pulse gate ]
+      pulse gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: canBuild
+            With:
+              cell: !var cursor cell
+              occupied: !var occupied cells
+              path: !var path cells
+              cols: !var grid cols
+              rows: !var grid rows
+              gold: !var gold
+              cost: !var pulse cost
+        Listeners: [ place pulse, occupy cell, pay pulse ]
+      place pulse:
+        Type: spawner
+        Properties:
+          TemplateId: tower_template
+          Position: !expr
+            Do: cellWorld
+            With:
+              cell: !var cursor cell
+              ox: !var grid origin x
+              oz: !var grid origin z
+              y: !var tower y
+          Parameters:
+            range: !var pulse range
+            fire_interval: !var pulse fire interval
+            tint: !var pulse colour
+            shot: dart_template
+            shot_speed: !var dart speed
+            cell: !var cursor cell
+      pay pulse:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'gold - cost'
+            With: { gold: !var gold, cost: !var pulse cost }
+
+      # ---- Build: FROST ----
+      frost action:
+        Type: input action
+        Properties: { Action: build-frost }
+        Listeners: [ frost gate ]
+      frost gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: canBuild
+            With:
+              cell: !var cursor cell
+              occupied: !var occupied cells
+              path: !var path cells
+              cols: !var grid cols
+              rows: !var grid rows
+              gold: !var gold
+              cost: !var frost cost
+        Listeners: [ place frost, occupy cell, pay frost ]
+      place frost:
+        Type: spawner
+        Properties:
+          TemplateId: tower_template
+          Position: !expr
+            Do: cellWorld
+            With:
+              cell: !var cursor cell
+              ox: !var grid origin x
+              oz: !var grid origin z
+              y: !var tower y
+          Parameters:
+            range: !var frost range
+            fire_interval: !var frost fire interval
+            tint: !var frost colour
+            shot: frost_template
+            shot_speed: !var frost bolt speed
+            cell: !var cursor cell
+      pay frost:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'gold - cost'
+            With: { gold: !var gold, cost: !var frost cost }
+
+      # ---- Build: CANNON ----
+      cannon action:
+        Type: input action
+        Properties: { Action: build-cannon }
+        Listeners: [ cannon gate ]
+      cannon gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: canBuild
+            With:
+              cell: !var cursor cell
+              occupied: !var occupied cells
+              path: !var path cells
+              cols: !var grid cols
+              rows: !var grid rows
+              gold: !var gold
+              cost: !var cannon cost
+        Listeners: [ place cannon, occupy cell, pay cannon ]
+      place cannon:
+        Type: spawner
+        Properties:
+          TemplateId: tower_template
+          Position: !expr
+            Do: cellWorld
+            With:
+              cell: !var cursor cell
+              ox: !var grid origin x
+              oz: !var grid origin z
+              y: !var tower y
+          Parameters:
+            range: !var cannon range
+            fire_interval: !var cannon fire interval
+            tint: !var cannon colour
+            shot: shell_template
+            shot_speed: !var shell speed
+            cell: !var cursor cell
+      pay cannon:
+        Type: int variable setter
+        Properties:
+          VariableId: !var gold
+          Value: !expr
+            Do: 'gold - cost'
+            With: { gold: !var gold, cost: !var cannon cost }
+
+      # Shared by all three build paths.
+      occupy cell:
+        Type: vector list add
+        Properties:
+          List: !var occupied cells
+          Value: !var cursor cell
+
+      # ---- Upgrade: broadcast to every tower; their own gates pick the one under the cursor ----
+      upgrade action:
+        Type: input action
+        Properties: { Action: upgrade }
+        Listeners:
+          - { EntityTag: tower, BehaviourId: upgrade gate }
+
+  # =========================================================================
+  # THE POWER CORE - the thing being defended. Its lamp fades green -> red as
+  # integrity drains. Creeps detect its tag and burn themselves on arrival.
+  # =========================================================================
+  power core:
+    Tags: [ basecore ]
+    Position: !vec { X: 8.6, Y: 0.7, Z: 1.5 }
+    Behaviours:
+      housing:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 1.1, Y: 1.4, Z: 1.1 }, Colour: !var core colour }
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 35, Z: 0 } }
+      lamp:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: healthGlow
+            With:
+              health: !var lives
+              max_health: !var start lives
+              full: !var health full colour
+              hurt: !var health low colour
+          Intensity: 2.5
+          Range: 5
+      zone:
+        Type: box collider
+        Properties: { Size: !vec { X: 1.3, Y: 1.8, Z: 1.3 }, IsTrigger: true }
+
+  # The portal the assault pours out of.
+  spawn portal:
+    Position: !vec { X: -9.2, Y: 0.7, Z: 2.5 }
+    Behaviours:
+      frame:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.9, Y: 1.5, Z: 0.9 }, Colour: !var portal colour }
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: -60, Z: 0 } }
+      glow:
+        Type: light
+        Properties: { Type: point, Colour: !var portal colour, Intensity: 2.2, Range: 4.5 }
+
+  # Also the camera pivot: `camera follow` tag targets resolve through the live
+  # BEHAVIOUR registry, so the tag must sit on an entity that owns at least one
+  # behaviour - a bare tagged entity is never registered and the vcam would have
+  # no target. The ground slab is centred on the board, so it doubles perfectly.
+  ground:
+    Tags: [ pivot ]
+    Position: !vec { X: 0, Y: -0.05, Z: 0 }
+    Behaviours:
+      slab:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 20.5, Y: 0.1, Z: 11.4 }, Colour: !var ground colour }
+
+  # =========================================================================
+  # FX RACK - camera shakes, the titan's slow-motion entrance, and the shared
+  # timescale applier (fast-forward aware, so slow-mo restores to x1 OR x2).
+  # =========================================================================
+  fx:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      breach shake:
+        Type: camera shake
+        Properties: { Force: 1.4, Duration: 0.4, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      blast thump:
+        Type: camera shake
+        Properties: { Force: 0.25, Duration: 0.12, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      boss shake:
+        Type: camera shake
+        Properties: { Force: 2, Duration: 0.7, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      boss slow:
+        Type: set timescale
+        Properties: { Scale: 0.35 }
+      boss restore delay:
+        Type: deferred trigger
+        Properties: { Delay: 0.9 }
+        Listeners: [ apply pace ]
+
+      # Fast-forward toggle (F key, HUD button, mobile shoulder button).
+      speed action:
+        Type: input action
+        Properties: { Action: speed }
+        Listeners: [ flip pace, apply pace ]
+      flip pace:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var fast forward
+          Value: !expr
+            Do: negate
+            With: { flag: !var fast forward }
+      apply pace:
+        Type: set timescale
+        Properties:
+          Scale: !expr
+            Do: pace
+            With: { fast: !var fast forward }
+
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # REFEREE - one poll for both endings: the core falls, or the table is
+  # exhausted (the director rolls `wave` past `max wave` only when the final
+  # wave is fully spawned and cleared).
+  # =========================================================================
+  referee:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ end gate ]
+      end gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'lives <= 0 || wave > max_wave'
+            With:
+              lives: !var lives
+              wave: !var wave
+              max_wave: !var max wave
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # LIGHT & CAMERA
+  # =========================================================================
+  sun:
+    Position: !vec { X: 0, Y: 10, Z: 0 }
+    Rotation: !vec { X: 60, Y: -35, Z: 0 }
+    Behaviours:
+      key light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.75, G: 0.78, B: 0.9, A: 1 }, Intensity: 0.75 }
+
+  camera:
+    Position: !vec { X: 0, Y: 12, Z: -9 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "perspective", DefaultBlend: 1 }
+
+  vcam overview:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Tag: pivot }
+          LookAt: { Tag: pivot }
+          Mode: "3d"
+          Priority: 10
+          Lens: 46
+          Damping: 1
+          FollowOffset: !vec { X: 0, Y: 12.5, Z: -8 }
+
+  # =========================================================================
+  # HUD
+  # =========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 6
+              Padding: 22
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 34
+                  PreferredWidth: 720
+                  PreferredHeight: 46
+          help1:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.help1, Arguments: [ !var pulse cost, !var frost cost, !var cannon cost ] }
+                  FontSize: 16
+                  PreferredWidth: 780
+                  PreferredHeight: 26
+          help2:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.help2, Arguments: [ !var upgrade cost ] }
+                  FontSize: 16
+                  PreferredWidth: 780
+                  PreferredHeight: 26
+          gold:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.gold, Arguments: [ !var gold ] }
+                  FontSize: 28
+                  PreferredWidth: 420
+                  PreferredHeight: 40
+          lives:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.lives, Arguments: [ !var lives ] }
+                  FontSize: 24
+                  PreferredWidth: 420
+                  PreferredHeight: 36
+          wave:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.wave, Arguments: [ !var wave, !var max wave ] }
+                  FontSize: 24
+                  PreferredWidth: 420
+                  PreferredHeight: 36
+          left:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.left
+                    Arguments:
+                      - !expr
+                          Do: 'alive + to_spawn'
+                          ReturnType: int
+                          With:
+                            alive: !var creeps alive
+                            to_spawn: !var creeps to spawn
+                  FontSize: 20
+                  PreferredWidth: 420
+                  PreferredHeight: 32
+          kills:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.kills, Arguments: [ !var kills ] }
+                  FontSize: 20
+                  PreferredWidth: 420
+                  PreferredHeight: 32
+          banner:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'wave == boss_wave ? msg : blank'
+                    ArgumentTypes: [ int, int, string, string ]
+                    With:
+                      wave: !var wave
+                      boss_wave: !var max wave
+                      msg: !text hud.boss
+                      blank: ""
+                  FontSize: 30
+                  PreferredWidth: 560
+                  PreferredHeight: 44
+          speed:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !expr
+                    Do: 'fast ? fast_label : normal_label'
+                    ArgumentTypes: [ bool, string, string ]
+                    With:
+                      fast: !var fast forward
+                      fast_label: !text btn.speed.fast
+                      normal_label: !text btn.speed.normal
+                  PreferredWidth: 220
+                  PreferredHeight: 46
+                Listeners:
+                  - { EntityId: fx, BehaviourId: flip pace }
+                  - { EntityId: fx, BehaviourId: apply pace }
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 220
+                  PreferredHeight: 46
+                Listeners:
+                  - !gameover

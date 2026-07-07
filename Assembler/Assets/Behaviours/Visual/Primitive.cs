@@ -31,7 +31,8 @@ namespace Assembler.Behaviours.Visual
 			primitive.name = shape.ToString();
 			primitive.transform.SetParent(transform, false);
 
-			primitive.GetComponent<MeshRenderer>().sharedMaterial = Resources.Load<Material>("Materials/Primitive");
+			var renderer = primitive.GetComponent<MeshRenderer>();
+			renderer.sharedMaterial = Resources.Load<Material>("Materials/Primitive");
 
 			// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
 			// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without
@@ -56,12 +57,15 @@ namespace Assembler.Behaviours.Visual
 			// back to Vector3.one, matching the transform's default (so the no-Size case is unchanged).
 			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
 
-			data.Colour.UseIfValueExists(colour =>
+			// Live-bind the colour so a !var/!expr re-tints the primitive at runtime (matching Size and the
+			// light behaviour). The no-fallback overload leaves an omitted colour untouched, so the primitive
+			// keeps the shared material's own colour — preserving the previous UseIfValueExists behaviour.
+			var block = new MaterialPropertyBlock();
+			data.Colour.BindLive(this, colour =>
 			{
-				var block = new MaterialPropertyBlock();
 				block.SetColor(BaseColorId, colour);
 				block.SetColor(ColorId, colour);
-				primitive.GetComponent<MeshRenderer>().SetPropertyBlock(block);
+				renderer.SetPropertyBlock(block);
 			});
 		}
 	}

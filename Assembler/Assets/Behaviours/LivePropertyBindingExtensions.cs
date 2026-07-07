@@ -35,6 +35,31 @@ namespace Assembler.Behaviours
 				return;
 			}
 
+			BindNonNull(provider, owner, apply);
+		}
+
+		/// <summary>
+		/// As <see cref="BindLive{T,TOwner}(IValueProvider{T},TOwner,Action{T},T)"/> but with no fallback:
+		/// an omitted optional (a <see cref="NullValueProvider{T}"/>) binds nothing and applies nothing,
+		/// leaving whatever default the caller already set in place. Use this when the sink's untouched
+		/// state is the intended default (e.g. a primitive keeping its shared material's own colour) so
+		/// there is no fallback value to force.
+		/// </summary>
+		public static void BindLive<T, TOwner>(this IValueProvider<T> provider,
+			TOwner owner, Action<T> apply)
+			where TOwner : GameBehaviour, INeedsLiveProperties
+		{
+			if (provider is NullValueProvider<T>)
+			{
+				return;
+			}
+
+			BindNonNull(provider, owner, apply);
+		}
+
+		private static void BindNonNull<T, TOwner>(IValueProvider<T> provider, TOwner owner, Action<T> apply)
+			where TOwner : GameBehaviour, INeedsLiveProperties
+		{
 			void Apply() => apply(provider.Get());
 
 			// A plain immutable constant never changes: apply once and bind nothing — no sink, no subscription.
