@@ -760,7 +760,7 @@ Templates:
         Listeners: [ vanish ]
       expire:
         Type: timer trigger
-        Properties: { Delay: 1.3 }
+        Properties: { Delay: 1.3, AutoStart: true }
         Listeners: [ vanish ]
       vanish:
         Type: destroy
@@ -786,7 +786,7 @@ Templates:
         Listeners: [ vanish ]
       expire:
         Type: timer trigger
-        Properties: { Delay: 1.5 }
+        Properties: { Delay: 1.5, AutoStart: true }
         Listeners: [ vanish ]
       vanish:
         Type: destroy
@@ -818,7 +818,7 @@ Templates:
           Position: !entity { Property: Position }
       expire:
         Type: timer trigger
-        Properties: { Delay: 2.0 }
+        Properties: { Delay: 2.0, AutoStart: true }
         Listeners: [ vanish ]
       vanish:
         Type: destroy
@@ -843,7 +843,7 @@ Templates:
           - { EntityId: fx, BehaviourId: blast thump }
       fade:
         Type: timer trigger
-        Properties: { Delay: 0.3 }
+        Properties: { Delay: 0.3, AutoStart: true }
         Listeners: [ vanish ]
       vanish:
         Type: destroy
