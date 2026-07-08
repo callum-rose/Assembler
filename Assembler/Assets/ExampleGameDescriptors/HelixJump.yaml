@@ -1,0 +1,447 @@
+Game:
+  Title: Helix Jump
+  Description: |
+    An endless Helix Jump clone. A ball bounces in place on a stack of platform
+    rings wrapped around a central pole. You rotate the whole helix (A/D, arrows,
+    or drag/swipe) to line a GAP up under the ball so it drops to the next ring —
+    while keeping the RED segments out from under it, because landing on red ends
+    the run. The descent never ends: keep going as deep as you can.
+
+    HOW IT'S BUILT
+      * The ball is a single rigidbody frozen on X and Z, so it only ever moves
+        vertically. The project's global gravity is 0 (see issue #515), so gravity
+        is driven manually — a `fixed update trigger` adds a steady downward force
+        each physics step — and the bounce is scripted: landing on a blue segment
+        sets a fixed upward speed, giving a constant bounce height.
+      * A landing only counts when the contact is BELOW the ball's centre, so a
+        segment the player swings into the ball's side or top is ignored (no bounce,
+        and red only kills when the ball actually lands on top of it).
+      * The tower is a passive parent rotated in place by two `rotate` behaviours
+        (one fed by a keyboard/stick value action, one by a touch `drag trigger`).
+        Its ring children — and their segment children — spin with it.
+      * ENDLESS via a recycling pool: fourteen identical rings (one template) hang
+        off the tower. Each ring watches the ball; once it sits well ABOVE the ball
+        (off-screen) it drops a whole pool-height below the lowest ring and re-rolls
+        its rotation. So the same rings roll under the ball forever, always a fresh
+        layout, and the ball's depth (and score) climb without bound.
+      * The central pole tracks the ball's depth so it's always there beneath you.
+
+    Desktop: A/D or Left/Right to spin, mouse drag to spin, Esc to quit.
+    Mobile: drag to spin.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0b1020"
+
+Physics:
+  # NOTE: descriptor gravity is currently a no-op (issue #515); gravity is applied
+  # manually to the ball. Left here to document intent.
+  Gravity: !vec { X: 0, Y: -20, Z: 0 }
+
+Constants:
+  # --- Geometry ---
+  ring spacing: 3.0           # vertical gap between rings
+  seg size: !vec { X: 1.8, Y: 0.4, Z: 0.8 }
+  ball size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+  ball radius: 0.4
+
+  # --- Endless recycling ---
+  # A ring recycles once it is this far ABOVE the ball (chosen so it is off the top
+  # of the screen first), then drops by the whole pool height to sit just below the
+  # current lowest ring. 14 rings * 3.0 spacing = 42.
+  recycle above: 12.0
+  recycle drop: -42.0
+
+  # --- Feel ---
+  spin speed: 190.0           # degrees/second at full key/stick deflection
+  touch sens: 0.32            # degrees per pixel of drag
+  gravity force: 20.0         # downward accel on the ball (mass 1 -> force == accel)
+  bounce speed: 7.0           # upward speed set on each landing (apex ~1.2)
+  land margin: 0.15           # contact must be this far below ball centre to count
+
+  depth start: 0.0            # ball Y that reads as depth 0
+
+  # --- Look ---
+  safe colour:   !colour { R: 0.30, G: 0.62, B: 0.98, A: 1 }
+  deadly colour: !colour { R: 0.96, G: 0.25, B: 0.30, A: 1 }
+  ball colour:   !colour { R: 1.00, G: 0.85, B: 0.30, A: 1 }
+  pole colour:   !colour { R: 0.16, G: 0.19, B: 0.28, A: 1 }
+
+Controls:
+  Actions:
+    spin: { Type: value, ValueType: vector2 }   # read x for left/right
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      spin:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+      quit: [ "<Keyboard>/escape" ]
+    mobile:
+      spin: [ "<Gamepad>/leftStick" ]
+      quit: [ "<Gamepad>/start" ]
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "HELIX JUMP"
+      hud.help: "Spin: A/D · arrows · drag    Find the gaps, dodge the red"
+      hud.depth: "Depth: {0}"
+      btn.quit: "Quit"
+
+Templates:
+  # A safe (blue) platform segment: visible cube + a solid static box collider.
+  # Position/rotation are set by the ring child that instantiates it.
+  safe_seg:
+    Tags: [ platform ]
+    Behaviours:
+      mesh:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var seg size, Colour: !var safe colour }
+      body:
+        Type: box collider
+        Properties: { Size: !var seg size }
+
+  # A deadly (red) segment — same geometry, tagged so the ball's death detector fires.
+  deadly_seg:
+    Tags: [ deadly ]
+    Behaviours:
+      mesh:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var seg size, Colour: !var deadly colour }
+      body:
+        Type: box collider
+        Properties: { Size: !var seg size }
+
+  # One ring of the pool: two blue segments + one red, 120 degrees apart (three
+  # gaps). Watches the ball and recycles itself to the bottom of the stack — with a
+  # fresh random rotation — once it drifts well above the ball. `!entity` with no
+  # Id reads THIS ring's own transform.
+  ring_template:
+    Behaviours:
+      recycle tick:
+        Type: every frame trigger
+        Listeners: [ recycle gate ]
+      recycle gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'ringpos.y - ballpos.y > above'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              ringpos: !entity { Property: Position }
+              ballpos: !entity { Id: ball, Property: Position }
+              above: !var recycle above
+        Listeners: [ drop down, reroll spin ]
+      drop down:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(0f, drop, 0f)'
+            ArgumentTypes: [ float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With: { drop: !var recycle drop }
+      reroll spin:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: 'new UnityEngine.Vector3(0f, RandomFloat(0f, 360f), 0f)'
+            RegisterTypes: [ UnityEngine.Vector3 ]
+    Children:
+      a: { Position: !vec { X: 0,      Y: 0, Z: 2.2  }, Rotation: !vec { X: 0, Y: 0,   Z: 0 }, Template: { Id: safe_seg } }
+      b: { Position: !vec { X: 1.905,  Y: 0, Z: -1.1 }, Rotation: !vec { X: 0, Y: 120, Z: 0 }, Template: { Id: safe_seg } }
+      c: { Position: !vec { X: -1.905, Y: 0, Z: -1.1 }, Rotation: !vec { X: 0, Y: 240, Z: 0 }, Template: { Id: deadly_seg } }
+
+Entities:
+  # =========================================================================
+  # THE HELIX TOWER — a passive parent spun in place. Its children (fourteen pooled
+  # rings) rotate with it. Two `rotate` drivers add to its Y each frame: one from
+  # the keyboard/stick, one from drag.
+  # =========================================================================
+  tower:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      spin input:
+        Type: input action
+        Properties: { Action: spin }
+        Listeners: [ spin by key ]
+      spin by key:
+        Type: rotate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(0f, x * speed * dt, 0f)'
+            ArgumentTypes: [ float, float, float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With:
+              x: !output x
+              speed: !var spin speed
+              dt: !clock deltaTime
+      drag input:
+        Type: drag trigger
+        Properties: { Threshold: 4 }
+        Listeners: [ spin by drag ]
+      spin by drag:
+        Type: rotate
+        Properties:
+          Displacement: !expr
+            Do: 'new UnityEngine.Vector3(0f, delta.x * sens, 0f)'
+            ArgumentTypes: [ vector, float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With:
+              delta: !output delta
+              sens: !var touch sens
+    Children:
+      # The recycling ring pool — fourteen instances, evenly stacked, staggered
+      # start rotations. Each recycles itself endlessly (see ring_template).
+      ring0:  { Position: !vec { X: 0, Y: 0,   Z: 0 }, Rotation: !vec { X: 0, Y: 0,   Z: 0 }, Template: { Id: ring_template } }
+      ring1:  { Position: !vec { X: 0, Y: -3,  Z: 0 }, Rotation: !vec { X: 0, Y: 25,  Z: 0 }, Template: { Id: ring_template } }
+      ring2:  { Position: !vec { X: 0, Y: -6,  Z: 0 }, Rotation: !vec { X: 0, Y: 51,  Z: 0 }, Template: { Id: ring_template } }
+      ring3:  { Position: !vec { X: 0, Y: -9,  Z: 0 }, Rotation: !vec { X: 0, Y: 77,  Z: 0 }, Template: { Id: ring_template } }
+      ring4:  { Position: !vec { X: 0, Y: -12, Z: 0 }, Rotation: !vec { X: 0, Y: 103, Z: 0 }, Template: { Id: ring_template } }
+      ring5:  { Position: !vec { X: 0, Y: -15, Z: 0 }, Rotation: !vec { X: 0, Y: 129, Z: 0 }, Template: { Id: ring_template } }
+      ring6:  { Position: !vec { X: 0, Y: -18, Z: 0 }, Rotation: !vec { X: 0, Y: 154, Z: 0 }, Template: { Id: ring_template } }
+      ring7:  { Position: !vec { X: 0, Y: -21, Z: 0 }, Rotation: !vec { X: 0, Y: 180, Z: 0 }, Template: { Id: ring_template } }
+      ring8:  { Position: !vec { X: 0, Y: -24, Z: 0 }, Rotation: !vec { X: 0, Y: 206, Z: 0 }, Template: { Id: ring_template } }
+      ring9:  { Position: !vec { X: 0, Y: -27, Z: 0 }, Rotation: !vec { X: 0, Y: 231, Z: 0 }, Template: { Id: ring_template } }
+      ring10: { Position: !vec { X: 0, Y: -30, Z: 0 }, Rotation: !vec { X: 0, Y: 257, Z: 0 }, Template: { Id: ring_template } }
+      ring11: { Position: !vec { X: 0, Y: -33, Z: 0 }, Rotation: !vec { X: 0, Y: 283, Z: 0 }, Template: { Id: ring_template } }
+      ring12: { Position: !vec { X: 0, Y: -36, Z: 0 }, Rotation: !vec { X: 0, Y: 309, Z: 0 }, Template: { Id: ring_template } }
+      ring13: { Position: !vec { X: 0, Y: -39, Z: 0 }, Rotation: !vec { X: 0, Y: 334, Z: 0 }, Template: { Id: ring_template } }
+
+  # =========================================================================
+  # THE POLE — decorative central column. It re-centres on the ball's depth every
+  # frame so it's always present as the ball descends (a smooth cylinder is
+  # rotationally symmetric, so it needn't spin with the tower). Sits inside the
+  # ball's radius and carries no collider, so it never blocks the bounce column.
+  # =========================================================================
+  pole:
+    Position: !vec { X: 0, Y: -10, Z: 0 }
+    Behaviours:
+      mesh:
+        Type: primitive
+        Properties: { Shape: cylinder, Size: !vec { X: 2.2, Y: 60, Z: 2.2 }, Colour: !var pole colour }
+      track tick:
+        Type: every frame trigger
+        Listeners: [ follow ball ]
+      follow ball:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: 'new UnityEngine.Vector3(0f, pos.y - 10f, 0f)'
+            ArgumentTypes: [ vector ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With: { pos: !entity { Id: ball, Property: Position } }
+
+  # =========================================================================
+  # THE BALL — one rigidbody frozen on X and Z, so it only rises and falls on a
+  # fixed column at radius 2.2 on the +Z side of the pole. Gravity is a manual
+  # per-step force; the bounce is a scripted fixed upward speed, but ONLY on a
+  # real landing (contact below the ball's centre). Landing on red ends the run.
+  # =========================================================================
+  ball:
+    Tags: [ ball ]
+    Position: !vec { X: 0, Y: 3.5, Z: 2.2 }
+    Behaviours:
+      mesh:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !var ball size, Colour: !var ball colour }
+      glow:
+        Type: light
+        Properties: { Type: point, Colour: !var ball colour, Intensity: 1.6, Range: 6 }
+      body:
+        Type: sphere collider
+        Properties: { Radius: 0.4 }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false      # global gravity is 0; we drive it manually below
+          Mass: 1
+          LinearDamping: 0
+          FreezePosition: !vec { X: 1, Y: 0, Z: 1 }   # only Y is free
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+      gravity tick:
+        Type: fixed update trigger
+        Listeners: [ apply gravity ]
+      apply gravity:
+        Type: add force
+        Properties:
+          Force: !expr
+            Do: 'new UnityEngine.Vector3(0f, -g, 0f)'
+            ArgumentTypes: [ float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With: { g: !var gravity force }
+
+      # Landing: only bounce when the blue segment is UNDER the ball (contact point
+      # below centre). A segment swung into the ball's side/top is ignored.
+      land:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ platform ] }
+        Listeners:
+          - EntityId: ball
+            BehaviourId: land gate
+            Outputs:
+              contact_point: cp
+      land gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'cp.y < ballpos.y - margin'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              cp: !output cp
+              ballpos: !entity { Property: Position }
+              margin: !var land margin
+        Listeners: [ bounce ]
+      bounce:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: 'new UnityEngine.Vector3(0f, up, 0f)'
+            ArgumentTypes: [ float ]
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With: { up: !var bounce speed }
+
+      # Death: same landing test — you only die by coming DOWN onto a red segment,
+      # not by one clipping your side.
+      hit red:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ deadly ] }
+        Listeners:
+          - EntityId: ball
+            BehaviourId: death gate
+            Outputs:
+              contact_point: cp
+      death gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'cp.y < ballpos.y - margin'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              cp: !output cp
+              ballpos: !entity { Property: Position }
+              margin: !var land margin
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # REFEREE — owns the quit action (the only non-death way to end an endless run).
+  # =========================================================================
+  referee:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # LIGHT & CAMERA — a directional key light, plus a Cinemachine rig that trails
+  # the ball down the tower from the +Z side.
+  # =========================================================================
+  sun:
+    Position: !vec { X: 0, Y: 12, Z: -4 }
+    Rotation: !vec { X: 55, Y: -25, Z: 0 }
+    Behaviours:
+      key light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.85, G: 0.87, B: 0.95, A: 1 }, Intensity: 1.0 }
+
+  camera:
+    Position: !vec { X: 0, Y: 3, Z: 12 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "perspective", DefaultBlend: 0 }
+
+  vcam:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Id: ball }
+          LookAt: { Id: ball }
+          Mode: "3d"
+          Priority: 10
+          Lens: 55
+          Damping: 0.6
+          FollowOffset: !vec { X: 0, Y: 1.5, Z: 9 }
+
+  # =========================================================================
+  # HUD
+  # =========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 8
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.title, FontSize: 34, PreferredWidth: 620, PreferredHeight: 46 }
+          help:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.help, FontSize: 18, PreferredWidth: 620, PreferredHeight: 28 }
+          depth:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.depth
+                    Arguments:
+                      - !expr
+                          Do: |
+                            int d = (int)((start - pos.y) / spacing);
+                            if (d < 0)
+                            {
+                                d = 0;
+                            }
+                            return d;
+                          ReturnType: int
+                          ArgumentTypes: [ vector, float, float ]
+                          With:
+                            pos: !entity { Id: ball, Property: Position }
+                            start: !var depth start
+                            spacing: !var ring spacing
+                  FontSize: 26
+                  PreferredWidth: 420
+                  PreferredHeight: 40
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties: { Label: !text btn.quit, PreferredWidth: 200, PreferredHeight: 48 }
+                Listeners:
+                  - !gameover
