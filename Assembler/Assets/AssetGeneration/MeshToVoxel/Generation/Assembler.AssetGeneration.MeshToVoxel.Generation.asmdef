@@ -4,7 +4,8 @@
     "references": [
         "Assembler.AssetGeneration.MeshToVoxel",
         "Assembler.AssetGeneration.ImageToMesh",
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

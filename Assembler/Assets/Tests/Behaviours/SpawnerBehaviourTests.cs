@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Spawners;
+using Assembler.Libraries;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using NUnit.Framework;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Tests.Behaviours
 {
@@ -22,7 +22,7 @@ namespace Tests.Behaviours
 		}
 
 		[SetUp]
-		public void Seed() => Random.InitState(12345);
+		public void Seed() => RandomMath.Seed(12345);
 
 		private static (SpawnerBehaviour behaviour, RecordingSpawner spawner, GameObject go) NewSpawner(
 			SpawnerData data)

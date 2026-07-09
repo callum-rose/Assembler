@@ -1,5 +1,7 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using UnityEngine;
 
 namespace Assembler.Behaviours.ListOperations
 {
@@ -23,4 +25,25 @@ namespace Assembler.Behaviours.ListOperations
 			}
 		}
 	}
+
+	/// <summary>Overwrites the bool item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class BoolListSetAt : ListSetAtBehaviour<bool> { }
+
+	/// <summary>Overwrites the Color item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class ColourListSetAt : ListSetAtBehaviour<Color> { }
+
+	/// <summary>Overwrites the float item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class FloatListSetAt : ListSetAtBehaviour<float> { }
+
+	/// <summary>Overwrites the int item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class IntListSetAt : ListSetAtBehaviour<int> { }
+
+	/// <summary>Overwrites the record item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class RecordListSetAt : ListSetAtBehaviour<Record> { }
+
+	/// <summary>Overwrites the string item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class StringListSetAt : ListSetAtBehaviour<string> { }
+
+	/// <summary>Overwrites the Vector3 item at a given index in the target list when Executed. See <see cref="ListSetAtBehaviour{T}"/>.</summary>
+	public class Vector3ListSetAt : ListSetAtBehaviour<Vector3> { }
 }

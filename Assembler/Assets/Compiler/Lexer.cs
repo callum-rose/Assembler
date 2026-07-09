@@ -119,7 +119,6 @@ namespace Assembler.Compiler.Compiler
 				}
 			}
 
-			// Rest remains the same...
 			var token = c switch
 			{
 				'+' => new Token(TokenType.Plus, "+", _line, _column),
@@ -187,7 +186,7 @@ namespace Assembler.Compiler.Compiler
 			}
 
 			var value = sb.ToString();
-			var type = Keywords.ContainsKey(value) ? Keywords[value] : TokenType.Identifier;
+			var type = Keywords.TryGetValue(value, out var keywordType) ? keywordType : TokenType.Identifier;
 
 			return new Token(type, value, _line, startColumn);
 		}

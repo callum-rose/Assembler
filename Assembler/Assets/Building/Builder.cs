@@ -9,6 +9,7 @@ using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
+using Assembler.Libraries;
 using Assembler.Parsing;
 using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
@@ -115,13 +116,23 @@ namespace Assembler.Building
 		/// sandbox validator relies on this).
 		/// </summary>
 		/// <param name="resolved">The resolved game handle from <see cref="ResolveAsync"/>.</param>
-		/// <param name="clockMode">
-		/// Which <see cref="IGameClock"/> to run on. Defaults to <see cref="GameClockMode.Realtime"/> so every
-		/// normal play session and the sandbox validator are unchanged; deterministic / replay runs pass
-		/// <see cref="GameClockMode.FixedStep"/> for a constant per-frame delta.
+		/// <param name="options">
+		/// Per-run clock + seed configuration. Defaults to <see cref="RunOptions.Default"/> (realtime clock,
+		/// entropy-seeded RNG) so every normal play session and the sandbox validator are unchanged;
+		/// deterministic / replay runs pass <see cref="GameClockMode.FixedStep"/> and an explicit seed.
 		/// </param>
-		public static GameObject Instantiate(this ResolvedGame resolved, GameClockMode clockMode = GameClockMode.Realtime)
+		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null)
 		{
+			options ??= RunOptions.Default;
+
+			// Seed the ambient PRNG before any entity is created, so every random draw during instantiation
+			// (e.g. an entity's start position from RandomOnCircle) is reproducible. An explicit seed drives a
+			// deterministic / replay run; otherwise derive one from entropy so normal play still varies each
+			// launch. Log the resolved seed so a session can be captured and replayed later.
+			var seed = options.Seed ?? unchecked((uint)Guid.NewGuid().GetHashCode());
+			RandomMath.Seed(seed);
+			UnityEngine.Debug.Log($"[Assembler] Run seed {seed} ({options.ClockMode}).");
+
 			var gameInfo = resolved.GameInfo;
 			var controls = resolved.Controls;
 			var controlsAsset = resolved.ControlsAsset;
@@ -145,7 +156,7 @@ namespace Assembler.Building
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
 			// (ahead of every behaviour Update via DefaultExecutionOrder). FixedStep gives a constant delta
 			// for deterministic / replay runs; Realtime (the default) rides wall-clock.
-			IAdvancingGameClock gameClock = clockMode switch
+			IAdvancingGameClock gameClock = options.ClockMode switch
 			{
 				GameClockMode.FixedStep => new FixedStepGameClock(),
 				_ => new RealtimeGameClock()
@@ -172,6 +183,11 @@ namespace Assembler.Building
 			// Release the registry's loaded assets (Addressables handles) when the game root is destroyed, mirroring
 			// the controls asset above. Resources-sourced assets need no release; Dispose is a no-op for them.
 			gameRoot.AddComponent<AssetRegistryOwner>().Initialise(assetRegistry);
+
+			// Apply the descriptor's global physics settings (currently just gravity) for this run and restore
+			// them on teardown, so physics is a per-game setting rather than a mutated global that leaks between
+			// games loaded in the same process.
+			gameRoot.AddComponent<PhysicsSettingsOwner>().Initialise(gameInfo.Physics);
 
 			// uGUI needs exactly one EventSystem to deliver pointer input. The project is Input System-only
 			// (activeInputHandler == 2), so the Input System UI module is required — StandaloneInputModule

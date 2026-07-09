@@ -61,7 +61,7 @@ namespace Assembler.AssetGeneration.ImageToMesh
                 throw new MeshyException("Set an output directory.");
 
             // PBR maps only exist alongside a generated texture.
-            request.EnablePbr = request.GenerateTexture && request.EnablePbr;
+            var enablePbr = request.GenerateTexture && request.EnablePbr;
 
             using var client = new MeshyApiClient(apiKey);
 
@@ -101,7 +101,7 @@ namespace Assembler.AssetGeneration.ImageToMesh
             }
 
             var savedPath = await DownloadResultsAsync(
-                client, task, outputDir, outputFile, request.Format, request.EnablePbr, ct, onStatus);
+                client, task, outputDir, outputFile, request.Format, enablePbr, ct, onStatus);
 
             // Outputs are on disk and the task succeeded — the resume marker is no longer needed.
             TryDeleteTaskSidecar(sidecar);

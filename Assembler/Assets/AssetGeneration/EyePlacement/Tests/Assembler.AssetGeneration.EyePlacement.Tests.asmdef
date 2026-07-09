@@ -6,7 +6,8 @@
         "Assembler.AssetGeneration.ImageOrientation",
         "Assembler.Voxels",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

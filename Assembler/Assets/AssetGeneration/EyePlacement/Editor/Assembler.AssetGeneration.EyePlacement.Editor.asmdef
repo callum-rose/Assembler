@@ -5,7 +5,8 @@
         "Assembler.AssetGeneration.EyePlacement",
         "Assembler.Anthropic",
         "Assembler.Voxels",
-        "Assembler.AssetGeneration.Editor.Common"
+        "Assembler.AssetGeneration.Editor.Common",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"
