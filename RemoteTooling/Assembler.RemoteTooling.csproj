@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Assembler.RemoteTooling</RootNamespace>
+    <AssemblyName>assembler-remote</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- No NuGet dependencies: GitHub goes through the `gh` CLI (already the auth story),
+         manifest.json through System.Text.Json, and `claude`/`validate-game.sh` through Process. -->
+  </PropertyGroup>
+
+</Project>
