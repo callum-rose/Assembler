@@ -50,6 +50,13 @@ namespace Assembler.Behaviours.AI
 		// position when it has none (still a single cell). NavGridService maps this onto the grid lattice.
 		private Bounds Footprint()
 		{
+			// Collider.bounds lags the transform until the physics scene syncs, and play mode leaves
+			// Physics.autoSyncTransforms off — so at build time (before the first physics step) a freshly
+			// positioned obstacle's bounds can still read its pre-placement pose, registering the footprint on a
+			// stale cell (a cell the block isn't visually on: an invisible wall). Sync first so bounds are current.
+			// EditMode/tests don't hit this (bounds sync on read there), which is why it only shows in a real run.
+			Physics.SyncTransforms();
+
 			var colliders = GetComponentsInChildren<Collider>();
 
 			if (colliders.Length == 0)
