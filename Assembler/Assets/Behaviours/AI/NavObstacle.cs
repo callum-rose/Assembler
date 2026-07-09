@@ -55,7 +55,8 @@ namespace Assembler.Behaviours.AI
 			// positioned obstacle's bounds can still read its pre-placement pose, registering the footprint on a
 			// stale cell (a cell the block isn't visually on: an invisible wall). Sync first so bounds are current.
 			// EditMode/tests don't hit this (bounds sync on read there), which is why it only shows in a real run.
-			Physics.SyncTransforms();
+			// Fully qualified: the Assembler.Behaviours.Physics namespace shadows UnityEngine.Physics here.
+			UnityEngine.Physics.SyncTransforms();
 
 			var colliders = GetComponentsInChildren<Collider>();
 
