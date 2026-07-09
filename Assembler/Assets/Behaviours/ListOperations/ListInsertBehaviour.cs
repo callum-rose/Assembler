@@ -1,5 +1,7 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using UnityEngine;
 
 namespace Assembler.Behaviours.ListOperations
 {
@@ -23,4 +25,25 @@ namespace Assembler.Behaviours.ListOperations
 			}
 		}
 	}
+
+	/// <summary>Inserts a bool value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class BoolListInsert : ListInsertBehaviour<bool> { }
+
+	/// <summary>Inserts a Color value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class ColourListInsert : ListInsertBehaviour<Color> { }
+
+	/// <summary>Inserts a float value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class FloatListInsert : ListInsertBehaviour<float> { }
+
+	/// <summary>Inserts an int value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class IntListInsert : ListInsertBehaviour<int> { }
+
+	/// <summary>Inserts a record value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class RecordListInsert : ListInsertBehaviour<Record> { }
+
+	/// <summary>Inserts a string value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class StringListInsert : ListInsertBehaviour<string> { }
+
+	/// <summary>Inserts a Vector3 value into the target list at a given index when Executed. See <see cref="ListInsertBehaviour{T}"/>.</summary>
+	public class Vector3ListInsert : ListInsertBehaviour<Vector3> { }
 }

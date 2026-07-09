@@ -1,5 +1,7 @@
+using Assembler.Core;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using UnityEngine;
 
 namespace Assembler.Behaviours.ListOperations
 {
@@ -22,4 +24,25 @@ namespace Assembler.Behaviours.ListOperations
 			}
 		}
 	}
+
+	/// <summary>Removes the bool item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class BoolListRemoveAt : ListRemoveAtBehaviour<bool> { }
+
+	/// <summary>Removes the Color item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class ColourListRemoveAt : ListRemoveAtBehaviour<Color> { }
+
+	/// <summary>Removes the float item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class FloatListRemoveAt : ListRemoveAtBehaviour<float> { }
+
+	/// <summary>Removes the int item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class IntListRemoveAt : ListRemoveAtBehaviour<int> { }
+
+	/// <summary>Removes the record item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class RecordListRemoveAt : ListRemoveAtBehaviour<Record> { }
+
+	/// <summary>Removes the string item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class StringListRemoveAt : ListRemoveAtBehaviour<string> { }
+
+	/// <summary>Removes the Vector3 item at a given index from the target list when Executed. See <see cref="ListRemoveAtBehaviour{T}"/>.</summary>
+	public class Vector3ListRemoveAt : ListRemoveAtBehaviour<Vector3> { }
 }

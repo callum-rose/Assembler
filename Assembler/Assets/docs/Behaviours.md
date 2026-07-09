@@ -1045,7 +1045,7 @@ Writes a Vector3 value into the referenced variable when Executed. See VariableS
 | Value | Vector3 | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `int variable setter`
-Writes a int value into the referenced variable when Executed. See VariableSetterBehaviour.
+Writes an int value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1340,7 +1340,7 @@ Iterates a Vector3 list when Executed, firing listeners once per element. See Li
 | index | int | Zero-based position of the current element. |
 
 ## `int list add`
-Appends a int value to the end of the target list when Executed. See ListAddBehaviour.
+Appends an int value to the end of the target list when Executed. See ListAddBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1352,7 +1352,7 @@ Appends a int value to the end of the target list when Executed. See ListAddBeha
 | Value | int | Item to append. |
 
 ## `int list insert`
-Inserts a int value into the target list at a given index when Executed. See ListInsertBehaviour.
+Inserts an int value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1377,7 +1377,7 @@ Removes the int item at a given index from the target list when Executed. See Li
 | Index | int | Zero-based position to remove from. |
 
 ## `int list remove`
-Removes the first occurrence of a int value from the target list when Executed. See ListRemoveBehaviour.
+Removes the first occurrence of an int value from the target list when Executed. See ListRemoveBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1437,7 +1437,7 @@ Removes all items from the target int list when Executed. See ListClearBehaviour
 | List | List<int> | Reference to the target list variable. |
 
 ## `int list loop trigger`
-Iterates a int list when Executed, firing listeners once per element. See ListLoopTrigger.
+Iterates an int list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 **Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
