@@ -67,6 +67,8 @@ Constants:
   enemy speed: 2.2
   fuse time: 2.5          # seconds before a bomb detonates
   fire time: 0.5          # seconds a blast tile lingers
+  flee range: 4           # an enemy flees a bomb once it is within this many cells
+  flee distance: 6        # how far past itself an enemy aims when fleeing (a point away from the bomb)
 
   # --- Sizes ---
   block size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
@@ -227,6 +229,27 @@ Expressions:
     Expression: |
       return new Vector3(Round(p.x), Round(p.y), 0f);
 
+  # An enemy's navigate target. With no bomb within `flee range` (bomb_id empty) it chases the
+  # player; otherwise it aims at a point `flee_dist` away from the nearest bomb (directly opposite),
+  # so the pathfinder walks it out of the blast cross while the fuse burns down.
+  fleeOrChase:
+    ArgumentTypes: [ string, vector, vector, vector, float ]
+    ArgumentNames: [ bomb_id, bomb_pos, player_pos, self_pos, flee_dist ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      if (bomb_id == "")
+      {
+          return player_pos;
+      }
+      var away = new Vector3(self_pos.x - bomb_pos.x, self_pos.y - bomb_pos.y, 0f);
+      if (Magnitude(away) < 0.001f)
+      {
+          away = new Vector3(1f, 0f, 0f);
+      }
+      var dir = Normalize(away);
+      return new Vector3(self_pos.x + dir.x * flee_dist, self_pos.y + dir.y * flee_dist, 0f);
+
 Templates:
   # --- Indestructible pillar (even/even lattice): baked into the nav grid as a wall ---
   pillar_template:
@@ -287,13 +310,21 @@ Templates:
       collider:
         Type: box collider
         Properties: { Size: !var actor collider, IsTrigger: true }
-      # Pathfinder: A* to the player over the shared grid (re-routes through gaps the
-      # player blows open). Output set, so it writes a heading into `dir` rather than
-      # steering the enemy itself — the grid mover does the moving.
+      # Pathfinder: A* over the shared grid (re-routes through gaps the player blows open).
+      # Output set, so it writes a heading into `dir` rather than steering the enemy itself
+      # — the grid mover does the moving. The Target chases the player, but flips to fleeing
+      # a point away from the nearest bomb whenever one comes within `flee range` (see fleeOrChase).
       chase:
         Type: navigate
         Properties:
-          Target: !entity { Id: player, Property: Position }
+          Target: !expr
+            Do: fleeOrChase
+            With:
+              bomb_id: !query { Kind: NearestId, EntityTag: bomb, Origin: !entity { Property: Position }, MaxRange: !var flee range }
+              bomb_pos: !query { Kind: NearestPosition, EntityTag: bomb, Origin: !entity { Property: Position }, MaxRange: !var flee range }
+              player_pos: !entity { Id: player, Property: Position }
+              self_pos: !entity { Property: Position }
+              flee_dist: !var flee distance
           Speed: !var enemy speed
           SlowingRadius: 0.1
           Recompute: 0.25
