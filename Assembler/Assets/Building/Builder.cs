@@ -173,6 +173,11 @@ namespace Assembler.Building
 			// the controls asset above. Resources-sourced assets need no release; Dispose is a no-op for them.
 			gameRoot.AddComponent<AssetRegistryOwner>().Initialise(assetRegistry);
 
+			// Apply the descriptor's global physics settings (currently just gravity) for this run and restore
+			// them on teardown, so physics is a per-game setting rather than a mutated global that leaks between
+			// games loaded in the same process.
+			gameRoot.AddComponent<PhysicsSettingsOwner>().Initialise(gameInfo.Physics);
+
 			// uGUI needs exactly one EventSystem to deliver pointer input. The project is Input System-only
 			// (activeInputHandler == 2), so the Input System UI module is required — StandaloneInputModule
 			// would silently deliver no clicks. Parented to gameRoot so it unloads with the game.

@@ -83,8 +83,12 @@ mapping) — the tag itself is not required here because the field is already co
 
 ```yaml
 Physics:
-  Gravity: !vec { X: 0, Y: 0 }       # !vec, optional — { X:0, Y:0 } disables gravity (top-down/arcade)
+  Gravity: !vec { X: 0, Y: -9.81, Z: 0 }   # !vec, optional — global gravity applied to rigidbodies
 ```
+
+Sets `UnityEngine.Physics.gravity` for the run (restored on teardown, so it doesn't leak between games
+loaded in one process). Absent or `{ X:0, Y:0, Z:0 }` leaves gravity off — the project default — which
+top-down/arcade games rely on. A `rigidbody` only falls under this when its `UseGravity` is `true`.
 
 ### `Assets` — list of `AssetDto`
 
