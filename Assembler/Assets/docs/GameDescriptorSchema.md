@@ -272,6 +272,13 @@ filled with a second localised string, and this nests to any depth:
 Text: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }   # → "Placing: Pulse Tower"
 ```
 
+"Any value source" includes the object-erased ref tags — `!entity`/`!rigidbody` (which read a live
+`Vector3`), `!clock`, `!query`, `!var`, and trigger outputs — so a placeholder can show a live value:
+
+```yaml
+Text: !text { Key: hud.pos, Arguments: [ !entity { Id: player, Property: Position } ] }
+```
+
 ### `Navigation` — `NavigationDto`
 
 Configures the walkability grid used by pathfinding/perception behaviours.

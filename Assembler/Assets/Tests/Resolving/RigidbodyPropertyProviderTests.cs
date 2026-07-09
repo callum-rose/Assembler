@@ -97,5 +97,17 @@ namespace Tests.Resolving
 
 			Assert.AreEqual(new Vector3(9, 9, 9), _rigidbody.linearVelocity);
 		}
+
+		[Test]
+		public void ResolvesAsBoxedObjectWhenUntyped()
+		{
+			// A !rigidbody used as an untyped argument (a !text/!expr operand) resolves as object, boxing the
+			// concrete Vector3 provider up to IValueProvider<object> (issue #523).
+			_rigidbody.linearVelocity = new Vector3(1, 2, 3);
+
+			var provider = new RigidbodyPropertySource<object>("entity", RigidbodyProperty.Velocity).Resolve(Context());
+
+			Assert.AreEqual(new Vector3(1, 2, 3), provider.Get(TriggerContext.Empty));
+		}
 	}
 }
