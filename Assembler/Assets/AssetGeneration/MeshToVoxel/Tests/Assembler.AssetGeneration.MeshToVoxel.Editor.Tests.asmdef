@@ -6,7 +6,8 @@
         "Assembler.AssetGeneration.MeshToVoxel.Editor",
         "Assembler.AssetGeneration.MeshToVoxels",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

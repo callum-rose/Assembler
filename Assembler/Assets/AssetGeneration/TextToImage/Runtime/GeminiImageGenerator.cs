@@ -62,7 +62,7 @@ namespace Assembler.AssetGeneration.TextToImage
                 HttpResilience.ThrowIfServerRejected((int)response.StatusCode);
                 if (!response.IsSuccessStatusCode)
                     throw new ImageGenerationException(
-                        $"Gemini request failed ({(int)response.StatusCode}): {Truncate(payload)}");
+                        $"Gemini request failed ({(int)response.StatusCode}): {ProviderSupport.Truncate(payload)}");
 
                 return payload;
             }, ct);
@@ -76,10 +76,10 @@ namespace Assembler.AssetGeneration.TextToImage
         // the text, which is how Gemini's generateContent does image-conditioned edits.
         private static string BuildRequestJson(string prompt, ReferenceImage? reference)
         {
-            var textPart = "{\"text\":\"" + EscapeJson(prompt) + "\"}";
+            var textPart = "{\"text\":\"" + ProviderSupport.EscapeJson(prompt) + "\"}";
 
             var parts = reference is { } image
-                ? "{\"inlineData\":{\"mimeType\":\"" + EscapeJson(image.MimeType) +
+                ? "{\"inlineData\":{\"mimeType\":\"" + ProviderSupport.EscapeJson(image.MimeType) +
                   "\",\"data\":\"" + Convert.ToBase64String(image.Bytes) + "\"}}," + textPart
                 : textPart;
 
@@ -113,34 +113,8 @@ namespace Assembler.AssetGeneration.TextToImage
             }
 
             throw new ImageGenerationException(
-                $"Response contained no image data. Raw: {Truncate(json)}");
+                $"Response contained no image data. Raw: {ProviderSupport.Truncate(json)}");
         }
-
-        private static string EscapeJson(string s)
-        {
-            var sb = new StringBuilder(s.Length + 16);
-            foreach (var c in s)
-            {
-                switch (c)
-                {
-                    case '\"': sb.Append("\\\""); break;
-                    case '\\': sb.Append("\\\\"); break;
-                    case '\n': sb.Append("\\n"); break;
-                    case '\r': sb.Append("\\r"); break;
-                    case '\t': sb.Append("\\t"); break;
-                    default:
-                        if (c < 0x20)
-                            sb.Append("\\u").Append(((int)c).ToString("x4"));
-                        else
-                            sb.Append(c);
-                        break;
-                }
-            }
-            return sb.ToString();
-        }
-
-        private static string Truncate(string s) =>
-            s.Length <= 600 ? s : s.Substring(0, 600) + "…";
 
         // --- DTOs (camelCase to match the v1beta REST JSON for JsonUtility mapping) ---
 

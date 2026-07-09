@@ -16,7 +16,7 @@ namespace Assembler.Generation.Verification
 
 		private readonly Func<GameDescriptorGenerator> _generatorFactory;
 		private readonly Func<string, BuildResult> _builder;
-		private readonly IGeneratorLogger? _logger;
+		private readonly IGeneratorLogger _logger;
 
 		public static GenerationOrchestrator CreateDefault(string apiKey, IGeneratorLogger? logger = null)
 		{
@@ -28,12 +28,12 @@ namespace Assembler.Generation.Verification
 
 		private GenerationOrchestrator(
 			Func<GameDescriptorGenerator> generatorFactory,
-			Func<string, BuildResult>? builder = null,
-			IGeneratorLogger? logger = null)
+			Func<string, BuildResult> builder,
+			IGeneratorLogger? logger)
 		{
 			_generatorFactory = generatorFactory;
-			_builder = builder ?? BuildHarness.TryBuild;
-			_logger = logger;
+			_builder = builder;
+			_logger = logger ?? NullGeneratorLogger.Instance;
 		}
 
 		public async Task<GenerationResult> GenerateAsync(
@@ -111,7 +111,7 @@ namespace Assembler.Generation.Verification
 
 		private void Log(string message)
 		{
-			_logger?.Log(message);
+			_logger.Log(message);
 		}
 
 		internal static string? TryExtractTitle(string yaml)

@@ -8,7 +8,8 @@
         "Assembler.AssetGeneration.MeshToVoxel.Editor",
         "Assembler.AssetGeneration.MeshToVoxel.Generation",
         "Assembler.AssetGeneration.MeshToVoxels",
-        "Assembler.AssetGeneration.Editor.Common"
+        "Assembler.AssetGeneration.Editor.Common",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

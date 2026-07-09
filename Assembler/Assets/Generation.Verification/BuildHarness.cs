@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using Assembler.Deserialisation.Dtos;
 
 namespace Assembler.Generation.Verification
 {
-	public sealed record BuildResult(bool Success, IReadOnlyList<string> Errors, GameDto? ParsedDto);
+	public sealed record BuildResult(bool Success, IReadOnlyList<string> Errors);
 
 	// Thin adapter over SandboxValidator that flattens the staged result into the flat shape the generation
 	// loop consumes. Delegating here means the generator and the headless validate-game tool share one
@@ -30,8 +29,7 @@ namespace Assembler.Generation.Verification
 				}
 			}
 
-			// ParsedDto is no longer surfaced (no caller reads it); kept on the record for source compat.
-			return new BuildResult(result.Success, errors, null);
+			return new BuildResult(result.Success, errors);
 		}
 	}
 }

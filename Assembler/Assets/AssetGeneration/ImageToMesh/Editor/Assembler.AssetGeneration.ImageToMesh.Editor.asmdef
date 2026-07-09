@@ -3,7 +3,8 @@
     "rootNamespace": "Assembler",
     "references": [
         "Assembler.AssetGeneration.ImageToMesh",
-        "Assembler.AssetGeneration.Editor.Common"
+        "Assembler.AssetGeneration.Editor.Common",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

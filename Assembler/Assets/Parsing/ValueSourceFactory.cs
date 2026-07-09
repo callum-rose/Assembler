@@ -182,8 +182,6 @@ namespace Assembler.Parsing
 					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => ExpressionSynthesis.CreateExpressionSource<T>(ctx, exprRef),
-				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
-					(T)(object)vec.ToVector3(ctx.Values)),
 				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(ctx.Values)),
 				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
 					(T)(object)col.ToColor(ctx.Values)),
