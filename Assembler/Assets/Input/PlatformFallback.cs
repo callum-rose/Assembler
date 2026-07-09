@@ -18,9 +18,6 @@ namespace Assembler.Input
 			InputPlatform.Mobile => new[] { "mobile", "desktop" },
 			InputPlatform.Console => new[] { "console", "gamepad", "desktop" },
 			InputPlatform.Gamepad => new[] { "gamepad", "desktop" },
-			// The automation scheme is standalone: it never falls back to a device group, so a game either binds
-			// its 'auto' group for harness-driven input or validation surfaces the used-but-unbound actions.
-			InputPlatform.Auto => new[] { "auto" },
 			_ => new[] { "desktop" }
 		};
 

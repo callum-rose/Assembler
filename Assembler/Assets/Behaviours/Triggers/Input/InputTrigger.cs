@@ -11,34 +11,47 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// valid Listeners: targets.
 	/// </summary>
 	/// <remarks>
-	/// This is the record/replay seam (issue #101). Subclasses emit through <see cref="EmitInput"/> (never
-	/// <c>NotifyListeners</c> directly), so every input emission is captured to the active
-	/// <see cref="InputReplaySession"/>; during replay they must gate their live device reads on
-	/// <see cref="IsReplaying"/> so only the recorded log drives the game.
+	/// This is the record/replay seam (issue #101), made structural rather than convention-based: it <b>shadows</b>
+	/// <see cref="GameBehaviour.NotifyListeners"/>, so a subclass just calls <c>NotifyListeners</c> as any trigger
+	/// would and automatically gets (a) capture of the emission to the active <see cref="InputReplaySession"/>, and
+	/// (b) suppression of the live emission while replaying (the recorded log drives listeners instead). A subclass
+	/// that forgets the seam and reaches <c>base.NotifyListeners</c> is the only way to bypass it. Live device
+	/// polling in <c>Update</c> may still early-out on <see cref="IsReplaying"/> as an optimisation, but it is no
+	/// longer required for correctness — suppression happens at this single choke point.
 	/// </remarks>
 	public abstract class InputTrigger<T> : Trigger<T>, IReplayableInput where T : TriggerData
 	{
-		/// <summary>This trigger's stable key — <c>(entity id, behaviour id)</c>. Valid once the build's
-		/// initialisation pass has assigned the entity and behaviour ids.</summary>
-		public BehaviourDescriptor Descriptor => new(Entity.Id, Id);
+		private BehaviourDescriptor? _descriptor;
 
-		/// <summary>True while the active run is replaying a captured log. Subclasses must early-out of their
-		/// device-polling code paths on this so the recorded emissions are the only ones that fire.</summary>
-		protected bool IsReplaying => InputReplayHub.Current is { Mode: ReplayMode.Replay };
+		/// <summary>This trigger's stable key — <c>(entity id, behaviour id)</c>. Cached (the ids are fixed once the
+		/// build's initialisation pass has run), so per-emission recording doesn't allocate a fresh descriptor.</summary>
+		public BehaviourDescriptor Descriptor => _descriptor ??= new BehaviourDescriptor(Entity.Id, Id);
+
+		/// <summary>True while the active run is replaying a captured log. Optional early-out for device polling; the
+		/// authoritative suppression is in <see cref="NotifyListeners"/>.</summary>
+		protected bool IsReplaying => InputReplayHub.Current is { IsReplaying: true };
 
 		/// <summary>
-		/// Emit an input context to this trigger's listeners, first recording it to the active session when the run
-		/// is capturing. Every input-trigger subclass fires through this rather than <c>NotifyListeners</c> so the
-		/// emission is captured for replay.
+		/// Record-then-notify choke point that shadows <see cref="GameBehaviour.NotifyListeners"/>: captures the
+		/// emission to the active session (record mode) and drops it entirely (replay mode), otherwise forwards to
+		/// the base. Every input-trigger subclass calls this exactly as it would the base method.
 		/// </summary>
-		protected void EmitInput(TriggerContext ctx)
+		protected new void NotifyListeners(TriggerContext ctx)
 		{
-			InputReplayHub.Current?.Record(Descriptor, ctx);
-			NotifyListeners(ctx);
+			if (InputReplayHub.Current is { } session)
+			{
+				if (session.IsReplaying)
+				{
+					return;
+				}
+
+				session.Record(Descriptor, ctx);
+			}
+
+			base.NotifyListeners(ctx);
 		}
 
-		// Replay path: re-emit a recorded context straight to listeners, deliberately NOT through EmitInput so a
-		// replayed emission is never recorded again.
-		void IReplayableInput.ReplayEmit(TriggerContext ctx) => NotifyListeners(ctx);
+		// Replay path: re-emit a recorded context straight to listeners via the base, bypassing capture/suppression.
+		void IReplayableInput.ReplayEmit(TriggerContext ctx) => base.NotifyListeners(ctx);
 	}
 }

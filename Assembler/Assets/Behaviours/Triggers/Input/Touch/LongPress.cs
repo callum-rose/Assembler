@@ -25,12 +25,6 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
-			// While replaying, don't read the live pointer; ReplayDriver re-emits the captured gesture.
-			if (IsReplaying)
-			{
-				return;
-			}
-
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 
@@ -54,7 +48,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 					var held = Clock.Time - _startTime;
 					if (held >= Data.Duration.ValueOr(0.5f))
 					{
-						EmitInput(TriggerContext.New(b =>
+						NotifyListeners(TriggerContext.New(b =>
 						{
 							b["position"] = position;
 							b["hold_duration"] = (float)held;

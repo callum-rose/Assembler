@@ -23,12 +23,6 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
-			// While replaying, don't read the live pointer; ReplayDriver re-emits the captured gesture.
-			if (IsReplaying)
-			{
-				return;
-			}
-
 			if (Pointer.Count < 2)
 			{
 				_tracking = false;
@@ -60,7 +54,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 				return;
 			}
 
-			EmitInput(TriggerContext.New(b =>
+			NotifyListeners(TriggerContext.New(b =>
 			{
 				b["center"] = (first + second) * 0.5f;
 				b["distance"] = distance;

@@ -26,8 +26,9 @@ namespace Tests.Determinism
 	/// <remarks>
 	/// PlayMode, because behaviour <c>Update</c> and input only run in play mode. The probe descriptor is
 	/// deliberately physics-free (Level 1 excludes physics, and two in-process runs would otherwise share a
-	/// <c>PhysicsScene</c>). Input is injected through the <c>auto</c> controls scheme (see the descriptor) driven by
-	/// a synthetic <see cref="Gamepad"/>, so the capture exercises the real device → action → trigger → record path.
+	/// <c>PhysicsScene</c>). Input is injected by overriding the platform to <see cref="InputPlatform.Gamepad"/> and
+	/// driving a synthetic <see cref="Gamepad"/> bound in the probe's <c>gamepad</c> group, so the capture exercises
+	/// the real device → action → trigger → record path.
 	/// </remarks>
 	public sealed class ReplayDeterminismTests
 	{
@@ -55,7 +56,7 @@ Controls:
   Actions:
     move: { Type: value, ValueType: vector2 }
   Bindings:
-    auto:
+    gamepad:
       move: [ ""<Gamepad>/leftStick"" ]
 
 Entities:
@@ -139,9 +140,9 @@ Entities:
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
 
-			// Force the automation scheme so the descriptor's `auto` bindings mask in (override-only, like the
-			// editor simulating a platform).
-			var resolveTask = gameInfo.ResolveAsync(controls, InputPlatform.Auto);
+			// Override the platform to Gamepad so the probe's `gamepad` bindings mask in (as the editor does when
+			// simulating a device); the test then drives a synthetic Gamepad bound in that group.
+			var resolveTask = gameInfo.ResolveAsync(controls, InputPlatform.Gamepad);
 			yield return new WaitUntil(() => resolveTask.IsCompleted);
 			if (resolveTask.IsFaulted)
 			{

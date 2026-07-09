@@ -21,15 +21,6 @@ namespace Assembler.Behaviours.Replay
 		private InputReplaySession _session = null!;
 		private IGameClock _clock = null!;
 
-		/// <summary>Publishes the session on the ambient hub immediately (so triggers registering/emitting during the
-		/// build's initialisation pass already see it) and wires the clock the replay pump reads.</summary>
-		public void Initialise(InputReplaySession session, IGameClock clock)
-		{
-			_session = session;
-			_clock = clock;
-			InputReplayHub.Current = session;
-		}
-
 		private void Update()
 		{
 			if (_session.Mode is ReplayMode.Replay)
@@ -46,6 +37,17 @@ namespace Assembler.Behaviours.Replay
 			{
 				InputReplayHub.Current = null;
 			}
+		}
+
+		/// <summary>Binds the run clock to the session, publishes the session on the ambient hub immediately (so
+		/// triggers emitting during the build's initialisation pass already see it), and wires the clock the replay
+		/// pump reads. Single point that threads the clock into the session.</summary>
+		public void Initialise(InputReplaySession session, IGameClock clock)
+		{
+			_session = session;
+			_clock = clock;
+			session.Bind(clock);
+			InputReplayHub.Current = session;
 		}
 	}
 }

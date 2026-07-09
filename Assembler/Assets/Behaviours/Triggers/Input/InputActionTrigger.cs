@@ -24,6 +24,11 @@ namespace Assembler.Behaviours.Triggers.Input
 	/// </remarks>
 	public class InputActionTrigger : InputTrigger<InputActionTriggerData>
 	{
+		// Set by the started/canceled callback (which fires in the Input System's own player-loop step, before the
+		// clock ticks) and flushed in Update so the emission is tagged with — and replayed on — the same frame it
+		// actually affects gameplay. Emitting straight from the callback would tag it one tick early.
+		private bool _pendingButtonEmit;
+
 		protected override void OnInitialise(InputActionTriggerData data)
 		{
 			Wire();
@@ -74,18 +79,21 @@ namespace Assembler.Behaviours.Triggers.Input
 			action.canceled -= OnButtonEvent;
 		}
 
+		// started/canceled fire before the clock ticks, so defer the emission to Update (see _pendingButtonEmit)
+		// rather than notifying here — tag-and-replay on the frame it lands, not the previous one.
 		private void OnButtonEvent(InputAction.CallbackContext _)
 		{
-			// Suppress live device events while replaying — the recorded log drives listeners instead.
 			if (isActiveAndEnabled && !IsReplaying)
 			{
-				EmitInput(TriggerContext.Empty);
+				_pendingButtonEmit = true;
 			}
 		}
 
 		private void Update()
 		{
-			// While replaying, don't read the live action at all; ReplayDriver re-emits the captured contexts.
+			// While replaying, don't read the live action at all; ReplayDriver re-emits the captured contexts. Not
+			// required for correctness (NotifyListeners suppresses during replay) — an optimisation that also skips
+			// the per-frame value-context allocation.
 			if (IsReplaying)
 			{
 				return;
@@ -99,17 +107,25 @@ namespace Assembler.Behaviours.Triggers.Input
 				return;
 			}
 
-			// Button + hold: fire every frame the control is pressed. Down/up are event-driven (see Wire).
-			if (Data.Phase is ButtonPhase.Hold && action.IsPressed())
+			// Button down/up: flush the callback-deferred emission on this frame. Hold: fire every frame pressed.
+			if (Data.Phase is ButtonPhase.Hold)
 			{
-				EmitInput(TriggerContext.Empty);
+				if (action.IsPressed())
+				{
+					NotifyListeners(TriggerContext.Empty);
+				}
+			}
+			else if (_pendingButtonEmit)
+			{
+				_pendingButtonEmit = false;
+				NotifyListeners(TriggerContext.Empty);
 			}
 		}
 
 		// Exposed for unit testing: live device polling is impractical to drive in a unit test, so the
 		// value-forwarding shape (axis/x/y) is verified through this seam.
 		// The action reads a Vector2 from its binding; it widens to a Vector3 (z = 0) here.
-		internal void Emit(Vector3 value) => EmitInput(BuildValueContext(value));
+		internal void Emit(Vector3 value) => NotifyListeners(BuildValueContext(value));
 
 		internal static TriggerContext BuildValueContext(Vector3 value) =>
 			TriggerContext.New(b =>

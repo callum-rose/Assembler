@@ -10,8 +10,8 @@ namespace Tests.Behaviours
 {
 	/// <summary>
 	/// EditMode unit coverage for the record/replay core (issue #101): the capture log keys emissions by clock
-	/// frame + trigger descriptor, and replay re-emits them onto the matching frame, in order, routed to the
-	/// registered trigger. The full device-driven end-to-end proof lives in the PlayMode
+	/// frame + trigger descriptor, and replay re-emits them onto the matching frame, in order, resolving the target
+	/// trigger through the bound lookup. The full device-driven end-to-end proof lives in the PlayMode
 	/// <c>ReplayDeterminismTests</c>; these tests pin the session logic itself without needing play mode.
 	/// </summary>
 	public sealed class InputReplaySessionTests
@@ -62,8 +62,7 @@ namespace Tests.Behaviours
 			var session = InputReplaySession.Replay(log);
 			var a = new FakeInput(TriggerA);
 			var b = new FakeInput(TriggerB);
-			session.Register(a);
-			session.Register(b);
+			session.BindTriggerLookup(Lookup(a, b));
 
 			session.ReplayFrame(0);
 			Assert.That(a.Received, Is.Empty, "nothing is due on frame 0");
@@ -90,7 +89,7 @@ namespace Tests.Behaviours
 			};
 			var session = InputReplaySession.Replay(log);
 			var a = new FakeInput(TriggerA);
-			session.Register(a);
+			session.BindTriggerLookup(Lookup(a));
 
 			// Jumping straight to frame 5 still fires everything due on or before it (the cursor never stalls).
 			session.ReplayFrame(5);
@@ -98,7 +97,34 @@ namespace Tests.Behaviours
 			Assert.That(a.Received.Select(c => c.Get<int>("v")), Is.EqualTo(new[] { 1, 3 }));
 		}
 
+		[Test]
+		public void Bind_resets_the_cursor_so_one_log_replays_against_many_runs()
+		{
+			var session = InputReplaySession.Replay(new[] { new RecordedInput(1, TriggerA, Ctx(7)) });
+
+			var first = new FakeInput(TriggerA);
+			session.BindTriggerLookup(Lookup(first));
+			session.Bind(new FakeClock());
+			session.ReplayFrame(1);
+			Assert.That(first.Received.Count, Is.EqualTo(1));
+
+			// A second run of the same session: Bind resets the cursor, so the log drives the new run too rather
+			// than the session being silently single-use.
+			var second = new FakeInput(TriggerA);
+			session.BindTriggerLookup(Lookup(second));
+			session.Bind(new FakeClock());
+			session.ReplayFrame(1);
+			Assert.That(second.Received.Count, Is.EqualTo(1), "Bind must reset the replay cursor for a fresh run.");
+		}
+
 		private static TriggerContext Ctx(int value) => TriggerContext.New("v", value);
+
+		// Descriptor → trigger lookup over the given fakes, matching the shape the builder binds over BehaviourRegistry.
+		private static System.Func<BehaviourDescriptor, IReplayableInput?> Lookup(params FakeInput[] triggers)
+		{
+			var byDescriptor = triggers.ToDictionary(t => t.Descriptor, t => (IReplayableInput)t);
+			return d => byDescriptor.TryGetValue(d, out var t) ? t : null;
+		}
 
 		private sealed class FakeInput : IReplayableInput
 		{

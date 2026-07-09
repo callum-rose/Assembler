@@ -31,12 +31,6 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 
 		private void Update()
 		{
-			// While replaying, don't read the live pointer; ReplayDriver re-emits the captured gesture.
-			if (IsReplaying)
-			{
-				return;
-			}
-
 			var pressed = Pointer.IsPressed;
 			var position = Pointer.Position;
 			var maxMovement = Data.MaxMovement.ValueOr(25f);
@@ -64,7 +58,7 @@ namespace Assembler.Behaviours.Triggers.Input.Touch
 						 Clock.Time - _firstTapTime <= Data.MaxInterval.ValueOr(0.3f) &&
 						 (position - _firstTapPosition).sqrMagnitude <= maxMoveSqr)
 				{
-					EmitInput(TriggerContext.New("position", position));
+					NotifyListeners(TriggerContext.New("position", position));
 					_hasFirstTap = false;
 				}
 				else

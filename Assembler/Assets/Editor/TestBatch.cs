@@ -31,23 +31,18 @@ namespace Editor
 		private static TestRunnerApi? _api;
 		private static Callbacks? _callbacks;
 
-		// The platform of the current run, threaded to the results writer so EditMode and PlayMode runs write to
-		// separate XML files (the deterministic replay test, issue #101, is the first PlayMode suite).
-		private static TestMode _mode = TestMode.EditMode;
-
-		public static void RunEditModeTests() => Run(TestMode.EditMode);
-
-		public static void RunPlayModeTests() => Run(TestMode.PlayMode);
-
-		private static void Run(TestMode mode)
+		// EditMode only. There is deliberately no PlayMode entry point: entering play mode triggers a domain
+		// reload that wipes these statics (and the callback registration), so RunFinished — which writes the XML
+		// and exits — never fires and the batch editor wedges. PlayMode tests (issue #101) run in a built player
+		// via Unity's own -runTests (Tools/run-tests.sh --player), which sidesteps the play->edit transition.
+		public static void RunEditModeTests()
 		{
-			_mode = mode;
 			EditorBatchCli.SuppressLogStackTraces();
 			try
 			{
 				string[] args = Environment.GetCommandLineArgs();
 
-				var filter = new Filter { testMode = mode };
+				var filter = new Filter { testMode = TestMode.EditMode };
 
 				string[] assemblies = EditorBatchCli.ArgValues(args, "-testAssembly").ToArray();
 				if (assemblies.Length > 0)
@@ -72,7 +67,7 @@ namespace Editor
 				_api.RegisterCallbacks(_callbacks);
 
 				var scope = DescribeScope(assemblies, nameRegexes, categories);
-				Debug.Log($"TestBatch: starting {mode} test run ({scope}).");
+				Debug.Log($"TestBatch: starting EditMode test run ({scope}).");
 
 				_api.Execute(new ExecutionSettings(filter));
 				// Returns immediately; Callbacks.RunFinished exits the editor when the run completes.
@@ -195,7 +190,7 @@ namespace Editor
 				{
 					string dir = Path.Combine(Directory.GetCurrentDirectory(), "TestResults");
 					Directory.CreateDirectory(dir);
-					string path = Path.Combine(dir, $"{_mode}-results.xml");
+					string path = Path.Combine(dir, "EditMode-results.xml");
 					File.WriteAllText(path, result.ToXml().OuterXml);
 					Debug.Log("TestBatch: wrote results XML to " + path);
 				}
