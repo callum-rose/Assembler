@@ -53,6 +53,50 @@ Entities:
 		}
 
 		[Test]
+		public void NestedTextTagBecomesNestedLocalisedSource()
+		{
+			var yaml = @"
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }
+";
+			var source = TextSourceOf(Parse(yaml));
+
+			Assert.AreEqual("hud.placing", source.Key);
+			Assert.AreEqual(1, source.Arguments.Count);
+
+			// The inner !text nests as an object-typed argument (a !text argument has no declared type).
+			var nested = (LocalisedTextSource<object>)source.Arguments[0];
+			Assert.AreEqual("tower.pulse", nested.Key);
+			Assert.AreEqual(0, nested.Arguments.Count);
+		}
+
+		[Test]
+		public void TextTagsNestToArbitraryDepth()
+		{
+			var yaml = @"
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: a, Arguments: [ !text { Key: b, Arguments: [ !text c ] } ] }
+";
+			var source = TextSourceOf(Parse(yaml));
+
+			Assert.AreEqual("a", source.Key);
+			var level2 = (LocalisedTextSource<object>)source.Arguments[0];
+			Assert.AreEqual("b", level2.Key);
+			var level3 = (LocalisedTextSource<object>)level2.Arguments[0];
+			Assert.AreEqual("c", level3.Key);
+		}
+
+		[Test]
 		public void LocalisationBlockTransformsIntoLocalisationInfo()
 		{
 			var yaml = @"

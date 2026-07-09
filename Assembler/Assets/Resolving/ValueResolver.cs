@@ -30,6 +30,11 @@ namespace Assembler.Resolving
 					query.Origin.Resolve(ctx), query.MaxRange.Resolve(ctx)),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
+				// A !text nested as an argument (of an outer !text or an !expr) resolves as object. The
+				// provider is concretely IValueProvider<string>, so box it up to IValueProvider<object> —
+				// mirroring how VariableRegistry.Get<object> boxes a typed variable.
+				LocalisedTextSource<T> text when typeof(T) == typeof(object) =>
+					(IValueProvider<T>)(object)BoxingValueProvider.Create(BuildLocalisedTextProvider(text, ctx)),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
 				// SubstituteParameters is meant to eliminate every ParameterSource during template
