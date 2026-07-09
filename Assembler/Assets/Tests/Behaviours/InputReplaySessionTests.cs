@@ -3,7 +3,6 @@ using System.Linq;
 using Assembler.Behaviours.Replay;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
-using Assembler.Time;
 using NUnit.Framework;
 
 namespace Tests.Behaviours
@@ -22,7 +21,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Record_tags_each_emission_with_the_current_frame_and_descriptor()
 		{
-			var clock = new FakeClock();
+			var clock = new FakeGameClock();
 			var session = InputReplaySession.Record();
 			session.Bind(clock);
 
@@ -39,7 +38,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Record_is_a_no_op_when_the_session_is_replaying()
 		{
-			var clock = new FakeClock();
+			var clock = new FakeGameClock();
 			var session = InputReplaySession.Replay(new[] { new RecordedInput(0, TriggerA, Ctx(1)) });
 			session.Bind(clock);
 
@@ -104,7 +103,7 @@ namespace Tests.Behaviours
 
 			var first = new FakeInput(TriggerA);
 			session.BindTriggerLookup(Lookup(first));
-			session.Bind(new FakeClock());
+			session.Bind(new FakeGameClock());
 			session.ReplayFrame(1);
 			Assert.That(first.Received.Count, Is.EqualTo(1));
 
@@ -112,7 +111,7 @@ namespace Tests.Behaviours
 			// than the session being silently single-use.
 			var second = new FakeInput(TriggerA);
 			session.BindTriggerLookup(Lookup(second));
-			session.Bind(new FakeClock());
+			session.Bind(new FakeGameClock());
 			session.ReplayFrame(1);
 			Assert.That(second.Received.Count, Is.EqualTo(1), "Bind must reset the replay cursor for a fresh run.");
 		}
@@ -135,23 +134,6 @@ namespace Tests.Behaviours
 			public List<TriggerContext> Received { get; } = new();
 
 			public void ReplayEmit(TriggerContext ctx) => Received.Add(ctx);
-		}
-
-		// A minimal IGameClock whose FrameCount the test drives directly; the other members are inert.
-		private sealed class FakeClock : IGameClock
-		{
-			public int FrameCount { get; set; }
-			public float DeltaTime => 0f;
-			public float UnscaledDeltaTime => 0f;
-			public double Time => 0d;
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused => false;
-
-			public void Pause() { }
-
-			public void Resume() { }
-
-			public void Step(int frames = 1) { }
 		}
 	}
 }
