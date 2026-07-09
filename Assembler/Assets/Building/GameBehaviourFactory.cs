@@ -625,6 +625,9 @@ namespace Assembler.Building
 						i.Ids.Resolve(ctx.Resolution),
 						i.Velocities.Resolve(ctx.Resolution),
 						i.Count.ResolveWritable(ctx.Resolution))),
+				[typeof(TagCountInfo)] = Entry<TagCountInfo, TagCount, TagCountData>(
+					(i, ctx) => new TagCountData(i.Id,
+						i.Tag.Resolve(ctx.Resolution))),
 				[typeof(SteeringInfo)] = Entry<SteeringInfo, Steering, SteeringData>(
 					(i, ctx) => new SteeringData(i.Id,
 						i.Forces.Select(f => new SteeringForce(

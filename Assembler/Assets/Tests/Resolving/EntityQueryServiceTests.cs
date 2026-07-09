@@ -146,6 +146,47 @@ namespace Tests.Resolving
 		}
 
 		[Test]
+		public void CountByTagCountsAllCarriersRegardlessOfPosition()
+		{
+			var service = new EntityQueryService();
+			service.Register("a", At("a", new Vector3(1, 0, 0)), new[] { "enemy" });
+			service.Register("b", At("b", new Vector3(9999, 0, 0)), new[] { "enemy" });
+			service.Register("ally", At("ally", Vector3.zero), new[] { "ally" });
+
+			Assert.AreEqual(2, service.CountByTag("enemy"));
+			Assert.AreEqual(1, service.CountByTag("ally"));
+		}
+
+		[Test]
+		public void CountByTagReturnsZeroForUnknownTag()
+		{
+			var service = new EntityQueryService();
+			service.Register("a", At("a", Vector3.zero), new[] { "enemy" });
+
+			Assert.AreEqual(0, service.CountByTag("pickup"));
+		}
+
+		[Test]
+		public void CountByTagDropsToZeroAsCarriersLeave()
+		{
+			var service = new EntityQueryService();
+			service.Register("a", At("a", Vector3.zero), new[] { "enemy" });
+			var doomed = At("b", new Vector3(1, 0, 0));
+			service.Register("b", doomed, new[] { "enemy" });
+
+			Assert.AreEqual(2, service.CountByTag("enemy"));
+
+			// A destroyed-but-not-yet-unregistered carrier must not be counted (the liveness backstop)...
+			Object.DestroyImmediate(doomed.gameObject);
+			_objects.Clear();
+			Assert.AreEqual(1, service.CountByTag("enemy"));
+
+			// ...and an explicit unregister empties the tag entirely.
+			service.Unregister("a");
+			Assert.AreEqual(0, service.CountByTag("enemy"));
+		}
+
+		[Test]
 		public void UnregisterRemovesEntity()
 		{
 			var service = new EntityQueryService();
