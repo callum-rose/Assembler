@@ -2,6 +2,7 @@ using System.Linq;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 
 namespace Tests.Parsing
@@ -102,6 +103,27 @@ Entities:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ";
 			Assert.Catch(() => Parse(yaml));
+		}
+
+		[Test]
+		public void RigidbodyTagNestsAsObjectArgumentOfText()
+		{
+			// A !rigidbody used as a !text argument is untyped, so it parses as RigidbodyPropertySource<object>
+			// (mirroring how a nested !text parses as LocalisedTextSource<object>) — issue #523.
+			var info = Parse(@"
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.vel, Arguments: [ !rigidbody { Id: hud, Property: Velocity } ] }
+");
+			var text = (LocalisedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
+			var nested = (RigidbodyPropertySource<object>)text.Arguments[0];
+
+			Assert.AreEqual("hud", nested.EntityId);
+			Assert.AreEqual(RigidbodyProperty.Velocity, nested.Property);
 		}
 	}
 }

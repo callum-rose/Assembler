@@ -126,6 +126,27 @@ Entities:
 		}
 
 		[Test]
+		public void EntityTagNestsAsObjectArgumentOfText()
+		{
+			// An !entity used as a !text argument is untyped, so it parses as EntityPropertySource<object>
+			// (mirroring how a nested !text parses as LocalisedTextSource<object>) — issue #523.
+			var info = Parse(@"
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.pos, Arguments: [ !entity { Id: hud, Property: Position } ] }
+");
+			var text = (LocalisedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
+			var nested = (EntityPropertySource<object>)text.Arguments[0];
+
+			Assert.AreEqual("hud", nested.EntityId.Id);
+			Assert.AreEqual(EntityProperty.Position, nested.Property);
+		}
+
+		[Test]
 		public void EmptyIdStringThrows()
 		{
 			// An explicit empty id is an authoring mistake, distinct from omitting Id entirely.

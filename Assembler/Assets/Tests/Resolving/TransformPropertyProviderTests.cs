@@ -73,5 +73,31 @@ namespace Tests.Resolving
 
 			Assert.AreEqual(new Vector3(9, 9, 9), _gameObject.transform.localScale);
 		}
+
+		[Test]
+		public void ResolvesAsBoxedObjectWhenUntyped()
+		{
+			// An !entity used as an untyped argument (a !text/!expr operand) resolves as object, boxing the
+			// concrete Vector3 provider up to IValueProvider<object> (issue #523).
+			_gameObject.transform.position = new Vector3(1, 2, 3);
+
+			var provider = new EntityPropertySource<object>(new LiteralEntityId("entity"), EntityProperty.Position)
+				.Resolve(Context());
+
+			Assert.AreEqual(new Vector3(1, 2, 3), provider.Get(TriggerContext.Empty));
+		}
+
+		[Test]
+		public void BoxedObjectReadIsLive()
+		{
+			_gameObject.transform.position = new Vector3(1, 1, 1);
+			var provider = new EntityPropertySource<object>(new LiteralEntityId("entity"), EntityProperty.Position)
+				.Resolve(Context());
+
+			Assert.AreEqual(new Vector3(1, 1, 1), provider.Get(TriggerContext.Empty));
+
+			_gameObject.transform.position = new Vector3(5, 6, 7);
+			Assert.AreEqual(new Vector3(5, 6, 7), provider.Get(TriggerContext.Empty));
+		}
 	}
 }
