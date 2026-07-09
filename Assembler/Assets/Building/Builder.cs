@@ -114,7 +114,13 @@ namespace Assembler.Building
 		/// Returns the root "Game" GameObject so callers can tear the whole game down by destroying it (the
 		/// sandbox validator relies on this).
 		/// </summary>
-		public static GameObject Instantiate(this ResolvedGame resolved)
+		/// <param name="resolved">The resolved game handle from <see cref="ResolveAsync"/>.</param>
+		/// <param name="clockMode">
+		/// Which <see cref="IGameClock"/> to run on. Defaults to <see cref="GameClockMode.Realtime"/> so every
+		/// normal play session and the sandbox validator are unchanged; deterministic / replay runs pass
+		/// <see cref="GameClockMode.FixedStep"/> for a constant per-frame delta.
+		/// </param>
+		public static GameObject Instantiate(this ResolvedGame resolved, GameClockMode clockMode = GameClockMode.Realtime)
 		{
 			var gameInfo = resolved.GameInfo;
 			var controls = resolved.Controls;
@@ -137,8 +143,13 @@ namespace Assembler.Building
 
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
-			// (ahead of every behaviour Update via DefaultExecutionOrder).
-			var gameClock = new RealtimeGameClock();
+			// (ahead of every behaviour Update via DefaultExecutionOrder). FixedStep gives a constant delta
+			// for deterministic / replay runs; Realtime (the default) rides wall-clock.
+			IAdvancingGameClock gameClock = clockMode switch
+			{
+				GameClockMode.FixedStep => new FixedStepGameClock(),
+				_ => new RealtimeGameClock()
+			};
 
 			var exclusiveGroupRegistry = new ExclusiveGroupRegistry(gameClock);
 

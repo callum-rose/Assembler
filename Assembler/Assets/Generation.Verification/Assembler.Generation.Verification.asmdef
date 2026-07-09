@@ -8,7 +8,8 @@
         "Assembler.Parsing",
         "Assembler.Deserialisation",
         "Assembler.Input",
-        "Assembler.Validation"
+        "Assembler.Validation",
+        "Assembler.Time"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
