@@ -2232,6 +2232,32 @@ A clickable uGUI button. Acts as a trigger: notifies its listeners each time it 
 | PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
 | PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
 
+## `ui drag source`
+A draggable uGUI widget. Acts as a trigger, but unlike ui button (which fires only on
+            click) it reports the whole pointer lifecycle — press, drag, release — as a screen-space position stream.
+            A press can therefore begin a drag whose position feeds another behaviour (e.g. a board's placement
+            logic) as the pointer moves over the play area. The caption is re-read every frame, so it can be bound to
+            a variable/expression.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Label | string | Caption (re-read each frame). |
+| PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
+| PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| phase | string | Lifecycle stage of this fire — "press", "drag", or "release". |
+| position | Vector3 | Current screen-space pointer position (z is 0). |
+| start | Vector3 | Screen-space position where the press began (z is 0). |
+| delta | Vector3 | Screen-space movement since the previous drag frame (z is 0). |
+
 ## `ui slider`
 A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.
 
