@@ -959,7 +959,9 @@ Walks an entity through an ordered list of waypoints, advancing on arrival.
 Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
             only re-decides direction once it arrives there, so motion is always grid-aligned and never diagonal
             (classic maze movement). At each cell it turns onto the requested Direction if that neighbour is
-            walkable, else continues its current heading, else stops. Walkability and cell geometry come from the
+            walkable, else continues its current heading while a direction is held, else stops. A zero Direction
+            (no input) stops it at the next cell — deliberate, stop-on-release control; a game that wants Pac-Man-style
+            momentum keeps feeding a non-zero heading (e.g. the last one) rather than zero. Walkability and cell geometry come from the
             NavGridService, so a player driven by this and the AI driven by navigate share one
             maze. Robust to external teleports (a wrap position tunnel): a large jump re-anchors to the new
             cell instead of dragging the entity back.

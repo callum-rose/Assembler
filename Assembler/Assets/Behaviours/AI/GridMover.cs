@@ -8,7 +8,9 @@ namespace Assembler.Behaviours.AI
 	/// Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
 	/// only re-decides direction once it arrives there, so motion is always grid-aligned and never diagonal
 	/// (classic maze movement). At each cell it turns onto the requested <c>Direction</c> if that neighbour is
-	/// walkable, else continues its current heading, else stops. Walkability and cell geometry come from the
+	/// walkable, else continues its current heading while a direction is held, else stops. A zero <c>Direction</c>
+	/// (no input) stops it at the next cell — deliberate, stop-on-release control; a game that wants Pac-Man-style
+	/// momentum keeps feeding a non-zero heading (e.g. the last one) rather than zero. Walkability and cell geometry come from the
 	/// <see cref="NavGridService"/>, so a player driven by this and the AI driven by <c>navigate</c> share one
 	/// maze. Robust to external teleports (a <c>wrap position</c> tunnel): a large jump re-anchors to the new
 	/// cell instead of dragging the entity back.
@@ -79,8 +81,16 @@ namespace Assembler.Behaviours.AI
 				transform.position = _target;
 				remaining -= toTarget;
 
+				// No input: stop on this cell rather than coasting on the last heading. This is stop-on-release
+				// control (a tap moves one cell); a mover that wants momentum keeps feeding a non-zero Direction.
+				if (desired == Vector3.zero)
+				{
+					_heading = Vector3.zero;
+					break;
+				}
+
 				// Turn onto the requested heading when the cell that way is open; otherwise keep going straight.
-				if (desired != Vector3.zero && Nav.IsWalkable(Nav.CellCentre(_target + desired * cellSize), agentRadius))
+				if (Nav.IsWalkable(Nav.CellCentre(_target + desired * cellSize), agentRadius))
 				{
 					_heading = desired;
 				}
