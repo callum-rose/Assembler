@@ -156,6 +156,10 @@ namespace Tests.Behaviours
 			Assert.AreEqual(7f, orbit.Radius, 1e-4f);
 			Assert.AreEqual(new Vector3(0f, 2f, 0f), orbit.TargetOffset);
 
+			// The auto-orbit reads Clock.DeltaTime; the build pipeline injects the clock (INeedsGameClock), so mirror
+			// that here before pumping Update. DeltaTime is 0 pre-Tick, which is fine — this only asserts the target.
+			behaviour.Clock = new Assembler.Time.RealtimeGameClock();
+
 			InvokeUpdate(behaviour);
 			Assert.AreEqual(target, cam.Follow);
 		}
