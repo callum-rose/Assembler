@@ -4,7 +4,8 @@
     "references": [
         "Assembler.Anthropic",
         "Assembler.Voxels",
-        "Assembler.AssetGeneration.ImageOrientation"
+        "Assembler.AssetGeneration.ImageOrientation",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

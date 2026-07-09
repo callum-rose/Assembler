@@ -14,12 +14,13 @@ namespace Assembler.Compiler.Compiler
 
 		public void RegisterMethod(string name, MethodInfo methodInfo)
 		{
-			if (!_registeredMethods.ContainsKey(name))
+			if (!_registeredMethods.TryGetValue(name, out var methods))
 			{
-				_registeredMethods[name] = new HashSet<MethodInfo>();
+				methods = new HashSet<MethodInfo>();
+				_registeredMethods[name] = methods;
 			}
 
-			_registeredMethods[name].Add(methodInfo);
+			methods.Add(methodInfo);
 		}
 
 		public void RegisterStaticMethods(Type type)

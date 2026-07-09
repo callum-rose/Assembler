@@ -11,7 +11,8 @@
         "Assembler.TextToVoxelPipeline.Editor",
         "Assembler.AssetGeneration.TextToImage",
         "Assembler.AssetGeneration.ImageToMesh",
-        "Assembler.AssetGeneration.MeshToVoxel"
+        "Assembler.AssetGeneration.MeshToVoxel",
+        "Assembler.AssetGeneration.Common"
     ],
     "includePlatforms": [
         "Editor"

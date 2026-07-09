@@ -17,7 +17,6 @@ namespace Assembler.Compiler.Compiler
 		private readonly Stack<LabelTarget> _breakLabels = new();
 		private readonly Stack<LabelTarget> _continueLabels = new();
 		private readonly Dictionary<string, Type> _registeredTypes = new();
-		private readonly Stack<ParameterExpression> _lambdaParameters = new();
 		private LabelTarget? _returnLabel;
 		private Type _returnType = typeof(void);
 
@@ -189,12 +188,13 @@ namespace Assembler.Compiler.Compiler
 
 		public void RegisterMethod(string name, MethodInfo method)
 		{
-			if (!_availableMethods.ContainsKey(name))
+			if (!_availableMethods.TryGetValue(name, out var methods))
 			{
-				_availableMethods[name] = new List<MethodInfo>();
+				methods = new List<MethodInfo>();
+				_availableMethods[name] = methods;
 			}
 
-			_availableMethods[name].Add(method);
+			methods.Add(method);
 		}
 
 		public void RegisterType(string name, Type type)
@@ -1979,96 +1979,6 @@ namespace Assembler.Compiler.Compiler
 			return candidates.FirstOrDefault();
 		}
 
-		private MethodInfo? FindExtensionMethod(Type instanceType, string methodName, Type[] argTypes)
-		{
-			// Look through all registered methods to find extension methods
-			if (!_availableMethods.TryGetValue(methodName, out var methods))
-			{
-				return null;
-			}
-
-			foreach (var method in methods)
-			{
-				if (!method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
-				{
-					continue;
-				}
-
-				var parameters = method.GetParameters();
-				if (parameters.Length == 0)
-				{
-					continue;
-				}
-
-				// First parameter should be compatible with instance type
-				// For generic extension methods, we need special handling
-				var firstParamType = parameters[0].ParameterType;
-				bool instanceMatches = false;
-
-				if (IsCompatibleType(instanceType, firstParamType))
-				{
-					instanceMatches = true;
-				}
-				else if (firstParamType.IsGenericType)
-				{
-					// Check if instance type implements the generic interface
-					var genericTypeDef = firstParamType.GetGenericTypeDefinition();
-					foreach (var iface in instanceType.GetInterfaces())
-					{
-						if (iface.IsGenericType && iface.GetGenericTypeDefinition() == genericTypeDef)
-						{
-							instanceMatches = true;
-							break;
-						}
-					}
-				}
-
-				if (!instanceMatches)
-				{
-					continue;
-				}
-
-				// Check remaining parameters match argument types
-				if (parameters.Length - 1 != argTypes.Length)
-				{
-					continue;
-				}
-
-				bool match = true;
-				for (int i = 0; i < argTypes.Length; i++)
-				{
-					var paramType = parameters[i + 1].ParameterType;
-					var argType = argTypes[i];
-
-					// Special handling for lambda expressions matching delegate parameters
-					if (argType.IsSubclassOf(typeof(System.Linq.Expressions.LambdaExpression)) ||
-						argType == typeof(System.Linq.Expressions.LambdaExpression))
-					{
-						// Lambda can match any delegate type, but we need to check parameter count
-						if (paramType.IsSubclassOf(typeof(Delegate)) || paramType == typeof(Delegate))
-						{
-							// This is a delegate parameter - lambda is potentially compatible
-							// We'll validate the actual signature later when we have the concrete method
-							continue;
-						}
-					}
-
-					if (!IsCompatibleType(argType, paramType))
-					{
-						match = false;
-						break;
-					}
-				}
-
-				if (match)
-				{
-					return method;
-				}
-			}
-
-			return null;
-		}
-
 		private Expression ParseFunctionCall(Expression function)
 		{
 			var arguments = new List<Expression>();
@@ -2222,12 +2132,10 @@ namespace Assembler.Compiler.Compiler
 							nameToken);
 					}
 
-					_lambdaParameters.Push(lambdaParam);
 					_variables[name] = lambdaParam;
 
 					var lambdaBody = ParseExpression();
 
-					_lambdaParameters.Pop();
 					_variables.Remove(name);
 
 					return Expression.Lambda(lambdaBody, lambdaParam);
@@ -2846,12 +2754,10 @@ namespace Assembler.Compiler.Compiler
 					paramToken);
 			}
 
-			_lambdaParameters.Push(lambdaParam);
 			_variables[paramName] = lambdaParam;
 
 			var lambdaBody = ParseExpression();
 
-			_lambdaParameters.Pop();
 			_variables.Remove(paramName);
 
 			return Expression.Lambda(lambdaBody, lambdaParam);

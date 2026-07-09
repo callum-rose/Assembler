@@ -226,9 +226,9 @@ namespace Assembler.AssetGeneration.ImageToMesh
             sb.Append($"\"image_url\":\"{dataUri}\"");
             AppendString(sb, "ai_model", request.AiModel);
 
-            // Texturing.
+            // Texturing. PBR maps only exist alongside a generated texture.
             AppendBool(sb, "should_texture", request.GenerateTexture);
-            AppendBool(sb, "enable_pbr", request.EnablePbr);
+            AppendBool(sb, "enable_pbr", request.GenerateTexture && request.EnablePbr);
             AppendBool(sb, "hd_texture", request.HdTexture);
 
             // Geometry / remeshing.
@@ -380,34 +380,32 @@ namespace Assembler.AssetGeneration.ImageToMesh
         Ultra,
     }
 
-    // Plain mutable struct (get/set, not init) because editor-only asmdefs in this
-    // project don't have the IsExternalInit polyfill that init accessors require.
     // NOTE: bool fields default to false, which differs from Meshy's API default for
     // remove_lighting (true) — callers should set RemoveLighting explicitly.
     public struct MeshyRequest
     {
-        public string ImagePath { get; set; }
-        public ModelFormat Format { get; set; }
-        public string AiModel { get; set; }
+        public string ImagePath { get; init; }
+        public ModelFormat Format { get; init; }
+        public string AiModel { get; init; }
 
         // Texturing.
-        public bool GenerateTexture { get; set; }
-        public bool EnablePbr { get; set; }
-        public bool HdTexture { get; set; }
+        public bool GenerateTexture { get; init; }
+        public bool EnablePbr { get; init; }
+        public bool HdTexture { get; init; }
 
         // Geometry / remeshing.
-        public bool Remesh { get; set; }
-        public MeshyTopology Topology { get; set; }
-        public DecimationMode Decimation { get; set; }
-        public int TargetPolycount { get; set; }
-        public bool SavePreRemeshedModel { get; set; }
+        public bool Remesh { get; init; }
+        public MeshyTopology Topology { get; init; }
+        public DecimationMode Decimation { get; init; }
+        public int TargetPolycount { get; init; }
+        public bool SavePreRemeshedModel { get; init; }
 
         // Output presentation.
-        public bool RemoveLighting { get; set; }
-        public bool Moderation { get; set; }
-        public bool AutoSize { get; set; }
-        public ModelOrigin OriginAt { get; set; }
-        public bool MultiViewThumbnails { get; set; }
-        public bool AlphaThumbnail { get; set; }
+        public bool RemoveLighting { get; init; }
+        public bool Moderation { get; init; }
+        public bool AutoSize { get; init; }
+        public ModelOrigin OriginAt { get; init; }
+        public bool MultiViewThumbnails { get; init; }
+        public bool AlphaThumbnail { get; init; }
     }
 }
