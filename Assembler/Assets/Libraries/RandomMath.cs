@@ -10,9 +10,9 @@ namespace Assembler.Libraries
 	/// automatically during overload resolution. Lists are carried as List&lt;T&gt;, matching GridMath.
 	/// </summary>
 	/// <remarks>
-	/// Every helper draws from a single ambient <see cref="DeterministicRng"/> — the per-run seeded PRNG
-	/// (issue #101) — rather than <c>UnityEngine.Random</c>, so a game's randomness replays exactly given the
-	/// same seed (Level 1: same build, same machine). <see cref="Builder"/> calls <see cref="Seed(uint)"/>
+	/// Every helper draws from a single ambient <see cref="Unity.Mathematics.Random"/> — the per-run seeded
+	/// PRNG (issue #101) — rather than <c>UnityEngine.Random</c>, so a game's randomness replays exactly given
+	/// the same seed (Level 1: same build, same machine). <see cref="Builder"/> calls <see cref="Seed(uint)"/>
 	/// once at run start (an explicit seed for a deterministic/replay run, otherwise one derived from entropy
 	/// so normal play still varies each launch). The generator is static, so it assumes one game runs at a
 	/// time — fine at Level 1. Anything that calls <c>UnityEngine.Random</c> directly (including a descriptor
@@ -21,16 +21,19 @@ namespace Assembler.Libraries
 	/// </remarks>
 	public static class RandomMath
 	{
-		// The single source of randomness for every helper below. Seeded from entropy on first use so a
-		// process that never calls Seed still varies; Builder overwrites it per run via Seed(uint).
-		private static DeterministicRng _rng = new(unchecked((uint)System.Environment.TickCount));
+		// The single source of randomness for every helper below. Unity.Mathematics.Random is a deterministic
+		// xorshift struct seeded by a uint (see Seed). CreateFromIndex hashes the seed so any value — including
+		// small or zero seeds the bare constructor rejects — maps to a well-distributed state. Seeded from
+		// entropy on first use so a process that never calls Seed still varies; Builder overwrites it per run.
+		private static Unity.Mathematics.Random _rng =
+			Unity.Mathematics.Random.CreateFromIndex(unchecked((uint)System.Environment.TickCount));
 
 		/// <summary>
 		/// Reseeds the ambient generator so every subsequent draw follows a fresh, reproducible sequence.
 		/// Called once per run by the builder; the same seed yields the same game randomness.
 		/// </summary>
 		/// <param name="seed">The run seed.</param>
-		public static void Seed(uint seed) => _rng = new DeterministicRng(seed);
+		public static void Seed(uint seed) => _rng = Unity.Mathematics.Random.CreateFromIndex(seed);
 
 		/// <summary>A random float in the range [min, max).</summary>
 		/// <param name="min">Lower bound (inclusive).</param>
