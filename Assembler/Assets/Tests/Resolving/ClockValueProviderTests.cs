@@ -7,19 +7,6 @@ namespace Tests.Resolving
 {
 	public class ClockValueProviderTests
 	{
-		private sealed class FakeGameClock : IGameClock
-		{
-			public float DeltaTime { get; set; }
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() => IsPaused = true;
-			public void Resume() => IsPaused = false;
-			public void Step(int frames = 1) { }
-		}
-
 		private static ResolutionContext ContextWith(IGameClock clock) =>
 			// Only the clock is exercised when resolving a ClockValueSource; the other registries are
 			// not touched, so they can be left null for this focused test.

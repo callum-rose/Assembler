@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -11,8 +10,6 @@ namespace Tests.Parsing
 	// These lock in the loud/correct behaviour at the parse boundary.
 	public class SilentDescriptorFailureTests
 	{
-		private static GameInfo Transform(string yaml) => Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static BehaviourInfo Behaviour(GameInfo info, string entityId, string behaviourId) =>
 			info.Entities.Single(e => e.Id == entityId).Behaviours.Single(b => b.Id == behaviourId);
 
@@ -21,7 +18,7 @@ namespace Tests.Parsing
 		[Test]
 		public void EntityTaggedListener_WithoutBehaviourId_HasNullBehaviourId()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -38,7 +35,7 @@ Entities:
 		[Test]
 		public void EntityTaggedListener_WithBehaviourId_CarriesIt()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -58,7 +55,7 @@ Entities:
 		[Test]
 		public void TypedListTagsToDetect_AreParsed()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   ball:
     Behaviours:

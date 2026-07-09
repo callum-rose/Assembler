@@ -3,7 +3,6 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,19 +10,6 @@ namespace Tests.Behaviours
 {
 	public class PerceiveTests
 	{
-		private sealed class FakeClock : IGameClock
-		{
-			public float DeltaTime { get; set; }
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() { }
-			public void Resume() { }
-			public void Step(int frames = 1) { }
-		}
-
 		private GameObject _seer = null!;
 		private GameObject _enemy = null!;
 
@@ -53,7 +39,7 @@ namespace Tests.Behaviours
 			perceive.SetEntity(entity);
 			perceive.Query = query;
 			perceive.Sight = new LineOfSightService();
-			perceive.Clock = new FakeClock();
+			perceive.Clock = new FakeGameClock();
 
 			var id = new ValueProvider<string>(string.Empty);
 			var pos = new ValueProvider<Vector3>(Vector3.zero);

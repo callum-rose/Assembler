@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -11,7 +10,7 @@ namespace Tests.Parsing
 	public class TemplateTests
 	{
 		[Test]
-		public void TestTemplateExpansion()
+		public void TemplateExpansionResolvesParameters()
 		{
 			var yaml = @"
 Templates:
@@ -29,9 +28,7 @@ Entities:
         speed: !vec { X: 0, Y: 2 }
 ";
 
-			var parser = new GameFileParser();
-			var gameDto = parser.Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			Assert.AreEqual(1, gameInfo.Entities.Count);
 			var paddle = gameInfo.Entities[0];
@@ -63,7 +60,7 @@ Entities:
     Template: { Id: mover_template }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
@@ -92,7 +89,7 @@ Entities:
     Template: { Id: mover_template }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
@@ -124,7 +121,7 @@ Entities:
         target: leader
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
@@ -149,7 +146,7 @@ Entities:
     Template: { Id: follower_template }
 ";
 
-			Assert.Throws<ParsingException>(() => Transformer.Transform(new GameFileParser().Parse(yaml)));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -164,7 +161,7 @@ Entities:
     Template: { Id: base }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
@@ -184,7 +181,7 @@ Entities:
     Template: { Id: base }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialRotation as ConstantSource<Vector3>;
@@ -205,7 +202,7 @@ Entities:
     Position: !vec { X: 10, Y: 0 }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
@@ -214,7 +211,7 @@ Entities:
 		}
 
 		[Test]
-		public void TestTemplateOverride()
+		public void EntityTagsOverrideTemplateTags()
 		{
 			var yaml = @"
 Templates:
@@ -228,9 +225,7 @@ Entities:
     Tags: [ right_paddle ]
 ";
 
-			var parser = new GameFileParser();
-			var gameDto = parser.Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			Assert.AreEqual(1, gameInfo.Entities.Count);
 			var paddle = gameInfo.Entities[0];

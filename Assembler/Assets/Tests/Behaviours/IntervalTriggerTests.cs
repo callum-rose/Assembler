@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Timing;
 using Assembler.Resolving;
@@ -10,93 +8,62 @@ using UnityEngine;
 
 namespace Tests.Behaviours
 {
-	public class IntervalTriggerTests
+	public class IntervalTriggerTests : BehaviourTestFixture
 	{
-		private sealed class ActionListener : Listener
-		{
-			private readonly Action<TriggerContext> _action;
-
-			public ActionListener(Action<TriggerContext> action)
-				: base(new Dictionary<string, string>())
-			{
-				_action = action;
-			}
-
-			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
-
-#if DEBUG_CONSOLE
-			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
-#endif
-		}
-
 		[Test]
 		public void FireIteration_PublishesIncrementingIndexAndCount()
 		{
-			var go = new GameObject("IntervalTriggerTestObject");
-			try
+			var go = Track(new GameObject("IntervalTriggerTestObject"));
+			var trigger = go.AddComponent<IntervalTrigger>();
+
+			var observedIndices = new List<int>();
+			var observedCounts = new List<int>();
+
+			var listener = new ActionListener(ctx =>
 			{
-				var trigger = go.AddComponent<IntervalTrigger>();
+				observedIndices.Add(ctx.Get<int>("iteration_index"));
+				observedCounts.Add(ctx.Get<int>("iteration_count"));
+			});
 
-				var observedIndices = new List<int>();
-				var observedCounts = new List<int>();
+			var data = new IntervalTriggerData(
+				id: "test_interval",
+				interval: new ValueProvider<float>(0f),
+				count: new ValueProvider<int>(3),
+				autoStart: new ValueProvider<bool>(false));
 
-				var listener = new ActionListener(ctx =>
-				{
-					observedIndices.Add(ctx.Get<int>("iteration_index"));
-					observedCounts.Add(ctx.Get<int>("iteration_count"));
-				});
+			trigger.Initialise(data, new List<Listener> { listener });
 
-				var data = new IntervalTriggerData(
-					id: "test_interval",
-					interval: new ValueProvider<float>(0f),
-					count: new ValueProvider<int>(3),
-					autoStart: new ValueProvider<bool>(false));
-
-				trigger.Initialise(data, new List<Listener> { listener });
-
-				const int totalIterations = 3;
-				for (int i = 0; i < totalIterations; i++)
-				{
-					trigger.FireIteration(i, totalIterations, TriggerContext.Empty);
-				}
-
-				CollectionAssert.AreEqual(new[] { 0, 1, 2 }, observedIndices);
-				CollectionAssert.AreEqual(new[] { 3, 3, 3 }, observedCounts);
-			}
-			finally
+			const int totalIterations = 3;
+			for (int i = 0; i < totalIterations; i++)
 			{
-				UnityEngine.Object.DestroyImmediate(go);
+				trigger.FireIteration(i, totalIterations, TriggerContext.Empty);
 			}
+
+			CollectionAssert.AreEqual(new[] { 0, 1, 2 }, observedIndices);
+			CollectionAssert.AreEqual(new[] { 3, 3, 3 }, observedCounts);
 		}
 
 		[Test]
 		public void FireIteration_ForwardsUpstreamOutputsThroughToListeners()
 		{
-			var go = new GameObject("IntervalTriggerTestObject");
-			try
-			{
-				var trigger = go.AddComponent<IntervalTrigger>();
+			var go = Track(new GameObject("IntervalTriggerTestObject"));
+			var trigger = go.AddComponent<IntervalTrigger>();
 
-				int observedOuter = 0;
-				var listener = new ActionListener(ctx => observedOuter = ctx.Get<int>("outer"));
+			int observedOuter = 0;
+			var listener = new ActionListener(ctx => observedOuter = ctx.Get<int>("outer"));
 
-				var data = new IntervalTriggerData(
-					id: "test_interval",
-					interval: new ValueProvider<float>(0f),
-					count: new ValueProvider<int>(1),
-					autoStart: new ValueProvider<bool>(false));
+			var data = new IntervalTriggerData(
+				id: "test_interval",
+				interval: new ValueProvider<float>(0f),
+				count: new ValueProvider<int>(1),
+				autoStart: new ValueProvider<bool>(false));
 
-				trigger.Initialise(data, new List<Listener> { listener });
+			trigger.Initialise(data, new List<Listener> { listener });
 
-				var upstream = TriggerContext.New("outer", 42);
-				trigger.FireIteration(0, 1, upstream);
+			var upstream = TriggerContext.New("outer", 42);
+			trigger.FireIteration(0, 1, upstream);
 
-				Assert.AreEqual(42, observedOuter);
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			Assert.AreEqual(42, observedOuter);
 		}
 	}
 }

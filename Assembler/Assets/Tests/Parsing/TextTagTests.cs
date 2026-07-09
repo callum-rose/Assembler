@@ -1,4 +1,3 @@
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -8,9 +7,6 @@ namespace Tests.Parsing
 {
 	public class TextTagTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static LocalisedTextSource<string> TextSourceOf(GameInfo info) =>
 			(LocalisedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
 
@@ -26,7 +22,7 @@ Entities:
         Properties:
           Text: !text menu.start
 ";
-			var source = TextSourceOf(Parse(yaml));
+			var source = TextSourceOf(ParseHelper.ParseGame(yaml));
 
 			Assert.AreEqual("menu.start", source.Key);
 			Assert.AreEqual(0, source.Arguments.Count);
@@ -46,7 +42,7 @@ Entities:
         Properties:
           Text: !text { Key: hud.score, Arguments: [ !var score ] }
 ";
-			var source = TextSourceOf(Parse(yaml));
+			var source = TextSourceOf(ParseHelper.ParseGame(yaml));
 
 			Assert.AreEqual("hud.score", source.Key);
 			Assert.AreEqual(1, source.Arguments.Count);
@@ -64,7 +60,7 @@ Entities:
         Properties:
           Text: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }
 ";
-			var source = TextSourceOf(Parse(yaml));
+			var source = TextSourceOf(ParseHelper.ParseGame(yaml));
 
 			Assert.AreEqual("hud.placing", source.Key);
 			Assert.AreEqual(1, source.Arguments.Count);
@@ -87,7 +83,7 @@ Entities:
         Properties:
           Text: !text { Key: a, Arguments: [ !text { Key: b, Arguments: [ !text c ] } ] }
 ";
-			var source = TextSourceOf(Parse(yaml));
+			var source = TextSourceOf(ParseHelper.ParseGame(yaml));
 
 			Assert.AreEqual("a", source.Key);
 			var level2 = (LocalisedTextSource<object>)source.Arguments[0];
@@ -111,7 +107,7 @@ Entities:
   hud:
     Behaviours: {}
 ";
-			var info = Parse(yaml);
+			var info = ParseHelper.ParseGame(yaml);
 
 			Assert.AreEqual("en", info.Localisation.DefaultLocale);
 			Assert.IsTrue(info.Localisation.Locales.ContainsKey("en"));
@@ -123,7 +119,7 @@ Entities:
 		[Test]
 		public void MissingLocalisationBlockYieldsEmptyInfo()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   hud:
     Behaviours: {}
@@ -145,7 +141,7 @@ Entities:
           Text: hi
           FontSize: !text some.key
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 	}
 }

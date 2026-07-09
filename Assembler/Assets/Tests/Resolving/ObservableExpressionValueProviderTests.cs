@@ -128,18 +128,5 @@ namespace Tests.Resolving
 		// registries are not touched while resolving a constant/clock-arg expression, so leave them null.
 		private static ResolutionContext ContextWith(CompiledExpressionsRegistry expressions, IGameClock? clock) =>
 			new(null!, expressions, null!, null!, null, null!, null!, clock!);
-
-		private sealed class FakeGameClock : IGameClock
-		{
-			public float DeltaTime { get; set; }
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() => IsPaused = true;
-			public void Resume() => IsPaused = false;
-			public void Step(int frames = 1) { }
-		}
 	}
 }

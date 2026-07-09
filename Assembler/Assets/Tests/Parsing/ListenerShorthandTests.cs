@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using NUnit.Framework;
@@ -8,9 +7,6 @@ namespace Tests.Parsing
 {
 	public class ListenerShorthandTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static DirectListenerInfo DirectListener(GameInfo info, string entityId, string behaviourId) =>
 			(DirectListenerInfo)info.Entities
 				.First(e => e.Id == entityId)
@@ -22,7 +18,7 @@ namespace Tests.Parsing
 		[Test]
 		public void OmittedEntityIdDefaultsToEnclosingEntity()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -44,7 +40,7 @@ Entities:
 		[Test]
 		public void ScalarShorthandBehaviourTargetsOwnEntity()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -65,7 +61,7 @@ Entities:
 		[Test]
 		public void ScalarShorthandEntitySlashBehaviourTargetsNamedEntity()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -88,7 +84,7 @@ Entities:
 		[Test]
 		public void ExplicitEntityIdStillWorks()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
@@ -113,7 +109,7 @@ Entities:
 		[Test]
 		public void OmittedEntityIdInTemplateResolvesToInstanceId()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Templates:
   mover:
     Behaviours:
@@ -138,7 +134,7 @@ Entities:
 		[Test]
 		public void OutputsPreservedInMappingForm()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   player:
     Behaviours:
