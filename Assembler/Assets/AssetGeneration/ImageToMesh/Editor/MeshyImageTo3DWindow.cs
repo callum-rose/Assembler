@@ -54,7 +54,7 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
 				DrawOutputPicker();
 				EditorGUILayout.Space();
 
-				MeshySettingsGui.Draw(ref _meshy);
+				_meshy = MeshySettingsGui.Draw(_meshy);
 			}
 
 			EditorGUILayout.Space();
@@ -144,8 +144,7 @@ namespace Assembler.AssetGeneration.ImageToMesh.Editor
 			{
 				// Core submit/poll/download lives in MeshyConversionCore so it can be driven
 				// headlessly or as one stage of the image → mesh → voxels pipeline.
-				var request = _meshy;
-				request.ImagePath = _imagePath;
+				var request = MeshySettingsGui.WithImagePath(_meshy, _imagePath);
 				var result = await MeshyConversionCore.ConvertAsync(
 					_apiKey, request, _outputDir, _outputFile, ct, _run.SetStatus);
 

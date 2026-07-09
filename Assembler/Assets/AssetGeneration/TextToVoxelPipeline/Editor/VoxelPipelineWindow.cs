@@ -166,22 +166,26 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 
 				// Image → mesh (Meshy) generation parameters map onto the stage-2 draft.
 				var m = config.Meshy;
-				_meshy.AiModel = m.MeshAiModel;
-				_meshy.Format = m.MeshFormat;
-				_meshy.GenerateTexture = m.GenerateTexture;
-				_meshy.EnablePbr = m.EnablePbr;
-				_meshy.HdTexture = m.HdTexture;
-				_meshy.Remesh = m.Remesh;
-				_meshy.Topology = m.Topology;
-				_meshy.Decimation = m.Decimation;
-				_meshy.TargetPolycount = m.TargetPolycount;
-				_meshy.SavePreRemeshedModel = m.SavePreRemeshedModel;
-				_meshy.RemoveLighting = m.RemoveLighting;
-				_meshy.AutoSize = m.AutoSize;
-				_meshy.OriginAt = m.OriginAt;
-				_meshy.Moderation = m.Moderation;
-				_meshy.MultiViewThumbnails = m.MultiViewThumbnails;
-				_meshy.AlphaThumbnail = m.AlphaThumbnail;
+				_meshy = new MeshyRequest
+				{
+					ImagePath = _meshy.ImagePath,
+					AiModel = m.MeshAiModel,
+					Format = m.MeshFormat,
+					GenerateTexture = m.GenerateTexture,
+					EnablePbr = m.EnablePbr,
+					HdTexture = m.HdTexture,
+					Remesh = m.Remesh,
+					Topology = m.Topology,
+					Decimation = m.Decimation,
+					TargetPolycount = m.TargetPolycount,
+					SavePreRemeshedModel = m.SavePreRemeshedModel,
+					RemoveLighting = m.RemoveLighting,
+					AutoSize = m.AutoSize,
+					OriginAt = m.OriginAt,
+					Moderation = m.Moderation,
+					MultiViewThumbnails = m.MultiViewThumbnails,
+					AlphaThumbnail = m.AlphaThumbnail,
+				};
 
 				// Drop keyboard focus so the prompt text field repaints with the imported value.
 				GUI.FocusControl(null);
@@ -228,7 +232,7 @@ namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 			_settings.MeshyApiKey = ApiKeyField.Draw("Meshy API Key", _settings.MeshyApiKey,
 				key => ApiKeyStore.Save("Meshy", key));
 
-			MeshySettingsGui.Draw(ref _meshy);
+			_meshy = MeshySettingsGui.Draw(_meshy);
 		}
 
 		// ---- Stage 3: mesh → voxels (the full Mesh → Voxel control set) ----
