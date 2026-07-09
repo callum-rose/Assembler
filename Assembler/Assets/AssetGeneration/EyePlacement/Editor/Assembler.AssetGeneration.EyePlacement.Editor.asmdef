@@ -4,7 +4,8 @@
     "references": [
         "Assembler.AssetGeneration.EyePlacement",
         "Assembler.Anthropic",
-        "Assembler.Voxels"
+        "Assembler.Voxels",
+        "Assembler.AssetGeneration.Editor.Common"
     ],
     "includePlatforms": [
         "Editor"
