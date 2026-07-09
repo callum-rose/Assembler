@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using NUnit.Framework;
@@ -10,13 +9,10 @@ namespace Tests.Parsing
 {
 	public class PlacementInfoTests
 	{
-		private static GameInfo Transform(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		[Test]
 		public void LiteralAtYieldsConstantPositionSource()
 		{
-			var gameInfo = Transform(@"
+			var gameInfo = ParseHelper.ParseGame(@"
 Templates:
   pill:
     Tags: [ pill ]
@@ -44,7 +40,7 @@ Placements:
 		[Test]
 		public void ExpressionAtYieldsExpressionPositionSource()
 		{
-			var gameInfo = Transform(@"
+			var gameInfo = ParseHelper.ParseGame(@"
 Templates:
   pill:
     Tags: [ pill ]
@@ -66,7 +62,7 @@ Placements:
 		[Test]
 		public void UnknownTemplateThrows()
 		{
-			Assert.Throws<ParsingException>(() => Transform(@"
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(@"
 Placements:
   orphans:
     Template: nope

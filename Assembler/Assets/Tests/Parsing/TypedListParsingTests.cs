@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
@@ -15,12 +14,10 @@ namespace Tests.Parsing
 	// vector and scalar element kinds (the record kind is covered by RecordParsingTests).
 	public class TypedListParsingTests
 	{
-		private static GameInfo Transform(string yaml) => Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		[Test]
 		public void PopulatedVecList_ResolvesToVectorListWithElements()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Variables:
   route: !vec [ { X: 1, Y: 0 }, { X: 2, Y: 0, Z: 3 } ]
 ");
@@ -45,7 +42,7 @@ Variables:
 		[Test]
 		public void PopulatedIntList_ResolvesToIntListWithElements()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Variables:
   spawn weights: !int [ 5, 10, 15 ]
 ");
@@ -63,7 +60,7 @@ Variables:
 		[Test]
 		public void PopulatedStringList_ResolvesToStringListWithElements()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Constants:
   level names: !string [ intro, boss, finale ]
 ");
@@ -78,7 +75,7 @@ Constants:
 		[Test]
 		public void EmptyVecList_ResolvesToEmptyVectorList()
 		{
-			var info = Transform(@"
+			var info = ParseHelper.ParseGame(@"
 Variables:
   occupied: !vec []
 ");
