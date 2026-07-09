@@ -1,0 +1,563 @@
+Game:
+  Title: Bomberman
+  Description: |
+    A single-player Bomberman clone built on the shared nav grid. Walk around a
+    walled arena, drop bombs, and blow up the roaming enemies to win — but don't get
+    caught in your own blast.
+
+    Design notes (why it is built the way it is):
+
+    - **Grid movement with destructible terrain.** The player and enemies both move
+      tile-to-tile with `grid mover` on the shared nav grid (never free-roaming,
+      never diagonal — `Navigation: Diagonal: false`). The indestructible border and
+      pillars are baked into the grid as `wall`-tagged static obstacles. The soft
+      blocks are *dynamic* obstacles: each carries a `nav obstacle` behaviour, so
+      when a blast destroys one it frees its cell on the grid synchronously and the
+      path you just opened becomes walkable — for the player and for the enemies'
+      pathfinding alike. (This is what a static nav grid could not express, which is
+      why the earlier draft fell back to free physics movement.)
+    - **The arena** is an integer cell lattice (world coords == cell coords). A
+      border ring plus a regular grid of indestructible pillars at every even/even
+      cell (`isSolidCell`); the remaining interior cells are randomly filled with
+      destructible soft blocks (`softCells`), except the four corner spawn pockets
+      (`isSafeCell`).
+    - **Bombs** are dropped at the player's snapped cell (`snapCell`). After a fuse
+      the bomb spawns a radius-1 blast cross (`blastCells`): the centre plus each
+      orthogonal neighbour that isn't an indestructible cell, so blasts stop at
+      pillars/border. Fire tiles are trigger volumes; the player, enemies, and soft
+      blocks each sense contact and react (die / clear).
+    - **Enemies** chase the player with four-connected A* (`navigate` writes a
+      heading its `grid mover` consumes). They are slower than the player, so you can
+      outrun them and lure them into your blasts — and they re-route through gaps you
+      blow open, because they read the same dynamic grid.
+
+    Win by clearing every enemy. Lose if an enemy touches you or a blast catches you.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#0a0a12"
+
+Physics:
+  # Top-down arcade — no world gravity. Movement is grid-locked, not force-driven;
+  # bodies are kinematic and used only so trigger overlaps (blasts, contact) fire.
+  Gravity: !vec { X: 0, Y: 0 }
+
+# The shared walkability grid. Cell size 1 with these bounds puts cell centres on
+# integer coordinates, so the pillars, the soft blocks, the player's tile steps and
+# the enemies' paths all share one lattice. The border ring (x=+/-6, y=+/-5) is inside
+# the bounds so it bakes in as a solid edge. Diagonal: false = four-connected search.
+Navigation:
+  CellSize: 1
+  Bounds: { Min: !vec { X: -6.5, Y: -5.5 }, Max: !vec { X: 6.5, Y: 5.5 } }
+  ObstacleTag: wall
+  Diagonal: false
+
+Constants:
+  # --- Palette ---
+  wall colour:  !colour { R: 0.30, G: 0.32, B: 0.40, A: 1 }
+  pillar colour: !colour { R: 0.42, G: 0.45, B: 0.55, A: 1 }
+  soft colour:  !colour { R: 0.55, G: 0.36, B: 0.20, A: 1 }
+  player colour: !colour { R: 0.35, G: 0.80, B: 0.95, A: 1 }
+  enemy colour: !colour { R: 0.95, G: 0.30, B: 0.35, A: 1 }
+  bomb colour:  !colour { R: 0.10, G: 0.10, B: 0.12, A: 1 }
+  fire colour:  !colour { R: 1.00, G: 0.65, B: 0.15, A: 1 }
+
+  # --- Tuning ---
+  player speed: 4.5
+  enemy speed: 2.2
+  fuse time: 2.5          # seconds before a bomb detonates
+  fire time: 0.5          # seconds a blast tile lingers
+
+  # --- Sizes ---
+  block size: !vec { X: 0.9, Y: 0.9, Z: 0.9 }
+  actor size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+  actor collider: !vec { X: 0.7, Y: 0.7, Z: 0.7 }
+  bomb size: !vec { X: 0.6, Y: 0.6, Z: 0.6 }
+  fire size: !vec { X: 0.85, Y: 0.85, Z: 0.85 }
+
+  # --- Camera ---
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera size: 6
+
+Variables:
+  # Kept in sync with the three enemy Placements below.
+  enemies alive: 3
+  # The player's requested heading; the move action writes it, the grid mover reads it.
+  move dir: !vec { X: 0, Y: 0, Z: 0 }
+
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+    bomb: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+      bomb: [ "<Keyboard>/space" ]
+    gamepad:
+      move: [ "<Gamepad>/leftStick" ]
+      bomb: [ "<Gamepad>/buttonSouth" ]
+    mobile:
+      move: [ "<Gamepad>/dpad" ]
+      bomb: [ "<Gamepad>/buttonSouth" ]
+
+  OnScreen:
+    - Type: dpad
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 300, Y: 300 }
+      Size:   { X: 400, Y: 400 }
+    - Type: button
+      Action: bomb
+      Label: "Bomb"
+      Anchor: lower-right
+      Offset: { X: 260, Y: 260 }
+      Size:   { X: 240, Y: 240 }
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.enemies: "Enemies left: {0}"
+      hud.help: "Move: WASD / Arrows     Drop bomb: Space"
+
+Expressions:
+  # An indestructible cell: outside the interior (border ring) or a pillar at an
+  # even/even lattice point. Both the blast and the soft-block fill respect it.
+  isSolidCell:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ x, y ]
+    ReturnType: bool
+    Expression: |
+      return (x < -5 || x > 5 || y < -4 || y > 4) || (x % 2 == 0 && y % 2 == 0);
+
+  # The four corner spawn pockets kept clear of soft blocks (player + 3 enemies).
+  # Each is a 3-tile vertical lane so a bomb can be dropped at the far end and
+  # escaped by stepping back two tiles — a radius-1 blast only reaches one tile,
+  # so the third tile is always safe. (A 2-tile pocket would trap you in your
+  # own blast, with no valid opening move.)
+  isSafeCell:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ x, y ]
+    ReturnType: bool
+    Expression: |
+      return ((x == -5 || x == 5) && (y == 4 || y == 3 || y == 2))
+          || ((x == -5 || x == 5) && (y == -4 || y == -3 || y == -2));
+
+  # The indestructible pillar lattice: every even/even interior cell.
+  pillarCells:
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int x = -4; x <= 4; x = x + 2)
+      {
+          for (int y = -4; y <= 4; y = y + 2)
+          {
+              b.Add(new Vector3((float)x, (float)y, 0f));
+          }
+      }
+      return b.ToList();
+
+  # Destructible soft blocks: interior cells that are neither solid nor a spawn
+  # pocket, filled at random so each run's maze differs.
+  softCells:
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int x = -5; x <= 5; x = x + 1)
+      {
+          for (int y = -4; y <= 4; y = y + 1)
+          {
+              if (!isSolidCell(x, y) && !isSafeCell(x, y) && Chance(0.78f))
+              {
+                  b.Add(new Vector3((float)x, (float)y, 0f));
+              }
+          }
+      }
+      return b.ToList();
+
+  # Radius-1 blast cross from a bomb cell: the centre plus each orthogonal
+  # neighbour that isn't indestructible, so the blast stops at pillars/border.
+  blastCells:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ c ]
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      int cx = (int)Round(c.x);
+      int cy = (int)Round(c.y);
+      b.Add(new Vector3((float)cx, (float)cy, 0f));
+      if (!isSolidCell(cx + 1, cy))
+      {
+          b.Add(new Vector3((float)(cx + 1), (float)cy, 0f));
+      }
+      if (!isSolidCell(cx - 1, cy))
+      {
+          b.Add(new Vector3((float)(cx - 1), (float)cy, 0f));
+      }
+      if (!isSolidCell(cx, cy + 1))
+      {
+          b.Add(new Vector3((float)cx, (float)(cy + 1), 0f));
+      }
+      if (!isSolidCell(cx, cy - 1))
+      {
+          b.Add(new Vector3((float)cx, (float)(cy - 1), 0f));
+      }
+      return b.ToList();
+
+  # Snap a world position to the nearest integer cell centre (bombs align to grid).
+  snapCell:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ p ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      return new Vector3(Round(p.x), Round(p.y), 0f);
+
+Templates:
+  # --- Indestructible pillar (even/even lattice): baked into the nav grid as a wall ---
+  pillar_template:
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Colour: !var pillar colour, Size: !var block size }
+      collider:
+        Type: box collider
+        Properties: { Size: !var block size, IsTrigger: false }
+
+  # --- Destructible soft block: a DYNAMIC nav obstacle, cleared by a blast ---
+  soft_template:
+    Tags: [ soft ]
+    Variables:
+      solid: true            # drives the nav obstacle; cleared the instant a blast hits
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Colour: !var soft colour, Size: !var block size }
+      # Trigger volume so a fire tile can sense the block; also the footprint the
+      # nav obstacle blocks. Not a physical wall — walkability comes from the grid.
+      collider:
+        Type: box collider
+        Properties: { Size: !var block size, IsTrigger: true }
+      # Blocks this block's cell on the shared grid while `solid` is true. Re-read on
+      # Execute, so clearing `solid` then Executing this frees the cell synchronously.
+      obstacle:
+        Type: nav obstacle
+        Properties: { Blocked: !var solid }
+      burn:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ explosion ] }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: clear solid
+          - EntityId: !parameter self_id
+            BehaviourId: obstacle
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      clear solid:
+        Type: bool variable setter
+        Properties: { VariableId: !var solid, Value: false }
+      self destruct:
+        Type: destroy
+
+  # --- Chasing enemy: four-connected A* toward the player, grid-locked movement ---
+  enemy_template:
+    Tags: [ enemy ]
+    Variables:
+      dir: !vec { X: 0, Y: 0, Z: 0 }   # navigate writes the heading here; grid mover reads it
+      dead: false                      # per-enemy guard so a blast decrements the counter once
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Colour: !var enemy colour, Size: !var actor size }
+      collider:
+        Type: box collider
+        Properties: { Size: !var actor collider, IsTrigger: true }
+      # Pathfinder: A* to the player over the shared grid (re-routes through gaps the
+      # player blows open). Output set, so it writes a heading into `dir` rather than
+      # steering the enemy itself — the grid mover does the moving.
+      chase:
+        Type: navigate
+        Properties:
+          Target: !entity { Id: player, Property: Position }
+          Speed: !var enemy speed
+          SlowingRadius: 0.1
+          Recompute: 0.25
+          Mode: astar
+          Output: !var dir
+      move:
+        Type: grid mover
+        Properties:
+          Direction: !var dir
+          Speed: !var enemy speed
+      # Caught in a blast: die once (guarded), decrement the counter, vanish.
+      die:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ explosion ] }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: death gate
+      death gate:
+        Type: inverse condition gate
+        Properties: { Condition: !var dead }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: mark dead
+          - EntityId: score
+            BehaviourId: enemy killed
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      self destruct:
+        Type: destroy
+
+  # --- Bomb: fuses, then spawns the blast cross and removes itself ---
+  bomb_template:
+    Tags: [ bomb ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Colour: !var bomb colour, Size: !var bomb size }
+      fuse:
+        Type: timer trigger
+        Properties: { Delay: !var fuse time, AutoStart: true }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: blast loop
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      # Iterate the blast cells and spawn a fire tile at each.
+      blast loop:
+        Type: vector list loop trigger
+        Properties:
+          List: !expr
+            Do: blastCells
+            With: { c: !entity { Property: Position } }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: place fire
+            Outputs: { item: cell }
+      place fire:
+        Type: spawner
+        Properties:
+          TemplateId: fire_template
+          Position: !output cell
+      self destruct:
+        Type: destroy
+
+  # --- Fire tile: a short-lived trigger volume that damages what it overlaps ---
+  fire_template:
+    Tags: [ explosion ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Colour: !var fire colour, Size: !var fire size }
+      collider:
+        Type: box collider
+        Properties: { Size: !var fire size, IsTrigger: true }
+      # Kinematic body so trigger events fire against the soft blocks / actors it overlaps.
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      life:
+        Type: timer trigger
+        Properties: { Delay: !var fire time, AutoStart: true }
+        Listeners:
+          - EntityId: !parameter self_id
+            BehaviourId: self destruct
+      self destruct:
+        Type: destroy
+
+Placements:
+  pillars:
+    Template: pillar_template
+    At: !expr { Do: pillarCells }
+  softs:
+    Template: soft_template
+    At: !expr { Do: softCells }
+  enemies:
+    Template: enemy_template
+    At:
+      - !vec { X: 5, Y: 4, Z: 0 }
+      - !vec { X: -5, Y: -4, Z: 0 }
+      - !vec { X: 5, Y: -4, Z: 0 }
+
+Entities:
+  # --- Arena border ring (indestructible, baked into the nav grid) ---
+  wall top:
+    Position: !vec { X: 0, Y: 5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Colour: !var wall colour, Size: !vec { X: 13, Y: 1, Z: 1 } } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 13, Y: 1, Z: 1 }, IsTrigger: false } }
+  wall bottom:
+    Position: !vec { X: 0, Y: -5, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Colour: !var wall colour, Size: !vec { X: 13, Y: 1, Z: 1 } } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 13, Y: 1, Z: 1 }, IsTrigger: false } }
+  wall left:
+    Position: !vec { X: -6, Y: 0, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Colour: !var wall colour, Size: !vec { X: 1, Y: 11, Z: 1 } } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 11, Z: 1 }, IsTrigger: false } }
+  wall right:
+    Position: !vec { X: 6, Y: 0, Z: 0 }
+    Tags: [ wall ]
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Colour: !var wall colour, Size: !vec { X: 1, Y: 11, Z: 1 } } }
+      collider: { Type: box collider, Properties: { Size: !vec { X: 1, Y: 11, Z: 1 }, IsTrigger: false } }
+
+  # --- Player: grid-locked movement; a kinematic rigidbody so its trigger overlaps
+  #     (enemies, blasts) still fire while the grid mover drives it. ---
+  player:
+    Tags: [ player ]
+    Position: !vec { X: -5, Y: 4, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Colour: !var player colour, Size: !var actor size }
+      collider:
+        Type: box collider
+        Properties: { Size: !var actor collider, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      mover:
+        Type: grid mover
+        Properties:
+          Direction: !var move dir
+          Speed: !var player speed
+      # The move action (WASD/arrows on desktop, on-screen d-pad on mobile) writes the
+      # requested heading; the grid mover applies it at the next cell centre and stops
+      # when the input returns to neutral.
+      move action:
+        Type: input action
+        Properties: { Action: move }
+        Listeners:
+          - EntityId: player
+            BehaviourId: apply move
+      apply move:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var move dir
+          Value: !output axis
+      # Space (or the on-screen Bomb button) drops a bomb on the player's cell.
+      drop action:
+        Type: input action
+        Properties: { Action: bomb }
+        Listeners:
+          - EntityId: player
+            BehaviourId: drop bomb
+      drop bomb:
+        Type: spawner
+        Properties:
+          TemplateId: bomb_template
+          Position: !expr
+            Do: snapCell
+            With: { p: !entity { Property: Position } }
+      # Touching an enemy ends the run.
+      caught:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ enemy ] }
+        Listeners:
+          - !gameover
+      # Caught in a blast ends the run.
+      burned:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ explosion ] }
+        Listeners:
+          - !gameover
+
+  # --- Score / win tracking ---
+  score:
+    Behaviours:
+      enemy killed:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies alive
+          Value: !expr
+            Do: 'n - 1'
+            With: { n: !var enemies alive }
+            ArgumentTypes: [ int ]
+      # Poll for the win: every frame, if no enemies remain, end the game.
+      win tick:
+        Type: every frame trigger
+        Listeners:
+          - EntityId: score
+            BehaviourId: win gate
+      win gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n <= 0'
+            With: { n: !var enemies alive }
+            ArgumentTypes: [ int ]
+        Listeners:
+          - !gameover
+
+  # --- Lighting so the primitives aren't near-black under URP Lit ---
+  sun:
+    Rotation: !vec { X: 50, Y: 180, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour white, Intensity: 1.4 }
+
+  # --- Camera ---
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: orthographic, Size: !var camera size }
+
+  # --- HUD ---
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties: { Direction: vertical, Spacing: 10, Padding: 20, ChildAlignment: upper-left }
+        Children:
+          enemies:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.enemies, Arguments: [ !var enemies alive ] }
+                  FontSize: 30
+                  PreferredWidth: 500
+                  PreferredHeight: 44
+          help:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.help
+                  FontSize: 20
+                  PreferredWidth: 600
+                  PreferredHeight: 32
