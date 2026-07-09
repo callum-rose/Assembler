@@ -978,6 +978,17 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
 | Speed | float |  |
 | AgentRadius | float |  |
 
+## `nav obstacle`
+Makes the entity a dynamic nav-grid obstacle whose cells block or free at runtime, on Execute.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Blocked | bool | Whether this obstacle currently blocks its cells; re-read on each Execute (bind to a variable/expression to toggle). Defaults to true. |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 

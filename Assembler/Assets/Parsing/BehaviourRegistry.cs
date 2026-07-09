@@ -87,6 +87,7 @@ namespace Assembler.Parsing
 				["navigate"] = NavigateInfo.Create,
 				["patrol"] = PatrolInfo.Create,
 				["grid mover"] = GridMoverInfo.Create,
+				["nav obstacle"] = NavObstacleInfo.Create,
 				["vector variable setter"] = VariableSetterInfo<Vector3>.Create,
 				["int variable setter"] = VariableSetterInfo<int>.Create,
 				["float variable setter"] = VariableSetterInfo<float>.Create,

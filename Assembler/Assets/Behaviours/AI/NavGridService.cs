@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Assembler.Navigation;
@@ -49,9 +50,18 @@ namespace Assembler.Behaviours.AI
 		private readonly Dictionary<(GridCoord Goal, int CellRadius), FlowField> _fields = new();
 		private readonly List<(GridCoord Goal, int CellRadius)> _fieldOrder = new();
 
-		// The uninflated grid (obstacles rasterized once), plus one inflated copy per distinct cell radius.
-		private NavGrid? _baseGrid;
+		// The static grid (obstacle colliders rasterized once), and the working grid — a clone of it with the
+		// dynamic obstacle overlay applied. Callers navigate the working grid; each distinct agent radius then
+		// gets its own copy of it, inflated by that radius and cached.
+		private NavGrid? _staticGrid;
+		private NavGrid? _workingGrid;
 		private readonly Dictionary<int, NavGrid> _gridsByCellRadius = new();
+
+		// The dynamic-obstacle overlay: cells blocked at runtime by `nav obstacle` behaviours, refcounted so
+		// overlapping obstacles resolve correctly (a cell reopens only once the last obstacle leaves it), plus
+		// the footprint each obstacle currently occupies so it can withdraw exactly its own contribution.
+		private readonly Dictionary<GridCoord, int> _overlayBlocked = new();
+		private readonly Dictionary<object, IReadOnlyList<GridCoord>> _overlayFootprints = new();
 
 		public NavGridService(NavGridSettings settings) => _settings = settings;
 
@@ -75,8 +85,9 @@ namespace Assembler.Behaviours.AI
 		/// off-plane coordinate. Snaps a position onto the grid lattice.</summary>
 		public Vector3 CellCentre(Vector3 world)
 		{
-			// Cell geometry is radius-independent — the lattice is the same on every inflated variant.
-			var grid = BaseGrid();
+			// Cell geometry is radius-independent — the lattice is the same on the static, working and inflated
+			// grids — so read it off the static grid without forcing the overlay-applied working grid to build.
+			var grid = StaticGrid();
 			var (u, v) = _settings.Plane.Project(world);
 			var (cu, cv) = grid.CellToWorld(grid.WorldToCell(u, v));
 			return _settings.Plane.ToWorld(cu, cv, world);
@@ -145,6 +156,96 @@ namespace Assembler.Behaviours.AI
 			return plane.ToWorldDirection(dx, dy);
 		}
 
+		/// <summary>Sets whether the dynamic obstacle identified by <paramref name="handle"/> blocks the cells its
+		/// world-space <paramref name="bounds"/> covers. Called by the <c>nav obstacle</c> behaviour on
+		/// build/execute so destructible or moving terrain (a bombed block, an opening door, a pushed crate)
+		/// mutates walkability synchronously — unlike the baked static grid, which never changes. The overlay is
+		/// refcounted per cell, so overlapping obstacles resolve correctly; passing <paramref name="blocked"/>
+		/// false (or <see cref="RemoveObstacle"/>) withdraws exactly this handle's footprint.</summary>
+		public void SetObstacle(object handle, Bounds bounds, bool blocked) =>
+			SetFootprint(handle, blocked ? FootprintOf(bounds) : Array.Empty<GridCoord>());
+
+		/// <summary>Withdraws the dynamic obstacle identified by <paramref name="handle"/> from the overlay,
+		/// reopening the cells it held (subject to other obstacles' refcounts). Called by the <c>nav obstacle</c>
+		/// behaviour's <c>OnDestroy</c> as a leak-guard so an obstacle destroyed without first toggling off never
+		/// strands a permanently blocked cell.</summary>
+		public void RemoveObstacle(object handle) => SetFootprint(handle, Array.Empty<GridCoord>());
+
+		// Diffs the overlay: withdraws the handle's previous footprint (decrementing each cell's refcount) and
+		// applies the new one (incrementing), then dirties the working and inflated grids and flow fields so the
+		// next query rebuilds against the changed walkability. A no-op change still invalidates cheaply — callers
+		// only invoke this when their state actually changed.
+		private void SetFootprint(object handle, IReadOnlyList<GridCoord> footprint)
+		{
+			if (_overlayFootprints.TryGetValue(handle, out var previous))
+			{
+				foreach (var cell in previous)
+				{
+					if (--_overlayBlocked[cell] <= 0)
+					{
+						_overlayBlocked.Remove(cell);
+					}
+				}
+			}
+
+			if (footprint.Count == 0)
+			{
+				_overlayFootprints.Remove(handle);
+			}
+			else
+			{
+				foreach (var cell in footprint)
+				{
+					_overlayBlocked[cell] = _overlayBlocked.GetValueOrDefault(cell) + 1;
+				}
+
+				_overlayFootprints[handle] = footprint;
+			}
+
+			InvalidateWorkingGrids();
+		}
+
+		// The cells a world-space obstacle rect covers, on the grid lattice. Mirrors the static rasteriser's
+		// bounds path: an obstacle wholly off the grid contributes nothing rather than smearing the nearest edge.
+		private IReadOnlyList<GridCoord> FootprintOf(Bounds bounds)
+		{
+			var plane = _settings.Plane;
+			var grid = StaticGrid();
+			var (bu0, bv0) = plane.Project(bounds.min);
+			var (bu1, bv1) = plane.Project(bounds.max);
+			var (minU, minV) = (Mathf.Min(bu0, bu1), Mathf.Min(bv0, bv1));
+			var (maxU, maxV) = (Mathf.Max(bu0, bu1), Mathf.Max(bv0, bv1));
+
+			if (!grid.OverlapsWorldRect(minU, minV, maxU, maxV))
+			{
+				return Array.Empty<GridCoord>();
+			}
+
+			var min = grid.WorldToCell(minU, minV);
+			var max = grid.WorldToCell(maxU, maxV);
+			var cells = new List<GridCoord>();
+
+			for (var y = min.Y; y <= max.Y; y++)
+			{
+				for (var x = min.X; x <= max.X; x++)
+				{
+					cells.Add(new GridCoord(x, y));
+				}
+			}
+
+			return cells;
+		}
+
+		// Drops the overlay-applied working grid and everything derived from it. The static grid is untouched —
+		// only the dynamic layer changed — so the next query re-clones the static grid and re-applies the overlay.
+		private void InvalidateWorkingGrids()
+		{
+			_workingGrid = null;
+			_gridsByCellRadius.Clear();
+			_fields.Clear();
+			_fieldOrder.Clear();
+		}
+
 		// A small LRU of flow fields keyed by (goal cell, agent radius). A single shared goal+radius stays a
 		// straight cache hit; a handful of distinct goals/radii coexist without rebuilding the field on every
 		// alternating call — the failure mode of a single cached field.
@@ -172,8 +273,8 @@ namespace Assembler.Behaviours.AI
 			return field;
 		}
 
-		// The grid an agent of this radius navigates: the base grid for zero clearance, otherwise the base grid
-		// inflated by the radius and cached. Radii that round to the same whole-cell inflation share one grid.
+		// The grid an agent of this radius navigates: the working grid for zero clearance, otherwise the working
+		// grid inflated by the radius and cached. Radii that round to the same whole-cell inflation share one grid.
 		private NavGrid GridFor(float agentRadius)
 		{
 			var cellRadius = CellRadiusOf(agentRadius);
@@ -201,11 +302,28 @@ namespace Assembler.Behaviours.AI
 		private int CellRadiusOf(float agentRadius) =>
 			agentRadius <= 0f ? 0 : Mathf.CeilToInt(agentRadius / _settings.CellSize);
 
-		// Memoised: the uninflated grid is built once on first use and reused as the source for every inflated
-		// variant. CreateBaseGrid is a pure factory (no field side effects), so this stays a null-coalescing get.
-		private NavGrid BaseGrid() => _baseGrid ??= CreateBaseGrid();
+		// The uninflated grid every navigating agent reads: the static grid with the dynamic obstacle overlay
+		// applied. Memoised and rebuilt lazily whenever the overlay changes (see InvalidateWorkingGrids), and
+		// reused as the source the inflated variants clone from.
+		private NavGrid BaseGrid() => _workingGrid ??= BuildWorkingGrid();
 
-		private NavGrid CreateBaseGrid()
+		private NavGrid BuildWorkingGrid()
+		{
+			var grid = StaticGrid().Clone();
+
+			foreach (var cell in _overlayBlocked.Keys)
+			{
+				grid.SetWalkable(cell, false);
+			}
+
+			return grid;
+		}
+
+		// Memoised: the static grid (obstacle colliders rasterized once) is built on first use and never mutated —
+		// dynamic changes live in the overlay, so this is a pure factory reused as the working grid's source.
+		private NavGrid StaticGrid() => _staticGrid ??= CreateStaticGrid();
+
+		private NavGrid CreateStaticGrid()
 		{
 			var grid = NavGrid.Create(_settings.MinX, _settings.MinY, _settings.MaxX, _settings.MaxY, _settings.CellSize);
 
@@ -219,7 +337,7 @@ namespace Assembler.Behaviours.AI
 
 		private void RasterizeObstacles(NavGrid grid)
 		{
-			var obstacles = Object.FindObjectsByType<GameEntity>(FindObjectsSortMode.None)
+			var obstacles = UnityEngine.Object.FindObjectsByType<GameEntity>(FindObjectsSortMode.None)
 				.Where(entity => entity.Tags.Contains(_settings.ObstacleTag))
 				.SelectMany(entity => entity.GetComponentsInChildren<Collider>());
 
