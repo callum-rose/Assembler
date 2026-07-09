@@ -11,19 +11,22 @@ Game:
     drives BOTH the visible path tiles (a list-loop trigger spawning a tile per
     cell) and the build-blocking rule (you cannot build on the lane).
 
-    POINTER-DRIVEN BUILDING. There is no keyboard cursor: every screen tap/click is
-    unprojected through the FIXED perspective camera (a hand-rolled ray -> ground
-    plane intersection in an expression, using UnityEngine.Screen and the camera's
-    authored position/pitch constants) into a board cell. Click a tower in the
-    build palette to ARM it, sweep the pointer over the board (the ghost plate
-    tracks the hover cell and colours itself green = buildable, amber = can't
-    afford, red = blocked), then click a tile - or drag across the board and
-    release - to place. Right-click (or the Cancel button) disarms.
+    DRAG A TOWER FROM THE PALETTE ONTO A TILE. Each build-menu entry is a
+    `ui drag source`: press it and its press/drag/release stream feeds the board.
+    uGUI captures the pointer to the widget, so the drag keeps reporting its
+    screen position after the finger leaves the button and sweeps over the board -
+    a `screen to world` behaviour unprojects that live position through the ACTUAL
+    output camera (no authored camera constants, no pinned camera) onto the XZ
+    ground plane, and a tiny expression snaps the world point to a cell. The ghost
+    plate tracks the drag and colours itself green = buildable, amber = can't
+    afford, red = blocked; releasing over a green tile places the tower. Release
+    back over the UI rail (a screen-band guard) and nothing is built.
 
-    CLICK A TOWER TO UPGRADE IT. A tap on an occupied cell broadcasts to EVERY
-    tower (entity-tag listener); each tower's own condition gate checks "is the
-    picked cell my cell, is there gold, am I below max level" so exactly the
-    clicked tower levels up - faster fire, longer reach, brighter body.
+    CLICK A TOWER TO UPGRADE IT. A board tap (`tap trigger` -> the same
+    `screen to world` chain) on an occupied cell broadcasts to EVERY tower
+    (entity-tag listener); each tower's own condition gate checks "is the picked
+    cell my cell, is there gold, am I below max level" so exactly the tapped tower
+    levels up - faster fire, longer reach, brighter body.
 
     ONE TOWER TEMPLATE, FIVE WEAPONS. Towers are a single template parameterised
     by range / fire rate / colour / projectile template id:
@@ -45,10 +48,10 @@ Game:
     slow-motion pulse and camera shake. Leaked creeps shake the camera and drain
     the core, whose lamp fades green to red with your remaining integrity.
 
-    Desktop: mouse to build/upgrade, right-click cancel, F fast-forward, Esc quit.
-    Mobile: same taps/drags with a finger; palette buttons for everything else.
-    (The interactive UI lives in a right-hand rail whose screen band the picker
-    rejects, so palette clicks can never place or upgrade through the UI.)
+    Desktop: drag from the build menu to place, click a tower to upgrade,
+    F fast-forward, Esc quit. Mobile: identical drags/taps with a finger.
+    (The interactive UI lives in a right-hand rail whose screen band the board
+    picker rejects, so a drag or tap released over the UI never touches the board.)
 
 World:
   Dimensionality: 3
@@ -80,15 +83,14 @@ Constants:
   creep route: !vec [ { X: -9.2, Y: 0.55, Z: 2.5 }, { X: -2.5, Y: 0.55, Z: 2.5 }, { X: -2.5, Y: 0.55, Z: -2.5 }, { X: 2.5, Y: 0.55, Z: -2.5 }, { X: 2.5, Y: 0.55, Z: 1.5 }, { X: 9.0, Y: 0.55, Z: 1.5 } ]
   spawn point: !vec { X: -9.2, Y: 0.55, Z: 2.5 }
 
-  # --- Pointer picking: the camera is pinned (vcam damping 0) so these constants
-  #     exactly describe it. Position = pivot (0,-0.05,0) + follow offset
-  #     (0,12.5,-8); pitch = atan2(12.5, 8); tan-half-fov = tan(46deg / 2).
-  #     `ui guard u` rejects picks in the right-hand UI rail's screen band. ---
-  cam position: !vec { X: 0, Y: 12.45, Z: -8 }
-  cam pitch: 57.38
-  cam tan half fov: 0.42447
-  pick plane y: 0.0
-  ui guard u: 0.84
+  # --- Pointer picking: the `screen to world` behaviour unprojects the pointer
+  #     through the live output camera onto the XZ ground plane, so there are no
+  #     camera constants to keep in sync and the camera need not be pinned.
+  #     `ui guard u` is the only pointer constant left: board interactions must
+  #     land in the left `ui guard u` fraction of the screen; the right-hand UI
+  #     rail occupies the rest, so a drag/tap released over the palette is ignored
+  #     (tune it in-editor to match the rail's on-screen width). ---
+  ui guard u: 0.86
 
   # --- The campaign: kind picks the creep parameter set, the rest are FINAL
   #     stats (no per-kind multipliers hide in the factory). `max wave` must
@@ -197,16 +199,15 @@ Variables:
   creeps alive: 0
   spawn gap: 1.1
 
-  # Build state. `hover cell` is the raw pick under the pointer (may be the
-  # off-grid sentinel); `cursor cell` is the last ON-grid hover the ghost plate
-  # sits on; `picked cell` is the cell a tap/drag actually committed.
-  hover cell: !vec { X: -99, Y: -99 }
+  # Build state. `picked cell` is the raw board cell under the pointer this event
+  # (may be off-board); `cursor cell` is the last ON-board cell, where the ghost
+  # plate sits. `pointer phase` mirrors the active palette drag ("press"/"drag"/
+  # "release"); `placing` is true while that drag is in flight (ghost visible).
   cursor cell: !vec { X: 3, Y: 5 }
   picked cell: !vec { X: -99, Y: -99 }
   selected tower: ""
   placing: false
-  dragging: false
-  armed at: 0.0
+  pointer phase: ""
   occupied cells: !vec []                  # cells towers already sit on
   path cells: !vec []                      # derived from `creep route` on start
 
@@ -221,37 +222,16 @@ Expressions:
     RegisterTypes: [ UnityEngine.Vector3 ]
     Expression: 'return new Vector3(ox + cell.x, y, oz + cell.y);'
 
-  # Screen-space pointer -> board cell, for the FIXED perspective camera: build
-  # the camera basis from its authored pitch, cast the ray through the pixel,
-  # intersect the ground plane, snap to a cell. Picks with no ground hit, or in
-  # the right-hand UI rail's screen band (u > guard), return the (-999,-999)
-  # sentinel, which every on-grid check downstream rejects.
-  screenToCell:
-    ArgumentTypes: [ vector, vector, float, float, float, float, float, float ]
-    ArgumentNames: [ screen_pos, cam_pos, pitch, tan_half, plane_y, ox, oz, guard ]
+  # Snap a world point (emitted by the `screen to world` behaviour on the XZ
+  # ground plane) to a board (col, row) cell. The camera unprojection now lives
+  # in `screen to world`, so this scrap of arithmetic is all that remains of the
+  # old hand-rolled, camera-constant picker.
+  boardCell:
+    ArgumentTypes: [ vector, float, float ]
+    ArgumentNames: [ world, ox, oz ]
     ReturnType: vector
-    RegisterTypes: [ UnityEngine.Screen, UnityEngine.Vector3 ]
-    Expression: |
-      var w = UnityEngine.Screen.width * 1f;
-      var h = UnityEngine.Screen.height * 1f;
-      if (screen_pos.x / w > guard)
-      {
-          return new Vector3(-999f, -999f, 0f);
-      }
-      float u = (screen_pos.x / w - 0.5f) * 2f;
-      float v = (screen_pos.y / h - 0.5f) * 2f;
-      var angles = new Vector3(pitch, 0f, 0f);
-      var fwd = ForwardFromAngles(angles);
-      var right = RightFromAngles(angles);
-      var up = UpFromAngles(angles);
-      var dir = AddVector(AddVector(fwd, ScaleVector(right, u * tan_half * (w / h))), ScaleVector(up, v * tan_half));
-      if (dir.y > -0.001f)
-      {
-          return new Vector3(-999f, -999f, 0f);
-      }
-      float t = (plane_y - cam_pos.y) / dir.y;
-      var world = AddVector(cam_pos, ScaleVector(dir, t));
-      return new Vector3(Round(world.x - ox), Round(world.z - oz), 0f);
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: 'return new Vector3(Round(world.x - ox), Round(world.z - oz), 0f);'
 
   # Walk each axis-aligned waypoint segment cell-by-cell and collect the unique
   # (col, row) cells the lane covers. Authoring lives in the waypoints; the
@@ -310,14 +290,31 @@ Expressions:
     ReturnType: bool
     Expression: 'return InBounds(cell.x, cell.y, cols, rows) && !IsOccupied(occupied, cell.x, cell.y) && !IsOccupied(path, cell.x, cell.y);'
 
-  # The shared "commit a placement" gate for both the tap path and the
-  # drag-release path. The armed-at guard swallows the same-frame tap the
-  # palette click that armed us also produces.
-  canCommit:
-    ArgumentTypes: [ bool, float, float, vector, vector list, vector list, int, int ]
-    ArgumentNames: [ placing, t, armed, cell, occupied, path, cols, rows ]
+  # True when a screen point lies over the board, not the right-hand UI rail.
+  # The only screen-space guard left (the camera math is gone): it stops a drag
+  # or tap released back over the palette from acting on the board behind it.
+  onBoard:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ screen_pos, guard ]
     ReturnType: bool
-    Expression: 'return placing && t - armed > 0.25f && canPlace(cell, occupied, path, cols, rows);'
+    RegisterTypes: [ UnityEngine.Screen ]
+    Expression: 'return screen_pos.x < UnityEngine.Screen.width * guard;'
+
+  # A palette drag commits a placement only on its "release" event, over the
+  # board, on a buildable cell (affordability is checked per-type downstream).
+  canDropCommit:
+    ArgumentTypes: [ string, vector, float, vector, vector list, vector list, int, int ]
+    ArgumentNames: [ phase, screen_pos, guard, cell, occupied, path, cols, rows ]
+    ReturnType: bool
+    Expression: 'return phase == "release" && onBoard(screen_pos, guard) && canPlace(cell, occupied, path, cols, rows);'
+
+  # A board tap upgrades only when it lands over the board on an occupied cell
+  # (the tower on that cell answers the broadcast).
+  canUpgradeTap:
+    ArgumentTypes: [ vector, float, vector list, vector ]
+    ArgumentNames: [ screen_pos, guard, occupied, cell ]
+    ReturnType: bool
+    Expression: 'return onBoard(screen_pos, guard) && IsOccupied(occupied, cell.x, cell.y);'
 
   selectedCost:
     ArgumentTypes: [ string, int, int, int, int, int ]
@@ -450,54 +447,50 @@ Expressions:
     ReturnType: float
     Expression: 'return fast ? 2f : 1f;'
 
+# Building is a `ui drag source` gesture and upgrading is a `tap trigger`, both of
+# which read the pointer directly - so the only Controls actions are the two
+# discrete toggles.
 Controls:
   Actions:
-    pointer-pos:   { Type: value, ValueType: vector2 }
-    place-release: { Type: button, Phase: up }
-    cancel-place:  { Type: button, Phase: down }
-    speed:         { Type: button, Phase: down }
-    quit:          { Type: button, Phase: down }
+    speed: { Type: button, Phase: down }
+    quit:  { Type: button, Phase: down }
 
   Bindings:
     desktop:
-      pointer-pos:   [ "<Mouse>/position" ]
-      place-release: [ "<Mouse>/leftButton" ]
-      cancel-place:  [ "<Mouse>/rightButton" ]
-      speed:         [ "<Keyboard>/f" ]
-      quit:          [ "<Keyboard>/escape" ]
+      speed: [ "<Keyboard>/f" ]
+      quit:  [ "<Keyboard>/escape" ]
     mobile:
-      pointer-pos:   [ "<Touchscreen>/primaryTouch/position" ]
-      place-release: [ "<Touchscreen>/primaryTouch/press" ]
-      cancel-place:  [ "<Gamepad>/buttonEast" ]
-      speed:         [ "<Gamepad>/rightShoulder" ]
-      quit:          [ "<Gamepad>/start" ]
+      speed: [ "<Gamepad>/rightShoulder" ]
+      quit:  [ "<Gamepad>/start" ]
 
 Localisation:
   DefaultLocale: en
   Locales:
     en:
       hud.title: "GRIDFALL"
-      hud.help1: "Click a tower in the build menu, then click a green tile to place it (drag on the board to aim)"
-      hud.help2: "Click a placed tower to upgrade it ({0}g)   right-click cancels   [F] fast-forward"
+      hud.help1: "Drag a tower from the build menu onto a green tile to place it"
+      hud.help2: "Click a placed tower to upgrade it ({0}g)   [F] fast-forward"
       hud.gold: "Gold: {0}"
       hud.lives: "Core integrity: {0}"
       hud.wave: "Wave: {0} / {1}"
       hud.left: "Hostiles: {0}"
       hud.kills: "Kills: {0}"
       hud.boss: "!!  TITAN INBOUND  !!"
-      hud.placing.pulse: "Placing: Pulse - click a green tile"
-      hud.placing.frost: "Placing: Frost - click a green tile"
-      hud.placing.venom: "Placing: Venom - click a green tile"
-      hud.placing.cannon: "Placing: Cannon - click a green tile"
-      hud.placing.sniper: "Placing: Sniper - click a green tile"
-      hud.idle: "Arm a tower from the build menu"
+      # `hud.placing` is filled with a localised tower name via a nested !text -
+      # {0} is itself a !text key (tower.pulse, ...), so translators own both.
+      hud.placing: "Placing {0} - release over a green tile"
+      hud.idle: "Drag a tower from the build menu to place it"
+      tower.pulse: "Pulse"
+      tower.frost: "Frost"
+      tower.venom: "Venom"
+      tower.cannon: "Cannon"
+      tower.sniper: "Sniper"
       palette.header: "BUILD"
       btn.pulse: "Pulse - {0}g"
       btn.frost: "Frost - {0}g"
       btn.venom: "Venom - {0}g"
       btn.cannon: "Cannon - {0}g"
       btn.sniper: "Sniper - {0}g"
-      btn.cancel: "Cancel"
       btn.speed.normal: "Speed x1"
       btn.speed.fast: "Speed x2"
       btn.quit: "Abandon Run"
@@ -1393,12 +1386,15 @@ Entities:
             With: { alive: !var creeps alive }
 
   # =========================================================================
-  # BUILD CURSOR - the pointer pipeline. Every frame the pointer position is
-  # unprojected to `hover cell` (the ghost plate follows the last ON-grid
-  # hover). A tap commits `picked cell`, then tries an upgrade broadcast
-  # (occupied cell) before a placement (armed + buildable). Dragging on the
-  # board re-aims both cells every frame and the pointer-release action
-  # commits the drop. Palette buttons on the UI arm a tower type here.
+  # BUILD CURSOR - the board's pointer end. It owns two pipelines that both
+  # start from a `screen to world` unprojection (no camera constants):
+  #   PLACEMENT is driven by the palette `ui drag source` widgets. Each forwards
+  #     its press/drag/release stream here: `to world` unprojects the live drag
+  #     position, `stash raw cell` snaps it to a cell (the ghost plate tracks it),
+  #     and on the "release" event `commit gate` places if it landed on a
+  #     buildable board tile.
+  #   UPGRADE is a `tap trigger` on the board: `tap to world` -> a cell, and if
+  #     occupied every tower is pinged so the one on that cell levels up.
   # =========================================================================
   build cursor:
     Position: !vec { X: -4.5, Y: 0.09, Z: 0.5 }
@@ -1472,34 +1468,32 @@ Entities:
               y: !var cursor y
           SmoothTime: 0.07
 
-      # ---- Hover: pointer position -> raw pick; the plate only follows on-grid picks ----
-      hover input:
-        Type: input action
-        Properties: { Action: pointer-pos }
-        Listeners: [ stash hover, hover bounds gate ]
-      stash hover:
+      # ---- Shared placement pipeline. The palette `ui drag source` widgets fire
+      #      `set placing`, `stash phase` and then `to world` on every press/drag/
+      #      release; `to world` unprojects the drag position and drives the ghost
+      #      plus the release-only commit. ----
+      to world:
+        Type: screen to world
+        Properties: { ScreenPosition: !output position }
+        Listeners: [ stash raw cell, ghost bounds gate, commit gate ]
+      stash raw cell:
         Type: vector variable setter
         Properties:
-          VariableId: !var hover cell
+          VariableId: !var picked cell
           Value: !expr
-            Do: screenToCell
+            Do: boardCell
             With:
-              screen_pos: !output axis
-              cam_pos: !var cam position
-              pitch: !var cam pitch
-              tan_half: !var cam tan half fov
-              plane_y: !var pick plane y
+              world: !output world_position
               ox: !var grid origin x
               oz: !var grid origin z
-              guard: !var ui guard u
-      hover bounds gate:
+      ghost bounds gate:
         Type: condition gate
         Properties:
           Condition: !expr
             Do: 'InBounds(cell.x, cell.y, cols, rows)'
             ArgumentTypes: [ vector, int, int ]
             With:
-              cell: !var hover cell
+              cell: !var picked cell
               cols: !var grid cols
               rows: !var grid rows
         Listeners: [ sync cursor ]
@@ -1507,49 +1501,16 @@ Entities:
         Type: vector variable setter
         Properties:
           VariableId: !var cursor cell
-          Value: !var hover cell
-
-      # ---- Tap: commit the pick, try upgrade first (so a placement can never
-      #      upgrade itself the same frame), then try placement ----
-      tap:
-        Type: tap trigger
-        Properties: { MaxDuration: 0.35 }
-        Listeners: [ stash pick, upgrade broadcast gate, place gate ]
-      stash pick:
-        Type: vector variable setter
+          Value: !var picked cell
+      commit gate:
+        Type: condition gate
         Properties:
-          VariableId: !var picked cell
-          Value: !expr
-            Do: screenToCell
+          Condition: !expr
+            Do: canDropCommit
             With:
-              screen_pos: !output position
-              cam_pos: !var cam position
-              pitch: !var cam pitch
-              tan_half: !var cam tan half fov
-              plane_y: !var pick plane y
-              ox: !var grid origin x
-              oz: !var grid origin z
+              phase: !var pointer phase
+              screen_pos: !output screen_position
               guard: !var ui guard u
-      upgrade broadcast gate:
-        Type: condition gate
-        Properties:
-          Condition: !expr
-            Do: 'IsOccupied(occupied, cell.x, cell.y)'
-            ArgumentTypes: [ vector list, vector ]
-            With:
-              occupied: !var occupied cells
-              cell: !var picked cell
-        Listeners:
-          - { EntityTag: tower, BehaviourId: upgrade gate }
-      place gate:
-        Type: condition gate
-        Properties:
-          Condition: !expr
-            Do: canCommit
-            With:
-              placing: !var placing
-              t: !clock time
-              armed: !var armed at
               cell: !var picked cell
               occupied: !var occupied cells
               path: !var path cells
@@ -1557,50 +1518,55 @@ Entities:
               rows: !var grid rows
         Listeners: [ try pulse, try frost, try venom, try cannon, try sniper ]
 
-      # ---- Drag: re-aim both cells every frame; the release action commits ----
-      drag:
-        Type: drag trigger
-        Listeners: [ drag gate ]
-      drag gate:
-        Type: condition gate
+      # Per-event bookkeeping the drag sources fire before `to world`, so the
+      # commit gate reads the right phase and the ghost shows only mid-drag.
+      set placing:
+        Type: bool variable setter
         Properties:
-          Condition: !var placing
-        Listeners: [ stash drag hover, stash drag pick, mark dragging, hover bounds gate ]
-      stash drag hover:
-        Type: vector variable setter
-        Properties:
-          VariableId: !var hover cell
+          VariableId: !var placing
           Value: !expr
-            Do: screenToCell
-            With:
-              screen_pos: !output position
-              cam_pos: !var cam position
-              pitch: !var cam pitch
-              tan_half: !var cam tan half fov
-              plane_y: !var pick plane y
-              ox: !var grid origin x
-              oz: !var grid origin z
-              guard: !var ui guard u
-      stash drag pick:
+            Do: 'phase != "release"'
+            ArgumentTypes: [ string ]
+            With: { phase: !output phase }
+      stash phase:
+        Type: string variable setter
+        Properties:
+          VariableId: !var pointer phase
+          Value: !output phase
+
+      # ---- Upgrade: a board tap unprojects to a cell; if it is occupied every
+      #      tower is pinged and the one on that cell answers (canUpgrade). The
+      #      onBoard guard stops a tap on the palette from reaching the board. ----
+      tap:
+        Type: tap trigger
+        Properties: { MaxDuration: 0.35 }
+        Listeners: [ tap to world ]
+      tap to world:
+        Type: screen to world
+        Properties: { ScreenPosition: !output position }
+        Listeners: [ stash tap cell, upgrade tap gate ]
+      stash tap cell:
         Type: vector variable setter
         Properties:
           VariableId: !var picked cell
-          Value: !var hover cell
-      mark dragging:
-        Type: bool variable setter
-        Properties: { VariableId: !var dragging, Value: true }
-      release action:
-        Type: input action
-        Properties: { Action: place-release }
-        Listeners: [ release drag gate, end drag ]
-      release drag gate:
+          Value: !expr
+            Do: boardCell
+            With:
+              world: !output world_position
+              ox: !var grid origin x
+              oz: !var grid origin z
+      upgrade tap gate:
         Type: condition gate
         Properties:
-          Condition: !var dragging
-        Listeners: [ place gate ]
-      end drag:
-        Type: bool variable setter
-        Properties: { VariableId: !var dragging, Value: false }
+          Condition: !expr
+            Do: canUpgradeTap
+            With:
+              screen_pos: !output screen_position
+              guard: !var ui guard u
+              occupied: !var occupied cells
+              cell: !var picked cell
+        Listeners:
+          - { EntityTag: tower, BehaviourId: upgrade gate }
 
       # ---- The five typed placements (the palette armed exactly one) ----
       try pulse:
@@ -1783,7 +1749,9 @@ Entities:
         Type: bool variable setter
         Properties: { VariableId: !var placing, Value: false }
 
-      # ---- Arming (targeted by the palette buttons) and cancelling ----
+      # ---- Arming: each palette `ui drag source` sets `selected tower` to its
+      #      own type on every event of its press/drag/release stream, so the
+      #      cost ghost and the typed commit gate both read the dragged type. ----
       arm pulse:
         Type: string variable setter
         Properties: { VariableId: !var selected tower, Value: "pulse" }
@@ -1799,18 +1767,6 @@ Entities:
       arm sniper:
         Type: string variable setter
         Properties: { VariableId: !var selected tower, Value: "sniper" }
-      begin placing:
-        Type: bool variable setter
-        Properties: { VariableId: !var placing, Value: true }
-      stamp armed:
-        Type: float variable setter
-        Properties:
-          VariableId: !var armed at
-          Value: !clock time
-      cancel action:
-        Type: input action
-        Properties: { Action: cancel-place }
-        Listeners: [ end placing ]
 
   # =========================================================================
   # THE POWER CORE - the thing being defended. Its lamp fades green -> red as
@@ -1861,9 +1817,6 @@ Entities:
   # BEHAVIOUR registry, so the tag must sit on an entity that owns at least one
   # behaviour - a bare tagged entity is never registered and the vcam would have
   # no target. The ground slab is centred on the board, so it doubles perfectly.
-  # NOTE: the pointer-picking constants (`cam position` / `cam pitch`) are
-  # derived from this entity's position + the vcam's FollowOffset - keep them
-  # in sync if either moves.
   ground:
     Tags: [ pivot ]
     Position: !vec { X: 0, Y: -0.05, Z: 0 }
@@ -1945,8 +1898,9 @@ Entities:
           - !gameover
 
   # =========================================================================
-  # LIGHT & CAMERA - the vcam is PINNED (damping 0, instant blend) so the
-  # pointer-picking expression's authored camera constants stay exact.
+  # LIGHT & CAMERA - a static overhead-ish rig. `screen to world` reads this
+  # camera live for picking, so it no longer needs to be pinned; the modest
+  # damping is now purely cosmetic.
   # =========================================================================
   sun:
     Position: !vec { X: 0, Y: 10, Z: 0 }
@@ -1974,7 +1928,7 @@ Entities:
           Mode: "3d"
           Priority: 10
           Lens: 46
-          Damping: 0
+          Damping: 1
           FollowOffset: !vec { X: 0, Y: 12.5, Z: -8 }
 
   # =========================================================================
@@ -2095,11 +2049,11 @@ Entities:
                       placing: !var placing
                       sel: !var selected tower
                       idle: !text hud.idle
-                      msg_pulse: !text hud.placing.pulse
-                      msg_frost: !text hud.placing.frost
-                      msg_venom: !text hud.placing.venom
-                      msg_cannon: !text hud.placing.cannon
-                      msg_sniper: !text hud.placing.sniper
+                      msg_pulse: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }
+                      msg_frost: !text { Key: hud.placing, Arguments: [ !text tower.frost ] }
+                      msg_venom: !text { Key: hud.placing, Arguments: [ !text tower.venom ] }
+                      msg_cannon: !text { Key: hud.placing, Arguments: [ !text tower.cannon ] }
+                      msg_sniper: !text { Key: hud.placing, Arguments: [ !text tower.sniper ] }
                   FontSize: 26
                   PreferredWidth: 700
                   PreferredHeight: 38
@@ -2139,76 +2093,75 @@ Entities:
                   FontSize: 26
                   PreferredWidth: 240
                   PreferredHeight: 36
+          # Each tower entry is a `ui drag source`: press it and drag onto a green
+          # board tile to build. The shared listener chain arms this tower's type,
+          # mirrors the pointer phase, then hands the drag position to `to world`
+          # (which drives the ghost and, on release over a buildable tile, places).
           pulse:
             Behaviours:
-              button:
-                Type: ui button
+              drag:
+                Type: ui drag source
                 Properties:
                   Label: !text { Key: btn.pulse, Arguments: [ !var pulse cost ] }
                   PreferredWidth: 240
                   PreferredHeight: 54
                 Listeners:
                   - { EntityId: build cursor, BehaviourId: arm pulse }
-                  - { EntityId: build cursor, BehaviourId: begin placing }
-                  - { EntityId: build cursor, BehaviourId: stamp armed }
+                  - { EntityId: build cursor, BehaviourId: set placing }
+                  - { EntityId: build cursor, BehaviourId: stash phase }
+                  - { EntityId: build cursor, BehaviourId: to world }
           frost:
             Behaviours:
-              button:
-                Type: ui button
+              drag:
+                Type: ui drag source
                 Properties:
                   Label: !text { Key: btn.frost, Arguments: [ !var frost cost ] }
                   PreferredWidth: 240
                   PreferredHeight: 54
                 Listeners:
                   - { EntityId: build cursor, BehaviourId: arm frost }
-                  - { EntityId: build cursor, BehaviourId: begin placing }
-                  - { EntityId: build cursor, BehaviourId: stamp armed }
+                  - { EntityId: build cursor, BehaviourId: set placing }
+                  - { EntityId: build cursor, BehaviourId: stash phase }
+                  - { EntityId: build cursor, BehaviourId: to world }
           venom:
             Behaviours:
-              button:
-                Type: ui button
+              drag:
+                Type: ui drag source
                 Properties:
                   Label: !text { Key: btn.venom, Arguments: [ !var venom cost ] }
                   PreferredWidth: 240
                   PreferredHeight: 54
                 Listeners:
                   - { EntityId: build cursor, BehaviourId: arm venom }
-                  - { EntityId: build cursor, BehaviourId: begin placing }
-                  - { EntityId: build cursor, BehaviourId: stamp armed }
+                  - { EntityId: build cursor, BehaviourId: set placing }
+                  - { EntityId: build cursor, BehaviourId: stash phase }
+                  - { EntityId: build cursor, BehaviourId: to world }
           cannon:
             Behaviours:
-              button:
-                Type: ui button
+              drag:
+                Type: ui drag source
                 Properties:
                   Label: !text { Key: btn.cannon, Arguments: [ !var cannon cost ] }
                   PreferredWidth: 240
                   PreferredHeight: 54
                 Listeners:
                   - { EntityId: build cursor, BehaviourId: arm cannon }
-                  - { EntityId: build cursor, BehaviourId: begin placing }
-                  - { EntityId: build cursor, BehaviourId: stamp armed }
+                  - { EntityId: build cursor, BehaviourId: set placing }
+                  - { EntityId: build cursor, BehaviourId: stash phase }
+                  - { EntityId: build cursor, BehaviourId: to world }
           sniper:
             Behaviours:
-              button:
-                Type: ui button
+              drag:
+                Type: ui drag source
                 Properties:
                   Label: !text { Key: btn.sniper, Arguments: [ !var sniper cost ] }
                   PreferredWidth: 240
                   PreferredHeight: 54
                 Listeners:
                   - { EntityId: build cursor, BehaviourId: arm sniper }
-                  - { EntityId: build cursor, BehaviourId: begin placing }
-                  - { EntityId: build cursor, BehaviourId: stamp armed }
-          cancel:
-            Behaviours:
-              button:
-                Type: ui button
-                Properties:
-                  Label: !text btn.cancel
-                  PreferredWidth: 240
-                  PreferredHeight: 48
-                Listeners:
-                  - { EntityId: build cursor, BehaviourId: end placing }
+                  - { EntityId: build cursor, BehaviourId: set placing }
+                  - { EntityId: build cursor, BehaviourId: stash phase }
+                  - { EntityId: build cursor, BehaviourId: to world }
           speed:
             Behaviours:
               button:
