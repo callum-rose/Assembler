@@ -556,6 +556,18 @@ namespace Assembler.Building
 						i.PreferredHeight.Resolve(ctx.Resolution),
 						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
 				}),
+				[typeof(UIDragSourceInfo)] = new(typeof(UIDragSource), (go, info, ctx) =>
+				{
+					var i = (UIDragSourceInfo)info;
+					var b = go.AddComponent<UIDragSource>();
+					// Renders with the shared button prefab — a drag source is a pressable, labelled graphic.
+					var prefab = RequireUiPrefab(ctx, lib => lib.ButtonPrefab, "ui drag source");
+					return (b, lr => b.Initialise(new UIDragSourceData(i.Id,
+						i.Label.Resolve(ctx.Resolution),
+						i.PreferredWidth.Resolve(ctx.Resolution),
+						i.PreferredHeight.Resolve(ctx.Resolution),
+						prefab), i.Listeners.ToListeners(lr, ctx.Resolution)));
+				}),
 				[typeof(UISliderInfo)] = new(typeof(UISlider), (go, info, ctx) =>
 				{
 					var i = (UISliderInfo)info;

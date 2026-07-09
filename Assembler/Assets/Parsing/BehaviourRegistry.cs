@@ -191,6 +191,7 @@ namespace Assembler.Parsing
 				["ui container"] = UIContainerInfo.Create,
 				["text label"] = TextLabelInfo.Create,
 				["ui button"] = UIButtonInfo.Create,
+				["ui drag source"] = UIDragSourceInfo.Create,
 				["ui slider"] = UISliderInfo.Create,
 			};
 	}
