@@ -1,23 +1,20 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
+using Assembler.Parsing.Info.Behaviours;
 using NUnit.Framework;
 
 namespace Tests.Parsing
 {
 	public class RigidbodyTagTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static RigidbodyPropertySource<UnityEngine.Vector3> VelocitySourceOf(GameInfo info, string entityId) =>
 			(RigidbodyPropertySource<UnityEngine.Vector3>)info.Entities.First(e => e.Id == entityId).InitialPosition;
 
 		[Test]
 		public void MappingRigidbodyTagBecomesRigidbodyPropertySource()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   follower:
     Position: !rigidbody { Id: leader, Property: Velocity }
@@ -33,7 +30,7 @@ Entities:
 		[Test]
 		public void AngularVelocityPositionAndRotationPropertiesParse()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   reads angular:
     Position: !rigidbody { Id: leader, Property: AngularVelocity }
@@ -52,7 +49,7 @@ Entities:
 		[Test]
 		public void PropertyNameIsCaseInsensitive()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   follower:
     Position: !rigidbody { Id: leader, Property: velocity }
@@ -72,7 +69,7 @@ Entities:
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -88,7 +85,7 @@ Entities:
           Text: hi
           FontSize: !rigidbody { Id: hud, Property: Velocity }
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -101,7 +98,28 @@ Entities:
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ";
-			Assert.Catch(() => Parse(yaml));
+			Assert.Catch(() => ParseHelper.ParseGame(yaml));
+		}
+
+		[Test]
+		public void RigidbodyTagNestsAsObjectArgumentOfText()
+		{
+			// A !rigidbody used as a !text argument is untyped, so it parses as RigidbodyPropertySource<object>
+			// (mirroring how a nested !text parses as LocalisedTextSource<object>) — issue #523.
+			var info = ParseHelper.ParseGame(@"
+Entities:
+  hud:
+    Behaviours:
+      label:
+        Type: text label
+        Properties:
+          Text: !text { Key: hud.vel, Arguments: [ !rigidbody { Id: hud, Property: Velocity } ] }
+");
+			var text = (LocalisedTextSource<string>)((TextLabelInfo)info.Entities[0].Behaviours[0]).Text;
+			var nested = (RigidbodyPropertySource<object>)text.Arguments[0];
+
+			Assert.AreEqual("hud", nested.EntityId);
+			Assert.AreEqual(RigidbodyProperty.Velocity, nested.Property);
 		}
 	}
 }

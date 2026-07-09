@@ -4,7 +4,6 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,19 +11,6 @@ namespace Tests.Behaviours
 {
 	public class PatrolTests
 	{
-		private sealed class FakeClock : IGameClock
-		{
-			public float DeltaTime { get; set; } = 0.1f;
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() { }
-			public void Resume() { }
-			public void Step(int frames = 1) { }
-		}
-
 		private readonly List<GameObject> _spawned = new();
 
 		[TearDown]
@@ -63,7 +49,7 @@ namespace Tests.Behaviours
 			go = new GameObject("patrol");
 			_spawned.Add(go);
 			var patrol = go.AddComponent<Patrol>();
-			patrol.Clock = new FakeClock();
+			patrol.Clock = new FakeGameClock { DeltaTime = 0.1f };
 			patrol.Initialise(data, Array.Empty<Listener>());
 			return patrol;
 		}
@@ -176,7 +162,7 @@ namespace Tests.Behaviours
 		{
 			var wps = new List<Vector3> { new(1, 0, 0), new(3, 0, 0) };
 			var patrol = NewPatrol(Data(wps, loop: false, arriveRadius: 0.2f, speed: 4f), out var go);
-			((FakeClock)patrol.Clock).DeltaTime = 0.05f;
+			((FakeGameClock)patrol.Clock).DeltaTime = 0.05f;
 
 			go.transform.position = Vector3.zero;
 			for (var i = 0; i < 400; i++)

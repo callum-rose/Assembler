@@ -1,0 +1,31 @@
+using System.Collections.Generic;
+
+
+namespace Assembler.Parsing.Info.Behaviours
+{
+	public record UIDragSourceInfo(
+		string Id,
+		IReadOnlyList<ListenerInfo> Listeners,
+		ValueSource<string> Label,
+		ValueSource<float> PreferredWidth,
+		ValueSource<float> PreferredHeight) : BehaviourInfo(Id, Listeners)
+	{
+		public static UIDragSourceInfo Create(string id,
+			IReadOnlyList<ListenerInfo> listeners,
+			IReadOnlyDictionary<string, AssemblerValue> props,
+			TransformContext ctx) =>
+			new(id,
+				listeners,
+				ValueSourceFactory.CreateOptionalValueSource<string>(ctx, props.GetValueOrDefault("Label")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredWidth")),
+				ValueSourceFactory.CreateOptionalValueSource<float>(ctx, props.GetValueOrDefault("PreferredHeight")));
+
+		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
+			TransformContext ctx) =>
+			new UIDragSourceInfo(Id,
+				substitutedListeners,
+				Label.SubstituteParameters(ctx),
+				PreferredWidth.SubstituteParameters(ctx),
+				PreferredHeight.SubstituteParameters(ctx));
+	}
+}

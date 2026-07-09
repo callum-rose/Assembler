@@ -1,4 +1,3 @@
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -9,9 +8,6 @@ namespace Tests.Parsing
 {
 	public class UIBlocksParseTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private const string Yaml = @"
 Entities:
   ui:
@@ -43,7 +39,7 @@ Entities:
 		[Test]
 		public void UiBlocksTransformIntoTheirInfoTypes()
 		{
-			var behaviours = Parse(Yaml).Entities[0].Behaviours;
+			var behaviours = ParseHelper.ParseGame(Yaml).Entities[0].Behaviours;
 
 			Assert.IsInstanceOf<UICanvasInfo>(behaviours[0]);
 			Assert.IsInstanceOf<UIContainerInfo>(behaviours[1]);
@@ -57,7 +53,7 @@ Entities:
 			// Regression: an omitted value-type property must become None (NullValueProvider at runtime), not
 			// a ConstantSource of default(T). Otherwise the behaviour's ValueOr(default) never fires — which
 			// made `ui canvas` resolve ReferenceResolution to (0,0,0) and collapse the whole UI to size 0.
-			var behaviours = Parse(Yaml).Entities[0].Behaviours;
+			var behaviours = ParseHelper.ParseGame(Yaml).Entities[0].Behaviours;
 			var canvas = (UICanvasInfo)behaviours[0];
 			var label = (TextLabelInfo)behaviours[2];
 
@@ -70,7 +66,7 @@ Entities:
 		[Test]
 		public void CanvasMatchValueParsesAsConstant()
 		{
-			var canvas = (UICanvasInfo)Parse(Yaml).Entities[0].Behaviours[0];
+			var canvas = (UICanvasInfo)ParseHelper.ParseGame(Yaml).Entities[0].Behaviours[0];
 
 			Assert.AreEqual(0.25f, ((ConstantSource<float>)canvas.MatchWidthOrHeight).Value);
 		}
@@ -78,7 +74,7 @@ Entities:
 		[Test]
 		public void ContainerPropertiesParseAsConstants()
 		{
-			var container = (UIContainerInfo)Parse(Yaml).Entities[0].Behaviours[1];
+			var container = (UIContainerInfo)ParseHelper.ParseGame(Yaml).Entities[0].Behaviours[1];
 
 			Assert.AreEqual(LayoutDirection.Horizontal, ((ConstantSource<LayoutDirection>)container.Direction).Value);
 			Assert.AreEqual(8f, ((ConstantSource<float>)container.Spacing).Value);
@@ -89,7 +85,7 @@ Entities:
 		[Test]
 		public void LabelAndButtonCaptionsParseAsConstants()
 		{
-			var behaviours = Parse(Yaml).Entities[0].Behaviours;
+			var behaviours = ParseHelper.ParseGame(Yaml).Entities[0].Behaviours;
 			var label = (TextLabelInfo)behaviours[2];
 			var button = (UIButtonInfo)behaviours[3];
 
@@ -137,7 +133,7 @@ Entities:
 			// The key becomes the child's relative IdSuffix, which the builder
 			// prefixes with the parent path (e.g. "ui/hud", "ui/hud/title") so
 			// listeners can target nested children by their full hierarchical id.
-			var ui = Parse(KeyedChildrenYaml).Entities[0];
+			var ui = ParseHelper.ParseGame(KeyedChildrenYaml).Entities[0];
 
 			Assert.AreEqual(1, ui.Children.Count);
 			Assert.AreEqual("hud", ui.Children[0].IdSuffix);
@@ -148,7 +144,7 @@ Entities:
 		public void ListChildrenAreRejected()
 		{
 			// Children must be a keyed mapping; the sequence/list form is no longer supported.
-			Assert.Catch(() => Parse(ListChildrenYaml));
+			Assert.Catch(() => ParseHelper.ParseGame(ListChildrenYaml));
 		}
 	}
 }

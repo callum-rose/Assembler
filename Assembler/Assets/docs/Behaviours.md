@@ -463,7 +463,7 @@ Fires once after a delay.
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
-| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
+| AutoStart | bool | When true (the default when omitted) the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -516,7 +516,7 @@ Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 |------|------|-------------|
 | Interval | float | Seconds between fires. Re-read before each wait, so binding it to a variable that other |
 | Count | int | Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound |
-| AutoStart | bool | When true the timer starts on entity start; when false it waits for an Execute call from upstream. |
+| AutoStart | bool | When true (the default when omitted) the timer starts on entity start; when false it waits for an Execute call from upstream. |
 
 ### Outputs
 
@@ -815,6 +815,30 @@ Adds a Cinemachine virtual camera that frames a whole group of entities at once:
 | FramingSize | float | How much of the screen the group should fill, 0..1 (default Cinemachine's 0.8). |
 | Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
 
+## `screen to world`
+Unprojects a screen-space position through the live output camera and emits the world point on a
+            configurable plane plus the full camera ray, so descriptors do screen→world picking without hand-rolled
+            camera constants. Insert it in a chain after an input behaviour that supplies the screen position.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| ScreenPosition | Vector3 | Screen-space pixel position to unproject (z ignored). Bind to an upstream output, e.g. `!output axis` from an `input action` or `!output position` from a `tap trigger`. |
+| PlanePoint | Vector3 | A point on the world plane whose intersection becomes world_position. Defaults to (0, 0, 0). |
+| PlaneNormal | Vector3 | The world plane's normal. Defaults to (0, 1, 0) (the XZ ground plane); use (0, 0, 1) for a 2D XY game. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| screen_position | Vector3 | The screen-space position that was unprojected (z is 0). |
+| world_position | Vector3 | Where the camera ray through the screen point meets the configured plane (falls back to the ray origin when the ray is parallel to the plane). |
+| origin | Vector3 | World-space origin of the camera ray through the screen point. |
+| direction | Vector3 | Normalised world-space direction of the camera ray through the screen point. |
+
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.
 
@@ -908,6 +932,23 @@ Sensor that scans for every tagged entity in range and writes them into blackboa
 | Velocities | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans). |
 | Count | int | !var reference to the int variable set to the number of entities detected this scan. |
 
+## `tag count`
+Counts the live entities carrying a tag and re-emits to its listeners with that count as an output.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to count. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| count | int | The number of live entities carrying Tag at the moment of counting. |
+
 ## `steering`
 Blends a weighted list of steering forces into one velocity each frame.
 
@@ -959,7 +1000,9 @@ Walks an entity through an ordered list of waypoints, advancing on arrival.
 Moves the entity tile-to-tile along the shared nav grid: it heads to the centre of the next cell, and
             only re-decides direction once it arrives there, so motion is always grid-aligned and never diagonal
             (classic maze movement). At each cell it turns onto the requested Direction if that neighbour is
-            walkable, else continues its current heading, else stops. Walkability and cell geometry come from the
+            walkable, else continues its current heading while a direction is held, else stops. A zero Direction
+            (no input) stops it at the next cell — deliberate, stop-on-release control; a game that wants Pac-Man-style
+            momentum keeps feeding a non-zero heading (e.g. the last one) rather than zero. Walkability and cell geometry come from the
             NavGridService, so a player driven by this and the AI driven by navigate share one
             maze. Robust to external teleports (a wrap position tunnel): a large jump re-anchors to the new
             cell instead of dragging the entity back.
@@ -978,6 +1021,17 @@ Moves the entity tile-to-tile along the shared nav grid: it heads to the centre 
 | Speed | float |  |
 | AgentRadius | float |  |
 
+## `nav obstacle`
+Makes the entity a dynamic nav-grid obstacle whose cells block or free at runtime, on Execute.
+
+**Role:** Executable (valid `Listeners:` target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Blocked | bool | Whether this obstacle currently blocks its cells; re-read on each Execute (bind to a variable/expression to toggle). Defaults to true. |
+
 ## `vector variable setter`
 Writes a Vector3 value into the referenced variable when Executed. See VariableSetterBehaviour.
 
@@ -991,7 +1045,7 @@ Writes a Vector3 value into the referenced variable when Executed. See VariableS
 | Value | Vector3 | Source value to assign. Can be a constant, expression, or another variable reference. |
 
 ## `int variable setter`
-Writes a int value into the referenced variable when Executed. See VariableSetterBehaviour.
+Writes an int value into the referenced variable when Executed. See VariableSetterBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1286,7 +1340,7 @@ Iterates a Vector3 list when Executed, firing listeners once per element. See Li
 | index | int | Zero-based position of the current element. |
 
 ## `int list add`
-Appends a int value to the end of the target list when Executed. See ListAddBehaviour.
+Appends an int value to the end of the target list when Executed. See ListAddBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1298,7 +1352,7 @@ Appends a int value to the end of the target list when Executed. See ListAddBeha
 | Value | int | Item to append. |
 
 ## `int list insert`
-Inserts a int value into the target list at a given index when Executed. See ListInsertBehaviour.
+Inserts an int value into the target list at a given index when Executed. See ListInsertBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1323,7 +1377,7 @@ Removes the int item at a given index from the target list when Executed. See Li
 | Index | int | Zero-based position to remove from. |
 
 ## `int list remove`
-Removes the first occurrence of a int value from the target list when Executed. See ListRemoveBehaviour.
+Removes the first occurrence of an int value from the target list when Executed. See ListRemoveBehaviour.
 
 **Role:** Executable (valid `Listeners:` target).
 
@@ -1383,7 +1437,7 @@ Removes all items from the target int list when Executed. See ListClearBehaviour
 | List | List<int> | Reference to the target list variable. |
 
 ## `int list loop trigger`
-Iterates a int list when Executed, firing listeners once per element. See ListLoopTrigger.
+Iterates an int list when Executed, firing listeners once per element. See ListLoopTrigger.
 
 **Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
 
@@ -2218,6 +2272,32 @@ A clickable uGUI button. Acts as a trigger: notifies its listeners each time it 
 | Label | string | Button caption (re-read each frame). |
 | PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
 | PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
+
+## `ui drag source`
+A draggable uGUI widget. Acts as a trigger, but unlike ui button (which fires only on
+            click) it reports the whole pointer lifecycle — press, drag, release — as a screen-space position stream.
+            A press can therefore begin a drag whose position feeds another behaviour (e.g. a board's placement
+            logic) as the pointer moves over the play area. The caption is re-read every frame, so it can be bound to
+            a variable/expression.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Label | string | Caption (re-read each frame). |
+| PreferredWidth | float | Preferred width for the parent layout (omit for a sensible default). |
+| PreferredHeight | float | Preferred height for the parent layout (omit for a sensible default). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| phase | string | Lifecycle stage of this fire — "press", "drag", or "release". |
+| position | Vector3 | Current screen-space pointer position (z is 0). |
+| start | Vector3 | Screen-space position where the press began (z is 0). |
+| delta | Vector3 | Screen-space movement since the previous drag frame (z is 0). |
 
 ## `ui slider`
 A uGUI slider. Acts as a trigger: notifies its listeners whenever the value changes.

@@ -83,8 +83,12 @@ mapping) — the tag itself is not required here because the field is already co
 
 ```yaml
 Physics:
-  Gravity: !vec { X: 0, Y: 0 }       # !vec, optional — { X:0, Y:0 } disables gravity (top-down/arcade)
+  Gravity: !vec { X: 0, Y: -9.81, Z: 0 }   # !vec, optional — global gravity applied to rigidbodies
 ```
+
+Sets `UnityEngine.Physics.gravity` for the run (restored on teardown, so it doesn't leak between games
+loaded in one process). Absent or `{ X:0, Y:0, Z:0 }` leaves gravity off — the project default — which
+top-down/arcade games rely on. A `rigidbody` only falls under this when its `UseGravity` is `true`.
 
 ### `Assets` — list of `AssetDto`
 
@@ -95,9 +99,20 @@ with the `!asset` tag (for `sprite.Sprite`, `voxel mesh.Mesh`, `audio source.Cli
 Assets:
   - Id: voxel mesh asset             # string — the id used by !asset
     Type: mesh                       # string — asset kind (mesh | sprite | audio | …)
-    Source: resources                # string — where to load from (e.g. resources)
-    Path: Voxels/voxel               # string — load path within that source
+    Source: resources                # string — where to load from (resources | addressables)
+    Path: Voxels/voxel               # string — load path/address within that source
 ```
+
+**`Source`** selects where the bytes come from:
+
+- `resources` — loaded synchronously from a Unity **Resources** folder; `Path` is the Resources path
+  (e.g. `Voxels/voxel`).
+- `addressables` — loaded (possibly downloaded) via Unity **Addressables**, including remote content;
+  `Path` is the Addressables **address/key** (e.g. `Enemies/Goblin`), not a Resources path. The asset's
+  load handle is released automatically when the game is torn down. Referencing an `addressables` asset
+  requires the project to have Addressables set up (settings created, the target asset marked Addressable
+  with that address, and — for remote content — a built/hosted catalog). The `!asset` reference syntax is
+  unchanged regardless of source.
 
 ### `Constants` — map `id → value`
 
@@ -175,7 +190,7 @@ skill. Prefer the global helpers in [`Libraries.md`](Libraries.md) over register
 
 ```yaml
 Expressions:
-  paddle bounce:
+  paddleBounce:                              # the id is the exact name it's callable by — see note below
     ArgumentTypes: [ int, int ]              # optional — types of the declared params, positional
     ArgumentNames: [ a, b ]                  # optional — must match ArgumentTypes length
     ReturnType:    int                       # required — int | float | bool | string | vector | colour | record | record list | …
@@ -188,6 +203,13 @@ Expressions:
 `ExpressionDto` fields: `ArgumentTypes[]`, `ArgumentNames[]`, `ReturnType`, `RegisterTypes[]`,
 `RegisterTypeStatics[]`, `Expression`, `CallableAs`. You often don't need a named entry at all — a
 one-off body can be written inline at the `!expr` call site.
+
+> **Expression names must be valid identifiers.** Unlike entity/behaviour ids (which may contain
+> spaces), an expression's id — and its `CallableAs` alias — is the literal name it's invoked by from
+> another expression body and from `!expr Do:`, with no normalisation. So it must be a legal identifier:
+> letters, digits and underscores only, not starting with a digit (e.g. `paddleBounce` or
+> `paddle_bounce`, **not** `paddle bounce`). A name with a space or other illegal character is rejected
+> at parse time.
 
 ### `Templates` — map `id → EntityDto`
 
@@ -241,9 +263,25 @@ Localisation:
     en:
       hud.score: "Score: {0}"        # {0},{1},… are string.Format placeholders; escape literals as {{ }}
       menu.start: "Press Space to start"
+      hud.placing: "Placing: {0}"
+      tower.pulse: "Pulse Tower"
 ```
 
 A missing key renders as a visible `#key#` marker rather than crashing.
+
+`!text` arguments accept any value source, **including another `!text`** — so a placeholder can be
+filled with a second localised string, and this nests to any depth:
+
+```yaml
+Text: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }   # → "Placing: Pulse Tower"
+```
+
+"Any value source" includes the object-erased ref tags — `!entity`/`!rigidbody` (which read a live
+`Vector3`), `!clock`, `!query`, `!var`, and trigger outputs — so a placeholder can show a live value:
+
+```yaml
+Text: !text { Key: hud.pos, Arguments: [ !entity { Id: player, Property: Position } ] }
+```
 
 ### `Navigation` — `NavigationDto`
 
@@ -297,8 +335,9 @@ entity id:                           # the YAML key is the entity id
 `EntityDto` fields: `Id`, `Template`, `Tags`, `Position`, `Rotation`, `Behaviours`, `Variables`,
 `Children`. Notes:
 
-- There is **no entity-level `Scale`** field — scale is *read* off another entity via
-  `!entity { Property: Scale }`, not set here.
+- There is **no entity-level `Scale`** field — scale is only *read* off an entity via
+  `!entity { Id: other, Property: Scale }` (or `!entity { Property: Scale }` for the entity itself),
+  not set here.
 - `Position` / `Rotation` are untyped (`object`), so they accept any value form that resolves to a
   `Vector3` (`!vec`, `!var`, `!expr`).
 - `Children` ids are **path-joined** onto the parent (`ui` → child `hud` → `ui/hud`). Target a nested
@@ -457,7 +496,7 @@ Tags carry a leading `!` and tell the loader how to interpret a value. The full 
 | `!expr` | `ExprRefDto` | `!expr { Do, With, … }` (mapping) | Evaluates code. See [`!expr`](#expr-detail). |
 | `!asset` | `AssetRefDto` | `!asset asset_id` (scalar **only** — mapping form fails) | References a top-level `Assets:` entry by id, for asset-typed properties. |
 | `!output` | `OutputRefDto` | `!output local_name` (scalar) | Reads a trigger output previously bound by a listener's `Outputs:` map. |
-| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of another entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. Inside a template, `Id` may be `!parameter <slot>` (e.g. `!entity { Id: !parameter self_id, Property: Position }`) to read the **instantiated** entity's own transform. |
+| `!entity` | `EntityRefDto` | `!entity { Id: other, Property: Position }` (mapping) | A **live** per-frame read of an entity's transform `Property` (`Position` \| `Rotation` \| `Scale`) as a `Vector3`. **Omit `Id`** — `!entity { Property: Rotation }` — to read the **enclosing** entity's own transform ("self"); this works in a direct entity behaviour and inside a template behaviour alike (preferred over the older `Id: !parameter self_id` form). Or set `Id: !parameter <slot>` to read a parameterised entity by id. |
 | `!rigidbody` | `RigidbodyRefDto` | `!rigidbody { Id: car, Property: Velocity }` (mapping) | A live read of an entity's `Rigidbody` `Property` (`Velocity` \| `AngularVelocity` \| `Position`). |
 | `!query` | `EntityQueryRefDto` | `!query { Kind, EntityTag, Origin, MaxRange }` (mapping) | A one-off spatial perception query against the live entity index. `Kind` selects the verb (e.g. `NearestId`, `NearestPosition`). |
 | `!clock` | `ClockRefDto` | `!clock deltaTime` (scalar) | Reads a game-clock property (`deltaTime` \| `time` \| `frameCount` \| `unscaledDeltaTime`) as a number. Respects pause/slow-mo. |

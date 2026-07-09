@@ -25,16 +25,21 @@ namespace Assembler.Deserialisation
 
 		public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
 		{
+			// Capture the node's position before consuming any events — parser.Current is the first event
+			// of this listener (the scalar or the MappingStart) at this point.
+			var position = PositionOf(parser);
+
 			if (parser.TryConsume<Scalar>(out var scalar))
 			{
 				var slash = scalar.Value.LastIndexOf('/');
 
 				return slash < 0
-					? new ListenerDto { BehaviourId = scalar.Value.Trim() }
+					? new ListenerDto { BehaviourId = scalar.Value.Trim(), Position = position }
 					: new ListenerDto
 					{
 						EntityId = scalar.Value[..slash].Trim(),
-						BehaviourId = scalar.Value[(slash + 1)..].Trim()
+						BehaviourId = scalar.Value[(slash + 1)..].Trim(),
+						Position = position
 					};
 			}
 
@@ -80,9 +85,15 @@ namespace Assembler.Deserialisation
 				BehaviourId = behaviourId,
 				EntityTag = entityTag,
 				BehaviourTag = behaviourTag,
-				Outputs = outputs
+				Outputs = outputs,
+				Position = position
 			};
 		}
+
+		private static SourcePosition PositionOf(IParser parser) =>
+			parser.Current is { } current
+				? SourcePosition.At((int)current.Start.Line, (int)current.Start.Column)
+				: SourcePosition.Unknown;
 
 		public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer) =>
 			throw new NotSupportedException();

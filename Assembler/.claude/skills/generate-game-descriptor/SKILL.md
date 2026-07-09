@@ -129,7 +129,7 @@ physical keys.
 Named code snippets that can be called via `!expr { Do: <name>, … }`. Each entry:
 
 ```yaml
-expression name:
+expressionName:                              # must be a valid identifier — see note below
   ArgumentTypes:   [ int, int ]              # optional, omit if no args
   ArgumentNames:   [ a, b ]                  # optional, must match ArgumentTypes length
   ReturnType:      int                       # required: int | float | bool | string | vector | colour
@@ -137,6 +137,11 @@ expression name:
   RegisterTypeStatics: [ UnityEngine.Random ]# optional; lets the body call statics without the type prefix
   Expression: "a + b;"                       # the method body
 ```
+
+Unlike entity/behaviour ids, an expression's name (its id, and any `CallableAs` alias) is the literal
+name other expression bodies call it by, so it **must be a valid identifier**: letters, digits and
+underscores only, not starting with a digit (e.g. `expressionName` or `expression_name`, never
+`expression name`). A space or other illegal character is rejected at parse time.
 
 The `Expression:` field is code. **Always invoke the [`unity-expression-compiler`](../unity-expression-compiler/SKILL.md)
 skill when authoring it.** It is a strict procedural subset of C#; ordinary C# will fail to parse.
@@ -215,7 +220,7 @@ as shown.
 | `!parameter` | `!parameter slot_name` | Inside a template, refers to a parameter slot supplied at instantiation. `!parameter self_id` is the special implicit slot for the entity's own id (use when a template behaviour needs to refer to "this entity"). |
 | `!expr` | `!expr { Do: …, With: { name: value, … } }` | Evaluates code. `Do` is either a **named** expression id (calls an `Expressions:` entry) **or** an inline C# body; `With` is a **map** of named operands. See **Expressions and `!expr`** below. |
 | `!output` | `!output local_name` | Reads a trigger output that was bound by an upstream listener (see **Trigger outputs**). |
-| `!entity` | `!entity { Id: other_entity_id, Property: Position }` | A **live** read of another entity's transform property (`Position`, `Rotation`, or `Scale`) as a `Vector3`, re-resolved each frame — use it to follow, aim at, or measure distance to another entity (e.g. as an `!expr` `With:` argument). Use the **mapping** form with `Id` and `Property` keys. |
+| `!entity` | `!entity { Id: other_entity_id, Property: Position }` | A **live** read of an entity's transform property (`Position`, `Rotation`, or `Scale`) as a `Vector3`, re-resolved each frame — use it to follow, aim at, or measure distance to another entity (e.g. as an `!expr` `With:` argument). Use the **mapping** form with `Id` and `Property` keys. **Omit `Id`** (`!entity { Property: Rotation }`) to read the **enclosing** entity's own transform — works in both direct and template behaviours, and is preferred over `Id: !parameter self_id`. |
 | `!asset` | `!asset some_asset_id` | References a project asset by id for asset-typed properties (`sprite`'s `Sprite`, `voxel mesh`'s `Mesh`, `audio source`'s `Clip`). Use the **scalar** form (the asset id); the mapping form `!asset { Id: … }` fails to deserialise. |
 | `!clock` | `!clock deltaTime` | Reads a property of the game clock (`deltaTime`, `time`, `frameCount`, `unscaledDeltaTime`) as a number. Respects pause / slow-mo (`set timescale`): `deltaTime` is 0 while paused. Use it to pass the frame delta into per-frame `!expr` physics, e.g. `IntegratePosition(pos, vel, dt)` with `dt` supplied as `!clock deltaTime`. |
 | `!text` | `!text menu.start` or `!text { Key: hud.score, Arguments: [ !var score ] }` | Resolves a localisation key to a string from the `Localisation:` table. Use the scalar form for static text and the mapping form for text with runtime values. **Note the mapping form uses `Arguments:`, not `With:`.** Always use `!text` for user-facing strings instead of inline literals (see **Localisation**). |

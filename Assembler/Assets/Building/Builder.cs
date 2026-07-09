@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
 using Assembler.Input;
+using Assembler.Libraries;
 using Assembler.Parsing;
 using Assembler.Parsing.Controls;
 using Assembler.Parsing.Info;
@@ -23,19 +25,27 @@ namespace Assembler.Building
 {
 	public static class Builder
 	{
-		public static void Build(string yamlPath, InputPlatform? overridePlatform = null)
+		public static Task BuildAsync(string yamlPath, InputPlatform? overridePlatform = null)
+			=> BuildFromYamlAsync(File.ReadAllText(yamlPath), overridePlatform);
+
+		/// <summary>
+		/// Build a game directly from a descriptor's YAML <em>content</em> (e.g. a descriptor downloaded from the
+		/// remote store), without it having to exist as a file first. Returns the root "Game" GameObject so the
+		/// caller can detect teardown (destroying the root unloads the whole game). Distinct from
+		/// <see cref="BuildAsync(string, InputPlatform?)"/>, whose string argument is a file path.
+		/// </summary>
+		public static async Task<GameObject> BuildFromYamlAsync(string yaml, InputPlatform? overridePlatform = null)
 		{
-			var yaml = File.ReadAllText(yamlPath);
 			var gameDto = new GameFileParser().Parse(yaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
-			Build(gameInfo, controls, overridePlatform);
+			return (await gameInfo.ResolveAsync(controls, overridePlatform)).Instantiate();
 		}
 
-		public static void Build(GameInfo gameInfo) => Build(gameInfo, ControlsInfo.Empty, null);
+		public static Task BuildAsync(GameInfo gameInfo) => BuildAsync(gameInfo, ControlsInfo.Empty, null);
 
-		public static void Build(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
-			=> gameInfo.Resolve(controls, overridePlatform).Instantiate();
+		public static async Task BuildAsync(GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+			=> (await gameInfo.ResolveAsync(controls, overridePlatform)).Instantiate();
 
 		/// <summary>
 		/// First build phase: validate the descriptor's game-over path and controls, then stand up all the
@@ -44,7 +54,7 @@ namespace Assembler.Building
 		/// resolution-time failures separately from instantiation-time ones. The returned handle carries the
 		/// resolved state into <see cref="Instantiate"/>.
 		/// </summary>
-		public static ResolvedGame Resolve(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
+		public static async Task<ResolvedGame> ResolveAsync(this GameInfo gameInfo, ControlsInfo controls, InputPlatform? overridePlatform)
 		{
 			// 0. Enforce a game-over path so a game can never get stuck unfinishable.
 			if (!GameOverReachability.HasReachableGameOver(gameInfo))
@@ -77,9 +87,10 @@ namespace Assembler.Building
 
 			compiledExpressionsRegistry.CompileAndRegisterAll(gameInfo.Expressions);
 
-			// 2. Load assets
+			// 2. Load assets. The only async step in resolve: Resources completes synchronously, but Addressables
+			// (especially remote content) genuinely awaits a download here, off the main thread.
 			var assetRegistry = new AssetRegistry();
-			assetRegistry.LoadAll(gameInfo.Assets);
+			await assetRegistry.LoadAllAsync(gameInfo.Assets);
 
 			// 2b. Load the localisation string table. Locale is hardcoded for now; this is the seam the
 			// future settings/options system will drive.
@@ -104,8 +115,24 @@ namespace Assembler.Building
 		/// Returns the root "Game" GameObject so callers can tear the whole game down by destroying it (the
 		/// sandbox validator relies on this).
 		/// </summary>
-		public static GameObject Instantiate(this ResolvedGame resolved)
+		/// <param name="resolved">The resolved game handle from <see cref="ResolveAsync"/>.</param>
+		/// <param name="options">
+		/// Per-run clock + seed configuration. Defaults to <see cref="RunOptions.Default"/> (realtime clock,
+		/// entropy-seeded RNG) so every normal play session and the sandbox validator are unchanged;
+		/// deterministic / replay runs pass <see cref="GameClockMode.FixedStep"/> and an explicit seed.
+		/// </param>
+		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null)
 		{
+			options ??= RunOptions.Default;
+
+			// Seed the ambient PRNG before any entity is created, so every random draw during instantiation
+			// (e.g. an entity's start position from RandomOnCircle) is reproducible. An explicit seed drives a
+			// deterministic / replay run; otherwise derive one from entropy so normal play still varies each
+			// launch. Log the resolved seed so a session can be captured and replayed later.
+			var seed = options.Seed ?? unchecked((uint)Guid.NewGuid().GetHashCode());
+			RandomMath.Seed(seed);
+			UnityEngine.Debug.Log($"[Assembler] Run seed {seed} ({options.ClockMode}).");
+
 			var gameInfo = resolved.GameInfo;
 			var controls = resolved.Controls;
 			var controlsAsset = resolved.ControlsAsset;
@@ -127,8 +154,13 @@ namespace Assembler.Building
 
 			// The single source of game time, injected everywhere timing matters. Created before the
 			// registry and factory that depend on it. A driver MonoBehaviour ticks it once per frame
-			// (ahead of every behaviour Update via DefaultExecutionOrder).
-			var gameClock = new RealtimeGameClock();
+			// (ahead of every behaviour Update via DefaultExecutionOrder). FixedStep gives a constant delta
+			// for deterministic / replay runs; Realtime (the default) rides wall-clock.
+			IAdvancingGameClock gameClock = options.ClockMode switch
+			{
+				GameClockMode.FixedStep => new FixedStepGameClock(),
+				_ => new RealtimeGameClock()
+			};
 
 			var exclusiveGroupRegistry = new ExclusiveGroupRegistry(gameClock);
 
@@ -147,6 +179,15 @@ namespace Assembler.Building
 			// Enable the controls asset for the game's lifetime and tie its destruction to the game root, so
 			// individual input triggers never enable/disable (and never leak) the shared asset themselves.
 			gameRoot.AddComponent<ControlsAssetOwner>().Initialise(controlsAsset);
+
+			// Release the registry's loaded assets (Addressables handles) when the game root is destroyed, mirroring
+			// the controls asset above. Resources-sourced assets need no release; Dispose is a no-op for them.
+			gameRoot.AddComponent<AssetRegistryOwner>().Initialise(assetRegistry);
+
+			// Apply the descriptor's global physics settings (currently just gravity) for this run and restore
+			// them on teardown, so physics is a per-game setting rather than a mutated global that leaks between
+			// games loaded in the same process.
+			gameRoot.AddComponent<PhysicsSettingsOwner>().Initialise(gameInfo.Physics);
 
 			// uGUI needs exactly one EventSystem to deliver pointer input. The project is Input System-only
 			// (activeInputHandler == 2), so the Input System UI module is required — StandaloneInputModule

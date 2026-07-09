@@ -1,4 +1,3 @@
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -10,9 +9,6 @@ namespace Tests.Parsing
 {
 	public class BehaviourEnumParseTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		[Test]
 		public void ParseIsCaseInsensitive()
 		{
@@ -60,7 +56,7 @@ Entities:
 		[Test]
 		public void OmittedEnumPropertyTakesItsDefault()
 		{
-			var anim = (AnimationInfo)Parse(AnimationYaml).Entities[0].Behaviours[0];
+			var anim = (AnimationInfo)ParseHelper.ParseGame(AnimationYaml).Entities[0].Behaviours[0];
 
 			Assert.AreEqual(Easing.InOutSine, ((ConstantSource<Easing>)anim.Steps[0].Easing).Value);
 		}
@@ -80,7 +76,7 @@ Entities:
           Duration: 1
           Easing: outBack
 ";
-			var anim = (AnimationInfo)Parse(yaml).Entities[0].Behaviours[0];
+			var anim = (AnimationInfo)ParseHelper.ParseGame(yaml).Entities[0].Behaviours[0];
 
 			Assert.AreEqual(Easing.OutBack, ((ConstantSource<Easing>)anim.Steps[0].Easing).Value);
 		}
@@ -97,7 +93,7 @@ Entities:
         Properties:
           Shape: dodecahedron
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 	}
 }

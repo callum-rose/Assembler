@@ -14,12 +14,13 @@ namespace Assembler.Compiler.Compiler
 
 		public void RegisterMethod(string name, MethodInfo methodInfo)
 		{
-			if (!_registeredMethods.ContainsKey(name))
+			if (!_registeredMethods.TryGetValue(name, out var methods))
 			{
-				_registeredMethods[name] = new HashSet<MethodInfo>();
+				methods = new HashSet<MethodInfo>();
+				_registeredMethods[name] = methods;
 			}
 
-			_registeredMethods[name].Add(methodInfo);
+			methods.Add(methodInfo);
 		}
 
 		public void RegisterStaticMethods(Type type)
@@ -30,6 +31,11 @@ namespace Assembler.Compiler.Compiler
 			{
 				RegisterMethod(method.Name, method);
 			}
+
+			// Also register the type itself so qualified calls (`Mathf.Sin(x)`) resolve through the
+			// static-member-access path, mirroring `RegisterType` — otherwise the bare `Sin(x)` form is
+			// the only one that works and the qualified form fails with "Unknown identifier 'Mathf.Sin'".
+			RegisterType(type);
 		}
 
 		// Registers an already-compiled expression delegate so other expressions can

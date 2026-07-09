@@ -3,7 +3,6 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -11,19 +10,6 @@ namespace Tests.Behaviours
 {
 	public class NavigateTests
 	{
-		private sealed class FakeClock : IGameClock
-		{
-			public float DeltaTime { get; set; } = 0.1f;
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() { }
-			public void Resume() { }
-			public void Step(int frames = 1) { }
-		}
-
 		private GameObject _go = null!;
 
 		[TearDown]
@@ -40,7 +26,7 @@ namespace Tests.Behaviours
 		{
 			_go = new GameObject("agent");
 			var navigate = _go.AddComponent<Navigate>();
-			navigate.Clock = new FakeClock();
+			navigate.Clock = new FakeGameClock { DeltaTime = 0.1f };
 			navigate.Nav = new NavGridService(NavGridSettings.Default);
 
 			navigate.Initialise(new NavigateData("n",

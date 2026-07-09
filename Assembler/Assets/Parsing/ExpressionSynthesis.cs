@@ -152,6 +152,14 @@ namespace Assembler.Parsing
 				var operand = exprRef.With[i];
 				var typeName = explicitArgTypes != null ? explicitArgTypes[i] : InferTypeName(ctx, operand.Value);
 
+				if (typeName is null)
+				{
+					throw new ParsingException(
+						$"Inline expression '{exprRef.Do}' cannot infer the type of operand " +
+						$"'{operand.Name}'. Add an explicit ArgumentTypes hint to the call site " +
+						"(positional to the With order), or supply the operand from a typed source.");
+				}
+
 				if (!ctx.TypeRegistry.TryGetValue(typeName, out var argType))
 				{
 					throw new ParsingException(
@@ -189,11 +197,17 @@ namespace Assembler.Parsing
 			return new ExpressionSource<T>(id, args);
 		}
 
-		// Best-effort static type-name for an inline operand: literals by kind, `!var` by its
-		// resolved value, nested named `!expr` by its declared return type. Anything else (including
-		// nested inline `!expr`) falls back to the use-site type, supplied by the caller via the
-		// generic CreateValueSource<T> through InferReturnTypeName — here we default to "float".
-		private static string InferTypeName(TransformContext ctx, AssemblerValue value) =>
+		// Static type-name for an inline operand. Inferred precisely where the source carries a known
+		// type: literals by kind, `!var` by its resolved value, nested named `!expr` by its declared
+		// return type, and the transform/physics property refs (`!entity` / `!rigidbody`) by their
+		// always-Vector3 result — a type known from the ref kind alone, so it holds even before a
+		// `!parameter` id is substituted. Two sources have no statically-knowable type but a strong
+		// default: `!clock` values are always float, and a trigger `!output` is read back as whatever
+		// type the body asks for (float being the overwhelming case — input axes, slider values) — both
+		// default to float, overridable with an explicit ArgumentTypes hint. Everything else (a nested
+		// inline `!expr`, an unresolvable `!var`, a bare `!parameter`, a `!query`, …) returns null, and
+		// the caller turns that into a clear "add an ArgumentTypes hint" error rather than guessing.
+		private static string? InferTypeName(TransformContext ctx, AssemblerValue value) =>
 			value switch
 			{
 				IntValue => "int",
@@ -202,13 +216,13 @@ namespace Assembler.Parsing
 				StringValue => "string",
 				Vector3Value or VecValue => "vector",
 				ColorValue or ColourValue => "colour",
+				EntityPropertyRef or RigidbodyPropertyRef => "vector",
+				ClockRef or OutputRef => "float",
 				TypedListValue typed when TryGetTypeName(ctx,
 					typeof(List<>).MakeGenericType(typed.ElementType), out var listName) => listName,
-				VarRef varRef => TryResolveValue(ctx, varRef.Id, out var resolved)
-					? InferTypeName(ctx, resolved)
-					: "float",
+				VarRef varRef when TryResolveValue(ctx, varRef.Id, out var resolved) => InferTypeName(ctx, resolved),
 				ExprRef nested when TryResolveNamedExpression(ctx, nested.Do, out var info) => info.ReturnType,
-				_ => "float"
+				_ => null
 			};
 
 		// Return type for a synthesised inline expression: the use-site T mapped to a registry name

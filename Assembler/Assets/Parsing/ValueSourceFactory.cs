@@ -172,14 +172,16 @@ namespace Assembler.Parsing
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				QueryRef queryRef => BuildQuerySource<T>(ctx, queryRef),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
-				TextRef textRef when typeof(T) == typeof(string) =>
+				// A !text resolves to a string, so it's valid in a string slot and (like the other
+				// object-erased ref tags above) in an untyped `object` slot — which is what a !text/!expr
+				// argument is. The object case lets one !text nest inside another's Arguments, recursing to
+				// any depth (BuildTextArguments builds each argument as object).
+				TextRef textRef when typeof(T) == typeof(string) || typeof(T) == typeof(object) =>
 					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
 				TextRef textRef => throw new ParsingException(
 					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),
 				VarRef varRef => new ValueReferenceSource<T>(varRef.Id),
 				ExprRef exprRef => ExpressionSynthesis.CreateExpressionSource<T>(ctx, exprRef),
-				VecValue vec when typeof(T) == typeof(Vector3) => new ConstantSource<T>(
-					(T)(object)vec.ToVector3(ctx.Values)),
 				VecValue vec => new ConstantSource<T>((T)(object)vec.ToVector3(ctx.Values)),
 				ColourValue col when typeof(T) == typeof(Color) => new ConstantSource<T>(
 					(T)(object)col.ToColor(ctx.Values)),
@@ -194,6 +196,9 @@ namespace Assembler.Parsing
 					new ConstantSource<T>((T)BuildTypedList(ctx, typed)),
 				ListValue list when TryGetListElementType(typeof(T), out var elementType) =>
 					new ConstantSource<T>((T)BuildListFromUntyped(ctx, list, elementType!)),
+				RuntimeObjectValue obj when obj.Value is T typed => new ConstantSource<T>(typed),
+				RuntimeObjectValue obj => throw new ParsingException(
+					$"Parameter resolved to a {obj.Value.GetType().Name} but was used where a {typeof(T).Name} was expected"),
 				NoValue or null when fallback is not null => new ConstantSource<T>(fallback),
 				NoValue or null => None<T>.Instance,
 				_ => new ConstantSource<T>(CoerceConstant<T>(raw))

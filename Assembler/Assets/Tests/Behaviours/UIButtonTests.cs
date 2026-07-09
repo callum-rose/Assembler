@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.UI;
 using Assembler.Behaviours.UI.Views;
@@ -15,20 +13,6 @@ namespace Tests.Behaviours
 {
 	public class UIButtonTests
 	{
-		private sealed class ActionListener : Listener
-		{
-			private readonly Action<TriggerContext> _action;
-
-			public ActionListener(Action<TriggerContext> action)
-				: base(new Dictionary<string, string>()) => _action = action;
-
-			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
-
-#if DEBUG_CONSOLE
-			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
-#endif
-		}
-
 		// Builds a minimal stand-in for a button prefab: a Button + a child TMP label, with the view wired.
 		private static GameObject CreateButtonPrefab()
 		{

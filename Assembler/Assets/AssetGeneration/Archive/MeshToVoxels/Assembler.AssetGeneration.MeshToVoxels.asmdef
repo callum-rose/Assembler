@@ -1,0 +1,16 @@
+{
+    "name": "Assembler.AssetGeneration.MeshToVoxels",
+    "rootNamespace": "Assembler",
+    "references": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

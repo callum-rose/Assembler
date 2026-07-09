@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Assembler.AssetGeneration.MeshToVoxel;
+using Assembler.AssetGeneration.TextToImage;
 using Assembler.Voxels.Scripting;
 
 namespace Assembler.Generation.Verification.Editor
@@ -18,12 +20,46 @@ namespace Assembler.Generation.Verification.Editor
 	public sealed record AssetResult(AssetRequest Request, bool Success, string? Error);
 
 	/// <summary>
-	/// Per-type generation knobs. Voxel-only for v1; new asset types add their own
-	/// fields here as they land.
+	/// Per-type generation knobs. <see cref="VoxelLimits"/> bounds the Anthropic-only
+	/// <see cref="VoxelMeshAssetGenerator"/>; <see cref="Pipeline"/> configures the full
+	/// text→image→Meshy→voxel <see cref="PipelineVoxelMeshAssetGenerator"/>. Which of the two
+	/// runs is chosen by the orchestrator's <see cref="MeshSource"/>.
 	/// </summary>
-	public sealed record AssetGenerationOptions(VoxelScriptLimits VoxelLimits)
+	public sealed record AssetGenerationOptions(VoxelScriptLimits VoxelLimits, PipelineAssetOptions Pipeline)
 	{
-		public static AssetGenerationOptions Default { get; } = new(VoxelScriptLimits.Default);
+		public static AssetGenerationOptions Default { get; } =
+			new(VoxelScriptLimits.Default, PipelineAssetOptions.Default);
+	}
+
+	/// <summary>
+	/// Config for the full text→image→Meshy→voxel pipeline driven by
+	/// <see cref="PipelineVoxelMeshAssetGenerator"/>. API keys are caller-supplied — the pipeline
+	/// never looks them up itself — so <see cref="Default"/> leaves them blank for the window to fill.
+	/// <see cref="MaxDimVoxels"/> overrides that one knob on the voxel stage's <see cref="Settings.Defaults"/>.
+	/// </summary>
+	public sealed record PipelineAssetOptions(
+		ImageProvider ImageProvider,
+		string ImageApiKey,
+		string ImageModel,
+		string MeshyApiKey,
+		int MaxDimVoxels)
+	{
+		public static PipelineAssetOptions Default { get; } = new(
+			ImageProvider.GoogleGemini,
+			string.Empty,
+			ImageGeneratorFactory.DefaultModelFor(ImageProvider.GoogleGemini),
+			string.Empty,
+			Settings.Defaults.MaxDimVoxels);
+	}
+
+	/// <summary>Which concrete "mesh" generator the orchestrator wires up.</summary>
+	public enum MeshSource
+	{
+		/// <summary>Anthropic-only voxel-drawing script — near-instant, free, clean/blocky.</summary>
+		Script,
+
+		/// <summary>Full text→image→Meshy→voxel pipeline — slow, paid (image + Meshy), organic.</summary>
+		Pipeline,
 	}
 
 	/// <summary>
@@ -76,8 +112,16 @@ namespace Assembler.Generation.Verification.Editor
 		/// <summary>The asset types we can generate — surfaced to Claude in the prompt.</summary>
 		public IReadOnlyList<string> SupportedTypes => new List<string>(_generators.Keys);
 
-		/// <summary>The shipping registry: one concrete generator (voxel meshes).</summary>
+		/// <summary>The default registry: the Anthropic-only voxel-script mesh generator.</summary>
 		public static AssetGeneratorRegistry Default =>
 			new AssetGeneratorRegistry().Register(new VoxelMeshAssetGenerator());
+
+		/// <summary>The registry whose "mesh" generator drives the full asset-generation pipeline.</summary>
+		public static AssetGeneratorRegistry Pipeline =>
+			new AssetGeneratorRegistry().Register(new PipelineVoxelMeshAssetGenerator());
+
+		/// <summary>Pick the registry for a <see cref="MeshSource"/>.</summary>
+		public static AssetGeneratorRegistry For(MeshSource source) =>
+			source is MeshSource.Pipeline ? Pipeline : Default;
 	}
 }

@@ -1,0 +1,1427 @@
+Game:
+  Title: The Heist at Hollow Manor
+  Description: |
+    A 2.5D stealth heist: a 3D manor rendered in perspective, with all gameplay on the
+    XZ ground plane. Sneak through the manor, steal enough loot, and get back to the
+    getaway van before the shift timer runs out — without being caught.
+
+    The systems are deliberately interlocking:
+
+      LOOT ECONOMY (Records). Every stealable item is a `Loot` record { kind, value,
+      weight }. The swag bag is a single record-list variable; pickups append their
+      record. HUD haul/weight/bag-count are LINQ folds over the list, and carry weight
+      feeds straight into the player's movement expression — the more you steal, the
+      slower you move. Escape requires `sumValue(bag) >= target haul`.
+
+      GUARD AI (one template, placed twice + spawned once). Each guard runs:
+        perceive (vision cone + line of sight, walls block) -> blackboard variables ->
+        state machine (patrol / investigate / chase / search / caught) ->
+        dual locomotion: a `patrol` behaviour and a `navigate` behaviour both emit
+        desired velocities into per-instance variables; a per-frame selector picks one
+        by FSM mode and a single `velocity` integrator applies it. Facing follows the
+        applied velocity and drives both the perception cone and a torch spotlight
+        whose colour reflects the guard's state (white patrol / yellow investigate /
+        orange search / red chase).
+
+      GLOBAL ALARM (0..3) that everything reads. Noise raises it to 1, a camera
+      sighting to 2, a guard giving chase to 3 (lockdown). It decays while no guard is
+      chasing. Alarm level scales guard speed, recolours the manor's interior light
+      (green-blue -> red), switches which Cinemachine rig is live (a distant overview
+      vs a tight handheld pursuit cam, via a Priority expression), and the first
+      lockdown fires a slow-motion pulse + camera shake and spawns a reinforcement
+      guard through the same guard template.
+
+      NOISE PROPAGATION. Sprinting is fast but loud: while sprinting and moving, an
+      interval trigger stamps the player's position into a global noise ping that
+      guards within earshot investigate. Security cameras REPORT SIGHTINGS AS NOISE,
+      so a camera spotting you converges distant guards on your position. Cutting the
+      breaker in the south-west corner disables every camera's eyes at once
+      (tag-targeted `set behaviour enabled`).
+
+      THE VAULT. The crown (the big score) sits behind a vault door that only opens if
+      the swag bag CONTAINS THE KEY RECORD — the door checks the record list, then
+      slides into the floor via a DOTween animation sequence. Its status lamp reads
+      the bag live: red (no key) / amber (key carried) / green (open).
+
+    Desktop: WASD move, hold Left Shift to sprint, Esc quits.
+    Mobile: on-screen joystick + Sprint / Quit buttons.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0b0d16"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# Walkability grid on the ground (XZ) plane; wall-tagged entities are rasterized as
+# obstacles (including the closed vault door). Guards route around them with A*.
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -12.5, Y: 0, Z: -9.5 }, Max: !vec { X: 12.5, Y: 0, Z: 9.5 } }
+  ObstacleTag: wall
+  Plane: xz
+  Diagonal: false
+
+# One schema covers every stealable thing, the vault key included.
+Records:
+  Loot:
+    kind:   { Type: string }
+    value:  { Type: int,   Default: 0 }
+    weight: { Type: float, Default: 0.0 }
+
+Constants:
+  # --- Loot table (instantiated into templates via parameters) ---
+  coin item:      !record { Type: Loot, kind: coin,      value: 10,  weight: 0.5 }
+  goblet item:    !record { Type: Loot, kind: goblet,    value: 25,  weight: 1.5 }
+  painting item:  !record { Type: Loot, kind: painting,  value: 40,  weight: 3.0 }
+  crown item:     !record { Type: Loot, kind: crown,     value: 120, weight: 4.0 }
+  vault key item: !record { Type: Loot, kind: vault_key, value: 0,   weight: 0.2 }
+
+  target haul: 150
+  carry capacity: 9.0
+
+  coin size: !vec { X: 0.35, Y: 0.35, Z: 0.35 }
+  coin colour: !colour { R: 0.95, G: 0.8, B: 0.2, A: 1 }
+  goblet size: !vec { X: 0.35, Y: 0.3, Z: 0.35 }
+  goblet colour: !colour { R: 0.75, G: 0.85, B: 0.95, A: 1 }
+  painting colour: !colour { R: 0.6, G: 0.3, B: 0.75, A: 1 }
+  crown colour: !colour { R: 1.0, G: 0.6, B: 0.1, A: 1 }
+
+  # --- Player ---
+  player speed: 4.2
+  sprint multiplier: 1.65
+  player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
+  player size: !vec { X: 0.7, Y: 0.85, Z: 0.7 }
+  play min: !vec { X: -11.4, Y: 0.9, Z: -8.4 }
+  play max: !vec { X: 11.4, Y: 0.9, Z: 8.4 }
+
+  # --- Guards ---
+  guard patrol speed: 1.6
+  guard chase speed: 2.6
+  guard detect range: 6.5
+  guard cone: 110.0
+  earshot: 9.0
+  catch range: 0.9
+  arrive eps: 0.8
+  guard colour: !colour { R: 0.9, G: 0.3, B: 0.3, A: 1 }
+  guard size: !vec { X: 0.8, Y: 0.9, Z: 0.8 }
+
+  # Patrol routes are straight-line seek chains (patrol does not pathfind), so every
+  # consecutive pair — including last -> first on the loop — is line-of-sight clear.
+  route west wing: !vec [ { X: -10, Y: 0.9, Z: 7 }, { X: -10, Y: 0.9, Z: -7 }, { X: -4.5, Y: 0.9, Z: -7 }, { X: -4.5, Y: 0.9, Z: 4.5 }, { X: -10, Y: 0.9, Z: 4.5 } ]
+  route east wing: !vec [ { X: 6, Y: 0.9, Z: 2 }, { X: 11.5, Y: 0.9, Z: 2 }, { X: 11.5, Y: 0.9, Z: -6 }, { X: 4, Y: 0.9, Z: -6 }, { X: 4, Y: 0.9, Z: 2 } ]
+  route grand hall: !vec [ { X: 0, Y: 0.9, Z: 6.5 }, { X: -4.5, Y: 0.9, Z: 6.5 }, { X: -4.5, Y: 0.9, Z: 4.3 }, { X: 0, Y: 0.9, Z: 4.3 } ]
+
+  guard west start: !vec { X: -10, Y: 0.9, Z: 7 }
+  guard east start: !vec { X: 6, Y: 0.9, Z: 2 }
+  backup spawn: !vec { X: 0, Y: 0.9, Z: 6.5 }
+
+  # --- Torch / status colours ---
+  torch calm: !colour { R: 0.95, G: 0.93, B: 0.8, A: 1 }
+  torch chase: !colour { R: 1.0, G: 0.15, B: 0.1, A: 1 }
+  torch search: !colour { R: 1.0, G: 0.55, B: 0.1, A: 1 }
+  torch investigate: !colour { R: 1.0, G: 0.9, B: 0.2, A: 1 }
+
+  cctv tilt: 35.0
+  cam idle colour: !colour { R: 0.2, G: 0.9, B: 0.4, A: 1 }
+  cam spotted colour: !colour { R: 1.0, G: 0.1, B: 0.1, A: 1 }
+  cam dead colour: !colour { R: 0.35, G: 0.35, B: 0.4, A: 1 }
+
+  door locked colour: !colour { R: 0.9, G: 0.15, B: 0.15, A: 1 }
+  door ready colour: !colour { R: 1.0, G: 0.75, B: 0.15, A: 1 }
+  door open colour: !colour { R: 0.2, G: 0.9, B: 0.4, A: 1 }
+
+  manor calm colour: !colour { R: 0.55, G: 0.65, B: 0.9, A: 1 }
+  manor alert colour: !colour { R: 1.0, G: 0.12, B: 0.08, A: 1 }
+
+  # --- Structure ---
+  wall colour: !colour { R: 0.32, G: 0.33, B: 0.42, A: 1 }
+  floor colour: !colour { R: 0.16, G: 0.18, B: 0.24, A: 1 }
+  floor size: !vec { X: 25, Y: 0.1, Z: 19.4 }
+  vault door colour: !colour { R: 0.55, G: 0.45, B: 0.2, A: 1 }
+
+  # --- Round ---
+  shift length: 240.0
+  noise ping interval: 0.7
+  alarm decay interval: 6.0
+
+Variables:
+  # The whole inventory: one record list, folded by LINQ expressions everywhere.
+  swag bag: !record []
+
+  # Global alert state.
+  alarm level: 0
+  guards chasing: 0
+  reinforced: false
+  cams disabled: false
+  vault open: false
+
+  # The most recent noise event: a monotonically increasing sequence + a position.
+  # Guards each remember the last sequence number they acknowledged.
+  noise seq: 0
+  noise position: !vec { X: 0, Y: 0.9, Z: 0 }
+
+  is sprinting: false
+
+Expressions:
+  # ---- Record-list folds over the swag bag ----
+  sumValue:
+    ArgumentTypes: [ record list ]
+    ArgumentNames: [ bag ]
+    ReturnType: int
+    Expression: 'return bag.Sum(r => GetInt(r, "value"));'
+
+  sumWeight:
+    ArgumentTypes: [ record list ]
+    ArgumentNames: [ bag ]
+    ReturnType: float
+    Expression: 'return bag.Sum(r => GetFloat(r, "weight"));'
+
+  bagCount:
+    ArgumentTypes: [ record list ]
+    ArgumentNames: [ bag ]
+    ReturnType: int
+    Expression: 'return bag.Count();'
+
+  hasKind:
+    ArgumentTypes: [ record list, string ]
+    ArgumentNames: [ bag, kind ]
+    ReturnType: bool
+    Expression: 'return bag.Any(r => GetString(r, "kind") == kind);'
+
+  # ---- Player locomotion: sprint boosts, carried weight drags ----
+  playerVelocity:
+    ArgumentTypes: [ vector, bool, float, float, float, float ]
+    ArgumentNames: [ input, sprinting, weight, speed, sprint_mult, capacity ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      float mult = sprinting ? sprint_mult : 1f;
+      float penalty = 1f / (1f + Max(weight, 0f) / capacity);
+      Vector3 flat = new Vector3(input.x, 0f, input.y);
+      return ScaleVector(flat, speed * mult * penalty);
+
+  # ---- Guard AI plumbing ----
+  # Navigation goal by FSM mode: 1 chase live target, 2 search last-known, 3 investigate
+  # the latest noise, else hold position (seek self => ~zero velocity).
+  guardGoal:
+    ArgumentTypes: [ int, vector, vector, vector, vector ]
+    ArgumentNames: [ mode, target_pos, last_known, noise_pos, self_pos ]
+    ReturnType: vector
+    Expression: 'return mode == 1 ? target_pos : mode == 2 ? last_known : mode == 3 ? noise_pos : self_pos;'
+
+  # Patrol velocity while patrolling; navigate velocity in every hunting mode.
+  pickVelocity:
+    ArgumentTypes: [ int, vector, vector ]
+    ArgumentNames: [ mode, patrol_vel, chase_vel ]
+    ReturnType: vector
+    Expression: 'return mode == 0 ? patrol_vel : chase_vel;'
+
+  within:
+    ArgumentTypes: [ vector, vector, float ]
+    ArgumentNames: [ a, b, threshold ]
+    ReturnType: bool
+    Expression: 'return Distance(a, b) < threshold;'
+
+  negate:
+    ArgumentTypes: [ bool ]
+    ArgumentNames: [ flag ]
+    ReturnType: bool
+    Expression: 'return !flag;'
+
+  # A new noise this guard has not acknowledged, close enough to hear.
+  heardNoise:
+    ArgumentTypes: [ int, int, vector, vector, float ]
+    ArgumentNames: [ seq, heard, self_pos, noise_pos, range ]
+    ReturnType: bool
+    Expression: 'return seq > heard && Distance(self_pos, noise_pos) < range;'
+
+  # Alarm never lowers via a raise (monotonic escalation).
+  raiseTo:
+    ArgumentTypes: [ int, int ]
+    ArgumentNames: [ current, level ]
+    ReturnType: int
+    Expression: 'return current < level ? level : current;'
+
+  # Guards get faster as the manor wakes up.
+  guardSpeed:
+    ArgumentTypes: [ float, int ]
+    ArgumentNames: [ speed, alarm ]
+    ReturnType: float
+    Expression: 'return speed * (1f + 0.15f * alarm);'
+
+  yawEuler:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ heading ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: 'return new Vector3(0f, YawFromDirectionXZ(heading), 0f);'
+
+  torchColour:
+    ArgumentTypes: [ int, colour, colour, colour, colour ]
+    ArgumentNames: [ mode, calm, chase, search, investigate ]
+    ReturnType: colour
+    Expression: 'return mode == 1 ? chase : mode == 2 ? search : mode == 3 ? investigate : calm;'
+
+  camLight:
+    ArgumentTypes: [ bool, bool, colour, colour, colour ]
+    ArgumentNames: [ sees, dead, dead_colour, spotted_colour, idle_colour ]
+    ReturnType: colour
+    Expression: 'return dead ? dead_colour : sees ? spotted_colour : idle_colour;'
+
+  doorLight:
+    ArgumentTypes: [ bool, bool, colour, colour, colour ]
+    ArgumentNames: [ open, carrying, open_colour, ready_colour, locked_colour ]
+    ReturnType: colour
+    Expression: 'return open ? open_colour : carrying ? ready_colour : locked_colour;'
+
+  alarmColour:
+    ArgumentTypes: [ int, colour, colour ]
+    ArgumentNames: [ alarm, calm, hot ]
+    ReturnType: colour
+    Expression: 'return LerpColor(calm, hot, alarm / 3f);'
+
+  # The tight pursuit vcam outbids the overview only while the manor is alerted.
+  camPriority:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ alarm ]
+    ReturnType: int
+    Expression: 'return alarm >= 2 ? 30 : 5;'
+
+  timeLeft:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ t, limit ]
+    ReturnType: int
+    Expression: 'return (int)Ceil(Max(limit - t, 0f));'
+
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+    sprint-on:  { Type: button, Phase: down }   # press: loud and fast
+    sprint-off: { Type: button, Phase: up }     # release: quiet again
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+      sprint-on:  [ "<Keyboard>/leftShift" ]
+      sprint-off: [ "<Keyboard>/leftShift" ]
+      quit: [ "<Keyboard>/escape" ]
+    # Mobile scheme: the on-screen widgets derive their control paths from here.
+    # Sprint-on and sprint-off share one control, so a single on-screen button gives
+    # hold-to-sprint (down sets the flag, release clears it).
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]
+      sprint-on:  [ "<Gamepad>/buttonWest" ]
+      sprint-off: [ "<Gamepad>/buttonWest" ]
+      quit: [ "<Gamepad>/buttonEast" ]
+
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 240, Y: 240 }
+      Size:   { X: 360, Y: 360 }
+    - Type: button
+      Action: sprint-on
+      Label: Sprint
+      Anchor: lower-right
+      Offset: { X: 200, Y: 220 }
+      Size:   { X: 230, Y: 230 }
+    - Type: button
+      Action: quit
+      Label: Quit
+      Anchor: upper-right
+      Offset: { X: 130, Y: 120 }
+      Size:   { X: 170, Y: 170 }
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "THE HEIST AT HOLLOW MANOR"
+      hud.instructions: "Steal {0} in valuables and reach the van. Sprinting is LOUD. The vault needs its key; the breaker kills the cameras."
+      hud.haul: "Haul: {0} / {1}"
+      hud.weight: "Bag weight: {0:0.0} kg (heavier = slower)"
+      hud.bag: "Items bagged: {0}"
+      hud.alarm: "Alarm: {0} / 3"
+      hud.chasing: "Guards on you: {0}"
+      hud.time: "Shift ends in {0}s"
+      btn.quit: "Abort Heist"
+
+Templates:
+  # ---------------------------------------------------------------------------
+  # THE GUARD. Used by two placed patrols AND spawned at runtime as the lockdown
+  # reinforcement — same brain, different route via the `route` / `home` parameters.
+  # ---------------------------------------------------------------------------
+  guard_template:
+    Tags: [ guard ]
+    Variables:
+      guard_mode: 0                       # 0 patrol, 1 chase, 2 search, 3 investigate
+      has_target: false
+      target_id: ""
+      target_position: !parameter home
+      last_known_position: !parameter home
+      patrol_vel: !vec { X: 0, Y: 0, Z: 0 }
+      chase_vel: !vec { X: 0, Y: 0, Z: 0 }
+      ai_velocity: !vec { X: 0, Y: 0, Z: 0 }
+      heading: !vec { X: 0, Y: 0, Z: 1 }
+      ai_goal: !parameter home
+      heard_seq: 0                        # last global noise ping this guard acknowledged
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: capsule, Size: !var guard size, Colour: !var guard colour }
+
+      # Torch: a spotlight along the guard's facing whose colour broadcasts the FSM
+      # state (live-bound — it re-tints the moment guard_mode changes).
+      torch:
+        Type: light
+        Properties:
+          Type: spot
+          Colour: !expr
+            Do: torchColour
+            With:
+              mode: !var guard_mode
+              calm: !var torch calm
+              chase: !var torch chase
+              search: !var torch search
+              investigate: !var torch investigate
+          Intensity: 2.5
+          Range: 7.5
+          SpotAngle: 70
+
+      # Sensor: vision cone along `heading`, walls block line of sight. Writes the
+      # blackboard the FSM transitions read.
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: player
+          Radius: !var guard detect range
+          ConeAngle: !var guard cone
+          Forward: !var heading
+          RequireLineOfSight: true
+          Obstacles: wall
+          Interval: 0.1
+          TargetId: !var target_id
+          TargetPosition: !var target_position
+          HasTarget: !var has_target
+          LastKnownPosition: !var last_known_position
+
+      # Locomotion A: walk the parameterised route (straight-line seek chain).
+      route:
+        Type: patrol
+        Properties:
+          Waypoints: !parameter route
+          Loop: true
+          Speed: !expr { Do: guardSpeed, With: { speed: !var guard patrol speed, alarm: !var alarm level } }
+          ArriveRadius: 0.4
+          Output: !var patrol_vel
+
+      # Locomotion B: A* through the walkability grid toward the mode-selected goal.
+      hunt:
+        Type: navigate
+        Properties:
+          Target: !var ai_goal
+          Speed: !expr { Do: guardSpeed, With: { speed: !var guard chase speed, alarm: !var alarm level } }
+          SlowingRadius: 0.5
+          Recompute: 0.3
+          Mode: astar
+          AgentRadius: 0.3
+          Output: !var chase_vel
+
+      # Per-frame brain tick: refresh the goal, select which locomotion drives, face
+      # the way we are moving (which in turn re-aims the vision cone and the torch).
+      brain clock:
+        Type: every frame trigger
+        Listeners: [ update goal, select velocity, face gate ]
+      update goal:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ai_goal
+          Value: !expr
+            Do: guardGoal
+            With:
+              mode: !var guard_mode
+              target_pos: !var target_position
+              last_known: !var last_known_position
+              noise_pos: !var noise position
+              self_pos: !entity { Property: Position }
+      select velocity:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ai_velocity
+          Value: !expr
+            Do: pickVelocity
+            With:
+              mode: !var guard_mode
+              patrol_vel: !var patrol_vel
+              chase_vel: !var chase_vel
+      face gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: 'Magnitude(v) > 0.1f', ArgumentTypes: [ vector ], With: { v: !var ai_velocity } }
+        Listeners: [ set heading, apply facing ]
+      set heading:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var heading
+          Value: !expr { Do: 'Normalize(v)', ArgumentTypes: [ vector ], With: { v: !var ai_velocity } }
+      apply facing:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr { Do: yawEuler, With: { heading: !var heading } }
+
+      # The single integrator that actually moves the guard.
+      apply:
+        Type: velocity
+        Properties: { Velocity: !var ai_velocity }
+
+      ai:
+        Type: state machine
+        Properties:
+          StateVariable: guard_state
+          Initial: patrol
+          States:
+            patrol:
+              OnEnter:
+                - { EntityId: !parameter self_id, BehaviourId: set mode patrol }
+            investigate:
+              OnEnter:
+                - { EntityId: !parameter self_id, BehaviourId: ack noise }
+                - { EntityId: !parameter self_id, BehaviourId: set mode investigate }
+            chase:
+              OnEnter:
+                - { EntityId: !parameter self_id, BehaviourId: set mode chase }
+                - { EntityId: alarm control, BehaviourId: alarm to 3 }
+                - { EntityId: alarm control, BehaviourId: chaser joined }
+              OnExit:
+                - { EntityId: alarm control, BehaviourId: chaser left }
+            search:
+              OnEnter:
+                - { EntityId: !parameter self_id, BehaviourId: set mode search }
+            caught:
+              OnEnter:
+                - !gameover
+          Transitions:
+            # Declared order matters: first match wins, so the catch check outranks
+            # losing sight, and seeing the player outranks everything else.
+            - from: patrol
+              to: chase
+              when: !var has_target
+            - from: patrol
+              to: investigate
+              when: !expr
+                Do: heardNoise
+                With: { seq: !var noise seq, heard: !var heard_seq, self_pos: !entity { Property: Position }, noise_pos: !var noise position, range: !var earshot }
+            - from: investigate
+              to: chase
+              when: !var has_target
+            - from: investigate
+              to: patrol
+              when: !expr
+                Do: within
+                With: { a: !entity { Property: Position }, b: !var noise position, threshold: !var arrive eps }
+            - from: chase
+              to: caught
+              when: !expr
+                Do: within
+                With: { a: !entity { Property: Position }, b: !entity { Id: player, Property: Position }, threshold: !var catch range }
+            - from: chase
+              to: search
+              when: !expr { Do: negate, With: { flag: !var has_target } }
+            - from: search
+              to: chase
+              when: !var has_target
+            - from: search
+              to: investigate
+              when: !expr
+                Do: heardNoise
+                With: { seq: !var noise seq, heard: !var heard_seq, self_pos: !entity { Property: Position }, noise_pos: !var noise position, range: !var earshot }
+            - from: search
+              to: patrol
+              when: !expr
+                Do: within
+                With: { a: !entity { Property: Position }, b: !var last_known_position, threshold: !var arrive eps }
+
+      set mode patrol:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 0 }
+      set mode chase:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 1 }
+      set mode search:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 2 }
+      set mode investigate:
+        Type: int variable setter
+        Properties: { VariableId: !var guard_mode, Value: 3 }
+      ack noise:
+        Type: int variable setter
+        Properties: { VariableId: !var heard_seq, Value: !var noise seq }
+
+  # ---------------------------------------------------------------------------
+  # A CCTV CAMERA. Sweeps on a yoyo rotate tween between two yaws; its perception
+  # cone follows its live rotation. A sighting escalates the alarm AND is reported
+  # as a noise ping at the player's seen position, converging guards on you.
+  # ---------------------------------------------------------------------------
+  cctv_template:
+    Tags: [ cctv ]
+    Variables:
+      cam_sees: false
+      cam_target_id: ""
+      cam_target: !vec { X: 0, Y: 0, Z: 0 }
+      cam_last: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      head:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.7, Y: 0.45, Z: 0.7 }, Colour: !colour { R: 0.15, G: 0.15, B: 0.2, A: 1 } }
+
+      # The surveillance beam: a spot light matched to the perception cone (same angle,
+      # same reach), pitched down with the head so its lit patch sweeps across the floor —
+      # the visible pool of light IS the watched area. Green idle, red while it sees you,
+      # grey once the breaker is cut.
+      beam:
+        Type: light
+        Properties:
+          Type: spot
+          Colour: !expr
+            Do: camLight
+            With:
+              sees: !var cam_sees
+              dead: !var cams disabled
+              dead_colour: !var cam dead colour
+              spotted_colour: !var cam spotted colour
+              idle_colour: !var cam idle colour
+          Intensity: 4
+          Range: 9
+          SpotAngle: 65
+
+      # The sweep: an endless yoyo rotate between the two parameterised yaws, pitched
+      # down so both the beam and the vision cone rake the floor.
+      boot:
+        Type: on start trigger
+        Listeners: [ sweep ]
+      sweep:
+        Type: animation
+        Properties:
+          Loops: -1
+          LoopType: yoyo
+          Steps:
+            - Animate: rotate
+              Start: !expr
+                Do: 'new UnityEngine.Vector3(tilt, a, 0f)'
+                ArgumentTypes: [ float, float ]
+                ReturnType: vector
+                With: { tilt: !var cctv tilt, a: !parameter yaw_a }
+              End: !expr
+                Do: 'new UnityEngine.Vector3(tilt, b, 0f)'
+                ArgumentTypes: [ float, float ]
+                ReturnType: vector
+                With: { tilt: !var cctv tilt, b: !parameter yaw_b }
+              Duration: 4.5
+              Easing: InOutSine
+
+      # Perception cone re-aimed every frame from the tweened rotation.
+      eyes:
+        Type: perceive
+        Properties:
+          Tag: player
+          Radius: 7.5
+          ConeAngle: 65
+          Forward: !expr
+            Do: 'ForwardFromAngles(rot)'
+            ArgumentTypes: [ vector ]
+            ReturnType: vector
+            With: { rot: !entity { Property: Rotation } }
+          RequireLineOfSight: true
+          Obstacles: wall
+          Interval: 0.15
+          TargetId: !var cam_target_id
+          TargetPosition: !var cam_target
+          HasTarget: !var cam_sees
+          LastKnownPosition: !var cam_last
+
+      # Sighting pipeline: per-frame gate -> debounce (one report per 4s window) ->
+      # escalate the alarm and broadcast the sighting as a noise ping.
+      spot clock:
+        Type: every frame trigger
+        Listeners: [ spot gate ]
+      spot gate:
+        Type: condition gate
+        Properties: { Condition: !var cam_sees }
+        Listeners: [ alert relay ]
+      alert relay:
+        Type: debounced trigger
+        Properties: { Interval: 4.0 }
+        Listeners:
+          - { EntityId: alarm control, BehaviourId: alarm to 2 }
+          - mark noise position
+          - mark noise ping
+      mark noise position:
+        Type: vector variable setter
+        Properties: { VariableId: !var noise position, Value: !var cam_target }
+      mark noise ping:
+        Type: int variable setter
+        Properties:
+          VariableId: !var noise seq
+          Value: !expr { Do: 'seq + 1', With: { seq: !var noise seq } }
+
+  # ---------------------------------------------------------------------------
+  # A LOOT PICKUP. The template owns the MECHANICS (spin, bob, pickup, stashing the
+  # parameterised record); each placed entity layers its own body/glow visuals on
+  # top, since enum-typed properties like `primitive.Shape` cannot come from a
+  # string parameter.
+  # ---------------------------------------------------------------------------
+  loot_template:
+    Tags: [ loot ]
+    Behaviours:
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 40, Z: 0 } }
+      boot:
+        Type: on start trigger
+        Listeners: [ bob ]
+      bob:
+        Type: animation
+        Properties:
+          Loops: -1
+          LoopType: yoyo
+          Steps:
+            - Animate: move
+              End: !expr
+                Do: 'AddVector(pos, new UnityEngine.Vector3(0f, 0.25f, 0f))'
+                ArgumentTypes: [ vector ]
+                ReturnType: vector
+                With: { pos: !entity { Property: Position } }
+              Duration: 1.6
+              Easing: InOutSine
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 0.9, Y: 1.2, Z: 0.9 }, IsTrigger: true }
+      collect:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ stash, remove self ]
+      stash:
+        Type: record list add
+        Properties: { List: !var swag bag, Value: !parameter item }
+      remove self:
+        Type: destroy
+
+  # A manor wall slab: solid (blocks the player) and a rasterized nav obstacle.
+  wall_template:
+    Tags: [ wall ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !var wall colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !parameter size, IsTrigger: false }
+
+Entities:
+  # ============================ THE THIEF ============================
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 3, Y: 0.9, Z: -7.5 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: capsule, Size: !var player size, Colour: !var player colour }
+      collider:
+        Type: capsule collider
+        Properties: { Radius: 0.35, Height: 1.7, Direction: 1, IsTrigger: false }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: false
+          IsKinematic: false
+          FreezePosition: !vec { X: 0, Y: 1, Z: 0 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+
+      # Movement: analogue input -> XZ velocity, boosted by sprint, dragged by the
+      # live weight of the swag bag (a LINQ fold, re-evaluated as the bag changes).
+      move action:
+        Type: input action
+        Properties: { Action: move }
+        Listeners: [ apply move ]
+      apply move:
+        Type: set velocity
+        Properties:
+          Velocity: !expr
+            Do: playerVelocity
+            With:
+              input: !output axis
+              sprinting: !var is sprinting
+              weight: !expr { Do: sumWeight, With: { bag: !var swag bag } }
+              speed: !var player speed
+              sprint_mult: !var sprint multiplier
+              capacity: !var carry capacity
+
+      # Hold-to-sprint: the down phase sets the flag, the up phase clears it.
+      sprint press:
+        Type: input action
+        Properties: { Action: sprint-on }
+        Listeners: [ start sprint ]
+      start sprint:
+        Type: bool variable setter
+        Properties: { VariableId: !var is sprinting, Value: true }
+      sprint release:
+        Type: input action
+        Properties: { Action: sprint-off }
+        Listeners: [ stop sprint ]
+      stop sprint:
+        Type: bool variable setter
+        Properties: { VariableId: !var is sprinting, Value: false }
+
+      # Footsteps: while sprinting AND actually moving, stamp a fresh noise ping at
+      # the player's position on a steady cadence. Guards in earshot come looking.
+      noise clock:
+        Type: interval trigger
+        Properties: { Interval: !var noise ping interval, AutoStart: true }
+        Listeners: [ noise gate ]
+      noise gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'sprinting && Magnitude(vel) > 1f'
+            ArgumentTypes: [ bool, vector ]
+            With:
+              sprinting: !var is sprinting
+              vel: !rigidbody { Id: player, Property: Velocity }
+        Listeners: [ stamp noise position, stamp noise ping, nudge alarm ]
+      stamp noise position:
+        Type: vector variable setter
+        Properties: { VariableId: !var noise position, Value: !entity { Property: Position } }
+      stamp noise ping:
+        Type: int variable setter
+        Properties:
+          VariableId: !var noise seq
+          Value: !expr { Do: 'seq + 1', With: { seq: !var noise seq } }
+      nudge alarm:
+        Type: int variable setter
+        Properties:
+          VariableId: !var alarm level
+          Value: !expr { Do: raiseTo, With: { current: !var alarm level, level: 1 } }
+
+      keep in bounds:
+        Type: clamp position
+        Properties: { Min: !var play min, Max: !var play max }
+
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # ============================ THE MANOR ============================
+  floor:
+    Position: !vec { X: 0, Y: -0.05, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !var floor size, Colour: !var floor colour }
+
+  # Perimeter.
+  wall north:
+    Position: !vec { X: 0, Y: 1.25, Z: 9 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 25, Y: 2.5, Z: 0.6 } } }
+  wall south:
+    Position: !vec { X: 0, Y: 1.25, Z: -9 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 25, Y: 2.5, Z: 0.6 } } }
+  wall east:
+    Position: !vec { X: 12, Y: 1.25, Z: 0 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 0.6, Y: 2.5, Z: 17.4 } } }
+  wall west:
+    Position: !vec { X: -12, Y: 1.25, Z: 0 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 0.6, Y: 2.5, Z: 17.4 } } }
+
+  # Interior partitions (positions chosen so every patrol leg stays line-of-sight).
+  wall grand hall:
+    Position: !vec { X: 0, Y: 1.25, Z: 3 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 7, Y: 2.5, Z: 0.6 } } }
+  wall west gallery:
+    Position: !vec { X: -6, Y: 1.25, Z: -1 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 0.6, Y: 2.5, Z: 9 } } }
+  wall east study:
+    Position: !vec { X: 3, Y: 1.25, Z: -4 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 0.6, Y: 2.5, Z: 7 } } }
+  wall east hall:
+    Position: !vec { X: 8, Y: 1.25, Z: 0 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 5.6, Y: 2.5, Z: 0.6 } } }
+
+  # The vault room (north-east corner) and its door.
+  wall vault west:
+    Position: !vec { X: 7, Y: 1.25, Z: 6.5 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 0.6, Y: 2.5, Z: 5 } } }
+  wall vault south a:
+    Position: !vec { X: 8.1, Y: 1.25, Z: 4 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 2.2, Y: 2.5, Z: 0.6 } } }
+  wall vault south b:
+    Position: !vec { X: 11.4, Y: 1.25, Z: 4 }
+    Template: { Id: wall_template, Parameters: { size: !vec { X: 1.2, Y: 2.5, Z: 0.6 } } }
+
+  # The vault door itself: a wall-tagged solid slab that SLIDES INTO THE FLOOR when
+  # unlocked, taking its collider with it. Its lamp reads the swag bag live.
+  vault door:
+    Tags: [ wall ]
+    Position: !vec { X: 10, Y: 1.25, Z: 4 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 1.6, Y: 2.5, Z: 0.6 }, Colour: !var vault door colour }
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 1.6, Y: 2.5, Z: 0.6 }, IsTrigger: false }
+      lamp:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: doorLight
+            With:
+              open: !var vault open
+              carrying: !expr { Do: hasKind, With: { bag: !var swag bag, kind: "vault_key" } }
+              open_colour: !var door open colour
+              ready_colour: !var door ready colour
+              locked_colour: !var door locked colour
+          Intensity: 2
+          Range: 4
+      slide open:
+        Type: animation
+        Properties:
+          Steps:
+            - Animate: move
+              End: !expr
+                Do: 'AddVector(pos, new UnityEngine.Vector3(0f, -2.7f, 0f))'
+                ArgumentTypes: [ vector ]
+                ReturnType: vector
+                With: { pos: !entity { Property: Position } }
+              Duration: 1.4
+              Easing: InOutSine
+
+  # A pressure zone in front of the door: stepping in with the key record in the bag
+  # opens the vault exactly once.
+  vault door sensor:
+    Position: !vec { X: 10, Y: 0.9, Z: 3 }
+    Behaviours:
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 1.5, IsTrigger: true }
+      approach:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ key gate ]
+      key gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'carrying && !open'
+            ArgumentTypes: [ bool, bool ]
+            With:
+              carrying: !expr { Do: hasKind, With: { bag: !var swag bag, kind: "vault_key" } }
+              open: !var vault open
+        Listeners:
+          - { EntityId: vault door, BehaviourId: slide open }
+          - mark open
+      mark open:
+        Type: bool variable setter
+        Properties: { VariableId: !var vault open, Value: true }
+
+  # The vault key: a spinning pickup that stashes a zero-value record into the bag —
+  # the door's gate then finds it by kind.
+  vault key:
+    Position: !vec { X: 8, Y: 0.55, Z: -3 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.35, Y: 0.35, Z: 0.35 }, Colour: !colour { R: 1.0, G: 0.85, B: 0.2, A: 1 } }
+      halo:
+        Type: light
+        Properties: { Type: point, Colour: !colour { R: 1.0, G: 0.85, B: 0.2, A: 1 }, Intensity: 1.6, Range: 3 }
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 120, Z: 0 } }
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 0.9, Y: 1.2, Z: 0.9 }, IsTrigger: true }
+      collect:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ stash, remove self ]
+      stash:
+        Type: record list add
+        Properties: { List: !var swag bag, Value: !var vault key item }
+      remove self:
+        Type: destroy
+
+  # The breaker: walk into it once to cut power to every camera's eyes (and their
+  # per-frame sighting gates) in a single tag-targeted broadcast.
+  breaker:
+    Position: !vec { X: -10.8, Y: 0.7, Z: -7.8 }
+    Behaviours:
+      console:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.7, Y: 1.4, Z: 0.5 }, Colour: !colour { R: 0.5, G: 0.12, B: 0.12, A: 1 } }
+      lamp:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: 'off ? dead : live'
+            ArgumentTypes: [ bool, colour, colour ]
+            ReturnType: colour
+            With:
+              off: !var cams disabled
+              dead: !var cam dead colour
+              live: !colour cyan
+          Intensity: 1.8
+          Range: 3.5
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 1.3, IsTrigger: true }
+      touch:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ cut gate ]
+      cut gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: negate, With: { flag: !var cams disabled } }
+        Listeners: [ mark cams off, kill camera eyes ]
+      mark cams off:
+        Type: bool variable setter
+        Properties: { VariableId: !var cams disabled, Value: true }
+      kill camera eyes:
+        Type: set behaviour enabled
+        Properties:
+          Targets:
+            - { EntityTag: cctv, BehaviourId: eyes }
+            - { EntityTag: cctv, BehaviourId: spot clock }
+          Enabled: false
+
+  # ============================ THE LOOT ============================
+  # Each item = the loot template's mechanics + its own layered body/glow visuals.
+  coin hall:
+    Position: !vec { X: -2, Y: 0.55, Z: 7 }
+    Template: { Id: loot_template, Parameters: { item: !var coin item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: sphere, Size: !var coin size, Colour: !var coin colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var coin colour, Intensity: 1.2, Range: 2.5 } }
+  coin landing:
+    Position: !vec { X: 2.5, Y: 0.55, Z: 5.5 }
+    Template: { Id: loot_template, Parameters: { item: !var coin item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: sphere, Size: !var coin size, Colour: !var coin colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var coin colour, Intensity: 1.2, Range: 2.5 } }
+  coin gallery:
+    Position: !vec { X: -9, Y: 0.55, Z: -2 }
+    Template: { Id: loot_template, Parameters: { item: !var coin item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: sphere, Size: !var coin size, Colour: !var coin colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var coin colour, Intensity: 1.2, Range: 2.5 } }
+  coin cellar:
+    Position: !vec { X: 6, Y: 0.55, Z: -7.5 }
+    Template: { Id: loot_template, Parameters: { item: !var coin item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: sphere, Size: !var coin size, Colour: !var coin colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var coin colour, Intensity: 1.2, Range: 2.5 } }
+
+  goblet study:
+    Position: !vec { X: 10.5, Y: 0.6, Z: -7 }
+    Template: { Id: loot_template, Parameters: { item: !var goblet item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cylinder, Size: !var goblet size, Colour: !var goblet colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var goblet colour, Intensity: 1.2, Range: 2.5 } }
+  goblet passage:
+    Position: !vec { X: 4.5, Y: 0.6, Z: -1.5 }
+    Template: { Id: loot_template, Parameters: { item: !var goblet item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cylinder, Size: !var goblet size, Colour: !var goblet colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var goblet colour, Intensity: 1.2, Range: 2.5 } }
+
+  painting west:
+    Position: !vec { X: -11, Y: 1.2, Z: 3 }
+    Template: { Id: loot_template, Parameters: { item: !var painting item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Size: !vec { X: 0.15, Y: 1.0, Z: 0.8 }, Colour: !var painting colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var painting colour, Intensity: 1.2, Range: 2.5 } }
+  painting south:
+    Position: !vec { X: -9, Y: 1.2, Z: -8.3 }
+    Template: { Id: loot_template, Parameters: { item: !var painting item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Size: !vec { X: 0.8, Y: 1.0, Z: 0.15 }, Colour: !var painting colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var painting colour, Intensity: 1.2, Range: 2.5 } }
+
+  # The big score, inside the vault.
+  the crown:
+    Position: !vec { X: 9.5, Y: 0.7, Z: 6.5 }
+    Template: { Id: loot_template, Parameters: { item: !var crown item } }
+    Behaviours:
+      body: { Type: primitive, Properties: { Shape: cube, Size: !vec { X: 0.6, Y: 0.45, Z: 0.6 }, Colour: !var crown colour } }
+      glow: { Type: light, Properties: { Type: point, Colour: !var crown colour, Intensity: 2, Range: 3.5 } }
+
+  # ============================ THE OPPOSITION ============================
+  guard west:
+    Position: !var guard west start
+    Template:
+      Id: guard_template
+      Parameters:
+        route: !var route west wing
+        home: !var guard west start
+
+  guard east:
+    Position: !var guard east start
+    Template:
+      Id: guard_template
+      Parameters:
+        route: !var route east wing
+        home: !var guard east start
+
+  cctv vault approach:
+    Position: !vec { X: 11.3, Y: 2.6, Z: 1 }
+    Template:
+      Id: cctv_template
+      Parameters: { yaw_a: 200, yaw_b: 320 }
+
+  cctv west gallery:
+    Position: !vec { X: -11.3, Y: 2.6, Z: 6 }
+    Template:
+      Id: cctv_template
+      Parameters: { yaw_a: 100, yaw_b: 175 }
+
+  # ============================ ALARM CONTROL ============================
+  # The manor's nervous system: monotonic raise targets for every reporter, timed
+  # decay while nobody is chasing, and the lockdown choreography (slow-mo pulse,
+  # camera shake, one-time reinforcement dispatch) on the 3-transition.
+  alarm control:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      alarm to 1:
+        Type: int variable setter
+        Properties:
+          VariableId: !var alarm level
+          Value: !expr { Do: raiseTo, With: { current: !var alarm level, level: 1 } }
+      alarm to 2:
+        Type: int variable setter
+        Properties:
+          VariableId: !var alarm level
+          Value: !expr { Do: raiseTo, With: { current: !var alarm level, level: 2 } }
+      alarm to 3:
+        Type: int variable setter
+        Properties:
+          VariableId: !var alarm level
+          Value: !expr { Do: raiseTo, With: { current: !var alarm level, level: 3 } }
+
+      chaser joined:
+        Type: int variable setter
+        Properties:
+          VariableId: !var guards chasing
+          Value: !expr { Do: 'n + 1', With: { n: !var guards chasing } }
+      chaser left:
+        Type: int variable setter
+        Properties:
+          VariableId: !var guards chasing
+          Value: !expr { Do: 'n - 1', With: { n: !var guards chasing } }
+
+      # Cool-down: while no guard is actively chasing, the manor relaxes a level at a
+      # time on a slow tick.
+      decay clock:
+        Type: interval trigger
+        Properties: { Interval: !var alarm decay interval, AutoStart: true }
+        Listeners: [ decay gate ]
+      decay gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'alarm > 0 && chasing == 0'
+            ArgumentTypes: [ int, int ]
+            With:
+              alarm: !var alarm level
+              chasing: !var guards chasing
+        Listeners: [ cool down ]
+      cool down:
+        Type: int variable setter
+        Properties:
+          VariableId: !var alarm level
+          Value: !expr { Do: 'alarm - 1', With: { alarm: !var alarm level } }
+
+      # Lockdown choreography, keyed off the alarm variable CHANGING to 3 (a repeat
+      # write of 3 does not re-fire): slow-mo dip, camera shake, dispatch backup once.
+      lockdown watch:
+        Type: int variable changed trigger
+        Properties: { VariableId: !var alarm level }
+        Listeners: [ lockdown gate ]
+      lockdown gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: 'alarm == 3', With: { alarm: !var alarm level } }
+        Listeners: [ slow mo, shake, restore delay, dispatch gate ]
+      slow mo:
+        Type: set timescale
+        Properties: { Scale: 0.4 }
+      restore delay:
+        Type: deferred trigger
+        Properties: { Delay: 0.5 }
+        Listeners: [ restore speed ]
+      restore speed:
+        Type: set timescale
+        Properties: { Scale: 1 }
+      shake:
+        Type: camera shake
+        Properties: { Force: 1.5, Duration: 0.4, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      dispatch gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr { Do: negate, With: { flag: !var reinforced } }
+        Listeners: [ send backup, mark reinforced ]
+      send backup:
+        Type: spawner
+        Properties:
+          TemplateId: guard_template
+          Position: !var backup spawn
+          Parameters:
+            route: !var route grand hall
+            home: !var backup spawn
+      mark reinforced:
+        Type: bool variable setter
+        Properties: { VariableId: !var reinforced, Value: true }
+
+  # ============================ WIN / LOSE ============================
+  # The getaway van: driving off with enough loot ends the heist (the win).
+  getaway van:
+    Position: !vec { X: 0, Y: 0.9, Z: -8.2 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 2.2, Y: 1.4, Z: 1.1 }, Colour: !colour { R: 0.2, G: 0.25, B: 0.3, A: 1 } }
+      headlight:
+        Type: light
+        Properties: { Type: point, Colour: !colour { R: 1.0, G: 0.95, B: 0.7, A: 1 }, Intensity: 1.5, Range: 4 }
+      zone:
+        Type: box collider
+        Properties: { Size: !vec { X: 2.6, Y: 2, Z: 1.6 }, IsTrigger: true }
+      boarding:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ escape gate ]
+      escape gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'haul >= target'
+            ArgumentTypes: [ int, int ]
+            With:
+              haul: !expr { Do: sumValue, With: { bag: !var swag bag } }
+              target: !var target haul
+        Listeners:
+          - !gameover
+
+  # The shift timer: dawdle too long and the heist ends regardless.
+  shift clock:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ time gate ]
+      time gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 't >= limit'
+            ArgumentTypes: [ float, float ]
+            With:
+              t: !clock time
+              limit: !var shift length
+        Listeners:
+          - !gameover
+
+  # ============================ LIGHT & CAMERA ============================
+  sun:
+    Position: !vec { X: 0, Y: 8, Z: 0 }
+    Rotation: !vec { X: 55, Y: -30, Z: 0 }
+    Behaviours:
+      moonlight:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.65, G: 0.7, B: 0.85, A: 1 }, Intensity: 0.55 }
+
+  # The manor's interior glow tracks the alarm: cool blue at rest, blood red in
+  # lockdown (a live-bound colour expression over the alarm variable).
+  manor glow:
+    Position: !vec { X: 0, Y: 6, Z: 0 }
+    Behaviours:
+      mood:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: alarmColour
+            With:
+              alarm: !var alarm level
+              calm: !var manor calm colour
+              hot: !var manor alert colour
+          Intensity: 1.8
+          Range: 30
+
+  # Output camera + two competing Cinemachine rigs. The alert rig's Priority is an
+  # expression over the alarm, so the brain blends OUT to a wider, higher, slightly
+  # shaky vantage the moment the manor goes to alert — you need situational awareness
+  # to plan an escape, not a close-up — and blends back in as the alarm decays.
+  camera:
+    Position: !vec { X: 0, Y: 12, Z: -10 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "perspective", DefaultBlend: 1.2 }
+
+  vcam overview:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          LookAt: { Tag: player }
+          Mode: "3d"
+          Priority: 10
+          Lens: 45
+          Damping: 1
+          FollowOffset: !vec { X: 0, Y: 13, Z: -8 }
+
+  vcam alert:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Tag: player }
+          LookAt: { Tag: player }
+          Mode: "3d"
+          Priority: !expr { Do: camPriority, With: { alarm: !var alarm level } }
+          Lens: 50
+          Damping: 0.6
+          FollowOffset: !vec { X: 0, Y: 17, Z: -10.5 }
+      jitter:
+        Type: camera noise
+        Properties: { Profile: "Handheld_normal_mild", Amplitude: 0.5, Frequency: 1 }
+
+  # ============================ HUD ============================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 8
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 30
+                  PreferredWidth: 760
+                  PreferredHeight: 46
+          instructions:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.instructions, Arguments: [ !var target haul ] }
+                  FontSize: 16
+                  PreferredWidth: 760
+                  PreferredHeight: 46
+          haul:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.haul
+                    Arguments:
+                      - !expr { Do: sumValue, With: { bag: !var swag bag } }
+                      - !var target haul
+                  FontSize: 26
+                  PreferredWidth: 420
+                  PreferredHeight: 40
+          weight:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.weight
+                    Arguments:
+                      - !expr { Do: sumWeight, With: { bag: !var swag bag } }
+                  FontSize: 20
+                  PreferredWidth: 520
+                  PreferredHeight: 32
+          bag:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.bag
+                    Arguments:
+                      - !expr { Do: bagCount, With: { bag: !var swag bag } }
+                  FontSize: 20
+                  PreferredWidth: 420
+                  PreferredHeight: 32
+          alarm:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.alarm, Arguments: [ !var alarm level ] }
+                  FontSize: 24
+                  PreferredWidth: 420
+                  PreferredHeight: 38
+          chasing:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.chasing, Arguments: [ !var guards chasing ] }
+                  FontSize: 20
+                  PreferredWidth: 420
+                  PreferredHeight: 32
+          time:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.time
+                    Arguments:
+                      - !expr { Do: timeLeft, With: { t: !clock time, limit: !var shift length } }
+                  FontSize: 22
+                  PreferredWidth: 420
+                  PreferredHeight: 36
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties:
+                  Label: !text btn.quit
+                  PreferredWidth: 260
+                  PreferredHeight: 50
+                Listeners:
+                  - !gameover

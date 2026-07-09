@@ -18,15 +18,34 @@ namespace Assembler.Resolving
 				EntityPropertySource<T> { EntityId: { PendingParameter: { } param } } => throw new ResolveException(
 					$"Unsubstituted !entity Id parameter '{param}' reached resolve time — " +
 					"it should have been substituted during template instantiation."),
+				EntityPropertySource<T> { EntityId: SelfEntityId } => throw new ResolveException(
+					"An omitted-Id !entity (self reference) reached resolve time unbound — " +
+					"it should have been resolved to the enclosing entity during instantiation."),
 				EntityPropertySource<T> ep when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new TransformPropertyProvider(ctx.EntityTransforms.Get(ep.EntityId.Id), ep.Property),
+				// An !entity nested as an argument (of a !text or an !expr) resolves as object. The provider is
+				// concretely IValueProvider<Vector3>, so box it up to IValueProvider<object> — mirroring the
+				// !text object arm below and how VariableRegistry.Get<object> boxes a typed variable.
+				EntityPropertySource<T> ep when typeof(T) == typeof(object) =>
+					(IValueProvider<T>)(object)BoxingValueProvider.Create(
+						new TransformPropertyProvider(ctx.EntityTransforms.Get(ep.EntityId.Id), ep.Property)),
 				RigidbodyPropertySource<T> rb when typeof(T) == typeof(Vector3) =>
 					(IValueProvider<T>)(object)new RigidbodyPropertyProvider(ctx.EntityTransforms.Get(rb.EntityId), rb.Property),
+				// A !rigidbody nested as an argument resolves as object; box its concrete
+				// IValueProvider<Vector3> up to IValueProvider<object>, same as the !entity arm above.
+				RigidbodyPropertySource<T> rb when typeof(T) == typeof(object) =>
+					(IValueProvider<T>)(object)BoxingValueProvider.Create(
+						new RigidbodyPropertyProvider(ctx.EntityTransforms.Get(rb.EntityId), rb.Property)),
 				ClockValueSource<T> clock => new ClockValueProvider<T>(ctx.Clock, clock.Property),
 				QuerySource<T> query => new QueryValueProvider<T>(ctx.EntityQuery, query.Kind, query.EntityTag,
 					query.Origin.Resolve(ctx), query.MaxRange.Resolve(ctx)),
 				LocalisedTextSource<T> text when typeof(T) == typeof(string) =>
 					(IValueProvider<T>)(object)BuildLocalisedTextProvider(text, ctx),
+				// A !text nested as an argument (of an outer !text or an !expr) resolves as object. The
+				// provider is concretely IValueProvider<string>, so box it up to IValueProvider<object> —
+				// mirroring how VariableRegistry.Get<object> boxes a typed variable.
+				LocalisedTextSource<T> text when typeof(T) == typeof(object) =>
+					(IValueProvider<T>)(object)BoxingValueProvider.Create(BuildLocalisedTextProvider(text, ctx)),
 				TriggerOutputSource<T> output => new TriggerOutputProvider<T>(output.OutputName),
 				None<T> => NullValueProvider<T>.Instance,
 				// SubstituteParameters is meant to eliminate every ParameterSource during template

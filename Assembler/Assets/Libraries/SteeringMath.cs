@@ -9,7 +9,7 @@ namespace Assembler.Libraries
 	/// movement function returns a desired-velocity <c>Vector3</c>, so they compose inside a <c>velocity: !expr</c>
 	/// (or feed the <c>steering</c> aggregator behaviour). Positions/velocities are carried as <c>Vector3</c>
 	/// (z = 0 for 2D), matching VectorMath; all numeric parameters are float so int arguments coerce
-	/// automatically. <c>Wander</c> draws on the global RNG and is therefore non-deterministic, like RandomMath.
+	/// automatically. <c>Wander</c> draws on the same seeded RNG as RandomMath, so it replays with the run seed.
 	/// </summary>
 	public static class SteeringMath
 	{
@@ -73,7 +73,7 @@ namespace Assembler.Libraries
 			return Flee(position, target + targetVelocity * lead, maxSpeed);
 		}
 
-		/// <summary>Nudge the current heading by a random jitter, for aimless roaming. Non-deterministic.</summary>
+		/// <summary>Nudge the current heading by a random jitter, for aimless roaming. Uses the seeded RNG.</summary>
 		/// <param name="velocity">Current velocity (its direction is the base heading).</param>
 		/// <param name="maxSpeed">Speed of the returned velocity (units per second).</param>
 		/// <param name="jitterDegrees">Maximum turn this step, in degrees either way.</param>
@@ -81,7 +81,7 @@ namespace Assembler.Libraries
 		public static Vector3 Wander(Vector3 velocity, float maxSpeed, float jitterDegrees)
 		{
 			var heading = velocity.sqrMagnitude > 1e-6f ? velocity.normalized : Vector3.right;
-			var turn = Random.Range(-jitterDegrees, jitterDegrees) * Mathf.Deg2Rad;
+			var turn = RandomMath.RandomFloat(-jitterDegrees, jitterDegrees) * Mathf.Deg2Rad;
 			var c = Mathf.Cos(turn);
 			var s = Mathf.Sin(turn);
 			return new Vector3(heading.x * c - heading.y * s, heading.x * s + heading.y * c, heading.z) * maxSpeed;

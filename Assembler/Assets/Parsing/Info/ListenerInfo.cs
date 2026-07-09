@@ -1,10 +1,17 @@
 using System.Collections.Generic;
+using Assembler.Deserialisation;
 
 namespace Assembler.Parsing.Info
 {
 	public abstract record ListenerInfo
 	{
 		public IReadOnlyDictionary<string, string> OutputMapping { get; init; } = new Dictionary<string, string>();
+
+		/// <summary>Where the listener was authored in the source YAML, carried from the DTO so a
+		/// transform-time reference error can point at the line. <see cref="SourcePosition.Unknown"/> for
+		/// listeners synthesised without a source node (e.g. nested OnEnter/OnExit hooks). Preserved
+		/// across template instantiation because <c>with</c> expressions copy it.</summary>
+		public SourcePosition Position { get; init; } = SourcePosition.Unknown;
 	}
 
 	/// <summary>Targets a specific behaviour by entity id + behaviour id. <see cref="EntityId"/> is a

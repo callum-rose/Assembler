@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -11,7 +10,7 @@ namespace Tests.Parsing
 	public class TemplateTests
 	{
 		[Test]
-		public void TestTemplateExpansion()
+		public void TemplateExpansionResolvesParameters()
 		{
 			var yaml = @"
 Templates:
@@ -29,9 +28,7 @@ Entities:
         speed: !vec { X: 0, Y: 2 }
 ";
 
-			var parser = new GameFileParser();
-			var gameDto = parser.Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			Assert.AreEqual(1, gameInfo.Entities.Count);
 			var paddle = gameInfo.Entities[0];
@@ -63,13 +60,42 @@ Entities:
     Template: { Id: mover_template }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
 
 			// self_id substituted in at instantiation, so the source reads the instance's own transform.
 			Assert.AreEqual("mover", source.EntityId.Id);
+			Assert.IsNull(source.EntityId.PendingParameter);
+			Assert.AreEqual(EntityProperty.Position, source.Property);
+		}
+
+		[Test]
+		public void TemplateBehaviourCanReferenceOwnTransformViaOmittedId()
+		{
+			// !entity with the Id omitted is the self shorthand — equivalent to Id: !parameter self_id but
+			// without the parameter plumbing — and binds to the instantiated entity's id (issue #400).
+			var yaml = @"
+Templates:
+  mover_template:
+    Behaviours:
+      translate:
+        Type: translate
+        Properties:
+          Displacement: !entity { Property: Position }
+Entities:
+  mover:
+    Template: { Id: mover_template }
+";
+
+			var gameInfo = ParseHelper.ParseGame(yaml);
+
+			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
+			var source = (EntityPropertySource<Vector3>)translate.Displacement;
+
+			Assert.AreEqual("mover", source.EntityId.Id);
+			Assert.IsInstanceOf<LiteralEntityId>(source.EntityId);
 			Assert.IsNull(source.EntityId.PendingParameter);
 			Assert.AreEqual(EntityProperty.Position, source.Property);
 		}
@@ -95,7 +121,7 @@ Entities:
         target: leader
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var translate = (TranslateInfo)gameInfo.Entities[0].Behaviours[0];
 			var source = (EntityPropertySource<Vector3>)translate.Displacement;
@@ -120,7 +146,7 @@ Entities:
     Template: { Id: follower_template }
 ";
 
-			Assert.Throws<ParsingException>(() => Transformer.Transform(new GameFileParser().Parse(yaml)));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -135,7 +161,7 @@ Entities:
     Template: { Id: base }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
@@ -155,7 +181,7 @@ Entities:
     Template: { Id: base }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialRotation as ConstantSource<Vector3>;
@@ -176,7 +202,7 @@ Entities:
     Position: !vec { X: 10, Y: 0 }
 ";
 
-			var gameInfo = Transformer.Transform(new GameFileParser().Parse(yaml));
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			var entity = gameInfo.Entities[0];
 			var constantSource = entity.InitialPosition as ConstantSource<Vector3>;
@@ -185,7 +211,7 @@ Entities:
 		}
 
 		[Test]
-		public void TestTemplateOverride()
+		public void EntityTagsOverrideTemplateTags()
 		{
 			var yaml = @"
 Templates:
@@ -199,9 +225,7 @@ Entities:
     Tags: [ right_paddle ]
 ";
 
-			var parser = new GameFileParser();
-			var gameDto = parser.Parse(yaml);
-			var gameInfo = Transformer.Transform(gameDto);
+			var gameInfo = ParseHelper.ParseGame(yaml);
 
 			Assert.AreEqual(1, gameInfo.Entities.Count);
 			var paddle = gameInfo.Entities[0];

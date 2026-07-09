@@ -1,0 +1,21 @@
+{
+    "name": "Assembler.AssetGeneration.MeshToVoxel.Generation",
+    "rootNamespace": "Assembler",
+    "references": [
+        "Assembler.AssetGeneration.MeshToVoxel",
+        "Assembler.AssetGeneration.ImageToMesh",
+        "Assembler.Anthropic",
+        "Assembler.AssetGeneration.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

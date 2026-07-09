@@ -1,6 +1,8 @@
 using Assembler.Behaviours.Triggers;
+using Assembler.Core;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using UnityEngine;
 
 namespace Assembler.Behaviours.Flow
 {
@@ -29,4 +31,25 @@ namespace Assembler.Behaviours.Flow
 			}
 		}
 	}
+
+	/// <summary>Iterates a bool list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class BoolListLoopTrigger : ListLoopTrigger<bool> { }
+
+	/// <summary>Iterates a Color list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class ColourListLoopTrigger : ListLoopTrigger<Color> { }
+
+	/// <summary>Iterates a float list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class FloatListLoopTrigger : ListLoopTrigger<float> { }
+
+	/// <summary>Iterates an int list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class IntListLoopTrigger : ListLoopTrigger<int> { }
+
+	/// <summary>Iterates a record list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class RecordListLoopTrigger : ListLoopTrigger<Record> { }
+
+	/// <summary>Iterates a string list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class StringListLoopTrigger : ListLoopTrigger<string> { }
+
+	/// <summary>Iterates a Vector3 list when Executed, firing listeners once per element. See <see cref="ListLoopTrigger{T}"/>.</summary>
+	public class Vector3ListLoopTrigger : ListLoopTrigger<Vector3> { }
 }

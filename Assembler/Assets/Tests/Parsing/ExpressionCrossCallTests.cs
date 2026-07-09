@@ -24,17 +24,19 @@ namespace Tests.Parsing
 			new(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler());
 
 		[Test]
-		public void ExpressionCanCallAnotherByCamelCasedId()
+		public void ExpressionCanCallAnotherByItsLiteralId()
 		{
+			// Regression for #403: an expression is callable from another body by the exact id it's
+			// declared with — no hidden camelCasing — so a snake_case id resolves as written.
 			var registry = NewRegistry();
 
 			registry.CompileAndRegisterAll(new[]
 			{
-				Expr("base offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") }),
-				Expr("use offset", "int", "return baseOffset(x, 3);", new[] { ("int", "x") }),
+				Expr("base_offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") }),
+				Expr("use_offset", "int", "return base_offset(x, 3);", new[] { ("int", "x") }),
 			});
 
-			var func = (Func<int, int>)registry.GetCompiled("use offset").@delegate;
+			var func = (Func<int, int>)registry.GetCompiled("use_offset").@delegate;
 
 			Assert.That(func(4), Is.EqualTo(7));
 		}
@@ -47,11 +49,11 @@ namespace Tests.Parsing
 			// Caller is declared before callee; topo sort must reorder compilation.
 			registry.CompileAndRegisterAll(new[]
 			{
-				Expr("use offset", "int", "return baseOffset(x, 3);", new[] { ("int", "x") }),
-				Expr("base offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") }),
+				Expr("use_offset", "int", "return base_offset(x, 3);", new[] { ("int", "x") }),
+				Expr("base_offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") }),
 			});
 
-			var func = (Func<int, int>)registry.GetCompiled("use offset").@delegate;
+			var func = (Func<int, int>)registry.GetCompiled("use_offset").@delegate;
 
 			Assert.That(func(4), Is.EqualTo(7));
 		}
@@ -75,18 +77,19 @@ namespace Tests.Parsing
 		}
 
 		[Test]
-		public void ExplicitAliasOverridesCamelCasedName()
+		public void ExplicitAliasIsTheCallableName()
 		{
+			// A CallableAs alias pins the name an expression is invoked by; the body calls that alias.
 			var registry = NewRegistry();
 
 			registry.CompileAndRegisterAll(new[]
 			{
-				Expr("base offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") },
+				Expr("base_offset", "int", "return a + b;", new[] { ("int", "a"), ("int", "b") },
 					callableAs: "bo"),
-				Expr("use offset", "int", "return bo(x, 3);", new[] { ("int", "x") }),
+				Expr("use_offset", "int", "return bo(x, 3);", new[] { ("int", "x") }),
 			});
 
-			var func = (Func<int, int>)registry.GetCompiled("use offset").@delegate;
+			var func = (Func<int, int>)registry.GetCompiled("use_offset").@delegate;
 
 			Assert.That(func(4), Is.EqualTo(7));
 		}
@@ -94,12 +97,14 @@ namespace Tests.Parsing
 		[Test]
 		public void CallableNameCollisionThrows()
 		{
+			// Ids are unique by construction (mapping keys), so a collision can only arise when a
+			// CallableAs alias clashes with another expression's id (or alias).
 			var registry = NewRegistry();
 
 			var ex = Assert.Throws<ResolveException>(() => registry.CompileAndRegisterAll(new[]
 			{
-				Expr("base offset", "int", "return 1;"),
-				Expr("base_offset", "int", "return 2;"),
+				Expr("alpha", "int", "return 1;"),
+				Expr("beta", "int", "return 2;", callableAs: "alpha"),
 			}));
 
 			Assert.That(ex!.Message, Does.Contain("collision"));

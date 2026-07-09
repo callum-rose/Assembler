@@ -11,12 +11,15 @@ namespace Assembler.Time
 	/// because <see cref="Time"/> and <see cref="FrameCount"/> are accumulators that cannot be
 	/// recomputed on demand once they diverge from wall-clock.
 	/// </remarks>
-	public sealed class RealtimeGameClock : IGameClock
+	public sealed class RealtimeGameClock : IAdvancingGameClock
 	{
 		public float DeltaTime { get; private set; }
 		public float UnscaledDeltaTime { get; private set; }
 		public double Time { get; private set; }
 		public int FrameCount { get; private set; }
+
+		// Wall-clock driven: leave Unity's own time on its default cadence (captureDeltaTime disabled).
+		public float CaptureDeltaTime => 0f;
 
 		public float TimeScale
 		{

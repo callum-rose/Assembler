@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Anthropic;
+using Assembler.Extensions;
 
 namespace Assembler.Generation.Verification.Editor
 {
@@ -44,11 +45,12 @@ namespace Assembler.Generation.Verification.Editor
 		private string? _storedPath;
 
 		public GameWithAssetsOrchestrator(string apiKey, IGeneratorLogger logger,
-			AssetGenerationOptions? options = null, int maxConcurrency = 4)
+			AssetGenerationOptions? options = null, int maxConcurrency = 4,
+			MeshSource meshSource = MeshSource.Script)
 		{
 			_apiKey = apiKey;
 			_logger = logger;
-			_registry = AssetGeneratorRegistry.Default;
+			_registry = AssetGeneratorRegistry.For(meshSource);
 			_options = options ?? AssetGenerationOptions.Default;
 			_maxConcurrency = Math.Max(1, maxConcurrency);
 			_generator = new GameDescriptorGenerator(new AnthropicClient(_apiKey));
@@ -191,7 +193,7 @@ namespace Assembler.Generation.Verification.Editor
 
 		private static string BuildSlug(string userPrompt)
 		{
-			var slug = DescriptorFileWriter.Sanitise(userPrompt);
+			var slug = FileNameSanitiser.Sanitise(userPrompt);
 			if (!string.IsNullOrEmpty(slug) && slug.Length > MaxSlugLength)
 			{
 				slug = slug[..MaxSlugLength].Trim('-');

@@ -1,0 +1,22 @@
+{
+    "name": "Assembler.AssetGeneration.EyePlacement.Editor",
+    "rootNamespace": "Assembler.AssetGeneration.EyePlacement",
+    "references": [
+        "Assembler.AssetGeneration.EyePlacement",
+        "Assembler.Anthropic",
+        "Assembler.Voxels",
+        "Assembler.AssetGeneration.Editor.Common",
+        "Assembler.AssetGeneration.Common"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -115,4 +115,9 @@ ProjectSettings/EntitiesClientSettings [0-9]*.asset
 # Claude
 /.claude/worktrees/
 
+# Generated Assets
 /[Aa]ssets/Resources/Voxels/Sets/
+/[Aa]ssets/TestModels/
+/[Aa]ssets/TestModels.meta
+/[Aa]ssets/GeneratedImages/
+/[Aa]ssets/GeneratedImages.meta

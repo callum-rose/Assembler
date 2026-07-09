@@ -5,6 +5,11 @@ namespace Assembler.Compiler.Compiler
 {
 	public static class DelegateTypeHelper
 	{
+		// Kept as an explicit switch rather than collapsing to BCL Expression.GetDelegateType on purpose:
+		// GetDelegateType emits a brand-new delegate type via Reflection.Emit for arities beyond the built-in
+		// Action/Func families, which is unavailable under IL2CPP/AOT (a Phase 0 concern — the compiler must
+		// run in AOT player builds). Naming each Action<...>/Func<...> instantiation directly keeps every path
+		// to a closed generic MakeGenericType, with no dynamic type generation. Do not "simplify" this away.
 		public static Type GetDelegateType(Type returnType, Type[] parameterTypes)
 		{
 			if (returnType == typeof(void))

@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using Assembler.Compiler.Compiler;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
@@ -18,9 +17,6 @@ namespace Tests.Parsing
 	// names (inline body); the positional arg0/arg1 form has been removed.
 	public class ExprDoWithTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static ValueSource<Vector3> PositionOf(GameInfo info) =>
 			info.Entities[0].InitialPosition;
 
@@ -37,11 +33,11 @@ Entities:
 		[Test]
 		public void NamedDoCallTargetsDeclaredExpressionById()
 		{
-			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !var v } }",
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: shiftUp, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -50,7 +46,7 @@ Expressions:
 			var source = PositionOf(info);
 
 			Assert.IsInstanceOf<ExpressionSource<Vector3>>(source);
-			Assert.AreEqual("shift up", ((ExpressionSource<Vector3>)source).ExpressionId);
+			Assert.AreEqual("shiftUp", ((ExpressionSource<Vector3>)source).ExpressionId);
 			Assert.AreEqual(1, ((ExpressionSource<Vector3>)source).Arguments.Count);
 
 			// A named call must not synthesise an inline expression.
@@ -60,11 +56,11 @@ Expressions:
 		[Test]
 		public void NamedDoCallResolvesByCallableAlias()
 		{
-			var info = Parse(EntityWithPositionExpr(
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: up, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -74,7 +70,7 @@ Expressions:
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
 			// The call site uses the alias, but the source targets the canonical id.
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			Assert.IsFalse(info.Expressions.Any(e => e.Id.StartsWith("__inline_")));
 		}
 
@@ -85,7 +81,7 @@ Expressions:
 			// by position would put the float operand into the vector slot and fail — binding by name
 			// pairs each operand with its declared argument, so this parses and targets the declared id.
 			GameInfo info = null!;
-			Assert.DoesNotThrow(() => info = Parse(EntityWithPositionExpr(
+			Assert.DoesNotThrow(() => info = ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: lift, With: { lift: 1.0, base: !var v } }",
 				extraTop: @"
 Expressions:
@@ -103,11 +99,11 @@ Expressions:
 		[Test]
 		public void NamedCallMissingOperandNameThrows()
 		{
-			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { wrong: !var v } }",
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: shiftUp, With: { wrong: !var v } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -119,7 +115,7 @@ Expressions:
 		[Test]
 		public void DuplicateOperandNameThrows()
 		{
-			var ex = Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: 'a + a', With: { a: !var v, a: 2 } }")));
 
 			Assert.That(ex!.Message, Does.Contain("more than once"));
@@ -128,7 +124,7 @@ Expressions:
 		[Test]
 		public void InlineDoBodySynthesisesAnonymousExpression()
 		{
-			var info = Parse(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v } }"));
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v } }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
@@ -145,7 +141,7 @@ Expressions:
 		public void InlineBodyInfersOperandTypesFromConstantsAndVars()
 		{
 			// scale is a vector (from !var v), factor is an int literal.
-			var info = Parse(EntityWithPositionExpr("!expr { Do: 'scale * factor', With: { scale: !var v, factor: 2 } }"));
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr("!expr { Do: 'scale * factor', With: { scale: !var v, factor: 2 } }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
@@ -156,11 +152,54 @@ Expressions:
 		}
 
 		[Test]
+		public void InlineBodyInfersEntityPropertyOperandAsVector()
+		{
+			// An `!entity { Property: Rotation }` operand resolves to Vector3, a type known from the ref
+			// kind alone — inference must pick "vector", not the "float" default, so no explicit
+			// ArgumentTypes hint is needed (issue #399).
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: 'heading * 2', With: { heading: !entity { Id: e, Property: Rotation } } }"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+
+			Assert.AreEqual(("vector", "heading"), synthesised.Arguments[0]);
+			Assert.AreEqual("vector", synthesised.ReturnType);
+		}
+
+		[Test]
+		public void InlineBodyInfersRigidbodyPropertyOperandAsVector()
+		{
+			// A `!rigidbody { Property: Velocity }` operand likewise resolves to Vector3.
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: '-vel', With: { vel: !rigidbody { Id: e, Property: Velocity } } }"));
+
+			var source = (ExpressionSource<Vector3>)PositionOf(info);
+			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
+
+			Assert.AreEqual(("vector", "vel"), synthesised.Arguments[0]);
+			Assert.AreEqual("vector", synthesised.ReturnType);
+		}
+
+		[Test]
+		public void InlineUninferableOperandThrowsWithoutArgumentTypes()
+		{
+			// A nested *inline* !expr operand has no statically-known type. Rather than silently
+			// assuming float (the old default that masked issue #399), synthesis throws an actionable
+			// error naming the operand and pointing at the ArgumentTypes hint.
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: 'outer + inner', With: { outer: !var v, inner: !expr { Do: '-outer', With: { outer: !var v } } } }")));
+
+			Assert.That(ex!.Message, Does.Contain("inner"));
+			Assert.That(ex!.Message, Does.Contain("ArgumentTypes"));
+		}
+
+		[Test]
 		public void DoNameWinsOverInlineInterpretation()
 		{
 			// "scale" is also a plausible inline identifier, but because it's a declared expression the
 			// registry-membership check routes it as a named call, not an inline body.
-			var info = Parse(EntityWithPositionExpr(
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: scale, With: { a: !var v } }",
 				extraTop: @"
 Expressions:
@@ -179,11 +218,11 @@ Expressions:
 		[Test]
 		public void NestedInlineInsideNamedCallResolves()
 		{
-			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !expr { Do: '-x', With: { x: !var v } } } }",
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: shiftUp, With: { a: !expr { Do: '-x', With: { x: !var v } } } }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -191,7 +230,7 @@ Expressions:
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			// The nested inline operand synthesised exactly one anonymous expression.
 			Assert.AreEqual(1, info.Expressions.Count(e => e.Id.StartsWith("__inline_")));
 		}
@@ -199,7 +238,7 @@ Expressions:
 		[Test]
 		public void MissingDoThrows()
 		{
-			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { With: { a: !var v } }")));
+			var ex = Assert.Catch(() => ParseHelper.ParseGame(EntityWithPositionExpr("!expr { With: { a: !var v } }")));
 
 			Assert.That(ex!.ToString(), Does.Contain("Do"));
 		}
@@ -207,7 +246,7 @@ Expressions:
 		[Test]
 		public void EmptyDoThrows()
 		{
-			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '', With: { a: !var v } }")));
+			var ex = Assert.Catch(() => ParseHelper.ParseGame(EntityWithPositionExpr("!expr { Do: '', With: { a: !var v } }")));
 
 			Assert.That(ex!.ToString(), Does.Contain("Do"));
 		}
@@ -216,7 +255,7 @@ Expressions:
 		public void SequenceFormWithThrows()
 		{
 			// The positional list form is no longer accepted; it must be a map.
-			var ex = Assert.Catch(() => Parse(EntityWithPositionExpr("!expr { Do: '-a', With: [ !var v ] }")));
+			var ex = Assert.Catch(() => ParseHelper.ParseGame(EntityWithPositionExpr("!expr { Do: '-a', With: [ !var v ] }")));
 
 			Assert.That(ex!.ToString(), Does.Contain("map"));
 		}
@@ -226,11 +265,11 @@ Expressions:
 		[Test]
 		public void InlineAndNamedExpressionsCompileAndEvaluate()
 		{
-			var info = Parse($@"
+			var info = ParseHelper.ParseGame($@"
 Variables:
   v: !vec {{ X: 1, Y: 2, Z: 3 }}
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -243,7 +282,7 @@ Entities:
     Position: !expr {{ Do: 'a * 2', With: {{ a: !var v }} }}
     Behaviours: {{}}
   named:
-    Position: !expr {{ Do: shift up, With: {{ a: !var v }} }}
+    Position: !expr {{ Do: shiftUp, With: {{ a: !var v }} }}
     Behaviours: {{}}
 ");
 
@@ -260,7 +299,7 @@ Entities:
 
 			var negate = (Func<Vector3, Vector3>)registry.GetCompiled(negateId).@delegate;
 			var scale = (Func<Vector3, Vector3>)registry.GetCompiled(scaleId).@delegate;
-			var shiftUp = (Func<Vector3, Vector3>)registry.GetCompiled("shift up").@delegate;
+			var shiftUp = (Func<Vector3, Vector3>)registry.GetCompiled("shiftUp").@delegate;
 
 			Assert.AreEqual(new Vector3(-1, -2, -3), negate(v));
 			Assert.AreEqual(new Vector3(2, 4, 6), scale(v));
@@ -277,7 +316,7 @@ Entities:
 			GameInfo info = null!;
 			Assert.DoesNotThrow(() =>
 			{
-				info = Transformer.Transform(new GameFileParser().Parse(File.ReadAllText(path)));
+				info = ParseHelper.ParseGame(File.ReadAllText(path));
 			});
 
 			Assert.IsTrue(info.Expressions.Count > 0, "Pong declares named expressions.");
@@ -289,7 +328,7 @@ Entities:
 		public void InlineArgumentTypesHintOverridesInference()
 		{
 			// With { a: 1, b: 2 } would infer int operands; the explicit hint forces float.
-			var info = Parse(EntityWithPositionExpr(
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: 'a + b', With: { a: 1, b: 2 }, ArgumentTypes: [ float, float ] }"));
 
 			var synthesised = info.Expressions.Single(e => e.Id.StartsWith("__inline_"));
@@ -301,21 +340,21 @@ Entities:
 		[Test]
 		public void InlineArgumentTypesCountMismatchThrows()
 		{
-			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: 'a + b', With: { a: !var v }, ArgumentTypes: [ vector, vector ] }")));
 		}
 
 		[Test]
 		public void InlineUnknownReturnTypeThrows()
 		{
-			Assert.Throws<ParsingException>(() => Parse(EntityWithPositionExpr(
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
 				"!expr { Do: '-a', With: { a: !var v }, ReturnType: nonsense }")));
 		}
 
 		[Test]
 		public void InlineReturnTypeHintFlowsToSynthesisedExpression()
 		{
-			var info = Parse(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v }, ReturnType: vector }"));
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr("!expr { Do: '-a', With: { a: !var v }, ReturnType: vector }"));
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 			var synthesised = info.Expressions.Single(e => e.Id == source.ExpressionId);
@@ -341,7 +380,7 @@ Entities:
           Text: !text { Key: k, Arguments: [ !expr { Do: 'RandomInt(0, 6)', ReturnType: int } ] }
 ";
 			GameInfo info = null!;
-			Assert.DoesNotThrow(() => info = Parse(yaml));
+			Assert.DoesNotThrow(() => info = ParseHelper.ParseGame(yaml));
 
 			var synthesised = info.Expressions.Single(e => e.Id.StartsWith("__inline_"));
 			Assert.AreEqual("int", synthesised.ReturnType);
@@ -366,7 +405,7 @@ Entities:
         Properties:
           Text: !text { Key: k, Arguments: [ !expr { Do: 'RandomInt(0, 6)' } ] }
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		// RegisterTypes makes a type available to the inline body by short name; without it
@@ -374,7 +413,7 @@ Entities:
 		[Test]
 		public void InlineRegisterTypesEnableShortTypeNameAndCompile()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   e:
     Position: !expr { Do: 'new UnityEngine.Vector3(Mathf.PI, 0f, 0f)', RegisterTypes: [ UnityEngine.Mathf ] }
@@ -396,11 +435,11 @@ Entities:
 		{
 			// ReturnType on a named call is ignored (logged); the source still targets the named id
 			// and no inline expression is synthesised.
-			var info = Parse(EntityWithPositionExpr(
-				"!expr { Do: shift up, With: { a: !var v }, ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
+			var info = ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!expr { Do: shiftUp, With: { a: !var v }, ReturnType: int, RegisterTypes: [ UnityEngine.Mathf ] }",
 				extraTop: @"
 Expressions:
-  shift up:
+  shiftUp:
     ArgumentTypes: [ vector ]
     ArgumentNames: [ a ]
     ReturnType: vector
@@ -408,8 +447,44 @@ Expressions:
 
 			var source = (ExpressionSource<Vector3>)PositionOf(info);
 
-			Assert.AreEqual("shift up", source.ExpressionId);
+			Assert.AreEqual("shiftUp", source.ExpressionId);
 			Assert.IsFalse(info.Expressions.Any(e => e.Id.StartsWith("__inline_")));
+		}
+
+		[Test]
+		public void ExpressionIdWithIllegalCharactersIsRejected()
+		{
+			// The id is the exact name the expression is callable by, so a space (or other non-identifier
+			// character) is rejected up front rather than silently rewritten to a different callable name.
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!vec { X: 0, Y: 0, Z: 0 }",
+				extraTop: @"
+Expressions:
+  shift up:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    Expression: 'return a;'")));
+
+			Assert.That(ex!.Message, Does.Contain("shift up"));
+			Assert.That(ex.Message, Does.Contain("id"));
+		}
+
+		[Test]
+		public void CallableAsAliasWithIllegalCharactersIsRejected()
+		{
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(EntityWithPositionExpr(
+				"!vec { X: 0, Y: 0, Z: 0 }",
+				extraTop: @"
+Expressions:
+  shiftUp:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ a ]
+    ReturnType: vector
+    CallableAs: shift up
+    Expression: 'return a;'")));
+
+			Assert.That(ex!.Message, Does.Contain("CallableAs"));
 		}
 
 		// Descriptors that don't transform today for reasons unrelated to expressions (sequence-form
@@ -434,7 +509,7 @@ Expressions:
 
 				try
 				{
-					var info = Transformer.Transform(new GameFileParser().Parse(File.ReadAllText(path)));
+					var info = ParseHelper.ParseGame(File.ReadAllText(path));
 					new CompiledExpressionsRegistry(BuiltInTypeRegistry.Default, new ExpressionMethodCompiler())
 						.CompileAndRegisterAll(info.Expressions);
 				}

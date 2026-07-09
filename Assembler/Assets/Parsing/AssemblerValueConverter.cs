@@ -72,6 +72,17 @@ namespace Assembler.Parsing
 				// domain value type.
 				(Vector2 v, { AllowRuntimeTypes: true }) => new Vector3Value(v),
 				(Color c, { AllowRuntimeTypes: true }) => new ColorValue(c),
+				// Runtime stage: concrete typed lists produced by resolving a list variable/expression passed
+				// as a spawner Parameter (e.g. a vector-list patrol route forwarded to a template's Waypoints
+				// slot). Primitive lists (int/float/bool/string) are the same concrete types at every stage and
+				// are handled by the unconditional arms below.
+				(List<Vector3> vectorList, { AllowRuntimeTypes: true }) => new TypedListValue(typeof(Vector3),
+					vectorList.ConvertAll<AssemblerValue>(v => new Vector3Value(v))),
+				(List<Color> colorList, { AllowRuntimeTypes: true }) => new TypedListValue(typeof(Color),
+					colorList.ConvertAll<AssemblerValue>(c => new ColorValue(c))),
+				// Runtime stage: an already-resolved asset (UnityEngine.Object) passed as a spawner Parameter
+				// (e.g. !asset <id>). Carry it through; CreateValueSource rewraps it as a ConstantSource<T>.
+				(Object obj, { AllowRuntimeTypes: true }) => new RuntimeObjectValue(obj),
 				// IR stage: DTOs become unevaluated AssemblerValue IR. These inputs only occur in the IR
 				// stage; the resolved stage handles RefDto above (and rejects everything else) and the runtime
 				// stage never receives DTOs.
@@ -106,20 +117,22 @@ namespace Assembler.Parsing
 					ToAssemblerValue(v.B),
 					ToAssemblerValue(v.A),
 					v.Raw is null ? NoValue.Instance : new StringValue(v.Raw)),
-				// Typed lists are accepted at the IR and resolved stages (and rejected at runtime). Each
-				// element recurses with the same context, so VecDto/ColourDto elements evaluate at the
-				// resolved stage and stay unevaluated at the IR stage, exactly as a scalar would.
+				// Typed DTO lists occur at the IR and resolved stages (the runtime stage never sees DTOs —
+				// its concrete Vector3/Color lists are handled above). Each element recurses with the same
+				// context, so VecDto/ColourDto elements evaluate at the resolved stage and stay unevaluated
+				// at the IR stage, exactly as a scalar would. Primitive lists are the same concrete types at
+				// every stage — including runtime spawner Parameters — so they convert unconditionally.
 				(List<VecDto> vecList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(Vector3),
 					vecList.ConvertAll<AssemblerValue>(v => ToAssemblerValue(v, conversion))),
 				(List<ColourDto> colourList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(Color),
 					colourList.ConvertAll<AssemblerValue>(c => ToAssemblerValue(c, conversion))),
-				(List<int> intList, { AllowRuntimeTypes: false }) =>
+				(List<int> intList, _) =>
 					new TypedListValue(typeof(int), intList.ConvertAll<AssemblerValue>(i => new IntValue(i))),
-				(List<float> floatList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(float),
+				(List<float> floatList, _) => new TypedListValue(typeof(float),
 					floatList.ConvertAll<AssemblerValue>(f => new FloatValue(f))),
-				(List<bool> boolList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(bool),
+				(List<bool> boolList, _) => new TypedListValue(typeof(bool),
 					boolList.ConvertAll<AssemblerValue>(b => new BoolValue(b))),
-				(List<string> stringList, { AllowRuntimeTypes: false }) => new TypedListValue(typeof(string),
+				(List<string> stringList, _) => new TypedListValue(typeof(string),
 					stringList.ConvertAll<AssemblerValue>(s => new StringValue(s))),
 				// A `!record` literal becomes a RecordValue at every non-runtime stage (its field values
 				// recurse with the same context, so nested refs deref at the resolved stage); the transform
@@ -174,13 +187,15 @@ namespace Assembler.Parsing
 
 		// Builds the !entity IR. A literal Id is carried verbatim; a !parameter Id (a ParamRefDto) is
 		// captured as a pending ParameterEntityId so template instantiation can substitute the resolved
-		// entity id later (mirroring how a listener's `EntityId: !parameter self_id` is threaded through).
+		// entity id later (mirroring how a listener's `EntityId: !parameter self_id` is threaded through);
+		// an omitted Id becomes the SelfEntityId sentinel — the same "enclosing entity" marker listeners use
+		// when they omit EntityId — resolved to the concrete id at TemplateInstantiator.Instantiate.
 		private static EntityPropertyRef ToEntityPropertyRef(EntityRefDto dto) =>
 			dto.Id switch
 			{
 				ParamRefDto p => new EntityPropertyRef(new ParameterEntityId(p.Id ?? string.Empty), ParseEntityProperty(dto.Property)),
 				string s => new EntityPropertyRef(new LiteralEntityId(s), ParseEntityProperty(dto.Property)),
-				null => new EntityPropertyRef(new LiteralEntityId(string.Empty), ParseEntityProperty(dto.Property)),
+				null => new EntityPropertyRef(SelfEntityId.Instance, ParseEntityProperty(dto.Property)),
 				_ => throw new ParsingException(
 					$"!entity 'Id' must be an entity id or !parameter, but was {dto.Id.GetType().Name}.")
 			};

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Assembler.Building;
 using Assembler.Deserialisation;
 using Assembler.Parsing;
@@ -116,7 +117,10 @@ namespace Assembler.Generation.Verification
 			BuildStage.Instantiate
 		};
 
-		public static SandboxValidationResult Validate(string yaml)
+		// Async because the resolve stage is async (Addressables assets load asynchronously). Sync top-level
+		// callers (the batch validator's -executeMethod, the generation BuildHarness) block with
+		// GetAwaiter().GetResult(); local content completes immediately so blocking is cheap there.
+		public static async Task<SandboxValidationResult> ValidateAsync(string yaml)
 		{
 			var run = new PipelineRun();
 
@@ -128,7 +132,7 @@ namespace Assembler.Generation.Verification
 			// Stages 2-5 touch live engine state; run them under a log hook with teardown.
 			if (!run.Aborted)
 			{
-				RunBuildStages(yaml, run);
+				await RunBuildStages(yaml, run);
 			}
 
 			run.FillNotRun(Order);
@@ -160,7 +164,7 @@ namespace Assembler.Generation.Verification
 		// Stages 2-5: deserialise → parse → resolve → instantiate. Each stage's work runs under a log hook
 		// (so behaviours that report failures via Debug.LogError rather than throwing are still captured) and
 		// is skipped once an earlier stage has failed. Everything instantiated is torn down before returning.
-		private static void RunBuildStages(string yaml, PipelineRun run)
+		private static async Task RunBuildStages(string yaml, PipelineRun run)
 		{
 			void OnLog(string condition, string stackTrace, LogType type)
 			{
@@ -188,8 +192,8 @@ namespace Assembler.Generation.Verification
 				var parsed = run.Run(BuildStage.Parse, "Parsing failed",
 					() => new ParsedGame(Transformer.Transform(dto!), ControlsTransformer.Transform(dto!.Controls)));
 
-				var resolved = run.Run(BuildStage.Resolve, "Resolving failed",
-					() => parsed!.GameInfo.Resolve(parsed.Controls, null));
+				var resolved = await run.RunAsync(BuildStage.Resolve, "Resolving failed",
+					() => parsed!.GameInfo.ResolveAsync(parsed.Controls, null));
 
 				run.Run(BuildStage.Instantiate, "Entity instantiation failed",
 					() => resolved!.Instantiate());
@@ -301,6 +305,37 @@ namespace Assembler.Generation.Verification
 				try
 				{
 					artifact = work();
+				}
+				catch (Exception ex)
+				{
+					errors.Add(failPrefix + ": " + Summarise(ex));
+				}
+				finally
+				{
+					Sink = null;
+				}
+
+				Record(new RanResult(stage, errors.Count == 0, errors));
+				return errors.Count == 0 ? artifact : null;
+			}
+
+			// Async sibling of Run for stages whose work is asynchronous (resolve, via Addressables). Same
+			// exception/log capture and short-circuit-on-abort behaviour; the only difference is awaiting the work.
+			// Distinct name (not an overload) because a Func<Task<T>> lambda is convertible to both Func<T> and
+			// Func<Task<T>>, which would make an overloaded Run ambiguous.
+			public async Task<T?> RunAsync<T>(BuildStage stage, string failPrefix, Func<Task<T>> work) where T : class
+			{
+				if (Aborted)
+				{
+					return null;
+				}
+
+				var errors = new List<string>();
+				Sink = errors;
+				T? artifact = null;
+				try
+				{
+					artifact = await work();
 				}
 				catch (Exception ex)
 				{

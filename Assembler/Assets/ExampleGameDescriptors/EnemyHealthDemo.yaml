@@ -70,7 +70,7 @@ Templates:
         Properties:
           VariableId: !var health
           Value: !expr
-            Do: int sub
+            Do: intSub
             With:
               a: !var health
               b: !var damage per hit
@@ -91,7 +91,7 @@ Templates:
         Properties:
           VariableId: !var enemies remaining
           Value: !expr
-            Do: int sub
+            Do: intSub
             With:
               a: !var enemies remaining
               b: !var damage per hit
@@ -187,7 +187,7 @@ Templates:
           Value: !var stopped
 
 Expressions:
-  int sub:
+  intSub:
     ArgumentTypes: [ int, int ]
     ArgumentNames: [ a, b ]
     ReturnType: int

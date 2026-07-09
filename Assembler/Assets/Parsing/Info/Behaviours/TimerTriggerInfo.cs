@@ -12,7 +12,10 @@ namespace Assembler.Parsing.Info.Behaviours
 			new(id,
 				listeners,
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Delay")),
-				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart")));
+				// AutoStart defaults to true: an omitted AutoStart self-arms the countdown on entity
+				// start (the common "self-destruct after N seconds" case). Set AutoStart: false to make
+				// it wait for an upstream Execute instead.
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart"), true));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>

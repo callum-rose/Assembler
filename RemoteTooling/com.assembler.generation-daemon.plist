@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd LaunchAgent for the Assembler generation daemon.
+
+  Setup:
+    1. Build the tool once:  dotnet build -c Release RemoteTooling/Assembler.RemoteTooling.csproj
+       (this produces the native launcher referenced below).
+    2. cp this file to  ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+    3. Edit the COPY under ~/Library/LaunchAgents (not this tracked template): set the paths and the
+       ASSEMBLER_STORE_REPO value to match your machine, so your home path/username aren't committed.
+    4. launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+    To stop:  launchctl unload -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist
+    Logs:     ~/Library/Logs/assembler-generation-daemon.{out,err}.log
+
+  KeepAlive restarts the daemon if it crashes; RunAtLoad starts it at login. The daemon releases its
+  single-flight lock on SIGTERM, so `launchctl unload` (or a KeepAlive restart) won't lock it out.
+  Note: PATH must include the dirs holding `claude`, `gh`, `git`, `dotnet`, and Unity — adjust EnvironmentVariables.PATH.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.assembler.generation-daemon</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/REPLACE_ME/Developer/Unity Projects/Assembler/RemoteTooling/bin/Release/net10.0/assembler-remote</string>
+		<string>daemon</string>
+	</array>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>ASSEMBLER_STORE_REPO</key>
+		<string>REPLACE_OWNER/assembler-games</string>
+		<key>ASSEMBLER_STORE_DIR</key>
+		<string>/Users/REPLACE_ME/Developer/assembler-games</string>
+		<key>ASSEMBLER_ENGINE_DIR</key>
+		<string>/Users/REPLACE_ME/Developer/Unity Projects/Assembler/Assembler</string>
+		<key>ASSEMBLER_POLL_SECONDS</key>
+		<string>30</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/local/share/dotnet:/usr/bin:/bin:/Users/REPLACE_ME/.claude/local</string>
+	</dict>
+
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+
+	<key>StandardOutPath</key>
+	<string>/Users/REPLACE_ME/Library/Logs/assembler-generation-daemon.out.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/REPLACE_ME/Library/Logs/assembler-generation-daemon.err.log</string>
+</dict>
+</plist>

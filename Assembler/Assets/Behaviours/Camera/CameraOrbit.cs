@@ -1,5 +1,6 @@
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
+using Assembler.Time;
 using Unity.Cinemachine;
 using UnityEngine;
 
@@ -9,8 +10,9 @@ namespace Assembler.Behaviours.Camera
 	/// (third-person / orbital framing), blended by the brain on the output <c>camera</c>. Mirrors
 	/// <c>camera follow</c> but uses an orbital body rather than a screen/offset rig.</summary>
 	/// <remarks>
-	/// The follow target is re-resolved every frame, so a tag target tracks entities spawned after build. Damping
-	/// and the auto-orbit run on real frame time (presentation-only) and never feed back into game logic. With
+	/// The follow target is re-resolved every frame, so a tag target tracks entities spawned after build. The
+	/// auto-orbit advances on <see cref="IGameClock.DeltaTime"/>, so it pauses and slows with game time and stays
+	/// deterministic under a fixed-step clock; Cinemachine's own damping still runs on real frame time. With
 	/// <c>OrbitSpeed</c> at 0 (the default) the camera holds its starting angle; a non-zero value spins it around
 	/// the target continuously. Driving the orbit from player input is intentionally out of scope here.
 	/// Properties:
@@ -22,8 +24,10 @@ namespace Assembler.Behaviours.Camera
 	///   Priority: Virtual-camera priority; the brain shows the highest-priority live vcam.
 	///   Lens: Orthographic size or field of view in degrees, depending on the output camera projection.
 	/// </remarks>
-	public sealed class CameraOrbit : GameBehaviour<CameraOrbitData>
+	public sealed class CameraOrbit : GameBehaviour<CameraOrbitData>, INeedsGameClock
 	{
+		public IGameClock Clock { get; set; } = null!;
+
 		private CinemachineCamera _cam = null!;
 		private CinemachineOrbitalFollow _orbit = null!;
 
@@ -55,7 +59,7 @@ namespace Assembler.Behaviours.Camera
 		}
 
 		// Re-resolve the target each frame so a tag target follows entities spawned after build, and advance the
-		// auto-orbit. Time is fully qualified because Assembler.Behaviours.Time shadows the bare `Time` name.
+		// auto-orbit on game time (so it respects pause/slow-mo and is deterministic under a fixed-step clock).
 		private void Update()
 		{
 			if (Data.Follow is not NullValueProvider<Transform>)
@@ -72,7 +76,7 @@ namespace Assembler.Behaviours.Camera
 			{
 				// HorizontalAxis is a struct field with Wrap=true; ClampValue wraps the angle back into its range.
 				_orbit.HorizontalAxis.Value =
-					_orbit.HorizontalAxis.ClampValue(_orbit.HorizontalAxis.Value + speed * UnityEngine.Time.deltaTime);
+					_orbit.HorizontalAxis.ClampValue(_orbit.HorizontalAxis.Value + speed * Clock.DeltaTime);
 			}
 		}
 	}
