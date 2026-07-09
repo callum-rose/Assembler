@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 #
-# Runs the EditMode test suites headlessly by booting the Unity editor in batch mode and invoking
-# Editor.TestBatch.RunEditModeTests (the same tests you would run from Window > General > Test
-# Runner). Prints a pass/fail summary to the log and exits non-zero if anything fails, so Claude
-# can run and verify tests without the UI.
+# Runs the test suites headlessly by booting the Unity editor in batch mode and invoking
+# Editor.TestBatch (the same tests you would run from Window > General > Test Runner). Defaults to
+# the EditMode suites; pass --playmode to run the PlayMode suites instead (e.g. the deterministic
+# record/replay test, which needs behaviour Update to run — issue #101). Prints a pass/fail summary
+# to the log and exits non-zero if anything fails, so Claude can run and verify tests without the UI.
 #
 # Usage:
 #   Assembler/Tools/run-tests.sh                       # run all EditMode tests
+#   Assembler/Tools/run-tests.sh --playmode            # run all PlayMode tests
 #   Assembler/Tools/run-tests.sh Tests.Compiler        # run only these assemblies (repeatable)
 #   Assembler/Tools/run-tests.sh --filter '.*Lexer.*'  # run tests whose full name matches a regex
 #   Assembler/Tools/run-tests.sh --category Slow        # run tests with a given [Category]
-# Flags and assembly names can be combined; --filter/--category are repeatable.
+# Flags and assembly names can be combined; --filter/--category are repeatable; --playmode selects
+# the platform for the whole run.
 #
 # Notes:
 #  - The first run in a fresh worktree triggers a full asset import and is slow (minutes).
@@ -62,9 +65,17 @@ fi
 
 # Translate friendly CLI args into the -testAssembly/-testFilter/-testCategory flags that
 # TestBatch reads from the command line. Bare positional args are treated as assembly names.
+# --playmode selects the PlayMode entry point (and the PlayMode-results.xml output) for the run.
 FILTER_ARGS=()
+METHOD="Editor.TestBatch.RunEditModeTests"
+MODE="EditMode"
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--playmode)
+			METHOD="Editor.TestBatch.RunPlayModeTests"
+			MODE="PlayMode"
+			shift
+			;;
 		--filter)
 			FILTER_ARGS+=(-testFilter "$2")
 			shift 2
@@ -74,7 +85,7 @@ while [[ $# -gt 0 ]]; do
 			shift 2
 			;;
 		-*)
-			echo "error: unknown flag '$1' (expected --filter or --category, or a bare assembly name)" >&2
+			echo "error: unknown flag '$1' (expected --playmode, --filter or --category, or a bare assembly name)" >&2
 			exit 1
 			;;
 		*)
@@ -86,7 +97,7 @@ done
 
 LOG="$(mktemp -t assembler-run-tests.XXXXXX.log)"
 
-echo "Running EditMode tests with Unity $VERSION (project: $PROJECT)..."
+echo "Running $MODE tests with Unity $VERSION (project: $PROJECT)..."
 
 # Capture the (very noisy) Unity log to a temp file rather than streaming it — only the delimited
 # "TestBatch results" block (pass/fail counts + any failures) is printed, so the summary isn't buried
@@ -98,7 +109,7 @@ set +e
 "$UNITY" \
 	-batchmode -nographics \
 	-projectPath "$PROJECT" \
-	-executeMethod Editor.TestBatch.RunEditModeTests \
+	-executeMethod "$METHOD" \
 	${FILTER_ARGS[@]+"${FILTER_ARGS[@]}"} \
 	-logFile - > "$LOG" 2>&1
 RC=$?
@@ -118,7 +129,7 @@ else
 	echo "        spurious cold-import failure.)" >&2
 fi
 echo
-echo "Full NUnit XML: $PROJECT/TestResults/EditMode-results.xml"
+echo "Full NUnit XML: $PROJECT/TestResults/$MODE-results.xml"
 echo "Full Unity log: $LOG"
 
 # Verdict comes from TestBatch's exit code (0 = all passed, 1 = a failure/error), which Unity returns.

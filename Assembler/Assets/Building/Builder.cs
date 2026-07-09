@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
+using Assembler.Behaviours.Replay;
 using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
@@ -121,7 +122,13 @@ namespace Assembler.Building
 		/// entropy-seeded RNG) so every normal play session and the sandbox validator are unchanged;
 		/// deterministic / replay runs pass <see cref="GameClockMode.FixedStep"/> and an explicit seed.
 		/// </param>
-		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null)
+		/// <param name="replay">
+		/// Optional input capture/replay session (issue #101). <c>null</c> (or <see cref="ReplayMode.Off"/>) leaves
+		/// input untouched. A <see cref="ReplayMode.Record"/> session captures every input-trigger emission; a
+		/// <see cref="ReplayMode.Replay"/> session suppresses live device reads and drives the game from its log.
+		/// Pair with <see cref="GameClockMode.FixedStep"/> + a fixed seed for a reproducible run.
+		/// </param>
+		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null, InputReplaySession? replay = null)
 		{
 			options ??= RunOptions.Default;
 
@@ -170,6 +177,15 @@ namespace Assembler.Building
 			var gameRoot = new GameObject("Game");
 			gameRoot.AddComponent<GameController>();
 			gameRoot.AddComponent<GameClockDriver>().Clock = gameClock;
+
+			// Publish the input capture/replay session for the game's lifetime (issue #101). The driver sets the
+			// ambient InputReplayHub so input triggers record/suppress, and pumps replayed input each frame; it
+			// clears the hub on teardown. Bind the clock so record tags emissions with the current frame.
+			if (replay is { Mode: not ReplayMode.Off })
+			{
+				replay.Bind(gameClock);
+				gameRoot.AddComponent<ReplayDriver>().Initialise(replay, gameClock);
+			}
 
 			// Drives polled live properties (clock/query/transform/partial-expression bindings) once per frame.
 			// Pushed (variable/constant/observable-expression) bindings never register here, so its tick list
@@ -259,6 +275,20 @@ namespace Assembler.Building
 
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
+
+			// 5b. Register every input trigger with the active replay session so a recorded emission can be routed
+			// back to the exact trigger on replay. Done after initialisation, when each trigger's descriptor
+			// (entity id + behaviour id) is set. Lookup is by descriptor, so registration order is irrelevant.
+			if (replay is { Mode: not ReplayMode.Off })
+			{
+				foreach (var behaviour in behaviourRegistry.All.Values)
+				{
+					if (behaviour is IReplayableInput input)
+					{
+						replay.Register(input);
+					}
+				}
+			}
 
 #if DEBUG_CONSOLE
 			// 6. Attach the framework-level debug overlay (stripped entirely in non-DEBUG_CONSOLE builds).

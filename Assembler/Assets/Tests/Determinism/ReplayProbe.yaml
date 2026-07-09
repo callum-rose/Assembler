@@ -1,0 +1,66 @@
+Game:
+  Title: Replay Probe
+  Description: >
+    Deterministic record/replay probe (issue #101) — not a playable game. A single "mover" whose start
+    position is seeded-random (so the run seed shows up in observable transform state) and which
+    translates by the abstract "move" input every frame the trigger fires. A "referee" holds an
+    always-present !gameover path that never fires during a test (its condition variable is never set).
+    Deliberately physics-free and UI-free: no colliders/rigidbodies means two in-process runs never share
+    a PhysicsScene (the Phase-0 divergence caveat), and no UI keeps the build dependency-light.
+
+    The mover is moved ONLY by the input trigger's own notify chain (input action -> translate), so nothing
+    else touches its transform in a frame — there is no same-tick ordering dependency (#241) to diverge on.
+
+World:
+  Dimensionality: 2
+
+Variables:
+  # Game-over flag for the referee. Never set during the test, so the game runs for the whole window.
+  is dead: false
+
+# The automation ("auto") scheme binds the same abstract actions a real device would, but to a synthetic
+# device a harness drives directly. Selected by building with InputPlatform.Auto (override-only), exactly
+# as the editor overrides the platform to simulate a device. See PlatformFallback.Chain(Auto) => ["auto"].
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+
+  Bindings:
+    auto:
+      move: [ "<Gamepad>/leftStick" ]
+
+Entities:
+  # Seeded-random start position folds the run seed into observable transform state: same seed => same
+  # start; a different seed => a different start (the negative determinism check).
+  mover:
+    Position: !expr
+      Do: 'new UnityEngine.Vector3(RandomFloat(-3f, 3f), RandomFloat(-3f, 3f), 0f)'
+      RegisterTypes: [ UnityEngine.Vector3 ]
+    Behaviours:
+      move input:
+        Type: input action
+        Properties: { Action: move }
+        Listeners: [ nudge ]
+
+      # Translate by the input's axis each emission. Because this runs inside the input trigger's notify
+      # chain, the mover's transform is touched only here — record and replay apply the identical sequence.
+      nudge:
+        Type: translate
+        Properties:
+          Displacement: !output axis
+
+  # Holds the mandatory (statically reachable) !gameover path. The condition is a plain flag that stays
+  # false for the whole test, so the game never actually ends mid-run.
+  referee:
+    Position: !vec { X: 0, Y: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ gate ]
+
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !var is dead
+        Listeners:
+          - !gameover

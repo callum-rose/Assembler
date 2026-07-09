@@ -76,14 +76,21 @@ namespace Assembler.Behaviours.Triggers.Input
 
 		private void OnButtonEvent(InputAction.CallbackContext _)
 		{
-			if (isActiveAndEnabled)
+			// Suppress live device events while replaying — the recorded log drives listeners instead.
+			if (isActiveAndEnabled && !IsReplaying)
 			{
-				NotifyListeners(TriggerContext.Empty);
+				EmitInput(TriggerContext.Empty);
 			}
 		}
 
 		private void Update()
 		{
+			// While replaying, don't read the live action at all; ReplayDriver re-emits the captured contexts.
+			if (IsReplaying)
+			{
+				return;
+			}
+
 			var action = Data.Action;
 
 			if (Data.Kind is ActionKind.Value)
@@ -95,14 +102,14 @@ namespace Assembler.Behaviours.Triggers.Input
 			// Button + hold: fire every frame the control is pressed. Down/up are event-driven (see Wire).
 			if (Data.Phase is ButtonPhase.Hold && action.IsPressed())
 			{
-				NotifyListeners(TriggerContext.Empty);
+				EmitInput(TriggerContext.Empty);
 			}
 		}
 
 		// Exposed for unit testing: live device polling is impractical to drive in a unit test, so the
 		// value-forwarding shape (axis/x/y) is verified through this seam.
 		// The action reads a Vector2 from its binding; it widens to a Vector3 (z = 0) here.
-		internal void Emit(Vector3 value) => NotifyListeners(BuildValueContext(value));
+		internal void Emit(Vector3 value) => EmitInput(BuildValueContext(value));
 
 		internal static TriggerContext BuildValueContext(Vector3 value) =>
 			TriggerContext.New(b =>
