@@ -453,30 +453,6 @@ No properties.
 | angle | float | Current angle of the line between the two fingers, in degrees. |
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
-## `pointer trigger`
-Fires on primary-pointer hover/press/hold/release and publishes the pointer's screen position plus
-            the live camera ray (origin + direction) and the ray's intersection with a configurable world plane, so
-            descriptors do screen→world picking without hand-rolled camera constants.
-
-**Role:** Trigger (event source — emits to listeners; not a listener target).
-
-### Properties
-
-| Name | Type | Description |
-|------|------|-------------|
-| Phase | hover|press|hold|release | When to fire — every frame the pointer has a position pressed or not (hover), once on press (press, default), every frame held (hold), or once on release (release). |
-| PlanePoint | Vector3 | A point on the world plane whose intersection becomes world_position. Defaults to (0, 0, 0). |
-| PlaneNormal | Vector3 | The world plane's normal. Defaults to (0, 1, 0) (the XZ ground plane); use (0, 0, 1) for a 2D XY game. |
-
-### Outputs
-
-| Name | Type | Description |
-|------|------|-------------|
-| screen_position | Vector3 | Screen-space pointer position in pixels (z is 0). |
-| world_position | Vector3 | Where the camera ray through the pointer meets the configured plane (falls back to the ray origin when the ray is parallel to the plane). |
-| origin | Vector3 | World-space origin of the camera ray through the pointer. |
-| direction | Vector3 | Normalised world-space direction of the camera ray through the pointer. |
-
 ## `timer trigger`
 Fires once after a delay.
 
@@ -838,6 +814,30 @@ Adds a Cinemachine virtual camera that frames a whole group of entities at once:
 | Damping | float | How softly the framing reacts as members move, in seconds (default Cinemachine's 2); 0 is instant. |
 | FramingSize | float | How much of the screen the group should fill, 0..1 (default Cinemachine's 0.8). |
 | Lens | float | Orthographic size or field of view in degrees, depending on the output camera projection. |
+
+## `screen to world`
+Unprojects a screen-space position through the live output camera and emits the world point on a
+            configurable plane plus the full camera ray, so descriptors do screen→world picking without hand-rolled
+            camera constants. Insert it in a chain after an input behaviour that supplies the screen position.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| ScreenPosition | Vector3 | Screen-space pixel position to unproject (z ignored). Bind to an upstream output, e.g. `!output axis` from an `input action` or `!output position` from a `tap trigger`. |
+| PlanePoint | Vector3 | A point on the world plane whose intersection becomes world_position. Defaults to (0, 0, 0). |
+| PlaneNormal | Vector3 | The world plane's normal. Defaults to (0, 1, 0) (the XZ ground plane); use (0, 0, 1) for a 2D XY game. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| screen_position | Vector3 | The screen-space position that was unprojected (z is 0). |
+| world_position | Vector3 | Where the camera ray through the screen point meets the configured plane (falls back to the ray origin when the ray is parallel to the plane). |
+| origin | Vector3 | World-space origin of the camera ray through the screen point. |
+| direction | Vector3 | Normalised world-space direction of the camera ray through the screen point. |
 
 ## `condition gate`
 Forwards an upstream trigger to listeners only when Condition evaluates to true at that moment.

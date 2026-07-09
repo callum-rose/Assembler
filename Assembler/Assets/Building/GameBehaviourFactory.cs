@@ -273,9 +273,9 @@ namespace Assembler.Building
 						i.Threshold.Resolve(ctx.Resolution))),
 				[typeof(PinchAndRotateTriggerInfo)] = Entry<PinchAndRotateTriggerInfo, PinchAndRotate, PinchAndRotateTriggerData>(
 					(i, ctx) => new PinchAndRotateTriggerData(i.Id)),
-				[typeof(PointerTriggerInfo)] = Entry<PointerTriggerInfo, PointerTrigger, PointerTriggerData>(
-					(i, ctx) => new PointerTriggerData(i.Id,
-						i.Phase.Resolve(ctx.Resolution),
+				[typeof(ScreenToWorldInfo)] = Entry<ScreenToWorldInfo, ScreenToWorld, ScreenToWorldData>(
+					(i, ctx) => new ScreenToWorldData(i.Id,
+						i.ScreenPosition.Resolve(ctx.Resolution),
 						i.PlanePoint.Resolve(ctx.Resolution),
 						i.PlaneNormal.Resolve(ctx.Resolution))),
 				[typeof(OnStartTriggerInfo)] = Entry<OnStartTriggerInfo, OnStartTrigger, OnStartTriggerData>(
