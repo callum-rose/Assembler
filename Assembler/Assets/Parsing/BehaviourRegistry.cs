@@ -83,6 +83,7 @@ namespace Assembler.Parsing
 				["state machine"] = StateMachineInfo.Create,
 				["perceive"] = PerceiveInfo.Create,
 				["perceive all"] = PerceiveAllInfo.Create,
+				["tag count"] = TagCountInfo.Create,
 				["steering"] = SteeringInfo.Create,
 				["navigate"] = NavigateInfo.Create,
 				["patrol"] = PatrolInfo.Create,

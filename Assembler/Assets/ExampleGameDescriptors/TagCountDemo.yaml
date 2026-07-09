@@ -1,0 +1,175 @@
+Game:
+  Title: Tag Count Demo
+  Description: |
+    The `tag count` behaviour, contrasted with the manual counter that
+    `EnemyHealthDemo` uses. Three enemies self-destruct on staggered timers; the
+    win condition is simply "no enemies remain".
+
+    There is NO hand-maintained `enemies remaining` seed, NO per-enemy decrement,
+    and NO idempotency guard. Instead a single `count enemies` (tag count) on the
+    `census` entity recomputes the live enemy count on demand and publishes it as
+    the `count` output. Each enemy, on death, destroys itself and then pings the
+    census to recount; the `win check` gate ends the game the moment `count` hits
+    zero, and the HUD label mirrors the same authoritative number.
+
+    The order of an enemy's death listeners matters: it destroys FIRST, then
+    recounts — the `destroy` behaviour evicts an entity from the live index the
+    instant it runs, so the recount never counts the entity just removed. Swapping
+    the order would read one-too-many on the final kill.
+
+World:
+  Dimensionality: 2
+  BackgroundColor: "#101820"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0 }
+
+Constants:
+  enemy size: !vec { X: 0.8, Y: 0.8, Z: 0.8 }
+  enemy colour: !colour red
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 5
+
+Variables:
+  # Display-only: mirrored from the authoritative live count on every census.
+  # The seed is irrelevant — the start-of-game census overwrites it before the
+  # first frame is drawn. It is never hand-decremented.
+  enemies remaining: 0
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.remaining: "Enemies remaining: {0}"
+
+Templates:
+  enemy:
+    Tags: [ enemy ]
+    Variables:
+      # Per-enemy lifetime, seeded by a !parameter at instantiation.
+      death delay: !parameter death_delay
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: sphere
+          Size: !var enemy size
+          Colour: !var enemy colour
+      life timer:
+        Type: timer trigger
+        Properties:
+          Delay: !var death delay
+          AutoStart: true
+        Listeners:
+          # Destroy FIRST (evicts from the live index synchronously), THEN recount,
+          # so the census never counts the enemy that just died.
+          - self destruct
+          - { EntityId: census, BehaviourId: count enemies }
+      self destruct:
+        Type: destroy
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
+Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
+  # The census: one `tag count` is the single source of truth for "how many
+  # enemies are alive". It emits the tally as the `count` output; its listeners
+  # read it via !output. No seed, no decrement, no double-count guard.
+  census:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      count enemies:
+        Type: tag count
+        Properties:
+          Tag: enemy
+        Listeners:
+          - show remaining
+          - win check
+      # One census at start populates the HUD from the real count, not a literal.
+      initial census:
+        Type: timer trigger
+        Properties: { Delay: 0, AutoStart: true }
+        Listeners:
+          - count enemies
+      show remaining:
+        Type: int variable setter
+        Properties:
+          VariableId: !var enemies remaining
+          Value: !output count
+      win check:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'count <= 0'
+            ArgumentTypes: [ int ]
+            With:
+              count: !output count
+        Listeners:
+          - !gameover
+
+  enemy a:
+    Template: { Id: enemy, Parameters: { death_delay: 1.5 } }
+    Position: !vec { X: -3, Y: 1 }
+  enemy b:
+    Template: { Id: enemy, Parameters: { death_delay: 3.0 } }
+    Position: !vec { X: 0, Y: 1 }
+  enemy c:
+    Template: { Id: enemy, Parameters: { death_delay: 4.5 } }
+    Position: !vec { X: 3, Y: 1 }
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
+
+  # HUD: the label's Text is re-read each frame, so binding it to the
+  # `enemies remaining` display variable shows the live count ticking down.
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 12
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          remaining:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.remaining, Arguments: [ !var enemies remaining ] }
+                  FontSize: 28
+                  PreferredWidth: 460
+                  PreferredHeight: 44

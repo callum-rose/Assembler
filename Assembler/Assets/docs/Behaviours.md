@@ -908,6 +908,23 @@ Sensor that scans for every tagged entity in range and writes them into blackboa
 | Velocities | List<Vector3> | !var reference to the vector-list variable cleared and filled with each detected entity's velocity (finite-differenced between scans). |
 | Count | int | !var reference to the int variable set to the number of entities detected this scan. |
 
+## `tag count`
+Counts the live entities carrying a tag and re-emits to its listeners with that count as an output.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Tag | string | Entity tag to count. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| count | int | The number of live entities carrying Tag at the moment of counting. |
+
 ## `steering`
 Blends a weighted list of steering forces into one velocity each frame.
 

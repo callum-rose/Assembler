@@ -181,6 +181,32 @@ namespace Assembler.Resolving
 			return result;
 		}
 
+		/// <summary>
+		/// The number of live entities currently carrying <paramref name="tag"/>, across the whole world (no range
+		/// limit) — the count primitive behind "all enemies destroyed" style win checks. Counts only entities with a
+		/// live transform (the same liveness check the spatial queries apply), so an entity torn down this frame but
+		/// not yet <see cref="Unregister"/>ed is excluded. Returns 0 for a tag no live entity carries.
+		/// </summary>
+		public int CountByTag(string tag)
+		{
+			if (!_idsByTag.TryGetValue(tag, out var bucket))
+			{
+				return 0;
+			}
+
+			var count = 0;
+
+			foreach (var id in bucket)
+			{
+				if (TryLivePosition(id, out _))
+				{
+					count++;
+				}
+			}
+
+			return count;
+		}
+
 		private bool TryLivePosition(string id, out Vector3 position)
 		{
 			if (_byId.TryGetValue(id, out var entry) && entry.Transform != null)
