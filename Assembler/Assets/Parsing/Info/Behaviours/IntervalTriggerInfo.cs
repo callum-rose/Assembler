@@ -18,7 +18,10 @@ namespace Assembler.Parsing.Info.Behaviours
 				listeners,
 				ValueSourceFactory.CreateValueSource<float>(ctx, props.GetValueOrDefault("Interval")),
 				ValueSourceFactory.CreateValueSource<int>(ctx, props.GetValueOrDefault("Count")),
-				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart")));
+				// AutoStart defaults to true: an omitted AutoStart self-arms the interval on entity start
+				// (the common "spawn on a cadence" case). Set AutoStart: false to make it wait for an
+				// upstream Execute instead.
+				ValueSourceFactory.CreateValueSource<bool>(ctx, props.GetValueOrDefault("AutoStart"), true));
 
 		public override BehaviourInfo SubstituteParameters(IReadOnlyList<ListenerInfo> substitutedListeners,
 			TransformContext ctx) =>
