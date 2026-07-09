@@ -4,7 +4,6 @@ using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
-using Assembler.Time;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -12,19 +11,6 @@ namespace Tests.Behaviours
 {
 	public class PerceiveAllTests
 	{
-		private sealed class FakeClock : IGameClock
-		{
-			public float DeltaTime { get; set; }
-			public float UnscaledDeltaTime { get; set; }
-			public double Time { get; set; }
-			public int FrameCount { get; set; }
-			public float TimeScale { get; set; } = 1f;
-			public bool IsPaused { get; set; }
-			public void Pause() { }
-			public void Resume() { }
-			public void Step(int frames = 1) { }
-		}
-
 		private GameObject _seer = null!;
 		private readonly List<GameObject> _spawned = new();
 
@@ -47,7 +33,7 @@ namespace Tests.Behaviours
 			_spawned.Clear();
 		}
 
-		private PerceiveAll Build(EntityQueryService query, PerceiveAllData data, FakeClock? clock = null)
+		private PerceiveAll Build(EntityQueryService query, PerceiveAllData data, FakeGameClock? clock = null)
 		{
 			_seer = new GameObject("seer");
 			// The factory wires every behaviour to its owning entity; mirror that so PerceiveAll can read its own
@@ -60,7 +46,7 @@ namespace Tests.Behaviours
 			perceive.SetEntity(entity);
 			perceive.Query = query;
 			perceive.Sight = new LineOfSightService();
-			perceive.Clock = clock ?? new FakeClock();
+			perceive.Clock = clock ?? new FakeGameClock();
 			perceive.Initialise(data, Array.Empty<Listener>());
 
 			return perceive;
@@ -218,7 +204,7 @@ namespace Tests.Behaviours
 			var query = new EntityQueryService();
 			var mover = Enemy(query, "mover", new Vector3(2, 0, 0));
 
-			var clock = new FakeClock { Time = 0 };
+			var clock = new FakeGameClock { Time = 0 };
 			var velocities = new ValueProvider<List<Vector3>>(new List<Vector3>());
 
 			var perceive = Build(query,
