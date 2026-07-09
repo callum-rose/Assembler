@@ -276,6 +276,12 @@ namespace Assembler.Building
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
 
+			// 5a. Drive every per-frame behaviour from one ordered central tick instead of each behaviour's own
+			// Update, so a shared-velocity stack (acceleration → drag → speed limit → velocity) composes in stable
+			// registration order rather than Unity's undefined per-component Update order (issue #241). The driver
+			// reads the registry's live list, so spawned/destroyed entities stay in sync via register/deregister.
+			gameRoot.AddComponent<PerFrameDriver>().Initialise(behaviourRegistry.PerFrameBehaviours, gameClock);
+
 			// 5b. Register every input trigger with the active replay session so a recorded emission can be routed
 			// back to the exact trigger on replay. Done after initialisation, when each trigger's descriptor
 			// (entity id + behaviour id) is set. Lookup is by descriptor, so registration order is irrelevant.
