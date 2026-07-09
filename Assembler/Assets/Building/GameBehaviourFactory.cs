@@ -666,6 +666,9 @@ namespace Assembler.Building
 						i.Direction.Resolve(ctx.Resolution),
 						i.Speed.Resolve(ctx.Resolution),
 						i.AgentRadius.Resolve(ctx.Resolution))),
+				[typeof(NavObstacleInfo)] = Entry<NavObstacleInfo, NavObstacle, NavObstacleData>(
+					(i, ctx) => new NavObstacleData(i.Id,
+						i.Blocked.Resolve(ctx.Resolution))),
 				[typeof(PatrolInfo)] = Entry<PatrolInfo, Patrol, PatrolData>(
 					(i, ctx) => new PatrolData(i.Id,
 						i.Waypoints.Resolve(ctx.Resolution),

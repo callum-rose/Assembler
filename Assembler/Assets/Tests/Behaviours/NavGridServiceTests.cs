@@ -157,6 +157,78 @@ namespace Tests.Behaviours
 			Assert.AreEqual(0f, ObstacleService(NavPlane.XY).DefaultAgentRadius, 1e-4f);
 		}
 
+		[Test]
+		public void DynamicObstacleBlocksAndReopensItsCell()
+		{
+			// The nav obstacle behaviour drives this: destructible/moving terrain toggles walkability at runtime,
+			// unlike the baked static grid. A cell open on the empty grid blocks while an obstacle sits on it and
+			// reopens the moment the obstacle is toggled off — no rebuild, no waiting for collider teardown.
+			var service = Service(NavPlane.XY);
+			var at = new Vector3(0.5f, 0.5f, 0f);
+			var footprint = new Bounds(at, new Vector3(0.8f, 0.8f, 1f));
+
+			Assert.IsTrue(service.IsWalkable(at, 0f), "the empty grid starts walkable");
+
+			service.SetObstacle(new object(), footprint, blocked: true);
+			Assert.IsFalse(service.IsWalkable(at, 0f), "the cell blocks while the obstacle occupies it");
+		}
+
+		[Test]
+		public void TogglingADynamicObstacleOffReopensItsCell()
+		{
+			var service = Service(NavPlane.XY);
+			var at = new Vector3(0.5f, 0.5f, 0f);
+			var footprint = new Bounds(at, new Vector3(0.8f, 0.8f, 1f));
+			var handle = new object();
+
+			service.SetObstacle(handle, footprint, blocked: true);
+			service.SetObstacle(handle, footprint, blocked: false);
+			Assert.IsTrue(service.IsWalkable(at, 0f), "toggling Blocked false reopens the cell");
+
+			service.SetObstacle(handle, footprint, blocked: true);
+			service.RemoveObstacle(handle);
+			Assert.IsTrue(service.IsWalkable(at, 0f), "the OnDestroy leak-guard (RemoveObstacle) reopens the cell too");
+		}
+
+		[Test]
+		public void OverlappingDynamicObstaclesAreRefcounted()
+		{
+			// Two obstacles on the same cell: removing one must not reopen it while the other is still there —
+			// otherwise a destroyed block would wrongly clear a cell a second block still occupies.
+			var service = Service(NavPlane.XY);
+			var at = new Vector3(0.5f, 0.5f, 0f);
+			var footprint = new Bounds(at, new Vector3(0.8f, 0.8f, 1f));
+			var first = new object();
+			var second = new object();
+
+			service.SetObstacle(first, footprint, blocked: true);
+			service.SetObstacle(second, footprint, blocked: true);
+
+			service.RemoveObstacle(first);
+			Assert.IsFalse(service.IsWalkable(at, 0f), "the cell stays blocked while the second obstacle remains");
+
+			service.RemoveObstacle(second);
+			Assert.IsTrue(service.IsWalkable(at, 0f), "the cell reopens once the last obstacle leaves");
+		}
+
+		[Test]
+		public void DynamicObstacleClearsInflatedGridsForRadiusAgents()
+		{
+			// The overlay must flow through to the per-radius inflated grids (the cache the flow fields and larger
+			// agents read), not just the radius-0 base — otherwise a large agent would walk through a fresh block.
+			var service = Service(NavPlane.XY);
+			var at = new Vector3(0.5f, 0.5f, 0f);
+			var nearBlock = new Vector3(2.5f, 0.5f, 0f);
+
+			// Query a radius first so an inflated grid is built and cached before the overlay changes.
+			Assert.IsTrue(service.IsWalkable(nearBlock, 2f), "the empty grid is clear for a large agent");
+
+			service.SetObstacle(new object(), new Bounds(at, new Vector3(0.8f, 0.8f, 1f)), blocked: true);
+
+			Assert.IsFalse(service.IsWalkable(nearBlock, 2f), "a large agent is kept clear of the new block");
+			Assert.IsTrue(service.IsWalkable(nearBlock, 0f), "a point-sized agent may still pass close by");
+		}
+
 		// A grid service whose obstacles are exactly the test-created entities tagged ObstacleTag.
 		// DefaultAgentRadius is the game-wide fallback the behaviours apply when an agent's own radius is unset;
 		// the service's query methods take the per-agent radius explicitly.
