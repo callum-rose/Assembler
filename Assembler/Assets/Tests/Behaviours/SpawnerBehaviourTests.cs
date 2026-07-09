@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace Tests.Behaviours
 {
-	public class SpawnerBehaviourTests
+	public class SpawnerBehaviourTests : BehaviourTestFixture
 	{
 		private sealed class RecordingSpawner : IEntitySpawner
 		{
@@ -24,15 +24,14 @@ namespace Tests.Behaviours
 		[SetUp]
 		public void Seed() => RandomMath.Seed(12345);
 
-		private static (SpawnerBehaviour behaviour, RecordingSpawner spawner, GameObject go) NewSpawner(
-			SpawnerData data)
+		private (SpawnerBehaviour behaviour, RecordingSpawner spawner) NewSpawner(SpawnerData data)
 		{
-			var go = new GameObject("SpawnerTestObject");
+			var go = Track(new GameObject("SpawnerTestObject"));
 			var behaviour = go.AddComponent<SpawnerBehaviour>();
 			var spawner = new RecordingSpawner();
 			behaviour.Spawner = spawner;
 			behaviour.Initialise(data, Array.Empty<Listener>());
-			return (behaviour, spawner, go);
+			return (behaviour, spawner);
 		}
 
 		private static SpawnerData Data(
@@ -53,17 +52,10 @@ namespace Tests.Behaviours
 		[Test]
 		public void FallsBackToTemplateIdWhenNoTemplatesListed()
 		{
-			var (behaviour, spawner, go) = NewSpawner(Data(templateId: new ValueProvider<string>("solo")));
-			try
-			{
-				behaviour.Execute(TriggerContext.Empty);
-				behaviour.Execute(TriggerContext.Empty);
-				CollectionAssert.AreEqual(new[] { "solo", "solo" }, spawner.SpawnedTemplateIds);
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			var (behaviour, spawner) = NewSpawner(Data(templateId: new ValueProvider<string>("solo")));
+			behaviour.Execute(TriggerContext.Empty);
+			behaviour.Execute(TriggerContext.Empty);
+			CollectionAssert.AreEqual(new[] { "solo", "solo" }, spawner.SpawnedTemplateIds);
 		}
 
 		[Test]
@@ -72,76 +64,48 @@ namespace Tests.Behaviours
 			var data = Data(
 				templates: new[] { Template("a"), Template("b") },
 				selection: new ValueProvider<string>("sequential"));
-			var (behaviour, spawner, go) = NewSpawner(data);
-			try
+			var (behaviour, spawner) = NewSpawner(data);
+			for (int i = 0; i < 4; i++)
 			{
-				for (int i = 0; i < 4; i++)
-				{
-					behaviour.Execute(TriggerContext.Empty);
-				}
+				behaviour.Execute(TriggerContext.Empty);
+			}
 
-				CollectionAssert.AreEqual(new[] { "a", "b", "a", "b" }, spawner.SpawnedTemplateIds);
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			CollectionAssert.AreEqual(new[] { "a", "b", "a", "b" }, spawner.SpawnedTemplateIds);
 		}
 
 		[Test]
 		public void RandomSelectionOnlySpawnsPositivelyWeightedTemplates()
 		{
 			var data = Data(templates: new[] { Template("zero", 0f), Template("one", 1f) });
-			var (behaviour, spawner, go) = NewSpawner(data);
-			try
+			var (behaviour, spawner) = NewSpawner(data);
+			for (int i = 0; i < 50; i++)
 			{
-				for (int i = 0; i < 50; i++)
-				{
-					behaviour.Execute(TriggerContext.Empty);
-				}
+				behaviour.Execute(TriggerContext.Empty);
+			}
 
-				CollectionAssert.DoesNotContain(spawner.SpawnedTemplateIds, "zero");
-				Assert.That(spawner.SpawnedTemplateIds, Has.All.EqualTo("one"));
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			CollectionAssert.DoesNotContain(spawner.SpawnedTemplateIds, "zero");
+			Assert.That(spawner.SpawnedTemplateIds, Has.All.EqualTo("one"));
 		}
 
 		[Test]
 		public void RandomSelectionCoversAllTemplatesAndOnlyThem()
 		{
 			var data = Data(templates: new[] { Template("a"), Template("b") });
-			var (behaviour, spawner, go) = NewSpawner(data);
-			try
+			var (behaviour, spawner) = NewSpawner(data);
+			for (int i = 0; i < 200; i++)
 			{
-				for (int i = 0; i < 200; i++)
-				{
-					behaviour.Execute(TriggerContext.Empty);
-				}
+				behaviour.Execute(TriggerContext.Empty);
+			}
 
-				// Every spawn is one of the two templates, and both appear over many spawns.
-				Assert.That(spawner.SpawnedTemplateIds.Distinct(), Is.EquivalentTo(new[] { "a", "b" }));
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			// Every spawn is one of the two templates, and both appear over many spawns.
+			Assert.That(spawner.SpawnedTemplateIds.Distinct(), Is.EquivalentTo(new[] { "a", "b" }));
 		}
 
 		[Test]
 		public void ThrowsWhenNeitherTemplatesNorTemplateIdSet()
 		{
-			var (behaviour, _, go) = NewSpawner(Data());
-			try
-			{
-				Assert.Throws<InvalidOperationException>(() => behaviour.Execute(TriggerContext.Empty));
-			}
-			finally
-			{
-				UnityEngine.Object.DestroyImmediate(go);
-			}
+			var (behaviour, _) = NewSpawner(Data());
+			Assert.Throws<InvalidOperationException>(() => behaviour.Execute(TriggerContext.Empty));
 		}
 	}
 }

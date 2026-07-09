@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Parsing.Info.Behaviours;
@@ -9,16 +8,13 @@ namespace Tests.Parsing
 {
 	public class EntityTagTests
 	{
-		private static GameInfo Parse(string yaml) =>
-			Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		private static EntityPropertySource<UnityEngine.Vector3> PositionSourceOf(GameInfo info, string entityId) =>
 			(EntityPropertySource<UnityEngine.Vector3>)info.Entities.First(e => e.Id == entityId).InitialPosition;
 
 		[Test]
 		public void MappingEntityTagBecomesEntityPropertySource()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   follower:
     Position: !entity { Id: leader, Property: Position }
@@ -34,7 +30,7 @@ Entities:
 		[Test]
 		public void RotationAndScalePropertiesParse()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   reads rotation:
     Position: !entity { Id: leader, Property: Rotation }
@@ -50,7 +46,7 @@ Entities:
 		[Test]
 		public void PropertyNameIsCaseInsensitive()
 		{
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   follower:
     Position: !entity { Id: leader, Property: position }
@@ -70,7 +66,7 @@ Entities:
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -86,7 +82,7 @@ Entities:
           Text: hi
           FontSize: !entity { Id: hud, Property: Position }
 ";
-			Assert.Throws<ParsingException>(() => Parse(yaml));
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -99,7 +95,7 @@ Entities:
   leader:
     Position: !vec { X: 0, Y: 0, Z: 0 }
 ";
-			Assert.Catch(() => Parse(yaml));
+			Assert.Catch(() => ParseHelper.ParseGame(yaml));
 		}
 
 		[Test]
@@ -107,7 +103,7 @@ Entities:
 		{
 			// !entity with no Id is the self shorthand: a direct entity behaviour reading its own transform
 			// resolves to that entity's id at instantiation (issue #400).
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   spinner:
     Behaviours:
@@ -130,7 +126,7 @@ Entities:
 		{
 			// An !entity used as a !text argument is untyped, so it parses as EntityPropertySource<object>
 			// (mirroring how a nested !text parses as LocalisedTextSource<object>) — issue #523.
-			var info = Parse(@"
+			var info = ParseHelper.ParseGame(@"
 Entities:
   hud:
     Behaviours:
@@ -155,7 +151,7 @@ Entities:
   follower:
     Position: !entity { Id: '', Property: Position }
 ";
-			Assert.Catch(() => Parse(yaml));
+			Assert.Catch(() => ParseHelper.ParseGame(yaml));
 		}
 	}
 }

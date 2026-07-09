@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Triggers.Variables;
 using Assembler.Resolving;
@@ -12,23 +10,6 @@ namespace Tests.Behaviours
 {
 	public class VariableChangedTriggerTests
 	{
-		private sealed class ActionListener : Listener
-		{
-			private readonly Action<TriggerContext> _action;
-
-			public ActionListener(Action<TriggerContext> action)
-				: base(new Dictionary<string, string>())
-			{
-				_action = action;
-			}
-
-			public override void Notify(TriggerContext ctx) => _action(Prepare(ctx));
-
-#if DEBUG_CONSOLE
-			public override IEnumerable<GameBehaviour> DebugTargets() => Enumerable.Empty<GameBehaviour>();
-#endif
-		}
-
 		[Test]
 		public void Set_NotifiesListenersWithNewAndPreviousValues()
 		{

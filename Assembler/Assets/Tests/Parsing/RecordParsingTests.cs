@@ -1,5 +1,4 @@
 using System.Linq;
-using Assembler.Deserialisation;
 using Assembler.Libraries;
 using Assembler.Parsing;
 using Assembler.Core;
@@ -18,12 +17,10 @@ Records:
     durability: { Type: float, Default: 1.0 }
 ";
 
-		private static GameInfo Transform(string yaml) => Transformer.Transform(new GameFileParser().Parse(yaml));
-
 		[Test]
 		public void RecordsSection_ParsesFieldTypesAndDefaults()
 		{
-			var info = Transform(ItemSchema + @"
+			var info = ParseHelper.ParseGame(ItemSchema + @"
 Constants:
   marker: 0
 ");
@@ -46,7 +43,7 @@ Constants:
 		[Test]
 		public void RecordLiteral_FillsUnsetFieldsWithDefaults()
 		{
-			var info = Transform(ItemSchema + @"
+			var info = ParseHelper.ParseGame(ItemSchema + @"
 Constants:
   potion: !record { Type: Item, kind: potion }
 ");
@@ -63,7 +60,7 @@ Constants:
 		[Test]
 		public void RecordLiteral_OverridesDefaultsWhenProvided()
 		{
-			var info = Transform(ItemSchema + @"
+			var info = ParseHelper.ParseGame(ItemSchema + @"
 Constants:
   potion: !record { Type: Item, kind: potion, count: 5 }
 ");
@@ -75,7 +72,7 @@ Constants:
 		[Test]
 		public void RecordLiteral_UnknownFieldThrows()
 		{
-			var ex = Assert.Throws<ParsingException>(() => Transform(ItemSchema + @"
+			var ex = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(ItemSchema + @"
 Constants:
   bad: !record { Type: Item, bogus: 5 }
 "));
@@ -86,7 +83,7 @@ Constants:
 		[Test]
 		public void RecordLiteral_TypeMismatchThrows()
 		{
-			Assert.Throws<ParsingException>(() => Transform(ItemSchema + @"
+			Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(ItemSchema + @"
 Constants:
   bad: !record { Type: Item, count: ""not an int"" }
 "));
@@ -95,7 +92,7 @@ Constants:
 		[Test]
 		public void EmptyRecordList_ProducesTypedListOfRecord()
 		{
-			var info = Transform(ItemSchema + @"
+			var info = ParseHelper.ParseGame(ItemSchema + @"
 Variables:
   inventory: !record []
 ");
@@ -111,7 +108,7 @@ Variables:
 		[Test]
 		public void RecordList_ElementsAreCompletedWithDefaults()
 		{
-			var info = Transform(ItemSchema + @"
+			var info = ParseHelper.ParseGame(ItemSchema + @"
 Variables:
   inventory: !record [ { Type: Item, kind: coin, count: 3 }, { Type: Item, kind: key } ]
 ");

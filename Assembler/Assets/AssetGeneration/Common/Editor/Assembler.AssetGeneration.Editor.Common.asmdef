@@ -1,7 +1,12 @@
 {
     "name": "Assembler.AssetGeneration.Editor.Common",
     "rootNamespace": "Assembler.AssetGeneration.EditorCommon",
-    "references": [],
+    "references": [
+        "Assembler.AssetGeneration.MeshToVoxel",
+        "Assembler.AssetGeneration.MeshToVoxels",
+        "Assembler.AssetGeneration.ImageToMesh",
+        "Assembler.AssetGeneration.Common"
+    ],
     "includePlatforms": [
         "Editor"
     ],
