@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Assembler.AssetGeneration.MeshToVoxel
+namespace Assembler.AssetGeneration.Colour
 {
     /// <summary>The three colour-handling modes surfaced as live toggles in the Mesh to Voxel window.</summary>
     public enum ColourMode

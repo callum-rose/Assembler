@@ -1,7 +1,9 @@
 {
     "name": "Assembler.AssetGeneration.MeshToVoxel",
     "rootNamespace": "Assembler",
-    "references": [],
+    "references": [
+        "Assembler.AssetGeneration.Colour"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

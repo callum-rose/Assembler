@@ -1,4 +1,4 @@
-namespace Assembler.AssetGeneration.MeshToVoxel
+namespace Assembler.AssetGeneration.Colour
 {
     /// <summary>
     /// Portable 8-bit sRGB RGBA colour — the engine-free stand-in for <c>UnityEngine.Color32</c> in

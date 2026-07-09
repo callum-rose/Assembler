@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel
 {

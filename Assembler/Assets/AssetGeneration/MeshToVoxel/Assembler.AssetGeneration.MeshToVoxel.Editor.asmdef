@@ -2,6 +2,7 @@
     "name": "Assembler.AssetGeneration.MeshToVoxel.Editor",
     "rootNamespace": "Assembler",
     "references": [
+        "Assembler.AssetGeneration.Colour",
         "Assembler.AssetGeneration.MeshToVoxel",
         "Assembler.AssetGeneration.MeshToVoxels",
         "Assembler.AssetGeneration.Editor.Common"

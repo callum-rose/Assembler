@@ -6,6 +6,7 @@ using Assembler.AssetGeneration.EditorCommon;
 using Assembler.AssetGeneration.MeshToVoxels;
 using UnityEditor;
 using UnityEngine;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel.Editor
 {

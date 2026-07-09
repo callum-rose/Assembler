@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.MeshToVoxel
 {

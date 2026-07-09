@@ -14,6 +14,7 @@ using Assembler.AssetGeneration.MeshToVoxel.Generation;
 using Assembler.AssetGeneration.TextToImage;
 using UnityEditor;
 using UnityEngine;
+using Assembler.AssetGeneration.Colour;
 
 namespace Assembler.AssetGeneration.TextToVoxelPipeline.Editor
 {
