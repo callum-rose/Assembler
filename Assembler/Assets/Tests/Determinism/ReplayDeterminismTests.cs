@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Replay;
 using Assembler.Building;
@@ -37,7 +36,56 @@ namespace Tests.Determinism
 		private const uint SeedA = 12345u;
 		private const uint SeedB = 987u;
 
-		private static string ProbePath => Path.Combine(Application.dataPath, "Tests", "Determinism", "ReplayProbe.yaml");
+		// The probe descriptor is embedded rather than loaded from disk so the test runs unchanged in a built
+		// player (where Application.dataPath is not the Assets folder) — the reliable headless path is a player
+		// test build (Tools/run-tests.sh --player), since in-editor batch PlayMode hangs on this setup. Physics-free
+		// and UI-free; the mover is moved only inside the input trigger's own notify chain (no intra-tick race).
+		private const string ProbeYaml = @"
+Game:
+  Title: Replay Probe
+  Description: Deterministic record/replay probe (issue 101) - not a playable game.
+
+World:
+  Dimensionality: 2
+
+Variables:
+  is dead: false
+
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+  Bindings:
+    auto:
+      move: [ ""<Gamepad>/leftStick"" ]
+
+Entities:
+  mover:
+    Position: !expr
+      Do: 'new UnityEngine.Vector3(RandomFloat(-3f, 3f), RandomFloat(-3f, 3f), 0f)'
+      RegisterTypes: [ UnityEngine.Vector3 ]
+    Behaviours:
+      move input:
+        Type: input action
+        Properties: { Action: move }
+        Listeners: [ nudge ]
+      nudge:
+        Type: translate
+        Properties:
+          Displacement: !output axis
+
+  referee:
+    Position: !vec { X: 0, Y: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ gate ]
+      gate:
+        Type: condition gate
+        Properties:
+          Condition: !var is dead
+        Listeners:
+          - !gameover
+";
 
 		[UnityTest]
 		public IEnumerator Replaying_a_recorded_log_reproduces_final_state()
@@ -87,8 +135,7 @@ namespace Tests.Determinism
 		private IEnumerator RunProbe(uint seed, InputReplaySession session, bool driveInput,
 			IReadOnlyList<Vector2> schedule, System.Action<Vector3> onFinalPosition)
 		{
-			var yaml = File.ReadAllText(ProbePath);
-			var gameDto = new GameFileParser().Parse(yaml);
+			var gameDto = new GameFileParser().Parse(ProbeYaml);
 			var gameInfo = Transformer.Transform(gameDto);
 			var controls = ControlsTransformer.Transform(gameDto.Controls);
 
