@@ -199,10 +199,12 @@ Variables:
   creeps alive: 0
   spawn gap: 1.1
 
-  # Build state. `picked cell` is the raw board cell under the pointer this event
-  # (may be off-board); `cursor cell` is the last ON-board cell, where the ghost
-  # plate sits. `pointer phase` mirrors the active palette drag ("press"/"drag"/
-  # "release"); `placing` is true while that drag is in flight (ghost visible).
+  # Build state. `hover cell` is the board cell under the pointer each frame (the
+  # per-frame `pointer-pos` feed); `cursor cell` is the last ON-board cell, where
+  # the ghost plate sits (both a hover and a drag keep it there); `picked cell` is
+  # the raw cell a drag/tap event resolved (may be off-board). `pointer phase`
+  # mirrors the active palette drag; `placing` is true while a drag is in flight.
+  hover cell: !vec { X: 3, Y: 5 }
   cursor cell: !vec { X: 3, Y: 5 }
   picked cell: !vec { X: -99, Y: -99 }
   selected tower: ""
@@ -315,6 +317,15 @@ Expressions:
     ArgumentNames: [ screen_pos, guard, occupied, cell ]
     ReturnType: bool
     Expression: 'return onBoard(screen_pos, guard) && IsOccupied(occupied, cell.x, cell.y);'
+
+  # The hover ghost moves only while the pointer is over the board (an in-bounds
+  # cell AND not over the UI rail), so it freezes at the last board cell rather
+  # than jumping to a far-right cell when the pointer slides onto the palette.
+  hoverShow:
+    ArgumentTypes: [ vector, int, int, vector, float ]
+    ArgumentNames: [ cell, cols, rows, screen_pos, guard ]
+    ReturnType: bool
+    Expression: 'return InBounds(cell.x, cell.y, cols, rows) && onBoard(screen_pos, guard);'
 
   selectedCost:
     ArgumentTypes: [ string, int, int, int, int, int ]
@@ -448,20 +459,24 @@ Expressions:
     Expression: 'return fast ? 2f : 1f;'
 
 # Building is a `ui drag source` gesture and upgrading is a `tap trigger`, both of
-# which read the pointer directly - so the only Controls actions are the two
-# discrete toggles.
+# which read the pointer directly. The one value action is `pointer-pos`: it
+# streams the pointer position every frame so the ghost plate can hover-follow the
+# cursor with no button down (touch has no hover, so it just tracks while pressed).
 Controls:
   Actions:
-    speed: { Type: button, Phase: down }
-    quit:  { Type: button, Phase: down }
+    pointer-pos: { Type: value, ValueType: vector2 }
+    speed:       { Type: button, Phase: down }
+    quit:        { Type: button, Phase: down }
 
   Bindings:
     desktop:
-      speed: [ "<Keyboard>/f" ]
-      quit:  [ "<Keyboard>/escape" ]
+      pointer-pos: [ "<Mouse>/position" ]
+      speed:       [ "<Keyboard>/f" ]
+      quit:        [ "<Keyboard>/escape" ]
     mobile:
-      speed: [ "<Gamepad>/rightShoulder" ]
-      quit:  [ "<Gamepad>/start" ]
+      pointer-pos: [ "<Touchscreen>/primaryTouch/position" ]
+      speed:       [ "<Gamepad>/rightShoulder" ]
+      quit:        [ "<Gamepad>/start" ]
 
 Localisation:
   DefaultLocale: en
@@ -1386,8 +1401,10 @@ Entities:
             With: { alive: !var creeps alive }
 
   # =========================================================================
-  # BUILD CURSOR - the board's pointer end. It owns two pipelines that both
+  # BUILD CURSOR - the board's pointer end. It owns three pipelines that all
   # start from a `screen to world` unprojection (no camera constants):
+  #   HOVER runs every frame off the `pointer-pos` value action: the ghost plate
+  #     follows the cursor over the board even with no button down.
   #   PLACEMENT is driven by the palette `ui drag source` widgets. Each forwards
   #     its press/drag/release stream here: `to world` unprojects the live drag
   #     position, `stash raw cell` snaps it to a cell (the ghost plate tracks it),
@@ -1467,6 +1484,45 @@ Entities:
               oz: !var grid origin z
               y: !var cursor y
           SmoothTime: 0.07
+
+      # ---- Hover: every frame the pointer position (no button needed) is
+      #      unprojected and, while it is over the board, `cursor cell` follows it
+      #      so the ghost plate tracks the mouse before any drag begins. ----
+      hover input:
+        Type: input action
+        Properties: { Action: pointer-pos }
+        Listeners: [ hover to world ]
+      hover to world:
+        Type: screen to world
+        Properties: { ScreenPosition: !output axis }
+        Listeners: [ stash hover cell, hover show gate ]
+      stash hover cell:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var hover cell
+          Value: !expr
+            Do: boardCell
+            With:
+              world: !output world_position
+              ox: !var grid origin x
+              oz: !var grid origin z
+      hover show gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: hoverShow
+            With:
+              cell: !var hover cell
+              cols: !var grid cols
+              rows: !var grid rows
+              screen_pos: !output screen_position
+              guard: !var ui guard u
+        Listeners: [ sync hover cursor ]
+      sync hover cursor:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var cursor cell
+          Value: !var hover cell
 
       # ---- Shared placement pipeline. The palette `ui drag source` widgets fire
       #      `set placing`, `stash phase` and then `to world` on every press/drag/
