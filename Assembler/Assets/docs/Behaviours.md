@@ -453,6 +453,30 @@ No properties.
 | angle | float | Current angle of the line between the two fingers, in degrees. |
 | angle_delta | float | Signed change in that angle since the previous frame, in degrees (positive = counter-clockwise). |
 
+## `pointer trigger`
+Fires on primary-pointer hover/press/hold/release and publishes the pointer's screen position plus
+            the live camera ray (origin + direction) and the ray's intersection with a configurable world plane, so
+            descriptors do screen→world picking without hand-rolled camera constants.
+
+**Role:** Trigger (event source — emits to listeners; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Phase | hover|press|hold|release | When to fire — every frame the pointer has a position pressed or not (hover), once on press (press, default), every frame held (hold), or once on release (release). |
+| PlanePoint | Vector3 | A point on the world plane whose intersection becomes world_position. Defaults to (0, 0, 0). |
+| PlaneNormal | Vector3 | The world plane's normal. Defaults to (0, 1, 0) (the XZ ground plane); use (0, 0, 1) for a 2D XY game. |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| screen_position | Vector3 | Screen-space pointer position in pixels (z is 0). |
+| world_position | Vector3 | Where the camera ray through the pointer meets the configured plane (falls back to the ray origin when the ray is parallel to the plane). |
+| origin | Vector3 | World-space origin of the camera ray through the pointer. |
+| direction | Vector3 | Normalised world-space direction of the camera ray through the pointer. |
+
 ## `timer trigger`
 Fires once after a delay.
 

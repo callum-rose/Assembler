@@ -52,6 +52,7 @@ namespace Assembler.Parsing
 				["swipe trigger"] = SwipeTriggerInfo.Create,
 				["drag trigger"] = DragTriggerInfo.Create,
 				["pinch and rotate trigger"] = PinchAndRotateTriggerInfo.Create,
+				["pointer trigger"] = PointerTriggerInfo.Create,
 				["timer trigger"] = TimerTriggerInfo.Create,
 				["deferred trigger"] = DeferredTriggerInfo.Create,
 				["debounced trigger"] = DebouncedTriggerInfo.Create,

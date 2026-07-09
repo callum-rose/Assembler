@@ -40,6 +40,22 @@ namespace Assembler.Parsing.Info.Behaviours
 		Orthographic
 	}
 
+	/// <summary>When a <c>pointer trigger</c> fires relative to the primary pointer's press state.</summary>
+	public enum PointerPhase
+	{
+		/// <summary>Fires every frame the pointer has a position, pressed or not (mouse hover; the last touch point on mobile).</summary>
+		Hover,
+
+		/// <summary>Fires once on the frame the pointer is pressed.</summary>
+		Press,
+
+		/// <summary>Fires every frame the pointer is held down.</summary>
+		Hold,
+
+		/// <summary>Fires once on the frame the pointer is released.</summary>
+		Release
+	}
+
 	/// <summary>Which rig a <c>camera follow</c> uses: a 2D screen-space framing rig or a 3D
 	/// world-offset rig.</summary>
 	public enum CameraFollowMode
@@ -112,6 +128,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(PrimitiveType) ? ParsePrimitiveType(normalised, raw) :
 				typeof(TEnum) == typeof(TextAnchor) ? ParseTextAnchor(normalised, raw) :
 				typeof(TEnum) == typeof(CameraProjection) ? ParseCameraProjection(normalised, raw) :
+				typeof(TEnum) == typeof(PointerPhase) ? ParsePointerPhase(normalised, raw) :
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
 				typeof(TEnum) == typeof(CameraConfinerMode) ? ParseCameraConfinerMode(normalised, raw) :
 				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
@@ -223,6 +240,17 @@ namespace Assembler.Parsing.Info.Behaviours
 				"orthographic" => CameraProjection.Orthographic,
 				_ => throw new ParsingException(
 					$"Unknown camera view '{raw}'. Valid values: perspective, orthographic")
+			};
+
+		private static PointerPhase ParsePointerPhase(string s, string raw) =>
+			s switch
+			{
+				"hover" or "move" or "track" => PointerPhase.Hover,
+				"press" or "down" => PointerPhase.Press,
+				"hold" => PointerPhase.Hold,
+				"release" or "up" => PointerPhase.Release,
+				_ => throw new ParsingException(
+					$"Unknown pointer phase '{raw}'. Valid values: hover, press, hold, release")
 			};
 
 		private static CameraFollowMode ParseCameraFollowMode(string s, string raw) =>

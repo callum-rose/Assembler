@@ -273,6 +273,11 @@ namespace Assembler.Building
 						i.Threshold.Resolve(ctx.Resolution))),
 				[typeof(PinchAndRotateTriggerInfo)] = Entry<PinchAndRotateTriggerInfo, PinchAndRotate, PinchAndRotateTriggerData>(
 					(i, ctx) => new PinchAndRotateTriggerData(i.Id)),
+				[typeof(PointerTriggerInfo)] = Entry<PointerTriggerInfo, PointerTrigger, PointerTriggerData>(
+					(i, ctx) => new PointerTriggerData(i.Id,
+						i.Phase.Resolve(ctx.Resolution),
+						i.PlanePoint.Resolve(ctx.Resolution),
+						i.PlaneNormal.Resolve(ctx.Resolution))),
 				[typeof(OnStartTriggerInfo)] = Entry<OnStartTriggerInfo, OnStartTrigger, OnStartTriggerData>(
 					(i, ctx) => new OnStartTriggerData(i.Id)),
 				[typeof(TimerTriggerInfo)] = Entry<TimerTriggerInfo, TimerTrigger, TimerTriggerData>(

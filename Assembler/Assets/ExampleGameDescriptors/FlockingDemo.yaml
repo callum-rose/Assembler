@@ -102,22 +102,6 @@ Expressions:
     ReturnType: vector
     Expression: "return Distance(pos, mouse) < radius ? Flee(pos, mouse, max) : new UnityEngine.Vector3(0f, 0f, 0f);"
 
-  # Convert a screen-space pointer position to a world point on the z=0 plane for this orthographic
-  # camera. Self-contained (no Camera.main, which the camera entity isn't tagged for) — derived from
-  # the viewport mapping using the camera's known position and orthographic size.
-  screenToWorld:
-    ArgumentTypes: [ vector, vector, float ]
-    ArgumentNames: [ screen_pos, cam_pos, ortho_size ]
-    ReturnType: vector
-    RegisterTypes: [ UnityEngine.Screen ]
-    Expression: |
-      var w = UnityEngine.Screen.width * 1f;
-      var h = UnityEngine.Screen.height * 1f;
-      var aspect = w / h;
-      var x = cam_pos.x + (screen_pos.x / w - 0.5f) * 2f * ortho_size * aspect;
-      var y = cam_pos.y + (screen_pos.y / h - 0.5f) * 2f * ortho_size;
-      return new UnityEngine.Vector3(x, y, 0f);
-
 Templates:
   boid:
     Tags: [ boid ]
@@ -217,21 +201,16 @@ Placements:
 Controls:
   Actions:
     quit:   { Type: button, Phase: down }
-    cursor: { Type: value, ValueType: vector2 }
 
   Bindings:
-    # Desktop: the mouse repels the flock; Q quits.
+    # Desktop: Q quits. The flock is repelled by the `pointer trigger` below, which reads the live
+    # mouse/touch position directly (no control binding needed).
     desktop:
       quit:   [ "<Keyboard>/q" ]
-      cursor: [ "<Mouse>/position" ]
-    # Mobile: the primary finger repels the flock — drag it through the boids.
-    # The entities are identical; only the binding changes (mouse → touchscreen).
-    # The touch position holds its last value after you lift, so the flock keeps
-    # fleeing the point you last touched. `quit` is driven by the on-screen
-    # button below, which synthesises the action's mobile path when tapped.
+    # Mobile: `quit` is driven by the on-screen button below, which synthesises the action's mobile
+    # path when tapped.
     mobile:
       quit:   [ "<Keyboard>/escape" ]
-      cursor: [ "<Touchscreen>/position" ]
 
   # On-screen touch widgets, rendered only when the active platform is Mobile
   # (choose it in the Game Launcher's Platform dropdown).
@@ -251,24 +230,26 @@ Entities:
         Properties: { Action: quit }
         Listeners: [ !gameover ]
 
-  # Tracks the mouse and publishes its world position into the global `mouse world` variable each
-  # frame, which every boid's `avoid mouse` steering force reads to flee the cursor.
+  # Tracks the pointer and publishes its world position into the global `mouse world` variable each
+  # frame, which every boid's `avoid mouse` steering force reads to flee the cursor. The `pointer
+  # trigger` reads the live output camera and emits `world_position` on the game's z=0 plane, so there
+  # are no authored camera constants to keep in sync (unlike the old hand-rolled screen→world expr).
   cursor:
     Behaviours:
-      track mouse:
-        Type: input action
-        Properties: { Action: cursor }
+      track pointer:
+        Type: pointer trigger
+        Properties:
+          # hover = fire every frame regardless of press, so the mouse repels the flock without a click
+          # (and the last touch point keeps repelling on mobile after you lift).
+          Phase: hover
+          # This is a 2D game in the XY plane, so intersect the z=0 plane (normal +Z) not the XZ ground.
+          PlaneNormal: !vec { X: 0, Y: 0, Z: 1 }
         Listeners: [ store mouse ]
       store mouse:
         Type: vector variable setter
         Properties:
           VariableId: !var mouse world
-          Value: !expr
-            Do: screenToWorld
-            With:
-              screen_pos: !output axis
-              cam_pos: !var camera position
-              ortho_size: !var camera size
+          Value: !output world_position
 
   camera:
     Position: !var camera position
