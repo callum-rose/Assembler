@@ -172,7 +172,11 @@ namespace Assembler.Parsing
 					$"!clock '{clockRef.Property}' resolves to a numeric value but was used where a {typeof(T).Name} was expected"),
 				QueryRef queryRef => BuildQuerySource<T>(ctx, queryRef),
 				OutputRef outputRef => new TriggerOutputSource<T>(outputRef.Id),
-				TextRef textRef when typeof(T) == typeof(string) =>
+				// A !text resolves to a string, so it's valid in a string slot and (like the other
+				// object-erased ref tags above) in an untyped `object` slot — which is what a !text/!expr
+				// argument is. The object case lets one !text nest inside another's Arguments, recursing to
+				// any depth (BuildTextArguments builds each argument as object).
+				TextRef textRef when typeof(T) == typeof(string) || typeof(T) == typeof(object) =>
 					new LocalisedTextSource<T>(textRef.Key, BuildTextArguments(ctx, textRef)),
 				TextRef textRef => throw new ParsingException(
 					$"!text '{textRef.Key}' resolves to a string but was used where a {typeof(T).Name} was expected"),

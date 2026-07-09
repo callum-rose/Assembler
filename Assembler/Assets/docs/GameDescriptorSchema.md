@@ -259,9 +259,18 @@ Localisation:
     en:
       hud.score: "Score: {0}"        # {0},{1},… are string.Format placeholders; escape literals as {{ }}
       menu.start: "Press Space to start"
+      hud.placing: "Placing: {0}"
+      tower.pulse: "Pulse Tower"
 ```
 
 A missing key renders as a visible `#key#` marker rather than crashing.
+
+`!text` arguments accept any value source, **including another `!text`** — so a placeholder can be
+filled with a second localised string, and this nests to any depth:
+
+```yaml
+Text: !text { Key: hud.placing, Arguments: [ !text tower.pulse ] }   # → "Placing: Pulse Tower"
+```
 
 ### `Navigation` — `NavigationDto`
 
