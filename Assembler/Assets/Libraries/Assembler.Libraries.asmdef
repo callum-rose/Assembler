@@ -2,7 +2,8 @@
     "name": "Assembler.Libraries",
     "rootNamespace": "Assembler",
     "references": [
-        "Assembler.Core"
+        "Assembler.Core",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

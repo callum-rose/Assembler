@@ -8,6 +8,7 @@
         "Assembler.Parsing",
         "Assembler.Deserialisation",
         "Assembler.Compiler",
+        "Assembler.Libraries",
         "Assembler.Time",
         "Unity.Cinemachine",
         "UnityEngine.TestRunner",
