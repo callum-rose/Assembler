@@ -7,7 +7,6 @@ using Assembler.Parsing.Info;
 using Assembler.Resolving;
 using NUnit.Framework;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Tests.Resolving
 {
@@ -16,7 +15,7 @@ namespace Tests.Resolving
 		private const float Tol = 1e-3f;
 
 		[SetUp]
-		public void Seed() => Random.InitState(12345);
+		public void Seed() => RandomMath.Seed(12345);
 
 		[Test]
 		public void RandomFloatStaysInRange()
@@ -121,6 +120,54 @@ namespace Tests.Resolving
 			{
 				Assert.That(RandomMath.WeightedPickIndex(weights), Is.InRange(0, weights.Count - 1));
 			}
+		}
+
+		// ---- seed reproducibility -------------------------------------------------
+
+		// Draws one value from each helper, in a fixed order, so a single sequence exercises them together.
+		private static IReadOnlyList<float> DrawMixedSequence()
+		{
+			var values = new List<float>();
+			var vecItems = new List<Vector3> { new(1, 0, 0), new(2, 0, 0), new(3, 0, 0) };
+			var weights = new List<float> { 1f, 2f, 3f };
+
+			for (int i = 0; i < 20; i++)
+			{
+				values.Add(RandomMath.RandomFloat(-5f, 5f));
+				values.Add(RandomMath.RandomInt(0, 100));
+				values.Add(RandomMath.Chance(0.5f) ? 1f : 0f);
+				values.Add(RandomMath.RandomOnCircle(3f).x);
+				values.Add(RandomMath.RandomInsideCircle(3f).y);
+				values.Add(RandomMath.RandomColor().g);
+				values.Add(RandomMath.Pick(vecItems).x);
+				values.Add(RandomMath.WeightedPickIndex(weights));
+			}
+
+			return values;
+		}
+
+		[Test]
+		public void SameSeedReproducesIdenticalSequence()
+		{
+			RandomMath.Seed(777);
+			var first = DrawMixedSequence();
+
+			RandomMath.Seed(777);
+			var second = DrawMixedSequence();
+
+			CollectionAssert.AreEqual(first, second);
+		}
+
+		[Test]
+		public void DifferentSeedsDivergeSequence()
+		{
+			RandomMath.Seed(1);
+			var first = DrawMixedSequence();
+
+			RandomMath.Seed(2);
+			var second = DrawMixedSequence();
+
+			Assert.That(first, Is.Not.EqualTo(second));
 		}
 
 		// ---- compiler integration -------------------------------------------------
