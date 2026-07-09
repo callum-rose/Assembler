@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
+using Assembler.Behaviours.Animations;
 using Assembler.Behaviours.Replay;
 using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
@@ -275,6 +276,17 @@ namespace Assembler.Building
 
 			// 5. Initialise Behaviours
 			initialisations.ExecuteAll(behaviourRegistry);
+
+			// 5a. Drive every per-frame behaviour from one ordered central tick instead of each behaviour's own
+			// Update, so a shared-velocity stack (acceleration → drag → speed limit → velocity) composes in stable
+			// registration order rather than Unity's undefined per-component Update order (issue #241). The driver
+			// reads the registry's live list, so spawned/destroyed entities stay in sync via register/deregister.
+			gameRoot.AddComponent<PerFrameDriver>().Initialise(behaviourRegistry.PerFrameBehaviours, gameClock);
+
+			// 5a-ii. Pump DOTween animations off the game clock (they mark themselves UpdateType.Manual) so tweens
+			// pause/scale with the game and complete on a deterministic frame, rather than running on Unity wall-clock
+			// and firing their OnComplete trigger chains into a paused game (issue #241).
+			gameRoot.AddComponent<TweenDriver>().Initialise(gameClock);
 
 			// 5b. Register every input trigger with the active replay session so a recorded emission can be routed
 			// back to the exact trigger on replay. Done after initialisation, when each trigger's descriptor

@@ -26,7 +26,10 @@ namespace Assembler.Behaviours.Animations
 		{
 			_sequence?.Kill();
 
-			var sequence = DOTween.Sequence().SetLink(gameObject);
+			// UpdateType.Manual removes the sequence from DOTween's own wall-clock loop; the game root's TweenDriver
+			// pumps it from the game clock instead, so the animation pauses/scales with the game and — under the
+			// fixed-step clock — completes on a deterministic frame (its OnComplete drives listeners, i.e. game logic).
+			var sequence = DOTween.Sequence().SetLink(gameObject).SetUpdate(UpdateType.Manual);
 
 			foreach (var step in Data.Steps)
 			{

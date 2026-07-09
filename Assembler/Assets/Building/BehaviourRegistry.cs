@@ -32,7 +32,17 @@ namespace Assembler.Building
 		/// <summary>All registered behaviours keyed by descriptor. Used by debug tooling to enumerate the live graph.</summary>
 		public IReadOnlyDictionary<BehaviourDescriptor, GameBehaviour> All => _behaviours;
 
+		/// <summary>
+		/// Every per-frame behaviour in registration order — the deterministic order the <c>PerFrameDriver</c> steps
+		/// them each frame (issue #241). Backed by the live list, so spawns append and destroys remove through the
+		/// same <see cref="Register"/> / <see cref="Deregister"/> churn points, keeping the driver in sync for free.
+		/// </summary>
+		public IReadOnlyList<IPerFrameStepped> PerFrameBehaviours => _perFrameBehaviours;
+
 		private readonly Dictionary<BehaviourDescriptor, GameBehaviour> _behaviours = new();
+
+		/// <summary>Per-frame behaviours in registration order (see <see cref="PerFrameBehaviours"/>).</summary>
+		private readonly List<IPerFrameStepped> _perFrameBehaviours = new();
 		private readonly Dictionary<string, List<GameBehaviour>> _behavioursByTag = new();
 
 		/// <summary>
@@ -63,6 +73,13 @@ namespace Assembler.Building
 		{
 			_behaviours.Add(descriptor, behaviour);
 			_registrationIndex[behaviour] = _nextIndex++;
+
+			// Collect per-frame behaviours in registration order so the driver steps them deterministically; a
+			// spawned entity registers later and so ticks after existing ones, its own stack order preserved.
+			if (behaviour is IPerFrameStepped stepped)
+			{
+				_perFrameBehaviours.Add(stepped);
+			}
 
 			// Entity tags are read once here (the entity component is configured before registration) rather than via a
 			// GetComponent per query, and remembered so deregistration can find the buckets to evict from.
@@ -169,6 +186,11 @@ namespace Assembler.Building
 			_behaviours.Remove(descriptor);
 			_registrationIndex.Remove(behaviour);
 			_registrations.Remove(descriptor);
+
+			if (behaviour is IPerFrameStepped stepped)
+			{
+				_perFrameBehaviours.Remove(stepped);
+			}
 
 			foreach (var tag in registration.BehaviourTags)
 			{
