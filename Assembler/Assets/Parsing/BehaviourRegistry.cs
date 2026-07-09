@@ -77,6 +77,7 @@ namespace Assembler.Parsing
 				["camera orbit"] = CameraOrbitInfo.Create,
 				["camera confiner"] = CameraConfinerInfo.Create,
 				["camera group"] = CameraGroupInfo.Create,
+				["screen to world"] = ScreenToWorldInfo.Create,
 				["condition gate"] = ConditionGateInfo.Create,
 				["inverse condition gate"] = InverseConditionGateInfo.Create,
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
