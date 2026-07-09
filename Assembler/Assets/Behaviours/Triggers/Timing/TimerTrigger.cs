@@ -10,7 +10,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 	/// <remarks>
 	/// Properties:
 	///   Delay: Seconds to wait before notifying listeners.
-	///   AutoStart: When true the countdown starts on entity start; when false it waits for an Execute call from upstream.
+	///   AutoStart: When true (the default when omitted) the countdown starts on entity start; when false it waits for an Execute call from upstream.
 	/// </remarks>
 	public class TimerTrigger : TimingTrigger<TimerTriggerData>, INeedsGameClock, IAmExecutable
 	{

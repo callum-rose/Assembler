@@ -13,7 +13,7 @@ namespace Assembler.Behaviours.Triggers.Timing
 	///     behaviours mutate changes the live tick rate (e.g. accelerating gravity as a level increases).
 	///   Count: Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound
 	///     count can extend or shorten the run live.
-	///   AutoStart: When true the timer starts on entity start; when false it waits for an Execute call from upstream.
+	///   AutoStart: When true (the default when omitted) the timer starts on entity start; when false it waits for an Execute call from upstream.
 	/// Outputs:
 	///   iteration_index [int]: Zero-based index of the current fire (0 on the first fire, 1 on the second, etc.).
 	///   iteration_count [int]: Total number of fires configured by Count; 0 when the trigger is unbounded.

@@ -463,7 +463,7 @@ Fires once after a delay.
 | Name | Type | Description |
 |------|------|-------------|
 | Delay | float | Seconds to wait before notifying listeners. |
-| AutoStart | bool | When true the countdown starts on entity start; when false it waits for an Execute call from upstream. |
+| AutoStart | bool | When true (the default when omitted) the countdown starts on entity start; when false it waits for an Execute call from upstream. |
 
 ## `deferred trigger`
 Forwards a trigger event to listeners after a delay. Insert between an upstream trigger and downstream behaviours to defer execution.
@@ -516,7 +516,7 @@ Fires repeatedly at an interval. Optionally limited to a number of repetitions.
 |------|------|-------------|
 | Interval | float | Seconds between fires. Re-read before each wait, so binding it to a variable that other |
 | Count | int | Number of times to fire; 0 means fire forever. Re-read each iteration, so a variable-bound |
-| AutoStart | bool | When true the timer starts on entity start; when false it waits for an Execute call from upstream. |
+| AutoStart | bool | When true (the default when omitted) the timer starts on entity start; when false it waits for an Execute call from upstream. |
 
 ### Outputs
 
