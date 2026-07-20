@@ -79,7 +79,21 @@ Foreground (testing):
 ASSEMBLER_STORE_REPO=<you>/assembler-games assembler-remote daemon
 ```
 
-Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash:
+Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash.
+
+**One command (Rider or shell).** `deploy-daemon.sh` does the whole install: builds Release, writes the
+plist to `~/Library/LaunchAgents` with your real paths filled in (resolved from the script's own location —
+no `REPLACE_ME` editing), and reloads launchd. Re-run it any time to redeploy after a code change.
+
+- **From Rider:** run the committed **"Deploy Generation Daemon"** run configuration (top-right run-config
+  dropdown; it's in `.run/` at the repo root, which is the folder you open as the `RemoteTooling` project).
+- **From a shell:** `RemoteTooling/deploy-daemon.sh` (from anywhere).
+
+It auto-detects the store repo as `<your gh login>/assembler-games`; override any of
+`ASSEMBLER_STORE_REPO` / `ASSEMBLER_STORE_DIR` / `ASSEMBLER_ENGINE_DIR` / `ASSEMBLER_POLL_SECONDS` via the
+environment (or the run configuration's *Environment variables* field) if your setup differs.
+
+**Manual (equivalent steps)** if you'd rather not use the script:
 
 1. Build once (see [Build](#build)) so the launcher exists.
 2. `cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/`
