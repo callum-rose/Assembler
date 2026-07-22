@@ -100,11 +100,12 @@ environment (or the run configuration's *Environment variables* field) if your s
 3. Edit the **copy** — `~/Library/LaunchAgents/com.assembler.generation-daemon.plist` — replacing
    `REPLACE_ME` / `REPLACE_OWNER` and checking `PATH`. (Edit the copy, not the tracked template, so your
    home path and username never get committed.)
-4. `launchctl load -w ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
+4. `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
+   (if it's already loaded, `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist` first — a bare `bootstrap` of an already-loaded label fails with `5: Input/output error`)
 
 The daemon generates → validates → publishes → comments the result on the issue → closes it. Failures
 leave the issue open (with the label removed) and a comment explaining why. It holds a single-flight lock
-so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl unload` / a KeepAlive
+so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl bootout` / a KeepAlive
 restart isn't locked out.
 
 ## Wiring the app
