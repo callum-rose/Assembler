@@ -7,6 +7,13 @@ namespace Assembler.RemoteTooling.Commands;
 /// </summary>
 public static class PublishCommand
 {
+	// Generation (the multi-minute claude run) is safe to overlap, but validation and the git publish are
+	// not: two Unity batch builds on one project corrupt its Library, and two writers race the store's
+	// working tree + manifest.json. So the daemon may call Publish from several threads at once, but the
+	// build-and-publish half of each call is funnelled through this single gate. Generation happens before
+	// it's taken, so N briefs still generate concurrently and only serialise to validate + push.
+	private static readonly object BuildPublishGate = new();
+
 	public static int Run(IReadOnlyList<string> args)
 	{
 		var log = new Logger();
@@ -89,40 +96,45 @@ public static class PublishCommand
 				throw new AppException($"could not derive a game id from '{title}' — pass one explicitly");
 			}
 
-			log.Info($"Validating '{id}' (booting Unity sandbox — this is slow)…");
-			var validationExit = Proc.Stream(validateScript, [descriptor], workingDir: null, env: null, log.Raw);
-			if (validationExit != 0)
+			// Validate + publish is the serial critical section (see BuildPublishGate); generation above
+			// already ran concurrently. Under the gate at most one job boots Unity or touches the store.
+			lock (BuildPublishGate)
 			{
-				keepWork = true; // keep the descriptor around so it can be inspected / refined
-				throw new AppException($"validation failed — not publishing. Descriptor left at: {descriptor}");
-			}
+				log.Info($"Validating '{id}' (booting Unity sandbox — this is slow)…");
+				var validationExit = Proc.Stream(validateScript, [descriptor], workingDir: null, env: null, log.Raw);
+				if (validationExit != 0)
+				{
+					keepWork = true; // keep the descriptor around so it can be inspected / refined
+					throw new AppException($"validation failed — not publishing. Descriptor left at: {descriptor}");
+				}
 
-			var (owner, repo) = Store.OwnerRepo(storeDir, Config.StoreRemote);
-			var branch = Config.StoreBranch;
-			var version = Store.Version(descriptor);
-			var url = $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/games/{id}/descriptor.yaml";
+				var (owner, repo) = Store.OwnerRepo(storeDir, Config.StoreRemote);
+				var branch = Config.StoreBranch;
+				var version = Store.Version(descriptor);
+				var url = $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/games/{id}/descriptor.yaml";
 
-			var gameDir = Path.Combine(storeDir, "games", id);
-			Directory.CreateDirectory(gameDir);
-			File.Copy(descriptor, Path.Combine(gameDir, "descriptor.yaml"), overwrite: true);
+				var gameDir = Path.Combine(storeDir, "games", id);
+				Directory.CreateDirectory(gameDir);
+				File.Copy(descriptor, Path.Combine(gameDir, "descriptor.yaml"), overwrite: true);
 
-			Store.UpsertManifest(Path.Combine(storeDir, "manifest.json"), id, title, url, version);
+				Store.UpsertManifest(Path.Combine(storeDir, "manifest.json"), id, title, url, version);
 
-			Proc.Run("git", ["-C", storeDir, "add", "-A"]);
-			var commit = Proc.Capture("git", ["-C", storeDir, "commit", "-q", "-m", $"Publish {id} ({version})"]);
-			if (commit.ExitCode != 0)
-			{
-				log.Info("nothing changed");
+				Proc.Run("git", ["-C", storeDir, "add", "-A"]);
+				var commit = Proc.Capture("git", ["-C", storeDir, "commit", "-q", "-m", $"Publish {id} ({version})"]);
+				if (commit.ExitCode != 0)
+				{
+					log.Info("nothing changed");
+					return new PublishOutcome(id, feedback);
+				}
+
+				if (Proc.Run("git", ["-C", storeDir, "push", "-q", Config.StoreRemote, $"HEAD:{branch}"]) != 0)
+				{
+					throw new AppException($"git push to {Config.StoreRemote} {branch} failed");
+				}
+
+				log.Info($"Published '{id}' v{version} → {url}");
 				return new PublishOutcome(id, feedback);
 			}
-
-			if (Proc.Run("git", ["-C", storeDir, "push", "-q", Config.StoreRemote, $"HEAD:{branch}"]) != 0)
-			{
-				throw new AppException($"git push to {Config.StoreRemote} {branch} failed");
-			}
-
-			log.Info($"Published '{id}' v{version} → {url}");
-			return new PublishOutcome(id, feedback);
 		}
 		finally
 		{
