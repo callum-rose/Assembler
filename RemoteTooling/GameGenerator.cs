@@ -25,6 +25,28 @@ public static class GameGenerator
 	// feedback the generate-game-descriptor skill volunteered. Chosen to never occur in valid YAML.
 	private const string FeedbackDelimiter = "===BEHAVIOUR CATALOGUE FEEDBACK===";
 
+	// Prepended to every prompt. The generate-game-descriptor skill makes it a *hard requirement* to
+	// self-verify by writing the YAML to disk and running the headless validators (validate-game.sh /
+	// check-expression.sh). That path is both impossible and undesirable here: this runs non-interactively
+	// under `claude -p` with only read tools granted (writes and Bash are denied), and — even if they
+	// weren't — N concurrent generation runs each booting validate-game.sh would race the one Unity project
+	// Library and corrupt it (why PublishCommand serialises validation behind a single gate). The daemon
+	// validates the output itself afterwards and loops the report back via Fix, so the model must NOT try
+	// to self-validate. Without this override the model follows the skill, hits the write/Bash denials, and
+	// gives up by emitting a prose apology — which is then captured as the "descriptor" and fails validation
+	// at line 1 (the failure this preamble exists to prevent).
+	private const string OperatingConstraints =
+		"OPERATING CONTEXT — read first, it overrides the skill's self-verification requirement: You are "
+		+ "running non-interactively with read-only tools. You CAN read files (the behaviour catalogue, the "
+		+ "schema, the libraries doc, example descriptors) — do that to author correctly. You CANNOT write "
+		+ "files and CANNOT run any command, script or Bash. Do NOT write a descriptor file, and do NOT run "
+		+ "the headless validators (validate-game.sh / check-expression.sh) or any other tool to self-verify "
+		+ "— those are unavailable here and attempting them only wastes the run. Author the descriptor purely "
+		+ "by reasoning against the catalogue docs and output it as text. It is validated externally after you "
+		+ "finish; if it fails to build you will be handed the validator's report to correct and try again. Do "
+		+ "not refuse, stall, or apologise about being unable to self-validate — always produce your complete "
+		+ "best-effort YAML.\n\n";
+
 	public static GenerationResult GenerateNew(string brief, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to author a complete, runnable Assembler game descriptor "
 		+ $"for this idea: \"{brief}\". Hard constraint: the game must use ONLY built-in primitive renderers — "
@@ -62,6 +84,7 @@ public static class GameGenerator
 
 	private static GenerationResult Invoke(string prompt, Logger log)
 	{
+		prompt = OperatingConstraints + prompt;
 		var claude = Config.ClaudeBin;
 		if (!Proc.Which(claude))
 		{
