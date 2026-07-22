@@ -28,6 +28,22 @@ public static class DaemonCommand
 	// that spans several poll cycles isn't picked up a second time and generated twice.
 	private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> InFlight = new();
 
+	// Non-blocking exclusive advisory lock (Unix only). The kernel releases it automatically when the fd
+	// closes or the owning process dies — including a SIGKILL/crash/reboot that never runs our cleanup —
+	// so a dead daemon can never wedge future launchd restarts.
+	[DllImport("libc", SetLastError = true)]
+	private static extern int flock(int fd, int operation);
+
+	private const int LOCK_EX = 2; // exclusive
+	private const int LOCK_NB = 4; // fail instead of blocking if already held
+
+	// Take the exclusive advisory lock for the lifetime of the process. Returns 0 on success.
+	private static int FlockExclusiveNonBlocking(FileStream file)
+	{
+		var fd = (int)file.SafeFileHandle.DangerousGetHandle();
+		return flock(fd, LOCK_EX | LOCK_NB);
+	}
+
 	public static int Run(IReadOnlyList<string> args)
 	{
 		var repo = Config.StoreRepo;
@@ -47,14 +63,31 @@ public static class DaemonCommand
 		var pollSeconds = Config.PollSeconds;
 		var lockPath = Path.Combine(Path.GetTempPath(), "assembler-generation-daemon.lock");
 
+		// Single-flight guard. It must survive a hard kill (SIGKILL, crash, reboot) without wedging every
+		// future launchd restart, so we rely on the OS dropping the lock when the holder dies rather than on
+		// a file we have to remember to delete. The lock file itself is allowed to persist between runs — its
+		// mere existence means nothing; only a live holder of the OS lock counts.
+		//   • Windows: an exclusive FileShare.None handle the OS releases on process death.
+		//   • Unix: an advisory flock() the kernel drops when the fd closes or the process exits.
 		FileStream lockFile;
 		try
 		{
-			lockFile = new FileStream(lockPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+			lockFile = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
 		}
 		catch (IOException)
 		{
+			// Windows: another live daemon holds the handle exclusively. (A dead holder's handle is already
+			// closed by the OS, so this open would have succeeded.)
 			DaemonLog($"another daemon holds {lockPath} — exiting");
+			return 0;
+		}
+
+		// Unix: FileShare.None isn't enforced across processes, so arbitrate with an advisory flock. A dead
+		// holder's lock is already gone, so a non-zero return means a genuinely-live daemon owns it.
+		if (!OperatingSystem.IsWindows() && FlockExclusiveNonBlocking(lockFile) != 0)
+		{
+			DaemonLog($"another daemon holds {lockPath} — exiting");
+			lockFile.Dispose();
 			return 0;
 		}
 
@@ -68,15 +101,15 @@ public static class DaemonCommand
 
 			try
 			{
-				lockFile.Dispose();
-				File.Delete(lockPath);
+				lockFile.Dispose(); // drops the flock / releases the exclusive handle; the file may remain
 				File.Delete(DaemonState.Path); // a stopped daemon has no live status
 			}
 			catch { /* best-effort */ }
 		}
 
-		// Release the single-flight lock on graceful shutdown (Ctrl-C, or `launchctl unload`'s SIGTERM)
-		// so a KeepAlive restart isn't locked out by a stale lock.
+		// Promptly clear the live-status snapshot on graceful shutdown (Ctrl-C, or `launchctl unload`'s
+		// SIGTERM). The OS lock itself is released automatically when the process exits — a hard kill that
+		// skips this handler is fine, unlike the old delete-the-lock-file scheme it replaces.
 		AppDomain.CurrentDomain.ProcessExit += (_, _) => ReleaseLock();
 		var signals = new[] { PosixSignal.SIGINT, PosixSignal.SIGTERM, PosixSignal.SIGQUIT }
 			.Select(signal => PosixSignalRegistration.Create(signal, ctx =>

@@ -1,9 +1,9 @@
 # Remote loading & remote generation (Phase 2)
 
-This folder is the **dev-side tooling** for the remote game pipeline, as a standalone .NET console app
-(`assembler-remote`) that lives **outside** the Unity project. Game *data* lives in a separate, free,
-public GitHub repo (`assembler-games`) served over `raw.githubusercontent.com`; this tool generates
-games, validates them, and publishes them there. The app downloads from there at runtime.
+Dev-side tooling for the remote game pipeline: a standalone .NET console app (`assembler-remote`)
+that lives **outside** the Unity project. It generates, validates, and publishes games to a separate
+public GitHub repo (`assembler-games`), served over `raw.githubusercontent.com`. The phone app
+downloads from there at runtime.
 
 ```
 phone app  ──GET manifest.json──►  assembler-games repo  ◄──push──  assembler-remote (this Mac)
@@ -11,67 +11,50 @@ phone app  ──GET manifest.json──►  assembler-games repo  ◄──push
    tap ────GET descriptor.yaml────►
 ```
 
-Everything here is **private dev tooling** — generation is never exposed in the app (v1). It replaces
-the old `Tools/remote/*.sh` bash scripts (`setup-store.sh` → `setup`, `publish-game.sh` → `publish`,
-`refine-game.sh` → `refine`, `generation-daemon.sh` → `daemon`); behaviour and env-var surface are unchanged.
+Generation is **private dev tooling**, never exposed in the app (v1). This replaces the old
+`Tools/remote/*.sh` scripts (`setup`, `publish`, `refine`, `daemon`); behaviour and env vars are unchanged.
 
 ## Build
 
-From the **repo root**, build the console app (pointing at the `.csproj` so it works regardless of your
-current directory):
+From the **repo root**:
 
 ```sh
 dotnet build -c Release RemoteTooling/Assembler.RemoteTooling.csproj
 ```
 
-This produces a native launcher at `RemoteTooling/bin/Release/net10.0/assembler-remote`. The examples
-below call `assembler-remote`; either put that on your PATH, use the full path, or run via
-`dotnet run --project RemoteTooling -- <command>` from the repo root.
+This produces `RemoteTooling/bin/Release/net10.0/assembler-remote`. Put it on your PATH, use the full
+path, or run `dotnet run --project RemoteTooling -- <command>` from the repo root.
 
 ## One-time setup
 
-1. **Install deps:** `brew install gh` and `gh auth login`, plus the .NET SDK (`brew install dotnet`).
-   The `claude` CLI must be on PATH (generation is billed to your Claude subscription — no API key needed).
-2. **Create the store repo** — run `setup` with no arguments:
-   ```sh
-   assembler-remote setup
-   ```
-   This creates `~/Developer/assembler-games`, the public GitHub repo behind it, and the `generate`
-   label, then prints your **Manifest URL** (e.g.
-   `https://raw.githubusercontent.com/<you>/assembler-games/main/manifest.json`). Pass a name —
-   `assembler-remote setup my-store` — to use a different repo. (Don't paste a trailing `# comment`
-   after the command: an interactive zsh prompt passes the `#` as an argument.)
-3. **Point the app at it:** open the `Bootstrap` scene in Unity, select the boot GameObject, and set
-   **GameShelf → Manifest Url** to that URL. (See "Wiring the app" below — the `GameShelf` component
-   replaces `GameBootstrap`.)
+1. **Install deps:** `brew install gh dotnet` and `gh auth login`. The `claude` CLI must be on PATH
+   (generation is billed to your Claude subscription — no API key needed).
+2. **Create the store repo:** `assembler-remote setup` (add a name to use a different repo). This creates
+   `~/Developer/assembler-games`, the public GitHub repo, and the `generate` label, then prints your
+   **Manifest URL**. (Don't append a trailing `# comment` — zsh passes the `#` as an argument.)
+3. **Point the app at it:** open the `Bootstrap` scene, select the boot GameObject, set
+   **GameShelf → Manifest Url** to that URL (see [Wiring the app](#wiring-the-app)).
 
 ## Daily use
 
-Generate a new game from a brief, validate it, and publish it:
-
 ```sh
+# Generate from a brief, validate, and publish:
 assembler-remote publish "a top-down game where you dodge falling rocks"
-```
 
-Publish/refresh an existing local descriptor:
-
-```sh
+# Publish/refresh an existing local descriptor:
 assembler-remote publish Assembler/Assets/ExampleGameDescriptors/Pong.yaml
-```
 
-Refine a published game and bump its version (clients re-download):
-
-```sh
+# Refine a published game and bump its version (clients re-download):
 assembler-remote refine dodge-falling-rocks "make the rocks faster and add a score"
 ```
 
-Each publish commits + pushes to the store; the app shows the new/updated game on its next shelf refresh
-(the shelf re-fetches the manifest every time you exit a game).
+Each publish commits + pushes to the store; the app picks up new/updated games on its next shelf
+refresh (it re-fetches the manifest every time you exit a game).
 
 ## Generate from your phone (the always-on daemon)
 
-Run the daemon so you can queue games from anywhere by opening a GitHub issue labelled `generate`
-(via the GitHub mobile app or an iOS Shortcut). The issue title/body is the brief.
+Run the daemon to queue games from anywhere: open a GitHub issue labelled `generate` (via the GitHub
+mobile app or an iOS Shortcut). The title/body is the brief.
 
 Foreground (testing):
 
@@ -80,65 +63,53 @@ ASSEMBLER_STORE_REPO=<you>/assembler-games assembler-remote daemon
 ```
 
 Background (recommended) — install the LaunchAgent so it runs at login and restarts on crash.
+`deploy-daemon.sh` does the whole install: builds Release, writes the plist to `~/Library/LaunchAgents`
+with real paths filled in, and reloads launchd. Re-run any time to redeploy.
 
-**One command (Rider or shell).** `deploy-daemon.sh` does the whole install: builds Release, writes the
-plist to `~/Library/LaunchAgents` with your real paths filled in (resolved from the script's own location —
-no `REPLACE_ME` editing), and reloads launchd. Re-run it any time to redeploy after a code change.
-
-- **From Rider:** run the committed **"Deploy Generation Daemon"** run configuration (top-right run-config
-  dropdown; it's in `.run/` at the repo root, which is the folder you open as the `RemoteTooling` project).
+- **From Rider:** run the committed **"Deploy Generation Daemon"** run configuration.
 - **From a shell:** `RemoteTooling/deploy-daemon.sh` (from anywhere).
 
-It auto-detects the store repo as `<your gh login>/assembler-games`; override any of
-`ASSEMBLER_STORE_REPO` / `ASSEMBLER_STORE_DIR` / `ASSEMBLER_ENGINE_DIR` / `ASSEMBLER_POLL_SECONDS` via the
-environment (or the run configuration's *Environment variables* field) if your setup differs.
+It auto-detects the store repo as `<your gh login>/assembler-games`; override `ASSEMBLER_STORE_REPO` /
+`ASSEMBLER_STORE_DIR` / `ASSEMBLER_ENGINE_DIR` / `ASSEMBLER_POLL_SECONDS` via the environment if needed.
 
-**Manual (equivalent steps)** if you'd rather not use the script:
+<details>
+<summary>Manual install (equivalent steps)</summary>
 
-1. Build once (see [Build](#build)) so the launcher exists.
+1. Build once (see [Build](#build)).
 2. `cp com.assembler.generation-daemon.plist ~/Library/LaunchAgents/`
-3. Edit the **copy** — `~/Library/LaunchAgents/com.assembler.generation-daemon.plist` — replacing
-   `REPLACE_ME` / `REPLACE_OWNER` and checking `PATH`. (Edit the copy, not the tracked template, so your
-   home path and username never get committed.)
+3. Edit the **copy**, replacing `REPLACE_ME` / `REPLACE_OWNER` and checking `PATH` (edit the copy, not
+   the tracked template, so your home path and username aren't committed).
 4. `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
-   (if it's already loaded, `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist` first — a bare `bootstrap` of an already-loaded label fails with `5: Input/output error`)
+   (if already loaded, `launchctl bootout gui/$(id -u) …` first — a bare `bootstrap` of a loaded label
+   fails with `5: Input/output error`).
+</details>
 
-The daemon comments on pick-up (so you know it started) → generates → validates → publishes → comments the
-result on the issue (with any behaviour-catalogue feedback the generator volunteered) → closes it. Failures
-leave the issue open (with the label removed) and a comment explaining why. It holds a single-flight lock
-so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl bootout` / a KeepAlive
-restart isn't locked out.
+The daemon comments on pick-up → generates → validates → publishes → comments the result (with any
+generator feedback) → closes the issue. Failures leave the issue open (label removed) with a reason. It
+holds a single-flight lock (a second daemon exits immediately) and releases it on SIGTERM.
 
 ### Check what it's doing
 
-Ask the running daemon what it's up to without tailing its log:
-
 ```sh
-assembler-remote status
+assembler-remote status         # add --json for a machine-readable snapshot
 ```
 
-It reports whether the daemon is alive, the job in flight right now (which issue, the brief, and which
-phase — generating / validating / publishing — plus how long it's been going), the queue of open
-`generate`-labelled issues still waiting, the last finished job, and running totals. Add `--json` for a
-machine-readable snapshot (handy for a menu-bar widget or an iOS Shortcut).
-
-The daemon writes a small heartbeat/progress file next to its lock in the temp dir; `status` reads that for
-the live picture and queries GitHub for the queue (so the queue needs `ASSEMBLER_STORE_REPO`, or a daemon
-that has already recorded it). A stopped daemon deletes the file on exit; a crashed one leaves a stale file
+Reports whether the daemon is alive, the in-flight job (issue, brief, phase, elapsed), the queue of open
+`generate` issues, the last finished job, and running totals. It reads a heartbeat file next to its lock
+and queries GitHub for the queue (needs `ASSEMBLER_STORE_REPO`). A crashed daemon leaves a stale file
 that `status` detects (dead pid / missed heartbeats) and reports as *not running*.
 
-**Which build is running?** The daemon logs its version on startup (`generation daemon v1.0.0 started …`),
-and `assembler-remote version` prints it too — so after a redeploy you can confirm the running binary is the
-one you just built. The version is the `<Version>` in `Assembler.RemoteTooling.csproj`; bump it when you ship
-a change worth telling apart.
+**Which build is running?** The daemon logs its version on startup, and `assembler-remote version` prints
+it. The version is `<Version>` in `Assembler.RemoteTooling.csproj`; bump it when you ship a change worth
+telling apart.
 
 ## Wiring the app
 
 The `Assembler.Remote` assembly (`Assembler/Assets/Remote/`) adds the runtime shelf. To switch a build
-from the single-game `GameBootstrap` to the remote shelf, in the **Bootstrap** scene replace the boot
-GameObject's `GameBootstrap` component with **`GameShelf`** and set its **Manifest Url**. (This is a
-one-click editor change; it can't be scripted here because the component's GUID only exists after Unity
-imports the new script.) `GameBootstrap` stays in the project as a single-descriptor dev launcher.
+from single-game `GameBootstrap` to the remote shelf, in the **Bootstrap** scene replace the boot
+GameObject's `GameBootstrap` component with **`GameShelf`** and set its **Manifest Url**. (One-click
+editor change — it can't be scripted here because the component's GUID only exists after Unity imports
+the new script.) `GameBootstrap` stays as a single-descriptor dev launcher.
 
 ## Configuration (env vars)
 
@@ -155,15 +126,12 @@ imports the new script.) `GameBootstrap` stays in the project as a single-descri
 
 ## v1 limits & notes
 
-- **Primitive assets only.** Generated games must not declare a top-level `Assets:` block (no custom
-  voxel/sprite/audio). The app's `RemoteGameGuard` rejects asset-bearing descriptors so they fail with a
-  clean message instead of crashing mid-build. Voxel-asset remote loading is a later phase.
+- **Primitive assets only.** Games must not declare a top-level `Assets:` block. `RemoteGameGuard` rejects
+  asset-bearing descriptors with a clean message; voxel-asset remote loading is a later phase.
 - **Generation prompt may need tuning.** `publish` asks the `generate-game-descriptor` skill to emit YAML
-  on stdout. If your skill version writes to a file under `Assets/ExampleGameDescriptors/` instead, adjust
-  the prompt in `GameGenerator.cs` to copy that file to the descriptor path.
-- **`validate-game.sh` baseline:** on a clean tree some example descriptors already fail the sandbox
-  validator; treat a hard failure (parse/instantiate error) as the publish gate.
-- **CDN freshness:** we serve the manifest from `raw.githubusercontent.com` (always fresh). jsDelivr
-  caches `@latest` ~12h, so prefer raw for the fast refine loop; switch to a pinned-SHA jsDelivr URL only
-  when you want CDN scale.
-- **iOS ATS:** the manifest/descriptor URLs must be `https://` (raw is) — no `Info.plist` exception needed.
+  on stdout. If your skill version writes to a file instead, adjust the prompt in `GameGenerator.cs`.
+- **`validate-game.sh` baseline:** some example descriptors already fail the sandbox validator on a clean
+  tree; treat a hard failure (parse/instantiate error) as the publish gate.
+- **CDN freshness:** raw `githubusercontent.com` is always fresh (prefer it for the fast refine loop);
+  jsDelivr caches `@latest` ~12h — switch to a pinned-SHA jsDelivr URL only for CDN scale.
+- **iOS ATS:** manifest/descriptor URLs must be `https://` (raw is) — no `Info.plist` exception needed.
