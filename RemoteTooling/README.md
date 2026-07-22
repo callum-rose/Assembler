@@ -121,6 +121,8 @@ the new script.) `GameBootstrap` stays as a single-descriptor dev launcher.
 | `ASSEMBLER_STORE_BRANCH` | `main` | publish |
 | `ASSEMBLER_STORE_REMOTE` | `origin` | publish |
 | `ASSEMBLER_POLL_SECONDS` | `30` | daemon |
+| `ASSEMBLER_MAX_CONCURRENT` | `3` | daemon |
+| `ASSEMBLER_MAX_VALIDATION_ATTEMPTS` | `3` | publish (daemon, refine) |
 | `ASSEMBLER_GEN_LABEL` | `generate` | daemon, setup |
 | `CLAUDE_CLI_PATH` | `claude` | publish, refine |
 
@@ -132,6 +134,11 @@ the new script.) `GameBootstrap` stays as a single-descriptor dev launcher.
   on stdout. If your skill version writes to a file instead, adjust the prompt in `GameGenerator.cs`.
 - **`validate-game.sh` baseline:** some example descriptors already fail the sandbox validator on a clean
   tree; treat a hard failure (parse/instantiate error) as the publish gate.
+- **Validation fix loop:** `publish` validates the descriptor and, on failure, feeds the validator's
+  per-stage report back to the `generate-game-descriptor` skill to fix, then re-validates — up to
+  `ASSEMBLER_MAX_VALIDATION_ATTEMPTS` times (default 3; set to `1` to disable and restore single-shot
+  publishing). The fix run happens outside the build gate, so it still overlaps other daemon workers'
+  generation. Only after the attempts are exhausted does the daemon comment the failure and drop the label.
 - **CDN freshness:** raw `githubusercontent.com` is always fresh (prefer it for the fast refine loop);
   jsDelivr caches `@latest` ~12h — switch to a pinned-SHA jsDelivr URL only for CDN scale.
 - **iOS ATS:** manifest/descriptor URLs must be `https://` (raw is) — no `Info.plist` exception needed.

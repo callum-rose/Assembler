@@ -33,6 +33,15 @@ public static class Config
 	public static int MaxConcurrent =>
 		int.TryParse(Env("ASSEMBLER_MAX_CONCURRENT"), out var n) && n > 0 ? n : 3;
 
+	/// <summary>
+	/// How many times a descriptor is validated before publish gives up. The first attempt is the
+	/// freshly-generated descriptor; each subsequent attempt re-validates a version the generator fixed
+	/// from the previous attempt's validation report — mirroring how the skill is driven by hand. Must be
+	/// at least 1 (a lone attempt disables the fix loop, restoring the old single-shot behaviour).
+	/// </summary>
+	public static int MaxValidationAttempts =>
+		int.TryParse(Env("ASSEMBLER_MAX_VALIDATION_ATTEMPTS"), out var n) && n > 0 ? n : 3;
+
 	/// <summary>The Unity project root that holds <c>Tools/validate-game.sh</c>.</summary>
 	public static string EngineDir() =>
 		Env("ASSEMBLER_ENGINE_DIR")

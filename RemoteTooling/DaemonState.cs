@@ -93,6 +93,7 @@ public enum DaemonPhase
 	Picked,
 	Generating,
 	Validating,
+	Fixing,
 	Publishing,
 	Published,
 	Failed,

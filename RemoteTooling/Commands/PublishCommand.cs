@@ -1,9 +1,13 @@
+using System.Text;
+
 namespace Assembler.RemoteTooling.Commands;
 
 /// <summary>
 /// <c>publish "&lt;brief&gt;" | path/to/descriptor.yaml [game-id]</c> — obtain a descriptor (generate one
 /// from a brief, or take an existing file), validate that it builds, then commit + push it to the store
-/// repo and upsert <c>manifest.json</c>.
+/// repo and upsert <c>manifest.json</c>. If validation fails, the validator's report is fed back to the
+/// generator to fix and the result re-validated — looping up to <see cref="Config.MaxValidationAttempts"/>
+/// times before giving up.
 /// </summary>
 public static class PublishCommand
 {
@@ -96,44 +100,81 @@ public static class PublishCommand
 				throw new AppException($"could not derive a game id from '{title}' — pass one explicitly");
 			}
 
-			// Validate + publish is the serial critical section (see BuildPublishGate); generation above
-			// already ran concurrently. Under the gate at most one job boots Unity or touches the store.
-			lock (BuildPublishGate)
+			// Validate, and on failure feed the report back to the generator to fix — looping up to
+			// MaxValidationAttempts, the same way the skill is driven by hand. Only validation and the git
+			// publish are the serial critical section (see BuildPublishGate); the multi-minute fix run
+			// happens OUTSIDE the gate so it overlaps other workers' generation instead of blocking them.
+			var maxAttempts = Config.MaxValidationAttempts;
+			for (var attempt = 1; ; attempt++)
 			{
-				log.Info($"Validating '{id}' (booting Unity sandbox — this is slow)…");
-				var validationExit = Proc.Stream(validateScript, [descriptor], workingDir: null, env: null, log.Raw);
-				if (validationExit != 0)
+				string report;
+				lock (BuildPublishGate)
 				{
-					keepWork = true; // keep the descriptor around so it can be inspected / refined
-					throw new AppException($"validation failed — not publishing. Descriptor left at: {descriptor}");
+					log.Info(maxAttempts > 1
+						? $"Validating '{id}' (attempt {attempt}/{maxAttempts}; booting Unity sandbox — this is slow)…"
+						: $"Validating '{id}' (booting Unity sandbox — this is slow)…");
+
+					// Tee the validator's output into a buffer as well as the log, so a failure can be fed
+					// back to the generator verbatim (the script prints only its concise per-stage report).
+					var captured = new StringBuilder();
+					var validationExit = Proc.Stream(validateScript, [descriptor], workingDir: null, env: null,
+						line => { captured.AppendLine(line); log.Raw(line); });
+
+					if (validationExit == 0)
+					{
+						var (owner, repo) = Store.OwnerRepo(storeDir, Config.StoreRemote);
+						var branch = Config.StoreBranch;
+						var version = Store.Version(descriptor);
+						var url = $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/games/{id}/descriptor.yaml";
+
+						var gameDir = Path.Combine(storeDir, "games", id);
+						Directory.CreateDirectory(gameDir);
+						File.Copy(descriptor, Path.Combine(gameDir, "descriptor.yaml"), overwrite: true);
+
+						Store.UpsertManifest(Path.Combine(storeDir, "manifest.json"), id, title, url, version);
+
+						Proc.Run("git", ["-C", storeDir, "add", "-A"]);
+						var commit = Proc.Capture("git", ["-C", storeDir, "commit", "-q", "-m", $"Publish {id} ({version})"]);
+						if (commit.ExitCode != 0)
+						{
+							log.Info("nothing changed");
+							return new PublishOutcome(id, feedback);
+						}
+
+						if (Proc.Run("git", ["-C", storeDir, "push", "-q", Config.StoreRemote, $"HEAD:{branch}"]) != 0)
+						{
+							throw new AppException($"git push to {Config.StoreRemote} {branch} failed");
+						}
+
+						log.Info($"Published '{id}' v{version} → {url}");
+						return new PublishOutcome(id, feedback);
+					}
+
+					report = captured.ToString();
 				}
 
-				var (owner, repo) = Store.OwnerRepo(storeDir, Config.StoreRemote);
-				var branch = Config.StoreBranch;
-				var version = Store.Version(descriptor);
-				var url = $"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/games/{id}/descriptor.yaml";
-
-				var gameDir = Path.Combine(storeDir, "games", id);
-				Directory.CreateDirectory(gameDir);
-				File.Copy(descriptor, Path.Combine(gameDir, "descriptor.yaml"), overwrite: true);
-
-				Store.UpsertManifest(Path.Combine(storeDir, "manifest.json"), id, title, url, version);
-
-				Proc.Run("git", ["-C", storeDir, "add", "-A"]);
-				var commit = Proc.Capture("git", ["-C", storeDir, "commit", "-q", "-m", $"Publish {id} ({version})"]);
-				if (commit.ExitCode != 0)
+				// Validation failed; the gate is released. Give up once attempts are exhausted, leaving the
+				// last failing descriptor on disk for inspection / manual refinement.
+				if (attempt >= maxAttempts)
 				{
-					log.Info("nothing changed");
-					return new PublishOutcome(id, feedback);
+					keepWork = true;
+					throw new AppException(maxAttempts > 1
+						? $"validation still failing after {maxAttempts} attempts — not publishing. Descriptor left at: {descriptor}"
+						: $"validation failed — not publishing. Descriptor left at: {descriptor}");
 				}
 
-				if (Proc.Run("git", ["-C", storeDir, "push", "-q", Config.StoreRemote, $"HEAD:{branch}"]) != 0)
+				// Otherwise hand the validation report and current descriptor back to the generator, write its
+				// fix over the working descriptor, and re-validate on the next loop.
+				log.Info($"Validation failed — asking the generator to fix it (attempt {attempt + 1}/{maxAttempts})…");
+				var fixResult = GameGenerator.Fix(TailReport(report), File.ReadAllText(descriptor), log);
+				if (string.IsNullOrWhiteSpace(fixResult.Descriptor))
 				{
-					throw new AppException($"git push to {Config.StoreRemote} {branch} failed");
+					keepWork = true;
+					throw new AppException($"fix generation produced an empty descriptor — not publishing. Descriptor left at: {descriptor}");
 				}
 
-				log.Info($"Published '{id}' v{version} → {url}");
-				return new PublishOutcome(id, feedback);
+				File.WriteAllText(descriptor, fixResult.Descriptor);
+				feedback = fixResult.Feedback ?? feedback; // keep the latest volunteered catalogue feedback
 			}
 		}
 		finally
@@ -144,6 +185,14 @@ public static class PublishCommand
 				catch { /* best-effort temp cleanup */ }
 			}
 		}
+	}
+
+	// The validator prints a concise per-stage report, but guard against a pathologically long one before
+	// feeding it to the generator: keep the tail, which is where the failing stage and its error land.
+	private static string TailReport(string report, int maxLines = 200)
+	{
+		var lines = report.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
+		return lines.Length <= maxLines ? report : string.Join('\n', lines[^maxLines..]);
 	}
 
 	private static bool IsExecutable(string path)

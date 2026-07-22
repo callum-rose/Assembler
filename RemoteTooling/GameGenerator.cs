@@ -36,6 +36,20 @@ public static class GameGenerator
 		+ "behaviours you hit while authoring this game), or the single word none if you have nothing to report.",
 		log);
 
+	public static GenerationResult Fix(string validationReport, string currentDescriptor, Logger log) => Invoke(
+		"Use the generate-game-descriptor skill to fix an existing Assembler game descriptor that FAILED sandbox "
+		+ "validation. Below is the descriptor and the validator's report — it pinpoints the stage that broke "
+		+ "(structure → deserialise → parse → resolve → instantiate) and the thrown exception or logged error. "
+		+ "Diagnose the reported failure and correct the descriptor so it builds cleanly. Change only what the "
+		+ "errors require; keep the game's intent intact. Hard constraints unchanged: built-in primitive renderers "
+		+ "only (no Assets: block), and a reachable !gameover path must remain. "
+		+ "First output the full corrected YAML document — no prose, no code fences, nothing before it. "
+		+ $"Then, on its own line, output the exact delimiter {FeedbackDelimiter} followed by any feedback the "
+		+ "skill surfaces about the behaviour catalogue, or the single word none if you have nothing to report.\n\n"
+		+ $"Validation report:\n{validationReport}\n\n"
+		+ $"Current descriptor:\n{currentDescriptor}",
+		log);
+
 	public static GenerationResult Refine(string change, string currentDescriptor, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to revise an existing Assembler game descriptor. "
 		+ $"Apply this change: \"{change}\". Keep everything else intact. Hard constraints unchanged: "
