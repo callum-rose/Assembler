@@ -109,6 +109,11 @@ leave the issue open (with the label removed) and a comment explaining why. It h
 so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl bootout` / a KeepAlive
 restart isn't locked out.
 
+**Which build is running?** The daemon logs its version on startup (`generation daemon v1.0.0 started …`),
+and `assembler-remote version` prints it too — so after a redeploy you can confirm the running binary is the
+one you just built. The version is the `<Version>` in `Assembler.RemoteTooling.csproj`; bump it when you ship
+a change worth telling apart.
+
 ## Wiring the app
 
 The `Assembler.Remote` assembly (`Assembler/Assets/Remote/`) adds the runtime shelf. To switch a build

@@ -18,6 +18,7 @@ try
 		"publish" => PublishCommand.Run(rest),
 		"refine" => RefineCommand.Run(rest),
 		"daemon" => DaemonCommand.Run(rest),
+		"version" or "-v" or "--version" => PrintVersion(),
 		"-h" or "--help" or "help" => Usage(),
 		_ => Unknown(command),
 	};
@@ -26,6 +27,12 @@ catch (AppException ex)
 {
 	Console.Error.WriteLine(ex.Message);
 	return 1;
+}
+
+static int PrintVersion()
+{
+	Console.Out.WriteLine(BuildInfo.Version);
+	return 0;
 }
 
 static int Unknown(string command)
@@ -47,6 +54,7 @@ static int Usage()
           assembler-remote publish path/to/descriptor.yaml [id] publish/refresh an existing descriptor
           assembler-remote refine <game-id> "<change>"          revise a published game and bump its version
           assembler-remote daemon                               poll GitHub issues and fulfil generation requests
+          assembler-remote version                              print the running build's version
 
         Configuration is via environment variables — see RemoteTooling/README.md.
         """);

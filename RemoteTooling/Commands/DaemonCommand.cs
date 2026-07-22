@@ -72,7 +72,7 @@ public static class DaemonCommand
 			.ToList();
 		_ = signals; // keep the registrations alive for the lifetime of the process
 
-		DaemonLog($"generation daemon started — repo={repo} label={label} poll={pollSeconds}s");
+		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} poll={pollSeconds}s");
 
 		while (true)
 		{
