@@ -25,6 +25,14 @@ public static class Config
 	public static int PollSeconds =>
 		int.TryParse(Env("ASSEMBLER_POLL_SECONDS"), out var n) && n > 0 ? n : 30;
 
+	/// <summary>
+	/// How many issues the daemon fulfils at once. Only the multi-minute generation stage actually
+	/// overlaps — validation (one Unity <c>Library</c> lock) and publish (one git working tree) are
+	/// serialised regardless — so this caps concurrent <c>claude</c> runs, not concurrent pushes.
+	/// </summary>
+	public static int MaxConcurrent =>
+		int.TryParse(Env("ASSEMBLER_MAX_CONCURRENT"), out var n) && n > 0 ? n : 3;
+
 	/// <summary>The Unity project root that holds <c>Tools/validate-game.sh</c>.</summary>
 	public static string EngineDir() =>
 		Env("ASSEMBLER_ENGINE_DIR")

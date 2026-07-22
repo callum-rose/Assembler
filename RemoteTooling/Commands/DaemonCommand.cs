@@ -20,6 +20,14 @@ public static class DaemonCommand
 	// (via the Logger's onInfo hook) while the poll thread also reads/writes, so mutations are serialised.
 	private static readonly object StateGate = new();
 
+	// Caps how many issues are fulfilled at once. Only their generation stages truly overlap; validation
+	// and publish still serialise inside PublishCommand, so this mainly bounds concurrent `claude` runs.
+	private static readonly SemaphoreSlim Slots = new(Config.MaxConcurrent, Config.MaxConcurrent);
+
+	// Issue numbers currently being worked (queued or running). A poll skips any already here so a job
+	// that spans several poll cycles isn't picked up a second time and generated twice.
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> InFlight = new();
+
 	public static int Run(IReadOnlyList<string> args)
 	{
 		var repo = Config.StoreRepo;
@@ -92,7 +100,8 @@ public static class DaemonCommand
 		};
 		WriteState(s => s);
 
-		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} poll={pollSeconds}s");
+		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} "
+		+ $"poll={pollSeconds}s maxConcurrent={Config.MaxConcurrent}");
 
 		while (true)
 		{
@@ -124,6 +133,17 @@ public static class DaemonCommand
 		}
 	}
 
+	/// <summary>Replace the in-flight job for <paramref name="issue"/> via <paramref name="update"/>, leaving
+	/// every other worker's job untouched.</summary>
+	private static void UpdateJob(int issue, Func<DaemonJob, DaemonJob> update) => WriteState(s => s with
+	{
+		Current = s.Current.Select(j => j.Issue == issue ? update(j) : j).ToArray(),
+	});
+
+	/// <summary>The in-flight list without the job for <paramref name="issue"/>.</summary>
+	private static IReadOnlyList<DaemonJob> Remove(IReadOnlyList<DaemonJob> jobs, int issue) =>
+		jobs.Where(j => j.Issue != issue).ToArray();
+
 	private static void PollOnce(string repo, string label)
 	{
 		var response = Proc.Capture("gh", ["api", $"repos/{repo}/issues?state=open&labels={label}&per_page=20"]);
@@ -149,7 +169,35 @@ public static class DaemonCommand
 
 			// Prefer a non-empty body as the brief; fall back to the title.
 			var brief = string.IsNullOrWhiteSpace(body) ? title : body;
+
+			// Claim the issue before launching so a later poll (this generation can outlast several)
+			// doesn't pick it up again; the claim is released when the worker finishes.
+			if (!InFlight.TryAdd(number, 0))
+			{
+				continue;
+			}
+
+			_ = Task.Run(() => Worker(repo, label, number, brief));
+		}
+	}
+
+	// Fulfil one issue on its own thread, bounded by Slots so at most MaxConcurrent run at once. Never
+	// throws: a worker that died must still release its slot and its in-flight claim.
+	private static void Worker(string repo, string label, int number, string brief)
+	{
+		Slots.Wait();
+		try
+		{
 			Fulfil(repo, label, number, brief);
+		}
+		catch (Exception ex)
+		{
+			DaemonLog($"worker error #{number}: {ex.Message}");
+		}
+		finally
+		{
+			Slots.Release();
+			InFlight.TryRemove(number, out _);
 		}
 	}
 
@@ -157,16 +205,15 @@ public static class DaemonCommand
 	{
 		DaemonLog($"fulfilling #{number}: {brief}");
 		var job = new DaemonJob(number, brief, DaemonPhase.Picked, DateTimeOffset.Now);
-		WriteState(s => s with { Current = job });
+		WriteState(s => s with { Current = [.. s.Current, job] });
 
 		Comment(repo, number, "🛠️ The generation daemon has picked up this task and is generating the game now. "
 			+ "I'll comment again with the result.");
 
 		var captured = new StringBuilder();
 		// Derive the coarse phase from the publish pipeline's own progress logging so status can show it live.
-		var log = new Logger(captured, onInfo: line => WriteState(s => s.Current is { } c
-			? s with { Current = c with { Phase = PhaseFrom(line, c.Phase) } }
-			: s));
+		// Update only this issue's job — other workers' jobs share the Current list.
+		var log = new Logger(captured, onInfo: line => UpdateJob(number, j => j with { Phase = PhaseFrom(line, j.Phase) }));
 		PublishOutcome? outcome = null;
 		try
 		{
@@ -186,7 +233,7 @@ public static class DaemonCommand
 			DaemonLog($"published '{outcome.Id}' for #{number}");
 			WriteState(s => s with
 			{
-				Current = null,
+				Current = Remove(s.Current, number),
 				PublishedCount = s.PublishedCount + 1,
 				LastFinished = job with
 				{
@@ -210,7 +257,7 @@ public static class DaemonCommand
 			DaemonLog($"FAILED #{number}");
 			WriteState(s => s with
 			{
-				Current = null,
+				Current = Remove(s.Current, number),
 				FailedCount = s.FailedCount + 1,
 				LastFinished = job with { Phase = DaemonPhase.Failed, FinishedAt = DateTimeOffset.Now },
 			});

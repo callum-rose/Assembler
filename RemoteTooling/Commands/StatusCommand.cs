@@ -47,10 +47,13 @@ public static class StatusCommand
 			Console.WriteLine($"  totals   {state.PublishedCount} published   {state.FailedCount} failed");
 
 			Console.WriteLine();
-			if (state.Current is { } cur)
+			if (state.Current.Count > 0)
 			{
-				Console.WriteLine("Now generating:");
-				Console.WriteLine($"  #{cur.Issue}  \"{Trim(cur.Brief, 70)}\"   phase: {cur.Phase.ToString().ToLowerInvariant()}   ({Ago(cur.StartedAt, now)})");
+				Console.WriteLine($"Now generating ({state.Current.Count} in flight):");
+				foreach (var cur in state.Current.OrderBy(c => c.Issue))
+				{
+					Console.WriteLine($"  #{cur.Issue}  \"{Trim(cur.Brief, 70)}\"   phase: {cur.Phase.ToString().ToLowerInvariant()}   ({Ago(cur.StartedAt, now)})");
+				}
 			}
 			else
 			{
@@ -70,10 +73,10 @@ public static class StatusCommand
 		else
 		{
 			Console.WriteLine($"Queue ({queue.Count} open '{label}' issue{(queue.Count == 1 ? "" : "s")}):");
-			var currentIssue = state?.Current?.Issue;
+			var generating = (state?.Current ?? []).Select(c => c.Issue).ToHashSet();
 			foreach (var item in queue)
 			{
-				var marker = item.Number == currentIssue ? "→ generating now" : $"queued {Ago(item.CreatedAt, now)} ago";
+				var marker = generating.Contains(item.Number) ? "→ generating now" : $"queued {Ago(item.CreatedAt, now)} ago";
 				Console.WriteLine($"  #{item.Number,-5} {Trim(item.Title, 56),-56}  {marker}");
 			}
 		}

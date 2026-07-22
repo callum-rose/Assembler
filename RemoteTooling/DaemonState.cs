@@ -23,8 +23,9 @@ public sealed record DaemonState
 	public int PublishedCount { get; init; }
 	public int FailedCount { get; init; }
 
-	/// <summary>The job in flight right now, or <c>null</c> when the daemon is idle between polls.</summary>
-	public DaemonJob? Current { get; init; }
+	/// <summary>The jobs in flight right now (the daemon fulfils up to
+	/// <see cref="Config.MaxConcurrent"/> at once); empty when idle between polls.</summary>
+	public IReadOnlyList<DaemonJob> Current { get; init; } = [];
 
 	/// <summary>The most recently finished job (published or failed), for a bit of recent history.</summary>
 	public DaemonJob? LastFinished { get; init; }
