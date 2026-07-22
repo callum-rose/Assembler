@@ -18,6 +18,7 @@ try
 		"publish" => PublishCommand.Run(rest),
 		"refine" => RefineCommand.Run(rest),
 		"daemon" => DaemonCommand.Run(rest),
+		"status" => StatusCommand.Run(rest),
 		"-h" or "--help" or "help" => Usage(),
 		_ => Unknown(command),
 	};
@@ -47,6 +48,7 @@ static int Usage()
           assembler-remote publish path/to/descriptor.yaml [id] publish/refresh an existing descriptor
           assembler-remote refine <game-id> "<change>"          revise a published game and bump its version
           assembler-remote daemon                               poll GitHub issues and fulfil generation requests
+          assembler-remote status [--json]                      show what the daemon is generating right now
 
         Configuration is via environment variables — see RemoteTooling/README.md.
         """);

@@ -5,16 +5,21 @@ namespace Assembler.RemoteTooling;
 /// <summary>
 /// Writes human-facing progress to stderr (so a command's real payload — e.g. a published game id —
 /// stays alone on stdout). Optionally tees every line, un-coloured, into a buffer so the daemon can
-/// quote a failed publish back onto the GitHub issue.
+/// quote a failed publish back onto the GitHub issue, and forwards each <see cref="Info"/> line to an
+/// optional observer so the daemon can track which publish phase a job has reached.
 /// </summary>
-public sealed class Logger(StringBuilder? capture = null)
+public sealed class Logger(StringBuilder? capture = null, Action<string>? onInfo = null)
 {
 	private static readonly char Esc = (char)0x1b;
 	private static readonly string Cyan = $"{Esc}[36m";
 	private static readonly string Red = $"{Esc}[31m";
 	private static readonly string Reset = $"{Esc}[0m";
 
-	public void Info(string message) => Write(Cyan, message);
+	public void Info(string message)
+	{
+		Write(Cyan, message);
+		onInfo?.Invoke(message);
+	}
 
 	public void Err(string message) => Write(Red, message);
 

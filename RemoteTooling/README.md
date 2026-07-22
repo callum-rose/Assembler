@@ -109,6 +109,24 @@ leave the issue open (with the label removed) and a comment explaining why. It h
 so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl bootout` / a KeepAlive
 restart isn't locked out.
 
+### Check what it's doing
+
+Ask the running daemon what it's up to without tailing its log:
+
+```sh
+assembler-remote status
+```
+
+It reports whether the daemon is alive, the job in flight right now (which issue, the brief, and which
+phase — generating / validating / publishing — plus how long it's been going), the queue of open
+`generate`-labelled issues still waiting, the last finished job, and running totals. Add `--json` for a
+machine-readable snapshot (handy for a menu-bar widget or an iOS Shortcut).
+
+The daemon writes a small heartbeat/progress file next to its lock in the temp dir; `status` reads that for
+the live picture and queries GitHub for the queue (so the queue needs `ASSEMBLER_STORE_REPO`, or a daemon
+that has already recorded it). A stopped daemon deletes the file on exit; a crashed one leaves a stale file
+that `status` detects (dead pid / missed heartbeats) and reports as *not running*.
+
 ## Wiring the app
 
 The `Assembler.Remote` assembly (`Assembler/Assets/Remote/`) adds the runtime shelf. To switch a build
