@@ -21,23 +21,32 @@ public static class GameGenerator
 		["ANTHROPIC_AUTH_TOKEN"] = null,
 	};
 
-	public static string GenerateNew(string brief, Logger log) => Invoke(
+	// The model emits the descriptor first, then this delimiter on its own line, then any catalogue
+	// feedback the generate-game-descriptor skill volunteered. Chosen to never occur in valid YAML.
+	private const string FeedbackDelimiter = "===BEHAVIOUR CATALOGUE FEEDBACK===";
+
+	public static GenerationResult GenerateNew(string brief, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to author a complete, runnable Assembler game descriptor "
 		+ $"for this idea: \"{brief}\". Hard constraint: the game must use ONLY built-in primitive renderers — "
 		+ "it must NOT declare a top-level Assets: block or reference any voxel/sprite/audio assets. "
-		+ "It must declare a reachable !gameover path. Output ONLY the final YAML document, with no prose, "
-		+ "no code fences, and nothing before or after it.",
+		+ "It must declare a reachable !gameover path. "
+		+ "First output the final YAML document — no prose, no code fences, nothing before it. "
+		+ $"Then, on its own line, output the exact delimiter {FeedbackDelimiter} followed by any feedback the "
+		+ "skill surfaces about the behaviour catalogue (missing, faulty, awkwardly-composed or misnamed "
+		+ "behaviours you hit while authoring this game), or the single word none if you have nothing to report.",
 		log);
 
-	public static string Refine(string change, string currentDescriptor, Logger log) => Invoke(
+	public static GenerationResult Refine(string change, string currentDescriptor, Logger log) => Invoke(
 		$"Use the generate-game-descriptor skill to revise an existing Assembler game descriptor. "
 		+ $"Apply this change: \"{change}\". Keep everything else intact. Hard constraints unchanged: "
 		+ "built-in primitive renderers only (no Assets: block), and a reachable !gameover path must remain. "
-		+ "Output ONLY the full revised YAML document — no prose, no code fences.\n\n"
+		+ "First output the full revised YAML document — no prose, no code fences, nothing before it. "
+		+ $"Then, on its own line, output the exact delimiter {FeedbackDelimiter} followed by any feedback the "
+		+ "skill surfaces about the behaviour catalogue, or the single word none if you have nothing to report.\n\n"
 		+ $"Current descriptor:\n{currentDescriptor}",
 		log);
 
-	private static string Invoke(string prompt, Logger log)
+	private static GenerationResult Invoke(string prompt, Logger log)
 	{
 		var claude = Config.ClaudeBin;
 		if (!Proc.Which(claude))
@@ -80,12 +89,31 @@ public static class GameGenerator
 		if (state.Result is not null)
 		{
 			log.Info($"claude finished in {stopwatch.Elapsed.TotalSeconds:F0}s.");
-			return state.Result;
+			return Split(state.Result);
 		}
 
 		throw new AppException(state.Error is not null
 			? $"claude generation failed: {state.Error}"
 			: $"claude produced no result (exit {exit}) — no success event in the stream");
+	}
+
+	// Split the model's final message into descriptor + optional catalogue feedback on the LAST delimiter
+	// (so a stray earlier match can't truncate the descriptor). With no delimiter — an older model slip —
+	// the whole payload is the descriptor and there's no feedback, preserving the pure-YAML contract.
+	private static GenerationResult Split(string raw)
+	{
+		var lines = raw.Replace("\r\n", "\n").Split('\n');
+		var marker = Array.FindLastIndex(lines, line => line.Trim() == FeedbackDelimiter);
+		if (marker < 0)
+		{
+			return new GenerationResult(raw.Trim(), null);
+		}
+
+		var descriptor = string.Join('\n', lines[..marker]).Trim();
+		var feedback = string.Join('\n', lines[(marker + 1)..]).Trim();
+		return new GenerationResult(
+			descriptor,
+			feedback.Length == 0 || feedback.Equals("none", StringComparison.OrdinalIgnoreCase) ? null : feedback);
 	}
 
 	// Parse one line of claude's stream-json (newline-delimited JSON) and surface concise progress.
@@ -189,3 +217,7 @@ public static class GameGenerator
 		public long LastActivityMs;
 	}
 }
+
+/// <summary>A generated descriptor plus any behaviour-catalogue feedback the skill volunteered (null when
+/// it had nothing to report).</summary>
+public sealed record GenerationResult(string Descriptor, string? Feedback);

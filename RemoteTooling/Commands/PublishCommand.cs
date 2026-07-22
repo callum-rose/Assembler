@@ -12,11 +12,11 @@ public static class PublishCommand
 		var log = new Logger();
 		try
 		{
-			var id = Publish(
+			var outcome = Publish(
 				args.Count > 0 ? args[0] : null,
 				args.Count > 1 ? args[1] : null,
 				log);
-			Console.Out.WriteLine(id); // the id is the payload — daemon/refine read it from stdout
+			Console.Out.WriteLine(outcome.Id); // the id is the payload — daemon/refine read it from stdout
 			return 0;
 		}
 		catch (AppException ex)
@@ -27,10 +27,11 @@ public static class PublishCommand
 	}
 
 	/// <summary>
-	/// Publish a descriptor and return its game id. Reused in-process by <c>refine</c> and the daemon.
-	/// Throws <see cref="AppException"/> on any failure (leaving a failed-validation descriptor on disk).
+	/// Publish a descriptor and return its game id plus any behaviour-catalogue feedback the generator
+	/// volunteered. Reused in-process by <c>refine</c> and the daemon. Throws <see cref="AppException"/>
+	/// on any failure (leaving a failed-validation descriptor on disk).
 	/// </summary>
-	public static string Publish(string? input, string? forcedId, Logger log)
+	public static PublishOutcome Publish(string? input, string? forcedId, Logger log)
 	{
 		if (string.IsNullOrEmpty(input))
 		{
@@ -62,6 +63,7 @@ public static class PublishCommand
 			var descriptor = Path.Combine(work.FullName, "descriptor.yaml");
 
 			string title;
+			string? feedback = null;
 			if (File.Exists(input))
 			{
 				File.Copy(input, descriptor);
@@ -72,7 +74,9 @@ public static class PublishCommand
 			{
 				title = input;
 				log.Info($"Generating descriptor for: {input}");
-				File.WriteAllText(descriptor, GameGenerator.GenerateNew(input, log));
+				var generated = GameGenerator.GenerateNew(input, log);
+				File.WriteAllText(descriptor, generated.Descriptor);
+				feedback = generated.Feedback;
 				if (new FileInfo(descriptor).Length == 0)
 				{
 					throw new AppException("generation produced an empty descriptor");
@@ -109,7 +113,7 @@ public static class PublishCommand
 			if (commit.ExitCode != 0)
 			{
 				log.Info("nothing changed");
-				return id;
+				return new PublishOutcome(id, feedback);
 			}
 
 			if (Proc.Run("git", ["-C", storeDir, "push", "-q", Config.StoreRemote, $"HEAD:{branch}"]) != 0)
@@ -118,7 +122,7 @@ public static class PublishCommand
 			}
 
 			log.Info($"Published '{id}' v{version} → {url}");
-			return id;
+			return new PublishOutcome(id, feedback);
 		}
 		finally
 		{
@@ -147,3 +151,7 @@ public static class PublishCommand
 			& (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0;
 	}
 }
+
+/// <summary>A published game's id plus any behaviour-catalogue feedback the generator volunteered
+/// (null when publishing an existing descriptor file rather than generating from a brief).</summary>
+public sealed record PublishOutcome(string Id, string? Feedback);

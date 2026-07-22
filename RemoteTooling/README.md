@@ -103,7 +103,8 @@ environment (or the run configuration's *Environment variables* field) if your s
 4. `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist`
    (if it's already loaded, `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.assembler.generation-daemon.plist` first — a bare `bootstrap` of an already-loaded label fails with `5: Input/output error`)
 
-The daemon generates → validates → publishes → comments the result on the issue → closes it. Failures
+The daemon comments on pick-up (so you know it started) → generates → validates → publishes → comments the
+result on the issue (with any behaviour-catalogue feedback the generator volunteered) → closes it. Failures
 leave the issue open (with the label removed) and a comment explaining why. It holds a single-flight lock
 so a second daemon exits immediately, and releases the lock on SIGTERM so `launchctl bootout` / a KeepAlive
 restart isn't locked out.
