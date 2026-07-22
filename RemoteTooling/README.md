@@ -127,6 +127,11 @@ the live picture and queries GitHub for the queue (so the queue needs `ASSEMBLER
 that has already recorded it). A stopped daemon deletes the file on exit; a crashed one leaves a stale file
 that `status` detects (dead pid / missed heartbeats) and reports as *not running*.
 
+**Which build is running?** The daemon logs its version on startup (`generation daemon v1.0.0 started …`),
+and `assembler-remote version` prints it too — so after a redeploy you can confirm the running binary is the
+one you just built. The version is the `<Version>` in `Assembler.RemoteTooling.csproj`; bump it when you ship
+a change worth telling apart.
+
 ## Wiring the app
 
 The `Assembler.Remote` assembly (`Assembler/Assets/Remote/`) adds the runtime shelf. To switch a build

@@ -92,7 +92,7 @@ public static class DaemonCommand
 		};
 		WriteState(s => s);
 
-		DaemonLog($"generation daemon started — repo={repo} label={label} poll={pollSeconds}s");
+		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} poll={pollSeconds}s");
 
 		while (true)
 		{

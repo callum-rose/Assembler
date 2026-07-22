@@ -19,6 +19,7 @@ try
 		"refine" => RefineCommand.Run(rest),
 		"daemon" => DaemonCommand.Run(rest),
 		"status" => StatusCommand.Run(rest),
+		"version" or "-v" or "--version" => PrintVersion(),
 		"-h" or "--help" or "help" => Usage(),
 		_ => Unknown(command),
 	};
@@ -27,6 +28,12 @@ catch (AppException ex)
 {
 	Console.Error.WriteLine(ex.Message);
 	return 1;
+}
+
+static int PrintVersion()
+{
+	Console.Out.WriteLine(BuildInfo.Version);
+	return 0;
 }
 
 static int Unknown(string command)
@@ -49,6 +56,7 @@ static int Usage()
           assembler-remote refine <game-id> "<change>"          revise a published game and bump its version
           assembler-remote daemon                               poll GitHub issues and fulfil generation requests
           assembler-remote status [--json]                      show what the daemon is generating right now
+          assembler-remote version                              print the running build's version
 
         Configuration is via environment variables — see RemoteTooling/README.md.
         """);
