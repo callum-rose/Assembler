@@ -6,8 +6,8 @@ namespace Assembler.RemoteTooling.Commands;
 /// <c>publish "&lt;brief&gt;" | path/to/descriptor.yaml [game-id]</c> — obtain a descriptor (generate one
 /// from a brief, or take an existing file), validate that it builds, then commit + push it to the store
 /// repo and upsert <c>manifest.json</c>. If validation fails, the validator's report is fed back to the
-/// generator to fix and the result re-validated — looping up to <see cref="Config.MaxValidationAttempts"/>
-/// times before giving up.
+/// generator to fix and the result re-validated — looping until the descriptor builds cleanly (there is no
+/// attempt cap; only a generator that emits nothing at all is terminal).
 /// </summary>
 public static class PublishCommand
 {
@@ -100,19 +100,17 @@ public static class PublishCommand
 				throw new AppException($"could not derive a game id from '{title}' — pass one explicitly");
 			}
 
-			// Validate, and on failure feed the report back to the generator to fix — looping up to
-			// MaxValidationAttempts, the same way the skill is driven by hand. Only validation and the git
-			// publish are the serial critical section (see BuildPublishGate); the multi-minute fix run
-			// happens OUTSIDE the gate so it overlaps other workers' generation instead of blocking them.
-			var maxAttempts = Config.MaxValidationAttempts;
+			// Validate, and on failure feed the report back to the generator to fix, then re-validate — the
+			// same way the skill is driven by hand. The loop keeps going until the descriptor builds cleanly
+			// (there is deliberately no attempt cap). Only validation and the git publish are the serial
+			// critical section (see BuildPublishGate); the multi-minute fix run happens OUTSIDE the gate so it
+			// overlaps other workers' generation instead of blocking them.
 			for (var attempt = 1; ; attempt++)
 			{
 				string report;
 				lock (BuildPublishGate)
 				{
-					log.Info(maxAttempts > 1
-						? $"Validating '{id}' (attempt {attempt}/{maxAttempts}; booting Unity sandbox — this is slow)…"
-						: $"Validating '{id}' (booting Unity sandbox — this is slow)…");
+					log.Info($"Validating '{id}' (attempt {attempt}; booting Unity sandbox — this is slow)…");
 
 					// Tee the validator's output into a buffer as well as the log, so a failure can be fed
 					// back to the generator verbatim (the script prints only its concise per-stage report).
@@ -153,19 +151,11 @@ public static class PublishCommand
 					report = captured.ToString();
 				}
 
-				// Validation failed; the gate is released. Give up once attempts are exhausted, leaving the
-				// last failing descriptor on disk for inspection / manual refinement.
-				if (attempt >= maxAttempts)
-				{
-					keepWork = true;
-					throw new AppException(maxAttempts > 1
-						? $"validation still failing after {maxAttempts} attempts — not publishing. Descriptor left at: {descriptor}"
-						: $"validation failed — not publishing. Descriptor left at: {descriptor}");
-				}
-
-				// Otherwise hand the validation report and current descriptor back to the generator, write its
-				// fix over the working descriptor, and re-validate on the next loop.
-				log.Info($"Validation failed — asking the generator to fix it (attempt {attempt + 1}/{maxAttempts})…");
+				// Validation failed and the gate is released. Hand the report and current descriptor back to
+				// the generator, write its fix over the working descriptor, and re-validate on the next loop.
+				// The only terminal failure is the generator producing nothing at all — an empty descriptor
+				// can't be validated or fixed, so retrying it would just spin.
+				log.Info($"Validation failed — asking the generator to fix it (attempt {attempt + 1})…");
 				var fixResult = GameGenerator.Fix(TailReport(report), File.ReadAllText(descriptor), log);
 				if (string.IsNullOrWhiteSpace(fixResult.Descriptor))
 				{

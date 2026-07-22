@@ -9,9 +9,9 @@ namespace Assembler.RemoteTooling.Commands;
 /// On pick-up it comments to say it's started; on success it comments the outcome (plus any behaviour-catalogue
 /// feedback the generator volunteered) and closes the issue. Publish itself validates the generated descriptor
 /// and, when validation fails, feeds the validator's report back to the generator to fix and re-validates —
-/// looping up to <see cref="Config.MaxValidationAttempts"/> times, the way the skill is driven by hand. Only
-/// once those attempts are exhausted does it comment why and drop the label, leaving the issue open for
-/// inspection without being retried every poll. Single-flight: a second daemon on the same machine exits
+/// looping until it builds cleanly, the way the skill is driven by hand. Only a hard failure (e.g. the
+/// generator emitting nothing) ends the job: it then comments why and drops the label, leaving the issue open
+/// for inspection without being retried every poll. Single-flight: a second daemon on the same machine exits
 /// immediately.
 ///
 /// Throughout, it writes a heartbeat/progress snapshot to <see cref="DaemonState"/> so a separate
