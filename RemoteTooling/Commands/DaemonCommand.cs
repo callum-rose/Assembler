@@ -7,9 +7,12 @@ namespace Assembler.RemoteTooling.Commands;
 /// <summary>
 /// <c>daemon</c> — poll the store repo's open issues labelled <c>generate</c> and fulfil each via publish.
 /// On pick-up it comments to say it's started; on success it comments the outcome (plus any behaviour-catalogue
-/// feedback the generator volunteered) and closes the issue; on failure it comments why and drops the label so
-/// the issue stays open for inspection without being retried. Single-flight: a second daemon on the same
-/// machine exits immediately.
+/// feedback the generator volunteered) and closes the issue. Publish itself validates the generated descriptor
+/// and, when validation fails, feeds the validator's report back to the generator to fix and re-validates —
+/// looping until it builds cleanly, the way the skill is driven by hand. Only a hard failure (e.g. the
+/// generator emitting nothing) ends the job: it then comments why and drops the label, leaving the issue open
+/// for inspection without being retried every poll. Single-flight: a second daemon on the same machine exits
+/// immediately.
 ///
 /// Throughout, it writes a heartbeat/progress snapshot to <see cref="DaemonState"/> so a separate
 /// <c>status</c> invocation can report what it's generating right now.
@@ -306,6 +309,7 @@ public static class DaemonCommand
 	private static DaemonPhase PhaseFrom(string line, DaemonPhase current) => line switch
 	{
 		_ when line.StartsWith("Generating descriptor", StringComparison.Ordinal) => DaemonPhase.Generating,
+		_ when line.StartsWith("Validation failed — asking the generator to fix", StringComparison.Ordinal) => DaemonPhase.Fixing,
 		_ when line.StartsWith("Validating", StringComparison.Ordinal) => DaemonPhase.Validating,
 		_ when line.StartsWith("Published", StringComparison.Ordinal) => DaemonPhase.Publishing,
 		_ => current,
