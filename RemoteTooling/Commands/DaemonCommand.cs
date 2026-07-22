@@ -5,9 +5,11 @@ using System.Text.Json;
 namespace Assembler.RemoteTooling.Commands;
 
 /// <summary>
-/// <c>daemon</c> — poll the store repo's open issues labelled <c>generate</c>, fulfil each via publish,
-/// comment the result and close (or, on failure, drop the label so it isn't retried). Single-flight:
-/// a second daemon on the same machine exits immediately.
+/// <c>daemon</c> — poll the store repo's open issues labelled <c>generate</c> and fulfil each via publish.
+/// On pick-up it comments to say it's started; on success it comments the outcome (plus any behaviour-catalogue
+/// feedback the generator volunteered) and closes the issue; on failure it comments why and drops the label so
+/// the issue stays open for inspection without being retried. Single-flight: a second daemon on the same
+/// machine exits immediately.
 /// </summary>
 public static class DaemonCommand
 {
@@ -119,15 +121,15 @@ public static class DaemonCommand
 	private static void Fulfil(string repo, string label, int number, string brief)
 	{
 		DaemonLog($"fulfilling #{number}: {brief}");
+		Comment(repo, number, "🛠️ The generation daemon has picked up this task and is generating the game now. "
+			+ "I'll comment again with the result.");
 
 		var captured = new StringBuilder();
 		var log = new Logger(captured);
-		string? id = null;
-		var ok = false;
+		PublishOutcome? outcome = null;
 		try
 		{
-			id = PublishCommand.Publish(brief, forcedId: null, log);
-			ok = true;
+			outcome = PublishCommand.Publish(brief, forcedId: null, log);
 		}
 		catch (AppException ex)
 		{
@@ -138,10 +140,16 @@ public static class DaemonCommand
 			log.Err(ex.ToString());
 		}
 
-		if (ok)
+		if (outcome is not null)
 		{
-			DaemonLog($"published '{id}' for #{number}");
-			Comment(repo, number, $"✅ Published `{id}`. It should appear on the shelf shortly.");
+			DaemonLog($"published '{outcome.Id}' for #{number}");
+			var body = new StringBuilder($"✅ Published `{outcome.Id}`. It should appear on the shelf shortly.");
+			if (!string.IsNullOrWhiteSpace(outcome.Feedback))
+			{
+				body.Append($"\n\n**Generator feedback on the behaviour catalogue:**\n\n{outcome.Feedback}");
+			}
+
+			Comment(repo, number, body.ToString());
 			Proc.Capture("gh", ["api", "-X", "PATCH", $"repos/{repo}/issues/{number}", "-f", "state=closed"]);
 		}
 		else

@@ -27,7 +27,7 @@ public static class RefineCommand
 
 			log.Info($"Refining '{id}': {change}");
 			var revised = GameGenerator.Refine(change, File.ReadAllText(current), log);
-			if (string.IsNullOrWhiteSpace(revised))
+			if (string.IsNullOrWhiteSpace(revised.Descriptor))
 			{
 				throw new AppException("refinement produced an empty descriptor");
 			}
@@ -37,8 +37,8 @@ public static class RefineCommand
 			try
 			{
 				var revisedPath = Path.Combine(work.FullName, $"{id}.yaml");
-				File.WriteAllText(revisedPath, revised);
-				Console.Out.WriteLine(PublishCommand.Publish(revisedPath, id, log));
+				File.WriteAllText(revisedPath, revised.Descriptor);
+				Console.Out.WriteLine(PublishCommand.Publish(revisedPath, id, log).Id);
 				return 0;
 			}
 			finally
