@@ -10,9 +10,16 @@ namespace Assembler.RemoteTooling.Commands;
 /// feedback the generator volunteered) and closes the issue; on failure it comments why and drops the label so
 /// the issue stays open for inspection without being retried. Single-flight: a second daemon on the same
 /// machine exits immediately.
+///
+/// Throughout, it writes a heartbeat/progress snapshot to <see cref="DaemonState"/> so a separate
+/// <c>status</c> invocation can report what it's generating right now.
 /// </summary>
 public static class DaemonCommand
 {
+	// Guards the shared state below: the publish pipeline streams its progress from a background thread
+	// (via the Logger's onInfo hook) while the poll thread also reads/writes, so mutations are serialised.
+	private static readonly object StateGate = new();
+
 	public static int Run(IReadOnlyList<string> args)
 	{
 		var repo = Config.StoreRepo;
@@ -55,6 +62,7 @@ public static class DaemonCommand
 			{
 				lockFile.Dispose();
 				File.Delete(lockPath);
+				File.Delete(DaemonState.Path); // a stopped daemon has no live status
 			}
 			catch { /* best-effort */ }
 		}
@@ -72,10 +80,24 @@ public static class DaemonCommand
 			.ToList();
 		_ = signals; // keep the registrations alive for the lifetime of the process
 
+		var now = DateTimeOffset.Now;
+		_state = new DaemonState
+		{
+			Pid = Environment.ProcessId,
+			Repo = repo,
+			Label = label,
+			PollSeconds = pollSeconds,
+			StartedAt = now,
+			LastPollAt = now,
+		};
+		WriteState(s => s);
+
 		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} poll={pollSeconds}s");
 
 		while (true)
 		{
+			WriteState(s => s with { LastPollAt = DateTimeOffset.Now }); // heartbeat
+
 			try
 			{
 				PollOnce(repo, label);
@@ -86,6 +108,19 @@ public static class DaemonCommand
 			}
 
 			Thread.Sleep(TimeSpan.FromSeconds(pollSeconds));
+		}
+	}
+
+	// The live snapshot; mutated only through WriteState under StateGate.
+	private static DaemonState _state = new();
+
+	/// <summary>Apply <paramref name="update"/> to the current state and persist it, atomically.</summary>
+	private static void WriteState(Func<DaemonState, DaemonState> update)
+	{
+		lock (StateGate)
+		{
+			_state = update(_state);
+			_state.Write();
 		}
 	}
 
@@ -121,11 +156,17 @@ public static class DaemonCommand
 	private static void Fulfil(string repo, string label, int number, string brief)
 	{
 		DaemonLog($"fulfilling #{number}: {brief}");
+		var job = new DaemonJob(number, brief, DaemonPhase.Picked, DateTimeOffset.Now);
+		WriteState(s => s with { Current = job });
+
 		Comment(repo, number, "🛠️ The generation daemon has picked up this task and is generating the game now. "
 			+ "I'll comment again with the result.");
 
 		var captured = new StringBuilder();
-		var log = new Logger(captured);
+		// Derive the coarse phase from the publish pipeline's own progress logging so status can show it live.
+		var log = new Logger(captured, onInfo: line => WriteState(s => s.Current is { } c
+			? s with { Current = c with { Phase = PhaseFrom(line, c.Phase) } }
+			: s));
 		PublishOutcome? outcome = null;
 		try
 		{
@@ -143,6 +184,18 @@ public static class DaemonCommand
 		if (outcome is not null)
 		{
 			DaemonLog($"published '{outcome.Id}' for #{number}");
+			WriteState(s => s with
+			{
+				Current = null,
+				PublishedCount = s.PublishedCount + 1,
+				LastFinished = job with
+				{
+					Phase = DaemonPhase.Published,
+					FinishedAt = DateTimeOffset.Now,
+					PublishedId = outcome.Id,
+				},
+			});
+
 			var body = new StringBuilder($"✅ Published `{outcome.Id}`. It should appear on the shelf shortly.");
 			if (!string.IsNullOrWhiteSpace(outcome.Feedback))
 			{
@@ -155,11 +208,28 @@ public static class DaemonCommand
 		else
 		{
 			DaemonLog($"FAILED #{number}");
+			WriteState(s => s with
+			{
+				Current = null,
+				FailedCount = s.FailedCount + 1,
+				LastFinished = job with { Phase = DaemonPhase.Failed, FinishedAt = DateTimeOffset.Now },
+			});
+
 			Comment(repo, number, $"❌ Generation failed:\n```\n{Tail(captured.ToString(), 20)}\n```");
 			// Leave the issue open (drop the label) so it isn't retried every poll.
 			Proc.Capture("gh", ["api", "-X", "DELETE", $"repos/{repo}/issues/{number}/labels/{label}"]);
 		}
 	}
+
+	// Map a publish progress line to the phase it announces. Unrecognised lines keep the current phase,
+	// so incidental logging never regresses what status shows.
+	private static DaemonPhase PhaseFrom(string line, DaemonPhase current) => line switch
+	{
+		_ when line.StartsWith("Generating descriptor", StringComparison.Ordinal) => DaemonPhase.Generating,
+		_ when line.StartsWith("Validating", StringComparison.Ordinal) => DaemonPhase.Validating,
+		_ when line.StartsWith("Published", StringComparison.Ordinal) => DaemonPhase.Publishing,
+		_ => current,
+	};
 
 	private static void Comment(string repo, int number, string body) =>
 		Proc.Capture("gh", ["api", $"repos/{repo}/issues/{number}/comments", "-f", $"body={body}"]);
