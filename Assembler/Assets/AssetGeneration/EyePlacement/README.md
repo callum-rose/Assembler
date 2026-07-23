@@ -68,3 +68,59 @@ EyePlacementResult geo = EyePlacer.PlaceGeometric(model, options);
 ```
 
 Or drive it from the editor: **Assembler ▸ Eye Placement**.
+
+## Evaluation harness (issue #479)
+
+Placement quality is judged **only** on the resolved 3D anchors — never a 2D pick-in-region
+hit-rate, which read 87% when the true 3D placement was ~0%. The harness scores each anchor on
+three things: it is **within tolerance** of a ground-truth eye, **on a real surface voxel**, and
+its **normal does not point up** (eyes essentially never face +Z). A model passes only when every
+ground-truth eye is reached.
+
+### Ground truth
+
+Each corpus model is a `<name>.vox` paired with a human-authored `<name>.eyes.json` sidecar giving
+the acceptable eye regions in the model's own `.vox` grid coordinates (Z-up). Author them by
+inspecting the orbit renders (`EyePlacementSpikeBatch.Render` emits the 8-yaw ring) and spot-check
+by eye.
+
+```json
+{
+  "name": "spotted_cow",
+  "note": "authored from the 8-yaw ring",
+  "eyes": [
+    { "center": { "x": 12, "y": 5,  "z": 18 }, "radiusVoxels": 2 },
+    { "center": { "x": 12, "y": 15, "z": 18 }, "radiusVoxels": 2 }
+  ]
+}
+```
+
+`radiusVoxels` is the per-eye acceptance radius; omit it (or use 0) to fall back to the scorer's
+default tolerance. The `.vox` files are large and untracked — only the `.eyes.json` sidecars are
+committed.
+
+### Running it
+
+One command turns the corpus into per-model PASS/FAIL + an orbit montage per model:
+
+```
+Unity -batchmode -quit -projectPath <project> \
+  -executeMethod Assembler.AssetGeneration.EyePlacement.EyePlacementEvalBatch.Evaluate \
+  -corpusDir <dir-of-vox-and-eyes.json> -outDir <dir> \
+  [-apiKey sk-...] [-mode vision|geometric] [-gtDir <dir>] \
+  [-tolerance 2.5] [-upDot 0.6] [-viewCount 8]
+```
+
+With an API key it runs the full vision pipeline (the "current pipeline" whose baseline is
+expected ≈0/N) — run it **without** `-nographics` so the vision cue is the crisp GPU render. With
+no key it scores the offline geometric fallback (no GPU/network). Output: `eval_summary.json`
+(machine-readable per-model + totals) and `<name>_montage.png` — the human-review artifact that
+draws ground-truth regions (cyan) and resolved anchors (green = reached its eye, red = didn't,
+grey = extra; hollow when on the model's far side for that view) across the yaw ring.
+
+| Type | Role |
+|------|------|
+| `EyeGroundTruth` | The `.eyes.json` ground-truth format + loader |
+| `EyePlacementScorer` | Pure 3D scoring: match anchors → eyes, check within-N / on-surface / not-up |
+| `EyeMontage` | Orbit contact sheet drawing ground truth + anchors across the yaw ring |
+| `EyePlacementEvalBatch` | The one-command headless entry: corpus + GT → PASS/FAIL summary + montages |
