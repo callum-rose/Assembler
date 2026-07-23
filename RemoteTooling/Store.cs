@@ -19,6 +19,66 @@ public static partial class Store
 		return hyphenated.Length > 48 ? hyphenated[..48] : hyphenated;
 	}
 
+	/// <summary>
+	/// The top-level <c>Game.Title</c> from a descriptor's YAML text, or <c>null</c> if it has no inline
+	/// title. This is the name the generator chose for the game; slugified, it makes a far better id than
+	/// the raw brief (whose first few words often miss what the game actually is). Deliberately a small
+	/// text scan, not a full parse — the descriptor is parsed and validated elsewhere (in the Unity
+	/// sandbox); here we only need the single inline scalar under the top-level <c>Game:</c> key.
+	/// </summary>
+	public static string? ExtractTitle(string descriptorYaml)
+	{
+		var inGame = false;
+		foreach (var raw in descriptorYaml.Replace("\r\n", "\n").Split('\n'))
+		{
+			var line = raw.TrimEnd();
+			var trimmed = line.TrimStart();
+			if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+			{
+				continue;
+			}
+
+			var indent = line.Length - trimmed.Length;
+			if (!inGame)
+			{
+				// Enter the top-level Game: mapping (only ever a block mapping in our descriptors).
+				if (indent == 0 && trimmed.StartsWith("Game:", StringComparison.Ordinal))
+				{
+					inGame = true;
+				}
+
+				continue;
+			}
+
+			// A key back at column 0 ends the Game block before any Title turned up.
+			if (indent == 0)
+			{
+				break;
+			}
+
+			if (trimmed.StartsWith("Title:", StringComparison.Ordinal))
+			{
+				var value = trimmed["Title:".Length..].Trim();
+				// A block scalar (| or >) has no inline value to use — fall back to the brief instead.
+				if (value.Length == 0 || value[0] is '|' or '>')
+				{
+					return null;
+				}
+
+				value = StripQuotes(value);
+				return value.Length == 0 ? null : value;
+			}
+		}
+
+		return null;
+	}
+
+	// Strip one layer of matching single/double quotes from an inline YAML scalar.
+	private static string StripQuotes(string value) =>
+		value.Length >= 2 && (value[0] == '"' || value[0] == '\'') && value[^1] == value[0]
+			? value[1..^1]
+			: value;
+
 	/// <summary>The first 8 hex chars of the descriptor's SHA-256 — the client-visible version. Matches <c>shasum -a 256 | cut -c1-8</c>.</summary>
 	public static string Version(string descriptorPath) =>
 		Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(descriptorPath)))[..8];

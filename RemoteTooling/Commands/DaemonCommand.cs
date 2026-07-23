@@ -203,8 +203,16 @@ public static class DaemonCommand
 				? b.GetString() ?? ""
 				: "";
 
-			// Prefer a non-empty body as the brief; fall back to the title.
-			var brief = string.IsNullOrWhiteSpace(body) ? title : body;
+			// Feed both the title and the body to the generator. The title often carries the game's name
+			// or core hook that the body then assumes, so dropping it loses part of the intent. Combine
+			// them when both are present; otherwise use whichever one the issue actually has.
+			var brief = (string.IsNullOrWhiteSpace(title), string.IsNullOrWhiteSpace(body)) switch
+			{
+				(false, false) => $"{title.Trim()}\n\n{body.Trim()}",
+				(false, true) => title.Trim(),
+				(true, false) => body.Trim(),
+				_ => "",
+			};
 
 			// Claim the issue before launching so a later poll (this generation can outlast several)
 			// doesn't pick it up again; the claim is released when the worker finishes.

@@ -73,17 +73,17 @@ public static class PublishCommand
 		{
 			var descriptor = Path.Combine(work.FullName, "descriptor.yaml");
 
-			string title;
+			string fallbackTitle;
 			string? feedback = null;
 			if (File.Exists(input))
 			{
 				File.Copy(input, descriptor);
-				title = Path.GetFileNameWithoutExtension(input);
+				fallbackTitle = Path.GetFileNameWithoutExtension(input);
 				log.Info($"Using existing descriptor: {input}");
 			}
 			else
 			{
-				title = input;
+				fallbackTitle = input;
 				log.Info($"Generating descriptor for: {input}");
 				var generated = GameGenerator.GenerateNew(input, log);
 				File.WriteAllText(descriptor, generated.Descriptor);
@@ -94,6 +94,12 @@ public static class PublishCommand
 				}
 			}
 
+			// Prefer the descriptor's own Game.Title — the name the generator chose for the game — as both
+			// the shelf title and the source of the id. Slugifying the raw brief just captured its first
+			// few words, which often missed what the game actually was. An explicit [game-id] argument
+			// (forcedId) still wins; the brief is only a last resort when the descriptor has no Title.
+			var descriptorTitle = Store.ExtractTitle(File.ReadAllText(descriptor));
+			var title = !string.IsNullOrWhiteSpace(descriptorTitle) ? descriptorTitle! : fallbackTitle;
 			var id = !string.IsNullOrEmpty(forcedId) ? forcedId : Store.Slugify(title);
 			if (string.IsNullOrEmpty(id))
 			{
