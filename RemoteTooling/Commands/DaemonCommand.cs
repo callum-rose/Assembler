@@ -62,6 +62,18 @@ public static class DaemonCommand
 			return 1;
 		}
 
+		// Optional GitHub App identity: when configured, all gh calls run as the app's installation token
+		// (so comments read as the bot, not the login user). A half-configured app throws here — fail loudly.
+		try
+		{
+			_app = GitHubApp.FromConfig();
+		}
+		catch (AppException ex)
+		{
+			DaemonLog($"ERROR: {ex.Message}");
+			return 1;
+		}
+
 		var label = Config.GenLabel;
 		var pollSeconds = Config.PollSeconds;
 		var lockPath = Path.Combine(Path.GetTempPath(), "assembler-generation-daemon.lock");
@@ -137,7 +149,8 @@ public static class DaemonCommand
 		WriteState(s => s);
 
 		DaemonLog($"generation daemon v{BuildInfo.Version} started — repo={repo} label={label} "
-		+ $"poll={pollSeconds}s maxConcurrent={Config.MaxConcurrent}");
+		+ $"poll={pollSeconds}s maxConcurrent={Config.MaxConcurrent} "
+		+ $"commenter={(_app is null ? "gh login user" : "GitHub App installation")}");
 
 		while (true)
 		{
@@ -158,6 +171,30 @@ public static class DaemonCommand
 
 	// The live snapshot; mutated only through WriteState under StateGate.
 	private static DaemonState _state = new();
+
+	// The bot commenter identity, or null to use the ambient `gh auth login` user. Set once in Run().
+	private static GitHubApp? _app;
+
+	// Run a `gh` command as the configured GitHub App installation when one is set (so comments/close/label
+	// come from the bot identity), else as the ambient `gh auth login` user. If minting the app token fails
+	// (e.g. a transient network error) we log and fall back to the ambient login rather than stalling the daemon.
+	private static Proc.Result Gh(IReadOnlyList<string> args)
+	{
+		IReadOnlyDictionary<string, string?>? env = null;
+		if (_app is not null)
+		{
+			try
+			{
+				env = new Dictionary<string, string?> { ["GH_TOKEN"] = _app.Token(DateTimeOffset.Now) };
+			}
+			catch (Exception ex)
+			{
+				DaemonLog($"WARN: GitHub App token unavailable, falling back to gh login: {ex.Message}");
+			}
+		}
+
+		return Proc.Capture("gh", args, env: env);
+	}
 
 	/// <summary>Apply <paramref name="update"/> to the current state and persist it, atomically.</summary>
 	private static void WriteState(Func<DaemonState, DaemonState> update)
@@ -182,7 +219,7 @@ public static class DaemonCommand
 
 	private static void PollOnce(string repo, string label)
 	{
-		var response = Proc.Capture("gh", ["api", $"repos/{repo}/issues?state=open&labels={label}&per_page=20"]);
+		var response = Gh(["api", $"repos/{repo}/issues?state=open&labels={label}&per_page=20"]);
 		if (response.ExitCode != 0 || string.IsNullOrWhiteSpace(response.StdOut))
 		{
 			return;
@@ -294,7 +331,7 @@ public static class DaemonCommand
 			}
 
 			Comment(repo, number, body.ToString());
-			Proc.Capture("gh", ["api", "-X", "PATCH", $"repos/{repo}/issues/{number}", "-f", "state=closed"]);
+			Gh(["api", "-X", "PATCH", $"repos/{repo}/issues/{number}", "-f", "state=closed"]);
 		}
 		else
 		{
@@ -308,7 +345,7 @@ public static class DaemonCommand
 
 			Comment(repo, number, $"❌ Generation failed:\n```\n{Tail(captured.ToString(), 20)}\n```");
 			// Leave the issue open (drop the label) so it isn't retried every poll.
-			Proc.Capture("gh", ["api", "-X", "DELETE", $"repos/{repo}/issues/{number}/labels/{label}"]);
+			Gh(["api", "-X", "DELETE", $"repos/{repo}/issues/{number}/labels/{label}"]);
 		}
 	}
 
@@ -324,7 +361,7 @@ public static class DaemonCommand
 	};
 
 	private static void Comment(string repo, int number, string body) =>
-		Proc.Capture("gh", ["api", $"repos/{repo}/issues/{number}/comments", "-f", $"body={body}"]);
+		Gh(["api", $"repos/{repo}/issues/{number}/comments", "-f", $"body={body}"]);
 
 	private static string Tail(string text, int lines)
 	{

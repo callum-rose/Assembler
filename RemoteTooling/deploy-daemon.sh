@@ -15,6 +15,12 @@
 #   ASSEMBLER_ENGINE_DIR    default: <repo>/Assembler
 #   ASSEMBLER_POLL_SECONDS  default: 30
 #
+# Optional bot commenter identity (all three together — else the daemon comments
+# as your `gh auth login` user). See README "Comment as a bot":
+#   ASSEMBLER_GH_APP_ID               the GitHub App's numeric App ID
+#   ASSEMBLER_GH_APP_INSTALLATION_ID  its installation ID on the store repo's account
+#   ASSEMBLER_GH_APP_KEY              path to the app's private-key .pem
+#
 set -euo pipefail
 
 if [[ "$(uname)" != "Darwin" ]]; then
@@ -51,6 +57,23 @@ fi
 
 # PATH the daemon runs with — must reach claude, gh, git, dotnet, Unity.
 DAEMON_PATH="/opt/homebrew/bin:/usr/local/bin:/usr/local/share/dotnet:/usr/bin:/bin:$HOME/.claude/local"
+
+# Optional GitHub App bot identity — emit the plist env entries only when all three are set.
+GH_APP_ID="${ASSEMBLER_GH_APP_ID:-}"
+GH_APP_INSTALLATION_ID="${ASSEMBLER_GH_APP_INSTALLATION_ID:-}"
+GH_APP_KEY="${ASSEMBLER_GH_APP_KEY:-}"
+APP_ENV=""
+if [[ -n "$GH_APP_ID" && -n "$GH_APP_INSTALLATION_ID" && -n "$GH_APP_KEY" ]]; then
+  APP_ENV=$(cat <<APPENV
+		<key>ASSEMBLER_GH_APP_ID</key>
+		<string>$GH_APP_ID</string>
+		<key>ASSEMBLER_GH_APP_INSTALLATION_ID</key>
+		<string>$GH_APP_INSTALLATION_ID</string>
+		<key>ASSEMBLER_GH_APP_KEY</key>
+		<string>$GH_APP_KEY</string>
+APPENV
+)
+fi
 
 # --- Build -----------------------------------------------------------------
 echo "==> Building Release: $CSPROJ"
@@ -93,6 +116,7 @@ cat > "$DEST" <<PLIST
 		<string>$POLL</string>
 		<key>PATH</key>
 		<string>$DAEMON_PATH</string>
+$APP_ENV
 	</dict>
 
 	<key>RunAtLoad</key>
@@ -118,6 +142,11 @@ echo "Deployed. Daemon binary:  $BIN"
 echo "  store repo:  $STORE_REPO"
 echo "  store dir:   $STORE_DIR"
 echo "  engine dir:  $ENGINE_DIR"
+if [[ -n "$APP_ENV" ]]; then
+  echo "  commenter:   GitHub App (id $GH_APP_ID, installation $GH_APP_INSTALLATION_ID)"
+else
+  echo "  commenter:   gh login user (set ASSEMBLER_GH_APP_* to comment as a bot)"
+fi
 echo "  logs:        $LOG_OUT"
 echo "               $LOG_ERR"
 echo
