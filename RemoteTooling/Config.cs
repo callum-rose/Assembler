@@ -22,6 +22,16 @@ public static class Config
 
 	public static string? StoreRepo => Env("ASSEMBLER_STORE_REPO");
 
+	/// <summary>
+	/// GitHub App credentials for the daemon's bot commenter identity. All three must be set to take effect;
+	/// otherwise the daemon comments as the ambient <c>gh auth login</c> user. See <see cref="GitHubApp"/>.
+	/// </summary>
+	public static string? GitHubAppId => Env("ASSEMBLER_GH_APP_ID");
+
+	public static string? GitHubAppInstallationId => Env("ASSEMBLER_GH_APP_INSTALLATION_ID");
+
+	public static string? GitHubAppKeyPath => Env("ASSEMBLER_GH_APP_KEY");
+
 	public static int PollSeconds =>
 		int.TryParse(Env("ASSEMBLER_POLL_SECONDS"), out var n) && n > 0 ? n : 30;
 

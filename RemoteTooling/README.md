@@ -88,6 +88,36 @@ The daemon comments on pick-up → generates → validates → publishes → com
 generator feedback) → closes the issue. Failures leave the issue open (label removed) with a reason. It
 holds a single-flight lock (a second daemon exits immediately) and releases it on SIGTERM.
 
+### Comment as a bot (optional)
+
+By default the daemon talks to GitHub through your `gh auth login`, so its comments post under **your**
+account. To give it a distinct identity (e.g. *Game Generator Bot* with its own avatar and the `[bot]`
+badge), register a GitHub App and point the daemon at it:
+
+1. **Create the app:** GitHub → *Settings → Developer settings → GitHub Apps → New GitHub App*. Give it a
+   name and avatar, set *Repository permissions → Issues: Read and write*, uncheck *Webhook → Active*, and
+   create it. Note the **App ID**.
+2. **Generate a private key** (bottom of the app's settings page) and save the downloaded `.pem` somewhere
+   the daemon can read, e.g. `~/.config/assembler/gh-app.pem`.
+3. **Install it on the store repo:** the app's *Install App* tab → install on the account that owns
+   `assembler-games`, scoped to that repo. The install URL ends in `/installations/<ID>` — that number is
+   the **installation ID** (or read it from `gh api /users/<owner>/installation` once installed).
+4. **Point the daemon at it** by setting all three env vars (redeploy afterward — `deploy-daemon.sh` writes
+   them into the LaunchAgent when present):
+
+   ```sh
+   ASSEMBLER_GH_APP_ID=123456 \
+   ASSEMBLER_GH_APP_INSTALLATION_ID=7891011 \
+   ASSEMBLER_GH_APP_KEY=~/.config/assembler/gh-app.pem \
+   RemoteTooling/deploy-daemon.sh
+   ```
+
+The daemon mints a short-lived installation token from the key and uses it for every GitHub call
+(comment/close/label as well as polling). All three vars must be set or it silently stays on the `gh`
+login; a set-but-broken key (missing file / unparseable) fails loudly at startup. If minting ever fails at
+runtime (e.g. a network blip) it logs a warning and falls back to the `gh` login for that call rather than
+stalling. The startup log line shows which identity is active (`commenter=…`).
+
 ### Check what it's doing
 
 ```sh
@@ -123,6 +153,9 @@ the new script.) `GameBootstrap` stays as a single-descriptor dev launcher.
 | `ASSEMBLER_POLL_SECONDS` | `30` | daemon |
 | `ASSEMBLER_MAX_CONCURRENT` | `3` | daemon |
 | `ASSEMBLER_GEN_LABEL` | `generate` | daemon, setup |
+| `ASSEMBLER_GH_APP_ID` | — (all three enable bot commenter) | daemon |
+| `ASSEMBLER_GH_APP_INSTALLATION_ID` | — | daemon |
+| `ASSEMBLER_GH_APP_KEY` | — (path to the app's private-key `.pem`) | daemon |
 | `CLAUDE_CLI_PATH` | `claude` | publish, refine |
 
 ## v1 limits & notes
