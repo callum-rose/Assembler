@@ -68,3 +68,19 @@ EyePlacementResult geo = EyePlacer.PlaceGeometric(model, options);
 ```
 
 Or drive it from the editor: **Assembler ▸ Eye Placement**.
+
+## Roadmap & known issues
+
+All accuracy findings, the failure taxonomy, per-model human ground truth, and the ordered roadmap live in **GitHub umbrella issue [#483](https://github.com/callum-rose/Assembler/issues/483)** — read it before starting any new eye-placement work rather than re-deriving from old temp handoffs. Sub-issues: **#479** 3D eval harness (landed, PR #485), **#480** reprojection rework (the bottleneck — next task), **#481** head zoom (shelved), **#482** transparent render fix. The module is merged into `master` (PRs #438 + #458), so branch new work from `master`.
+
+### Evaluate placement in 3D, never by a 2D hit-rate
+
+**Do not judge placement quality with a 2D pick-in-region hit-rate, and don't trust a visualisation that reprojects the 3D anchor back into the single placement view.** An eye seated on the ears/top/back/wrong-side still reprojects *near the correct 2D spot* under the pitched camera, so 2D scoring reads ~87% while true 3D placement is ~0%. The head-zoom spike concluded "it works" from 2D metrics; inspecting the actual anchors in 3D found ~0/14 correct (eyes on ears, on the back, both on one side, on the snout).
+
+Judge on the resolved 3D `EyeAnchor`s rendered on the model **from several angles** (or against 3D-annotated eye voxels). The #479 harness does exactly this: `EyePlacementScorer` (within-N of ground truth + on a surface voxel + normal-not-up), `EyeGroundTruth` (`<name>.eyes.json` sidecar alongside the untracked `.vox`), `EyeMontage` (yaw-ring contact sheet), and `EyePlacementEvalBatch.Evaluate` (run **without** `-nographics` for the GPU render).
+
+The real bottleneck is **`EyeReprojection.BuildAnchors`**, not the 2D pick: it snaps to top/upward faces under the pitched-down view, mirrors across the *view* axis instead of the model's body axis (both eyes on one side on 3/4 views), and can't place side-eyed creatures from a front pick. Head-zoom improves the 2D pick, which is *not* the limiting stage — hence shelved (#481).
+
+### Render substrate: crisp isometric GPU, not a rough CPU splat
+
+The "paint eyes with an image model → diff → centroids" spike (2026-07-04) compared render configs. The verdict reversed an earlier "never use isometric": on a **crisp GPU/URP render, isometric is the strongest substrate** — it matches flat views elsewhere *and* uniquely cracks the hardest small-head case (a 3/4 view makes a tiny head an unambiguous protruding block, so the model places eyes on it instead of redrawing the head). The earlier "isometric floods" result was a **rough-CPU-render artifact** (the image model re-renders an aliased splat wholesale), not the view. So **feed the editor the crisp isometric render, never a rough CPU splat.** The remaining gap there is a *detector* fix (a shape-based "keep the 2 most eye-like clusters" selector to reject secondary muzzle/beak edits), which runs on already-captured images — not a placement problem.
