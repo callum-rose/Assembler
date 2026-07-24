@@ -27,10 +27,12 @@ provider) and model list. All honour the optional **Reference Image**.
 
 | Provider | Backend | Notes |
 |---|---|---|
-| **Google Gemini** | [GeminiImageGenerator.cs](Editor/GeminiImageGenerator.cs) | `gemini-2.5-flash-image` is free-tier; `gemini-3-pro-image` (Nano Banana Pro) is paid and best at prompt adherence. |
+| **Google Gemini** | [GeminiImageGenerator.cs](Editor/GeminiImageGenerator.cs) | `gemini-2.5-flash-image` (Nano Banana) is free-tier and returns **PNG (lossless)**; `gemini-3-pro-image` (Nano Banana Pro) is paid, best at prompt adherence, and returns **JPEG (lossy)**. See the format note below. |
 | **OpenAI** | [OpenAiImageGenerator.cs](Editor/OpenAiImageGenerator.cs) | `gpt-image-2` family; strongest literal instruction-following. A reference image routes to the multipart `/images/edits` endpoint. Paid. |
 | **Black Forest Labs** | [FluxImageGenerator.cs](Editor/FluxImageGenerator.cs) | FLUX.2 / Kontext. Async: submit → poll `polling_url` → download `result.sample`. Reference passed as `input_image`. Paid. |
 | **Recraft** | [RecraftImageGenerator.cs](Editor/RecraftImageGenerator.cs) | Returns a URL that's downloaded. Look is driven by a `style` (hard-coded `digital_illustration` default — see the file). Reference uses image-to-image. Paid. |
+
+**Output format is the provider's, not a setting.** `ImageGenerationCore` derives the file extension from the MIME the API returns, and there is **no PNG/JPEG toggle** (`GeminiImageGenerator` hard-pins `responseModalities` to `["IMAGE","TEXT"]`). Observed for Gemini (2026-07): `gemini-2.5-flash-image` → **PNG**, `gemini-3-pro-image` → **JPEG**. This matters when a downstream stage needs lossless colour (palette/colour extraction — JPEG chroma subsampling smears flat-colour edges): if you need PNG, use `gemini-2.5-flash-image` (weaker prompt adherence) rather than expecting a toggle.
 
 ## Swapping/adding a provider
 

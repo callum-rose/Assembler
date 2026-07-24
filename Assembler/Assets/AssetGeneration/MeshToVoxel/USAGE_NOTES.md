@@ -84,6 +84,20 @@ exceeded, the nearest clusters are then agglomeratively merged (frequency-weight
 cap is met. Each voxel is repainted with its cluster's mean. It produces a real palette + labels, so
 **Potts smoothing still applies** on top (it's disabled only for plain `Raw`).
 
+## `.vox` gotchas
+
+### Palette byte 1 is reserved — `VoxWriter` starts real colours at byte 2
+
+The Voxel Toolkit `.vox` importer maps voxel colour byte `b` → material index `b-1`, and material index **0** is treated as empty air by the mesher (no faces, voxel dropped entirely — not even rendered transparent) and is force-flagged Invalid/Transparent, never recomputed. So **every voxel written with colour byte 1 vanishes at import.** The symptom was "Snap to master palette decimating the mesh": snap collapses the model to a few swatches, so whatever colour lands in byte 1 is shared by a large voxel population and disappears (measured 97.9% loss on one starship).
+
+The fix is writer-side (don't touch the third-party plugin): `Core/VoxWriter.cs` reserves palette entry 0 as an opaque dummy and starts real colours at byte 2 — `FirstColorIndex = 2`, `MaxColors = 254`, applied to both the exact-palette and median-cut paths. Verified 0 voxels land in byte 1 on either path. **If you touch the palette-writing code, preserve the byte-2 start.**
+
+### `.vox` (and `.obj`/`.png`/`.fbx`) are untracked and NOT git-binary-safe
+
+The `Assets/TestModels/**` source assets are **untracked** — they exist only in the working copy — and no `.gitattributes` marks `*.vox` as binary. So text-based patch tooling corrupts them: restoring a binary `.vox` from a **JetBrains "Shelf" or a `git apply` text patch** rewrites every byte `≥ 0x80` to the UTF-8 replacement char `EF BF BD` (lossy, irreversible — the RGBA palette is destroyed in every file; only the header + SIZE-chunk dims survive). Fingerprint: a valid file starts `56 4F 58 20 96 …`; a corrupt one starts `56 4F 58 20 EF BF BD …`. `git stash` (blob-based) is binary-safe; shelves and text patches are not.
+
+**Recovery is re-voxelisation, not repair:** run **`Assembler ▸ Voxelisation ▸ Re-voxelise corrupt TestModels`** (finds `.vox` with a bad version tag, reads each one's recovered max-dim from its SIZE chunk, and re-runs the Mesh→Voxel pipeline from the untouched sibling `.obj`/`.fbx`). It must run from an **interactive editor** (OBJ/FBX load + texture decode need the main thread, and the sources are untracked so a headless worktree wouldn't contain them). Adding `*.vox binary` (etc.) to a `.gitattributes` would prevent recurrence.
+
 ## Possible automation (not yet built)
 
 - **Auto fine-factor.** Raising the fine factor for detailed models is currently manual. It could be
