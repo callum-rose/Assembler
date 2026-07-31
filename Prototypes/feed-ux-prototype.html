@@ -13,9 +13,14 @@
   (SHIPPLAN decision #6: "catalogue of ALL generated games with played/unplayed
   state; news-like styling". Phase 3, days 15-19.)
 
-  Four variants, switchable via ?variant=A|B|C|D or the floating bottom bar
+  Five variants, switchable via ?variant=A|B|C|D|E or the floating bottom bar
   (arrow keys work too). Ships in Unity eventually — this is only here to feel
   the information hierarchy before anyone builds uGUI.
+
+  A-D were the original spread. E is the synthesis after the first review
+  (2026-07-31) and is now the default: A's newspaper layout + D's
+  full-width-then-2-column grid + C/D's unplayed filter + B's restraint.
+  A-D are kept because they are the primary source for how E was arrived at.
 
   Data model mirrors Assembler.Remote.GameManifestEntry
   (Id, Title, Description, DescriptorUrl, Version) plus the fields the feed
@@ -283,6 +288,78 @@
     display: flex; align-items: center; justify-content: center;
   }
 
+  /* ======================================================================
+     VARIANT E — FRONT PAGE + GRID  (the synthesis, 2026-07-31)
+     A's newspaper spine and lead hero, D's full-width-then-2-column grid,
+     C/D's unplayed filter, B's restraint (airier spacing, one accent, pill
+     button, hairline rules only). The filter scopes the ARCHIVE only —
+     today's lead is the front page and never filters away.
+     ====================================================================== */
+  .vE { background: #fff; color: #14161a; }
+  .vE .masthead {
+    position: sticky; top: 0; z-index: 10; background: #fff;
+    border-bottom: 2px solid #14161a; padding: 16px 20px 12px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .vE .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 25px; letter-spacing: -.02em; font-weight: 700; }
+  .vE .masthead h1 span { color: #c8102e; }
+  .vE .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
+
+  .vE .hero { padding: 22px 20px 26px; }
+  .vE .kicker {
+    display: inline-block; background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .16em; text-transform: uppercase; padding: 4px 9px; border-radius: 2px; margin-bottom: 14px;
+  }
+  .vE .hero .shot { width: 100%; height: 196px; border-radius: 4px; overflow: hidden; margin-bottom: 16px; background: #eee; }
+  .vE .hero h2 { margin: 0 0 10px; font-family: Georgia, serif; font-size: 28px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
+  .vE .hero p { margin: 0 0 20px; font-size: 15px; line-height: 1.55; color: #56606d; }
+  .vE .playbtn {
+    width: 100%; border: 0; cursor: pointer; font: inherit;
+    background: #14161a; color: #fff; border-radius: 999px; padding: 16px;
+    font-size: 15.5px; font-weight: 700; letter-spacing: -.01em;
+  }
+  .vE .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
+  .vE .herometa { margin-top: 12px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
+
+  /* filter bar — scopes the archive below, not the lead above */
+  .vE .filterbar {
+    position: sticky; top: 60px; z-index: 9; background: #fff;
+    border-top: 1px solid #e9ecf0; border-bottom: 1px solid #e9ecf0;
+    padding: 11px 20px; display: flex; align-items: center; gap: 8px;
+  }
+  .vE .filterbar .chips { display: flex; gap: 6px; flex: 1; }
+  .vE .filterbar button {
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    background: #f2f4f7; color: #56606d; border: 0; border-radius: 999px; padding: 7px 13px;
+  }
+  .vE .filterbar button.on { background: #14161a; color: #fff; }
+  .vE .filterbar .tally { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #a4abb5; white-space: nowrap; }
+
+  .vE .sechead {
+    margin: 26px 20px 12px; padding-bottom: 7px; border-bottom: 1.5px solid #14161a;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
+  }
+  .vE .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
+  /* Flex column + margin-top:auto on the meta keeps the "NEW / PLAYED · date"
+     lines aligned across a row even when headlines wrap to different depths. */
+  .vE .card { cursor: pointer; display: flex; flex-direction: column; }
+  .vE .card .shot { width: 100%; aspect-ratio: 16 / 10; border-radius: 3px; overflow: hidden; background: #eee; margin-bottom: 9px; }
+  .vE .card h3 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 15px; line-height: 1.22; font-weight: 700; }
+  .vE .card p { margin: 0 0 7px; font-size: 12px; line-height: 1.4; color: #7b8492; }
+  .vE .card .meta { margin-top: auto; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
+  /* Played: keep the screenshot in colour (it should still invite a replay) and
+     signal state through opacity + the greyed headline. Greyscale on a light
+     ground reads as a broken image, not a played game. */
+  .vE .card.played .shot { opacity: .42; }
+  .vE .card.played h3 { color: #9aa2ad; font-weight: 400; }
+  .vE .card.played p { color: #b3bac3; }
+  .vE .dot { width: 5px; height: 5px; border-radius: 50%; background: #c8102e; flex: none; }
+  .vE .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
+  .vE .stg { color: #b45309; font-weight: 700; }
+  .vE .empty { padding: 54px 20px; text-align: center; }
+  .vE .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
+  .vE .empty span { font-size: 13px; color: #8a919c; }
+
   /* ---- shared notes panel under the phone ---- */
   .notes { max-width: 430px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
   .notes h5 { margin: 0 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
@@ -328,7 +405,7 @@ const GAMES = [
 // STATE — in memory only, no persistence (that is what the prototype checks)
 // ===========================================================================
 const state = {
-  variant: (new URLSearchParams(location.search).get('variant') || 'A').toUpperCase(),
+  variant: (new URLSearchParams(location.search).get('variant') || 'E').toUpperCase(),
   played: new Set(GAMES.filter(g => g.played).map(g => g.id)),
   devMode: false,
   filter: 'all',      // variants C + D
@@ -341,6 +418,7 @@ const VARIANTS = {
   B: 'Daily edition',
   C: 'The wire',
   D: 'Arcade grid',
+  E: 'Front page + grid',
 };
 
 const CAPTIONS = {
@@ -348,6 +426,7 @@ const CAPTIONS = {
   B: '<b>Daily edition.</b> One story per screen, tap the left/right halves (or ← →) to move through days. No feed at all; the catalogue hides behind ⌗ Archive. Bets on <b>daily ritual</b> over browsing.',
   C: '<b>The wire.</b> Dense chronological ticker, text first, thumbnails as 26px chips. Everything scannable at once. Bets that the <b>catalogue</b> is the product and recency is just a sort order.',
   D: '<b>Arcade grid.</b> The control: image-first tiles, dates demoted to a subtitle. Deliberately not news-like — the test is whether the news metaphor earns anything the plain arcade shelf does not.',
+  E: '<b>Front page + grid.</b> The synthesis: A’s newspaper spine and lead hero, D’s full-width-then-2-column grid, C/D’s unplayed filter, B’s restraint. <b>The filter scopes the archive only</b> — today’s lead never filters away.',
 };
 
 const NOTES = `
@@ -619,9 +698,79 @@ function VariantD() {
 }
 
 // ===========================================================================
+// VARIANT E — FRONT PAGE + GRID (synthesis of A + D + the C/D filter + B's calm)
+//
+// Design call worth arguing with: the filter scopes the ARCHIVE ONLY. The lead
+// is the front page — it does not filter away, even when it is already played.
+// The alternative (filter also re-picks the lead, so "Unplayed" heroes the
+// newest unplayed game under a "NEXT UP" kicker) is a one-line change; it reads
+// more like a task list and less like a newspaper.
+// ===========================================================================
+function VariantE() {
+  const lead = leadGame();
+  let rest = sorted().filter(g => g !== lead);
+  if (state.filter === 'unplayed') rest = rest.filter(g => !isPlayed(g));
+  if (state.filter === 'played') rest = rest.filter(g => isPlayed(g));
+
+  const week = rest.filter(g => (new Date(TODAY) - new Date(g.date)) / 864e5 <= 6);
+  const older = rest.filter(g => !week.includes(g));
+  const unplayedCount = visible().filter(g => !isPlayed(g)).length;
+
+  const card = g => `
+    <div class="card ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
+      <div class="shot">${thumb(g.id)}</div>
+      <h3>${esc(g.title)}</h3>
+      <p>${esc(g.blurb.split('.')[0])}</p>
+      <div class="meta">
+        ${isPlayed(g) ? '<span class="tick">✓</span> Played' : '<span class="dot"></span> New'}
+        <span>·</span><span>${relDay(g.date)}</span>
+        ${g.channel === 'staging' ? '<span class="stg">· Staging</span>' : ''}
+      </div>
+    </div>`;
+
+  const section = (title, items) =>
+    items.length ? `<div class="sechead">${title}</div><div class="grid">${items.map(card).join('')}</div>` : '';
+
+  const chip = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
+
+  const archive = (week.length || older.length)
+    ? section('Earlier this week', week) + section('The archive', older)
+    : `<div class="empty">
+         <b>${state.filter === 'unplayed' ? 'You’re all caught up.' : 'Nothing here yet.'}</b>
+         <span>${state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
+       </div>`;
+
+  return `<div class="vE">
+    <div class="masthead">
+      <h1>The Daily <span>Build</span></h1>
+      <time>${fullDate(TODAY)}</time>
+    </div>
+
+    <div class="hero">
+      <span class="kicker">Today's game</span>
+      <div class="shot">${thumb(lead.id)}</div>
+      <h2>${esc(lead.title)}</h2>
+      <p>${esc(lead.blurb)}</p>
+      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-play="${lead.id}">
+        ${isPlayed(lead) ? 'Play again' : 'Play now'}
+      </button>
+      ${isPlayed(lead) ? '<div class="herometa">✓ Played today</div>' : ''}
+    </div>
+
+    <div class="filterbar">
+      <div class="chips">${chip('all', 'All')}${chip('unplayed', 'Unplayed')}${chip('played', 'Played')}</div>
+      <div class="tally">${unplayedCount} unplayed</div>
+    </div>
+
+    ${archive}
+    <div style="height:36px"></div>
+  </div>`;
+}
+
+// ===========================================================================
 // SWITCHER + RENDER
 // ===========================================================================
-const RENDERERS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD };
+const RENDERERS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD, E: VariantE };
 const KEYS = Object.keys(RENDERERS);
 
 function cycle(step) {
@@ -649,7 +798,8 @@ function render() {
   if (!RENDERERS[state.variant]) state.variant = 'A';
   const screen = document.getElementById('screen');
   screen.innerHTML = RENDERERS[state.variant]();
-  document.querySelector('.phone').style.background = state.variant === 'A' ? '#fff' : state.variant === 'C' ? '#fbfbf9' : '#0b0d12';
+  document.querySelector('.phone').style.background =
+    'AE'.includes(state.variant) ? '#fff' : state.variant === 'C' ? '#fbfbf9' : '#0b0d12';
   document.getElementById('caption').innerHTML = CAPTIONS[state.variant];
   document.getElementById('notes').innerHTML = NOTES;
   renderSwitcher();
