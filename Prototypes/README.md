@@ -4,7 +4,7 @@ Throwaway code that answers a design question. Nothing here ships, and nothing h
 should be promoted as-is — the code is written under prototype constraints (no tests,
 no error handling, no abstractions). Rewrite properly when folding a decision in.
 
-## `app-tone-prototype.html` — round 3, OPEN
+## `app-tone-prototype.html` — rounds 3–4, OPEN
 
 **Question:** how dark is dark, and how loud is "game-like" allowed to get before the
 app stops reading as news?
@@ -13,20 +13,49 @@ app stops reading as news?
 open Prototypes/app-tone-prototype.html
 ```
 
-Three tone variants of the whole app, each in light **and** dark. Cycle with the
-floating bar, the `←`/`→` keys, or `?tone=a|b|c&theme=light|dark`; `D` toggles the
+Four tone variants of the whole app, each in light **and** dark. Cycle with the
+floating bar, the `←`/`→` keys, or `?tone=a|b|c|d&theme=light|dark`; `D` toggles the
 theme, which also has a row in Settings → Appearance (where the switch belongs is
-part of the question).
+part of the question). **D is the default** — it is the current best guess, and A/B/C
+are the record.
 
 | | Tone | Fun dial | What it changes |
 |---|---|---|---|
 | **A** | Broadsheet | 1/3 | Round 2 exactly, plus a dark theme and micro-motion. Press depth, a pulsing "new" dot, a score that counts up. Nothing else moves. |
 | **B** | Late Edition | 2/3 | Newspaper bones, print-shop swagger. Cream/ink, a highlighter second accent, an edition ticker, hard offset buttons, numbered cards, a rubber-stamp verdict and an odometer score. |
 | **C** | Arcade Edition | 3/3 | The newspaper becomes the cabinet. Condensed caps, a neon duo, scanlined thumbnails, a catalogue progress meter, cartridge cards, chunky 3D buttons, and a full-bleed result screen with a rank letter. |
+| **D** | Letterpress | 2/3, newspaper-first | **Round 4.** B with the feedback folded in — see below. |
+
+### Round 4 — D
+
+Verdict on round 3: *"B mostly. A is too bland, C is too arcadey. Make it generally
+feel a bit more newspaper-y."* Four notes, and what each cost:
+
+| Feedback | What D does |
+|---|---|
+| Strikethrough on played games is wrong — grey them out with an icon | Highlighter strikethrough gone. Played art goes full greyscale, with a tick badge on the corner. |
+| B's ticker is distracting and carries little | Replaced by a **static folio row** — same three facts, no motion, and it keeps the edition number, which nothing else on the page shows. |
+| C's completion bar is useless | Not carried into D. Catalogue-completion is meta-progression wearing a hat. |
+| Make it feel more newspaper-y | Print furniture that carries information rather than motion: a red kicker rule, a byline, a drop cap, **column rules between the grid cells** (the gap goes to zero — a newspaper's grid is defined by its rules, not its gutters), and a folio at the foot. B's card numbers went too: numbering stories is a listicle tell, not a newspaper one. |
+
+**Kept from B**, because that was the part that landed: cream/ink, the rubber PLAY
+stamp, letterpress offset buttons, the double section rule, the stamped verdict and
+the odometer score.
+
+**D reverses a round-2 call, and the reversal is conditional.** Round 2 rejected
+greyscale on played art because a desaturated thumbnail reads as a broken image. The
+tick badge is what buys the reversal — it says *played* where greyscale alone said
+*failed to load*. If the tick is ever dropped in the uGUI build, the greyscale has to
+go back to colour-at-42% with it. One decision, not two.
+
+**Still open in D:** the drop cap is one line of CSS here and a real problem in uGUI
+(TextMeshPro has no `::first-letter` — it needs a hand-laid glyph or `<size>`/`<voffset>`
+rich text). Decide whether it survives before it is promised. Archive and settings are
+still tone-token-only.
 
 Round 2's **structure is frozen** — masthead icons, lead + 6 + archive, everything
 through detail. The variants disagree about surface only. Judge them on the **feed**,
-not the game-over card: all three game-over cards are enjoyable, and only some of the
+not the game-over card: all four game-over cards are enjoyable, and only some of the
 mastheads still read as a newspaper.
 
 **The constraint that shaped all three:** the obvious levers for game-feel — streaks,

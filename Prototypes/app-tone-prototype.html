@@ -22,6 +22,54 @@
       C  ARCADE EDITION fun dial 3/3 — the newspaper becomes the CABINET.
                         Condensed caps, neon duo, scanlined thumbnails, chunky
                         3D buttons, a progress status bar, rank letters.
+      D  LETTERPRESS    round 4 — B with the round-3 feedback folded in, and
+                        the current default. See below.
+
+  ROUND 4 (D) — THE FEEDBACK, AND WHAT IT COST
+    Verdict on round 3: "B mostly. A is too bland, C is too arcadey. Make it
+    generally feel a bit more newspaper-y."  Four specific notes, and what each
+    one did to the design:
+
+      1. "Don't like the strikethrough on played games — they should just have
+         a played icon and be greyed out."
+         D drops the highlighter strikethrough entirely. Played art goes to
+         full greyscale, and a tick badge sits on the corner of the art.
+         NOTE THIS IS A REVERSAL of a round-2 call: round 2 rejected greyscale
+         because a desaturated thumbnail on a light ground reads as a broken
+         image. The tick is what buys the reversal — it says "played" where
+         greyscale alone said "failed to load". If the tick ever gets dropped
+         in the uGUI build, the greyscale has to go back to colour-at-42% with
+         it. They are one decision, not two.
+      2. "The ticker is fun but distracting and doesn't give much useful info."
+         Replaced by a STATIC folio row carrying the same three facts. It
+         keeps the edition number, which is the one thing nothing else on the
+         page shows, and it stops moving.
+      3. "C's completed bar is fun but a bit useless."
+         Not carried into D at all. Catalogue-completion is meta-progression
+         wearing a hat; it was the one place round 3 leaned toward the
+         "not in v1" list and it did not earn the line.
+      4. "Make it generally feel more newspaper-y."
+         D adds print furniture that carries information rather than motion:
+         a red kicker rule over the lead, a byline, a drop cap, column rules
+         between the grid cells (gap goes to zero — a newspaper's grid is
+         defined by its rules, not its gutters), and a folio at the foot.
+         B's card numbers went with the ticker: numbering stories is a
+         listicle tell, not a newspaper one.
+
+    KEPT FROM B, because that was the part that landed: cream/ink, the rubber
+    PLAY stamp on the lead, letterpress offset buttons, the double section
+    rule, the stamped verdict and the odometer score on the game-over slip.
+
+    STILL OPEN IN D
+      - The drop cap is one line of CSS here and a real problem in uGUI —
+        TextMeshPro has no ::first-letter. It needs either a separate glyph
+        laid out by hand or <size>/<voffset> rich text. Cheap-looking here,
+        not cheap there. Decide whether it survives before it is promised.
+      - Column rules assume exactly two columns. A trailing odd card drops its
+        rule via :nth-child(odd):last-child, which works here but is the kind
+        of thing a uGUI grid will not do for free — the layout needs to know
+        about the rules, not paint them per cell.
+      - The archive and settings screens are still tone-token-only.
 
     Round 2 (feed-ux-prototype.html) settled the STRUCTURE — masthead icons,
     lead + 6 + archive, everything goes through detail. Round 3 changes none of
@@ -212,6 +260,38 @@
   }
   .phone[data-tone="c"] { --accent-3: var(--accent-3, #6b4bff); }
 
+  /* ---- D · LETTERPRESS (round 4 — B, pushed back toward the newspaper) ----
+     Same cream/ink press-room palette as B, because that was the part that
+     landed. The second accent survives but is demoted to rules and the drop
+     cap; it is no longer allowed to mark up copy. */
+  .phone[data-tone="d"] {
+    --serif: Georgia, "Times New Roman", serif;
+    --display: Georgia, "Times New Roman", serif;
+    --radius: 2px;
+  }
+  .phone[data-tone="d"][data-theme="light"] {
+    --paper:#faf6ee; --surface:#fffdf8; --sunk:#efe9dd;
+    --ink:#17130d; --ink-2:#4f483d; --ink-3:#948b7c;
+    --rule:#d8cfbe; --rule-hard:#17130d;
+    --accent:#b8121b; --accent-2:#8a7248; --on-accent:#fffdf8;
+    --good:#1d7a45; --bad:#b8121b; --stg:#9a6212;
+    --shot-bg:#e7e0d2; --played-op:.5; --played-sat:0;
+    --btn:#17130d; --btn-ink:#faf6ee;
+    --shadow:0 8px 24px rgba(35,26,12,.14);
+    --offset:#17130d;
+  }
+  .phone[data-tone="d"][data-theme="dark"] {
+    --paper:#13100b; --surface:#1c1811; --sunk:#241f16;
+    --ink:#f8f2e5; --ink-2:#b5aa96; --ink-3:#7b7263;
+    --rule:#312a1f; --rule-hard:#f8f2e5;
+    --accent:#e8574a; --accent-2:#c99a3f; --on-accent:#13100b;
+    --good:#5fd48a; --bad:#e8574a; --stg:#e0a33a;
+    --shot-bg:#241f16; --played-op:.42; --played-sat:0;
+    --btn:#f8f2e5; --btn-ink:#13100b;
+    --shadow:0 10px 34px rgba(0,0,0,.66);
+    --offset:#3d3527;
+  }
+
   /* ======================================================================
      SHARED CHROME — masthead / subhead
      ====================================================================== */
@@ -333,7 +413,8 @@
   [data-tone="b"] .masthead h1 { letter-spacing: -.03em; }
   [data-tone="b"] .hero .badge { display: none; }
   [data-tone="b"] .hero .shot { box-shadow: 4px 4px 0 var(--offset); }
-  [data-tone="b"] .stamp {
+  /* unscoped — B and D both stamp the lead; only their heroes emit it */
+  .stamp {
     position: absolute; right: 10px; bottom: 10px; z-index: 2;
     border: 2.5px solid var(--accent); color: var(--accent);
     font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 800;
@@ -429,6 +510,132 @@
     box-shadow: 0 5px 0 color-mix(in srgb, var(--accent-3) 60%, #000);
   }
   [data-tone="c"] .seeall:active { transform: translateY(5px); box-shadow: 0 0 0 color-mix(in srgb, var(--accent-3) 60%, #000); }
+
+  /* ======================================================================
+     TONE D OVERRIDES — LETTERPRESS  (round 4)
+
+     B kept: cream/ink, the PLAY stamp, letterpress offset buttons, the double
+     section rule. B lost: the ticker (motion with no information), the
+     numbered cards (a listicle tell, not a newspaper one) and the highlighter
+     strikethrough on played headlines.
+
+     Added to push it back toward print: a static folio row instead of the
+     ticker, a red kicker rule over the lead, a byline, an italic standfirst,
+     a drop cap, column rules between the grid cells, and a folio at the foot.
+     ====================================================================== */
+  [data-tone="d"] .masthead { border-bottom-width: 3px; padding-bottom: 9px; }
+  [data-tone="d"] .masthead h1 { letter-spacing: -.03em; font-size: 27px; }
+  [data-tone="d"] .masthead time { display: none; }   /* the date moves to the folio row */
+
+  /* The folio row replaces B's marquee. Same three facts, no motion, and it
+     earns its line by being the only place the edition number lives. */
+  .folio-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 7px 20px 8px; border-bottom: 1px solid var(--rule-hard);
+    font-family: var(--serif); font-size: 10px; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--ink-2); background: var(--paper);
+  }
+  .folio-row b { font-weight: 700; color: var(--accent); }
+
+  /* lead: kicker rule, headline, byline, stamped art, drop-capped copy */
+  [data-tone="d"] .hero { padding-top: 20px; }
+  [data-tone="d"] .hero .badge { display: none; }
+  .kicker-rule {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    font-family: var(--serif); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent);
+  }
+  .kicker-rule::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .35; }
+  [data-tone="d"] .hero h2 { font-size: 30px; line-height: 1.08; letter-spacing: -.025em; margin-bottom: 10px; }
+  .byline {
+    font-family: var(--serif); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--rule);
+  }
+  [data-tone="d"] .hero .shot { box-shadow: 4px 4px 0 var(--offset); margin-bottom: 16px; }
+  /* Drop cap. ::first-letter only takes a float on a block, hence the <p>. */
+  [data-tone="d"] .hero p { font-family: var(--serif); font-size: 15px; line-height: 1.52; color: var(--ink-2); }
+  [data-tone="d"] .hero p::first-letter {
+    float: left; font-family: var(--serif); font-weight: 700; color: var(--accent);
+    font-size: 47px; line-height: .78; padding: 5px 8px 0 0;
+  }
+  [data-tone="d"] .playbtn {
+    border-radius: 2px; box-shadow: 4px 4px 0 var(--accent);
+    text-transform: uppercase; letter-spacing: .14em; font-size: 13px; font-weight: 800;
+    font-family: var(--serif);
+  }
+  [data-tone="d"] .playbtn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--accent); }
+  [data-tone="d"] .playbtn.done { box-shadow: 4px 4px 0 var(--rule), inset 0 0 0 1.5px var(--rule); }
+
+  [data-tone="d"] .sechead { border-bottom-width: 4px; border-bottom-style: double; }
+  [data-tone="d"] .sechead h4 { font-family: var(--serif); letter-spacing: .2em; }
+
+  /* Column rules. A newspaper's grid is defined by the rules between the
+     cells, not by the gaps — so the gap goes to zero and the cells rule. */
+  [data-tone="d"] .grid { gap: 0; }
+  [data-tone="d"] .card { padding: 15px 0 17px; }
+  [data-tone="d"] .card:nth-child(odd) { padding-right: 14px; border-right: 1px solid var(--rule); }
+  [data-tone="d"] .card:nth-child(even) { padding-left: 14px; }
+  /* an odd-length grid would otherwise hang a rule with nothing beside it */
+  [data-tone="d"] .card:nth-child(odd):last-child { border-right: 0; }
+  [data-tone="d"] .card:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  [data-tone="d"] .card h3 { font-size: 15.5px; line-height: 1.18; letter-spacing: -.012em; }
+  [data-tone="d"] .card p { font-family: var(--serif); font-size: 12.5px; line-height: 1.42; }
+  [data-tone="d"] .card .meta, [data-tone="d"] .row .meta { font-family: var(--serif); letter-spacing: .11em; }
+
+  /* PLAYED — greyed out plus an explicit mark, no strikethrough.
+     The mark is what makes greyscale safe: round 2 rejected greyscale because
+     a desaturated thumbnail on a light ground reads as a broken image, and the
+     tick is the thing that says "played" instead of "failed to load". */
+  /* The grey goes on the ART, not on .shot — the tick badge is a child of
+     .shot, and filtering the container fades the mark along with the image,
+     which is precisely the "broken image" read the mark exists to prevent. */
+  [data-tone="d"] .card.played .shot, [data-tone="d"] .row.played .shot { filter: none; opacity: 1; }
+  [data-tone="d"] .card.played .shot > svg, [data-tone="d"] .row.played .shot > svg {
+    filter: grayscale(1); opacity: var(--played-op);
+  }
+  [data-tone="d"] .card.played h3, [data-tone="d"] .row.played h3 { color: var(--ink-3); font-weight: 400; text-decoration: none; }
+  [data-tone="d"] .card.played p { color: var(--ink-3); opacity: .62; }
+  .pmark {
+    position: absolute; top: 6px; left: 6px; z-index: 3;
+    width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ink); color: var(--paper); font-size: 10px; font-weight: 800; line-height: 1;
+  }
+  .row .pmark { width: 15px; height: 15px; font-size: 8.5px; top: 3px; left: 3px; }
+
+  [data-tone="d"] .seeall { border-radius: 2px; font-family: var(--serif); box-shadow: 4px 4px 0 var(--rule); }
+  [data-tone="d"] .seeall:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--rule); }
+
+  /* the foot-of-page folio — the last print tell, and free */
+  .folio-foot {
+    padding: 0 20px 34px; text-align: center;
+    font-family: var(--serif); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* detail + pause pick up the same print furniture */
+  [data-tone="d"] .detail h2 { font-size: 29px; line-height: 1.1; }
+  [data-tone="d"] .detail .desc { font-family: var(--serif); }
+  [data-tone="d"] .htp { border-left: 3px solid var(--accent); background: var(--surface); }
+  [data-tone="d"] .htp h5 { font-family: var(--serif); }
+  [data-tone="d"] .sheetbtn { border-radius: 2px; font-family: var(--serif); }
+  [data-tone="d"] .sheetbtn.primary { box-shadow: 4px 4px 0 var(--accent); }
+  [data-tone="d"] .sheetbtn.primary:active { transform: translate(4px,4px); box-shadow: 0 0 0 var(--accent); }
+
+  /* game over = a result slip: ruled box, stamped verdict, odometer score */
+  [data-tone="d"] .over { border-radius: 2px; box-shadow: 8px 8px 0 var(--accent); border: 1px solid var(--rule-hard); }
+  [data-tone="d"] .over .slipkicker {
+    font-family: var(--serif); font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--ink-3); padding-bottom: 11px; margin-bottom: 16px; border-bottom: 3px double var(--rule-hard);
+  }
+  [data-tone="d"] .over .verdict {
+    display: inline-block; border: 3px solid currentColor; border-radius: 3px;
+    padding: 6px 16px; text-transform: uppercase; font-family: var(--serif);
+    font-size: 21px; font-weight: 800; letter-spacing: .1em; transform: rotate(-4deg);
+    animation: stampbig .38s cubic-bezier(.2,1.6,.4,1) both; margin-bottom: 13px;
+  }
+  [data-tone="d"] .over .score { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  [data-tone="d"] .over .btns { padding-top: 4px; border-top: 1px solid var(--rule); }
 
   /* ======================================================================
      SCREEN — GAME DETAIL
@@ -692,6 +899,9 @@ const TONES = {
   c: { key:'c', name:'Arcade Edition', dial:'fun 3/3',
        blurb:'The newspaper becomes the cabinet: condensed caps, a neon duo, scanlined thumbnails, cartridge cards, chunky 3D buttons and a full-screen result with a rank letter.',
        why:'Loudest, and the only one where the game-over card is an event. The risk is that the masthead is now decoration rather than identity — judge it on the feed, not the result screen.' },
+  d: { key:'d', name:'Letterpress',    dial:'fun 2/3, newspaper-first',
+       blurb:'B with the feedback folded in. Kept: cream/ink, the PLAY stamp, letterpress buttons, the double section rule. Cut: the ticker, the card numbers, the strikethrough. Added: a static folio row, a red kicker rule, a byline, a drop cap, column rules between the grid cells, and a folio at the foot.',
+       why:'The print furniture does the work the motion was doing in B, and it carries information instead of just moving. This is the one to beat.' },
 };
 
 // ===========================================================================
@@ -759,7 +969,8 @@ const params = new URLSearchParams(location.search);
 const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
 
 const state = {
-  tone: TONES[params.get('tone')] ? params.get('tone') : 'a',
+  // D is the default — it is the current best guess, and A/B/C are the record.
+  tone: TONES[params.get('tone')] ? params.get('tone') : 'd',
   theme: ['light','dark'].includes(params.get('theme')) ? params.get('theme') : (prefersDark ? 'dark' : 'light'),
   stats: {},               // id -> { plays, best } — stands in for the app-local store
   devMode: false,
@@ -865,6 +1076,7 @@ function Masthead() {
       </div>
       ${t === 'b' ? Ticker() : ''}
       ${t === 'c' ? StatusBar() : ''}
+      ${t === 'd' ? FolioRow() : ''}
     </div>`;
 }
 
@@ -886,6 +1098,17 @@ function StatusBar() {
     <span><b>${done}</b>/${all.length} cleared</span>
     <span class="segbar">${segs}</span>
     <span>${fullDate(TODAY).slice(0, 3).toUpperCase()}</span>
+  </div>`;
+}
+
+// D — the folio row. Replaces B's ticker: the same three facts, static, and it
+// carries the one thing nothing else on the page shows (the edition number).
+function FolioRow() {
+  const unplayed = visible().filter(g => !isPlayed(g)).length;
+  return `<div class="folio-row">
+    <span>No. ${214 - daysAgo(TODAY)}</span>
+    <span>${fullDate(TODAY)}</span>
+    <span>${unplayed ? `<b>${unplayed} new</b>` : 'All played'}</span>
   </div>`;
 }
 
@@ -914,19 +1137,24 @@ function Feed() {
   const rest = sorted().filter(g => g !== lead);
   const shown = rest.slice(0, FEED_LIMIT);
   const total = visible().length;
-  const hero = { a: HeroA, b: HeroB, c: HeroC }[state.tone](lead);
-  const card = { a: CardA, b: CardB, c: CardC }[state.tone];
-  const sec  = { a: 'Earlier', b: 'Earlier editions', c: '&#9664; Back catalogue &#9654;' }[state.tone];
+  const hero = { a: HeroA, b: HeroB, c: HeroC, d: HeroD }[state.tone](lead);
+  const card = { a: CardA, b: CardB, c: CardC, d: CardD }[state.tone];
+  const sec  = { a: 'Earlier', b: 'Earlier editions', c: '&#9664; Back catalogue &#9654;',
+                 d: 'Earlier editions' }[state.tone];
   const arch = { a: `Archive &mdash; all ${total} games &#9656;`,
                  b: `Open the archive &mdash; ${total} editions`,
-                 c: `Back catalogue &middot; ${total} &#9656;` }[state.tone];
+                 c: `Back catalogue &middot; ${total} &#9656;`,
+                 d: `Open the archive &mdash; ${total} editions` }[state.tone];
 
   return `${Masthead()}
     ${hero}
     ${shown.length ? `
       <div class="sechead"><h4>${sec}</h4></div>
       <div class="grid">${shown.map(card).join('')}</div>` : ''}
-    <button class="seeall" data-go="archive">${arch}</button>`;
+    <button class="seeall" data-go="archive">${arch}</button>
+    ${state.tone === 'd'
+      ? `<div class="folio-foot">The Daily Build &middot; No. ${214 - daysAgo(TODAY)} &middot; Page 1</div>`
+      : ''}`;
 }
 
 // --- A: unchanged from round 2 -------------------------------------------
@@ -996,6 +1224,32 @@ function CardC(g) {
   </div>`;
 }
 
+// --- D: newspaper furniture — kicker rule, byline, stamp, drop cap ---------
+function HeroD(g) {
+  const played = isPlayed(g);
+  return `<div class="hero">
+    <div class="kicker-rule">Today&rsquo;s game</div>
+    <h2 data-detail="${g.id}">${esc(g.title)}</h2>
+    <div class="byline">By the games desk &middot; Pressed ${g.time}</div>
+    <div class="shot" data-detail="${g.id}">${thumb(g.id)}
+      ${played ? '' : '<span class="stamp">PLAY</span>'}</div>
+    <p>${esc(g.desc)}</p>
+    <button class="playbtn ${played ? 'done' : ''}" data-detail="${g.id}">${played ? 'Run it again' : 'Play today&rsquo;s'}</button>
+    ${played ? '<div class="herometa">&#10003; Played today</div>' : ''}
+  </div>`;
+}
+// Played = greyed out plus a tick on the art. No strikethrough: it marks the
+// headline as retracted, which is exactly the wrong newspaper connotation.
+function CardD(g) {
+  const played = isPlayed(g);
+  return `<div class="card ${played ? 'played' : ''}" data-detail="${g.id}">
+    <div class="shot">${thumb(g.id)}${played ? '<span class="pmark">&#10003;</span>' : ''}</div>
+    <h3>${esc(g.title)}</h3>
+    <p>${esc(g.desc.split('.')[0])}.</p>
+    <div class="meta">${MetaBits(g)}</div>
+  </div>`;
+}
+
 function MetaBits(g) {
   return `${isPlayed(g) ? '<span class="tick">&#10003;</span> Played' : '<span class="dot"></span> New'}
     <span>&middot;</span><span>${relDay(g.date)}</span>
@@ -1011,8 +1265,8 @@ function Detail() {
   const g = gameById(state.route.id);
   const st = statsFor(g.id);
   const played = st.plays > 0;
-  const cta = state.tone === 'c' ? (played ? 'Press start' : 'Press start')
-            : state.tone === 'b' ? (played ? 'Run it again' : 'Play it')
+  const cta = state.tone === 'c' ? 'Press start'
+            : state.tone === 'b' || state.tone === 'd' ? (played ? 'Run it again' : 'Play it')
             : (played ? 'Play again' : 'Play');
 
   return `${SubHead(relDay(g.date))}
@@ -1055,7 +1309,7 @@ function Archive() {
 
   const row = g => `
     <div class="row ${isPlayed(g) ? 'played' : ''}" data-detail="${g.id}">
-      <div class="shot">${thumb(g.id)}</div>
+      <div class="shot">${thumb(g.id)}${state.tone === 'd' && isPlayed(g) ? '<span class="pmark">&#10003;</span>' : ''}</div>
       <div class="txt">
         <h3>${esc(g.title)}</h3>
         <div class="meta">${MetaBits(g)}</div>
@@ -1149,7 +1403,7 @@ function launch(id) {
   const game = gameById(id);
   session = { id, paused: false };
 
-  const head = { a: 'Fetching descriptor', b: 'Setting the press', c: 'Insert coin' }[state.tone];
+  const head = { a: 'Fetching descriptor', b: 'Setting the press', c: 'Insert coin', d: 'Setting the press' }[state.tone];
 
   const overlay = document.createElement('div');
   overlay.className = 'launch loading';
@@ -1197,7 +1451,7 @@ function renderGame(over) {
 // argument for authoring it in the descriptor rather than deriving it.
 function PauseSheet() {
   const g = gameById(session.id);
-  const title = { a: 'Paused', b: 'Held for press', c: 'Paused' }[state.tone];
+  const title = { a: 'Paused', b: 'Held for press', c: 'Paused', d: 'Held for press' }[state.tone];
   return `<div class="sheetwrap" data-resume="1">
     <div class="sheet" data-stop="1">
       <div class="grab"></div>
@@ -1233,7 +1487,7 @@ function endRun(outcome) {
   const best = state.stats[g.id].best;
 
   const buttons = `<div class="btns">
-      <button class="sheetbtn primary" data-restart="1">${{ a:'Play again', b:'Run it again', c:'Retry' }[state.tone]}</button>
+      <button class="sheetbtn primary" data-restart="1">${{ a:'Play again', b:'Run it again', c:'Retry', d:'Run it again' }[state.tone]}</button>
       ${next ? `<button class="sheetbtn" data-next="${next.id}">Next game &#9656;</button>` : ''}
       <button class="sheetbtn quiet" data-quit="1">Back to the feed</button>
     </div>`;
@@ -1268,6 +1522,17 @@ function endRun(outcome) {
         <div class="gname">${esc(g.title)}</div>
         ${outcome ? `<div class="rankbig ${outcome === 'lose' ? 'lost' : ''}">${rankFor(score)}</div>
           <div class="scorelbl">Score</div>
+          <div class="score" data-count="${score}">0</div>
+          <div class="best">${bestLine}</div>` : noScore}
+        ${buttons}
+      </div>`,
+
+    // D — a result slip: ruled box, stamped verdict, odometer score.
+    d: () => `<div class="over">
+        <div class="slipkicker">Late result &middot; ${longDate(g.date)}</div>
+        <div class="verdict ${outcome ?? ''}">${outcome === 'win' ? 'Won' : outcome === 'lose' ? 'Lost' : 'Over'}</div>
+        <div class="gname">${esc(g.title)}</div>
+        ${outcome ? `<div class="scorelbl">Final score</div>
           <div class="score" data-count="${score}">0</div>
           <div class="best">${bestLine}</div>` : noScore}
         ${buttons}
@@ -1319,7 +1584,9 @@ function render() {
     <p style="margin:0 0 4px"><b>Why it might win:</b> ${t.why}</p>
     <h5>What to judge</h5>
     <ul>
-      <li><b>The feed, not the result screen.</b> All three game-over cards are enjoyable; only one masthead still reads as a newspaper at 3/3.</li>
+      <li><b>D is the round-4 answer to the round-3 feedback</b> &mdash; B's palette, stamp and letterpress buttons kept; ticker, card numbers and strikethrough cut; kicker rule, byline, drop cap, column rules and folio added. A/B/C stay switchable as the record.</li>
+      <li><b>D reverses a round-2 call.</b> Round 2 rejected greyscale on played art because it reads as a broken image; D greys it out and adds a tick badge instead. The tick is what buys the reversal &mdash; if it goes, the greyscale has to go with it.</li>
+      <li><b>The feed, not the result screen.</b> All four game-over cards are enjoyable; only some mastheads still read as a newspaper.</li>
       <li><b>Dark played-cards.</b> Light dims the thumbnail to 42%; dark dims to 55% <i>and</i> desaturates, because 42% on a dark ground reads as "still loading". Reset and play a couple to compare.</li>
       <li><b>The accent.</b> Each tone lifts its red in dark rather than reusing the light value &mdash; #c8102e goes muddy on #101215.</li>
       <li><b>Detail / archive / settings</b> ride the tone tokens with only small hooks. If B or C wins, that is where the next round has to push.</li>
