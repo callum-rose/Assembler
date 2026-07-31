@@ -360,6 +360,103 @@
   .vE .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
   .vE .empty span { font-size: 13px; color: #8a919c; }
 
+  /* ======================================================================
+     VARIANT F — TIGHTER LEAD  (2026-07-31, second review)
+     E, with three fixes:
+       1. Hero height split between A and E (shot 172 vs 190/196, tighter rhythm).
+       2. "Today's game" badge overlaid on the thumbnail — no longer its own row.
+       3. Filter demoted out of its own bar and into the archive section header.
+          TWO treatments, toggled by FILT in the switcher, because which one is
+          right is the open question: 'inline' text buttons vs an 'icon' + popover.
+     ====================================================================== */
+  .vF { background: #fff; color: #14161a; }
+  .vF .masthead {
+    position: sticky; top: 0; z-index: 12; background: #fff;
+    border-bottom: 2px solid #14161a; padding: 15px 20px 11px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .vF .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; letter-spacing: -.02em; font-weight: 700; }
+  .vF .masthead h1 span { color: #c8102e; }
+  .vF .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
+
+  /* --- hero: mid-way between A and E --- */
+  .vF .hero { padding: 18px 20px 22px; }
+  .vF .hero .shot { position: relative; width: 100%; height: 172px; border-radius: 4px; overflow: hidden; margin-bottom: 14px; background: #eee; }
+  .vF .hero .badge {
+    position: absolute; top: 10px; left: 10px;
+    background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .16em; text-transform: uppercase; padding: 5px 9px; border-radius: 2px;
+  }
+  .vF .hero h2 { margin: 0 0 9px; font-family: Georgia, serif; font-size: 26px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
+  .vF .hero p { margin: 0 0 17px; font-size: 14.5px; line-height: 1.5; color: #56606d; }
+  .vF .playbtn {
+    width: 100%; border: 0; cursor: pointer; font: inherit;
+    background: #14161a; color: #fff; border-radius: 999px; padding: 15px;
+    font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  }
+  .vF .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
+  .vF .herometa { margin-top: 11px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
+
+  /* --- section header now carries the filter --- */
+  .vF .sechead {
+    position: sticky; top: 55px; z-index: 11; background: #fff;
+    margin: 0 20px 12px; padding: 14px 0 7px; border-bottom: 1.5px solid #14161a;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .vF .sechead > h4 { margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+  .vF .sechead.plain { justify-content: flex-start; margin-top: 26px; }
+
+  /* treatment 1 — quiet inline text buttons, typographically part of the rule */
+  .vF .inlinefilter { display: flex; align-items: center; gap: 2px; flex: none; }
+  .vF .inlinefilter button {
+    font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: none; border: 0; cursor: pointer; color: #b0b7c1; padding: 3px 5px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .vF .inlinefilter button.on { color: #14161a; background: #f0f2f5; }
+  .vF .inlinefilter i { color: #dde1e6; font-style: normal; font-size: 9px; }
+
+  /* treatment 2 — icon + popover */
+  .vF .iconfilter { position: relative; }
+  .vF .iconfilter > button {
+    display: flex; align-items: center; gap: 5px; cursor: pointer; font: inherit;
+    background: none; border: 0; padding: 3px; color: #6b7482; position: relative;
+  }
+  .vF .iconfilter > button.active { color: #c8102e; }
+  .vF .iconfilter svg { display: block; }
+  .vF .iconfilter .pip { position: absolute; top: 1px; right: 0; width: 5px; height: 5px; border-radius: 50%; background: #c8102e; }
+  .vF .pop {
+    position: absolute; top: 26px; right: 0; z-index: 20; width: 168px;
+    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(16,20,26,.14); overflow: hidden; padding: 4px;
+  }
+  .vF .pop button {
+    display: flex; width: 100%; align-items: center; justify-content: space-between;
+    font: inherit; font-size: 13px; background: none; border: 0; cursor: pointer;
+    padding: 9px 10px; border-radius: 5px; color: #14161a; text-align: left;
+  }
+  .vF .pop button:hover { background: #f5f7f9; }
+  .vF .pop button.on { font-weight: 700; }
+  .vF .pop button span { color: #a4abb5; font-size: 11.5px; letter-spacing: .04em; }
+  .vF .pop button.on span { color: #c8102e; }
+
+  /* --- grid: unchanged from E --- */
+  .vF .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
+  .vF .card { cursor: pointer; display: flex; flex-direction: column; }
+  .vF .card .shot { width: 100%; aspect-ratio: 16 / 10; border-radius: 3px; overflow: hidden; background: #eee; margin-bottom: 9px; }
+  .vF .card h3 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 15px; line-height: 1.22; font-weight: 700; }
+  .vF .card p { margin: 0 0 7px; font-size: 12px; line-height: 1.4; color: #7b8492; }
+  .vF .card .meta { margin-top: auto; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
+  .vF .card.played .shot { opacity: .42; }
+  .vF .card.played h3 { color: #9aa2ad; font-weight: 400; }
+  .vF .card.played p { color: #b3bac3; }
+  .vF .dot { width: 5px; height: 5px; border-radius: 50%; background: #c8102e; flex: none; }
+  .vF .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
+  .vF .stg { color: #b45309; font-weight: 700; }
+  .vF .empty { padding: 48px 20px; text-align: center; }
+  .vF .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
+  .vF .empty span { font-size: 13px; color: #8a919c; }
+
   /* ---- shared notes panel under the phone ---- */
   .notes { max-width: 430px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
   .notes h5 { margin: 0 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
@@ -405,12 +502,14 @@ const GAMES = [
 // STATE — in memory only, no persistence (that is what the prototype checks)
 // ===========================================================================
 const state = {
-  variant: (new URLSearchParams(location.search).get('variant') || 'E').toUpperCase(),
+  variant: (new URLSearchParams(location.search).get('variant') || 'F').toUpperCase(),
   played: new Set(GAMES.filter(g => g.played).map(g => g.id)),
   devMode: false,
-  filter: 'all',      // variants C + D
+  filter: 'all',      // variants C, D, E, F
   page: 0,            // variant B
   sheet: false,       // variant B
+  filterUi: 'inline', // variant F — 'inline' | 'icon', toggled by FILT
+  filterOpen: false,  // variant F — icon popover
 };
 
 const VARIANTS = {
@@ -419,6 +518,7 @@ const VARIANTS = {
   C: 'The wire',
   D: 'Arcade grid',
   E: 'Front page + grid',
+  F: 'Tighter lead',
 };
 
 const CAPTIONS = {
@@ -427,6 +527,7 @@ const CAPTIONS = {
   C: '<b>The wire.</b> Dense chronological ticker, text first, thumbnails as 26px chips. Everything scannable at once. Bets that the <b>catalogue</b> is the product and recency is just a sort order.',
   D: '<b>Arcade grid.</b> The control: image-first tiles, dates demoted to a subtitle. Deliberately not news-like — the test is whether the news metaphor earns anything the plain arcade shelf does not.',
   E: '<b>Front page + grid.</b> The synthesis: A’s newspaper spine and lead hero, D’s full-width-then-2-column grid, C/D’s unplayed filter, B’s restraint. <b>The filter scopes the archive only</b> — today’s lead never filters away.',
+  F: '<b>Tighter lead.</b> E with the hero cut back between A and E, the “Today’s game” badge moved onto the thumbnail, and the filter folded into the archive header. Hit <b>FILT</b> in the bar to swap the filter between <b>inline text</b> and <b>icon + popover</b> — that is the open question.',
 };
 
 const NOTES = `
@@ -768,9 +869,101 @@ function VariantE() {
 }
 
 // ===========================================================================
+// VARIANT F — TIGHTER LEAD
+// E with a shorter hero, the kicker moved onto the thumbnail, and the filter
+// demoted into the archive section header. Two filter treatments live side by
+// side (FILT in the switcher) because that is the undecided bit.
+// ===========================================================================
+function VariantF() {
+  const lead = leadGame();
+  const pool = sorted().filter(g => g !== lead);          // the filter scopes this, never the lead
+  const counts = {
+    all: pool.length,
+    unplayed: pool.filter(g => !isPlayed(g)).length,
+    played: pool.filter(g => isPlayed(g)).length,
+  };
+  const rest = state.filter === 'all' ? pool
+    : state.filter === 'unplayed' ? pool.filter(g => !isPlayed(g))
+    : pool.filter(g => isPlayed(g));
+
+  const week = rest.filter(g => (new Date(TODAY) - new Date(g.date)) / 864e5 <= 6);
+  const older = rest.filter(g => !week.includes(g));
+
+  const card = g => `
+    <div class="card ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
+      <div class="shot">${thumb(g.id)}</div>
+      <h3>${esc(g.title)}</h3>
+      <p>${esc(g.blurb.split('.')[0])}</p>
+      <div class="meta">
+        ${isPlayed(g) ? '<span class="tick">✓</span> Played' : '<span class="dot"></span> New'}
+        <span>·</span><span>${relDay(g.date)}</span>
+        ${g.channel === 'staging' ? '<span class="stg">· Staging</span>' : ''}
+      </div>
+    </div>`;
+
+  // --- the two filter treatments -----------------------------------------
+  const inlineFilter = () => {
+    const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
+    return `<div class="inlinefilter">
+      ${b('all', 'All')}<i>·</i>${b('unplayed', 'Unplayed')}<i>·</i>${b('played', 'Played')}
+    </div>`;
+  };
+
+  const iconFilter = () => {
+    const active = state.filter !== 'all';
+    const opt = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}<span>${counts[k]}</span></button>`;
+    return `<div class="iconfilter">
+      <button class="${active ? 'active' : ''}" data-pop="1" aria-label="Filter">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M4 8h8M6.5 12h3"/></svg>
+        ${active ? '<span class="pip"></span>' : ''}
+      </button>
+      ${state.filterOpen ? `<div class="pop">${opt('all', 'All games')}${opt('unplayed', 'Unplayed')}${opt('played', 'Played')}</div>` : ''}
+    </div>`;
+  };
+
+  const control = state.filterUi === 'inline' ? inlineFilter() : iconFilter();
+
+  // The filter always rides the FIRST section header on screen, whichever it is.
+  const sections = [];
+  if (week.length) sections.push(['Earlier this week', week]);
+  if (older.length) sections.push(['The archive', older]);
+
+  const body = sections.length
+    ? sections.map(([title, items], i) => `
+        <div class="sechead ${i ? 'plain' : ''}"><h4>${title}</h4>${i ? '' : control}</div>
+        <div class="grid">${items.map(card).join('')}</div>`).join('')
+    : `<div class="sechead"><h4>The archive</h4>${control}</div>
+       <div class="empty">
+         <b>${state.filter === 'unplayed' ? 'You’re all caught up.' : 'Nothing here.'}</b>
+         <span>${state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
+       </div>`;
+
+  return `<div class="vF">
+    <div class="masthead">
+      <h1>The Daily <span>Build</span></h1>
+      <time>${fullDate(TODAY)}</time>
+    </div>
+
+    <div class="hero">
+      <div class="shot">${thumb(lead.id)}<span class="badge">Today's game</span></div>
+      <h2>${esc(lead.title)}</h2>
+      <p>${esc(lead.blurb)}</p>
+      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-play="${lead.id}">
+        ${isPlayed(lead) ? 'Play again' : 'Play now'}
+      </button>
+      ${isPlayed(lead) ? '<div class="herometa">✓ Played today</div>' : ''}
+    </div>
+
+    ${body}
+    <div style="height:36px"></div>
+  </div>`;
+}
+
+// ===========================================================================
 // SWITCHER + RENDER
 // ===========================================================================
-const RENDERERS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD, E: VariantE };
+const RENDERERS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD, E: VariantE, F: VariantF };
 const KEYS = Object.keys(RENDERERS);
 
 function cycle(step) {
@@ -790,6 +983,7 @@ function renderSwitcher() {
     <div class="label">${state.variant} — ${VARIANTS[state.variant]}</div>
     <button data-cycle="1">→</button>
     <div class="state">${state.played.size}/${visible().length} played</div>
+    ${state.variant === 'F' ? `<button class="toggle ${state.filterUi === 'icon' ? 'on' : ''}" data-filterui="1">FILT: ${state.filterUi.toUpperCase()}</button>` : ''}
     <button class="toggle ${state.devMode ? 'on' : ''}" data-dev="1">DEV</button>
     <button data-reset="1">RESET</button>`;
 }
@@ -799,7 +993,7 @@ function render() {
   const screen = document.getElementById('screen');
   screen.innerHTML = RENDERERS[state.variant]();
   document.querySelector('.phone').style.background =
-    'AE'.includes(state.variant) ? '#fff' : state.variant === 'C' ? '#fbfbf9' : '#0b0d12';
+    'AEF'.includes(state.variant) ? '#fff' : state.variant === 'C' ? '#fbfbf9' : '#0b0d12';
   document.getElementById('caption').innerHTML = CAPTIONS[state.variant];
   document.getElementById('notes').innerHTML = NOTES;
   renderSwitcher();
@@ -811,15 +1005,19 @@ function render() {
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-play],[data-cycle],[data-dev],[data-reset],[data-filter],[data-page],[data-sheet]');
+  const t = e.target.closest('[data-play],[data-cycle],[data-dev],[data-reset],[data-filter],[data-page],[data-sheet],[data-filterui],[data-pop]');
+  // Click-away closes the F filter popover.
+  if (state.filterOpen && !e.target.closest('.iconfilter')) { state.filterOpen = false; render(); if (!t) return; }
   if (!t) return;
-  if (t.dataset.play)   return launch(t.dataset.play);
-  if (t.dataset.cycle)  return cycle(+t.dataset.cycle);
-  if (t.dataset.dev)    { state.devMode = !state.devMode; return render(); }
-  if (t.dataset.reset)  { state.played = new Set(); return render(); }
-  if (t.dataset.filter) { state.filter = t.dataset.filter; return render(); }
-  if (t.dataset.page)   { state.page = +t.dataset.page; return render(); }
-  if (t.dataset.sheet)  { state.sheet = t.dataset.sheet === '1'; return render(); }
+  if (t.dataset.play)     return launch(t.dataset.play);
+  if (t.dataset.cycle)    return cycle(+t.dataset.cycle);
+  if (t.dataset.dev)      { state.devMode = !state.devMode; return render(); }
+  if (t.dataset.reset)    { state.played = new Set(); return render(); }
+  if (t.dataset.filter)   { state.filter = t.dataset.filter; state.filterOpen = false; return render(); }
+  if (t.dataset.page)     { state.page = +t.dataset.page; return render(); }
+  if (t.dataset.sheet)    { state.sheet = t.dataset.sheet === '1'; return render(); }
+  if (t.dataset.filterui) { state.filterUi = state.filterUi === 'inline' ? 'icon' : 'inline'; state.filterOpen = false; return render(); }
+  if (t.dataset.pop)      { state.filterOpen = !state.filterOpen; return render(); }
 });
 
 document.addEventListener('keydown', e => {
