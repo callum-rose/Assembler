@@ -3,98 +3,180 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PROTOTYPE — feed UX variants</title>
+<title>PROTOTYPE — play-the-news feed UX</title>
 <!--
   ============================================================================
-  THROWAWAY PROTOTYPE — not production. Delete or move to a scrap branch.
+  THROWAWAY PROTOTYPE — not production code. Rewrite properly for uGUI.
   ============================================================================
 
-  QUESTION: what should the play-the-news feed look like?
-  (SHIPPLAN decision #6: "catalogue of ALL generated games with played/unplayed
-  state; news-like styling". Phase 3, days 15-19.)
+  QUESTION IT ANSWERED
+    What should the play-the-news feed look like?
+    (SHIPPLAN decision #6: "catalogue of ALL generated games with played/
+    unplayed state; news-like styling". Phase 3, days 15-19.)
 
-  Five variants, switchable via ?variant=A|B|C|D|E or the floating bottom bar
-  (arrow keys work too). Ships in Unity eventually — this is only here to feel
-  the information hierarchy before anyone builds uGUI.
+  THE ANSWER (settled 2026-07-31)
+    A newspaper front page: masthead, one full-width lead for today's game,
+    then a 2-column grid of the archive grouped by recency, with a quiet
+    inline filter riding the first section header.
 
-  A-D were the original spread. E is the synthesis after the first review
-  (2026-07-31) and is now the default: A's newspaper layout + D's
-  full-width-then-2-column grid + C/D's unplayed filter + B's restraint.
-  A-D are kept because they are the primary source for how E was arrived at.
+    Arrived at over three rounds. Six variants were built and compared; see
+    the branch history for the losing five, which are the primary source:
+      ffa21591  A Front page / B Daily edition / C The wire / D Arcade grid
+      41e40689  E Front page + grid  (A's layout + D's grid + the filter)
+      000d414a  F Tighter lead       (E, shorter hero, badged, filter demoted)
+    This file is F with the inline filter treatment, collapsed to one version.
 
-  Data model mirrors Assembler.Remote.GameManifestEntry
-  (Id, Title, Description, DescriptorUrl, Version) plus the fields the feed
-  needs that the manifest does NOT carry yet: publishedAt, thumbnail, channel
-  (live|staging). That gap is itself a finding — see the notes panel.
+  WHY THIS AND NOT THE OTHERS
+    - A read as a news app, which is the target identity; B was cleaner but
+      did not read as news and hid the catalogue behind a button; C and D
+      treated the catalogue, not today, as the point.
+    - The grid came from D: a full-width lead then two columns.
+    - B contributed restraint only — spacing, the pill button, hairline rules.
+    - The filter is INLINE rather than an icon+popover: on a ~14-item
+      catalogue the one control that changes what you are looking at is
+      cheaper to show than to hide. Revisit if the archive reaches a few
+      hundred games or needs more than three filters — a popover is the only
+      one of the two that scales, and it has room for per-filter counts.
 
-  LEGAL POSTURE BAKED IN (SHIPPLAN #11): no outlet article body, no outlet
-  photos. The "headline" shown here is OUR rewrite of the story hook; the blurb
-  is copy about OUR game; the thumbnail is a screenshot from the validation
-  sandbox. Every variant obeys that.
+  DESIGN CALLS WORTH RE-ARGUING IN UNITY
+    1. The filter scopes the ARCHIVE ONLY. Today's lead never filters away,
+       even once played — it just switches to a ghost "Play again". The
+       alternative (filter also re-picks the lead, "NEXT UP" kicker) reads as
+       a task list rather than a newspaper.
+    2. Played cards keep their screenshot in COLOUR at 42% opacity. Greyscale
+       on a light ground reads as a broken image, not a played game.
+    3. Two columns fit a one-sentence blurb only, so this truncates at the
+       first full stop. The generate skill should be writing a short first
+       sentence deliberately rather than the feed cutting prose mid-thought.
 
-  No persistence: played state is in memory, resets on reload.
+  BLOCKER FOR THE REAL IMPLEMENTATION
+    Assembler.Remote.GameManifestEntry is (Id, Title, Description,
+    DescriptorUrl, Version). This design needs three more fields the manifest
+    does not carry: publishedAt, thumbnail, channel (live|staging). That is a
+    store-side schema change and should land before the uGUI work.
+
+  LEGAL POSTURE BAKED IN (SHIPPLAN #11)
+    No outlet article body, no outlet photos. The headline is OUR rewrite of
+    the story hook, the blurb is copy about OUR game, the thumbnail is a
+    screenshot from the validation sandbox.
+
+  No persistence — played state is in memory and resets on reload.
+  The yellow bar is prototype scaffolding, not part of the design.
 -->
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    background: #14161a;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
-    padding: 28px 16px 140px;
-    overflow-y: auto;
+    background: #14161a; color: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    padding: 28px 16px 140px; overflow-y: auto;
   }
 
   /* ---- phone frame: density judgements are worthless at desktop width ---- */
   .phone {
-    width: 390px;
-    height: 844px;
-    flex: none;
-    border-radius: 44px;
-    border: 10px solid #000;
+    width: 390px; height: 844px; flex: none;
+    border-radius: 44px; border: 10px solid #000; background: #fff;
     box-shadow: 0 30px 70px rgba(0,0,0,.6);
-    overflow: hidden;
-    position: relative;
-    background: #fff;
+    overflow: hidden; position: relative;
   }
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; }
   .screen::-webkit-scrollbar { width: 0; }
-  .shot > svg, .chip > svg, .cell > svg, .art > svg { display: block; width: 100%; height: 100%; }
+  .shot > svg { display: block; width: 100%; height: 100%; }
 
-  .caption { font-size: 13px; color: #8b93a1; text-align: center; max-width: 420px; line-height: 1.5; }
-  .caption b { color: #dfe4ec; font-weight: 600; }
+  /* ======================================================================
+     THE DESIGN
+     ====================================================================== */
+  .feed { background: #fff; color: #14161a; }
 
-  /* ---- floating switcher (deliberately ugly / obviously not the design) ---- */
-  .switcher {
+  .masthead {
+    position: sticky; top: 0; z-index: 12; background: #fff;
+    border-bottom: 2px solid #14161a; padding: 15px 20px 11px;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; letter-spacing: -.02em; font-weight: 700; }
+  .masthead h1 span { color: #c8102e; }
+  .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
+
+  /* --- lead: today's game --- */
+  .hero { padding: 18px 20px 22px; }
+  .hero .shot { position: relative; width: 100%; height: 172px; border-radius: 4px; overflow: hidden; margin-bottom: 14px; background: #eee; }
+  .hero .badge {
+    position: absolute; top: 10px; left: 10px;
+    background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
+    letter-spacing: .16em; text-transform: uppercase; padding: 5px 9px; border-radius: 2px;
+  }
+  .hero h2 { margin: 0 0 9px; font-family: Georgia, serif; font-size: 26px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
+  .hero p { margin: 0 0 17px; font-size: 14.5px; line-height: 1.5; color: #56606d; }
+  .playbtn {
+    width: 100%; border: 0; cursor: pointer; font: inherit;
+    background: #14161a; color: #fff; border-radius: 999px; padding: 15px;
+    font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+  }
+  .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
+  .herometa { margin-top: 11px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
+
+  /* --- section header, carrying the filter on the first one --- */
+  .sechead {
+    position: sticky; top: 55px; z-index: 11; background: #fff;
+    margin: 0 20px 12px; padding: 14px 0 7px; border-bottom: 1.5px solid #14161a;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .sechead > h4 { margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
+  .sechead.plain { justify-content: flex-start; margin-top: 26px; }
+
+  .filter { display: flex; align-items: center; gap: 2px; flex: none; }
+  .filter button {
+    font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: none; border: 0; cursor: pointer; color: #b0b7c1; padding: 3px 5px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .filter button.on { color: #14161a; background: #f0f2f5; }
+  .filter i { color: #dde1e6; font-style: normal; font-size: 9px; }
+
+  /* --- archive grid --- */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
+  /* Flex column + margin-top:auto on the meta keeps the "NEW / PLAYED · date"
+     lines aligned across a row even when headlines wrap to different depths. */
+  .card { cursor: pointer; display: flex; flex-direction: column; }
+  .card .shot { width: 100%; aspect-ratio: 16 / 10; border-radius: 3px; overflow: hidden; background: #eee; margin-bottom: 9px; }
+  .card h3 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 15px; line-height: 1.22; font-weight: 700; }
+  .card p { margin: 0 0 7px; font-size: 12px; line-height: 1.4; color: #7b8492; }
+  .card .meta { margin-top: auto; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
+  .card.played .shot { opacity: .42; }
+  .card.played h3 { color: #9aa2ad; font-weight: 400; }
+  .card.played p { color: #b3bac3; }
+
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: #c8102e; flex: none; }
+  .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
+  .stg { color: #b45309; font-weight: 700; }
+
+  .empty { padding: 48px 20px; text-align: center; }
+  .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
+  .empty span { font-size: 13px; color: #8a919c; }
+
+  /* ======================================================================
+     PROTOTYPE SCAFFOLDING — deliberately ugly, obviously not the design
+     ====================================================================== */
+  .devbar {
     position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
     display: flex; align-items: stretch; gap: 2px;
-    background: #f2c94c; color: #1b1b1b;
-    border-radius: 999px; padding: 4px;
+    background: #f2c94c; color: #1b1b1b; border-radius: 999px; padding: 4px;
     box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    font-size: 13px; font-weight: 700; z-index: 100;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; font-weight: 700; z-index: 100;
   }
-  .switcher button {
-    font: inherit; border: 0; background: #1b1b1b; color: #f2c94c;
-    border-radius: 999px; padding: 8px 13px; cursor: pointer;
+  .devbar .tag { display: flex; align-items: center; padding: 0 12px; letter-spacing: .1em; }
+  .devbar .state { display: flex; align-items: center; padding: 0 12px; border-left: 2px solid rgba(0,0,0,.2); font-weight: 500; opacity: .85; }
+  .devbar button {
+    font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 8px 13px;
+    background: transparent; color: #1b1b1b; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
   }
-  .switcher button:hover { background: #333; }
-  .switcher .label { display: flex; align-items: center; padding: 0 14px; white-space: nowrap; }
-  .switcher .state {
-    display: flex; align-items: center; padding: 0 12px; border-left: 2px solid rgba(0,0,0,.2);
-    font-weight: 500; opacity: .85;
-  }
-  .switcher .toggle { background: transparent; color: #1b1b1b; border: 2px solid rgba(0,0,0,.25); }
-  .switcher .toggle.on { background: #1b1b1b; color: #f2c94c; border-color: #1b1b1b; }
+  .devbar button.on, .devbar button.solid { background: #1b1b1b; color: #f2c94c; box-shadow: none; }
 
-  /* ---- fake launch overlay, shared by all variants ---- */
+  /* ---- fake launch: download -> play -> gameover -> back to the feed ---- */
   .launch {
-    position: absolute; inset: 0; z-index: 50;
-    background: #06070a; color: #fff;
+    position: absolute; inset: 0; z-index: 50; background: #06070a; color: #fff;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 18px; text-align: center; padding: 32px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -103,379 +185,33 @@
   .launch p { margin: 0; font-size: 13px; opacity: .5; }
   .bar { width: 190px; height: 3px; background: #24262e; border-radius: 3px; overflow: hidden; }
   .bar i { display: block; height: 100%; width: 0; background: #4ea1ff; transition: width .55s ease; }
-  .fakegame {
-    position: absolute; inset: 0; background: #0d1018;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
-  }
+  .fakegame { position: absolute; inset: 0; background: #0d1018; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
   .fakegame .stage { width: 220px; height: 220px; border: 1px solid #232838; border-radius: 12px; position: relative; overflow: hidden; }
   .fakegame .stage b { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #4ea1ff; left: 24px; top: 96px; animation: bob 1.1s ease-in-out infinite alternate; }
   .fakegame .stage s { position: absolute; width: 14px; height: 60px; background: #f2c94c; right: 26px; top: 70px; border-radius: 4px; }
   @keyframes bob { to { transform: translate(150px, 20px); } }
-  .fakegame button {
-    font: inherit; font-family: inherit; border: 0; cursor: pointer;
-    background: #fff; color: #000; border-radius: 999px; padding: 12px 24px; font-weight: 700; font-size: 14px;
-  }
+  .fakegame button { font: inherit; border: 0; cursor: pointer; background: #fff; color: #000; border-radius: 999px; padding: 12px 24px; font-weight: 700; font-size: 14px; }
 
-  /* ======================================================================
-     VARIANT A — FRONT PAGE
-     Lead story hero + dated list beneath. Text-forward, serif, newspaper.
-     Primary affordance = the hero. Bets on "today" being the point.
-     ====================================================================== */
-  .vA { background: #fff; color: #14161a; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
-  .vA .masthead {
-    position: sticky; top: 0; z-index: 10; background: #fff;
-    border-bottom: 3px solid #14161a; padding: 14px 18px 10px;
-    display: flex; align-items: baseline; justify-content: space-between;
-  }
-  .vA .masthead h1 {
-    margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 25px;
-    letter-spacing: -.02em; font-weight: 700;
-  }
-  .vA .masthead h1 span { color: #c8102e; }
-  .vA .masthead time { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: #6b7280; }
-  .vA .hero { padding: 18px 18px 22px; border-bottom: 1px solid #e5e7eb; }
-  .vA .kicker {
-    display: inline-block; background: #c8102e; color: #fff; font-size: 10px; font-weight: 800;
-    letter-spacing: .14em; text-transform: uppercase; padding: 4px 8px; border-radius: 2px; margin-bottom: 12px;
-  }
-  .vA .hero .shot { width: 100%; height: 190px; border-radius: 3px; overflow: hidden; margin-bottom: 14px; background: #eee; }
-  .vA .hero h2 {
-    margin: 0 0 8px; font-family: Georgia, serif; font-size: 27px; line-height: 1.16;
-    letter-spacing: -.02em; font-weight: 700;
-  }
-  .vA .hero p { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: #4b5563; }
-  .vA .playbtn {
-    width: 100%; border: 0; cursor: pointer; font: inherit;
-    background: #14161a; color: #fff; border-radius: 3px; padding: 15px;
-    font-size: 15px; font-weight: 700; letter-spacing: .02em;
-  }
-  .vA .playbtn.done { background: #fff; color: #14161a; border: 2px solid #14161a; }
-  .vA .sechead {
-    padding: 16px 18px 8px; font-size: 11px; font-weight: 800; letter-spacing: .14em;
-    text-transform: uppercase; color: #14161a; border-bottom: 1px solid #14161a; margin: 0 18px 6px 18px;
-    padding-left: 0; padding-right: 0;
-  }
-  .vA .row { display: flex; gap: 13px; padding: 13px 18px; border-bottom: 1px solid #eef0f3; cursor: pointer; align-items: flex-start; }
-  .vA .row:active { background: #f7f8fa; }
-  .vA .row .shot { width: 78px; height: 58px; flex: none; border-radius: 2px; overflow: hidden; background: #eee; }
-  .vA .row h3 { margin: 0 0 4px; font-family: Georgia, serif; font-size: 16px; line-height: 1.25; font-weight: 700; }
-  .vA .row p { margin: 0 0 5px; font-size: 12.5px; line-height: 1.4; color: #6b7280; }
-  .vA .row .meta { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: #9ca3af; display: flex; gap: 8px; align-items: center; }
-  .vA .row.played h3, .vA .row.played p { color: #9ca3af; }
-  .vA .dot { width: 6px; height: 6px; border-radius: 50%; background: #c8102e; flex: none; }
-  .vA .tick { color: #16a34a; font-weight: 800; }
-
-  /* ======================================================================
-     VARIANT B — DAILY EDITION
-     One story per screen, swipe back through days. No list at all.
-     Primary affordance = one enormous PLAY. Bets on daily ritual.
-     ====================================================================== */
-  .vB { background: #0b0d12; color: #fff; height: 100%; overflow: hidden; position: relative; }
-  .vB .rail { position: absolute; top: 0; left: 0; right: 0; z-index: 5; padding: 16px 18px 0; display: flex; align-items: center; justify-content: space-between; }
-  .vB .rail .brand { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; font-weight: 800; opacity: .75; }
-  .vB .rail .count { font-size: 11px; letter-spacing: .1em; opacity: .45; font-family: ui-monospace, Menlo, monospace; }
-  .vB .pager { position: absolute; top: 44px; left: 18px; right: 18px; z-index: 5; display: flex; gap: 3px; }
-  .vB .pager i { flex: 1; height: 2px; background: rgba(255,255,255,.18); border-radius: 2px; }
-  .vB .pager i.on { background: #fff; }
-  .vB .pager i.done { background: rgba(255,255,255,.45); }
-  .vB .page { position: absolute; inset: 0; display: flex; flex-direction: column; }
-  .vB .art { position: absolute; inset: 0; }
-  .vB .art > svg { width: 100%; height: 100%; }
-  .vB .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,13,18,.72) 0%, rgba(11,13,18,.25) 32%, rgba(11,13,18,.86) 68%, #0b0d12 100%); }
-  .vB .body { position: relative; z-index: 6; margin-top: auto; padding: 0 26px 34px; }
-  .vB .date { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; opacity: .6; margin-bottom: 12px; font-family: ui-monospace, Menlo, monospace; }
-  .vB .body h2 { margin: 0 0 12px; font-size: 33px; line-height: 1.08; letter-spacing: -.03em; font-weight: 800; }
-  .vB .body p { margin: 0 0 26px; font-size: 15px; line-height: 1.55; opacity: .68; }
-  .vB .actions { display: flex; align-items: center; gap: 14px; }
-  .vB .big {
-    flex: 1; border: 0; cursor: pointer; font: inherit; background: #fff; color: #000;
-    border-radius: 999px; padding: 19px; font-size: 17px; font-weight: 800; letter-spacing: -.01em;
-  }
-  .vB .big.done { background: rgba(255,255,255,.1); color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.3); }
-  .vB .ghost {
-    width: 56px; height: 56px; flex: none; border-radius: 50%; cursor: pointer;
-    background: rgba(255,255,255,.09); color: #fff; border: 0; font-size: 19px;
-  }
-  .vB .nav { position: absolute; inset: 0; display: flex; z-index: 4; }
-  .vB .nav button { flex: 1; background: transparent; border: 0; cursor: pointer; color: transparent; }
-  .vB .hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; opacity: .3; z-index: 6; }
-  .vB .sheet {
-    position: absolute; inset: 0; z-index: 20; background: #0b0d12;
-    padding: 20px 18px; overflow-y: auto; display: none;
-  }
-  .vB .sheet.open { display: block; }
-  .vB .sheet header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .vB .sheet h3 { margin: 0; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; opacity: .6; }
-  .vB .sheet .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .vB .sheet .cell { aspect-ratio: 1; border-radius: 10px; overflow: hidden; position: relative; cursor: pointer; }
-  .vB .sheet .cell figcaption { position: absolute; inset: auto 0 0 0; padding: 6px 7px; font-size: 9.5px; line-height: 1.25; background: linear-gradient(transparent, rgba(0,0,0,.9)); }
-  .vB .sheet .cell.played { opacity: .38; }
-
-  /* ======================================================================
-     VARIANT C — THE WIRE
-     Dense chronological ticker. Text first, images as 26px chips.
-     Primary affordance = the row. Bets on catalogue + scanning.
-     ====================================================================== */
-  .vC { background: #fbfbf9; color: #17181a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  .vC .top { position: sticky; top: 0; z-index: 10; background: #17181a; color: #fbfbf9; padding: 12px 14px 10px; }
-  .vC .top .line1 { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-  .vC .top h1 { margin: 0; font-size: 13px; letter-spacing: .28em; text-transform: uppercase; font-weight: 700; }
-  .vC .top .live { font-size: 10px; letter-spacing: .1em; opacity: .55; }
-  .vC .chips { display: flex; gap: 6px; }
-  .vC .chips button {
-    font: inherit; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
-    background: transparent; color: rgba(251,251,249,.55); border: 1px solid rgba(251,251,249,.25);
-    border-radius: 2px; padding: 5px 9px; cursor: pointer;
-  }
-  .vC .chips button.on { background: #fbfbf9; color: #17181a; border-color: #fbfbf9; }
-  .vC .daybar {
-    position: sticky; top: 82px; z-index: 9;
-    background: #ececE6; border-top: 1px solid #d6d6cf; border-bottom: 1px solid #d6d6cf;
-    padding: 4px 14px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #6b6b63;
-  }
-  .vC .wirerow {
-    display: flex; gap: 10px; align-items: center; padding: 9px 14px;
-    border-bottom: 1px solid #eaeae4; cursor: pointer;
-  }
-  .vC .wirerow:active { background: #f2f2ec; }
-  .vC .wirerow .t { font-size: 10.5px; color: #9a9a90; width: 34px; flex: none; }
-  .vC .wirerow .chip { width: 26px; height: 26px; flex: none; border-radius: 3px; overflow: hidden; }
-  .vC .wirerow .txt { flex: 1; min-width: 0; }
-  .vC .wirerow .txt b { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .vC .wirerow .txt small { display: block; font-size: 10.5px; color: #8d8d84; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
-  .vC .wirerow .go { font-size: 14px; color: #17181a; flex: none; width: 18px; text-align: right; }
-  .vC .wirerow.played .txt b { color: #a2a29a; font-weight: 400; }
-  .vC .wirerow.played .chip { filter: grayscale(1) opacity(.5); }
-  .vC .wirerow.played .go { color: #c3c3ba; }
-  .vC .new { display: inline-block; background: #c8102e; color: #fff; font-size: 8.5px; letter-spacing: .1em; padding: 1px 4px; border-radius: 2px; margin-right: 5px; vertical-align: 1px; }
-  .vC .stagingrow { background: #fff8e1; }
-  .vC .empty { padding: 40px 14px; text-align: center; font-size: 12px; color: #9a9a90; }
-
-  /* ======================================================================
-     VARIANT D — ARCADE GRID (the control)
-     Deliberately NOT news-like: image-first tiles, no dates in the hierarchy.
-     Tests whether the news metaphor earns its keep at all.
-     ====================================================================== */
-  .vD { background: #101218; color: #fff; }
-  .vD .head { padding: 20px 16px 12px; }
-  .vD .head h1 { margin: 0 0 3px; font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
-  .vD .head p { margin: 0 0 16px; font-size: 13px; opacity: .45; }
-  .vD .seg { display: flex; background: rgba(255,255,255,.07); border-radius: 10px; padding: 3px; }
-  .vD .seg button {
-    flex: 1; font: inherit; font-size: 12.5px; font-weight: 600; border: 0; cursor: pointer;
-    background: transparent; color: rgba(255,255,255,.55); border-radius: 8px; padding: 8px;
-  }
-  .vD .seg button.on { background: rgba(255,255,255,.14); color: #fff; }
-  .vD .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px 30px; }
-  .vD .tile { position: relative; border-radius: 16px; overflow: hidden; cursor: pointer; aspect-ratio: 1 / 1.12; background: #1a1d26; }
-  .vD .tile.wide { grid-column: span 2; aspect-ratio: 16 / 9.4; }
-  .vD .tile .art { position: absolute; inset: 0; }
-  .vD .tile .art > svg { width: 100%; height: 100%; }
-  .vD .tile .fade { position: absolute; inset: 0; background: linear-gradient(transparent 18%, rgba(8,9,13,.72) 52%, rgba(8,9,13,.96)); }
-  .vD .tile .cap { position: absolute; inset: auto 0 0 0; padding: 11px 12px 12px; }
-  .vD .tile .cap b { display: block; font-size: 13.5px; line-height: 1.22; font-weight: 700; letter-spacing: -.01em; }
-  .vD .tile.wide .cap b { font-size: 20px; letter-spacing: -.025em; }
-  .vD .tile .cap small { display: block; font-size: 10.5px; opacity: .5; margin-top: 4px; }
-  .vD .tile .flag {
-    position: absolute; top: 9px; left: 9px; font-size: 9px; font-weight: 800; letter-spacing: .12em;
-    text-transform: uppercase; background: #ff375f; color: #fff; padding: 3px 7px; border-radius: 5px;
-  }
-  .vD .tile .flag.stg { background: #f2c94c; color: #1b1b1b; }
-  .vD .tile.played .art { filter: grayscale(.85) brightness(.55); }
-  .vD .tile.played .check {
-    position: absolute; top: 9px; right: 9px; width: 21px; height: 21px; border-radius: 50%;
-    background: rgba(255,255,255,.9); color: #101218; font-size: 12px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* ======================================================================
-     VARIANT E — FRONT PAGE + GRID  (the synthesis, 2026-07-31)
-     A's newspaper spine and lead hero, D's full-width-then-2-column grid,
-     C/D's unplayed filter, B's restraint (airier spacing, one accent, pill
-     button, hairline rules only). The filter scopes the ARCHIVE only —
-     today's lead is the front page and never filters away.
-     ====================================================================== */
-  .vE { background: #fff; color: #14161a; }
-  .vE .masthead {
-    position: sticky; top: 0; z-index: 10; background: #fff;
-    border-bottom: 2px solid #14161a; padding: 16px 20px 12px;
-    display: flex; align-items: baseline; justify-content: space-between;
-  }
-  .vE .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 25px; letter-spacing: -.02em; font-weight: 700; }
-  .vE .masthead h1 span { color: #c8102e; }
-  .vE .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
-
-  .vE .hero { padding: 22px 20px 26px; }
-  .vE .kicker {
-    display: inline-block; background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
-    letter-spacing: .16em; text-transform: uppercase; padding: 4px 9px; border-radius: 2px; margin-bottom: 14px;
-  }
-  .vE .hero .shot { width: 100%; height: 196px; border-radius: 4px; overflow: hidden; margin-bottom: 16px; background: #eee; }
-  .vE .hero h2 { margin: 0 0 10px; font-family: Georgia, serif; font-size: 28px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
-  .vE .hero p { margin: 0 0 20px; font-size: 15px; line-height: 1.55; color: #56606d; }
-  .vE .playbtn {
-    width: 100%; border: 0; cursor: pointer; font: inherit;
-    background: #14161a; color: #fff; border-radius: 999px; padding: 16px;
-    font-size: 15.5px; font-weight: 700; letter-spacing: -.01em;
-  }
-  .vE .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
-  .vE .herometa { margin-top: 12px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
-
-  /* filter bar — scopes the archive below, not the lead above */
-  .vE .filterbar {
-    position: sticky; top: 60px; z-index: 9; background: #fff;
-    border-top: 1px solid #e9ecf0; border-bottom: 1px solid #e9ecf0;
-    padding: 11px 20px; display: flex; align-items: center; gap: 8px;
-  }
-  .vE .filterbar .chips { display: flex; gap: 6px; flex: 1; }
-  .vE .filterbar button {
-    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
-    background: #f2f4f7; color: #56606d; border: 0; border-radius: 999px; padding: 7px 13px;
-  }
-  .vE .filterbar button.on { background: #14161a; color: #fff; }
-  .vE .filterbar .tally { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: #a4abb5; white-space: nowrap; }
-
-  .vE .sechead {
-    margin: 26px 20px 12px; padding-bottom: 7px; border-bottom: 1.5px solid #14161a;
-    font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
-  }
-  .vE .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
-  /* Flex column + margin-top:auto on the meta keeps the "NEW / PLAYED · date"
-     lines aligned across a row even when headlines wrap to different depths. */
-  .vE .card { cursor: pointer; display: flex; flex-direction: column; }
-  .vE .card .shot { width: 100%; aspect-ratio: 16 / 10; border-radius: 3px; overflow: hidden; background: #eee; margin-bottom: 9px; }
-  .vE .card h3 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 15px; line-height: 1.22; font-weight: 700; }
-  .vE .card p { margin: 0 0 7px; font-size: 12px; line-height: 1.4; color: #7b8492; }
-  .vE .card .meta { margin-top: auto; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
-  /* Played: keep the screenshot in colour (it should still invite a replay) and
-     signal state through opacity + the greyed headline. Greyscale on a light
-     ground reads as a broken image, not a played game. */
-  .vE .card.played .shot { opacity: .42; }
-  .vE .card.played h3 { color: #9aa2ad; font-weight: 400; }
-  .vE .card.played p { color: #b3bac3; }
-  .vE .dot { width: 5px; height: 5px; border-radius: 50%; background: #c8102e; flex: none; }
-  .vE .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
-  .vE .stg { color: #b45309; font-weight: 700; }
-  .vE .empty { padding: 54px 20px; text-align: center; }
-  .vE .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
-  .vE .empty span { font-size: 13px; color: #8a919c; }
-
-  /* ======================================================================
-     VARIANT F — TIGHTER LEAD  (2026-07-31, second review)
-     E, with three fixes:
-       1. Hero height split between A and E (shot 172 vs 190/196, tighter rhythm).
-       2. "Today's game" badge overlaid on the thumbnail — no longer its own row.
-       3. Filter demoted out of its own bar and into the archive section header.
-          TWO treatments, toggled by FILT in the switcher, because which one is
-          right is the open question: 'inline' text buttons vs an 'icon' + popover.
-     ====================================================================== */
-  .vF { background: #fff; color: #14161a; }
-  .vF .masthead {
-    position: sticky; top: 0; z-index: 12; background: #fff;
-    border-bottom: 2px solid #14161a; padding: 15px 20px 11px;
-    display: flex; align-items: baseline; justify-content: space-between;
-  }
-  .vF .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; letter-spacing: -.02em; font-weight: 700; }
-  .vF .masthead h1 span { color: #c8102e; }
-  .vF .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
-
-  /* --- hero: mid-way between A and E --- */
-  .vF .hero { padding: 18px 20px 22px; }
-  .vF .hero .shot { position: relative; width: 100%; height: 172px; border-radius: 4px; overflow: hidden; margin-bottom: 14px; background: #eee; }
-  .vF .hero .badge {
-    position: absolute; top: 10px; left: 10px;
-    background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
-    letter-spacing: .16em; text-transform: uppercase; padding: 5px 9px; border-radius: 2px;
-  }
-  .vF .hero h2 { margin: 0 0 9px; font-family: Georgia, serif; font-size: 26px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
-  .vF .hero p { margin: 0 0 17px; font-size: 14.5px; line-height: 1.5; color: #56606d; }
-  .vF .playbtn {
-    width: 100%; border: 0; cursor: pointer; font: inherit;
-    background: #14161a; color: #fff; border-radius: 999px; padding: 15px;
-    font-size: 15px; font-weight: 700; letter-spacing: -.01em;
-  }
-  .vF .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
-  .vF .herometa { margin-top: 11px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
-
-  /* --- section header now carries the filter --- */
-  .vF .sechead {
-    position: sticky; top: 55px; z-index: 11; background: #fff;
-    margin: 0 20px 12px; padding: 14px 0 7px; border-bottom: 1.5px solid #14161a;
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  }
-  .vF .sechead > h4 { margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
-  .vF .sechead.plain { justify-content: flex-start; margin-top: 26px; }
-
-  /* treatment 1 — quiet inline text buttons, typographically part of the rule */
-  .vF .inlinefilter { display: flex; align-items: center; gap: 2px; flex: none; }
-  .vF .inlinefilter button {
-    font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    background: none; border: 0; cursor: pointer; color: #b0b7c1; padding: 3px 5px; border-radius: 3px;
-    white-space: nowrap;
-  }
-  .vF .inlinefilter button.on { color: #14161a; background: #f0f2f5; }
-  .vF .inlinefilter i { color: #dde1e6; font-style: normal; font-size: 9px; }
-
-  /* treatment 2 — icon + popover */
-  .vF .iconfilter { position: relative; }
-  .vF .iconfilter > button {
-    display: flex; align-items: center; gap: 5px; cursor: pointer; font: inherit;
-    background: none; border: 0; padding: 3px; color: #6b7482; position: relative;
-  }
-  .vF .iconfilter > button.active { color: #c8102e; }
-  .vF .iconfilter svg { display: block; }
-  .vF .iconfilter .pip { position: absolute; top: 1px; right: 0; width: 5px; height: 5px; border-radius: 50%; background: #c8102e; }
-  .vF .pop {
-    position: absolute; top: 26px; right: 0; z-index: 20; width: 168px;
-    background: #fff; border: 1px solid #e3e7ec; border-radius: 8px;
-    box-shadow: 0 12px 28px rgba(16,20,26,.14); overflow: hidden; padding: 4px;
-  }
-  .vF .pop button {
-    display: flex; width: 100%; align-items: center; justify-content: space-between;
-    font: inherit; font-size: 13px; background: none; border: 0; cursor: pointer;
-    padding: 9px 10px; border-radius: 5px; color: #14161a; text-align: left;
-  }
-  .vF .pop button:hover { background: #f5f7f9; }
-  .vF .pop button.on { font-weight: 700; }
-  .vF .pop button span { color: #a4abb5; font-size: 11.5px; letter-spacing: .04em; }
-  .vF .pop button.on span { color: #c8102e; }
-
-  /* --- grid: unchanged from E --- */
-  .vF .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
-  .vF .card { cursor: pointer; display: flex; flex-direction: column; }
-  .vF .card .shot { width: 100%; aspect-ratio: 16 / 10; border-radius: 3px; overflow: hidden; background: #eee; margin-bottom: 9px; }
-  .vF .card h3 { margin: 0 0 5px; font-family: Georgia, serif; font-size: 15px; line-height: 1.22; font-weight: 700; }
-  .vF .card p { margin: 0 0 7px; font-size: 12px; line-height: 1.4; color: #7b8492; }
-  .vF .card .meta { margin-top: auto; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
-  .vF .card.played .shot { opacity: .42; }
-  .vF .card.played h3 { color: #9aa2ad; font-weight: 400; }
-  .vF .card.played p { color: #b3bac3; }
-  .vF .dot { width: 5px; height: 5px; border-radius: 50%; background: #c8102e; flex: none; }
-  .vF .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
-  .vF .stg { color: #b45309; font-weight: 700; }
-  .vF .empty { padding: 48px 20px; text-align: center; }
-  .vF .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
-  .vF .empty span { font-size: 13px; color: #8a919c; }
-
-  /* ---- shared notes panel under the phone ---- */
   .notes { max-width: 430px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
   .notes h5 { margin: 0 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
   .notes ul { margin: 0; padding-left: 18px; }
-  .notes li { margin-bottom: 4px; }
+  .notes li { margin-bottom: 5px; }
+  .notes b { color: #dfe4ec; }
+  .notes code { font-size: 11.5px; }
 </style>
 </head>
 <body>
 
 <div class="phone"><div class="screen" id="screen"></div></div>
-<div class="caption" id="caption"></div>
 <div class="notes" id="notes"></div>
-<div class="switcher" id="switcher"></div>
+<div class="devbar" id="devbar"></div>
 
 <script>
 // ===========================================================================
 // MOCK DATA
-// Mirrors GameManifestEntry + the three fields the manifest doesn't carry yet.
-// Headlines are OUR rewrites of the story hook, never the outlet's own text.
+// Mirrors GameManifestEntry + the three fields the manifest does not carry yet
+// (publishedAt, thumbnail, channel). Headlines are OUR rewrites of the story
+// hook, never the outlet's own text.
 // ===========================================================================
 const TODAY = '2026-07-31';
 
@@ -502,42 +238,20 @@ const GAMES = [
 // STATE — in memory only, no persistence (that is what the prototype checks)
 // ===========================================================================
 const state = {
-  variant: (new URLSearchParams(location.search).get('variant') || 'F').toUpperCase(),
   played: new Set(GAMES.filter(g => g.played).map(g => g.id)),
-  devMode: false,
-  filter: 'all',      // variants C, D, E, F
-  page: 0,            // variant B
-  sheet: false,       // variant B
-  filterUi: 'inline', // variant F — 'inline' | 'icon', toggled by FILT
-  filterOpen: false,  // variant F — icon popover
-};
-
-const VARIANTS = {
-  A: 'Front page',
-  B: 'Daily edition',
-  C: 'The wire',
-  D: 'Arcade grid',
-  E: 'Front page + grid',
-  F: 'Tighter lead',
-};
-
-const CAPTIONS = {
-  A: '<b>Front page.</b> Lead story hero + dated list. Text-forward, serif, newspaper. Primary affordance is the hero — bets that <b>“today”</b> is the whole point and the archive is a long tail.',
-  B: '<b>Daily edition.</b> One story per screen, tap the left/right halves (or ← →) to move through days. No feed at all; the catalogue hides behind ⌗ Archive. Bets on <b>daily ritual</b> over browsing.',
-  C: '<b>The wire.</b> Dense chronological ticker, text first, thumbnails as 26px chips. Everything scannable at once. Bets that the <b>catalogue</b> is the product and recency is just a sort order.',
-  D: '<b>Arcade grid.</b> The control: image-first tiles, dates demoted to a subtitle. Deliberately not news-like — the test is whether the news metaphor earns anything the plain arcade shelf does not.',
-  E: '<b>Front page + grid.</b> The synthesis: A’s newspaper spine and lead hero, D’s full-width-then-2-column grid, C/D’s unplayed filter, B’s restraint. <b>The filter scopes the archive only</b> — today’s lead never filters away.',
-  F: '<b>Tighter lead.</b> E with the hero cut back between A and E, the “Today’s game” badge moved onto the thumbnail, and the filter folded into the archive header. Hit <b>FILT</b> in the bar to swap the filter between <b>inline text</b> and <b>icon + popover</b> — that is the open question.',
+  devMode: false,           // show the unpromoted staging channel
+  filter: 'all',            // 'all' | 'unplayed' | 'played' — scopes the ARCHIVE only
 };
 
 const NOTES = `
-  <h5>What this prototype is asking</h5>
+  <h5>Decision · 31 Jul 2026</h5>
   <ul>
-    <li>The catalogue is <b>~14 items growing by one a day</b>, not a real news volume. A/B lean into that; C/D assume it eventually gets big.</li>
-    <li>Every variant shows <b>our</b> headline, <b>our</b> blurb and a sandbox screenshot — never outlet body text or photos (SHIPPLAN #11).</li>
-    <li><b>Manifest gap:</b> <code>GameManifestEntry</code> has no <code>publishedAt</code>, <code>thumbnail</code> or <code>channel</code>. Every variant needs all three; C and A need the date most.</li>
-    <li>Played/unplayed reads very differently per variant — a red dot (A), a progress rail (B), a NEW tag (C), a greyed tile (D).</li>
-    <li>Toggle <b>DEV</b> in the bar to see how a staging (unpromoted) game surfaces in each.</li>
+    <li>Newspaper front page: masthead, full-width lead for today, 2-column archive grid, <b>inline</b> filter on the first section header. Chosen over five other variants — see the branch history.</li>
+    <li><b>Blocker:</b> <code>GameManifestEntry</code> needs <code>publishedAt</code>, <code>thumbnail</code> and <code>channel</code> before this can be built for real.</li>
+    <li>The filter scopes the <b>archive only</b> — today's lead never filters away, it just becomes a ghost "Play again".</li>
+    <li>Two columns fit a <b>one-sentence</b> blurb, so the generate skill should write a short first sentence deliberately.</li>
+    <li>Revisit the inline filter if the archive reaches a few hundred games — an icon + popover is the version that scales, and it has room for per-filter counts.</li>
+    <li>Toggle <b>DEV</b> to see how an unpromoted staging game surfaces.</li>
   </ul>
 `;
 
@@ -572,32 +286,25 @@ function thumb(id) {
 const isPlayed = g => state.played.has(g.id);
 const visible = () => GAMES.filter(g => state.devMode || g.channel === 'live');
 const sorted = () => [...visible()].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-// The hero is always the newest *promoted* game — a staging entry must never take the
-// "Today's game" slot just because the daemon published it more recently.
+// The lead is always the newest *promoted* game — a staging entry must never
+// take the "Today's game" slot just because the daemon published it later.
 const leadGame = () => sorted().find(g => g.channel === 'live');
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+const daysAgo = date => Math.round((new Date(TODAY) - new Date(date)) / 864e5);
+const longDate = date => new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const fullDate = date => new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 function relDay(date) {
-  const days = Math.round((new Date(TODAY) - new Date(date)) / 864e5);
-  return days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days < 7 ? `${days} days ago` : longDate(date);
-}
-function longDate(date) {
-  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-}
-function weekday(date) {
-  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-}
-function fullDate(date) {
-  return new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  const d = daysAgo(date);
+  return d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 7 ? `${d} days ago` : longDate(date);
 }
 
 // ===========================================================================
-// FAKE LAUNCH — download -> play -> gameover -> back to feed, now marked played
-// The interesting bit is where you LAND on return, which differs per variant.
+// FAKE LAUNCH — download -> play -> gameover -> back to the feed, now played.
+// The point is to feel where you land on return, not to be a real game.
 // ===========================================================================
 function launch(id) {
   const game = GAMES.find(g => g.id === id);
-  const screen = document.getElementById('screen');
   const overlay = document.createElement('div');
   overlay.className = 'launch';
   overlay.innerHTML = `
@@ -622,271 +329,16 @@ function launch(id) {
 }
 
 // ===========================================================================
-// VARIANT A — FRONT PAGE
+// THE FEED
 // ===========================================================================
-function VariantA() {
+function Feed() {
   const lead = leadGame();
-  const rest = sorted().filter(g => g !== lead);
-  const week = rest.filter(g => (new Date(TODAY) - new Date(g.date)) / 864e5 <= 6);
-  const older = rest.filter(g => !week.includes(g));
-
-  const row = g => `
-    <div class="row ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
-      <div class="shot">${thumb(g.id)}</div>
-      <div>
-        <h3>${esc(g.title)}</h3>
-        <p>${esc(g.blurb)}</p>
-        <div class="meta">
-          ${isPlayed(g) ? '<span class="tick">✓</span> Played' : '<span class="dot"></span> New'}
-          <span>·</span><span>${relDay(g.date)}</span>
-          ${g.channel === 'staging' ? '<span>·</span><span style="color:#b45309">STAGING</span>' : ''}
-        </div>
-      </div>
-    </div>`;
-
-  return `<div class="vA">
-    <div class="masthead">
-      <h1>The Daily <span>Build</span></h1>
-      <time>${fullDate(TODAY)}</time>
-    </div>
-
-    <div class="hero">
-      <span class="kicker">Today's game</span>
-      <div class="shot">${thumb(lead.id)}</div>
-      <h2>${esc(lead.title)}</h2>
-      <p>${esc(lead.blurb)}</p>
-      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-play="${lead.id}">
-        ${isPlayed(lead) ? 'Play again' : 'Play now'}
-      </button>
-    </div>
-
-    ${week.length ? `<div class="sechead">Earlier this week</div>${week.map(row).join('')}` : ''}
-    ${older.length ? `<div class="sechead">The archive</div>${older.map(row).join('')}` : ''}
-    <div style="height:24px"></div>
-  </div>`;
-}
-
-// ===========================================================================
-// VARIANT B — DAILY EDITION
-// ===========================================================================
-function VariantB() {
-  const list = sorted();
-  state.page = Math.max(0, Math.min(state.page, list.length - 1));
-  const g = list[state.page];
-
-  const dots = list.map((x, i) =>
-    `<i class="${i === state.page ? 'on' : isPlayed(x) ? 'done' : ''}"></i>`).join('');
-
-  const cells = list.map(x => `
-    <figure class="cell ${isPlayed(x) ? 'played' : ''}" data-play="${x.id}" style="margin:0">
-      ${thumb(x.id)}<figcaption>${esc(x.title.split(' ').slice(0, 4).join(' '))}</figcaption>
-    </figure>`).join('');
-
-  return `<div class="vB">
-    <div class="page">
-      <div class="art">${thumb(g.id)}</div>
-      <div class="scrim"></div>
-      <div class="nav">
-        <button data-page="${state.page + 1}">older</button>
-        <button data-page="${state.page - 1}">newer</button>
-      </div>
-      <div class="body">
-        <div class="date">${state.page === 0 ? 'Today · edition ' + (list.length) : relDay(g.date)}${g.channel === 'staging' ? ' · STAGING' : ''}</div>
-        <h2>${esc(g.title)}</h2>
-        <p>${esc(g.blurb)}</p>
-        <div class="actions">
-          <button class="big ${isPlayed(g) ? 'done' : ''}" data-play="${g.id}">
-            ${isPlayed(g) ? 'Play again' : 'Play'}
-          </button>
-          <button class="ghost" data-sheet="1">⌗</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="rail">
-      <div class="brand">The Daily Build</div>
-      <div class="count">${state.played.size}/${list.length}</div>
-    </div>
-    <div class="pager">${dots}</div>
-    <div class="hint">tap left for older · right for newer</div>
-
-    <div class="sheet ${state.sheet ? 'open' : ''}">
-      <header>
-        <h3>Archive · ${list.length}</h3>
-        <button class="ghost" data-sheet="0" style="width:36px;height:36px;font-size:15px">✕</button>
-      </header>
-      <div class="grid">${cells}</div>
-    </div>
-  </div>`;
-}
-
-// ===========================================================================
-// VARIANT C — THE WIRE
-// ===========================================================================
-function VariantC() {
-  let list = sorted();
-  if (state.filter === 'unplayed') list = list.filter(g => !isPlayed(g));
-  if (state.filter === 'played') list = list.filter(g => isPlayed(g));
-
-  let html = '', lastDay = null;
-  for (const g of list) {
-    if (g.date !== lastDay) {
-      lastDay = g.date;
-      const days = Math.round((new Date(TODAY) - new Date(g.date)) / 864e5);
-      html += `<div class="daybar">${days < 7 ? relDay(g.date) + ' — ' + longDate(g.date) : weekday(g.date)}</div>`;
-    }
-    html += `
-      <div class="wirerow ${isPlayed(g) ? 'played' : ''} ${g.channel === 'staging' ? 'stagingrow' : ''}" data-play="${g.id}">
-        <div class="t">${g.time}</div>
-        <div class="chip">${thumb(g.id)}</div>
-        <div class="txt">
-          <b>${!isPlayed(g) ? '<span class="new">New</span>' : ''}${esc(g.title)}</b>
-          <small>${esc(g.blurb)}</small>
-        </div>
-        <div class="go">▸</div>
-      </div>`;
-  }
-  if (!list.length) html = `<div class="empty">Nothing here. Every game played.</div>`;
-
-  const chip = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
-
-  return `<div class="vC">
-    <div class="top">
-      <div class="line1">
-        <h1>Build Wire</h1>
-        <div class="live">${visible().length} filed · ${visible().length - state.played.size} unplayed</div>
-      </div>
-      <div class="chips">${chip('all', 'All')}${chip('unplayed', 'Unplayed')}${chip('played', 'Played')}</div>
-    </div>
-    ${html}
-    <div style="height:30px"></div>
-  </div>`;
-}
-
-// ===========================================================================
-// VARIANT D — ARCADE GRID (control)
-// ===========================================================================
-function VariantD() {
-  let list = sorted();
-  const lead = leadGame();
-  if (state.filter === 'unplayed') list = list.filter(g => !isPlayed(g));
-  if (state.filter === 'played') list = list.filter(g => isPlayed(g));
-  const rest = list.filter(g => g !== lead);
-
-  const tile = (g, wide) => `
-    <div class="tile ${wide ? 'wide' : ''} ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
-      <div class="art">${thumb(g.id)}</div>
-      <div class="fade"></div>
-      ${g.channel === 'staging' ? '<div class="flag stg">Staging</div>'
-        : wide ? '<div class="flag">Today</div>' : ''}
-      ${isPlayed(g) ? '<div class="check">✓</div>' : ''}
-      <div class="cap"><b>${esc(g.title)}</b><small>${esc(g.blurb.split('.')[0])}</small></div>
-    </div>`;
-
-  const seg = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
-
-  return `<div class="vD">
-    <div class="head">
-      <h1>Games</h1>
-      <p>${visible().length} built from the news · ${visible().length - state.played.size} unplayed</p>
-      <div class="seg">${seg('all', 'All')}${seg('unplayed', 'Unplayed')}${seg('played', 'Played')}</div>
-    </div>
-    <div class="tiles">
-      ${list.includes(lead) ? tile(lead, true) : ''}
-      ${rest.map(g => tile(g, false)).join('')}
-    </div>
-  </div>`;
-}
-
-// ===========================================================================
-// VARIANT E — FRONT PAGE + GRID (synthesis of A + D + the C/D filter + B's calm)
-//
-// Design call worth arguing with: the filter scopes the ARCHIVE ONLY. The lead
-// is the front page — it does not filter away, even when it is already played.
-// The alternative (filter also re-picks the lead, so "Unplayed" heroes the
-// newest unplayed game under a "NEXT UP" kicker) is a one-line change; it reads
-// more like a task list and less like a newspaper.
-// ===========================================================================
-function VariantE() {
-  const lead = leadGame();
-  let rest = sorted().filter(g => g !== lead);
-  if (state.filter === 'unplayed') rest = rest.filter(g => !isPlayed(g));
-  if (state.filter === 'played') rest = rest.filter(g => isPlayed(g));
-
-  const week = rest.filter(g => (new Date(TODAY) - new Date(g.date)) / 864e5 <= 6);
-  const older = rest.filter(g => !week.includes(g));
-  const unplayedCount = visible().filter(g => !isPlayed(g)).length;
-
-  const card = g => `
-    <div class="card ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
-      <div class="shot">${thumb(g.id)}</div>
-      <h3>${esc(g.title)}</h3>
-      <p>${esc(g.blurb.split('.')[0])}</p>
-      <div class="meta">
-        ${isPlayed(g) ? '<span class="tick">✓</span> Played' : '<span class="dot"></span> New'}
-        <span>·</span><span>${relDay(g.date)}</span>
-        ${g.channel === 'staging' ? '<span class="stg">· Staging</span>' : ''}
-      </div>
-    </div>`;
-
-  const section = (title, items) =>
-    items.length ? `<div class="sechead">${title}</div><div class="grid">${items.map(card).join('')}</div>` : '';
-
-  const chip = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
-
-  const archive = (week.length || older.length)
-    ? section('Earlier this week', week) + section('The archive', older)
-    : `<div class="empty">
-         <b>${state.filter === 'unplayed' ? 'You’re all caught up.' : 'Nothing here yet.'}</b>
-         <span>${state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
-       </div>`;
-
-  return `<div class="vE">
-    <div class="masthead">
-      <h1>The Daily <span>Build</span></h1>
-      <time>${fullDate(TODAY)}</time>
-    </div>
-
-    <div class="hero">
-      <span class="kicker">Today's game</span>
-      <div class="shot">${thumb(lead.id)}</div>
-      <h2>${esc(lead.title)}</h2>
-      <p>${esc(lead.blurb)}</p>
-      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-play="${lead.id}">
-        ${isPlayed(lead) ? 'Play again' : 'Play now'}
-      </button>
-      ${isPlayed(lead) ? '<div class="herometa">✓ Played today</div>' : ''}
-    </div>
-
-    <div class="filterbar">
-      <div class="chips">${chip('all', 'All')}${chip('unplayed', 'Unplayed')}${chip('played', 'Played')}</div>
-      <div class="tally">${unplayedCount} unplayed</div>
-    </div>
-
-    ${archive}
-    <div style="height:36px"></div>
-  </div>`;
-}
-
-// ===========================================================================
-// VARIANT F — TIGHTER LEAD
-// E with a shorter hero, the kicker moved onto the thumbnail, and the filter
-// demoted into the archive section header. Two filter treatments live side by
-// side (FILT in the switcher) because that is the undecided bit.
-// ===========================================================================
-function VariantF() {
-  const lead = leadGame();
-  const pool = sorted().filter(g => g !== lead);          // the filter scopes this, never the lead
-  const counts = {
-    all: pool.length,
-    unplayed: pool.filter(g => !isPlayed(g)).length,
-    played: pool.filter(g => isPlayed(g)).length,
-  };
+  const pool = sorted().filter(g => g !== lead);   // the filter scopes this, never the lead
   const rest = state.filter === 'all' ? pool
     : state.filter === 'unplayed' ? pool.filter(g => !isPlayed(g))
     : pool.filter(g => isPlayed(g));
 
-  const week = rest.filter(g => (new Date(TODAY) - new Date(g.date)) / 864e5 <= 6);
+  const week = rest.filter(g => daysAgo(g.date) <= 6);
   const older = rest.filter(g => !week.includes(g));
 
   const card = g => `
@@ -901,28 +353,8 @@ function VariantF() {
       </div>
     </div>`;
 
-  // --- the two filter treatments -----------------------------------------
-  const inlineFilter = () => {
-    const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
-    return `<div class="inlinefilter">
-      ${b('all', 'All')}<i>·</i>${b('unplayed', 'Unplayed')}<i>·</i>${b('played', 'Played')}
-    </div>`;
-  };
-
-  const iconFilter = () => {
-    const active = state.filter !== 'all';
-    const opt = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}<span>${counts[k]}</span></button>`;
-    return `<div class="iconfilter">
-      <button class="${active ? 'active' : ''}" data-pop="1" aria-label="Filter">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-             stroke-width="1.6" stroke-linecap="round"><path d="M2 4h12M4 8h8M6.5 12h3"/></svg>
-        ${active ? '<span class="pip"></span>' : ''}
-      </button>
-      ${state.filterOpen ? `<div class="pop">${opt('all', 'All games')}${opt('unplayed', 'Unplayed')}${opt('played', 'Played')}</div>` : ''}
-    </div>`;
-  };
-
-  const control = state.filterUi === 'inline' ? inlineFilter() : iconFilter();
+  const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
+  const filter = `<div class="filter">${b('all', 'All')}<i>·</i>${b('unplayed', 'Unplayed')}<i>·</i>${b('played', 'Played')}</div>`;
 
   // The filter always rides the FIRST section header on screen, whichever it is.
   const sections = [];
@@ -931,15 +363,15 @@ function VariantF() {
 
   const body = sections.length
     ? sections.map(([title, items], i) => `
-        <div class="sechead ${i ? 'plain' : ''}"><h4>${title}</h4>${i ? '' : control}</div>
+        <div class="sechead ${i ? 'plain' : ''}"><h4>${title}</h4>${i ? '' : filter}</div>
         <div class="grid">${items.map(card).join('')}</div>`).join('')
-    : `<div class="sechead"><h4>The archive</h4>${control}</div>
+    : `<div class="sechead"><h4>The archive</h4>${filter}</div>
        <div class="empty">
          <b>${state.filter === 'unplayed' ? 'You’re all caught up.' : 'Nothing here.'}</b>
          <span>${state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
        </div>`;
 
-  return `<div class="vF">
+  return `<div class="feed">
     <div class="masthead">
       <h1>The Daily <span>Build</span></h1>
       <time>${fullDate(TODAY)}</time>
@@ -961,74 +393,30 @@ function VariantF() {
 }
 
 // ===========================================================================
-// SWITCHER + RENDER
+// RENDER
 // ===========================================================================
-const RENDERERS = { A: VariantA, B: VariantB, C: VariantC, D: VariantD, E: VariantE, F: VariantF };
-const KEYS = Object.keys(RENDERERS);
-
-function cycle(step) {
-  const i = (KEYS.indexOf(state.variant) + step + KEYS.length) % KEYS.length;
-  state.variant = KEYS[i];
-  state.page = 0;
-  state.sheet = false;
-  const url = new URL(location);
-  url.searchParams.set('variant', state.variant);
-  history.replaceState(null, '', url);
-  render();
-}
-
-function renderSwitcher() {
-  document.getElementById('switcher').innerHTML = `
-    <button data-cycle="-1">←</button>
-    <div class="label">${state.variant} — ${VARIANTS[state.variant]}</div>
-    <button data-cycle="1">→</button>
-    <div class="state">${state.played.size}/${visible().length} played</div>
-    ${state.variant === 'F' ? `<button class="toggle ${state.filterUi === 'icon' ? 'on' : ''}" data-filterui="1">FILT: ${state.filterUi.toUpperCase()}</button>` : ''}
-    <button class="toggle ${state.devMode ? 'on' : ''}" data-dev="1">DEV</button>
-    <button data-reset="1">RESET</button>`;
-}
-
 function render() {
-  if (!RENDERERS[state.variant]) state.variant = 'A';
-  const screen = document.getElementById('screen');
-  screen.innerHTML = RENDERERS[state.variant]();
-  document.querySelector('.phone').style.background =
-    'AEF'.includes(state.variant) ? '#fff' : state.variant === 'C' ? '#fbfbf9' : '#0b0d12';
-  document.getElementById('caption').innerHTML = CAPTIONS[state.variant];
+  document.getElementById('screen').innerHTML = Feed();
   document.getElementById('notes').innerHTML = NOTES;
-  renderSwitcher();
-  // Surface the full state on every switch, per the prototype rules.
+  document.getElementById('devbar').innerHTML = `
+    <div class="tag">PROTOTYPE</div>
+    <div class="state">${state.played.size}/${visible().length} played</div>
+    <button class="${state.devMode ? 'on' : ''}" data-dev="1">DEV</button>
+    <button class="solid" data-reset="1">RESET</button>`;
+  // Surface the full state after every action, per the prototype rules.
   console.log('[prototype state]', {
-    variant: state.variant, devMode: state.devMode, filter: state.filter,
-    page: state.page, played: [...state.played], visible: visible().length,
+    devMode: state.devMode, filter: state.filter,
+    played: [...state.played], visible: visible().length,
   });
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-play],[data-cycle],[data-dev],[data-reset],[data-filter],[data-page],[data-sheet],[data-filterui],[data-pop]');
-  // Click-away closes the F filter popover.
-  if (state.filterOpen && !e.target.closest('.iconfilter')) { state.filterOpen = false; render(); if (!t) return; }
+  const t = e.target.closest('[data-play],[data-dev],[data-reset],[data-filter]');
   if (!t) return;
-  if (t.dataset.play)     return launch(t.dataset.play);
-  if (t.dataset.cycle)    return cycle(+t.dataset.cycle);
-  if (t.dataset.dev)      { state.devMode = !state.devMode; return render(); }
-  if (t.dataset.reset)    { state.played = new Set(); return render(); }
-  if (t.dataset.filter)   { state.filter = t.dataset.filter; state.filterOpen = false; return render(); }
-  if (t.dataset.page)     { state.page = +t.dataset.page; return render(); }
-  if (t.dataset.sheet)    { state.sheet = t.dataset.sheet === '1'; return render(); }
-  if (t.dataset.filterui) { state.filterUi = state.filterUi === 'inline' ? 'icon' : 'inline'; state.filterOpen = false; return render(); }
-  if (t.dataset.pop)      { state.filterOpen = !state.filterOpen; return render(); }
-});
-
-document.addEventListener('keydown', e => {
-  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
-  // In B the arrows page through editions; elsewhere they switch variant.
-  if (state.variant === 'B' && !e.shiftKey) {
-    if (e.key === 'ArrowLeft')  { state.page++; return render(); }
-    if (e.key === 'ArrowRight') { state.page--; return render(); }
-  }
-  if (e.key === 'ArrowLeft')  cycle(-1);
-  if (e.key === 'ArrowRight') cycle(1);
+  if (t.dataset.play)   return launch(t.dataset.play);
+  if (t.dataset.dev)    { state.devMode = !state.devMode; return render(); }
+  if (t.dataset.reset)  { state.played = new Set(); return render(); }
+  if (t.dataset.filter) { state.filter = t.dataset.filter; return render(); }
 });
 
 render();
