@@ -4,6 +4,55 @@ Throwaway code that answers a design question. Nothing here ships, and nothing h
 should be promoted as-is — the code is written under prototype constraints (no tests,
 no error handling, no abstractions). Rewrite properly when folding a decision in.
 
+## `app-tone-prototype.html` — round 3, OPEN
+
+**Question:** how dark is dark, and how loud is "game-like" allowed to get before the
+app stops reading as news?
+
+```bash
+open Prototypes/app-tone-prototype.html
+```
+
+Three tone variants of the whole app, each in light **and** dark. Cycle with the
+floating bar, the `←`/`→` keys, or `?tone=a|b|c&theme=light|dark`; `D` toggles the
+theme, which also has a row in Settings → Appearance (where the switch belongs is
+part of the question).
+
+| | Tone | Fun dial | What it changes |
+|---|---|---|---|
+| **A** | Broadsheet | 1/3 | Round 2 exactly, plus a dark theme and micro-motion. Press depth, a pulsing "new" dot, a score that counts up. Nothing else moves. |
+| **B** | Late Edition | 2/3 | Newspaper bones, print-shop swagger. Cream/ink, a highlighter second accent, an edition ticker, hard offset buttons, numbered cards, a rubber-stamp verdict and an odometer score. |
+| **C** | Arcade Edition | 3/3 | The newspaper becomes the cabinet. Condensed caps, a neon duo, scanlined thumbnails, a catalogue progress meter, cartridge cards, chunky 3D buttons, and a full-bleed result screen with a rank letter. |
+
+Round 2's **structure is frozen** — masthead icons, lead + 6 + archive, everything
+through detail. The variants disagree about surface only. Judge them on the **feed**,
+not the game-over card: all three game-over cards are enjoyable, and only some of the
+mastheads still read as a newspaper.
+
+**The constraint that shaped all three:** the obvious levers for game-feel — streaks,
+share, a calendar archive, difficulty chips — were all argued out in rounds 1–2 and
+are on the "not in v1" list. So **no variant adds a single persisted number.** The fun
+is typography, colour, motion, framing language, and making the game-over moment an
+event. C's rank letter is derived from the best score the app-local store already owes
+us. A variant that looks like it is promising progression is a bug in the variant, not
+a licence to add the feature.
+
+**Three dark-mode calls worth arguing:**
+
+1. **Played cards.** Round 2 kept the played thumbnail in colour at 42% opacity because
+   greyscale on a light ground reads as a broken image. On a dark ground 42% reads as
+   *still loading* instead, so dark dims to 55% **and** desaturates, and the headline
+   carries more of the played state. Check this against a real screenshot — the fake
+   thumbnails flatter it.
+2. **The red.** `#c8102e` is a masthead red on white and a muddy brown on `#101215`.
+   Every tone lifts its accent in dark rather than reusing the light value; the accent
+   is a token, not a constant.
+3. **Inverted print elements don't survive the flip.** B's hard "ledge" shadow and its
+   ticker strip are ink-on-cream in light; reused literally in dark they become a white
+   border and the brightest thing on screen. Both take a separate dark token.
+
+Nothing here adds to round 2's schema blockers — also on purpose.
+
 ## `feed-ux-prototype.html`
 
 The player-facing app UX, from the feed through to the game-over card. Open it in a
