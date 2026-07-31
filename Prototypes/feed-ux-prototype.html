@@ -3,65 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PROTOTYPE — play-the-news feed UX</title>
+<title>PROTOTYPE — play-the-news app UX</title>
 <!--
   ============================================================================
   THROWAWAY PROTOTYPE — not production code. Rewrite properly for uGUI.
   ============================================================================
 
-  QUESTION IT ANSWERED
-    What should the play-the-news feed look like?
+  ROUND 1 (settled 2026-07-31) — WHAT SHOULD THE FEED LOOK LIKE?
     (SHIPPLAN decision #6: "catalogue of ALL generated games with played/
     unplayed state; news-like styling". Phase 3, days 15-19.)
 
-  THE ANSWER (settled 2026-07-31)
-    A newspaper front page: masthead, one full-width lead for today's game,
-    then a 2-column grid of the archive grouped by recency, with a quiet
-    inline filter riding the first section header.
+    ANSWER: a newspaper front page — masthead, one full-width lead for
+    today's game, then a 2-column grid of the rest.
 
     Arrived at over three rounds. Six variants were built and compared; see
     the branch history for the losing five, which are the primary source:
       ffa21591  A Front page / B Daily edition / C The wire / D Arcade grid
       41e40689  E Front page + grid  (A's layout + D's grid + the filter)
       000d414a  F Tighter lead       (E, shorter hero, badged, filter demoted)
-    This file is F with the inline filter treatment, collapsed to one version.
 
-  WHY THIS AND NOT THE OTHERS
     - A read as a news app, which is the target identity; B was cleaner but
       did not read as news and hid the catalogue behind a button; C and D
       treated the catalogue, not today, as the point.
     - The grid came from D: a full-width lead then two columns.
     - B contributed restraint only — spacing, the pill button, hairline rules.
-    - The filter is INLINE rather than an icon+popover: on a ~14-item
-      catalogue the one control that changes what you are looking at is
-      cheaper to show than to hide. Revisit if the archive reaches a few
-      hundred games or needs more than three filters — a popover is the only
-      one of the two that scales, and it has room for per-filter counts.
+
+  ROUND 2 (this file) — THE REST OF THE APP
+    UX.md was written before SHIPPLAN and is partly stale. What it proposed
+    that we are NOT building (recorded so it is not re-litigated):
+      - newspaper SECTIONS (Politics/Sport/Tech) — one game a day makes
+        sections meaningless
+      - STREAK counter — meta-progression, on ROADMAP's "not in v1" list
+      - SHARE on the game-over card — no social in v1, needs a native plugin
+      - archive as a CALENDAR — a searchable list is what is wanted
+      - "MORE FROM TODAY" 2-up — there is one game a day
+      - difficulty / est-play-time chips — needs the LLM to self-assess
+      - "is the shell native or a descriptor?" (UX.md 6a) — already closed;
+        GameShelf is native
+
+    Six screens are now covered: FEED, DETAIL, ARCHIVE, SETTINGS, PAUSE,
+    GAME OVER.
+
+    Settled before building, so NOT varied here:
+      - Tapping any game opens a DETAIL page. Nothing direct-launches.
+      - "How to play" is AUTHORED in the descriptor (a HowToPlay list in the
+        Game: block, written by the generate skill). NOT derived from
+        Controls bindings — mobile bindings are Input System paths like
+        <Touchscreen>/primaryTouch/position and would render as garbage.
+      - The feed shows the lead + the newest N (6), then an archive button.
+        Search and the played/unplayed filter live on the ARCHIVE only.
+      - Game-over outcome rides the EndGame behaviour (Outcome: win|lose,
+        Score: !var …), not the Game: header — a descriptor can have several
+        !gameover listeners, so outcome belongs at the call site. Games that
+        set nothing get a plain "Game Over" card, so all ~47 existing
+        descriptors keep working untouched.
+
+    THE OPEN QUESTION, varied here — HOW DOES NAVIGATION WORK?
+      nav=A  Masthead icons   — search + gear in the masthead, no bottom bar
+      nav=B  Bottom tab bar   — Feed / Archive / Settings as persistent tabs
+      nav=C  Hybrid           — gear in the masthead; the archive is reached
+                                ONLY by the button at the foot of the feed
+    Switch with the arrows in the yellow bar, the left/right arrow keys, or
+    ?nav=A|B|C in the URL. Everything else on screen is identical between
+    them — the chrome IS the variant.
 
   DESIGN CALLS WORTH RE-ARGUING IN UNITY
-    1. The filter scopes the ARCHIVE ONLY. Today's lead never filters away,
-       even once played — it just switches to a ghost "Play again". The
-       alternative (filter also re-picks the lead, "NEXT UP" kicker) reads as
-       a task list rather than a newspaper.
-    2. Played cards keep their screenshot in COLOUR at 42% opacity. Greyscale
+    1. Played cards keep their screenshot in COLOUR at 42% opacity. Greyscale
        on a light ground reads as a broken image, not a played game.
-    3. Two columns fit a one-sentence blurb only, so this truncates at the
+    2. Two columns fit a one-sentence blurb only, so the feed truncates at the
        first full stop. The generate skill should be writing a short first
        sentence deliberately rather than the feed cutting prose mid-thought.
+    3. "Next game" on the game-over card LAUNCHES DIRECTLY rather than
+       returning to a detail page — the hook only works with momentum. This
+       is the one place that breaks the "everything goes through detail" rule.
+    4. The pause button is a shell-owned top strip, above the game's own HUD.
+       On a phone where the game may want the whole screen for touch input,
+       that strip is contended real estate — check it against a real game.
+    5. Settings has NO sound/haptics row. v1 is primitive-assets only
+       (RemoteGameGuard rejects a top-level Assets: block, which is where
+       audio lives), so there is nothing to turn down. Do not add a dead
+       slider to make the screen look fuller.
 
-  BLOCKER FOR THE REAL IMPLEMENTATION
-    Assembler.Remote.GameManifestEntry is (Id, Title, Description,
-    DescriptorUrl, Version). This design needs three more fields the manifest
-    does not carry: publishedAt, thumbnail, channel (live|staging). That is a
-    store-side schema change and should land before the uGUI work.
+  SCHEMA CHANGES THIS DESIGN REQUIRES (consolidated — nothing here works
+  without them; they should land before the uGUI work starts)
+    manifest — Assembler.Remote.GameManifestEntry is
+      (Id, Title, Description, DescriptorUrl, Version) and additionally needs:
+        publishedAt   which daily drop it belongs to (feed ordering, dates)
+        thumbnail     card + detail art (sandbox auto-screenshot, SHIPPLAN #9)
+        channel       live | staging (SHIPPLAN #7 two-stage publish)
+    descriptor Game: block — InfoDto is (Title, Description) and needs:
+        HowToPlay     list of short strings, shown on detail + pause
+    EndGame behaviour — currently property-less, and needs:
+        Outcome       win | lose | (absent = plain "Game Over")
+        Score         value source, e.g. !var score
+    engine — GameController.EndGame() currently does Destroy(gameObject)
+      immediately. It must freeze, hand the outcome to the shell, and destroy
+      only once the player dismisses the card. IGameClock already has
+      Pause()/Resume()/TimeScale, so the freeze seam exists for pause too.
+    app-local store — best score and play count per game persist nowhere
+      today. Needed by BOTH the detail page and the game-over card, so it
+      lands even though the Profile screen is deferred.
 
   LEGAL POSTURE BAKED IN (SHIPPLAN #11)
     No outlet article body, no outlet photos. The headline is OUR rewrite of
     the story hook, the blurb is copy about OUR game, the thumbnail is a
     screenshot from the validation sandbox.
 
-  No persistence — played state is in memory and resets on reload.
-  The yellow bar is prototype scaffolding, not part of the design.
+  No persistence — played state, scores and settings are in memory and reset
+  on reload. The yellow bar is prototype scaffolding, not part of the design.
 -->
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -70,7 +119,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background: #14161a; color: #fff;
     display: flex; flex-direction: column; align-items: center; gap: 18px;
-    padding: 28px 16px 140px; overflow-y: auto;
+    padding: 28px 16px 150px; overflow-y: auto;
   }
 
   /* ---- phone frame: density judgements are worthless at desktop width ---- */
@@ -80,33 +129,65 @@
     box-shadow: 0 30px 70px rgba(0,0,0,.6);
     overflow: hidden; position: relative;
   }
-  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; background: #fff; color: #14161a; }
   .screen::-webkit-scrollbar { width: 0; }
   .shot > svg { display: block; width: 100%; height: 100%; }
+  /* Variant B's tab bar floats over the scroller, so every screen needs to end above it. */
+  .screen.hastabs { padding-bottom: 74px; }
 
   /* ======================================================================
-     THE DESIGN
+     SHARED CHROME
      ====================================================================== */
-  .feed { background: #fff; color: #14161a; }
-
   .masthead {
     position: sticky; top: 0; z-index: 12; background: #fff;
     border-bottom: 2px solid #14161a; padding: 15px 20px 11px;
-    display: flex; align-items: baseline; justify-content: space-between;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
   }
   .masthead h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 24px; letter-spacing: -.02em; font-weight: 700; }
   .masthead h1 span { color: #c8102e; }
   .masthead time { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: #8a919c; }
+  .masthead .acts { display: flex; align-items: center; gap: 3px; align-self: center; }
+  .masthead .acts button {
+    font: inherit; background: none; border: 0; cursor: pointer; padding: 5px 6px;
+    border-radius: 6px; color: #14161a; line-height: 1; font-size: 17px;
+  }
+  .masthead .acts button:active { background: #f0f2f5; }
 
-  /* --- lead: today's game --- */
+  /* back-header used by detail / archive / settings when they are pushed, not tabbed */
+  .subhead {
+    position: sticky; top: 0; z-index: 12; background: #fff;
+    border-bottom: 1px solid #e6e9ee; padding: 14px 16px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .subhead button.back { font: inherit; background: none; border: 0; cursor: pointer; padding: 4px 6px 4px 0; font-size: 15px; font-weight: 600; color: #14161a; }
+  .subhead h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+  .subhead.tabbed { padding-left: 20px; }
+
+  /* variant B only — persistent bottom tabs */
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
+    border-top: 1px solid #e6e9ee; display: flex; padding: 8px 0 22px;
+  }
+  .tabs button {
+    flex: 1; font: inherit; background: none; border: 0; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: #a4abb5; font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tabs button em { font-style: normal; font-size: 17px; line-height: 1; }
+  .tabs button.on { color: #14161a; }
+
+  /* ======================================================================
+     SCREEN — FEED
+     ====================================================================== */
   .hero { padding: 18px 20px 22px; }
-  .hero .shot { position: relative; width: 100%; height: 172px; border-radius: 4px; overflow: hidden; margin-bottom: 14px; background: #eee; }
+  .hero .shot { position: relative; width: 100%; height: 172px; border-radius: 4px; overflow: hidden; margin-bottom: 14px; background: #eee; cursor: pointer; }
   .hero .badge {
     position: absolute; top: 10px; left: 10px;
     background: #c8102e; color: #fff; font-size: 9.5px; font-weight: 800;
     letter-spacing: .16em; text-transform: uppercase; padding: 5px 9px; border-radius: 2px;
   }
-  .hero h2 { margin: 0 0 9px; font-family: Georgia, serif; font-size: 26px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
+  .hero h2 { margin: 0 0 9px; font-family: Georgia, serif; font-size: 26px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; cursor: pointer; }
   .hero p { margin: 0 0 17px; font-size: 14.5px; line-height: 1.5; color: #56606d; }
   .playbtn {
     width: 100%; border: 0; cursor: pointer; font: inherit;
@@ -116,25 +197,12 @@
   .playbtn.done { background: #fff; color: #14161a; box-shadow: inset 0 0 0 1.5px #d6dae0; }
   .herometa { margin-top: 11px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
 
-  /* --- section header, carrying the filter on the first one --- */
   .sechead {
-    position: sticky; top: 55px; z-index: 11; background: #fff;
     margin: 0 20px 12px; padding: 14px 0 7px; border-bottom: 1.5px solid #14161a;
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
   }
-  .sechead > h4 { margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
-  .sechead.plain { justify-content: flex-start; margin-top: 26px; }
+  .sechead h4 { margin: 0; font-size: 10.5px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; }
 
-  .filter { display: flex; align-items: center; gap: 2px; flex: none; }
-  .filter button {
-    font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    background: none; border: 0; cursor: pointer; color: #b0b7c1; padding: 3px 5px; border-radius: 3px;
-    white-space: nowrap;
-  }
-  .filter button.on { color: #14161a; background: #f0f2f5; }
-  .filter i { color: #dde1e6; font-style: normal; font-size: 9px; }
-
-  /* --- archive grid --- */
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 13px; padding: 0 20px; }
   /* Flex column + margin-top:auto on the meta keeps the "NEW / PLAYED · date"
      lines aligned across a row even when headlines wrap to different depths. */
@@ -151,9 +219,153 @@
   .tick { color: #16a34a; font-weight: 800; font-size: 11px; }
   .stg { color: #b45309; font-weight: 700; }
 
-  .empty { padding: 48px 20px; text-align: center; }
+  /* the foot-of-feed archive button — the ONLY way into the archive in variant C */
+  .seeall {
+    margin: 30px 20px 34px; width: calc(100% - 40px);
+    font: inherit; cursor: pointer; background: none;
+    border: 1.5px solid #14161a; border-radius: 999px; padding: 14px;
+    font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #14161a;
+  }
+
+  /* ======================================================================
+     SCREEN — GAME DETAIL
+     ====================================================================== */
+  .detail .shot { width: 100%; height: 210px; overflow: hidden; background: #eee; }
+  .detail .body { padding: 20px 20px 30px; }
+  .detail .kicker { font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .detail h2 { margin: 0 0 12px; font-family: Georgia, serif; font-size: 27px; line-height: 1.14; letter-spacing: -.022em; font-weight: 700; }
+  .detail .desc { margin: 0 0 22px; font-size: 15px; line-height: 1.58; color: #454f5c; }
+
+  .htp { border: 1px solid #e6e9ee; border-radius: 6px; padding: 15px 16px 16px; margin-bottom: 20px; background: #fbfcfd; }
+  .htp h5 { margin: 0 0 11px; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #8a919c; }
+  .htp ul { margin: 0; padding: 0; list-style: none; }
+  .htp li { font-size: 13.5px; line-height: 1.45; color: #2b323c; display: flex; gap: 9px; margin-bottom: 8px; }
+  .htp li:last-child { margin-bottom: 0; }
+  .htp li b { flex: none; color: #c8102e; font-weight: 800; font-size: 11px; line-height: 1.75; }
+
+  .statrow { display: flex; gap: 0; border-top: 1px solid #e6e9ee; border-bottom: 1px solid #e6e9ee; margin-bottom: 22px; }
+  .statrow div { flex: 1; padding: 13px 4px; text-align: center; }
+  .statrow div + div { border-left: 1px solid #e6e9ee; }
+  .statrow b { display: block; font-family: Georgia, serif; font-size: 19px; font-weight: 700; margin-bottom: 3px; }
+  .statrow span { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
+  .statrow.unplayed b { color: #c9ced6; }
+
+  /* ======================================================================
+     SCREEN — ARCHIVE  (deliberately a dense LIST, not the feed's grid —
+     search results read as rows, and it contrasts with the front page)
+     ====================================================================== */
+  .searchwrap { padding: 14px 16px 10px; position: sticky; top: 0; z-index: 11; background: #fff; }
+  .searchwrap.pushed { top: 45px; }
+  .search { display: flex; align-items: center; gap: 8px; background: #f0f2f5; border-radius: 10px; padding: 10px 12px; }
+  .search input { flex: 1; font: inherit; font-size: 15px; border: 0; background: none; outline: none; color: #14161a; min-width: 0; }
+  .search input::placeholder { color: #a4abb5; }
+  .search .clr { font: inherit; border: 0; background: #c9ced6; color: #fff; cursor: pointer; border-radius: 50%; width: 18px; height: 18px; line-height: 1; font-size: 12px; padding: 0; flex: none; }
+
+  .filter { display: flex; align-items: center; gap: 3px; padding: 4px 16px 10px; }
+  .filter button {
+    font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    background: none; border: 0; cursor: pointer; color: #b0b7c1; padding: 5px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .filter button.on { color: #fff; background: #14161a; }
+  .archcount { padding: 0 16px 8px; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #b0b7c1; }
+
+  .row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #f0f2f5; }
+  .row .shot { width: 64px; height: 46px; flex: none; border-radius: 3px; overflow: hidden; background: #eee; }
+  .row .txt { min-width: 0; flex: 1; }
+  .row h3 { margin: 0 0 3px; font-family: Georgia, serif; font-size: 14.5px; line-height: 1.22; font-weight: 700; }
+  .row .meta { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; display: flex; align-items: center; gap: 6px; }
+  .row.played .shot { opacity: .42; }
+  .row.played h3 { color: #9aa2ad; font-weight: 400; }
+  .row .chev { color: #d6dae0; font-size: 16px; flex: none; }
+
+  .empty { padding: 54px 24px; text-align: center; }
   .empty b { display: block; font-family: Georgia, serif; font-size: 19px; margin-bottom: 6px; }
-  .empty span { font-size: 13px; color: #8a919c; }
+  .empty span { font-size: 13px; color: #8a919c; line-height: 1.5; }
+
+  /* ======================================================================
+     SCREEN — SETTINGS
+     ====================================================================== */
+  .setgroup { margin: 22px 0 0; }
+  .setgroup > h5 { margin: 0 16px 8px; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #a4abb5; }
+  .setrow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-top: 1px solid #f0f2f5; background: #fff; }
+  .setgroup .setrow:last-child { border-bottom: 1px solid #f0f2f5; }
+  .setrow .txt { flex: 1; min-width: 0; }
+  .setrow b { display: block; font-size: 14.5px; font-weight: 600; margin-bottom: 2px; }
+  .setrow small { font-size: 11.5px; color: #8a919c; line-height: 1.4; display: block; }
+  .setrow.tap { cursor: pointer; }
+  .setrow .chev { color: #d6dae0; font-size: 16px; }
+  .setrow .val { font-size: 13px; color: #a4abb5; }
+  .setrow.danger b { color: #c8102e; }
+
+  .toggle { width: 46px; height: 28px; border-radius: 999px; background: #d6dae0; position: relative; cursor: pointer; border: 0; padding: 0; flex: none; transition: background .15s; }
+  .toggle i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s; }
+  .toggle.on { background: #16a34a; }
+  .toggle.on i { transform: translateX(18px); }
+
+  .about { padding: 24px 16px 40px; text-align: center; font-size: 11px; color: #b0b7c1; line-height: 1.7; }
+
+  /* ======================================================================
+     IN-GAME — shell strip, pause sheet, game-over card
+     ====================================================================== */
+  /* The overlay hosts three different things (download, game, sheet/card), so the
+     monospace + centring belongs to the download state only — not inherited by the rest. */
+  .launch {
+    position: absolute; inset: 0; z-index: 50; background: #06070a; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 32px;
+  }
+  .launch.loading { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .launch h4 { margin: 0; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; opacity: .55; font-weight: 600; }
+  .launch p { margin: 0; font-size: 13px; opacity: .5; }
+  .bar { width: 190px; height: 3px; background: #24262e; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: #4ea1ff; transition: width .55s ease; }
+
+  .fakegame { position: absolute; inset: 0; background: #0d1018; display: flex; flex-direction: column; }
+  /* THE SHELL STRIP — the only chrome the app imposes on a running game. */
+  .gamestrip {
+    flex: none; display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px 12px; color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em;
+  }
+  .gamestrip .pausebtn { font: inherit; font-size: 16px; background: rgba(255,255,255,.12); border: 0; color: #fff; cursor: pointer; border-radius: 8px; width: 34px; height: 34px; line-height: 1; flex: none; }
+  .gamestrip .hud { flex: 1; display: flex; justify-content: space-between; opacity: .75; }
+  .gamestrip .hud em { font-style: normal; opacity: .45; }
+  .playfield { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+  .playfield .stage { width: 220px; height: 220px; border: 1px solid #232838; border-radius: 12px; position: relative; overflow: hidden; }
+  .playfield .stage b { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #4ea1ff; left: 24px; top: 96px; animation: bob 1.1s ease-in-out infinite alternate; }
+  .playfield .stage s { position: absolute; width: 14px; height: 60px; background: #f2c94c; right: 26px; top: 70px; border-radius: 4px; }
+  @keyframes bob { to { transform: translate(150px, 20px); } }
+  .paused .stage b { animation-play-state: paused; }
+  /* Three end buttons = prototype scaffolding. A real game reaches !gameover
+     on its own; these exist to exercise all three game-over card states. */
+  .endbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 0 20px; }
+  .endbtns button { font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,.13); color: #fff; font-family: ui-monospace, Menlo, monospace; }
+
+  /* --- pause sheet --- */
+  .sheetwrap { position: absolute; inset: 0; z-index: 60; background: rgba(4,5,8,.72); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: #fff; color: #14161a; border-radius: 20px 20px 0 0; padding: 10px 16px 26px; max-height: 88%; overflow-y: auto; }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 4px; background: #d6dae0; margin: 4px auto 16px; }
+  .sheet h3 { margin: 0 0 3px; font-family: Georgia, serif; font-size: 21px; font-weight: 700; text-align: center; }
+  .sheet .sub { margin: 0 0 20px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; }
+  .sheet .btns { display: flex; flex-direction: column; gap: 9px; }
+  .sheetbtn { width: 100%; font: inherit; cursor: pointer; border: 0; border-radius: 999px; padding: 15px; font-size: 15px; font-weight: 700; background: #f0f2f5; color: #14161a; }
+  .sheetbtn.primary { background: #14161a; color: #fff; }
+  .sheetbtn.quiet { background: none; color: #8a919c; font-weight: 600; font-size: 14px; }
+  .sheet .htp { margin: 0 0 18px; }
+
+  /* --- game-over card --- */
+  .overwrap { position: absolute; inset: 0; z-index: 60; background: rgba(4,5,8,.8); display: flex; align-items: center; justify-content: center; padding: 22px; }
+  .over { width: 100%; background: #fff; color: #14161a; border-radius: 14px; padding: 28px 22px 22px; text-align: center; }
+  .over .verdict { font-family: Georgia, serif; font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin-bottom: 4px; }
+  .over .verdict.win { color: #16a34a; }
+  .over .verdict.lose { color: #c8102e; }
+  .over .gname { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #a4abb5; margin-bottom: 22px; }
+  .over .score { font-family: Georgia, serif; font-size: 50px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+  .over .scorelbl { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: #a4abb5; margin-bottom: 7px; }
+  .over .best { font-size: 12px; color: #8a919c; margin: 9px 0 24px; }
+  .over .best .new { color: #16a34a; font-weight: 800; }
+  .over .noscore { font-size: 13.5px; color: #8a919c; line-height: 1.5; margin-bottom: 24px; }
+  .over .btns { display: flex; flex-direction: column; gap: 9px; }
 
   /* ======================================================================
      PROTOTYPE SCAFFOLDING — deliberately ugly, obviously not the design
@@ -166,34 +378,19 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px; font-weight: 700; z-index: 100;
   }
-  .devbar .tag { display: flex; align-items: center; padding: 0 12px; letter-spacing: .1em; }
-  .devbar .state { display: flex; align-items: center; padding: 0 12px; border-left: 2px solid rgba(0,0,0,.2); font-weight: 500; opacity: .85; }
+  .devbar .navlabel { display: flex; align-items: center; padding: 0 10px; letter-spacing: .04em; white-space: nowrap; min-width: 176px; justify-content: center; }
+  .devbar .sep { width: 2px; background: rgba(0,0,0,.2); margin: 4px 4px; border-radius: 2px; }
+  .devbar .state { display: flex; align-items: center; padding: 0 10px; font-weight: 500; opacity: .85; white-space: nowrap; }
   .devbar button {
     font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 8px 13px;
     background: transparent; color: #1b1b1b; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
   }
   .devbar button.on, .devbar button.solid { background: #1b1b1b; color: #f2c94c; box-shadow: none; }
-
-  /* ---- fake launch: download -> play -> gameover -> back to the feed ---- */
-  .launch {
-    position: absolute; inset: 0; z-index: 50; background: #06070a; color: #fff;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 18px; text-align: center; padding: 32px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-  .launch h4 { margin: 0; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; opacity: .55; font-weight: 600; }
-  .launch p { margin: 0; font-size: 13px; opacity: .5; }
-  .bar { width: 190px; height: 3px; background: #24262e; border-radius: 3px; overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; background: #4ea1ff; transition: width .55s ease; }
-  .fakegame { position: absolute; inset: 0; background: #0d1018; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-  .fakegame .stage { width: 220px; height: 220px; border: 1px solid #232838; border-radius: 12px; position: relative; overflow: hidden; }
-  .fakegame .stage b { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #4ea1ff; left: 24px; top: 96px; animation: bob 1.1s ease-in-out infinite alternate; }
-  .fakegame .stage s { position: absolute; width: 14px; height: 60px; background: #f2c94c; right: 26px; top: 70px; border-radius: 4px; }
-  @keyframes bob { to { transform: translate(150px, 20px); } }
-  .fakegame button { font: inherit; border: 0; cursor: pointer; background: #fff; color: #000; border-radius: 999px; padding: 12px 24px; font-weight: 700; font-size: 14px; }
+  .devbar button.arrow { padding: 8px 11px; box-shadow: none; background: rgba(0,0,0,.1); }
 
   .notes { max-width: 430px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
   .notes h5 { margin: 0 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .notes h5 + p { margin: 0 0 10px; }
   .notes ul { margin: 0; padding-left: 18px; }
   .notes li { margin-bottom: 5px; }
   .notes b { color: #dfe4ec; }
@@ -209,51 +406,98 @@
 <script>
 // ===========================================================================
 // MOCK DATA
-// Mirrors GameManifestEntry + the three fields the manifest does not carry yet
-// (publishedAt, thumbnail, channel). Headlines are OUR rewrites of the story
-// hook, never the outlet's own text.
+// Mirrors GameManifestEntry + the fields the manifest/descriptor do not carry
+// yet (publishedAt, thumbnail, channel, HowToPlay). Headlines are OUR rewrites
+// of the story hook, never the outlet's own text.
+// `desc` is the descriptor's Game.Description in full — the feed truncates it
+// to the first sentence, the detail page shows all of it.
 // ===========================================================================
 const TODAY = '2026-07-31';
 
 const GAMES = [
-  { id:'capsule-catch',  title:'Mars Sample Capsule Comes Home',        blurb:'Thread the returning capsule through re-entry and stick the splashdown ring.', date:'2026-07-31', time:'07:02', played:false, channel:'live' },
-  { id:'grid-balance',   title:'Heatwave Pushes The Grid To A Record',  blurb:'Juggle supply against demand. Brown out and it is over.',                     date:'2026-07-30', time:'06:58', played:false, channel:'live' },
-  { id:'rate-runner',    title:'Central Bank Holds Rates A Fifth Time', blurb:'Nudge the dial, keep inflation inside the band for twelve quarters.',        date:'2026-07-29', time:'07:11', played:true,  channel:'live' },
-  { id:'spot-kick',      title:'Euro Final Decided On Penalties',       blurb:'Five kicks. Read the keeper, time the strike.',                              date:'2026-07-28', time:'06:49', played:true,  channel:'live' },
-  { id:'swarm-sweep',    title:'Bee Swarm Halts A City Centre Tram',    blurb:'Guide the swarm off the line before the next tram arrives.',                 date:'2026-07-27', time:'07:04', played:false, channel:'live' },
-  { id:'packet-patch',   title:'Sea Cable Fault Slows Half A Continent',blurb:'Reroute packets around the break. Latency is the score.',                    date:'2026-07-26', time:'06:55', played:true,  channel:'live' },
-  { id:'thin-air',       title:'A Marathon At Four Thousand Metres',    blurb:'Pace the climb. Spend oxygen too fast and you stall.',                       date:'2026-07-25', time:'07:20', played:false, channel:'live' },
-  { id:'dig-site',       title:'Shipwreck Found Under A Car Park',      blurb:'Excavate the grid without cracking the hull.',                               date:'2026-07-24', time:'06:47', played:true,  channel:'live' },
-  { id:'boarding-group', title:'Airline Rewrites Its Boarding Order',   blurb:'Seat the plane in the fewest moves. Aisle rage is the fail state.',          date:'2026-07-23', time:'07:08', played:false, channel:'live' },
-  { id:'firebreak',      title:'Crews Contain The Ridge Fire',          blurb:'Cut breaks ahead of the wind. Hold the ridge for sixty seconds.',            date:'2026-07-22', time:'06:52', played:true,  channel:'live' },
-  { id:'sun-chase',      title:'Solar Beats Coal For The First Time',   blurb:'Chase the light across the map, bank charge before dusk.',                   date:'2026-07-21', time:'07:15', played:false, channel:'live' },
-  { id:'detour',         title:'Old Town Closes To Cars',              blurb:'Reroute the traffic. Every wrong turn adds a queue.',                        date:'2026-07-20', time:'06:44', played:true,  channel:'live' },
-  { id:'blitz-clock',    title:'Teen Challenger Topples The Champion',  blurb:'Blitz chess against a shrinking clock. Trade time for tempo.',               date:'2026-07-19', time:'07:01', played:true,  channel:'live' },
-  { id:'comet-trail',    title:'A Comet Visible Without A Telescope',   blurb:'Trace the tail before it drifts out of the frame.',                          date:'2026-07-18', time:'06:59', played:true,  channel:'live' },
+  { id:'capsule-catch', title:'Mars Sample Capsule Comes Home', date:'2026-07-31', time:'07:02', played:false, channel:'live',
+    desc:'A decade of Martian rock is falling through the atmosphere at four kilometres a second. Bleed off speed at the right moment and put the capsule inside the recovery ring before it runs out of sky.',
+    howToPlay:['Drag anywhere to steer the capsule','Hold to deploy the drogue chute','Land inside the ring — tighter scores higher'] },
+  { id:'grid-balance', title:'Heatwave Pushes The Grid To A Record', date:'2026-07-30', time:'06:58', played:false, channel:'live',
+    desc:'Demand is climbing faster than anything you can switch on. Juggle supply against load across the afternoon peak — brown out once and the run is over.',
+    howToPlay:['Tap a station to bring it online','Swipe down on a station to throttle it back','Keep the frequency needle out of the red'] },
+  { id:'rate-runner', title:'Central Bank Holds Rates A Fifth Time', date:'2026-07-29', time:'07:11', played:true, channel:'live',
+    desc:'Twelve quarters, one dial, and an inflation band you are not allowed to leave. Nudge too hard and you overshoot; nudge too softly and it drifts.',
+    howToPlay:['Drag the dial up or down to move rates','Tap Commit to lock the quarter in','Stay inside the band for twelve quarters to win'] },
+  { id:'spot-kick', title:'Euro Final Decided On Penalties', date:'2026-07-28', time:'06:49', played:true, channel:'live',
+    desc:'Five kicks, no second chances. Read which way the keeper is leaning, then commit — hesitate and the power meter drains.',
+    howToPlay:['Swipe in the direction you want to strike','Swipe length sets the power','Release before the meter empties'] },
+  { id:'swarm-sweep', title:'Bee Swarm Halts A City Centre Tram', date:'2026-07-27', time:'07:04', played:false, channel:'live',
+    desc:'Thirty thousand bees have settled on the overhead line and the next tram is four minutes out. Coax the swarm off the wire without scattering it.',
+    howToPlay:['Drag to move the smoke plume','The swarm drifts away from smoke, slowly','Clear the line before the tram arrives'] },
+  { id:'packet-patch', title:'Sea Cable Fault Slows Half A Continent', date:'2026-07-26', time:'06:55', played:true, channel:'live',
+    desc:'A trawler has cut the trunk line and traffic is stacking up at the landing station. Reroute around the break while the queue grows behind you.',
+    howToPlay:['Tap two nodes to lay a route between them','Tap a route again to tear it down','Score is total latency — lower is better'] },
+  { id:'thin-air', title:'A Marathon At Four Thousand Metres', date:'2026-07-25', time:'07:20', played:false, channel:'live',
+    desc:'The air holds about sixty per cent of the oxygen your legs expect. Pace the climb, spend your reserve on the gradients that matter, and finish standing.',
+    howToPlay:['Hold the right of the screen to push the pace','Release to recover','Empty the oxygen bar and you stall'] },
+  { id:'dig-site', title:'Shipwreck Found Under A Car Park', date:'2026-07-24', time:'06:47', played:true, channel:'live',
+    desc:'A fifteenth-century hull is sitting two metres under level three of a multi-storey. Excavate the grid without putting a trowel through the timbers.',
+    howToPlay:['Tap a cell to excavate it','Hold to brush instead of dig — slower, safer','Crack three timbers and the dig is shut down'] },
+  { id:'boarding-group', title:'Airline Rewrites Its Boarding Order', date:'2026-07-23', time:'07:08', played:false, channel:'live',
+    desc:'Someone in revenue management has decided the aisle is a solved problem. Seat the aircraft in as few moves as you can before tempers go.',
+    howToPlay:['Drag a passenger to their seat','Passengers block the aisle while stowing bags','Fill the cabin before the rage meter tops out'] },
+  { id:'firebreak', title:'Crews Contain The Ridge Fire', date:'2026-07-22', time:'06:52', played:true, channel:'live',
+    desc:'The wind is due to turn in ninety seconds and the ridge is the last line worth holding. Cut breaks ahead of the front, not behind it.',
+    howToPlay:['Drag to cut a firebreak line','Breaks take time to clear — start early','Hold the ridge for sixty seconds to win'] },
+  { id:'sun-chase', title:'Solar Beats Coal For The First Time', date:'2026-07-21', time:'07:15', played:false, channel:'live',
+    desc:'Daylight moves west across the map faster than your array can follow. Chase the light, bank charge, and be somewhere useful at dusk.',
+    howToPlay:['Tap a tile to move the array there','Charge accrues faster in full sun','Bank the most charge before dusk'] },
+  { id:'detour', title:'Old Town Closes To Cars', date:'2026-07-20', time:'06:44', played:true, channel:'live',
+    desc:'Six streets went pedestrian at midnight and nobody told the traffic. Reroute the flow before the queues reach the ring road.',
+    howToPlay:['Drag to place a diversion arrow','Tap an arrow to rotate it','Every wrong turn adds to the queue'] },
+  { id:'blitz-clock', title:'Teen Challenger Topples The Champion', date:'2026-07-19', time:'07:01', played:true, channel:'live',
+    desc:'Three minutes each and no increment. Trade thinking time for position and hope the position is worth it when the flag falls.',
+    howToPlay:['Tap a piece, then tap its destination','Your clock runs while you think','Win on the board or on time'] },
+  { id:'comet-trail', title:'A Comet Visible Without A Telescope', date:'2026-07-18', time:'06:59', played:true, channel:'live',
+    desc:'It will not be back for six thousand years and it is drifting out of frame. Track the tail through the exposure without losing the head.',
+    howToPlay:['Drag to pan the telescope','Keep the head inside the reticle','Score is total seconds tracked'] },
   // Staging = published by the daemon, not yet promoted. Dev-mode only (SHIPPLAN #7).
-  { id:'tide-line',      title:'Record Tide Reshapes The Estuary',      blurb:'Bank the sandbars before the next surge. UNPROMOTED.',                       date:'2026-07-31', time:'09:40', played:false, channel:'staging' },
+  { id:'tide-line', title:'Record Tide Reshapes The Estuary', date:'2026-07-31', time:'09:40', played:false, channel:'staging',
+    desc:'The highest water in forty years is rearranging a sandbank that a shipping lane depends on. Bank the bars before the next surge takes them.',
+    howToPlay:['Drag sediment along the channel','Bars settle where the current slows','Survive three surges'] },
 ];
+
+// How many games the feed shows below the lead before deferring to the archive.
+const FEED_LIMIT = 6;
 
 // ===========================================================================
 // STATE — in memory only, no persistence (that is what the prototype checks)
 // ===========================================================================
 const state = {
-  played: new Set(GAMES.filter(g => g.played).map(g => g.id)),
-  devMode: false,           // show the unpromoted staging channel
-  filter: 'all',            // 'all' | 'unplayed' | 'played' — scopes the ARCHIVE only
+  // id -> { plays, best } — stands in for the app-local store that does not exist yet.
+  stats: {},
+  devMode: false,
+  filter: 'all',            // 'all' | 'unplayed' | 'played' — archive screen only
+  search: '',
+  nav: 'A',                 // A masthead icons | B bottom tabs | C hybrid
+  route: { name: 'feed' },  // { name:'feed'|'detail'|'archive'|'settings', id? }
 };
 
-const NOTES = `
-  <h5>Decision · 31 Jul 2026</h5>
-  <ul>
-    <li>Newspaper front page: masthead, full-width lead for today, 2-column archive grid, <b>inline</b> filter on the first section header. Chosen over five other variants — see the branch history.</li>
-    <li><b>Blocker:</b> <code>GameManifestEntry</code> needs <code>publishedAt</code>, <code>thumbnail</code> and <code>channel</code> before this can be built for real.</li>
-    <li>The filter scopes the <b>archive only</b> — today's lead never filters away, it just becomes a ghost "Play again".</li>
-    <li>Two columns fit a <b>one-sentence</b> blurb, so the generate skill should write a short first sentence deliberately.</li>
-    <li>Revisit the inline filter if the archive reaches a few hundred games — an icon + popover is the version that scales, and it has room for per-filter counts.</li>
-    <li>Toggle <b>DEV</b> to see how an unpromoted staging game surfaces.</li>
-  </ul>
-`;
+// Seed a plausible history so the detail page and archive are not all empty states.
+function seedStats() {
+  state.stats = {};
+  GAMES.filter(g => g.played).forEach((g, i) => {
+    state.stats[g.id] = { plays: 1 + (i % 3), best: 2400 + ((hash(g.id) % 90) * 97) };
+  });
+}
+
+const NAVS = {
+  A: 'Masthead icons',
+  B: 'Bottom tab bar',
+  C: 'Hybrid (feed-foot)',
+};
+
+const NAV_NOTES = {
+  A: 'Search and settings sit in the masthead. No bottom bar, so the newspaper identity survives and the full 844px is content. Archive and Settings are <b>pushed</b> screens with a back arrow — you always return to the feed.',
+  B: 'Feed / Archive / Settings are persistent tabs. Conventional and unmissable, and the only variant where Profile has an obvious future home — but it eats ~74px on every screen and reads as app chrome bolted onto a front page.',
+  C: 'Only a gear in the masthead; the archive is reachable <b>solely</b> by the button at the foot of the feed. Fewest chrome elements of the three — but scroll halfway down the feed and there is no way to the archive at all.',
+};
 
 // ===========================================================================
 // THUMBNAILS — stand-ins for the sandbox auto-screenshot (SHIPPLAN #9).
@@ -283,13 +527,15 @@ function thumb(id) {
 // ===========================================================================
 // HELPERS
 // ===========================================================================
-const isPlayed = g => state.played.has(g.id);
+const statsFor = id => state.stats[id] ?? { plays: 0, best: 0 };
+const isPlayed = g => statsFor(g.id).plays > 0;
 const visible = () => GAMES.filter(g => state.devMode || g.channel === 'live');
 const sorted = () => [...visible()].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 // The lead is always the newest *promoted* game — a staging entry must never
 // take the "Today's game" slot just because the daemon published it later.
 const leadGame = () => sorted().find(g => g.channel === 'live');
-const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const gameById = id => GAMES.find(g => g.id === id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const daysAgo = date => Math.round((new Date(TODAY) - new Date(date)) / 864e5);
 const longDate = date => new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -298,127 +544,456 @@ function relDay(date) {
   const d = daysAgo(date);
   return d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 7 ? `${d} days ago` : longDate(date);
 }
+const num = n => n.toLocaleString('en-GB');
+
+const go = (name, id) => { state.route = { name, id }; document.getElementById('screen').scrollTop = 0; render(); };
 
 // ===========================================================================
-// FAKE LAUNCH — download -> play -> gameover -> back to the feed, now played.
-// The point is to feel where you land on return, not to be a real game.
+// SHARED FRAGMENTS
 // ===========================================================================
-function launch(id) {
-  const game = GAMES.find(g => g.id === id);
-  const overlay = document.createElement('div');
-  overlay.className = 'launch';
-  overlay.innerHTML = `
-    <h4>Fetching descriptor</h4>
-    <div class="bar"><i></i></div>
-    <p>${esc(game.id)}/descriptor.yaml · v3 · 41 KB</p>`;
-  document.querySelector('.phone').appendChild(overlay);
-  requestAnimationFrame(() => overlay.querySelector('.bar i').style.width = '100%');
+function Masthead() {
+  // Variant A carries both icons; C carries only the gear; B carries neither
+  // (its tab bar owns navigation entirely).
+  const acts = state.nav === 'A'
+    ? `<button data-go="archive" title="Archive">&#128269;</button><button data-go="settings" title="Settings">&#9881;&#65039;</button>`
+    : state.nav === 'C'
+      ? `<button data-go="settings" title="Settings">&#9881;&#65039;</button>`
+      : '';
 
-  setTimeout(() => {
-    overlay.innerHTML = `
-      <div class="fakegame">
-        <div class="stage"><b></b><s></s></div>
-        <button id="endgame">End run &amp; return</button>
-      </div>`;
-    overlay.querySelector('#endgame').onclick = () => {
-      state.played.add(id);
-      overlay.remove();
-      render();
-    };
-  }, 750);
-}
-
-// ===========================================================================
-// THE FEED
-// ===========================================================================
-function Feed() {
-  const lead = leadGame();
-  const pool = sorted().filter(g => g !== lead);   // the filter scopes this, never the lead
-  const rest = state.filter === 'all' ? pool
-    : state.filter === 'unplayed' ? pool.filter(g => !isPlayed(g))
-    : pool.filter(g => isPlayed(g));
-
-  const week = rest.filter(g => daysAgo(g.date) <= 6);
-  const older = rest.filter(g => !week.includes(g));
-
-  const card = g => `
-    <div class="card ${isPlayed(g) ? 'played' : ''}" data-play="${g.id}">
-      <div class="shot">${thumb(g.id)}</div>
-      <h3>${esc(g.title)}</h3>
-      <p>${esc(g.blurb.split('.')[0])}</p>
-      <div class="meta">
-        ${isPlayed(g) ? '<span class="tick">✓</span> Played' : '<span class="dot"></span> New'}
-        <span>·</span><span>${relDay(g.date)}</span>
-        ${g.channel === 'staging' ? '<span class="stg">· Staging</span>' : ''}
-      </div>
-    </div>`;
-
-  const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
-  const filter = `<div class="filter">${b('all', 'All')}<i>·</i>${b('unplayed', 'Unplayed')}<i>·</i>${b('played', 'Played')}</div>`;
-
-  // The filter always rides the FIRST section header on screen, whichever it is.
-  const sections = [];
-  if (week.length) sections.push(['Earlier this week', week]);
-  if (older.length) sections.push(['The archive', older]);
-
-  const body = sections.length
-    ? sections.map(([title, items], i) => `
-        <div class="sechead ${i ? 'plain' : ''}"><h4>${title}</h4>${i ? '' : filter}</div>
-        <div class="grid">${items.map(card).join('')}</div>`).join('')
-    : `<div class="sechead"><h4>The archive</h4>${filter}</div>
-       <div class="empty">
-         <b>${state.filter === 'unplayed' ? 'You’re all caught up.' : 'Nothing here.'}</b>
-         <span>${state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
-       </div>`;
-
-  return `<div class="feed">
-    <div class="masthead">
+  return `<div class="masthead">
+    <div>
       <h1>The Daily <span>Build</span></h1>
       <time>${fullDate(TODAY)}</time>
     </div>
+    ${acts ? `<div class="acts">${acts}</div>` : ''}
+  </div>`;
+}
+
+// Archive and Settings are pushed screens in A and C, and tabs in B — so the
+// back arrow only exists in A and C. This is the substantive difference
+// between the variants, not just where the entry point sits.
+function SubHead(title) {
+  return state.nav === 'B'
+    ? `<div class="subhead tabbed"><h2>${title}</h2></div>`
+    : `<div class="subhead"><button class="back" data-back="1">&#8249;&nbsp;Back</button><h2>${title}</h2></div>`;
+}
+
+function Tabs() {
+  if (state.nav !== 'B') return '';
+  const tab = (key, icon, label) =>
+    `<button class="${state.route.name === key ? 'on' : ''}" data-go="${key}"><em>${icon}</em>${label}</button>`;
+  return `<div class="tabs">
+    ${tab('feed', '&#128240;', 'Feed')}
+    ${tab('archive', '&#128269;', 'Archive')}
+    ${tab('settings', '&#9881;&#65039;', 'Settings')}
+  </div>`;
+}
+
+function HowToPlay(game, heading = 'How to play') {
+  return `<div class="htp">
+    <h5>${heading}</h5>
+    <ul>${game.howToPlay.map(l => `<li><b>&#9679;</b><span>${esc(l)}</span></li>`).join('')}</ul>
+  </div>`;
+}
+
+// ===========================================================================
+// SCREEN — FEED
+// ===========================================================================
+function Feed() {
+  const lead = leadGame();
+  const rest = sorted().filter(g => g !== lead);
+  const shown = rest.slice(0, FEED_LIMIT);      // no filter here — that lives on the archive
+  const total = visible().length;
+
+  const card = g => `
+    <div class="card ${isPlayed(g) ? 'played' : ''}" data-detail="${g.id}">
+      <div class="shot">${thumb(g.id)}</div>
+      <h3>${esc(g.title)}</h3>
+      <p>${esc(g.desc.split('.')[0])}.</p>
+      <div class="meta">
+        ${isPlayed(g) ? '<span class="tick">&#10003;</span> Played' : '<span class="dot"></span> New'}
+        <span>&middot;</span><span>${relDay(g.date)}</span>
+        ${g.channel === 'staging' ? '<span class="stg">&middot; Staging</span>' : ''}
+      </div>
+    </div>`;
+
+  return `${Masthead()}
 
     <div class="hero">
-      <div class="shot">${thumb(lead.id)}<span class="badge">Today's game</span></div>
-      <h2>${esc(lead.title)}</h2>
-      <p>${esc(lead.blurb)}</p>
-      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-play="${lead.id}">
+      <div class="shot" data-detail="${lead.id}">${thumb(lead.id)}<span class="badge">Today's game</span></div>
+      <h2 data-detail="${lead.id}">${esc(lead.title)}</h2>
+      <p>${esc(lead.desc)}</p>
+      <button class="playbtn ${isPlayed(lead) ? 'done' : ''}" data-detail="${lead.id}">
         ${isPlayed(lead) ? 'Play again' : 'Play now'}
       </button>
-      ${isPlayed(lead) ? '<div class="herometa">✓ Played today</div>' : ''}
+      ${isPlayed(lead) ? '<div class="herometa">&#10003; Played today</div>' : ''}
     </div>
 
+    ${shown.length ? `
+      <div class="sechead"><h4>Earlier</h4></div>
+      <div class="grid">${shown.map(card).join('')}</div>` : ''}
+
+    <button class="seeall" data-go="archive">Archive &mdash; all ${total} games &#9656;</button>`;
+}
+
+// ===========================================================================
+// SCREEN — GAME DETAIL
+// The full pitch: whole description, authored how-to-play, local stats.
+// ===========================================================================
+function Detail() {
+  const g = gameById(state.route.id);
+  const st = statsFor(g.id);
+  const played = st.plays > 0;
+
+  return `${SubHead(relDay(g.date))}
+    <div class="detail">
+      <div class="shot">${thumb(g.id)}</div>
+      <div class="body">
+        <div class="kicker">
+          ${played ? '<span class="tick">&#10003;</span> Played' : '<span class="dot"></span> Not played'}
+          <span>&middot;</span><span>${longDate(g.date)}</span>
+          ${g.channel === 'staging' ? '<span class="stg">&middot; Staging</span>' : ''}
+        </div>
+        <h2>${esc(g.title)}</h2>
+        <p class="desc">${esc(g.desc)}</p>
+
+        ${HowToPlay(g)}
+
+        <div class="statrow ${played ? '' : 'unplayed'}">
+          <div><b>${played ? num(st.best) : '&mdash;'}</b><span>Best score</span></div>
+          <div><b>${played ? st.plays : '&mdash;'}</b><span>${st.plays === 1 ? 'Play' : 'Plays'}</span></div>
+        </div>
+
+        <button class="playbtn" data-play="${g.id}">${played ? 'Play again' : 'Play'}</button>
+      </div>
+    </div>`;
+}
+
+// ===========================================================================
+// SCREEN — ARCHIVE
+// A dense list, not the feed's grid: search results read as rows, and it
+// keeps the front page visually distinct from the catalogue.
+// ===========================================================================
+function Archive() {
+  const q = state.search.trim().toLowerCase();
+  const matched = sorted().filter(g =>
+    !q || g.title.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q));
+  const rows = state.filter === 'all' ? matched
+    : state.filter === 'unplayed' ? matched.filter(g => !isPlayed(g))
+    : matched.filter(g => isPlayed(g));
+
+  const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
+
+  const row = g => `
+    <div class="row ${isPlayed(g) ? 'played' : ''}" data-detail="${g.id}">
+      <div class="shot">${thumb(g.id)}</div>
+      <div class="txt">
+        <h3>${esc(g.title)}</h3>
+        <div class="meta">
+          ${isPlayed(g) ? '<span class="tick">&#10003;</span> Played' : '<span class="dot"></span> New'}
+          <span>&middot;</span><span>${longDate(g.date)}</span>
+          ${g.channel === 'staging' ? '<span class="stg">&middot; Staging</span>' : ''}
+        </div>
+      </div>
+      <span class="chev">&#8250;</span>
+    </div>`;
+
+  const body = rows.length
+    ? `<div class="archcount">${rows.length} of ${visible().length} games</div>${rows.map(row).join('')}`
+    : `<div class="empty">
+         <b>${q ? 'No matches.' : state.filter === 'unplayed' ? 'You&rsquo;re all caught up.' : 'Nothing here.'}</b>
+         <span>${q ? `Nothing in the archive matches &ldquo;${esc(state.search.trim())}&rdquo;.`
+                   : state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
+       </div>`;
+
+  return `${SubHead('Archive')}
+    <div class="searchwrap ${state.nav === 'B' ? '' : 'pushed'}">
+      <div class="search">
+        <span>&#128269;</span>
+        <input id="q" type="search" placeholder="Search all games" value="${esc(state.search)}" autocomplete="off">
+        ${state.search ? '<button class="clr" data-clear="1">&times;</button>' : ''}
+      </div>
+    </div>
+    <div class="filter">${b('all', 'All')}${b('unplayed', 'Unplayed')}${b('played', 'Played')}</div>
     ${body}
-    <div style="height:36px"></div>
+    <div style="height:28px"></div>`;
+}
+
+// ===========================================================================
+// SCREEN — SETTINGS
+// Deliberately short. There is no sound/haptics row: v1 is primitive-assets
+// only (RemoteGameGuard rejects a top-level Assets: block, which is where
+// audio lives), so there is nothing to turn down.
+// ===========================================================================
+function Settings() {
+  const cacheMb = (visible().length * 0.04).toFixed(2);
+  const playedCount = GAMES.filter(isPlayed).length;
+
+  return `${SubHead('Settings')}
+
+    <div class="setgroup">
+      <h5>Content</h5>
+      <div class="setrow">
+        <div class="txt">
+          <b>Developer mode</b>
+          <small>Show games published to the staging channel before they are promoted.</small>
+        </div>
+        <button class="toggle ${state.devMode ? 'on' : ''}" data-dev="1"><i></i></button>
+      </div>
+    </div>
+
+    <div class="setgroup">
+      <h5>Storage</h5>
+      <div class="setrow tap" data-clearcache="1">
+        <div class="txt"><b>Clear downloaded games</b><small>Descriptors re-download next time you play.</small></div>
+        <span class="val">${cacheMb} MB</span>
+      </div>
+      <div class="setrow tap danger" data-resetplayed="1">
+        <div class="txt"><b>Reset play history</b><small>Clears played state, best scores and play counts.</small></div>
+        <span class="val">${playedCount} played</span>
+      </div>
+    </div>
+
+    <div class="setgroup">
+      <h5>About</h5>
+      <div class="setrow tap"><div class="txt"><b>Send feedback</b></div><span class="chev">&#8250;</span></div>
+      <div class="setrow tap"><div class="txt"><b>Privacy policy</b></div><span class="chev">&#8250;</span></div>
+      <div class="setrow"><div class="txt"><b>Version</b></div><span class="val">0.1.0 (build 41)</span></div>
+    </div>
+
+    <div class="about">The Daily Build<br>Games are generated daily and are not affiliated with any news outlet.</div>`;
+}
+
+// ===========================================================================
+// IN-GAME — download, play, pause, game over
+// The point is to feel the shape of the transitions, not to be a real game.
+// ===========================================================================
+let session = null;   // { id, paused }
+
+function launch(id) {
+  const game = gameById(id);
+  session = { id, paused: false };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'launch loading';
+  overlay.id = 'overlay';
+  overlay.innerHTML = `
+    <h4>Fetching descriptor</h4>
+    <div class="bar"><i></i></div>
+    <p>${esc(game.id)}/descriptor.yaml &middot; v3 &middot; 41 KB</p>`;
+  document.querySelector('.phone').appendChild(overlay);
+  requestAnimationFrame(() => overlay.querySelector('.bar i').style.width = '100%');
+
+  setTimeout(() => renderGame(), 750);
+}
+
+// The pause sheet and the game-over card both sit OVER a frozen game, never over
+// a blank screen — GameController.EndGame() is to stop the clock and leave the
+// final frame standing rather than Destroy() it. `over` is the game-over card.
+function renderGame(over) {
+  const overlay = document.getElementById('overlay');
+  if (!overlay) return;
+  const frozen = session.paused || over;
+  overlay.className = 'launch';
+  overlay.innerHTML = `
+    <div class="fakegame ${frozen ? 'paused' : ''}">
+      <div class="gamestrip">
+        <button class="pausebtn" data-pause="1" ${over ? 'disabled' : ''}>&#10073;&#10073;</button>
+        <div class="hud"><span><em>SCORE</em> 1,240</span><span><em>TIME</em> 0:45</span></div>
+      </div>
+      <div class="playfield">
+        <div class="stage"><b></b><s></s></div>
+        ${over ? '' : `<div class="endbtns">
+          <button data-end="win">Reach !gameover (win)</button>
+          <button data-end="lose">Reach !gameover (lose)</button>
+          <button data-end="none">Legacy descriptor (no outcome)</button>
+        </div>`}
+      </div>
+    </div>
+    ${session.paused ? PauseSheet() : ''}
+    ${over ?? ''}`;
+}
+
+// --- pause sheet -----------------------------------------------------------
+// Resume / Restart / How to play / Quit. "How to play" reuses the detail
+// page's block verbatim — the single strongest argument for authoring it in
+// the descriptor rather than deriving it.
+function PauseSheet() {
+  const g = gameById(session.id);
+  return `<div class="sheetwrap" data-resume="1">
+    <div class="sheet" data-stop="1">
+      <div class="grab"></div>
+      <h3>Paused</h3>
+      <p class="sub">${esc(g.title)}</p>
+      ${HowToPlay(g, 'Controls')}
+      <div class="btns">
+        <button class="sheetbtn primary" data-resume="1">Resume</button>
+        <button class="sheetbtn" data-restart="1">Restart</button>
+        <button class="sheetbtn quiet" data-quit="1">Quit to feed</button>
+      </div>
+    </div>
   </div>`;
+}
+
+// --- game over -------------------------------------------------------------
+// Three states, matching the EndGame schema decision:
+//   outcome 'win'  -> green verdict + score
+//   outcome 'lose' -> red verdict + score
+//   outcome null   -> plain "Game Over", no score (every existing descriptor)
+function endRun(outcome) {
+  const g = gameById(session.id);
+  const st = statsFor(g.id);
+  const score = outcome ? Math.round(400 + Math.random() * 9600) : 0;
+  const isBest = outcome && score > st.best;
+
+  state.stats[g.id] = { plays: st.plays + 1, best: Math.max(st.best, score) };
+
+  // "Next game" = newest unplayed, excluding this one. Absent when caught up.
+  const next = sorted().find(x => x.id !== g.id && !isPlayed(x));
+
+  const verdict = outcome === 'win' ? 'You win' : outcome === 'lose' ? 'Game over' : 'Game over';
+
+  renderGame(`
+    <div class="overwrap">
+      <div class="over">
+        <div class="verdict ${outcome ?? ''}">${verdict}</div>
+        <div class="gname">${esc(g.title)}</div>
+
+        ${outcome ? `
+          <div class="scorelbl">Score</div>
+          <div class="score">${num(score)}</div>
+          <div class="best">${isBest
+            ? '<span class="new">&#10022; New best</span>'
+            : `Best ${num(state.stats[g.id].best)}`}</div>`
+          : `<div class="noscore">This game doesn&rsquo;t report a score.<br>Add <code>Score:</code> to its <code>!gameover</code> to show one.</div>`}
+
+        <div class="btns">
+          <button class="sheetbtn primary" data-restart="1">Play again</button>
+          ${next ? `<button class="sheetbtn" data-next="${next.id}">Next game &#9656;</button>` : ''}
+          <button class="sheetbtn quiet" data-quit="1">Back to the feed</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function closeGame() {
+  document.getElementById('overlay')?.remove();
+  session = null;
 }
 
 // ===========================================================================
 // RENDER
 // ===========================================================================
 function render() {
-  document.getElementById('screen').innerHTML = Feed();
-  document.getElementById('notes').innerHTML = NOTES;
+  const screen = document.getElementById('screen');
+  const body = state.route.name === 'detail' ? Detail()
+    : state.route.name === 'archive' ? Archive()
+    : state.route.name === 'settings' ? Settings()
+    : Feed();
+
+  screen.className = 'screen' + (state.nav === 'B' ? ' hastabs' : '');
+  screen.innerHTML = body + Tabs();
+
+  document.getElementById('notes').innerHTML = `
+    <h5>Nav ${state.nav} &mdash; ${NAVS[state.nav]}</h5>
+    <p>${NAV_NOTES[state.nav]}</p>
+    <h5>Settled before building &mdash; not varied here</h5>
+    <ul>
+      <li>Every card opens a <b>detail page</b>. Only "Next game" on the game-over card launches directly.</li>
+      <li>"How to play" is <b>authored</b> in the descriptor (<code>Game.HowToPlay</code>), reused verbatim by the pause sheet.</li>
+      <li>The feed shows the lead + newest ${FEED_LIMIT}; <b>search and the filter live on the archive only</b>.</li>
+      <li>Game-over outcome rides <code>EndGame</code> (<code>Outcome</code> + <code>Score</code>). Try all three end buttons in-game &mdash; the third is what all ~47 existing descriptors get.</li>
+    </ul>
+    <h5>Blocked on schema</h5>
+    <ul>
+      <li><code>GameManifestEntry</code> needs <code>publishedAt</code>, <code>thumbnail</code>, <code>channel</code>.</li>
+      <li><code>InfoDto</code> needs <code>HowToPlay</code>; <code>EndGame</code> needs <code>Outcome</code> + <code>Score</code>.</li>
+      <li><code>GameController.EndGame()</code> must freeze rather than <code>Destroy</code> immediately.</li>
+      <li>Best score / play count persist nowhere &mdash; an app-local store is needed even though Profile is deferred.</li>
+    </ul>`;
+
   document.getElementById('devbar').innerHTML = `
-    <div class="tag">PROTOTYPE</div>
-    <div class="state">${state.played.size}/${visible().length} played</div>
-    <button class="${state.devMode ? 'on' : ''}" data-dev="1">DEV</button>
+    <button class="arrow" data-nav="-1">&#9664;</button>
+    <div class="navlabel">NAV ${state.nav} &mdash; ${NAVS[state.nav]}</div>
+    <button class="arrow" data-nav="1">&#9654;</button>
+    <div class="sep"></div>
+    <div class="state">${GAMES.filter(isPlayed).length}/${visible().length} played</div>
     <button class="solid" data-reset="1">RESET</button>`;
+
   // Surface the full state after every action, per the prototype rules.
   console.log('[prototype state]', {
-    devMode: state.devMode, filter: state.filter,
-    played: [...state.played], visible: visible().length,
+    nav: state.nav, route: state.route, devMode: state.devMode,
+    filter: state.filter, search: state.search,
+    stats: JSON.parse(JSON.stringify(state.stats)),
   });
 }
 
+// ===========================================================================
+// INPUT
+// ===========================================================================
+function cycleNav(step) {
+  const keys = Object.keys(NAVS);
+  state.nav = keys[(keys.indexOf(state.nav) + step + keys.length) % keys.length];
+  const url = new URL(location.href);
+  url.searchParams.set('nav', state.nav);
+  history.replaceState(null, '', url);
+  render();
+}
+
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-play],[data-dev],[data-reset],[data-filter]');
+  const t = e.target.closest('[data-play],[data-detail],[data-go],[data-back],[data-nav],[data-reset],[data-filter],[data-clear],[data-dev],[data-clearcache],[data-resetplayed],[data-pause],[data-resume],[data-restart],[data-quit],[data-next],[data-end],[data-stop]');
   if (!t) return;
-  if (t.dataset.play)   return launch(t.dataset.play);
-  if (t.dataset.dev)    { state.devMode = !state.devMode; return render(); }
-  if (t.dataset.reset)  { state.played = new Set(); return render(); }
-  if (t.dataset.filter) { state.filter = t.dataset.filter; return render(); }
+  const d = t.dataset;
+
+  // In-game
+  if (d.end)      return endRun(d.end === 'none' ? null : d.end);
+  if (d.pause)    { session.paused = true;  return renderGame(); }
+  if (d.stop)     return;                                    // taps inside the sheet must not dismiss it
+  if (d.resume)   { session.paused = false; return renderGame(); }
+  if (d.restart)  { const id = session.id; closeGame(); return launch(id); }
+  if (d.quit)     { closeGame(); return go('feed'); }
+  if (d.next)     { closeGame(); return launch(d.next); }
+  if (d.play)     return launch(d.play);
+
+  // Navigation
+  if (d.detail)   return go('detail', d.detail);
+  if (d.go)       return go(d.go);
+  if (d.back)     return go('feed');
+
+  // Settings
+  if (d.dev)          { state.devMode = !state.devMode; return render(); }
+  if (d.clearcache)   { return render(); }                   // stub — nothing is cached in a prototype
+  if (d.resetplayed)  { state.stats = {}; return render(); }
+
+  // Archive controls
+  if (d.filter)   { state.filter = d.filter; return render(); }
+  if (d.clear)    { state.search = ''; render(); return document.getElementById('q')?.focus(); }
+
+  // Scaffolding
+  if (d.nav)      return cycleNav(Number(d.nav));
+  if (d.reset)    { seedStats(); return render(); }
 });
 
+// Re-render on every keystroke, but restore focus + caret so typing survives it.
+document.addEventListener('input', e => {
+  if (e.target.id !== 'q') return;
+  state.search = e.target.value;
+  const caret = e.target.selectionStart;
+  render();
+  const q = document.getElementById('q');
+  if (q) { q.focus(); q.setSelectionRange(caret, caret); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const el = document.activeElement;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+  cycleNav(e.key === 'ArrowRight' ? 1 : -1);
+});
+
+state.nav = (new URL(location.href).searchParams.get('nav') ?? 'A').toUpperCase();
+if (!NAVS[state.nav]) state.nav = 'A';
+seedStats();
 render();
 </script>
 </body>
