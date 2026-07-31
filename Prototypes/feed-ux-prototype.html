@@ -44,7 +44,7 @@
     Six screens are now covered: FEED, DETAIL, ARCHIVE, SETTINGS, PAUSE,
     GAME OVER.
 
-    Settled before building, so NOT varied here:
+    Settled before building:
       - Tapping any game opens a DETAIL page. Nothing direct-launches.
       - "How to play" is AUTHORED in the descriptor (a HowToPlay list in the
         Game: block, written by the generate skill). NOT derived from
@@ -58,14 +58,22 @@
         set nothing get a plain "Game Over" card, so all ~47 existing
         descriptors keep working untouched.
 
-    THE OPEN QUESTION, varied here — HOW DOES NAVIGATION WORK?
-      nav=A  Masthead icons   — search + gear in the masthead, no bottom bar
-      nav=B  Bottom tab bar   — Feed / Archive / Settings as persistent tabs
-      nav=C  Hybrid           — gear in the masthead; the archive is reached
-                                ONLY by the button at the foot of the feed
-    Switch with the arrows in the yellow bar, the left/right arrow keys, or
-    ?nav=A|B|C in the URL. Everything else on screen is identical between
-    them — the chrome IS the variant.
+    NAVIGATION (settled 2026-07-31) — MASTHEAD ICONS.
+      Search and settings sit in the masthead; there is no bottom bar, so the
+      newspaper identity survives and the full screen height is content.
+      Archive and Settings are PUSHED screens with a back arrow — you always
+      return to where you came from.
+
+      Chosen over two alternatives, both in this file's history:
+        B  Bottom tab bar — Feed / Archive / Settings as persistent tabs.
+           Unmissable, and the only one with an obvious future home for
+           Profile, but it eats ~74px on every screen and reads as app
+           chrome bolted onto a front page.
+        C  Hybrid — gear in the masthead, archive reachable ONLY from the
+           button at the foot of the feed. Fewest chrome elements, but scroll
+           halfway down and there is no route to the archive at all.
+      If Profile is ever revived, B is the variant to reconsider — a fourth
+      destination is the point at which two masthead icons stop scaling.
 
   DESIGN CALLS WORTH RE-ARGUING IN UNITY
     1. Played cards keep their screenshot in COLOUR at 42% opacity. Greyscale
@@ -73,9 +81,12 @@
     2. Two columns fit a one-sentence blurb only, so the feed truncates at the
        first full stop. The generate skill should be writing a short first
        sentence deliberately rather than the feed cutting prose mid-thought.
-    3. "Next game" on the game-over card LAUNCHES DIRECTLY rather than
-       returning to a detail page — the hook only works with momentum. This
-       is the one place that breaks the "everything goes through detail" rule.
+    3. "Next game" on the game-over card goes to that game's DETAIL page, not
+       straight into it. An autoplay-style direct launch was considered and
+       rejected: the detail page is where the controls are taught, and
+       dropping a player into an unfamiliar game with no briefing trades one
+       tap for a confused first ten seconds. "Everything goes through detail"
+       therefore holds with no exceptions.
     4. The pause button is a shell-owned top strip, above the game's own HUD.
        On a phone where the game may want the whole screen for touch input,
        that strip is contended real estate — check it against a real game.
@@ -132,8 +143,6 @@
   .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; background: #fff; color: #14161a; }
   .screen::-webkit-scrollbar { width: 0; }
   .shot > svg { display: block; width: 100%; height: 100%; }
-  /* Variant B's tab bar floats over the scroller, so every screen needs to end above it. */
-  .screen.hastabs { padding-bottom: 74px; }
 
   /* ======================================================================
      SHARED CHROME
@@ -153,29 +162,14 @@
   }
   .masthead .acts button:active { background: #f0f2f5; }
 
-  /* back-header used by detail / archive / settings when they are pushed, not tabbed */
+  /* back-header for the pushed screens: detail / archive / settings */
   .subhead {
     position: sticky; top: 0; z-index: 12; background: #fff;
     border-bottom: 1px solid #e6e9ee; padding: 14px 16px 12px;
     display: flex; align-items: center; gap: 8px;
   }
-  .subhead button.back { font: inherit; background: none; border: 0; cursor: pointer; padding: 4px 6px 4px 0; font-size: 15px; font-weight: 600; color: #14161a; }
-  .subhead h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
-  .subhead.tabbed { padding-left: 20px; }
-
-  /* variant B only — persistent bottom tabs */
-  .tabs {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
-    background: rgba(255,255,255,.96); backdrop-filter: blur(12px);
-    border-top: 1px solid #e6e9ee; display: flex; padding: 8px 0 22px;
-  }
-  .tabs button {
-    flex: 1; font: inherit; background: none; border: 0; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    color: #a4abb5; font-size: 9.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  }
-  .tabs button em { font-style: normal; font-size: 17px; line-height: 1; }
-  .tabs button.on { color: #14161a; }
+  .subhead button.back { font: inherit; background: none; border: 0; cursor: pointer; padding: 4px 6px 4px 0; font-size: 15px; font-weight: 600; color: #14161a; white-space: nowrap; }
+  .subhead h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #a4abb5; }
 
   /* ======================================================================
      SCREEN — FEED
@@ -254,8 +248,8 @@
      SCREEN — ARCHIVE  (deliberately a dense LIST, not the feed's grid —
      search results read as rows, and it contrasts with the front page)
      ====================================================================== */
-  .searchwrap { padding: 14px 16px 10px; position: sticky; top: 0; z-index: 11; background: #fff; }
-  .searchwrap.pushed { top: 45px; }
+  /* top offset clears the sticky .subhead above it */
+  .searchwrap { padding: 14px 16px 10px; position: sticky; top: 45px; z-index: 11; background: #fff; }
   .search { display: flex; align-items: center; gap: 8px; background: #f0f2f5; border-radius: 10px; padding: 10px 12px; }
   .search input { flex: 1; font: inherit; font-size: 15px; border: 0; background: none; outline: none; color: #14161a; min-width: 0; }
   .search input::placeholder { color: #a4abb5; }
@@ -378,15 +372,13 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 13px; font-weight: 700; z-index: 100;
   }
-  .devbar .navlabel { display: flex; align-items: center; padding: 0 10px; letter-spacing: .04em; white-space: nowrap; min-width: 176px; justify-content: center; }
-  .devbar .sep { width: 2px; background: rgba(0,0,0,.2); margin: 4px 4px; border-radius: 2px; }
-  .devbar .state { display: flex; align-items: center; padding: 0 10px; font-weight: 500; opacity: .85; white-space: nowrap; }
+  .devbar .tag { display: flex; align-items: center; padding: 0 12px; letter-spacing: .1em; }
+  .devbar .state { display: flex; align-items: center; padding: 0 12px; border-left: 2px solid rgba(0,0,0,.2); font-weight: 500; opacity: .85; white-space: nowrap; }
   .devbar button {
     font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 8px 13px;
     background: transparent; color: #1b1b1b; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
   }
   .devbar button.on, .devbar button.solid { background: #1b1b1b; color: #f2c94c; box-shadow: none; }
-  .devbar button.arrow { padding: 8px 11px; box-shadow: none; background: rgba(0,0,0,.1); }
 
   .notes { max-width: 430px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
   .notes h5 { margin: 0 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
@@ -475,8 +467,10 @@ const state = {
   devMode: false,
   filter: 'all',            // 'all' | 'unplayed' | 'played' — archive screen only
   search: '',
-  nav: 'A',                 // A masthead icons | B bottom tabs | C hybrid
-  route: { name: 'feed' },  // { name:'feed'|'detail'|'archive'|'settings', id? }
+  // { name:'feed'|'detail'|'archive'|'settings', id?, from? } — `from` is the
+  // screen the back arrow returns to, so detail opened from the archive goes
+  // back to the archive rather than dumping you on the feed.
+  route: { name: 'feed' },
 };
 
 // Seed a plausible history so the detail page and archive are not all empty states.
@@ -487,17 +481,7 @@ function seedStats() {
   });
 }
 
-const NAVS = {
-  A: 'Masthead icons',
-  B: 'Bottom tab bar',
-  C: 'Hybrid (feed-foot)',
-};
-
-const NAV_NOTES = {
-  A: 'Search and settings sit in the masthead. No bottom bar, so the newspaper identity survives and the full 844px is content. Archive and Settings are <b>pushed</b> screens with a back arrow — you always return to the feed.',
-  B: 'Feed / Archive / Settings are persistent tabs. Conventional and unmissable, and the only variant where Profile has an obvious future home — but it eats ~74px on every screen and reads as app chrome bolted onto a front page.',
-  C: 'Only a gear in the masthead; the archive is reachable <b>solely</b> by the button at the foot of the feed. Fewest chrome elements of the three — but scroll halfway down the feed and there is no way to the archive at all.',
-};
+const SCREEN_NAMES = { feed: 'Feed', archive: 'Archive', settings: 'Settings' };
 
 // ===========================================================================
 // THUMBNAILS — stand-ins for the sandbox auto-screenshot (SHIPPLAN #9).
@@ -546,46 +530,42 @@ function relDay(date) {
 }
 const num = n => n.toLocaleString('en-GB');
 
-const go = (name, id) => { state.route = { name, id }; document.getElementById('screen').scrollTop = 0; render(); };
+// Pushing detail records where it was pushed FROM so the back arrow is honest.
+// Detail -> detail ("Next game") keeps the original origin rather than stacking.
+function go(name, id) {
+  const from = name !== 'detail' ? 'feed'
+    : state.route.name === 'detail' ? state.route.from
+    : state.route.name;
+  state.route = { name, id, from };
+  document.getElementById('screen').scrollTop = 0;
+  render();
+}
 
 // ===========================================================================
 // SHARED FRAGMENTS
 // ===========================================================================
+// The whole of navigation: two icons, only ever on the feed. Everything else
+// is a pushed screen that backs out to wherever it was opened from.
 function Masthead() {
-  // Variant A carries both icons; C carries only the gear; B carries neither
-  // (its tab bar owns navigation entirely).
-  const acts = state.nav === 'A'
-    ? `<button data-go="archive" title="Archive">&#128269;</button><button data-go="settings" title="Settings">&#9881;&#65039;</button>`
-    : state.nav === 'C'
-      ? `<button data-go="settings" title="Settings">&#9881;&#65039;</button>`
-      : '';
-
   return `<div class="masthead">
     <div>
       <h1>The Daily <span>Build</span></h1>
       <time>${fullDate(TODAY)}</time>
     </div>
-    ${acts ? `<div class="acts">${acts}</div>` : ''}
+    <div class="acts">
+      <button data-go="archive" title="Archive">&#128269;</button>
+      <button data-go="settings" title="Settings">&#9881;&#65039;</button>
+    </div>
   </div>`;
 }
 
-// Archive and Settings are pushed screens in A and C, and tabs in B — so the
-// back arrow only exists in A and C. This is the substantive difference
-// between the variants, not just where the entry point sits.
+// The back button names its destination rather than saying "Back", so the
+// return path is legible before you commit to it.
 function SubHead(title) {
-  return state.nav === 'B'
-    ? `<div class="subhead tabbed"><h2>${title}</h2></div>`
-    : `<div class="subhead"><button class="back" data-back="1">&#8249;&nbsp;Back</button><h2>${title}</h2></div>`;
-}
-
-function Tabs() {
-  if (state.nav !== 'B') return '';
-  const tab = (key, icon, label) =>
-    `<button class="${state.route.name === key ? 'on' : ''}" data-go="${key}"><em>${icon}</em>${label}</button>`;
-  return `<div class="tabs">
-    ${tab('feed', '&#128240;', 'Feed')}
-    ${tab('archive', '&#128269;', 'Archive')}
-    ${tab('settings', '&#9881;&#65039;', 'Settings')}
+  const back = SCREEN_NAMES[state.route.from] ?? 'Feed';
+  return `<div class="subhead">
+    <button class="back" data-back="1">&#8249;&nbsp;${back}</button>
+    <h2>${title}</h2>
   </div>`;
 }
 
@@ -707,7 +687,7 @@ function Archive() {
        </div>`;
 
   return `${SubHead('Archive')}
-    <div class="searchwrap ${state.nav === 'B' ? '' : 'pushed'}">
+    <div class="searchwrap">
       <div class="search">
         <span>&#128269;</span>
         <input id="q" type="search" placeholder="Search all games" value="${esc(state.search)}" autocomplete="off">
@@ -849,6 +829,9 @@ function endRun(outcome) {
   state.stats[g.id] = { plays: st.plays + 1, best: Math.max(st.best, score) };
 
   // "Next game" = newest unplayed, excluding this one. Absent when caught up.
+  // It opens that game's DETAIL page rather than launching it: the detail page
+  // is where the controls are taught, and an autoplay-style direct launch
+  // trades one tap for a confused first ten seconds in an unfamiliar game.
   const next = sorted().find(x => x.id !== g.id && !isPlayed(x));
 
   const verdict = outcome === 'win' ? 'You win' : outcome === 'lose' ? 'Game over' : 'Game over';
@@ -885,21 +868,18 @@ function closeGame() {
 // RENDER
 // ===========================================================================
 function render() {
-  const screen = document.getElementById('screen');
   const body = state.route.name === 'detail' ? Detail()
     : state.route.name === 'archive' ? Archive()
     : state.route.name === 'settings' ? Settings()
     : Feed();
 
-  screen.className = 'screen' + (state.nav === 'B' ? ' hastabs' : '');
-  screen.innerHTML = body + Tabs();
+  document.getElementById('screen').innerHTML = body;
 
   document.getElementById('notes').innerHTML = `
-    <h5>Nav ${state.nav} &mdash; ${NAVS[state.nav]}</h5>
-    <p>${NAV_NOTES[state.nav]}</p>
-    <h5>Settled before building &mdash; not varied here</h5>
+    <h5>Decision &middot; 31 Jul 2026</h5>
     <ul>
-      <li>Every card opens a <b>detail page</b>. Only "Next game" on the game-over card launches directly.</li>
+      <li><b>Navigation: masthead icons.</b> No bottom bar, so the newspaper identity survives and the full height is content. Chosen over a bottom tab bar and an archive-at-the-foot hybrid &mdash; both in this file's history. Reconsider the tab bar if Profile is ever revived; a fourth destination is where two icons stop scaling.</li>
+      <li>Every card opens a <b>detail page</b>, including "Next game" on the game-over card &mdash; no exceptions.</li>
       <li>"How to play" is <b>authored</b> in the descriptor (<code>Game.HowToPlay</code>), reused verbatim by the pause sheet.</li>
       <li>The feed shows the lead + newest ${FEED_LIMIT}; <b>search and the filter live on the archive only</b>.</li>
       <li>Game-over outcome rides <code>EndGame</code> (<code>Outcome</code> + <code>Score</code>). Try all three end buttons in-game &mdash; the third is what all ~47 existing descriptors get.</li>
@@ -913,16 +893,13 @@ function render() {
     </ul>`;
 
   document.getElementById('devbar').innerHTML = `
-    <button class="arrow" data-nav="-1">&#9664;</button>
-    <div class="navlabel">NAV ${state.nav} &mdash; ${NAVS[state.nav]}</div>
-    <button class="arrow" data-nav="1">&#9654;</button>
-    <div class="sep"></div>
+    <div class="tag">PROTOTYPE</div>
     <div class="state">${GAMES.filter(isPlayed).length}/${visible().length} played</div>
     <button class="solid" data-reset="1">RESET</button>`;
 
   // Surface the full state after every action, per the prototype rules.
   console.log('[prototype state]', {
-    nav: state.nav, route: state.route, devMode: state.devMode,
+    route: state.route, devMode: state.devMode,
     filter: state.filter, search: state.search,
     stats: JSON.parse(JSON.stringify(state.stats)),
   });
@@ -931,17 +908,8 @@ function render() {
 // ===========================================================================
 // INPUT
 // ===========================================================================
-function cycleNav(step) {
-  const keys = Object.keys(NAVS);
-  state.nav = keys[(keys.indexOf(state.nav) + step + keys.length) % keys.length];
-  const url = new URL(location.href);
-  url.searchParams.set('nav', state.nav);
-  history.replaceState(null, '', url);
-  render();
-}
-
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-play],[data-detail],[data-go],[data-back],[data-nav],[data-reset],[data-filter],[data-clear],[data-dev],[data-clearcache],[data-resetplayed],[data-pause],[data-resume],[data-restart],[data-quit],[data-next],[data-end],[data-stop]');
+  const t = e.target.closest('[data-play],[data-detail],[data-go],[data-back],[data-reset],[data-filter],[data-clear],[data-dev],[data-clearcache],[data-resetplayed],[data-pause],[data-resume],[data-restart],[data-quit],[data-next],[data-end],[data-stop]');
   if (!t) return;
   const d = t.dataset;
 
@@ -952,13 +920,13 @@ document.addEventListener('click', e => {
   if (d.resume)   { session.paused = false; return renderGame(); }
   if (d.restart)  { const id = session.id; closeGame(); return launch(id); }
   if (d.quit)     { closeGame(); return go('feed'); }
-  if (d.next)     { closeGame(); return launch(d.next); }
+  if (d.next)     { closeGame(); return go('detail', d.next); }
   if (d.play)     return launch(d.play);
 
   // Navigation
   if (d.detail)   return go('detail', d.detail);
   if (d.go)       return go(d.go);
-  if (d.back)     return go('feed');
+  if (d.back)     return go(state.route.from ?? 'feed');
 
   // Settings
   if (d.dev)          { state.devMode = !state.devMode; return render(); }
@@ -970,7 +938,6 @@ document.addEventListener('click', e => {
   if (d.clear)    { state.search = ''; render(); return document.getElementById('q')?.focus(); }
 
   // Scaffolding
-  if (d.nav)      return cycleNav(Number(d.nav));
   if (d.reset)    { seedStats(); return render(); }
 });
 
@@ -984,15 +951,6 @@ document.addEventListener('input', e => {
   if (q) { q.focus(); q.setSelectionRange(caret, caret); }
 });
 
-document.addEventListener('keydown', e => {
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-  const el = document.activeElement;
-  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
-  cycleNav(e.key === 'ArrowRight' ? 1 : -1);
-});
-
-state.nav = (new URL(location.href).searchParams.get('nav') ?? 'A').toUpperCase();
-if (!NAVS[state.nav]) state.nav = 'A';
 seedStats();
 render();
 </script>

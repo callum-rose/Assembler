@@ -37,30 +37,32 @@ records what it proposed that we are deliberately **not** building (sections, st
 share, a calendar archive, difficulty chips).
 
 Six screens are now covered: **feed, game detail, archive with search, settings, pause
-sheet, game over.** Four decisions were settled before building and are *not* varied:
+sheet, game over.** The decisions:
 
-1. Every card opens a **detail page** — nothing direct-launches. The one exception is
-   "Next game" on the game-over card, which launches directly because the hook only
-   works with momentum.
-2. **"How to play" is authored** in the descriptor (`Game.HowToPlay`), not derived from
+1. **Navigation is masthead icons** — search and settings in the masthead, no bottom
+   bar, so the newspaper identity survives and the full screen height is content.
+   Archive and Settings are pushed screens that back out to wherever they were opened
+   from. Chosen over a **bottom tab bar** (unmissable, and the only option with an
+   obvious future home for Profile, but it costs ~74px on every screen and reads as app
+   chrome on a front page) and an **archive-at-the-foot hybrid** (fewest chrome
+   elements, but scroll halfway down the feed and there is no route to the archive at
+   all). Both losing variants are in this branch's history. Reconsider the tab bar if
+   Profile is ever revived — a fourth destination is where two icons stop scaling.
+2. Every card opens a **detail page**, with no exceptions. "Next game" on the game-over
+   card goes to that game's detail page too; an autoplay-style direct launch was
+   considered and rejected, because the detail page is where the controls are taught and
+   dropping a player into an unfamiliar game with no briefing trades one tap for a
+   confused first ten seconds.
+3. **"How to play" is authored** in the descriptor (`Game.HowToPlay`), not derived from
    `Controls` bindings — mobile bindings are Input System paths like
    `<Touchscreen>/primaryTouch/position` and would render as garbage. The pause sheet
    reuses the same block verbatim.
-3. The feed shows the lead + the newest 6, then an archive button. **Search and the
+4. The feed shows the lead + the newest 6, then an archive button. **Search and the
    played/unplayed filter live on the archive only.**
-4. **Game-over outcome rides the `EndGame` behaviour** (`Outcome: win|lose`, `Score:`),
+5. **Game-over outcome rides the `EndGame` behaviour** (`Outcome: win|lose`, `Score:`),
    not the `Game:` header — a descriptor can have several `!gameover` listeners, so the
    outcome belongs at the call site. Descriptors that set nothing get a plain
    "Game Over" card, so all ~47 existing ones keep working untouched.
-
-**Open question, varied in the prototype — navigation.** Switch with the arrows in the
-yellow bar, the ← / → keys, or `?nav=A|B|C`:
-
-| | Treatment | Trade-off |
-|---|---|---|
-| **A** | Search + gear in the masthead | Newspaper identity survives, full height is content; two icons to learn |
-| **B** | Bottom tab bar | Unmissable, and the only variant with an obvious future home for Profile; eats ~74px everywhere and reads as app chrome on a front page |
-| **C** | Gear only; archive at the foot of the feed | Fewest chrome elements; scroll halfway down and there is no route to the archive at all |
 
 ### Blocked on schema
 
