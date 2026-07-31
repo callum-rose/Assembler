@@ -4,85 +4,88 @@ Throwaway code that answers a design question. Nothing here ships, and nothing h
 should be promoted as-is — the code is written under prototype constraints (no tests,
 no error handling, no abstractions). Rewrite properly when folding a decision in.
 
-## `app-tone-prototype.html` — rounds 3–4, OPEN
+## `app-look-prototype.html` — the settled look
 
-**Question:** how dark is dark, and how loud is "game-like" allowed to get before the
-app stops reading as news?
+**This is the current one.** Six screens — feed, detail, archive, settings, pause,
+game over — in the settled structure *and* the settled surface, light and dark.
 
 ```bash
-open Prototypes/app-tone-prototype.html
+open Prototypes/app-look-prototype.html
 ```
 
-Four tone variants of the whole app, each in light **and** dark. Cycle with the
-floating bar, the `←`/`→` keys, or `?tone=a|b|c|d&theme=light|dark`; `D` toggles the
-theme, which also has a row in Settings → Appearance (where the switch belongs is
-part of the question). **D is the default** — it is the current best guess, and A/B/C
-are the record.
+`D` toggles the theme, which also has a row in Settings → Appearance (where a player
+is expected to find the switch is part of the question). Theme rides the URL
+(`?theme=light|dark`) so a screenshot is reproducible.
 
-| | Tone | Fun dial | What it changes |
+### How it was arrived at
+
+Rounds 1–2 settled the **structure** (see `feed-ux-prototype.html`): masthead icons,
+a full-width lead then a 2-column grid, lead + 6 then the archive, everything opens a
+detail page. Rounds 3–4 settled the **surface**.
+
+Round 3 built three tones across the whole app, each in light and dark:
+
+| | Tone | Fun dial | |
 |---|---|---|---|
-| **A** | Broadsheet | 1/3 | Round 2 exactly, plus a dark theme and micro-motion. Press depth, a pulsing "new" dot, a score that counts up. Nothing else moves. |
-| **B** | Late Edition | 2/3 | Newspaper bones, print-shop swagger. Cream/ink, a highlighter second accent, an edition ticker, hard offset buttons, numbered cards, a rubber-stamp verdict and an odometer score. |
-| **C** | Arcade Edition | 3/3 | The newspaper becomes the cabinet. Condensed caps, a neon duo, scanlined thumbnails, a catalogue progress meter, cartridge cards, chunky 3D buttons, and a full-bleed result screen with a rank letter. |
-| **D** | Letterpress | 2/3, newspaper-first | **Round 4.** B with the feedback folded in — see below. |
+| **A** | Broadsheet | 1/3 | Round 2 + a dark theme + micro-motion only |
+| **B** | Late Edition | 2/3 | Newspaper bones, print-shop swagger |
+| **C** | Arcade Edition | 3/3 | The newspaper becomes the cabinet |
 
-### Round 4 — D
+Verdict: *"B mostly. A is too bland, C is too arcadey. Make it generally feel a bit
+more newspaper-y."* All three are in this branch's history at `2c8a7573` and are the
+primary source. Round 4 folded the feedback into **D, "Letterpress"** (`eb0ca995`),
+which is what this file now shows.
 
-Verdict on round 3: *"B mostly. A is too bland, C is too arcadey. Make it generally
-feel a bit more newspaper-y."* Four notes, and what each cost:
-
-| Feedback | What D does |
+| Feedback | What it cost |
 |---|---|
-| Strikethrough on played games is wrong — grey them out with an icon | Highlighter strikethrough gone. Played art goes full greyscale, with a tick badge on the corner. |
-| B's ticker is distracting and carries little | Replaced by a **static folio row** — same three facts, no motion, and it keeps the edition number, which nothing else on the page shows. |
-| C's completion bar is useless | Not carried into D. Catalogue-completion is meta-progression wearing a hat. |
-| Make it feel more newspaper-y | Print furniture that carries information rather than motion: a red kicker rule, a byline, a drop cap, **column rules between the grid cells** (the gap goes to zero — a newspaper's grid is defined by its rules, not its gutters), and a folio at the foot. B's card numbers went too: numbering stories is a listicle tell, not a newspaper one. |
+| Strikethrough on played games is wrong — grey them out with an icon | Strikethrough gone; played art goes greyscale with a tick badge on the corner. |
+| The ticker is distracting and carries little | Replaced by a **static folio row** — same three facts, no motion, and it keeps the edition number, which nothing else on the page shows. |
+| The completion bar is useless | Cut. Catalogue-completion is meta-progression wearing a hat. |
+| Make it feel more newspaper-y | Print furniture that carries information rather than motion: a red kicker rule, a byline, a drop cap, **column rules between the grid cells** (the gap goes to zero — a newspaper's grid is defined by its rules, not its gutters), and a folio at the foot. The card numbers went too: numbering stories is a listicle tell, not a newspaper one. |
 
 **Kept from B**, because that was the part that landed: cream/ink, the rubber PLAY
 stamp, letterpress offset buttons, the double section rule, the stamped verdict and
 the odometer score.
 
-**D reverses a round-2 call, and the reversal is conditional.** Round 2 rejected
-greyscale on played art because a desaturated thumbnail reads as a broken image. The
-tick badge is what buys the reversal — it says *played* where greyscale alone said
-*failed to load*. If the tick is ever dropped in the uGUI build, the greyscale has to
-go back to colour-at-42% with it. One decision, not two.
+### The constraint that shaped the whole surface
 
-**Still open in D:** the drop cap is one line of CSS here and a real problem in uGUI
-(TextMeshPro has no `::first-letter` — it needs a hand-laid glyph or `<size>`/`<voffset>`
-rich text). Decide whether it survives before it is promised. Archive and settings are
-still tone-token-only.
+The obvious levers for game-feel — streaks, share, a calendar archive, difficulty
+chips — were all argued out in rounds 1–2 and are on the "not in v1" list. So the
+design adds **no new persisted number**. The only numbers on screen are best-score and
+play-count, which the app-local store already owes us. If a future change looks like
+it is promising progression, that is a bug in the change, not a licence to add the
+feature.
 
-Round 2's **structure is frozen** — masthead icons, lead + 6 + archive, everything
-through detail. The variants disagree about surface only. Judge them on the **feed**,
-not the game-over card: all four game-over cards are enjoyable, and only some of the
-mastheads still read as a newspaper.
+### Two calls to re-argue in Unity
 
-**The constraint that shaped all three:** the obvious levers for game-feel — streaks,
-share, a calendar archive, difficulty chips — were all argued out in rounds 1–2 and
-are on the "not in v1" list. So **no variant adds a single persisted number.** The fun
-is typography, colour, motion, framing language, and making the game-over moment an
-event. C's rank letter is derived from the best score the app-local store already owes
-us. A variant that looks like it is promising progression is a bug in the variant, not
-a licence to add the feature.
+1. **Greyscale on played art is conditional on the tick.** Round 2 rejected greyscale
+   because a desaturated thumbnail reads as a broken image. The tick badge is what buys
+   the reversal — it says *played* where greyscale alone said *failed to load*. Drop
+   the tick and the greyscale has to go back to colour-at-42% with it: one decision,
+   not two. Note also that the grey goes on the **art**, not on its container —
+   filtering the container fades the badge along with the image it exists to explain.
+2. **The drop cap is not free.** TextMeshPro has no `::first-letter`; it needs a
+   hand-laid glyph or `<size>`/`<voffset>` rich text. Decide before it is promised.
 
-**Three dark-mode calls worth arguing:**
+### Dark mode is not a token swap
 
-1. **Played cards.** Round 2 kept the played thumbnail in colour at 42% opacity because
-   greyscale on a light ground reads as a broken image. On a dark ground 42% reads as
-   *still loading* instead, so dark dims to 55% **and** desaturates, and the headline
-   carries more of the played state. Check this against a real screenshot — the fake
-   thumbnails flatter it.
-2. **The red.** `#c8102e` is a masthead red on white and a muddy brown on `#101215`.
-   Every tone lifts its accent in dark rather than reusing the light value; the accent
-   is a token, not a constant.
-3. **Inverted print elements don't survive the flip.** B's hard "ledge" shadow and its
-   ticker strip are ink-on-cream in light; reused literally in dark they become a white
-   border and the brightest thing on screen. Both take a separate dark token.
+- **The red.** `#c8102e` is a masthead red on white and a muddy brown on a near-black
+  ground. Dark lifts it to `#e8574a` rather than reusing the light value.
+- **Inverted print elements don't survive the flip literally.** The hard letterpress
+  ledge under the lead art is ink-on-cream in light; reused as-is in dark it reads as
+  a white border rather than depth, so it takes its own `--offset` token.
+- **Played opacity is not the same number in both themes.** Light dims to 50%, dark to
+  42% — on a dark ground the lighter value reads as "still loading".
 
-Nothing here adds to round 2's schema blockers — also on purpose.
+Nothing in rounds 3–4 adds to round 2's schema blockers — also on purpose.
 
-## `feed-ux-prototype.html`
+## `feed-ux-prototype.html` — the rounds 1–2 record
+
+> **Superseded for anything visual.** This file settled the *structure*, and its
+> surface is the pre-round-3 look. For what the app should look like, read
+> `app-look-prototype.html` above; read this one for how the structure was argued.
+> The two cover the same six screens, so it is worth deciding whether this file still
+> earns its place now that git history holds the same record.
 
 The player-facing app UX, from the feed through to the game-over card. Open it in a
 browser, no server needed:
