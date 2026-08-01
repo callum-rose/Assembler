@@ -12,8 +12,6 @@
          change so a deployed daemon can be asked (`assembler-remote version`) which
          build is actually running. -->
     <Version>1.0.5</Version>
-    <!-- No NuGet dependencies: GitHub goes through the `gh` CLI (already the auth story),
-         manifest.json through System.Text.Json, and `claude`/`validate-game.sh` through Process. -->
   </PropertyGroup>
 
 </Project>
