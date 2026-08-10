@@ -41,11 +41,12 @@ public static class Proc
 	public static int StreamLines(
 		string file,
 		IReadOnlyList<string> args,
+		string? workingDir,
 		IReadOnlyDictionary<string, string?>? env,
 		Action<string> onStdout,
 		Action<string>? onStderr = null)
 	{
-		using var p = new Process { StartInfo = Psi(file, args, workingDir: null, env, redirect: true) };
+		using var p = new Process { StartInfo = Psi(file, args, workingDir, env, redirect: true) };
 		using var _ = KillOnExit(p);
 		var gate = new object();
 		p.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (gate) { onStdout(e.Data); } } };
