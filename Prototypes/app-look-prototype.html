@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE — play-the-news app, settled look</title>
+<!--
+  ============================================================================
+  THROWAWAY PROTOTYPE — not production code. Rewrite properly for uGUI.
+  ============================================================================
+
+  THE SETTLED LOOK — "LETTERPRESS", light and dark.
+
+  Rounds 1-2 settled the STRUCTURE (see feed-ux-prototype.html and the branch
+  history): masthead icons, a full-width lead then a 2-column grid, lead + 6
+  then the archive, and everything opens a detail page with no exceptions.
+  Rounds 3-4 settled the SURFACE, which is what this file now shows.
+
+  ROUND 3 — HOW DARK IS DARK, AND HOW LOUD IS "GAME-LIKE"?
+    Three tones were built across the whole app, each in light and dark:
+      A  Broadsheet     fun 1/3  round 2 + a dark theme + micro-motion only
+      B  Late Edition   fun 2/3  newspaper bones, print-shop swagger
+      C  Arcade Edition fun 3/3  the newspaper becomes the cabinet
+    Verdict: "B mostly. A is too bland, C is too arcadey. Make it generally
+    feel a bit more newspaper-y." All three are in this branch's history at
+    commit 2c8a7573, and they are the primary source.
+
+  ROUND 4 — D, "LETTERPRESS" (commit eb0ca995), which is what survived.
+    Kept from B, because that was the part that landed: cream/ink, the rubber
+    PLAY stamp on the lead, letterpress offset buttons, the double section
+    rule, the stamped verdict and the odometer score.
+
+    Cut, and why:
+      - the STRIKETHROUGH on played headlines. It marks a headline as
+        retracted, which is precisely the wrong newspaper connotation.
+      - the TICKER. Fun, but it moved without carrying anything. Replaced by
+        a static folio row with the same three facts.
+      - the CARD NUMBERS. Numbering stories is a listicle tell, not a
+        newspaper one, so they went with the ticker.
+      - C's CATALOGUE-COMPLETION BAR. It was the one place round 3 leaned
+        toward the "not in v1" list, and it did not earn the line.
+
+    Added, all of it print furniture that carries information rather than
+    motion: a red kicker rule over the lead, a byline, a drop cap, column
+    rules between the grid cells, and a folio at the foot.
+
+  THE CONSTRAINT THAT SHAPED THE WHOLE SURFACE
+    The obvious levers for game-feel are meta-progression, and they were all
+    argued out in rounds 1-2 as not-in-v1: STREAKS (ROADMAP), SHARE (no social
+    in v1, needs a native plugin), a CALENDAR archive (a searchable list is
+    what is wanted), DIFFICULTY CHIPS (needs the LLM to self-assess).
+    So this design adds NO new persisted number. The only numbers on screen
+    are best-score and play-count, which the app-local store already owes us.
+    If a future change looks like it is promising progression, that is a bug
+    in the change, not a licence to add the feature.
+
+  DESIGN CALLS WORTH RE-ARGUING IN UNITY
+    1. PLAYED ART IS GREYSCALE, AND THAT IS CONDITIONAL ON THE TICK.
+       Round 2 rejected greyscale because a desaturated thumbnail reads as a
+       broken image. The tick badge is what buys the reversal: it says
+       "played" where greyscale alone said "failed to load". If the tick is
+       ever dropped, the greyscale has to go back to colour-at-42% with it.
+       They are ONE decision, not two. Note also that the grey goes on the
+       ART, not on its container — filtering the container fades the badge
+       along with the image it exists to explain.
+    2. THE DROP CAP is one line of CSS here and a real problem in uGUI.
+       TextMeshPro has no ::first-letter; it needs a hand-laid glyph or
+       <size>/<voffset> rich text. Decide whether it survives before it is
+       promised to anyone.
+    3. COLUMN RULES assume two columns. A trailing odd card drops its rule
+       via :nth-child(odd):last-child, which works here but is the kind of
+       thing a uGUI grid will not do for free — the layout has to know about
+       the rules rather than each cell painting its own.
+    4. TWO COLUMNS fit a one-sentence blurb only, so the feed truncates at the
+       first full stop. The generate skill should be writing a short first
+       sentence deliberately rather than the feed cutting prose mid-thought.
+    5. THE PAUSE BUTTON is a shell-owned top strip, above the game's own HUD.
+       On a phone where the game may want the whole screen for touch input
+       that strip is contended real estate — check it against a real game.
+    6. SETTINGS HAS NO SOUND/HAPTICS ROW. v1 is primitive-assets only
+       (RemoteGameGuard rejects a top-level Assets: block, which is where
+       audio lives), so there is nothing to turn down. Do not add a dead
+       slider to make the screen look fuller.
+
+  DARK MODE — THE THREE NON-OBVIOUS CALLS
+    1. THE RED. #c8102e is a masthead red on white and a muddy brown on a
+       near-black ground. Dark lifts it to #e8574a rather than reusing the
+       light value. The accent is a token, not a constant.
+    2. INVERTED PRINT ELEMENTS DO NOT SURVIVE THE FLIP LITERALLY. The hard
+       "letterpress" ledge under the lead art is ink-on-cream in light; reused
+       as-is in dark it reads as a white border rather than depth, so it takes
+       its own token (--offset) and becomes a raised brown.
+    3. PLAYED OPACITY IS NOT THE SAME NUMBER IN BOTH THEMES. Light dims to
+       50%, dark to 42% — on a dark ground the lighter value reads as "still
+       loading" rather than "already played".
+
+  SCHEMA CHANGES THIS DESIGN REQUIRES (unchanged since round 2 — the surface
+  work deliberately added nothing to this list)
+    manifest — Assembler.Remote.GameManifestEntry is
+      (Id, Title, Description, DescriptorUrl, Version) and additionally needs:
+        publishedAt   which daily drop it belongs to (feed ordering, dates)
+        thumbnail     card + detail art (sandbox auto-screenshot, SHIPPLAN #9)
+        channel       live | staging (SHIPPLAN #7 two-stage publish)
+    descriptor Game: block — InfoDto is (Title, Description) and needs:
+        HowToPlay     list of short strings, shown on detail + pause
+    EndGame behaviour — currently property-less, and needs:
+        Outcome       win | lose | (absent = plain "Game Over")
+        Score         value source, e.g. !var score
+    engine — GameController.EndGame() currently does Destroy(gameObject)
+      immediately. It must freeze, hand the outcome to the shell, and destroy
+      only once the player dismisses the card. IGameClock already has
+      Pause()/Resume()/TimeScale, so the freeze seam exists for pause too.
+    app-local store — best score and play count per game persist nowhere
+      today. Needed by BOTH the detail page and the game-over card, so it
+      lands even though the Profile screen is deferred.
+
+  LEGAL POSTURE BAKED IN (SHIPPLAN #11)
+    No outlet article body, no outlet photos. The headline is OUR rewrite of
+    the story hook, the blurb is copy about OUR game, the thumbnail is a
+    screenshot from the validation sandbox.
+
+  No persistence — played state, scores and settings are in memory and reset
+  on reload. Theme rides the URL (?theme=light|dark) so a screenshot is
+  reproducible. The yellow bar is prototype scaffolding, not the design.
+-->
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #0c0e12; color: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+    padding: 28px 16px 170px; overflow-y: auto;
+  }
+
+  /* ---- phone frame: density judgements are worthless at desktop width ---- */
+  .phone {
+    width: 390px; height: 844px; flex: none;
+    border-radius: 44px; border: 10px solid #000;
+    box-shadow: 0 30px 70px rgba(0,0,0,.65);
+    overflow: hidden; position: relative;
+    background: var(--paper);
+  }
+  .screen { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; background: var(--paper); color: var(--ink); }
+  .screen::-webkit-scrollbar { width: 0; }
+  .shot > svg { display: block; width: 100%; height: 100%; }
+
+  /* ======================================================================
+     TOKENS
+     Set on .phone so the launch overlay (a sibling of .screen) inherits too.
+
+       --paper    page ground        --surface  raised: sheets, cards, inputs
+       --sunk     inset: search, segmented controls
+       --ink      primary text       --ink-2 body       --ink-3 meta
+       --rule     hairline           --rule-hard  masthead / section rules
+       --accent   the masthead red   --accent-2   demoted second accent
+       --offset   the hard letterpress ledge (see dark-mode note 2)
+       --played-op  how far played art dims (see dark-mode note 3)
+     ====================================================================== */
+  .phone {
+    --serif: Georgia, "Times New Roman", serif;
+    --radius: 2px;
+  }
+  .phone[data-theme="light"] {
+    --paper:#faf6ee; --surface:#fffdf8; --sunk:#efe9dd;
+    --ink:#17130d; --ink-2:#4f483d; --ink-3:#948b7c;
+    --rule:#d8cfbe; --rule-hard:#17130d;
+    --accent:#b8121b; --accent-2:#8a7248; --on-accent:#fffdf8;
+    --good:#1d7a45; --bad:#b8121b; --stg:#9a6212;
+    --shot-bg:#e7e0d2; --played-op:.5;
+    --btn:#17130d; --btn-ink:#faf6ee;
+    --shadow:0 8px 24px rgba(35,26,12,.14);
+    --offset:#17130d;
+  }
+  .phone[data-theme="dark"] {
+    --paper:#13100b; --surface:#1c1811; --sunk:#241f16;
+    --ink:#f8f2e5; --ink-2:#b5aa96; --ink-3:#7b7263;
+    --rule:#312a1f; --rule-hard:#f8f2e5;
+    --accent:#e8574a; --accent-2:#c99a3f; --on-accent:#13100b;
+    --good:#5fd48a; --bad:#e8574a; --stg:#e0a33a;
+    --shot-bg:#241f16; --played-op:.42;
+    --btn:#f8f2e5; --btn-ink:#13100b;
+    --shadow:0 10px 34px rgba(0,0,0,.66);
+    --offset:#3d3527;
+  }
+
+  /* ======================================================================
+     SHARED CHROME — masthead, folio row, back-header
+     ====================================================================== */
+  /* The masthead and the folio row stick as ONE block; sticking each
+     separately collides them at top:0 on scroll. */
+  .headstack { position: sticky; top: 0; z-index: 12; background: var(--paper); }
+
+  .masthead {
+    background: var(--paper);
+    border-bottom: 3px solid var(--rule-hard); padding: 15px 20px 9px;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  }
+  .masthead h1 { margin: 0; font-family: var(--serif); font-size: 27px; letter-spacing: -.03em; font-weight: 700; color: var(--ink); }
+  .masthead h1 span { color: var(--accent); }
+  .masthead .acts { display: flex; align-items: center; gap: 3px; align-self: center; }
+  .masthead .acts button {
+    font: inherit; background: none; border: 0; cursor: pointer; padding: 5px 6px;
+    border-radius: 6px; color: var(--ink); line-height: 1; font-size: 17px;
+    transition: background .12s, transform .12s;
+  }
+  .masthead .acts button:active { background: var(--sunk); transform: scale(.9); }
+
+  /* The folio row carries the edition number, which nothing else on the page
+     shows. It replaced a scrolling ticker: same facts, no motion. */
+  .folio-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 7px 20px 8px; border-bottom: 1px solid var(--rule-hard);
+    font-family: var(--serif); font-size: 10px; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--ink-2); background: var(--paper);
+  }
+  .folio-row b { font-weight: 700; color: var(--accent); }
+
+  /* back-header for the pushed screens: detail / archive / settings */
+  .subhead {
+    position: sticky; top: 0; z-index: 12; background: var(--paper);
+    border-bottom: 1px solid var(--rule); padding: 14px 16px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .subhead button.back { font: inherit; background: none; border: 0; cursor: pointer; padding: 4px 6px 4px 0; font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .subhead h2 { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* ======================================================================
+     SCREEN — FEED
+     ====================================================================== */
+  .hero { padding: 20px 20px 22px; }
+  .kicker-rule {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    font-family: var(--serif); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent);
+  }
+  .kicker-rule::after { content: ''; flex: 1; height: 1px; background: var(--accent); opacity: .35; }
+  .hero h2 { margin: 0 0 10px; font-family: var(--serif); font-size: 30px; line-height: 1.08; letter-spacing: -.025em; font-weight: 700; cursor: pointer; color: var(--ink); }
+  .byline {
+    font-family: var(--serif); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+    padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--rule);
+  }
+  .hero .shot {
+    position: relative; width: 100%; height: 172px; border-radius: var(--radius);
+    overflow: hidden; margin-bottom: 16px; background: var(--shot-bg); cursor: pointer;
+    box-shadow: 4px 4px 0 var(--offset);
+  }
+  /* Drop cap. ::first-letter only takes a float on a block, hence the <p>.
+     See design call 2 — this is not free in uGUI. */
+  .hero p { margin: 0 0 17px; font-family: var(--serif); font-size: 15px; line-height: 1.52; color: var(--ink-2); }
+  .hero p::first-letter {
+    float: left; font-family: var(--serif); font-weight: 700; color: var(--accent);
+    font-size: 47px; line-height: .78; padding: 5px 8px 0 0;
+  }
+  .herometa { margin-top: 11px; text-align: center; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* the rubber stamp on the lead art — the one piece of pure fun that stayed */
+  .stamp {
+    position: absolute; right: 10px; bottom: 10px; z-index: 2;
+    border: 2.5px solid var(--accent); color: var(--accent);
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 800;
+    letter-spacing: .18em; padding: 6px 10px; border-radius: 3px;
+    transform: rotate(-8deg); background: rgba(255,255,255,.08);
+    backdrop-filter: blur(2px); animation: stamp .4s cubic-bezier(.2,1.5,.4,1) both;
+  }
+  @keyframes stamp { from { transform: rotate(-8deg) scale(2.4); opacity: 0; } to { transform: rotate(-8deg) scale(1); opacity: 1; } }
+
+  /* letterpress button: the ledge IS the depth, and pressing consumes it */
+  .playbtn {
+    width: 100%; border: 0; cursor: pointer; font-family: var(--serif);
+    background: var(--btn); color: var(--btn-ink); border-radius: var(--radius);
+    padding: 15px; font-size: 13px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .14em;
+    box-shadow: 4px 4px 0 var(--accent);
+    transition: transform .09s ease, box-shadow .09s ease;
+  }
+  .playbtn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--accent); }
+  .playbtn.done { background: var(--surface); color: var(--ink); box-shadow: 4px 4px 0 var(--rule), inset 0 0 0 1.5px var(--rule); }
+
+  .sechead {
+    margin: 0 20px 0; padding: 14px 0 7px;
+    border-bottom: 4px double var(--rule-hard);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .sechead h4 { margin: 0; font-family: var(--serif); font-size: 10.5px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; white-space: nowrap; color: var(--ink); }
+
+  /* A newspaper's grid is defined by the rules BETWEEN the cells, not by the
+     gutters — so the gap goes to zero and each cell draws its own rules. */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0 20px; }
+  /* Flex column + margin-top:auto on the meta keeps the meta lines aligned
+     across a row even when headlines wrap to different depths. */
+  .card { cursor: pointer; display: flex; flex-direction: column; position: relative; padding: 15px 0 17px; transition: transform .12s ease; }
+  .card:active { transform: translateY(2px); }
+  .card:nth-child(odd) { padding-right: 14px; border-right: 1px solid var(--rule); }
+  .card:nth-child(even) { padding-left: 14px; }
+  .card:nth-child(n+3) { border-top: 1px solid var(--rule); }
+  /* an odd-length grid would otherwise hang a rule with nothing beside it */
+  .card:nth-child(odd):last-child { border-right: 0; }
+  .card .shot { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: var(--shot-bg); margin-bottom: 9px; }
+  .card h3 { margin: 0 0 5px; font-family: var(--serif); font-size: 15.5px; line-height: 1.18; letter-spacing: -.012em; font-weight: 700; color: var(--ink); }
+  .card p { margin: 0 0 7px; font-family: var(--serif); font-size: 12.5px; line-height: 1.42; color: var(--ink-2); opacity: .82; }
+  .card .meta, .row .meta {
+    margin-top: auto; font-family: var(--serif); font-size: 9.5px; letter-spacing: .11em;
+    text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 6px;
+  }
+
+  /* PLAYED — greyed out, plus an explicit mark. See design call 1: the grey
+     goes on the ART, never on .shot, or the badge fades with the image. */
+  .card.played .shot > svg, .row.played .shot > svg, .detail.played .shot > svg {
+    filter: grayscale(1); opacity: var(--played-op);
+  }
+  .card.played h3, .row.played h3 { color: var(--ink-3); font-weight: 400; }
+  .card.played p { color: var(--ink-3); opacity: .62; }
+  .pmark {
+    position: absolute; top: 6px; left: 6px; z-index: 3;
+    width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ink); color: var(--paper); font-size: 10px; font-weight: 800; line-height: 1;
+  }
+  .row .pmark { width: 15px; height: 15px; font-size: 8.5px; top: 3px; left: 3px; }
+  .detail .pmark { top: 10px; left: 10px; width: 24px; height: 24px; font-size: 13px; }
+
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex: none; animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.78); } }
+  .stg { color: var(--stg); font-weight: 700; }
+
+  .seeall {
+    margin: 30px 20px 24px; width: calc(100% - 40px);
+    font-family: var(--serif); cursor: pointer; background: none;
+    border: 1.5px solid var(--rule-hard); border-radius: var(--radius); padding: 14px;
+    font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
+    box-shadow: 4px 4px 0 var(--rule);
+    transition: transform .09s ease, box-shadow .09s ease;
+  }
+  .seeall:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--rule); }
+
+  /* the foot-of-page folio — the last print tell, and free */
+  .folio-foot {
+    padding: 0 20px 34px; text-align: center;
+    font-family: var(--serif); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* ======================================================================
+     SCREEN — GAME DETAIL
+     The full pitch: whole description, authored how-to-play, local stats.
+     ====================================================================== */
+  .detail .shot { position: relative; width: 100%; height: 210px; overflow: hidden; background: var(--shot-bg); }
+  .detail .body { padding: 20px 20px 30px; }
+  .detail .kicker { font-family: var(--serif); font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
+  .detail h2 { margin: 0 0 12px; font-family: var(--serif); font-size: 29px; line-height: 1.1; letter-spacing: -.025em; font-weight: 700; color: var(--ink); }
+  .detail .desc { margin: 0 0 22px; font-family: var(--serif); font-size: 15px; line-height: 1.58; color: var(--ink-2); }
+
+  .htp { border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 15px 16px 16px; margin-bottom: 20px; background: var(--surface); }
+  .htp h5 { margin: 0 0 11px; font-family: var(--serif); font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  .htp ul { margin: 0; padding: 0; list-style: none; }
+  .htp li { font-size: 13.5px; line-height: 1.45; color: var(--ink); display: flex; gap: 9px; margin-bottom: 8px; }
+  .htp li:last-child { margin-bottom: 0; }
+  .htp li b { flex: none; color: var(--accent); font-weight: 800; font-size: 11px; line-height: 1.75; }
+
+  .statrow { display: flex; gap: 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin-bottom: 22px; }
+  .statrow div { flex: 1; padding: 13px 4px; text-align: center; }
+  .statrow div + div { border-left: 1px solid var(--rule); }
+  .statrow b { display: block; font-family: var(--serif); font-size: 19px; font-weight: 700; margin-bottom: 3px; color: var(--ink); }
+  .statrow span { font-family: var(--serif); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+  .statrow.unplayed b { color: var(--ink-3); opacity: .5; }
+
+  /* ======================================================================
+     SCREEN — ARCHIVE  (deliberately a dense LIST, not the feed's grid —
+     search results read as rows, and it contrasts with the front page)
+     ====================================================================== */
+  /* top offset clears the sticky .subhead above it */
+  .searchwrap { padding: 14px 16px 10px; position: sticky; top: 45px; z-index: 11; background: var(--paper); }
+  .search { display: flex; align-items: center; gap: 8px; background: var(--sunk); border-radius: 8px; padding: 10px 12px; }
+  .search input { flex: 1; font: inherit; font-size: 15px; border: 0; background: none; outline: none; color: var(--ink); min-width: 0; }
+  .search input::placeholder { color: var(--ink-3); }
+  .search .clr { font: inherit; border: 0; background: var(--ink-3); color: var(--paper); cursor: pointer; border-radius: 50%; width: 18px; height: 18px; line-height: 1; font-size: 12px; padding: 0; flex: none; }
+
+  .filter { display: flex; align-items: center; gap: 3px; padding: 4px 16px 10px; }
+  .filter button {
+    font-family: var(--serif); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    background: none; border: 0; cursor: pointer; color: var(--ink-3); padding: 5px 9px; border-radius: var(--radius); white-space: nowrap;
+  }
+  .filter button.on { color: var(--btn-ink); background: var(--btn); }
+  .archcount { padding: 0 16px 8px; font-family: var(--serif); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+
+  .row { display: flex; align-items: center; gap: 13px; padding: 11px 16px; cursor: pointer; border-bottom: 1px solid var(--rule); }
+  .row:active { background: var(--sunk); }
+  .row .shot { position: relative; width: 64px; height: 46px; flex: none; overflow: hidden; background: var(--shot-bg); }
+  .row .txt { min-width: 0; flex: 1; }
+  .row h3 { margin: 0 0 3px; font-family: var(--serif); font-size: 14.5px; line-height: 1.22; font-weight: 700; color: var(--ink); }
+  .row .chev { color: var(--ink-3); opacity: .5; font-size: 16px; flex: none; }
+
+  .empty { padding: 54px 24px; text-align: center; }
+  .empty b { display: block; font-family: var(--serif); font-size: 19px; margin-bottom: 6px; color: var(--ink); }
+  .empty span { font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ======================================================================
+     SCREEN — SETTINGS
+     Deliberately short. There is no sound/haptics row: v1 is primitive-assets
+     only, so there is nothing to turn down.
+     ====================================================================== */
+  .setgroup { margin: 22px 0 0; }
+  .setgroup > h5 { margin: 0 16px 8px; font-family: var(--serif); font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+  .setrow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-top: 1px solid var(--rule); background: var(--surface); }
+  .setgroup .setrow:last-child { border-bottom: 1px solid var(--rule); }
+  .setrow .txt { flex: 1; min-width: 0; }
+  .setrow b { display: block; font-size: 14.5px; font-weight: 600; margin-bottom: 2px; color: var(--ink); }
+  .setrow small { font-size: 11.5px; color: var(--ink-3); line-height: 1.4; display: block; }
+  .setrow.tap { cursor: pointer; }
+  .setrow.tap:active { background: var(--sunk); }
+  .setrow .chev { color: var(--ink-3); opacity: .5; font-size: 16px; }
+  .setrow .val { font-size: 13px; color: var(--ink-3); }
+  .setrow.danger b { color: var(--bad); }
+
+  .toggle { width: 46px; height: 28px; border-radius: 999px; background: var(--sunk); position: relative; cursor: pointer; border: 0; padding: 0; flex: none; transition: background .15s; }
+  .toggle i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--paper); box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .18s cubic-bezier(.3,1.4,.5,1); }
+  .toggle.on { background: var(--good); }
+  .toggle.on i { transform: translateX(18px); }
+
+  /* Theme lives in Settings as well as the dev bar — part of the dark-mode
+     question is where a player is expected to find the switch. */
+  .segctl { display: flex; gap: 0; background: var(--sunk); border-radius: 6px; padding: 2px; flex: none; }
+  .segctl button {
+    font-family: var(--serif); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    border: 0; background: none; color: var(--ink-3); cursor: pointer; padding: 6px 10px; border-radius: 4px;
+  }
+  .segctl button.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+
+  .about { padding: 24px 16px 40px; text-align: center; font-family: var(--serif); font-size: 11px; color: var(--ink-3); line-height: 1.7; }
+
+  /* ======================================================================
+     IN-GAME — launch, shell strip, pause sheet, game-over slip
+     ====================================================================== */
+  /* The overlay hosts three different things (download, game, sheet/card), so
+     the monospace + centring belongs to the download state only. */
+  .launch {
+    position: absolute; inset: 0; z-index: 50; background: #06070a; color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 32px;
+  }
+  .launch.loading { text-align: center; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .launch h4 { margin: 0; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; opacity: .55; font-weight: 600; }
+  .launch p { margin: 0; font-size: 13px; opacity: .5; }
+  .bar { width: 190px; height: 3px; background: #24262e; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .55s ease; }
+
+  .fakegame { position: absolute; inset: 0; background: #0d1018; display: flex; flex-direction: column; }
+  /* THE SHELL STRIP — the only chrome the app imposes on a running game. */
+  .gamestrip {
+    flex: none; display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px 12px; color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: .1em;
+  }
+  .gamestrip .pausebtn { font: inherit; font-size: 16px; background: rgba(255,255,255,.12); border: 0; color: #fff; cursor: pointer; border-radius: 8px; width: 34px; height: 34px; line-height: 1; flex: none; }
+  .gamestrip .hud { flex: 1; display: flex; justify-content: space-between; opacity: .75; }
+  .gamestrip .hud em { font-style: normal; opacity: .45; }
+  .playfield { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+  .playfield .stage { width: 220px; height: 220px; border: 1px solid #232838; border-radius: 12px; position: relative; overflow: hidden; }
+  .playfield .stage b { position: absolute; width: 26px; height: 26px; border-radius: 6px; background: #4ea1ff; left: 24px; top: 96px; animation: bob 1.1s ease-in-out infinite alternate; }
+  .playfield .stage s { position: absolute; width: 14px; height: 60px; background: #f2c94c; right: 26px; top: 70px; border-radius: 4px; }
+  @keyframes bob { to { transform: translate(150px, 20px); } }
+  .paused .stage b { animation-play-state: paused; }
+  /* Three end buttons = prototype scaffolding. A real game reaches !gameover
+     on its own; these exist to exercise all three game-over card states. */
+  .endbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 0 20px; }
+  .endbtns button { font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 10px 16px; font-weight: 700; font-size: 12px; background: rgba(255,255,255,.13); color: #fff; font-family: ui-monospace, Menlo, monospace; }
+
+  /* --- pause sheet --- */
+  .sheetwrap { position: absolute; inset: 0; z-index: 60; background: rgba(4,5,8,.72); display: flex; align-items: flex-end; animation: fade .18s ease both; }
+  @keyframes fade { from { opacity: 0; } }
+  .sheet {
+    width: 100%; background: var(--surface); color: var(--ink);
+    border-radius: 16px 16px 0 0; padding: 10px 16px 26px; max-height: 88%; overflow-y: auto;
+    border-top: 1px solid var(--rule); animation: rise .24s cubic-bezier(.2,.9,.3,1) both;
+  }
+  @keyframes rise { from { transform: translateY(18px); } }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 4px; background: var(--rule); margin: 4px auto 16px; }
+  .sheet h3 { margin: 0 0 3px; font-family: var(--serif); font-size: 21px; font-weight: 700; text-align: center; color: var(--ink); }
+  .sheet .sub { margin: 0 0 20px; text-align: center; font-family: var(--serif); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+  .sheet .btns { display: flex; flex-direction: column; gap: 9px; }
+  .sheet .htp { margin: 0 0 18px; }
+
+  .sheetbtn {
+    width: 100%; font-family: var(--serif); cursor: pointer; border: 0; border-radius: var(--radius);
+    padding: 15px; font-size: 15px; font-weight: 700; background: var(--sunk); color: var(--ink);
+    transition: transform .09s ease, box-shadow .09s ease;
+  }
+  .sheetbtn:active { transform: translateY(2px); }
+  .sheetbtn.primary { background: var(--btn); color: var(--btn-ink); box-shadow: 4px 4px 0 var(--accent); }
+  .sheetbtn.primary:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--accent); }
+  .sheetbtn.quiet { background: none; color: var(--ink-3); font-weight: 600; font-size: 14px; }
+
+  /* --- game over: a result slip --- */
+  .overwrap { position: absolute; inset: 0; z-index: 60; background: rgba(4,5,8,.8); display: flex; align-items: center; justify-content: center; padding: 22px; animation: fade .2s ease both; }
+  .over {
+    width: 100%; background: var(--surface); color: var(--ink);
+    border: 1px solid var(--rule-hard); border-radius: var(--radius);
+    box-shadow: 8px 8px 0 var(--accent);
+    padding: 24px 22px 22px; text-align: center;
+    animation: pop .26s cubic-bezier(.2,1.3,.4,1) both;
+  }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } }
+  .over .slipkicker {
+    font-family: var(--serif); font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--ink-3); padding-bottom: 11px; margin-bottom: 16px; border-bottom: 3px double var(--rule-hard);
+  }
+  .over .verdict {
+    display: inline-block; border: 3px solid currentColor; border-radius: 3px;
+    padding: 6px 16px; text-transform: uppercase; font-family: var(--serif);
+    font-size: 21px; font-weight: 800; letter-spacing: .1em; transform: rotate(-4deg);
+    animation: stampbig .38s cubic-bezier(.2,1.6,.4,1) both; margin-bottom: 13px;
+  }
+  @keyframes stampbig { from { transform: rotate(-4deg) scale(2.2); opacity: 0; } }
+  .over .verdict.win { color: var(--good); }
+  .over .verdict.lose { color: var(--bad); }
+  .over .gname { font-family: var(--serif); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 20px; }
+  .over .scorelbl { font-family: var(--serif); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 7px; }
+  .over .score { font-family: var(--serif); font-size: 50px; font-weight: 700; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .over .best { font-size: 12px; color: var(--ink-3); margin: 9px 0 22px; }
+  .over .best .new { color: var(--good); font-weight: 800; }
+  .over .noscore { font-size: 13.5px; color: var(--ink-3); line-height: 1.5; margin-bottom: 22px; }
+  .over .btns { display: flex; flex-direction: column; gap: 9px; padding-top: 4px; border-top: 1px solid var(--rule); }
+
+  /* ======================================================================
+     PROTOTYPE SCAFFOLDING — deliberately ugly, obviously not the design
+     ====================================================================== */
+  .devbar {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: stretch; gap: 2px;
+    background: #f2c94c; color: #1b1b1b; border-radius: 999px; padding: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; font-weight: 700; z-index: 100;
+  }
+  .devbar .tag { display: flex; align-items: center; padding: 0 12px; letter-spacing: .1em; }
+  .devbar .state { display: flex; align-items: center; padding: 0 12px; border-left: 2px solid rgba(0,0,0,.2); font-weight: 500; opacity: .85; white-space: nowrap; }
+  .devbar button {
+    font: inherit; border: 0; cursor: pointer; border-radius: 999px; padding: 8px 13px;
+    background: transparent; color: #1b1b1b; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
+  }
+  .devbar button.on, .devbar button.solid { background: #1b1b1b; color: #f2c94c; box-shadow: none; }
+
+  .notes { max-width: 470px; font-size: 12.5px; line-height: 1.6; color: #8b93a1; }
+  .notes h5 { margin: 14px 0 6px; color: #dfe4ec; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .notes h5:first-child { margin-top: 0; }
+  .notes ul { margin: 0; padding-left: 18px; }
+  .notes li { margin-bottom: 5px; }
+  .notes b { color: #dfe4ec; }
+  .notes code { font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone" data-theme="light"><div class="screen" id="screen"></div></div>
+<div class="notes" id="notes"></div>
+<div class="devbar" id="devbar"></div>
+
+<script>
+// ===========================================================================
+// MOCK DATA
+// Mirrors GameManifestEntry + the fields the manifest/descriptor do not carry
+// yet (publishedAt, thumbnail, channel, HowToPlay). Headlines are OUR rewrites
+// of the story hook, never the outlet's own text.
+// `desc` is the descriptor's Game.Description in full — the feed truncates it
+// to the first sentence, the detail page shows all of it.
+// ===========================================================================
+const TODAY = '2026-07-31';
+
+const GAMES = [
+  { id:'capsule-catch', title:'Mars Sample Capsule Comes Home', date:'2026-07-31', time:'07:02', played:false, channel:'live',
+    desc:'A decade of Martian rock is falling through the atmosphere at four kilometres a second. Bleed off speed at the right moment and put the capsule inside the recovery ring before it runs out of sky.',
+    howToPlay:['Drag anywhere to steer the capsule','Hold to deploy the drogue chute','Land inside the ring — tighter scores higher'] },
+  { id:'grid-balance', title:'Heatwave Pushes The Grid To A Record', date:'2026-07-30', time:'06:58', played:false, channel:'live',
+    desc:'Demand is climbing faster than anything you can switch on. Juggle supply against load across the afternoon peak — brown out once and the run is over.',
+    howToPlay:['Tap a station to bring it online','Swipe down on a station to throttle it back','Keep the frequency needle out of the red'] },
+  { id:'rate-runner', title:'Central Bank Holds Rates A Fifth Time', date:'2026-07-29', time:'07:11', played:true, channel:'live',
+    desc:'Twelve quarters, one dial, and an inflation band you are not allowed to leave. Nudge too hard and you overshoot; nudge too softly and it drifts.',
+    howToPlay:['Drag the dial up or down to move rates','Tap Commit to lock the quarter in','Stay inside the band for twelve quarters to win'] },
+  { id:'spot-kick', title:'Euro Final Decided On Penalties', date:'2026-07-28', time:'06:49', played:true, channel:'live',
+    desc:'Five kicks, no second chances. Read which way the keeper is leaning, then commit — hesitate and the power meter drains.',
+    howToPlay:['Swipe in the direction you want to strike','Swipe length sets the power','Release before the meter empties'] },
+  { id:'swarm-sweep', title:'Bee Swarm Halts A City Centre Tram', date:'2026-07-27', time:'07:04', played:false, channel:'live',
+    desc:'Thirty thousand bees have settled on the overhead line and the next tram is four minutes out. Coax the swarm off the wire without scattering it.',
+    howToPlay:['Drag to move the smoke plume','The swarm drifts away from smoke, slowly','Clear the line before the tram arrives'] },
+  { id:'packet-patch', title:'Sea Cable Fault Slows Half A Continent', date:'2026-07-26', time:'06:55', played:true, channel:'live',
+    desc:'A trawler has cut the trunk line and traffic is stacking up at the landing station. Reroute around the break while the queue grows behind you.',
+    howToPlay:['Tap two nodes to lay a route between them','Tap a route again to tear it down','Score is total latency — lower is better'] },
+  { id:'thin-air', title:'A Marathon At Four Thousand Metres', date:'2026-07-25', time:'07:20', played:false, channel:'live',
+    desc:'The air holds about sixty per cent of the oxygen your legs expect. Pace the climb, spend your reserve on the gradients that matter, and finish standing.',
+    howToPlay:['Hold the right of the screen to push the pace','Release to recover','Empty the oxygen bar and you stall'] },
+  { id:'dig-site', title:'Shipwreck Found Under A Car Park', date:'2026-07-24', time:'06:47', played:true, channel:'live',
+    desc:'A fifteenth-century hull is sitting two metres under level three of a multi-storey. Excavate the grid without putting a trowel through the timbers.',
+    howToPlay:['Tap a cell to excavate it','Hold to brush instead of dig — slower, safer','Crack three timbers and the dig is shut down'] },
+  { id:'boarding-group', title:'Airline Rewrites Its Boarding Order', date:'2026-07-23', time:'07:08', played:false, channel:'live',
+    desc:'Someone in revenue management has decided the aisle is a solved problem. Seat the aircraft in as few moves as you can before tempers go.',
+    howToPlay:['Drag a passenger to their seat','Passengers block the aisle while stowing bags','Fill the cabin before the rage meter tops out'] },
+  { id:'firebreak', title:'Crews Contain The Ridge Fire', date:'2026-07-22', time:'06:52', played:true, channel:'live',
+    desc:'The wind is due to turn in ninety seconds and the ridge is the last line worth holding. Cut breaks ahead of the front, not behind it.',
+    howToPlay:['Drag to cut a firebreak line','Breaks take time to clear — start early','Hold the ridge for sixty seconds to win'] },
+  { id:'sun-chase', title:'Solar Beats Coal For The First Time', date:'2026-07-21', time:'07:15', played:false, channel:'live',
+    desc:'Daylight moves west across the map faster than your array can follow. Chase the light, bank charge, and be somewhere useful at dusk.',
+    howToPlay:['Tap a tile to move the array there','Charge accrues faster in full sun','Bank the most charge before dusk'] },
+  { id:'detour', title:'Old Town Closes To Cars', date:'2026-07-20', time:'06:44', played:true, channel:'live',
+    desc:'Six streets went pedestrian at midnight and nobody told the traffic. Reroute the flow before the queues reach the ring road.',
+    howToPlay:['Drag to place a diversion arrow','Tap an arrow to rotate it','Every wrong turn adds to the queue'] },
+  { id:'blitz-clock', title:'Teen Challenger Topples The Champion', date:'2026-07-19', time:'07:01', played:true, channel:'live',
+    desc:'Three minutes each and no increment. Trade thinking time for position and hope the position is worth it when the flag falls.',
+    howToPlay:['Tap a piece, then tap its destination','Your clock runs while you think','Win on the board or on time'] },
+  { id:'comet-trail', title:'A Comet Visible Without A Telescope', date:'2026-07-18', time:'06:59', played:true, channel:'live',
+    desc:'It will not be back for six thousand years and it is drifting out of frame. Track the tail through the exposure without losing the head.',
+    howToPlay:['Drag to pan the telescope','Keep the head inside the reticle','Score is total seconds tracked'] },
+  // Staging = published by the daemon, not yet promoted. Dev-mode only (SHIPPLAN #7).
+  { id:'tide-line', title:'Record Tide Reshapes The Estuary', date:'2026-07-31', time:'09:40', played:false, channel:'staging',
+    desc:'The highest water in forty years is rearranging a sandbank that a shipping lane depends on. Bank the bars before the next surge takes them.',
+    howToPlay:['Drag sediment along the channel','Bars settle where the current slows','Survive three surges'] },
+];
+
+// How many games the feed shows below the lead before deferring to the archive.
+const FEED_LIMIT = 6;
+
+// ===========================================================================
+// STATE — in memory only, no persistence (that is what the prototype checks).
+// Theme rides the URL so a screenshot is reproducible.
+// ===========================================================================
+const params = new URLSearchParams(location.search);
+const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+const state = {
+  theme: ['light','dark'].includes(params.get('theme')) ? params.get('theme') : (prefersDark ? 'dark' : 'light'),
+  // id -> { plays, best } — stands in for the app-local store that does not exist yet.
+  stats: {},
+  devMode: false,
+  filter: 'all',            // 'all' | 'unplayed' | 'played' — archive screen only
+  search: '',
+  // { name:'feed'|'detail'|'archive'|'settings', id?, from? } — `from` is the
+  // screen the back arrow returns to, so detail opened from the archive goes
+  // back to the archive rather than dumping you on the feed.
+  route: { name: 'feed' },
+};
+
+// Seed a plausible history so the detail page and archive are not all empty states.
+function seedStats() {
+  state.stats = {};
+  GAMES.filter(g => g.played).forEach((g, i) => {
+    state.stats[g.id] = { plays: 1 + (i % 3), best: 2400 + ((hash(g.id) % 90) * 97) };
+  });
+}
+
+const SCREEN_NAMES = { feed: 'Feed', archive: 'Archive', settings: 'Settings' };
+
+function syncUrl() {
+  history.replaceState(null, '', `${location.pathname}?theme=${state.theme}`);
+}
+
+// ===========================================================================
+// THUMBNAILS — stand-ins for the sandbox auto-screenshot (SHIPPLAN #9).
+// Deterministic per id, primitive shapes to match primitive-asset games.
+// The ground shifts with the theme so a fake screenshot does not flatter
+// light mode and wreck dark.
+// ===========================================================================
+function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function thumb(id) {
+  const h = hash(id);
+  // Small LCG so successive shapes decorrelate — a plain hash of (id + i) clusters them.
+  let seed = h || 1;
+  const rnd = () => (seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296;
+  const hue = h % 360, hue2 = (hue + 40 + h % 60) % 360;
+  const groundL = state.theme === 'dark' ? [18, 9] : [24, 13];
+  const shapes = [];
+  for (let i = 0; i < 11; i++) {
+    const x = 2 + rnd() * 96, y = 2 + rnd() * 96, s = 5 + rnd() * 17, r = rnd();
+    shapes.push((r < 0.34)
+      ? `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(s / 2).toFixed(1)}" fill="hsl(${hue2} 82% ${(56 + rnd() * 20).toFixed(0)}%)" opacity=".9"/>`
+      : `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${s.toFixed(1)}" height="${(s * (0.5 + rnd())).toFixed(1)}" rx="2" fill="hsl(${hue2} 78% ${(48 + rnd() * 28).toFixed(0)}%)" opacity=".88"/>`);
+  }
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="g${h}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="hsl(${hue} 45% ${groundL[0]}%)"/><stop offset="1" stop-color="hsl(${hue2} 55% ${groundL[1]}%)"/>
+    </linearGradient></defs>
+    <rect width="100" height="100" fill="url(#g${h})"/>${shapes.join('')}</svg>`;
+}
+
+// ===========================================================================
+// HELPERS
+// ===========================================================================
+const statsFor = id => state.stats[id] ?? { plays: 0, best: 0 };
+const isPlayed = g => statsFor(g.id).plays > 0;
+const visible = () => GAMES.filter(g => state.devMode || g.channel === 'live');
+const sorted = () => [...visible()].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+// The lead is always the newest *promoted* game — a staging entry must never
+// take the "Today's game" slot just because the daemon published it later.
+const leadGame = () => sorted().find(g => g.channel === 'live');
+const gameById = id => GAMES.find(g => g.id === id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const daysAgo = date => Math.round((new Date(TODAY) - new Date(date)) / 864e5);
+const longDate = date => new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+const fullDate = date => new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+function relDay(date) {
+  const d = daysAgo(date);
+  return d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d < 7 ? `${d} days ago` : longDate(date);
+}
+const num = n => n.toLocaleString('en-GB');
+const editionNo = () => 214 - daysAgo(TODAY);
+const tickMark = '<span class="pmark">&#10003;</span>';
+
+// Pushing detail records where it was pushed FROM so the back arrow is honest.
+// Detail -> detail ("Next game") keeps the original origin rather than stacking.
+function go(name, id) {
+  const from = name !== 'detail' ? 'feed'
+    : state.route.name === 'detail' ? state.route.from
+    : state.route.name;
+  state.route = { name, id, from };
+  document.getElementById('screen').scrollTop = 0;
+  render();
+}
+
+// ===========================================================================
+// SHARED FRAGMENTS
+// ===========================================================================
+// The whole of navigation: two icons, only ever on the feed. Everything else
+// is a pushed screen that backs out to wherever it was opened from.
+function Masthead() {
+  const unplayed = visible().filter(g => !isPlayed(g)).length;
+  return `<div class="headstack">
+      <div class="masthead">
+        <h1>The Daily <span>Build</span></h1>
+        <div class="acts">
+          <button data-go="archive" title="Archive">&#128269;</button>
+          <button data-go="settings" title="Settings">&#9881;&#65039;</button>
+        </div>
+      </div>
+      <div class="folio-row">
+        <span>No. ${editionNo()}</span>
+        <span>${fullDate(TODAY)}</span>
+        <span>${unplayed ? `<b>${unplayed} new</b>` : 'All played'}</span>
+      </div>
+    </div>`;
+}
+
+// The back button names its destination rather than saying "Back", so the
+// return path is legible before you commit to it.
+function SubHead(title) {
+  const back = SCREEN_NAMES[state.route.from] ?? 'Feed';
+  return `<div class="subhead">
+    <button class="back" data-back="1">&#8249;&nbsp;${back}</button>
+    <h2>${title}</h2>
+  </div>`;
+}
+
+function HowToPlay(game, heading = 'How to play') {
+  return `<div class="htp">
+    <h5>${heading}</h5>
+    <ul>${game.howToPlay.map(l => `<li><b>&#9679;</b><span>${esc(l)}</span></li>`).join('')}</ul>
+  </div>`;
+}
+
+// Played state is carried by the tick badge on the art, so the meta line does
+// not repeat the tick — it just names the state and the date.
+function MetaBits(g) {
+  return `${isPlayed(g) ? 'Played' : '<span class="dot"></span> New'}
+    <span>&middot;</span><span>${relDay(g.date)}</span>
+    ${g.channel === 'staging' ? '<span class="stg">&middot; Staging</span>' : ''}`;
+}
+
+// ===========================================================================
+// SCREEN — FEED
+// Newspaper furniture: kicker rule, byline, stamped art, drop cap, column
+// rules, folio. All of it carries information rather than motion.
+// ===========================================================================
+function Feed() {
+  const lead = leadGame();
+  const rest = sorted().filter(g => g !== lead);
+  const shown = rest.slice(0, FEED_LIMIT);      // no filter here — that lives on the archive
+  const total = visible().length;
+  const leadPlayed = isPlayed(lead);
+
+  const card = g => `
+    <div class="card ${isPlayed(g) ? 'played' : ''}" data-detail="${g.id}">
+      <div class="shot">${thumb(g.id)}${isPlayed(g) ? tickMark : ''}</div>
+      <h3>${esc(g.title)}</h3>
+      <p>${esc(g.desc.split('.')[0])}.</p>
+      <div class="meta">${MetaBits(g)}</div>
+    </div>`;
+
+  return `${Masthead()}
+
+    <div class="hero">
+      <div class="kicker-rule">Today&rsquo;s game</div>
+      <h2 data-detail="${lead.id}">${esc(lead.title)}</h2>
+      <div class="byline">By the games desk &middot; Pressed ${lead.time}</div>
+      <div class="shot" data-detail="${lead.id}">${thumb(lead.id)}
+        ${leadPlayed ? tickMark : '<span class="stamp">PLAY</span>'}</div>
+      <p>${esc(lead.desc)}</p>
+      <button class="playbtn ${leadPlayed ? 'done' : ''}" data-detail="${lead.id}">
+        ${leadPlayed ? 'Run it again' : 'Play today&rsquo;s'}
+      </button>
+      ${leadPlayed ? '<div class="herometa">Played today</div>' : ''}
+    </div>
+
+    ${shown.length ? `
+      <div class="sechead"><h4>Earlier editions</h4></div>
+      <div class="grid">${shown.map(card).join('')}</div>` : ''}
+
+    <button class="seeall" data-go="archive">Open the archive &mdash; ${total} editions</button>
+    <div class="folio-foot">The Daily Build &middot; No. ${editionNo()} &middot; Page 1</div>`;
+}
+
+// ===========================================================================
+// SCREEN — GAME DETAIL
+// The full pitch: whole description, authored how-to-play, local stats.
+// ===========================================================================
+function Detail() {
+  const g = gameById(state.route.id);
+  const st = statsFor(g.id);
+  const played = st.plays > 0;
+
+  return `${SubHead(relDay(g.date))}
+    <div class="detail ${played ? 'played' : ''}">
+      <div class="shot">${thumb(g.id)}${played ? tickMark : ''}</div>
+      <div class="body">
+        <div class="kicker">
+          ${played ? 'Played' : '<span class="dot"></span> Not played'}
+          <span>&middot;</span><span>${longDate(g.date)}</span>
+          ${g.channel === 'staging' ? '<span class="stg">&middot; Staging</span>' : ''}
+        </div>
+        <h2>${esc(g.title)}</h2>
+        <p class="desc">${esc(g.desc)}</p>
+
+        ${HowToPlay(g)}
+
+        <div class="statrow ${played ? '' : 'unplayed'}">
+          <div><b>${played ? num(st.best) : '&mdash;'}</b><span>Best score</span></div>
+          <div><b>${played ? st.plays : '&mdash;'}</b><span>${st.plays === 1 ? 'Play' : 'Plays'}</span></div>
+        </div>
+
+        <button class="playbtn" data-play="${g.id}">${played ? 'Run it again' : 'Play it'}</button>
+      </div>
+    </div>`;
+}
+
+// ===========================================================================
+// SCREEN — ARCHIVE
+// A dense list, not the feed's grid: search results read as rows, and it
+// keeps the front page visually distinct from the catalogue.
+// ===========================================================================
+function Archive() {
+  const q = state.search.trim().toLowerCase();
+  const matched = sorted().filter(g =>
+    !q || g.title.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q));
+  const rows = state.filter === 'all' ? matched
+    : state.filter === 'unplayed' ? matched.filter(g => !isPlayed(g))
+    : matched.filter(g => isPlayed(g));
+
+  const b = (k, l) => `<button class="${state.filter === k ? 'on' : ''}" data-filter="${k}">${l}</button>`;
+
+  const row = g => `
+    <div class="row ${isPlayed(g) ? 'played' : ''}" data-detail="${g.id}">
+      <div class="shot">${thumb(g.id)}${isPlayed(g) ? tickMark : ''}</div>
+      <div class="txt">
+        <h3>${esc(g.title)}</h3>
+        <div class="meta">${MetaBits(g)}</div>
+      </div>
+      <span class="chev">&#8250;</span>
+    </div>`;
+
+  const body = rows.length
+    ? `<div class="archcount">${rows.length} of ${visible().length} games</div>${rows.map(row).join('')}`
+    : `<div class="empty">
+         <b>${q ? 'No matches.' : state.filter === 'unplayed' ? 'You&rsquo;re all caught up.' : 'Nothing here.'}</b>
+         <span>${q ? `Nothing in the archive matches &ldquo;${esc(state.search.trim())}&rdquo;.`
+                   : state.filter === 'unplayed' ? 'Every game in the archive has been played.' : 'Try another filter.'}</span>
+       </div>`;
+
+  return `${SubHead('Archive')}
+    <div class="searchwrap">
+      <div class="search">
+        <span>&#128269;</span>
+        <input id="q" type="search" placeholder="Search all games" value="${esc(state.search)}" autocomplete="off">
+        ${state.search ? '<button class="clr" data-clear="1">&times;</button>' : ''}
+      </div>
+    </div>
+    <div class="filter">${b('all', 'All')}${b('unplayed', 'Unplayed')}${b('played', 'Played')}</div>
+    ${body}
+    <div style="height:28px"></div>`;
+}
+
+// ===========================================================================
+// SCREEN — SETTINGS
+// ===========================================================================
+function Settings() {
+  const cacheMb = (visible().length * 0.04).toFixed(2);
+  const playedCount = GAMES.filter(isPlayed).length;
+  const seg = (k, l) => `<button class="${state.theme === k ? 'on' : ''}" data-theme="${k}">${l}</button>`;
+
+  return `${SubHead('Settings')}
+
+    <div class="setgroup">
+      <h5>Appearance</h5>
+      <div class="setrow">
+        <div class="txt">
+          <b>Theme</b>
+          <small>Dark is the default on a phone set to dark. There is no auto option in the prototype &mdash; decide whether the shipped app needs one.</small>
+        </div>
+        <div class="segctl">${seg('light', 'Light')}${seg('dark', 'Dark')}</div>
+      </div>
+    </div>
+
+    <div class="setgroup">
+      <h5>Content</h5>
+      <div class="setrow">
+        <div class="txt">
+          <b>Developer mode</b>
+          <small>Show games published to the staging channel before they are promoted.</small>
+        </div>
+        <button class="toggle ${state.devMode ? 'on' : ''}" data-dev="1"><i></i></button>
+      </div>
+    </div>
+
+    <div class="setgroup">
+      <h5>Storage</h5>
+      <div class="setrow tap" data-clearcache="1">
+        <div class="txt"><b>Clear downloaded games</b><small>Descriptors re-download next time you play.</small></div>
+        <span class="val">${cacheMb} MB</span>
+      </div>
+      <div class="setrow tap danger" data-resetplayed="1">
+        <div class="txt"><b>Reset play history</b><small>Clears played state, best scores and play counts.</small></div>
+        <span class="val">${playedCount} played</span>
+      </div>
+    </div>
+
+    <div class="setgroup">
+      <h5>About</h5>
+      <div class="setrow tap"><div class="txt"><b>Send feedback</b></div><span class="chev">&#8250;</span></div>
+      <div class="setrow tap"><div class="txt"><b>Privacy policy</b></div><span class="chev">&#8250;</span></div>
+      <div class="setrow"><div class="txt"><b>Version</b></div><span class="val">0.1.0 (build 41)</span></div>
+    </div>
+
+    <div class="about">The Daily Build<br>Games are generated daily and are not affiliated with any news outlet.</div>`;
+}
+
+// ===========================================================================
+// IN-GAME — download, play, pause, game over
+// The point is to feel the shape of the transitions, not to be a real game.
+// ===========================================================================
+let session = null;   // { id, paused }
+
+function launch(id) {
+  const game = gameById(id);
+  session = { id, paused: false };
+
+  const overlay = document.createElement('div');
+  overlay.className = 'launch loading';
+  overlay.id = 'overlay';
+  overlay.innerHTML = `
+    <h4>Setting the press</h4>
+    <div class="bar"><i></i></div>
+    <p>${esc(game.id)}/descriptor.yaml &middot; v3 &middot; 41 KB</p>`;
+  document.getElementById('phone').appendChild(overlay);
+  requestAnimationFrame(() => overlay.querySelector('.bar i').style.width = '100%');
+
+  setTimeout(() => renderGame(), 750);
+}
+
+// The pause sheet and the game-over slip both sit OVER a frozen game, never over
+// a blank screen — GameController.EndGame() is to stop the clock and leave the
+// final frame standing rather than Destroy() it. `over` is the game-over slip.
+function renderGame(over) {
+  const overlay = document.getElementById('overlay');
+  if (!overlay) return;
+  const frozen = session.paused || over;
+  overlay.className = 'launch';
+  overlay.innerHTML = `
+    <div class="fakegame ${frozen ? 'paused' : ''}">
+      <div class="gamestrip">
+        <button class="pausebtn" data-pause="1" ${over ? 'disabled' : ''}>&#10073;&#10073;</button>
+        <div class="hud"><span><em>SCORE</em> 1,240</span><span><em>TIME</em> 0:45</span></div>
+      </div>
+      <div class="playfield">
+        <div class="stage"><b></b><s></s></div>
+        ${over ? '' : `<div class="endbtns">
+          <button data-end="win">Reach !gameover (win)</button>
+          <button data-end="lose">Reach !gameover (lose)</button>
+          <button data-end="none">Legacy descriptor (no outcome)</button>
+        </div>`}
+      </div>
+    </div>
+    ${session.paused ? PauseSheet() : ''}
+    ${over ?? ''}`;
+
+  if (over) countUp();
+}
+
+// --- pause sheet -----------------------------------------------------------
+// Resume / Restart / How to play / Quit. "How to play" reuses the detail
+// page's block verbatim — the single strongest argument for authoring it in
+// the descriptor rather than deriving it.
+function PauseSheet() {
+  const g = gameById(session.id);
+  return `<div class="sheetwrap" data-resume="1">
+    <div class="sheet" data-stop="1">
+      <div class="grab"></div>
+      <h3>Held for press</h3>
+      <p class="sub">${esc(g.title)}</p>
+      ${HowToPlay(g, 'Controls')}
+      <div class="btns">
+        <button class="sheetbtn primary" data-resume="1">Resume</button>
+        <button class="sheetbtn" data-restart="1">Restart</button>
+        <button class="sheetbtn quiet" data-quit="1">Quit to feed</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// --- game over: a result slip ----------------------------------------------
+// Three states, matching the EndGame schema decision:
+//   outcome 'win'  -> "Won" stamp + score
+//   outcome 'lose' -> "Lost" stamp + score
+//   outcome null   -> "Over" stamp, no score (every existing descriptor)
+function endRun(outcome) {
+  const g = gameById(session.id);
+  const st = statsFor(g.id);
+  const score = outcome ? Math.round(400 + Math.random() * 9600) : 0;
+  const isBest = outcome && score > st.best;
+
+  state.stats[g.id] = { plays: st.plays + 1, best: Math.max(st.best, score) };
+
+  // "Next game" = newest unplayed, excluding this one. Absent when caught up.
+  // It opens that game's DETAIL page rather than launching it: the detail page
+  // is where the controls are taught, and an autoplay-style direct launch
+  // trades one tap for a confused first ten seconds in an unfamiliar game.
+  const next = sorted().find(x => x.id !== g.id && !isPlayed(x));
+  const best = state.stats[g.id].best;
+
+  renderGame(`
+    <div class="overwrap">
+      <div class="over">
+        <div class="slipkicker">Late result &middot; ${longDate(g.date)}</div>
+        <div class="verdict ${outcome ?? ''}">${outcome === 'win' ? 'Won' : outcome === 'lose' ? 'Lost' : 'Over'}</div>
+        <div class="gname">${esc(g.title)}</div>
+
+        ${outcome ? `
+          <div class="scorelbl">Final score</div>
+          <div class="score" data-count="${score}">0</div>
+          <div class="best">${isBest
+            ? '<span class="new">&#10022; New best</span>'
+            : `Best ${num(best)}`}</div>`
+          : `<div class="noscore">This game doesn&rsquo;t report a score.<br>Add <code>Score:</code> to its <code>!gameover</code> to show one.</div>`}
+
+        <div class="btns">
+          <button class="sheetbtn primary" data-restart="1">Run it again</button>
+          ${next ? `<button class="sheetbtn" data-next="${next.id}">Next game &#9656;</button>` : ''}
+          <button class="sheetbtn quiet" data-quit="1">Back to the feed</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+// The score arrives rather than appearing. Cheap in uGUI too — it is a
+// coroutine over a Text component.
+function countUp() {
+  const el = document.querySelector('[data-count]');
+  if (!el) return;
+  const target = +el.dataset.count, t0 = performance.now(), dur = 620;
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    el.textContent = num(Math.round(target * (1 - Math.pow(1 - p, 3))));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function closeGame() {
+  document.getElementById('overlay')?.remove();
+  session = null;
+}
+
+// ===========================================================================
+// RENDER
+// ===========================================================================
+function render() {
+  document.getElementById('phone').dataset.theme = state.theme;
+
+  const body = state.route.name === 'detail' ? Detail()
+    : state.route.name === 'archive' ? Archive()
+    : state.route.name === 'settings' ? Settings()
+    : Feed();
+
+  document.getElementById('screen').innerHTML = body;
+
+  document.getElementById('notes').innerHTML = `
+    <h5>The settled look &mdash; &ldquo;Letterpress&rdquo;, light and dark</h5>
+    <p style="margin:0 0 8px">Rounds 1&ndash;2 settled the structure; rounds 3&ndash;4 settled the surface. Three tones (Broadsheet / Late Edition / Arcade Edition) were built across the whole app in both themes; this is what survived the feedback. All three losers are in this branch's history at <code>2c8a7573</code>, and they are the primary source.</p>
+    <h5>What survived, and what it cost</h5>
+    <ul>
+      <li><b>Kept:</b> cream/ink, the rubber PLAY stamp, letterpress offset buttons, the double section rule, the stamped verdict and the odometer score.</li>
+      <li><b>Cut:</b> the strikethrough on played headlines (it marks a headline as <i>retracted</i>), the ticker (moved without carrying anything), the card numbers (a listicle tell), and the catalogue-completion bar (meta-progression wearing a hat).</li>
+      <li><b>Added:</b> a red kicker rule, a byline, a drop cap, column rules between the grid cells, and a folio at the foot &mdash; print furniture that carries information rather than motion.</li>
+    </ul>
+    <h5>Two calls to re-argue in Unity</h5>
+    <ul>
+      <li><b>Greyscale on played art is conditional on the tick.</b> Round 2 rejected greyscale because it reads as a broken image; the badge is what says &ldquo;played&rdquo; instead of &ldquo;failed to load&rdquo;. Drop the tick and the greyscale has to go back to colour-at-42% with it &mdash; one decision, not two.</li>
+      <li><b>The drop cap is not free.</b> TextMeshPro has no <code>::first-letter</code>; it needs a hand-laid glyph or <code>&lt;size&gt;</code>/<code>&lt;voffset&gt;</code> rich text. Decide before it is promised.</li>
+    </ul>
+    <h5>No new persisted numbers</h5>
+    <ul>
+      <li>Streaks, share, a calendar archive and difficulty chips were all argued out in rounds 1&ndash;2. The only numbers on screen are best-score and play-count, which the app-local store already owes us.</li>
+    </ul>
+    <h5>Blocked on schema</h5>
+    <ul>
+      <li><code>GameManifestEntry</code> needs <code>publishedAt</code>, <code>thumbnail</code>, <code>channel</code>.</li>
+      <li><code>InfoDto</code> needs <code>HowToPlay</code>; <code>EndGame</code> needs <code>Outcome</code> + <code>Score</code>.</li>
+      <li><code>GameController.EndGame()</code> must freeze rather than <code>Destroy</code> immediately.</li>
+      <li>Best score / play count persist nowhere &mdash; an app-local store is needed even though Profile is deferred.</li>
+    </ul>`;
+
+  document.getElementById('devbar').innerHTML = `
+    <div class="tag">PROTOTYPE</div>
+    <button data-toggletheme="1" class="${state.theme === 'dark' ? 'on' : ''}">${state.theme === 'dark' ? '&#9789; DARK' : '&#9788; LIGHT'}</button>
+    <div class="state">${GAMES.filter(isPlayed).length}/${visible().length} played</div>
+    <button class="solid" data-reset="1">RESET</button>`;
+
+  // Surface the full state after every action, per the prototype rules.
+  console.log('[prototype state]', {
+    theme: state.theme, route: state.route, devMode: state.devMode,
+    filter: state.filter, search: state.search,
+    stats: JSON.parse(JSON.stringify(state.stats)),
+  });
+}
+
+// ===========================================================================
+// INPUT
+// ===========================================================================
+function setTheme(v) { state.theme = v; syncUrl(); render(); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-play],[data-detail],[data-go],[data-back],[data-reset],[data-filter],[data-clear],[data-dev],[data-clearcache],[data-resetplayed],[data-pause],[data-resume],[data-restart],[data-quit],[data-next],[data-end],[data-stop],[data-toggletheme],[data-theme]');
+  if (!t) return;
+  const d = t.dataset;
+
+  // Theme
+  if (d.toggletheme)  return setTheme(state.theme === 'dark' ? 'light' : 'dark');
+  if (d.theme)        return setTheme(d.theme);
+
+  // In-game
+  if (d.end)      return endRun(d.end === 'none' ? null : d.end);
+  if (d.pause)    { session.paused = true;  return renderGame(); }
+  if (d.stop)     return;                                    // taps inside the sheet must not dismiss it
+  if (d.resume)   { session.paused = false; return renderGame(); }
+  if (d.restart)  { const id = session.id; closeGame(); return launch(id); }
+  if (d.quit)     { closeGame(); return go('feed'); }
+  if (d.next)     { closeGame(); return go('detail', d.next); }
+  if (d.play)     return launch(d.play);
+
+  // Navigation
+  if (d.detail)   return go('detail', d.detail);
+  if (d.go)       return go(d.go);
+  if (d.back)     return go(state.route.from ?? 'feed');
+
+  // Settings
+  if (d.dev)          { state.devMode = !state.devMode; return render(); }
+  if (d.clearcache)   { return render(); }                   // stub — nothing is cached in a prototype
+  if (d.resetplayed)  { state.stats = {}; return render(); }
+
+  // Archive controls
+  if (d.filter)   { state.filter = d.filter; return render(); }
+  if (d.clear)    { state.search = ''; render(); return document.getElementById('q')?.focus(); }
+
+  // Scaffolding
+  if (d.reset)    { seedStats(); return render(); }
+});
+
+// Re-render on every keystroke, but restore focus + caret so typing survives it.
+document.addEventListener('input', e => {
+  if (e.target.id !== 'q') return;
+  state.search = e.target.value;
+  const caret = e.target.selectionStart;
+  render();
+  const q = document.getElementById('q');
+  if (q) { q.focus(); q.setSelectionRange(caret, caret); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea, [contenteditable]')) return;
+  if (e.key.toLowerCase() === 'd') setTheme(state.theme === 'dark' ? 'light' : 'dark');
+});
+
+syncUrl();
+seedStats();
+render();
+</script>
+</body>
+</html>
