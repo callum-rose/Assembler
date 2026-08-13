@@ -19,7 +19,7 @@ description: >
 You are authoring a declarative game definition as a YAML file. Each file describes one complete game.
 The game is built by composing **entities** out of **behaviours** drawn from a fixed catalogue.
 
-> **Three hard requirements before you write anything.**
+> **Four hard requirements before you write anything.**
 >
 > 1. **Read the behaviour catalogue.** The full list of available behaviours, their properties, and
 >    their trigger outputs lives in [`Assets/docs/Behaviours.md`](../../../Assets/docs/Behaviours.md).
@@ -36,7 +36,15 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 >    functions like `CellToWorld`, `Rotate2D`, `Clamp`, `RandomFloat`, `LerpColor`, callable by bare
 >    name from any expression with no `RegisterTypes` / `RegisterTypeStatics`. Prefer them over
 >    hand-rolling vector/scalar/random/colour math.
-> 3. **Verify the descriptor builds before handing it back.** A new or edited descriptor saved under
+> 3. **Read a flagship descriptor and match its bar.** Before authoring anything more involved than a
+>    single-mechanic demo, read **one of `Gridfall.yaml`, `HollowManorHeist.yaml`, `Riftwell.yaml`
+>    end to end** and model your structure and ambition on it. These are the three most systems-dense
+>    descriptors in the repo and they are the *default* reference — not the small single-feature
+>    demos, which show one behaviour wired minimally and are a poor model for a whole game. See
+>    **Reference descriptors** below for what to take from each, and for the complementary
+>    descriptors to open when your game has a specific shape (grid board, vehicle physics, endless
+>    content, …).
+> 4. **Verify the descriptor builds before handing it back.** A new or edited descriptor saved under
 >    `Assets/ExampleGameDescriptors/` is **automatically discovered** by the in-editor **`Assembler >
 >    Game Launcher`** window (it lists every `*.yaml` in that folder) — there is **no** per-game
 >    `MenuItem` to register any more, so do **not** edit `Builder.cs`. Instead, run the headless
@@ -59,6 +67,89 @@ layer, or the runtime. Treat the descriptor as a self-contained authoring format
 
 ---
 
+## Reference descriptors — start from the complex ones
+
+`Assets/ExampleGameDescriptors/` holds ~50 files, and most of them are **single-feature demos**
+(`TriggerStayDemo`, `LookAtDemo`, `CameraRigsDemo`, …). A demo shows one behaviour wired minimally;
+it is the right thing to check when you need that one behaviour's exact property names, and the
+wrong thing to imitate when you are building a game. **Default to the flagships below.**
+
+### The three flagships — read one in full before authoring
+
+| File | ~Lines | What to take from it |
+|---|---|---|
+| [`Gridfall.yaml`](../../../Assets/ExampleGameDescriptors/Gridfall.yaml) | 2250 | **Derived content and pointer-driven building.** A 3D tower defence whose board is *computed*, not hand-painted: an expression walks the authored lane waypoints cell-by-cell into a path-cell list, and that one list drives both the tile spawning (a `* list loop trigger`) and the "can't build on the lane" rule. Drag-to-place via `ui drag source` → `screen to world` → a cell-snap expression, with a live ghost plate (green/amber/red) and a screen-band guard so drops over the UI rail are ignored. Tap-to-upgrade as an entity-tag broadcast where each tower's own `condition gate` decides if it was the one tapped. One tower template × five weapons and one creep template × six kinds, all by `Parameters:`. A `Records:` wave table *is* the campaign. |
+| [`HollowManorHeist.yaml`](../../../Assets/ExampleGameDescriptors/HollowManorHeist.yaml) | 1430 | **Agent AI and a global state variable everything reads.** Guards are one template: `perceive` (vision cone + line of sight) writes a per-instance blackboard, a `state machine` reads it, and *two* locomotion behaviours (`patrol` and `navigate`) both emit desired velocities into per-instance variables that a per-frame selector picks between, feeding a single `velocity` integrator. A global 0..3 alarm is read live by guard speed, torch colour, the manor light, and a vcam `Priority` expression. Noise propagation as a `(sequence, position)` pair each guard acknowledges. Record-list inventory folded by LINQ, with carry weight feeding straight into the movement expression. `Navigation:` + wall obstacles; tag-targeted `set behaviour enabled` to kill every camera at once. |
+| [`Riftwell.yaml`](../../../Assets/ExampleGameDescriptors/Riftwell.yaml) | 2290 | **Trigger outputs as the data bus.** Five pointer gestures (tap / drag / fling / hold / pinch) where every verb's payload rides the listener edge as an `Outputs:` binding read back with `!output` — tap position into a spawner's velocity, swipe direction *and* distance into a projectile's heading and speed, collision `contact_point` / `other_velocity` / `other_position` into sparks, damage scaling and death-kick direction. `* variable changed trigger` with its `value`/`previous` outputs driving a "+N" readout and a damage-scaled camera shake. Record wave table, decaying combo multiplier, desktop/mobile parity on every gesture. |
+
+### What makes them the right model
+
+These three converge on the same architecture. Reproduce it:
+
+- **Data tables over hand-written entities.** A `Records:` schema plus a `!record [ … ]` literal *is*
+  the campaign/level/loot table; `Placements:` and expression-derived cell lists stamp out the board.
+  Author the rule once and let expressions, list-loop triggers and placements generate the content —
+  don't paste forty near-identical entity blocks.
+- **One template, many variants.** Stats, colours, and even the id of a template to spawn are
+  `!parameter` slots. Five weapon types and six enemy kinds come out of two templates.
+- **Two tiers of state.** Per-entity `Variables:` inside a template are the entity's blackboard
+  (mode, target, cooldown-until timestamps); global `Variables:` are the game's nervous system that
+  many unrelated behaviours read live.
+- **Gates are the logic.** `every frame trigger` → `condition gate` chains (and `state machine` for
+  agents) express nearly all rules. Reach for a chain before concluding the catalogue is missing
+  something.
+- **Presentation is bound, not scripted.** Colours, light intensity, camera `Priority`, and speeds
+  are `!expr` over state variables, so the game shows its own state without any update code.
+- **Broadcast instead of hardcoding.** Entity-tag and behaviour-tag listeners, so runtime-spawned
+  entities participate automatically.
+- **Full presentation layer.** Every player-visible string through `!text` + `Localisation:`;
+  `Controls` bound for both desktop and mobile, with `Controls.OnScreen` widgets for touch.
+- **They explain themselves.** A long `Game.Description` block literal spells out each interlocking
+  system, and every section carries comments saying *why*. Write that as you go, not afterwards.
+
+### Complementary references — open the one matching your game's shape
+
+Each of these is the cleanest worked example of one thing the flagships don't cover (or cover only
+in passing). Read it *alongside* a flagship, not instead of one.
+
+| Your game needs | Open | Why |
+|---|---|---|
+| A board held in list variables | [`Tetris.yaml`](../../../Assets/ExampleGameDescriptors/Tetris.yaml) | `GridMath` cell↔world math, move/rotate validated against an `occupied` cell list *before* committing, and a deferred three-phase broadcast (snapshot → apply → rebuild) for row clears. |
+| Tile-to-tile movement and chase AI | [`Pacman.yaml`](../../../Assets/ExampleGameDescriptors/Pacman.yaml) | `grid mover` + four-connected `navigate` on a shared nav grid, a dot field generated by one `Placements:` entry whose `At` is an `!expr` returning a `PositionList`, and a global mode flip (frightened ghosts). |
+| Terrain that changes at runtime | [`Bomberman.yaml`](../../../Assets/ExampleGameDescriptors/Bomberman.yaml) | `nav obstacle` as a *dynamic* grid obstacle — destroying a soft block frees its cell synchronously, so enemy A* immediately re-routes through the gap you blew open. |
+| 3D vehicle physics with AI rivals | [`MiniRacer3D.yaml`](../../../Assets/ExampleGameDescriptors/MiniRacer3D.yaml) | A non-kinematic rigidbody car with grip/drift handling, rivals running the *same* model but steered by A*-to-corner headings through an `ai steer` expression, and checkpoint→lap gating. |
+| A first-person camera | [`MazeShooterFps.yaml`](../../../Assets/ExampleGameDescriptors/MazeShooterFps.yaml) | The output `camera` living on the player entity, facing-relative movement (input rotated by yaw), and waves as `timer trigger` → `interval trigger` with a fixed `Count`. |
+| Endless content from a fixed pool | [`HelixJump.yaml`](../../../Assets/ExampleGameDescriptors/HelixJump.yaml) | Recycling a fixed ring pool below the player forever, manual gravity via `fixed update trigger` + `add force`, and a contact-below-centre test so only real landings count. |
+| A wave loop without a record table | [`WaveSurvival.yaml`](../../../Assets/ExampleGameDescriptors/WaveSurvival.yaml) | The minimal version: three counters (`wave`, `to spawn`, `alive`) polled each frame, with each round's difficulty derived from the wave number. |
+| Inventory with per-instance state | [`InventoryDemo2.yaml`](../../../Assets/ExampleGameDescriptors/InventoryDemo2.yaml) | A `record list` variable as the whole inventory, LINQ folds for live HUD counts, and consuming a record *in place* (decrementing its own fields). |
+| A real UI tree | [`UiShowcase.yaml`](../../../Assets/ExampleGameDescriptors/UiShowcase.yaml) | Canvas → container → label/button/slider nesting done correctly, with path-joined child entity ids. |
+
+Steering, perception and pathfinding each also have a focused demo (`FlockingDemo`, `PerceptionDemo`,
+`PatrolDemo`, `ClearancePathfinding`, `AiConcurrencyShowcase`) — useful for exact property names when
+a flagship's usage isn't enough.
+
+### Matching scale to the request
+
+- **"Make me a game"**, or any brief without a scope qualifier → aim at the flagship end: several
+  interlocking systems that read each other's state, not one mechanic in isolation.
+- **A deliberately small or specific ask** (a clone of one classic, one new mechanic, a demo of one
+  behaviour) → keep it small, but keep the flagship *structure*: tables over repetition,
+  parameterised templates, gate chains, live-bound visuals, a localised HUD. Fewer systems, same
+  discipline.
+- Never pad a descriptor with systems the user didn't ask for just to look like a flagship.
+
+### Before you copy a pattern from any example
+
+Descriptors fall out of date as the engine evolves, and some in that folder no longer build.
+
+- **Behaviour `Type:` names and property names come from `Behaviours.md`, never from an example** —
+  an older descriptor may predate a rename.
+- **Run `Tools/validate-game.sh <that-file>` before modelling your work on it.** Treat a clean run
+  (not the file's mere presence) as the signal that its patterns are safe to copy. The flagships are
+  the most recently exercised files in the corpus, but the check still applies.
+
+---
+
 ## Top-level structure
 
 A descriptor is a single YAML document with these top-level keys. Order is conventional but not
@@ -68,13 +159,17 @@ significant. Only `Entities` is strictly required for a working game; everything
 Game:                # metadata
 World:               # rendering / dimensionality
 Physics:             # global physics settings
+Assets:              # project assets (meshes, sprites, clips) referenced via !asset
 Constants:           # compile-time named values
 Variables:           # runtime mutable named values
+Records:             # named record (typed field-bag) schemas, instanced via !record
 Controls:            # abstract input actions + per-platform bindings
 Expressions:         # named code snippets, called from !expr
 Templates:           # reusable entity blueprints
+Placements:          # stamp a template out at many positions
 Entities:            # the actual entities in the scene
 Localisation:        # per-locale string table; referenced via !text
+Navigation:          # walkability grid config for pathfinding / perception
 ```
 
 ### `Game`
@@ -119,6 +214,26 @@ Variables:
   ball velocity: !vec { X: 3, Y: 3 }
   is dead: false
 ```
+
+### `Records`
+Named **record schemas** — typed field bags, each a map of `fieldName → { Type, Default }` (`Type` is
+`int` | `float` | `bool` | `string`). Instantiate one with `!record { Type: <schema>, field: value, … }`;
+a `!record [ … ]` sequence is a record *list*, and `!record []` an empty one.
+
+```yaml
+Records:
+  Wave:
+    kind:   { Type: string, Default: "normal" }
+    count:  { Type: int,    Default: 0 }
+    speed:  { Type: float,  Default: 1.0 }
+```
+
+This is the flagships' main data-modelling tool: a `!record [ … ]` constant is a **campaign / loot /
+spawn table**, and a `!record []` variable is an **inventory** you append to with `record list add`.
+Read fields inside expressions with the `RecordHelper` bare-name functions (`GetInt`, `GetFloat`,
+`GetString`, `GetBool`, `HasField`, and the `Set*` mutators), and fold a whole list with LINQ:
+`bag.Sum(r => GetInt(r, "value"))`. See `Gridfall.yaml` (wave table) and `HollowManorHeist.yaml`
+(swag bag).
 
 ### `Controls`
 The semantic input layer (see **Input — Controls and actions** below). Declares abstract **actions**
@@ -165,9 +280,46 @@ Reusable entity blueprints. An entity that references a template inherits its `T
 and `Behaviours`, with `!parameter` slots filled in at instantiation. See the **Templates** section
 below.
 
+### `Placements`
+Stamps one template out at many absolute positions without writing an entity per instance. `At` is a
+vector list — either a literal sequence of `!vec`, or an `!expr` returning one (build it with a
+`PositionList`), which is how a whole dot field / tile grid / obstacle scatter gets authored as a
+*rule*:
+
+```yaml
+Placements:
+  dots:                                  # placement id
+    Template: pill
+    At: !expr { Do: pillField }          # or a literal list of !vec
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }  # optional; shared by every instance
+    Parameters: { value: 10 }            # optional; forwarded to the template's slots
+    Tags: [ collectable ]                # optional; layered on the template's tags
+```
+
+Reach for this before repeating near-identical entity blocks. `Pacman.yaml` and `Bomberman.yaml` are
+the worked examples.
+
 ### `Entities`
 A map of `entity id → entity definition`. The entity id is the YAML key. See **Entity structure**
 below.
+
+### `Navigation`
+Configures the shared walkability grid that `navigate` (in either `astar` or `flowfield` mode) and
+`grid mover` read. Entities tagged `ObstacleTag` are rasterized into it as blocked cells; a
+`nav obstacle` behaviour makes an entity a *dynamic* one that frees its cell when destroyed.
+
+```yaml
+Navigation:
+  CellSize: 0.5
+  Bounds: { Min: !vec { X: -12.5, Y: 0, Z: -9.5 }, Max: !vec { X: 12.5, Y: 0, Z: 9.5 } }
+  ObstacleTag: wall
+  Plane: xz            # "xy" (default, 2D) or "xz" (3D ground plane)
+  Diagonal: false      # four-connected; true (default) allows diagonal steps
+  DefaultAgentRadius: 0.3   # optional obstacle inflation, overridable per agent
+```
+
+Required before any pathfinding behaviour will work. See `HollowManorHeist.yaml` (3D, `xz`) and
+`Pacman.yaml` (four-connected maze).
 
 ### Ending the game
 Every descriptor must declare at least one `!gameover` listener, or the build fails — this guarantees
@@ -790,6 +942,32 @@ These are conventions, not rules. Reach for them when they fit.
   player by tag (`Target: { Tag: player }`). Check `Behaviours.md` for the `Mode`/offset properties,
   and validate the result builds (see **Verifying your work**).
 
+The flagship descriptors add a handful of larger-scale patterns worth reaching for on anything
+beyond a single-mechanic game (see **Reference descriptors**):
+
+- **Record table → driver.** A `!record [ … ]` constant holds the wave/level/loot table; an index
+  variable plus expressions reading fields off `table[i]` drive the whole progression, so tuning the
+  game is editing one table. (`Gridfall`, `Riftwell`.)
+- **Derived board.** An `on start trigger` runs an expression that computes a cell/position list from
+  a few authored waypoints or a rule, then a `* list loop trigger` (or a `Placements:` entry with an
+  `!expr` `At`) stamps an entity per element — and the *same* list is reused as the gameplay rule
+  (walkable, buildable, blocked). (`Gridfall`, `Pacman`.)
+- **Global state variable as a bus.** One `int`/`bool` variable (alarm level, wave, combo, phase) that
+  many unrelated behaviours read live — speeds, colours, light intensity, camera `Priority` — so a
+  single write re-dresses the whole game. (`HollowManorHeist`.)
+- **Dual locomotion + selector.** Two motion behaviours write desired velocities into per-entity
+  variables; a per-frame `* variable setter` picks between them by FSM mode; one `velocity`
+  integrator applies the result. Cleaner than enabling/disabling motion behaviours. (`HollowManorHeist`.)
+- **Broadcast + self-filtering gate.** Instead of resolving which entity was hit/tapped/selected,
+  broadcast to an `EntityTag` listener and let each instance's own `condition gate` decide whether it
+  is the one. Works for entities spawned after build. (`Gridfall`.)
+- **Pointer → world.** `tap`/`drag` triggers or a `ui drag source` feed a `screen to world` behaviour
+  that unprojects through the live camera; a small expression snaps the result to a cell. Guard
+  against drops over the UI with a screen-band condition. (`Gridfall`.)
+- **Outputs as the payload.** Bind a trigger's `Outputs:` at the listener and read them with
+  `!output` downstream, rather than stashing values in globals just to move them one hop.
+  (`Riftwell`.)
+
 ---
 
 ## Verifying your work
@@ -809,14 +987,10 @@ it; with no argument it sweeps everything in `Assets/ExampleGameDescriptors/`.
 
 ### Learning from the example descriptors
 
-The descriptors in `Assets/ExampleGameDescriptors/` are the best reference for real, working
-structure — read them to see how movement, scoring, spawning, UI, and cameras are wired together.
-
-**But do not assume any example is current.** Descriptors fall out of date as the engine evolves, and
-some in that folder no longer build. **Before you copy patterns from an example, run
-`Tools/validate-game.sh <that-file>` and confirm it builds** — if it fails, don't model your work on
-it. Treat a clean `validate-game.sh` (not the file's mere presence) as the signal that a pattern is
-safe to copy.
+See **Reference descriptors** near the top of this skill: default to the three flagships
+(`Gridfall.yaml`, `HollowManorHeist.yaml`, `Riftwell.yaml`) for structure and ambition, open the
+matching complementary descriptor for your game's shape, and validate any file with
+`Tools/validate-game.sh` before copying its patterns.
 
 ---
 
@@ -824,6 +998,11 @@ safe to copy.
 
 Run through this before handing a descriptor back:
 
+- [ ] A flagship descriptor (`Gridfall` / `HollowManorHeist` / `Riftwell`) was actually read, and this
+      descriptor follows its architecture — data tables and `Placements`/list-loops over repeated
+      entity blocks, one parameterised template per family of variants, per-entity blackboard
+      variables, gate chains for rules, presentation bound to state via `!expr` — at a scale that
+      matches what the user asked for.
 - [ ] Every `Type:` value exists verbatim in [`Behaviours.md`](../../../Assets/docs/Behaviours.md)
       (and is not in the **Parse-only (not yet runnable)** list).
 - [ ] Every `Properties:` key matches the catalogue's property name exactly (PascalCase).
