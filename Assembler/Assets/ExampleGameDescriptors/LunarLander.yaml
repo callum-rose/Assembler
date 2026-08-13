@@ -73,6 +73,7 @@ Constants:
   terrain colour: !colour { R: 0.32, G: 0.33, B: 0.38, A: 1 }
   crag colour: !colour { R: 0.26, G: 0.27, B: 0.32, A: 1 }
   star colour: !colour { R: 0.75, G: 0.78, B: 0.9, A: 1 }
+  sky colour: !colour "#070912"    # matches World.BackgroundColor; the backdrop wears it
   spark colour: !colour { R: 1.0, G: 0.95, B: 0.75, A: 1 }
   blast colour: !colour { R: 1.0, G: 0.45, B: 0.12, A: 1 }
 
@@ -964,6 +965,20 @@ Entities:
     Template:
       Id: wall_template
       Parameters: { size: !vec { X: 21.5, Y: 0.6, Z: 3 } }
+
+  # =========================================================================
+  # BACKDROP - the output camera keeps Unity's default clear flags (the
+  # engine doesn't yet apply World.BackgroundColor to it), so without this
+  # the procedural skybox shows. A huge near-black slab behind the stars
+  # (z = 5, stars at z = 3) fills every pixel the playfield doesn't, on any
+  # aspect ratio. Purely cosmetic: `primitive` strips its built-in collider.
+  # =========================================================================
+  backdrop:
+    Position: !vec { X: 0, Y: 0, Z: 5 }
+    Behaviours:
+      void:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 34, Y: 16, Z: 0.1 }, Colour: !var sky colour }
 
   # =========================================================================
   # LIGHT & CAMERA - fixed orthographic framing of the whole playfield.
