@@ -1,0 +1,1113 @@
+Game:
+  Title: Lunar Salvage
+  Description: |
+    A classic lunar-lander descent loop, played as an endless run of "drops".
+    Each drop the ship is released near the top of the screen with a RANDOM
+    drift velocity, and must be rotated and thrust-braked down onto the green
+    landing pad while hoovering up the coins scattered across the sky.
+
+    THE CORE RULE: touching anything is judged by the ship's REAL velocity.
+    A per-frame tracker finite-differences the ship's position into a
+    `ship velocity` variable (the physics engine has already resolved the
+    contact by the time a collision callback reads the rigidbody, so the
+    tracker's one-frame-stale value IS the pre-impact velocity). Touch the
+    pad below the speed limit and nearly level -> TOUCHDOWN: a gentleness-
+    scaled bonus, then the next drop begins. Too fast, too tilted, or any
+    contact with the grey terrain -> the hull breaches, debris flies, game
+    over.
+
+    THE DROP LOOP is one relay chain on `mission control` (`begin round`),
+    fired on start and again two seconds after every touchdown. It rerolls
+    the drop point and drift, sweeps leftover coins, replaces the pad
+    (narrower every drop, at a new random spot), refills the coin budget
+    (an always-running drip clock + budget gate mints them), and resets the
+    ship. Difficulty is therefore pure data: drift grows, the pad shrinks,
+    coins get more valuable.
+
+    FLYING: `move` is one abstract value action - x rotates the ship
+    (A/D or arrows, joystick on mobile), y > 0.5 is the thruster (W/up, or
+    push the stick up). Thrust is applied as a real physics force along the
+    ship's own up vector each FixedUpdate while a `thrusting` flag is held
+    true, so gravity, drift and braking all interact honestly. The engine
+    flame and its light are pure presentation bindings on that same flag -
+    the nozzle glows and flickers while you burn, with no update code.
+
+    Desktop: A/D or arrows rotate, W/up thrusts, Esc quits.
+    Mobile: on-screen joystick (push up to burn); Abort button in the HUD.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#070912"
+
+Physics:
+  Gravity: !vec { X: 0, Y: -2.4, Z: 0 }
+
+Constants:
+  # --- Camera (fixed orthographic view of the whole playfield) ---
+  camera size: 6.0
+
+  # --- Ship handling ---
+  thrust power: 6.5          # force (mass 1) along the ship's up vector
+  turn speed: 150.0          # degrees per second of rotation input
+  drop height: 4.6           # y where each drop releases the ship
+  base drift: 1.2            # min horizontal release speed at drop 1
+  drift per round: 0.35      # extra release drift per drop
+
+  # --- The landing judgement ---
+  max landing speed: 2.2     # m/s - at or under this on the pad is survivable
+  max landing tilt: 12.0     # degrees off vertical allowed at touchdown
+
+  # --- Pad & coins ---
+  pad altitude: -3.4         # pads hover above the tallest crag (top -3.7)
+  coin base value: 20
+  coin value per round: 5
+
+  # --- Palette ---
+  hull colour: !colour { R: 0.78, G: 0.8, B: 0.86, A: 1 }
+  cabin colour: !colour { R: 0.45, G: 0.75, B: 0.95, A: 1 }
+  strut colour: !colour { R: 0.45, G: 0.46, B: 0.52, A: 1 }
+  nozzle colour: !colour { R: 0.2, G: 0.2, B: 0.24, A: 1 }
+  flame hot colour: !colour { R: 1.0, G: 0.55, B: 0.15, A: 1 }
+  pad colour: !colour { R: 0.25, G: 0.9, B: 0.45, A: 1 }
+  coin colour: !colour { R: 1.0, G: 0.82, B: 0.25, A: 1 }
+  terrain colour: !colour { R: 0.32, G: 0.33, B: 0.38, A: 1 }
+  crag colour: !colour { R: 0.26, G: 0.27, B: 0.32, A: 1 }
+  star colour: !colour { R: 0.75, G: 0.78, B: 0.9, A: 1 }
+  spark colour: !colour { R: 1.0, G: 0.95, B: 0.75, A: 1 }
+  blast colour: !colour { R: 1.0, G: 0.45, B: 0.12, A: 1 }
+
+Variables:
+  score: 0
+  round: 0                   # "drop" number; begin round rolls 0 -> 1
+  coins banked: 0
+  coins to spawn: 0          # budget the drip clock mints from
+
+  # Flight state: "prelaunch" -> "flying" -> "landed" (loops) / "crashed".
+  game state: "prelaunch"
+  status message: ""
+  thrusting: false
+
+  # The velocity tracker's blackboard (see Game.Description).
+  ship velocity: !vec { X: 0, Y: 0, Z: 0 }
+  prev position: !vec { X: 0, Y: 4.6, Z: 0 }
+
+  # Rolled once per drop so the teleport and the tracker agree exactly.
+  drop point: !vec { X: 0, Y: 4.6, Z: 0 }
+  drop velocity: !vec { X: 0, Y: 0, Z: 0 }
+
+  impact speed: 0.0          # captured at the moment of any contact judgement
+  last bonus: 0              # touchdown payout, for the HUD banner
+
+Expressions:
+  # Position-based velocity: (pos - prev) / dt, holding the old value on a
+  # degenerate dt (pause). One frame stale, which is exactly what makes it
+  # the PRE-impact velocity when a collision callback reads it.
+  measuredVelocity:
+    ArgumentTypes: [ vector, vector, float, vector ]
+    ArgumentNames: [ pos, prev, dt, old ]
+    ReturnType: vector
+    Expression: "return dt > 0.0005f ? ScaleVector(SubtractVector(pos, prev), 1f / dt) : old;"
+
+  # Unsigned degrees off vertical from a Unity euler z in [0, 360).
+  tiltDegrees:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ rot ]
+    ReturnType: float
+    Expression: "return Abs(rot.z > 180f ? rot.z - 360f : rot.z);"
+
+  isFlying:
+    ArgumentTypes: [ string ]
+    ArgumentNames: [ state ]
+    ReturnType: bool
+    Expression: 'return state == "flying";'
+
+  # The two halves of the pad judgement - exactly one fires per contact.
+  canLand:
+    ArgumentTypes: [ string, vector, vector, float, float ]
+    ArgumentNames: [ state, vel, rot, max_speed, max_tilt ]
+    ReturnType: bool
+    Expression: 'return state == "flying" && Magnitude(vel) <= max_speed && tiltDegrees(rot) <= max_tilt;'
+
+  isPadCrash:
+    ArgumentTypes: [ string, vector, vector, float, float ]
+    ArgumentNames: [ state, vel, rot, max_speed, max_tilt ]
+    ReturnType: bool
+    Expression: 'return state == "flying" && (Magnitude(vel) > max_speed || tiltDegrees(rot) > max_tilt);'
+
+  # Thrust along the ship's own up vector (rotation 0 faces +Y).
+  thrustForce:
+    ArgumentTypes: [ vector, float ]
+    ArgumentNames: [ rot, power ]
+    ReturnType: vector
+    Expression: "return ScaleVector(ForwardFromRotation2D(rot.z), power);"
+
+  # Per-frame rotation step; +x input tips the nose clockwise (to the right).
+  steerStep:
+    ArgumentTypes: [ float, float, float ]
+    ArgumentNames: [ x, turn, dt ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(0f, 0f, -x * turn * dt);"
+
+  # Release drift: guaranteed sideways motion (either way), growing per drop.
+  dropVelocity:
+    ArgumentTypes: [ int, float, float ]
+    ArgumentNames: [ round, base_drift, per_round ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var h = base_drift + round * per_round;
+      var x = Chance(0.5f) ? RandomFloat(0.7f, h) : RandomFloat(-h, -0.7f);
+      return new Vector3(x, RandomFloat(-1.7f, -0.7f), 0f);
+
+  dropPoint:
+    ArgumentTypes: [ float ]
+    ArgumentNames: [ y ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(RandomFloat(-6.5f, 6.5f), y, 0f);"
+
+  padPoint:
+    ArgumentTypes: [ float ]
+    ArgumentNames: [ y ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(RandomFloat(-7f, 7f), y, 0f);"
+
+  # The pad narrows every drop, floored at a still-landable 2.4 units.
+  padSize:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ round ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(Max(2.4f, 5.6f - round * 0.45f), 0.3f, 1.4f);"
+
+  coinPoint:
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(RandomFloat(-8.5f, 8.5f), RandomFloat(-2.6f, 4.0f), 0f);"
+
+  coinBudget:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ round ]
+    ReturnType: int
+    Expression: "return (int)Min(5f + round, 13f);"
+
+  coinWorth:
+    ArgumentTypes: [ int, int, int ]
+    ArgumentNames: [ base_value, per, round ]
+    ReturnType: int
+    Expression: "return base_value + per * round;"
+
+  # Touchdown payout: 160 for a feather touch tapering to 60 at the limit,
+  # plus a flat per-drop escalator.
+  landingBonus:
+    ArgumentTypes: [ vector, float, int ]
+    ArgumentNames: [ vel, max_speed, round ]
+    ReturnType: int
+    Expression: |
+      var gentle = Remap(Clamp(Magnitude(vel), 0f, max_speed), 0f, max_speed, 160f, 60f);
+      return (int)Round(gentle) + round * 30;
+
+  crashShakeForce:
+    ArgumentTypes: [ vector ]
+    ArgumentNames: [ vel ]
+    ReturnType: float
+    Expression: "return Clamp(Magnitude(vel) * 0.35f, 0.7f, 2.6f);"
+
+  debrisKick:
+    ReturnType: vector
+    Expression: "return ScaleVector(RandomOnCircle(1f), RandomFloat(2.2f, 5.2f));"
+
+  # A one-shot random starfield behind the playfield (z = 3).
+  starField:
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int i = 0; i < 46; i++)
+      {
+          b.Add(new Vector3(RandomFloat(-10.4f, 10.4f), RandomFloat(-5.6f, 5.6f), 3f));
+      }
+      return b.ToList();
+
+# One abstract action carries the whole flight model: x rotates, y > 0.5
+# thrusts. Desktop gets two composites (WASD and arrows); mobile gets the
+# on-screen joystick (push up to burn). Esc / the HUD button aborts.
+Controls:
+  Actions:
+    move: { Type: value, ValueType: vector2 }
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      move:
+        - Composite: 2DVector
+          Up: "<Keyboard>/w"
+          Down: "<Keyboard>/s"
+          Left: "<Keyboard>/a"
+          Right: "<Keyboard>/d"
+        - Composite: 2DVector
+          Up: "<Keyboard>/upArrow"
+          Down: "<Keyboard>/downArrow"
+          Left: "<Keyboard>/leftArrow"
+          Right: "<Keyboard>/rightArrow"
+      quit: [ "<Keyboard>/escape" ]
+    mobile:
+      move: [ "<Gamepad>/leftStick" ]
+      quit: [ "<Gamepad>/start" ]
+
+  OnScreen:
+    - Type: joystick
+      Action: move
+      Anchor: lower-left
+      Offset: { X: 260, Y: 260 }
+      Size: { X: 360, Y: 360 }
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "LUNAR SALVAGE"
+      hud.help1: "Rotate: A/D or arrows - Thrust: W or up"
+      hud.help2: "Grab coins, then settle on the green pad: under {0:0.0} m/s, nearly level"
+      hud.score: "Score: {0}"
+      hud.drop: "Drop {0}"
+      hud.coins: "Coins banked: {0}"
+      hud.speed: "Speed: {0:0.0} m/s"
+      hud.safe: "DESCENT SAFE"
+      hud.hot: "TOO FAST"
+      msg.drop: "Drop {0} - bring it down easy"
+      msg.landed: "TOUCHDOWN! +{0}"
+      msg.crashed: "CRASHED - hull breached at {0:0.0} m/s"
+      btn.quit: "Abort Mission"
+
+Templates:
+  # ---------------------------------------------------------------------------
+  # LANDING PAD - respawned every drop (narrower, new random spot), so its
+  # whole geometry rides one `size` parameter. The ship's own collision
+  # trigger does the judging; the pad just is, and glows green.
+  # ---------------------------------------------------------------------------
+  pad_template:
+    Tags: [ pad ]
+    Behaviours:
+      deck:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !var pad colour }
+      beacon:
+        Type: light
+        Properties: { Type: point, Colour: !var pad colour, Intensity: 1.6, Range: 3.2 }
+      slab:
+        Type: box collider
+        Properties: { Size: !parameter size }
+      vanish:
+        Type: destroy
+
+  # ---------------------------------------------------------------------------
+  # TERRAIN - every grey surface is lethal to touch; only the pad is safe.
+  # ---------------------------------------------------------------------------
+  terrain_template:
+    Tags: [ ground ]
+    Behaviours:
+      rock:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !parameter tint }
+      crust:
+        Type: box collider
+        Properties: { Size: !parameter size }
+
+  # Invisible arena walls - bumping them is survivable, they just contain you.
+  wall_template:
+    Behaviours:
+      shell:
+        Type: box collider
+        Properties: { Size: !parameter size }
+
+  # ---------------------------------------------------------------------------
+  # COIN - a pulsing gold pickup. Its own trigger pays the score (value is a
+  # per-coin parameter, so later drops mint richer coins), banks the tally,
+  # sparks, and vanishes. The round sweep calls `vanish` directly: no payout.
+  # ---------------------------------------------------------------------------
+  coin_template:
+    Tags: [ coin ]
+    Variables:
+      value: !parameter value
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.42, Y: 0.42, Z: 0.42 }, Colour: !var coin colour }
+      glint:
+        Type: light
+        Properties: { Type: point, Colour: !var coin colour, Intensity: 1.1, Range: 1.8 }
+      pulse:
+        Type: animation
+        Properties:
+          Animate: scale
+          End: !vec { X: 1.25, Y: 1.25, Z: 1.25 }
+          Duration: 0.5
+          Loops: -1
+          LoopType: yoyo
+      zone:
+        Type: sphere collider
+        Properties: { Radius: 0.3, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+      grab:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ ship ] }
+        Listeners: [ pay out, bank coin, sparkle, vanish ]
+      pay out:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: 'score + worth'
+            ArgumentTypes: [ int, int ]
+            With: { score: !var score, worth: !var value }
+      bank coin:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coins banked
+          Value: !expr
+            Do: 'coins + 1'
+            With: { coins: !var coins banked }
+      sparkle:
+        Type: spawner
+        Properties:
+          TemplateId: spark_template
+          Position: !entity { Property: Position }
+      vanish:
+        Type: destroy
+
+  # Pickup flash.
+  spark_template:
+    Behaviours:
+      flash:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.3, Y: 0.3, Z: 0.3 }, Colour: !var spark colour }
+      glow:
+        Type: light
+        Properties: { Type: point, Colour: !var spark colour, Intensity: 2.2, Range: 2.0 }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.2, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Crash fireball: one flash sphere that scatters four debris shards.
+  explosion_template:
+    Behaviours:
+      fireball:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 1.6, Y: 1.6, Z: 1.6 }, Colour: !var blast colour }
+      flash:
+        Type: light
+        Properties: { Type: point, Colour: !var blast colour, Intensity: 4.0, Range: 6.0 }
+      burst:
+        Type: on start trigger
+        Listeners: [ scatter a, scatter b, scatter c, scatter d ]
+      scatter a:
+        Type: spawner
+        Properties:
+          TemplateId: debris_template
+          Position: !entity { Property: Position }
+          Parameters: { kick: !expr { Do: debrisKick } }
+      scatter b:
+        Type: spawner
+        Properties:
+          TemplateId: debris_template
+          Position: !entity { Property: Position }
+          Parameters: { kick: !expr { Do: debrisKick } }
+      scatter c:
+        Type: spawner
+        Properties:
+          TemplateId: debris_template
+          Position: !entity { Property: Position }
+          Parameters: { kick: !expr { Do: debrisKick } }
+      scatter d:
+        Type: spawner
+        Properties:
+          TemplateId: debris_template
+          Position: !entity { Property: Position }
+          Parameters: { kick: !expr { Do: debrisKick } }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 0.35, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  # Hull fragment: a kick velocity plus a manual gravity integrator (no
+  # rigidbody/collider - it just arcs through everything and expires).
+  debris_template:
+    Behaviours:
+      shard:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.18, Y: 0.18, Z: 0.18 }, Colour: !var strut colour }
+      fly:
+        Type: velocity
+        Properties: { Velocity: !parameter kick }
+      fall:
+        Type: acceleration
+        Properties: { Acceleration: !vec { X: 0, Y: -6, Z: 0 } }
+      tumble:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 0, Z: 260 } }
+      fade:
+        Type: timer trigger
+        Properties: { Delay: 1.4, AutoStart: true }
+        Listeners: [ vanish ]
+      vanish:
+        Type: destroy
+
+  star_template:
+    Behaviours:
+      dot:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.07, Y: 0.07, Z: 0.07 }, Colour: !var star colour }
+
+# The sky, stamped from one expression - purely decorative, behind the
+# playfield at z = 3, no colliders.
+Placements:
+  stars:
+    Template: star_template
+    At: !expr { Do: starField }
+
+Entities:
+  # =========================================================================
+  # THE SHIP - a real dynamic rigidbody (gravity on, rotation frozen so the
+  # `rotate` behaviour owns attitude). Everything else about it hangs off
+  # three chains:
+  #   PILOT  - the `move` value action: x crosses a flying-gate into `rotate`,
+  #            y sets the `thrusting` flag (only while flying).
+  #   BURN   - a FixedUpdate clock gated on `thrusting` applies the thrust
+  #            force along the ship's up vector.
+  #   TRACK  - an every-frame pair keeps `ship velocity` = (pos - prev) / dt;
+  #            listener order (measure, THEN stash) is what makes it work.
+  # Its two collision triggers don't decide anything - they forward to the
+  # judgement gates on `mission control`.
+  # =========================================================================
+  lander:
+    Tags: [ ship ]
+    Position: !vec { X: 0, Y: 4.6, Z: 0 }
+    Behaviours:
+      hull:
+        Type: primitive
+        Properties: { Shape: cube, Size: !vec { X: 0.62, Y: 0.5, Z: 0.62 }, Colour: !var hull colour }
+      cabin light:
+        Type: light
+        Properties: { Type: point, Colour: !colour white, Intensity: 0.7, Range: 2.6 }
+      frame:
+        Type: box collider
+        Properties: { Size: !vec { X: 0.75, Y: 1.05, Z: 0.75 } }
+      rb:
+        Type: rigidbody
+        Properties:
+          UseGravity: true
+          Mass: 1.0
+          FreezePosition: !vec { X: 0, Y: 0, Z: 1 }
+          FreezeRotation: !vec { X: 1, Y: 1, Z: 1 }
+
+      # ---- PILOT ----
+      pilot:
+        Type: input action
+        Properties: { Action: move }
+        Listeners:
+          - { BehaviourId: steer gate, Outputs: { x: steer_x } }
+          - { BehaviourId: throttle, Outputs: { y: thrust_y } }
+      steer gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: isFlying
+            With: { state: !var game state }
+        Listeners: [ turn ]
+      turn:
+        Type: rotate
+        Properties:
+          Displacement: !expr
+            Do: steerStep
+            With:
+              x: !output steer_x
+              turn: !var turn speed
+              dt: !clock deltaTime
+      throttle:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var thrusting
+          Value: !expr
+            Do: 'y > 0.5f && state == "flying"'
+            ArgumentTypes: [ float, string ]
+            With:
+              y: !output thrust_y
+              state: !var game state
+
+      # ---- BURN ----
+      burn clock:
+        Type: fixed update trigger
+        Listeners: [ burn gate ]
+      burn gate:
+        Type: condition gate
+        Properties: { Condition: !var thrusting }
+        Listeners: [ burn ]
+      burn:
+        Type: add force
+        Properties:
+          Force: !expr
+            Do: thrustForce
+            With:
+              rot: !entity { Property: Rotation }
+              power: !var thrust power
+
+      # ---- TRACK (order matters: measure against prev, then overwrite prev) ----
+      track clock:
+        Type: every frame trigger
+        Listeners: [ measure speed, stash prev pos ]
+      measure speed:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var ship velocity
+          Value: !expr
+            Do: measuredVelocity
+            With:
+              pos: !entity { Property: Position }
+              prev: !var prev position
+              dt: !clock deltaTime
+              old: !var ship velocity
+      stash prev pos:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var prev position
+          Value: !entity { Property: Position }
+
+      # ---- CONTACT (forwarded to mission control's judgement gates) ----
+      pad contact:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ pad ] }
+        Listeners:
+          - { EntityId: mission control, BehaviourId: touchdown gate }
+          - { EntityId: mission control, BehaviourId: pancake gate }
+      ground contact:
+        Type: collision enter trigger
+        Properties: { TagsToDetect: [ ground ] }
+        Listeners:
+          - { EntityId: mission control, BehaviourId: ground crash gate }
+
+      # ---- Reset hooks the drop loop drives ----
+      reset position:
+        Type: position setter
+        Properties: { Position: !var drop point }
+      reset rotation:
+        Type: rotation setter
+        Properties: { Rotation: !vec { X: 0, Y: 0, Z: 0 } }
+      reset velocity:
+        Type: set velocity
+        Properties: { Velocity: !var drop velocity }
+      vanish:
+        Type: destroy
+
+    # Multi-part body - local offsets, so everything tilts with the ship.
+    Children:
+      cabin:
+        Position: !vec { X: 0, Y: 0.38, Z: 0 }
+        Behaviours:
+          dome:
+            Type: primitive
+            Properties: { Shape: capsule, Size: !vec { X: 0.42, Y: 0.22, Z: 0.42 }, Colour: !var cabin colour }
+      leg west:
+        Position: !vec { X: -0.34, Y: -0.42, Z: 0 }
+        Rotation: !vec { X: 0, Y: 0, Z: 22 }
+        Behaviours:
+          strut:
+            Type: primitive
+            Properties: { Shape: cube, Size: !vec { X: 0.1, Y: 0.5, Z: 0.1 }, Colour: !var strut colour }
+      leg east:
+        Position: !vec { X: 0.34, Y: -0.42, Z: 0 }
+        Rotation: !vec { X: 0, Y: 0, Z: -22 }
+        Behaviours:
+          strut:
+            Type: primitive
+            Properties: { Shape: cube, Size: !vec { X: 0.1, Y: 0.5, Z: 0.1 }, Colour: !var strut colour }
+      nozzle:
+        Position: !vec { X: 0, Y: -0.34, Z: 0 }
+        Behaviours:
+          bell:
+            Type: primitive
+            Properties: { Shape: cube, Size: !vec { X: 0.26, Y: 0.16, Z: 0.26 }, Colour: !var nozzle colour }
+      # The flame never toggles active state - its colour and light are LIVE
+      # bindings on `thrusting`, so it reads as a cold nozzle until you burn,
+      # then flickers (the intensity re-rolls every frame).
+      flame:
+        Position: !vec { X: 0, Y: -0.6, Z: 0 }
+        Behaviours:
+          plume:
+            Type: primitive
+            Properties:
+              Shape: cube
+              Size: !vec { X: 0.2, Y: 0.42, Z: 0.2 }
+              Colour: !expr
+                Do: 'on ? hot : idle'
+                ArgumentTypes: [ bool, colour, colour ]
+                ReturnType: colour
+                With:
+                  on: !var thrusting
+                  hot: !var flame hot colour
+                  idle: !var nozzle colour
+          exhaust glow:
+            Type: light
+            Properties:
+              Type: point
+              Colour: !var flame hot colour
+              Intensity: !expr
+                Do: 'on ? RandomFloat(1.8f, 2.6f) : 0f'
+                ArgumentTypes: [ bool ]
+                ReturnType: float
+                With: { on: !var thrusting }
+              Range: 2.4
+
+  # =========================================================================
+  # MISSION CONTROL - the whole game loop on one entity.
+  #   begin round : the drop relay (rerolls, sweeps, respawns, resets).
+  #   judgement   : the three gates the ship's contact triggers forward to.
+  #   coin mint   : always-running drip clock + budget gate (husk-factory
+  #                 pattern), so each drop's coins pop in over ~half a second.
+  # =========================================================================
+  mission control:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      launch:
+        Type: on start trigger
+        Listeners: [ begin round ]
+
+      # ---- THE DROP RELAY (a constant-true gate used as an ordered fan-out) ----
+      begin round:
+        Type: condition gate
+        Properties: { Condition: true }
+        Listeners:
+          - { BehaviourId: next round }
+          - { BehaviourId: roll drop point }
+          - { BehaviourId: roll drop velocity }
+          - { BehaviourId: refill coins }
+          - { EntityTag: coin, BehaviourId: vanish }     # sweep leftovers (no payout)
+          - { EntityTag: pad, BehaviourId: vanish }      # retire the old pad
+          - { BehaviourId: place pad }
+          - { EntityId: lander, BehaviourId: reset position }
+          - { EntityId: lander, BehaviourId: reset rotation }
+          - { EntityId: lander, BehaviourId: reset velocity }
+          - { BehaviourId: sync tracker pos }
+          - { BehaviourId: sync tracker vel }
+          - { BehaviourId: clear thrust }
+          - { BehaviourId: go flying }
+          - { BehaviourId: drop status }
+      next round:
+        Type: int variable setter
+        Properties:
+          VariableId: !var round
+          Value: !expr
+            Do: 'round + 1'
+            With: { round: !var round }
+      roll drop point:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var drop point
+          Value: !expr { Do: dropPoint, With: { y: !var drop height } }
+      roll drop velocity:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var drop velocity
+          Value: !expr
+            Do: dropVelocity
+            With:
+              round: !var round
+              base_drift: !var base drift
+              per_round: !var drift per round
+      refill coins:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coins to spawn
+          Value: !expr { Do: coinBudget, With: { round: !var round } }
+      place pad:
+        Type: spawner
+        Properties:
+          TemplateId: pad_template
+          Position: !expr { Do: padPoint, With: { y: !var pad altitude } }
+          Parameters:
+            size: !expr { Do: padSize, With: { round: !var round } }
+      sync tracker pos:
+        Type: vector variable setter
+        Properties: { VariableId: !var prev position, Value: !var drop point }
+      sync tracker vel:
+        Type: vector variable setter
+        Properties: { VariableId: !var ship velocity, Value: !var drop velocity }
+      clear thrust:
+        Type: bool variable setter
+        Properties: { VariableId: !var thrusting, Value: false }
+      go flying:
+        Type: string variable setter
+        Properties: { VariableId: !var game state, Value: "flying" }
+      drop status:
+        Type: string variable setter
+        Properties:
+          VariableId: !var status message
+          Value: !text { Key: msg.drop, Arguments: [ !var round ] }
+
+      # ---- JUDGEMENT: touchdown ----
+      touchdown gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: canLand
+            With:
+              state: !var game state
+              vel: !var ship velocity
+              rot: !entity { Id: lander, Property: Rotation }
+              max_speed: !var max landing speed
+              max_tilt: !var max landing tilt
+        Listeners:
+          - { BehaviourId: note impact }
+          - { BehaviourId: note bonus }
+          - { BehaviourId: pay bonus }
+          - { BehaviourId: set landed }
+          - { BehaviourId: clear thrust }
+          - { BehaviourId: landed status }
+          - { BehaviourId: soft thump }
+          - { BehaviourId: next drop fuse }
+      note impact:
+        Type: float variable setter
+        Properties:
+          VariableId: !var impact speed
+          Value: !expr
+            Do: 'Magnitude(vel)'
+            ArgumentTypes: [ vector ]
+            With: { vel: !var ship velocity }
+      note bonus:
+        Type: int variable setter
+        Properties:
+          VariableId: !var last bonus
+          Value: !expr
+            Do: landingBonus
+            With:
+              vel: !var ship velocity
+              max_speed: !var max landing speed
+              round: !var round
+      pay bonus:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: 'score + bonus'
+            With: { score: !var score, bonus: !var last bonus }
+      set landed:
+        Type: string variable setter
+        Properties: { VariableId: !var game state, Value: "landed" }
+      landed status:
+        Type: string variable setter
+        Properties:
+          VariableId: !var status message
+          Value: !text { Key: msg.landed, Arguments: [ !var last bonus ] }
+      soft thump:
+        Type: camera shake
+        Properties: { Force: 0.35, Duration: 0.2, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      next drop fuse:
+        Type: deferred trigger
+        Properties: { Delay: 2.0 }
+        Listeners: [ begin round ]
+
+      # ---- JUDGEMENT: crashes. Both gates share one crash sequence; the
+      #      state latch ("crashed") makes it fire exactly once. ----
+      pancake gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: isPadCrash
+            With:
+              state: !var game state
+              vel: !var ship velocity
+              rot: !entity { Id: lander, Property: Rotation }
+              max_speed: !var max landing speed
+              max_tilt: !var max landing tilt
+        Listeners:
+          - { BehaviourId: note impact }
+          - { BehaviourId: set crashed }
+          - { BehaviourId: crashed status }
+          - { BehaviourId: crash shake }
+          - { BehaviourId: boom }
+          - { EntityId: lander, BehaviourId: vanish }
+          - { BehaviourId: end fuse }
+      ground crash gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: isFlying
+            With: { state: !var game state }
+        Listeners:
+          - { BehaviourId: note impact }
+          - { BehaviourId: set crashed }
+          - { BehaviourId: crashed status }
+          - { BehaviourId: crash shake }
+          - { BehaviourId: boom }
+          - { EntityId: lander, BehaviourId: vanish }
+          - { BehaviourId: end fuse }
+      set crashed:
+        Type: string variable setter
+        Properties: { VariableId: !var game state, Value: "crashed" }
+      crashed status:
+        Type: string variable setter
+        Properties:
+          VariableId: !var status message
+          Value: !text { Key: msg.crashed, Arguments: [ !var impact speed ] }
+      crash shake:
+        Type: camera shake
+        Properties:
+          Force: !expr { Do: crashShakeForce, With: { vel: !var ship velocity } }
+          Duration: 0.45
+          Velocity: !vec { X: 0, Y: -1, Z: 0 }
+      boom:
+        Type: spawner
+        Properties:
+          TemplateId: explosion_template
+          Position: !entity { Id: lander, Property: Position }
+      end fuse:
+        Type: deferred trigger
+        Properties: { Delay: 2.4 }
+        Listeners:
+          - !gameover
+
+      # ---- COIN MINT ----
+      coin clock:
+        Type: interval trigger
+        Properties: { Interval: 0.07, AutoStart: true }
+        Listeners: [ coin gate ]
+      coin gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n > 0'
+            With: { n: !var coins to spawn }
+        Listeners: [ mint coin, use coin budget ]
+      mint coin:
+        Type: spawner
+        Properties:
+          TemplateId: coin_template
+          Position: !expr { Do: coinPoint }
+          Parameters:
+            value: !expr
+              Do: coinWorth
+              With:
+                base_value: !var coin base value
+                per: !var coin value per round
+                round: !var round
+      use coin budget:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coins to spawn
+          Value: !expr
+            Do: 'n - 1'
+            With: { n: !var coins to spawn }
+
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # =========================================================================
+  # THE MOON - a base strip plus crags (all tops at or below y = -3.7, so a
+  # pad hovering at -3.4 never intersects one). All of it is tagged `ground`.
+  # =========================================================================
+  bedrock:
+    Position: !vec { X: 0, Y: -5.5, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 24, Y: 1.6, Z: 2.4 }, tint: !var terrain colour }
+  crag west:
+    Position: !vec { X: -7.8, Y: -4.35, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 2.8, Y: 1.1, Z: 2 }, tint: !var crag colour }
+  boulder west:
+    Position: !vec { X: -4.2, Y: -4.55, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 2.0, Y: 1.5, Z: 2 }, tint: !var terrain colour }
+  rise mid:
+    Position: !vec { X: 0.6, Y: -4.5, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 3.2, Y: 0.9, Z: 2 }, tint: !var crag colour }
+  boulder east:
+    Position: !vec { X: 4.6, Y: -4.4, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 1.8, Y: 1.3, Z: 2 }, tint: !var terrain colour }
+  crag east:
+    Position: !vec { X: 8.2, Y: -4.3, Z: 0 }
+    Template:
+      Id: terrain_template
+      Parameters: { size: !vec { X: 2.4, Y: 1.2, Z: 2 }, tint: !var crag colour }
+
+  # Invisible containment - bouncing off these is not a crash.
+  west wall:
+    Position: !vec { X: -10.1, Y: 0, Z: 0 }
+    Template:
+      Id: wall_template
+      Parameters: { size: !vec { X: 0.6, Y: 13, Z: 3 } }
+  east wall:
+    Position: !vec { X: 10.1, Y: 0, Z: 0 }
+    Template:
+      Id: wall_template
+      Parameters: { size: !vec { X: 0.6, Y: 13, Z: 3 } }
+  ceiling:
+    Position: !vec { X: 0, Y: 6.4, Z: 0 }
+    Template:
+      Id: wall_template
+      Parameters: { size: !vec { X: 21.5, Y: 0.6, Z: 3 } }
+
+  # =========================================================================
+  # LIGHT & CAMERA - fixed orthographic framing of the whole playfield.
+  # =========================================================================
+  sun:
+    Position: !vec { X: 0, Y: 8, Z: -6 }
+    Rotation: !vec { X: 40, Y: -25, Z: 0 }
+    Behaviours:
+      key light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.68, G: 0.7, B: 0.82, A: 1 }, Intensity: 0.55 }
+
+  camera:
+    Position: !vec { X: 0, Y: 0, Z: -14 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "orthographic", Size: !var camera size, DefaultBlend: 0 }
+
+  vcam:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Id: mission control }
+          Mode: "2d"
+          Priority: 10
+          Lens: !var camera size
+          CameraDistance: 14
+          Damping: 0
+
+  # =========================================================================
+  # HUD - one upper-left stack. Speed and the SAFE / TOO FAST verdict are
+  # live bindings on the tracked velocity; the status line is whatever the
+  # game loop last wrote.
+  # =========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 6
+              Padding: 22
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.title, FontSize: 32, PreferredWidth: 720, PreferredHeight: 44 }
+          help1:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.help1, FontSize: 15, PreferredWidth: 780, PreferredHeight: 24 }
+          help2:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.help2, Arguments: [ !var max landing speed ] }
+                  FontSize: 15
+                  PreferredWidth: 780
+                  PreferredHeight: 24
+          score:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.score, Arguments: [ !var score ] }
+                  FontSize: 26
+                  PreferredWidth: 460
+                  PreferredHeight: 38
+          drop:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.drop, Arguments: [ !var round ] }
+                  FontSize: 20
+                  PreferredWidth: 460
+                  PreferredHeight: 30
+          coins:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.coins, Arguments: [ !var coins banked ] }
+                  FontSize: 18
+                  PreferredWidth: 460
+                  PreferredHeight: 28
+          speed:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.speed
+                    Arguments:
+                      - !expr
+                          Do: 'Magnitude(vel)'
+                          ArgumentTypes: [ vector ]
+                          ReturnType: float
+                          With: { vel: !var ship velocity }
+                  FontSize: 20
+                  PreferredWidth: 460
+                  PreferredHeight: 30
+          verdict:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'state == "flying" ? (Magnitude(vel) <= max_speed ? ok : hot) : blank'
+                    ArgumentTypes: [ string, vector, float, string, string, string ]
+                    With:
+                      state: !var game state
+                      vel: !var ship velocity
+                      max_speed: !var max landing speed
+                      ok: !text hud.safe
+                      hot: !text hud.hot
+                      blank: ""
+                  FontSize: 18
+                  PreferredWidth: 460
+                  PreferredHeight: 28
+          status:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !var status message, FontSize: 24, PreferredWidth: 720, PreferredHeight: 36 }
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties: { Label: !text btn.quit, PreferredWidth: 220, PreferredHeight: 44 }
+                Listeners:
+                  - !gameover
