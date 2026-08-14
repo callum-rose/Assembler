@@ -1,0 +1,1546 @@
+Game:
+  Title: "Subway Dash"
+  Description: |
+    An endless three-lane runner in the Subway Surfers mould. You sprint down a
+    subway line that never ends, hopping barricades, rolling under hanging signs,
+    swerving around parked trains and hoovering up coin lines - while the line
+    itself keeps getting faster.
+
+    THE FOUR VERBS (keyboard on desktop, swipe on mobile - the swipe recognizer
+    and the Controls actions converge on the SAME behaviours, so both platforms
+    drive one implementation):
+      LEFT / RIGHT - step one lane. The body eases between lane centres and
+                     banks into the turn, so a swerve reads as a swerve.
+      UP (jump)    - a scripted hop: a launch impulse into a per-frame gravity
+                     integrator. Only clears the low BARRICADES.
+      DOWN (roll)  - drop and tilt for `slide duration` seconds. Only clears the
+                     hanging SIGNS. Swiping down in mid-air slams you back down.
+    Nothing clears a TRAIN. Trains are a lane problem, not a timing problem.
+
+    HOW THE ENDLESS TRACK IS BUILT (no chunk streaming, no spawners)
+      * A fixed pool of twelve obstacles, one parameterised template, is the whole
+        course. Each obstacle watches the runner; once it is `recycle behind`
+        units astern it teleports itself to the front of the queue and re-rolls.
+      * The queue is a global ledger. `next obstacle z` is the next free slot;
+        an obstacle takes that slot and then books the one after it at the
+        current stage's `obstacle gap`. So obstacle spacing is a live function of
+        difficulty, and the pool can never overlap itself.
+      * Lanes come from `last obstacle lane` through `nextLane`, which returns one
+        of the OTHER two lanes. Consecutive obstacles are therefore never in the
+        same lane - the course is random but always survivable.
+      * Coins, power-ups and the scenery run the same ledger trick with their own
+        counters. Coins arrive in runs of `coin run length` down one lane, which
+        is what makes a greedy line worth taking.
+
+    STAGES ARE A RECORD TABLE. `stage table` maps a distance threshold to a run
+    speed, an obstacle gap and a name; `stageIndex` picks the row every frame.
+    That one row drives the speed, the course density, the score multiplier, the
+    camera's field of view and the HUD banner - tune the table, tune the game.
+
+    ECONOMY. Coins pay `coin value`, scaled by a decaying pickup combo and by the
+    stage multiplier. A MAGNET pickup drags every coin within `magnet radius`
+    into you for a few seconds; a HOVERBOARD is a stored second chance - the
+    first crash spends one board and grants brief invulnerability instead of
+    ending the run. Crash with no boards left and the run is over.
+
+    Desktop: A/D or arrows to swerve, W/Up/Space to hop, S/Down to roll, Esc to
+    quit; the mouse can swipe too. Mobile: swipe in all four directions.
+
+    Every piece of geometry in this descriptor is a `primitive` - no gizmos, no
+    sprites, no imported meshes - so it all renders in a real player build.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#070912"
+
+Physics:
+  # Nothing here is force-driven: the runner is kinematic and the hop is a hand
+  # integrated ballistic arc, so global gravity stays off.
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+# One row per difficulty stage of the line, listed in `stage table`.
+Records:
+  Stage:
+    at:    { Type: float,  Default: 0 }      # run distance at which this stage begins
+    speed: { Type: float,  Default: 13 }     # forward speed, units/second
+    gap:   { Type: float,  Default: 27 }     # metres between consecutive obstacles
+    name:  { Type: string, Default: "" }     # shown on the HUD
+
+Constants:
+  # --- Track geometry -------------------------------------------------------
+  lane width: 2.7             # lane centres sit at -2.7, 0, +2.7
+  stand height: 0.9           # runner origin height while upright
+  slide drop: 0.46            # fraction of stand height kept while rolling
+  slide lean: 74.0            # degrees of forward pitch while rolling
+
+  # --- Runner feel ----------------------------------------------------------
+  lane ease rate: 13.0        # how sharply the body converges on the lane centre
+  bank factor: 7.0            # degrees of roll per unit of lane error
+  jump speed: 9.6             # launch velocity of a hop (apex ~1.54)
+  gravity: 30.0               # downward acceleration on the hop
+  clear height: 0.7           # hop height that clears a barricade
+  slide duration: 0.72
+  invuln duration: 1.6        # grace window after a hoverboard save
+  death pause: 1.1            # seconds of wreckage before the run unloads
+  max boards: 3
+
+  # --- The line -------------------------------------------------------------
+  # Twelve obstacles, authored 27 apart from z = 60, so the pool's cycle order is
+  # exactly the authored order and `next obstacle z` starts just past the last.
+  recycle behind: 15.0
+  train size:   !vec { X: 2.3, Y: 3.0, Z: 6.5 }
+  train y: 1.5
+  hurdle size:  !vec { X: 2.3, Y: 0.8, Z: 0.9 }
+  hurdle y: 0.4
+  barrier size: !vec { X: 2.3, Y: 1.2, Z: 0.9 }
+  barrier y: 1.9
+
+  # --- Coins ----------------------------------------------------------------
+  coin value: 5
+  coin gap: 4.2
+  coin run length: 6          # coins per single-lane run
+  coin y: 1.05
+  combo window: 1.6
+  max combo: 8
+
+  # --- Power-ups ------------------------------------------------------------
+  magnet duration: 6.5
+  magnet radius: 6.5
+  magnet speed: 17.0
+  boost gap: 165.0
+  pickup y: 1.1
+
+  # --- Scenery --------------------------------------------------------------
+  scenery span: 208.0         # posts: 8 per side x 26; beams: 4 x 52
+  scenery behind: 26.0
+  pillar size: !vec { X: 0.9, Y: 5.5, Z: 0.9 }
+  beam size:   !vec { X: 13.0, Y: 0.5, Z: 1.0 }
+  ground size: !vec { X: 11.4, Y: 0.6, Z: 700.0 }
+  stripe size: !vec { X: 0.12, Y: 0.02, Z: 700.0 }
+  kerb size:   !vec { X: 0.5, Y: 0.35, Z: 700.0 }
+  strip ahead: 280.0          # how far in front of the runner the long strips centre
+
+  # --- Camera ---------------------------------------------------------------
+  base fov: 56.0
+  fov per speed: 0.85
+
+  # --- The campaign ---------------------------------------------------------
+  stage table: !record [
+    { Type: Stage, at:    0, speed: 13, gap: 27, name: "DEPOT" },
+    { Type: Stage, at:  260, speed: 15, gap: 25, name: "SIDINGS" },
+    { Type: Stage, at:  620, speed: 17, gap: 23, name: "TUNNELS" },
+    { Type: Stage, at: 1080, speed: 19, gap: 21, name: "VIADUCT" },
+    { Type: Stage, at: 1650, speed: 21, gap: 20, name: "EXPRESS" },
+    { Type: Stage, at: 2350, speed: 23, gap: 19, name: "OVERDRIVE" },
+    { Type: Stage, at: 3200, speed: 26, gap: 18, name: "RUNAWAY" } ]
+
+  # --- Palette --------------------------------------------------------------
+  runner colour:  !colour { R: 1.00, G: 0.78, B: 0.20, A: 1 }
+  magnet colour:  !colour { R: 0.30, G: 0.95, B: 1.00, A: 1 }
+  shield colour:  !colour { R: 1.00, G: 1.00, B: 1.00, A: 1 }
+  train colour:   !colour { R: 0.30, G: 0.36, B: 0.52, A: 1 }
+  hurdle colour:  !colour { R: 0.98, G: 0.45, B: 0.15, A: 1 }
+  barrier colour: !colour { R: 0.85, G: 0.25, B: 0.75, A: 1 }
+  coin colour:    !colour { R: 1.00, G: 0.84, B: 0.25, A: 1 }
+  board colour:   !colour { R: 0.35, G: 0.95, B: 0.55, A: 1 }
+  ground colour:  !colour { R: 0.11, G: 0.12, B: 0.18, A: 1 }
+  stripe colour:  !colour { R: 0.85, G: 0.87, B: 0.95, A: 1 }
+  kerb colour:    !colour { R: 0.20, G: 0.22, B: 0.32, A: 1 }
+  pillar colour:  !colour { R: 0.16, G: 0.18, B: 0.28, A: 1 }
+  beam colour:    !colour { R: 0.22, G: 0.24, B: 0.36, A: 1 }
+
+Variables:
+  # --- Run state ------------------------------------------------------------
+  run distance: 0.0           # also the runner's world z
+  run speed: 13.0             # seeded to stage 0 so frame one is well-defined
+  obstacle gap: 27.0
+  stage: 0
+  multiplier: 1
+  dead: false
+
+  # --- Runner blackboard ----------------------------------------------------
+  lane: 1                     # 0 | 1 | 2
+  player x: 0.0               # eased toward the lane centre
+  hop: 0.0                    # height above the standing pose
+  hop velocity: 0.0
+  sliding: false
+  slide until: 0.0
+  invuln until: -100.0
+  boards: 1
+
+  # --- Economy --------------------------------------------------------------
+  coins: 0
+  score: 0
+  coin combo: 0
+  last coin time: -100.0
+  magnet until: -100.0
+
+  # --- The recycling ledgers ------------------------------------------------
+  # Each pool hands out slots from its own monotonic counter, so a recycled
+  # object always lands ahead of every other member of its pool.
+  last obstacle lane: 0
+  next obstacle z: 384.0
+  coin lane: 2
+  coin run: 0
+  next coin z: 145.8
+  boost lane: 1
+  next boost z: 760.0
+
+Expressions:
+  # ---------- Stage table lookups ----------
+  # The active row is the last one whose `at` threshold the runner has passed.
+  stageIndex:
+    ArgumentTypes: [ record list, float ]
+    ArgumentNames: [ table, distance ]
+    ReturnType: int
+    Expression: |
+      int best = 0;
+      for (int i = 0; i < table.Count(); i++)
+      {
+          if (GetFloat(table[i], "at") <= distance)
+          {
+              best = i;
+          }
+      }
+      return best;
+
+  stageFloat:
+    ArgumentTypes: [ record list, int, string ]
+    ArgumentNames: [ table, index, field ]
+    ReturnType: float
+    Expression: "return index >= 0 && index < table.Count() ? GetFloat(table[index], field) : 0f;"
+
+  stageName:
+    ArgumentTypes: [ record list, int ]
+    ArgumentNames: [ table, index ]
+    ReturnType: string
+    Expression: 'return index >= 0 && index < table.Count() ? GetString(table[index], "name") : "";'
+
+  # ---------- Lanes ----------
+  laneX:
+    ArgumentTypes: [ int, float ]
+    ArgumentNames: [ lane, width ]
+    ReturnType: float
+    Expression: "return (lane - 1) * width;"
+
+  # The fairness rule: pick one of the two lanes the previous obstacle did NOT
+  # take, so no two consecutive obstacles can wall off the same line.
+  nextLane:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ last ]
+    ReturnType: int
+    Expression: "return (last + 1 + RandomInt(0, 1)) % 3;"
+
+  slotPos:
+    ArgumentTypes: [ int, float, float, float ]
+    ArgumentNames: [ lane, width, y, z ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(laneX(lane, width), y, z);"
+
+  easeLane:
+    ArgumentTypes: [ float, float, float, float ]
+    ArgumentNames: [ x, target, dt, rate ]
+    ReturnType: float
+    Expression: "return Lerp(x, target, Clamp(dt * rate, 0f, 1f));"
+
+  # ---------- The hop ----------
+  # Gravity only bites while airborne; resting on the ground clamps to zero so
+  # the runner does not accumulate downward speed between jumps.
+  hopVelocity:
+    ArgumentTypes: [ float, float, float, float ]
+    ArgumentNames: [ hop, vel, gravity, dt ]
+    ReturnType: float
+    Expression: |
+      if (hop <= 0f && vel <= 0f)
+      {
+          return 0f;
+      }
+      return vel - gravity * dt;
+
+  hopHeight:
+    ArgumentTypes: [ float, float, float ]
+    ArgumentNames: [ hop, vel, dt ]
+    ReturnType: float
+    Expression: "return Max(0f, hop + vel * dt);"
+
+  # ---------- Runner pose ----------
+  playerPos:
+    ArgumentTypes: [ float, float, float, float, float, bool ]
+    ArgumentNames: [ x, hop, z, stand, drop, sliding ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(x, (sliding ? stand * drop : stand) + hop, z);"
+
+  # Pitch forward into the roll, and bank by however far the body still is from
+  # the lane it is heading for.
+  playerTilt:
+    ArgumentTypes: [ bool, float, float, float, float, float ]
+    ArgumentNames: [ sliding, lean, x, target, bank, limit ]
+    ReturnType: vector
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: "return new Vector3(sliding ? lean : 0f, 0f, Clamp((x - target) * bank, -limit, limit));"
+
+  auraColour:
+    ArgumentTypes: [ bool, bool, colour, colour, colour ]
+    ArgumentNames: [ shielded, magnetised, base_c, shield_c, magnet_c ]
+    ReturnType: colour
+    Expression: "return shielded ? shield_c : (magnetised ? magnet_c : base_c);"
+
+  # ---------- Coins ----------
+  # A magnetised coin steers at the runner; otherwise its target is itself, so
+  # `move towards` leaves it alone.
+  magnetTarget:
+    ArgumentTypes: [ vector, vector, bool, float ]
+    ArgumentNames: [ self, player, active, radius ]
+    ReturnType: vector
+    Expression: "return active && Distance(self, player) < radius ? player : self;"
+
+  comboValue:
+    ArgumentTypes: [ int, int, int ]
+    ArgumentNames: [ value, combo, multiplier ]
+    ReturnType: int
+    Expression: "return value * (4 + combo) * multiplier / 4;"
+
+  # ---------- HUD ----------
+  totalScore:
+    ArgumentTypes: [ int, float ]
+    ArgumentNames: [ score, distance ]
+    ReturnType: int
+    Expression: "return score + (int)distance;"
+
+  secondsLeft:
+    ArgumentTypes: [ float, float ]
+    ArgumentNames: [ until, now ]
+    ReturnType: int
+    Expression: "return (int)Max(0f, Ceil(until - now));"
+
+  # ---------- Scenery layout ----------
+  # An evenly spaced row of props down one side of the line, used as a
+  # Placements `At` so the pool is authored as a rule rather than a list.
+  postRow:
+    ArgumentTypes: [ float, int, float, float, float ]
+    ArgumentNames: [ x, count, spacing, start, y ]
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int i = 0; i < count; i++)
+      {
+          b.Add(new Vector3(x, y, start + i * spacing));
+      }
+      return b.ToList();
+
+  # Coins are laid out in single-lane runs of `run` before the lane changes,
+  # which is what turns a coin line into a decision.
+  coinField:
+    ArgumentTypes: [ int, float, float, float, float, int ]
+    ArgumentNames: [ count, gap, start, y, width, run ]
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int i = 0; i < count; i++)
+      {
+          int lane = (i / run + 1) % 3;
+          b.Add(new Vector3((lane - 1) * width, y, start + i * gap));
+      }
+      return b.ToList();
+
+Controls:
+  Actions:
+    lane-left:  { Type: button, Phase: down }
+    lane-right: { Type: button, Phase: down }
+    jump:       { Type: button, Phase: down }
+    slide:      { Type: button, Phase: down }
+    quit:       { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      lane-left:  [ "<Keyboard>/a", "<Keyboard>/leftArrow" ]
+      lane-right: [ "<Keyboard>/d", "<Keyboard>/rightArrow" ]
+      jump:       [ "<Keyboard>/w", "<Keyboard>/upArrow", "<Keyboard>/space" ]
+      slide:      [ "<Keyboard>/s", "<Keyboard>/downArrow" ]
+      quit:       [ "<Keyboard>/escape" ]
+    mobile:
+      # Real touch play goes through the swipe recognizer on the runner; these
+      # keep a pad usable on a mobile build too.
+      lane-left:  [ "<Gamepad>/dpad/left" ]
+      lane-right: [ "<Gamepad>/dpad/right" ]
+      jump:       [ "<Gamepad>/buttonSouth" ]
+      slide:      [ "<Gamepad>/buttonEast" ]
+      quit:       [ "<Gamepad>/start" ]
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "SUBWAY DASH"
+      hud.help1: "A/D or arrows: swerve    W/Space: hop    S: roll    (or swipe)"
+      hud.help2: "Hop the orange barricades, roll under the pink signs, go around the trains"
+      hud.distance: "{0} m"
+      hud.stage: "Line: {0}   x{1}"
+      hud.score: "Score: {0}"
+      hud.coins: "Coins: {0}"
+      hud.combo: "Coin streak x{0}"
+      hud.magnet: "MAGNET {0}s"
+      hud.boards: "Hoverboards: {0}"
+      hud.wreck: "!!  WIPEOUT  !!"
+      btn.quit: "End the run"
+
+Templates:
+  # ---------------------------------------------------------------------------
+  # OBSTACLE - one template for all three hazards. Size, height and hitbox come
+  # from parameters; the hazard CLASS is an entity tag layered on at placement
+  # (solid / jumpable / duckable), which is what the runner's three detectors
+  # discriminate on. The recycle block below is the whole endless track.
+  # ---------------------------------------------------------------------------
+  obstacle_template:
+    Tags: [ obstacle ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !parameter tint }
+      hull:
+        Type: box collider
+        Properties: { Size: !parameter size }
+
+      recycle tick:
+        Type: every frame trigger
+        Listeners: [ recycle gate ]
+      recycle gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'playerpos.z - selfpos.z > behind'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              playerpos: !entity { Id: player, Property: Position }
+              selfpos: !entity { Property: Position }
+              behind: !var recycle behind
+        Listeners: [ pick lane, take slot, book next slot ]
+
+      # Write the new lane FIRST, then read it back when placing: listeners run
+      # in declaration order, so `take slot` sees the lane this obstacle just
+      # claimed and the next obstacle to recycle will avoid it in turn.
+      pick lane:
+        Type: int variable setter
+        Properties:
+          VariableId: !var last obstacle lane
+          Value: !expr
+            Do: nextLane
+            With: { last: !var last obstacle lane }
+      take slot:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: slotPos
+            With:
+              lane: !var last obstacle lane
+              width: !var lane width
+              y: !parameter y
+              z: !var next obstacle z
+      book next slot:
+        Type: float variable setter
+        Properties:
+          VariableId: !var next obstacle z
+          Value: !expr
+            Do: 'z + gap'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { z: !var next obstacle z, gap: !var obstacle gap }
+
+  # ---------------------------------------------------------------------------
+  # COIN - a spinning disc that recycles on the same ledger idea, but keeps its
+  # lane for `coin run length` pickups so coins arrive as a line rather than as
+  # noise. While a magnet is live it steers itself into the runner.
+  # ---------------------------------------------------------------------------
+  coin_template:
+    Tags: [ coin ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cylinder, Size: !vec { X: 0.5, Y: 0.06, Z: 0.5 }, Colour: !var coin colour }
+      spin:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 220, Z: 0 } }
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.55, IsTrigger: true }
+
+      magnet pull:
+        Type: move towards
+        Properties:
+          Speed: !var magnet speed
+          Target: !expr
+            Do: magnetTarget
+            With:
+              self: !entity { Property: Position }
+              player: !entity { Id: player, Property: Position }
+              active: !expr
+                Do: 'now < until'
+                ArgumentTypes: [ float, float ]
+                ReturnType: bool
+                With: { now: !clock time, until: !var magnet until }
+              radius: !var magnet radius
+
+      # Payout reads the combo BEFORE it is bumped, so the first coin of a line
+      # pays base rate and the streak builds from there.
+      pickup:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ pay coin, count coin, bump combo, stamp coin time, respawn ]
+      pay coin:
+        Type: int variable setter
+        Properties:
+          VariableId: !var score
+          Value: !expr
+            Do: 'score + comboValue(v, combo, mult)'
+            ArgumentTypes: [ int, int, int, int ]
+            ReturnType: int
+            With:
+              score: !var score
+              v: !var coin value
+              combo: !var coin combo
+              mult: !var multiplier
+      count coin:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coins
+          Value: !expr
+            Do: 'coins + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { coins: !var coins }
+      bump combo:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coin combo
+          Value: !expr
+            Do: 'combo < cap ? combo + 1 : cap'
+            ArgumentTypes: [ int, int ]
+            ReturnType: int
+            With: { combo: !var coin combo, cap: !var max combo }
+      stamp coin time:
+        Type: float variable setter
+        Properties: { VariableId: !var last coin time, Value: !clock time }
+
+      recycle tick:
+        Type: every frame trigger
+        Listeners: [ recycle gate ]
+      recycle gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'playerpos.z - selfpos.z > behind'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              playerpos: !entity { Id: player, Property: Position }
+              selfpos: !entity { Property: Position }
+              behind: !var recycle behind
+        Listeners: [ respawn ]
+
+      # Shared tail for both ways a coin leaves play (collected, or passed).
+      respawn:
+        Type: condition gate
+        Properties: { Condition: true }
+        Listeners: [ advance run, reroll gate, take slot, book next slot ]
+      advance run:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coin run
+          Value: !expr
+            Do: 'n + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { n: !var coin run }
+      reroll gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'n % run == 0'
+            ArgumentTypes: [ int, int ]
+            ReturnType: bool
+            With: { n: !var coin run, run: !var coin run length }
+        Listeners: [ pick coin lane ]
+      pick coin lane:
+        Type: int variable setter
+        Properties:
+          VariableId: !var coin lane
+          Value: !expr
+            Do: 'RandomInt(0, 2)'
+            ReturnType: int
+      take slot:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: slotPos
+            With:
+              lane: !var coin lane
+              width: !var lane width
+              y: !var coin y
+              z: !var next coin z
+      book next slot:
+        Type: float variable setter
+        Properties:
+          VariableId: !var next coin z
+          Value: !expr
+            Do: 'z + gap'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { z: !var next coin z, gap: !var coin gap }
+
+  # ---------------------------------------------------------------------------
+  # POWER-UP - one template, two flavours. `is_magnet` picks which of the two
+  # effect gates fires, so the magnet and the hoverboard share every line of
+  # pickup and recycling code between them.
+  # ---------------------------------------------------------------------------
+  pickup_template:
+    Tags: [ pickup ]
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: sphere, Size: !vec { X: 0.75, Y: 0.75, Z: 0.75 }, Colour: !parameter tint }
+      glow:
+        Type: light
+        Properties: { Type: point, Colour: !parameter tint, Intensity: 1.8, Range: 4.5 }
+      bob:
+        Type: angular velocity
+        Properties: { AngularVelocity: !vec { X: 0, Y: 120, Z: 0 } }
+      hull:
+        Type: sphere collider
+        Properties: { Radius: 0.6, IsTrigger: true }
+
+      grab:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ player ] }
+        Listeners: [ magnet gate, board gate, respawn ]
+      magnet gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'm'
+            ArgumentTypes: [ bool ]
+            ReturnType: bool
+            With: { m: !parameter is_magnet }
+        Listeners: [ arm magnet ]
+      arm magnet:
+        Type: float variable setter
+        Properties:
+          VariableId: !var magnet until
+          Value: !expr
+            Do: 'now + span'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { now: !clock time, span: !var magnet duration }
+      board gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!m'
+            ArgumentTypes: [ bool ]
+            ReturnType: bool
+            With: { m: !parameter is_magnet }
+        Listeners: [ stow board ]
+      stow board:
+        Type: int variable setter
+        Properties:
+          VariableId: !var boards
+          Value: !expr
+            Do: 'boards < cap ? boards + 1 : cap'
+            ArgumentTypes: [ int, int ]
+            ReturnType: int
+            With: { boards: !var boards, cap: !var max boards }
+
+      recycle tick:
+        Type: every frame trigger
+        Listeners: [ recycle gate ]
+      recycle gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'playerpos.z - selfpos.z > behind'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              playerpos: !entity { Id: player, Property: Position }
+              selfpos: !entity { Property: Position }
+              behind: !var recycle behind
+        Listeners: [ respawn ]
+
+      respawn:
+        Type: condition gate
+        Properties: { Condition: true }
+        Listeners: [ pick boost lane, take slot, book next slot ]
+      pick boost lane:
+        Type: int variable setter
+        Properties:
+          VariableId: !var boost lane
+          Value: !expr
+            Do: 'RandomInt(0, 2)'
+            ReturnType: int
+      take slot:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: slotPos
+            With:
+              lane: !var boost lane
+              width: !var lane width
+              y: !var pickup y
+              z: !var next boost z
+      book next slot:
+        Type: float variable setter
+        Properties:
+          VariableId: !var next boost z
+          Value: !expr
+            Do: 'z + gap'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { z: !var next boost z, gap: !var boost gap }
+
+  # ---------------------------------------------------------------------------
+  # SCENERY - visual speed cues only, no colliders. Same recycling idea, but a
+  # prop has no fairness rules to honour so it just leaps a whole pool length
+  # forward and keeps its lane.
+  # ---------------------------------------------------------------------------
+  scenery_template:
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !parameter tint }
+      recycle tick:
+        Type: every frame trigger
+        Listeners: [ recycle gate ]
+      recycle gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'playerpos.z - selfpos.z > behind'
+            ArgumentTypes: [ vector, vector, float ]
+            ReturnType: bool
+            With:
+              playerpos: !entity { Id: player, Property: Position }
+              selfpos: !entity { Property: Position }
+              behind: !var scenery behind
+        Listeners: [ leap ahead ]
+      leap ahead:
+        Type: translate
+        Properties:
+          Displacement: !expr
+            Do: 'new Vector3(0f, 0f, span)'
+            ArgumentTypes: [ float ]
+            ReturnType: vector
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With: { span: !var scenery span }
+
+  # ---------------------------------------------------------------------------
+  # TRACK STRIP - a very long bar (ground, lane stripe, kerb) that simply keeps
+  # itself centred ahead of the runner, so the line never runs out underfoot.
+  # ---------------------------------------------------------------------------
+  strip_template:
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: cube, Size: !parameter size, Colour: !parameter tint }
+      follow tick:
+        Type: every frame trigger
+        Listeners: [ follow ]
+      follow:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: 'new Vector3(x, y, playerpos.z + ahead)'
+            ArgumentTypes: [ float, float, vector, float ]
+            ReturnType: vector
+            RegisterTypes: [ UnityEngine.Vector3 ]
+            With:
+              x: !parameter x
+              y: !parameter y
+              playerpos: !entity { Id: player, Property: Position }
+              ahead: !var strip ahead
+
+# =============================================================================
+# PLACEMENTS - the whole course as four rules rather than fifty entity blocks.
+# Obstacles are authored 27 apart from z = 60 (twelve slots, interleaved by
+# class and by lane) because that authored order becomes the pool's permanent
+# cycle order; `next obstacle z` is seeded just past the last of them.
+# =============================================================================
+Placements:
+  trains:
+    Template: obstacle_template
+    Tags: [ solid ]
+    Parameters: { size: !var train size, tint: !var train colour, y: !var train y }
+    At:
+      - !vec { X: -2.7, Y: 1.5, Z: 60 }     # slot 0
+      - !vec { X: 0.0,  Y: 1.5, Z: 141 }    # slot 3
+      - !vec { X: 2.7,  Y: 1.5, Z: 195 }    # slot 5
+      - !vec { X: -2.7, Y: 1.5, Z: 276 }    # slot 8
+      - !vec { X: 0.0,  Y: 1.5, Z: 330 }    # slot 10
+
+  barricades:
+    Template: obstacle_template
+    Tags: [ jumpable ]
+    Parameters: { size: !var hurdle size, tint: !var hurdle colour, y: !var hurdle y }
+    At:
+      - !vec { X: 0.0,  Y: 0.4, Z: 87 }     # slot 1
+      - !vec { X: -2.7, Y: 0.4, Z: 168 }    # slot 4
+      - !vec { X: 2.7,  Y: 0.4, Z: 249 }    # slot 7
+      - !vec { X: -2.7, Y: 0.4, Z: 357 }    # slot 11
+
+  signs:
+    Template: obstacle_template
+    Tags: [ duckable ]
+    Parameters: { size: !var barrier size, tint: !var barrier colour, y: !var barrier y }
+    At:
+      - !vec { X: 2.7, Y: 1.9, Z: 114 }     # slot 2
+      - !vec { X: 0.0, Y: 1.9, Z: 222 }     # slot 6
+      - !vec { X: 2.7, Y: 1.9, Z: 303 }     # slot 9
+
+  # Twenty-four coins in four single-lane runs of six; the ledger continues from
+  # 145.8 (= 45 + 24 * 4.2).
+  coins:
+    Template: coin_template
+    Rotation: !vec { X: 90, Y: 0, Z: 0 }
+    At: !expr
+      Do: coinField
+      With:
+        count: 24
+        gap: !var coin gap
+        start: 45.0
+        y: !var coin y
+        width: !var lane width
+        run: !var coin run length
+
+  # Scenery pools. Eight posts a side (26 apart) and four overhead beams (52
+  # apart) all share a 208-unit leap, so each pool tiles itself seamlessly.
+  posts left:
+    Template: scenery_template
+    Parameters: { size: !var pillar size, tint: !var pillar colour }
+    At: !expr
+      Do: postRow
+      With: { x: -5.9, count: 8, spacing: 26.0, start: 20.0, y: 2.75 }
+
+  posts right:
+    Template: scenery_template
+    Parameters: { size: !var pillar size, tint: !var pillar colour }
+    At: !expr
+      Do: postRow
+      With: { x: 5.9, count: 8, spacing: 26.0, start: 33.0, y: 2.75 }
+
+  beams:
+    Template: scenery_template
+    Parameters: { size: !var beam size, tint: !var beam colour }
+    At: !expr
+      Do: postRow
+      With: { x: 0.0, count: 4, spacing: 52.0, start: 40.0, y: 5.4 }
+
+Entities:
+  # ===========================================================================
+  # THE RUNNER - the only moving thing in the game. Its world transform is a
+  # pure function of five blackboard variables (lane ease, hop integrator, run
+  # distance, roll state) written by one ordered per-frame chain, so the pose
+  # is deterministic and nothing fights over the transform.
+  #
+  # The collider is a trigger on a kinematic body: obstacles are plain static
+  # colliders, and the three detectors below discriminate purely on hazard tag.
+  # Because `tilt self` lays the box down during a roll, ducking is REAL
+  # geometry as well as a gated rule.
+  # ===========================================================================
+  player:
+    Tags: [ player ]
+    Position: !vec { X: 0, Y: 0.9, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties: { Shape: capsule, Size: !vec { X: 0.8, Y: 0.85, Z: 0.8 }, Colour: !var runner colour }
+      aura:
+        Type: light
+        Properties:
+          Type: point
+          Colour: !expr
+            Do: auraColour
+            With:
+              shielded: !expr
+                Do: 'now < until'
+                ArgumentTypes: [ float, float ]
+                ReturnType: bool
+                With: { now: !clock time, until: !var invuln until }
+              magnetised: !expr
+                Do: 'now < until'
+                ArgumentTypes: [ float, float ]
+                ReturnType: bool
+                With: { now: !clock time, until: !var magnet until }
+              base_c: !var runner colour
+              shield_c: !var shield colour
+              magnet_c: !var magnet colour
+          Intensity: 1.9
+          Range: 7.0
+      hull:
+        Type: box collider
+        Properties: { Size: !vec { X: 0.6, Y: 1.4, Z: 0.6 }, IsTrigger: true }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: false, IsKinematic: true }
+
+      # ---- The run loop. Order is the logic: stage -> speed -> distance ->
+      #      pose, so every reader downstream sees this frame's values. ----
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - sync stage
+          - sync multiplier
+          - sync speed
+          - sync gap
+          - advance distance
+          - ease lane
+          - step hop velocity
+          - step hop height
+          - end roll gate
+          - place self
+          - tilt self
+
+      sync stage:
+        Type: int variable setter
+        Properties:
+          VariableId: !var stage
+          Value: !expr
+            Do: stageIndex
+            With: { table: !var stage table, distance: !var run distance }
+      sync multiplier:
+        Type: int variable setter
+        Properties:
+          VariableId: !var multiplier
+          Value: !expr
+            Do: 'stage + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { stage: !var stage }
+      sync speed:
+        Type: float variable setter
+        Properties:
+          VariableId: !var run speed
+          Value: !expr
+            Do: 'dead ? 0f : stageFloat(table, stage, "speed")'
+            ArgumentTypes: [ bool, record list, int ]
+            ReturnType: float
+            With: { dead: !var dead, table: !var stage table, stage: !var stage }
+      sync gap:
+        Type: float variable setter
+        Properties:
+          VariableId: !var obstacle gap
+          Value: !expr
+            Do: stageFloat
+            With: { table: !var stage table, index: !var stage, field: "gap" }
+      advance distance:
+        Type: float variable setter
+        Properties:
+          VariableId: !var run distance
+          Value: !expr
+            Do: 'z + speed * dt'
+            ArgumentTypes: [ float, float, float ]
+            ReturnType: float
+            With: { z: !var run distance, speed: !var run speed, dt: !clock deltaTime }
+      ease lane:
+        Type: float variable setter
+        Properties:
+          VariableId: !var player x
+          Value: !expr
+            Do: 'easeLane(x, laneX(lane, width), dt, rate)'
+            ArgumentTypes: [ float, int, float, float, float ]
+            ReturnType: float
+            With:
+              x: !var player x
+              lane: !var lane
+              width: !var lane width
+              dt: !clock deltaTime
+              rate: !var lane ease rate
+      step hop velocity:
+        Type: float variable setter
+        Properties:
+          VariableId: !var hop velocity
+          Value: !expr
+            Do: hopVelocity
+            With:
+              hop: !var hop
+              vel: !var hop velocity
+              gravity: !var gravity
+              dt: !clock deltaTime
+      step hop height:
+        Type: float variable setter
+        Properties:
+          VariableId: !var hop
+          Value: !expr
+            Do: hopHeight
+            With: { hop: !var hop, vel: !var hop velocity, dt: !clock deltaTime }
+      end roll gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'sliding && now >= until'
+            ArgumentTypes: [ bool, float, float ]
+            ReturnType: bool
+            With: { sliding: !var sliding, now: !clock time, until: !var slide until }
+        Listeners: [ stand up ]
+      stand up:
+        Type: bool variable setter
+        Properties: { VariableId: !var sliding, Value: false }
+      place self:
+        Type: position setter
+        Properties:
+          Position: !expr
+            Do: playerPos
+            With:
+              x: !var player x
+              hop: !var hop
+              z: !var run distance
+              stand: !var stand height
+              drop: !var slide drop
+              sliding: !var sliding
+      tilt self:
+        Type: rotation setter
+        Properties:
+          Rotation: !expr
+            Do: playerTilt
+            With:
+              sliding: !var sliding
+              lean: !var slide lean
+              x: !var player x
+              target: !expr
+                Do: laneX
+                With: { lane: !var lane, width: !var lane width }
+              bank: !var bank factor
+              limit: 22.0
+
+      # ---- Desktop input. Every action lands on the same four verbs the
+      #      swipe gates below use, so there is one implementation each. ----
+      left action:
+        Type: input action
+        Properties: { Action: lane-left }
+        Listeners: [ step left ]
+      right action:
+        Type: input action
+        Properties: { Action: lane-right }
+        Listeners: [ step right ]
+      jump action:
+        Type: input action
+        Properties: { Action: jump }
+        Listeners: [ hop gate ]
+      slide action:
+        Type: input action
+        Properties: { Action: slide }
+        Listeners: [ roll gate ]
+
+      step left:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lane
+          Value: !expr
+            Do: 'lane > 0 ? lane - 1 : 0'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { lane: !var lane }
+      step right:
+        Type: int variable setter
+        Properties:
+          VariableId: !var lane
+          Value: !expr
+            Do: 'lane < 2 ? lane + 1 : 2'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { lane: !var lane }
+
+      hop gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'hop <= 0.01f && !sliding && !dead'
+            ArgumentTypes: [ float, bool, bool ]
+            ReturnType: bool
+            With: { hop: !var hop, sliding: !var sliding, dead: !var dead }
+        Listeners: [ launch hop ]
+      launch hop:
+        Type: float variable setter
+        Properties: { VariableId: !var hop velocity, Value: !var jump speed }
+
+      # Rolling in mid-air slams the runner back down, so a swipe-down is
+      # always a useful answer to a sign you jumped into.
+      roll gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!sliding && !dead'
+            ArgumentTypes: [ bool, bool ]
+            ReturnType: bool
+            With: { sliding: !var sliding, dead: !var dead }
+        Listeners: [ start roll, stamp roll end, slam down ]
+      start roll:
+        Type: bool variable setter
+        Properties: { VariableId: !var sliding, Value: true }
+      stamp roll end:
+        Type: float variable setter
+        Properties:
+          VariableId: !var slide until
+          Value: !expr
+            Do: 'now + span'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { now: !clock time, span: !var slide duration }
+      slam down:
+        Type: float variable setter
+        Properties:
+          VariableId: !var hop velocity
+          Value: !expr
+            Do: '-speed'
+            ArgumentTypes: [ float ]
+            ReturnType: float
+            With: { speed: !var jump speed }
+
+      # ---- Mobile input. One recognizer, four gates reading the swipe's
+      #      `direction` output off the listener edge. ----
+      swipe:
+        Type: swipe trigger
+        Properties: { MinDistance: 55, MaxDuration: 0.6 }
+        Listeners:
+          - { BehaviourId: swipe left gate,  Outputs: { direction: swipe_dir } }
+          - { BehaviourId: swipe right gate, Outputs: { direction: swipe_dir } }
+          - { BehaviourId: swipe up gate,    Outputs: { direction: swipe_dir } }
+          - { BehaviourId: swipe down gate,  Outputs: { direction: swipe_dir } }
+      swipe left gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'dir.x < -0.5f'
+            ArgumentTypes: [ vector ]
+            ReturnType: bool
+            With: { dir: !output swipe_dir }
+        Listeners: [ step left ]
+      swipe right gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'dir.x > 0.5f'
+            ArgumentTypes: [ vector ]
+            ReturnType: bool
+            With: { dir: !output swipe_dir }
+        Listeners: [ step right ]
+      swipe up gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'dir.y > 0.5f'
+            ArgumentTypes: [ vector ]
+            ReturnType: bool
+            With: { dir: !output swipe_dir }
+        Listeners: [ hop gate ]
+      swipe down gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'dir.y < -0.5f'
+            ArgumentTypes: [ vector ]
+            ReturnType: bool
+            With: { dir: !output swipe_dir }
+        Listeners: [ roll gate ]
+
+      # ---- Hazards. One detector per class; the class decides which escape
+      #      counts, and all three funnel into the same damage resolver. ----
+      hit train:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ solid ] }
+        Listeners: [ take hit ]
+      hit barricade:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ jumpable ] }
+        Listeners: [ barricade gate ]
+      barricade gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'hop < clear'
+            ArgumentTypes: [ float, float ]
+            ReturnType: bool
+            With: { hop: !var hop, clear: !var clear height }
+        Listeners: [ take hit ]
+      hit sign:
+        Type: trigger enter trigger
+        Properties: { TagsToDetect: [ duckable ] }
+        Listeners: [ sign gate ]
+      sign gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!sliding'
+            ArgumentTypes: [ bool ]
+            ReturnType: bool
+            With: { sliding: !var sliding }
+        Listeners: [ take hit ]
+
+      # A hit only lands if the run is live and the grace window has expired.
+      # Then exactly one of the two complementary gates below resolves it.
+      take hit:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: '!dead && now > until'
+            ArgumentTypes: [ bool, float, float ]
+            ReturnType: bool
+            With: { dead: !var dead, now: !clock time, until: !var invuln until }
+        Listeners: [ save gate, doom gate ]
+      save gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'boards > 0'
+            ArgumentTypes: [ int ]
+            ReturnType: bool
+            With: { boards: !var boards }
+        Listeners:
+          - spend board
+          - grant grace
+          - break combo
+          - { EntityId: fx, BehaviourId: save shake }
+      doom gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'boards <= 0'
+            ArgumentTypes: [ int ]
+            ReturnType: bool
+            With: { boards: !var boards }
+        Listeners:
+          - mark dead
+          - break combo
+          - { EntityId: fx, BehaviourId: crash shake }
+          - wreck fuse
+      spend board:
+        Type: int variable setter
+        Properties:
+          VariableId: !var boards
+          Value: !expr
+            Do: 'boards - 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { boards: !var boards }
+      grant grace:
+        Type: float variable setter
+        Properties:
+          VariableId: !var invuln until
+          Value: !expr
+            Do: 'now + span'
+            ArgumentTypes: [ float, float ]
+            ReturnType: float
+            With: { now: !clock time, span: !var invuln duration }
+      break combo:
+        Type: int variable setter
+        Properties: { VariableId: !var coin combo, Value: 0 }
+      mark dead:
+        Type: bool variable setter
+        Properties: { VariableId: !var dead, Value: true }
+      # `sync speed` reads `dead`, so the runner coasts to a dead stop and the
+      # wreck is on screen for a beat before the game unloads.
+      wreck fuse:
+        Type: deferred trigger
+        Properties: { Delay: !var death pause }
+        Listeners:
+          - !gameover
+
+  # ===========================================================================
+  # THE LINE - long strips that keep themselves centred ahead of the runner, so
+  # the ground, lane markings and platform kerbs never run out.
+  # ===========================================================================
+  ground:
+    Position: !vec { X: 0, Y: -0.3, Z: 0 }
+    Template:
+      Id: strip_template
+      Parameters: { size: !var ground size, tint: !var ground colour, x: 0.0, y: -0.3 }
+  stripe left:
+    Position: !vec { X: -1.35, Y: 0.02, Z: 0 }
+    Template:
+      Id: strip_template
+      Parameters: { size: !var stripe size, tint: !var stripe colour, x: -1.35, y: 0.02 }
+  stripe right:
+    Position: !vec { X: 1.35, Y: 0.02, Z: 0 }
+    Template:
+      Id: strip_template
+      Parameters: { size: !var stripe size, tint: !var stripe colour, x: 1.35, y: 0.02 }
+  kerb left:
+    Position: !vec { X: -5.0, Y: 0.15, Z: 0 }
+    Template:
+      Id: strip_template
+      Parameters: { size: !var kerb size, tint: !var kerb colour, x: -5.0, y: 0.15 }
+  kerb right:
+    Position: !vec { X: 5.0, Y: 0.15, Z: 0 }
+    Template:
+      Id: strip_template
+      Parameters: { size: !var kerb size, tint: !var kerb colour, x: 5.0, y: 0.15 }
+
+  # ===========================================================================
+  # POWER-UPS - two of each flavour, alternating down one shared ledger so they
+  # arrive in a predictable rhythm but a random lane.
+  # ===========================================================================
+  magnet a:
+    Position: !vec { X: 0, Y: 1.1, Z: 100 }
+    Template:
+      Id: pickup_template
+      Parameters: { is_magnet: true, tint: !var magnet colour }
+  board a:
+    Position: !vec { X: 2.7, Y: 1.1, Z: 265 }
+    Template:
+      Id: pickup_template
+      Parameters: { is_magnet: false, tint: !var board colour }
+  magnet b:
+    Position: !vec { X: -2.7, Y: 1.1, Z: 430 }
+    Template:
+      Id: pickup_template
+      Parameters: { is_magnet: true, tint: !var magnet colour }
+  board b:
+    Position: !vec { X: 0, Y: 1.1, Z: 595 }
+    Template:
+      Id: pickup_template
+      Parameters: { is_magnet: false, tint: !var board colour }
+
+  # ===========================================================================
+  # REFEREE - the coin streak's decay clock and the manual quit.
+  # ===========================================================================
+  referee:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners: [ combo decay gate ]
+      combo decay gate:
+        Type: condition gate
+        Properties:
+          Condition: !expr
+            Do: 'combo > 0 && now - last > window'
+            ArgumentTypes: [ int, float, float, float ]
+            ReturnType: bool
+            With:
+              combo: !var coin combo
+              now: !clock time
+              last: !var last coin time
+              window: !var combo window
+        Listeners: [ reset combo ]
+      reset combo:
+        Type: int variable setter
+        Properties: { VariableId: !var coin combo, Value: 0 }
+      quit action:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners:
+          - !gameover
+
+  # ===========================================================================
+  # FX RACK - both camera kicks in one place, fired by the hit resolver.
+  # ===========================================================================
+  fx:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      save shake:
+        Type: camera shake
+        Properties: { Force: 0.7, Duration: 0.25, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+      crash shake:
+        Type: camera shake
+        Properties: { Force: 2.2, Duration: 0.5, Velocity: !vec { X: 0, Y: -1, Z: 0 } }
+
+  # ===========================================================================
+  # LIGHT & CAMERA - a chase rig behind and above the runner. The lens widens
+  # with the stage's run speed, so the line visibly tightens as it speeds up.
+  # ===========================================================================
+  sun:
+    Position: !vec { X: 0, Y: 14, Z: -6 }
+    Rotation: !vec { X: 52, Y: -18, Z: 0 }
+    Behaviours:
+      key light:
+        Type: light
+        Properties: { Type: directional, Colour: !colour { R: 0.88, G: 0.90, B: 1.00, A: 1 }, Intensity: 1.1 }
+
+  camera:
+    Position: !vec { X: 0, Y: 4.4, Z: -9 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "perspective", DefaultBlend: 0 }
+
+  vcam:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      rig:
+        Type: camera follow
+        Properties:
+          Target: { Id: player }
+          LookAt: { Id: player }
+          Mode: "3d"
+          Priority: 10
+          Damping: 0.25
+          FollowOffset: !vec { X: 0, Y: 4.4, Z: -9 }
+          Lens: !expr
+            Do: 'base_fov + (speed - 13f) * per'
+            ArgumentTypes: [ float, float, float ]
+            ReturnType: float
+            With: { base_fov: !var base fov, speed: !var run speed, per: !var fov per speed }
+
+  # ===========================================================================
+  # HUD
+  # ===========================================================================
+  ui:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties: { MatchWidthOrHeight: 0.5 }
+    Children:
+      hud:
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 6
+              Padding: 24
+              ChildAlignment: upper-left
+              FitContent: false
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.title, FontSize: 34, PreferredWidth: 760, PreferredHeight: 46 }
+          help1:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.help1, FontSize: 16, PreferredWidth: 800, PreferredHeight: 24 }
+          help2:
+            Behaviours:
+              label:
+                Type: text label
+                Properties: { Text: !text hud.help2, FontSize: 16, PreferredWidth: 800, PreferredHeight: 24 }
+          distance:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.distance
+                    Arguments:
+                      - !expr
+                          Do: '(int)d'
+                          ArgumentTypes: [ float ]
+                          ReturnType: int
+                          With: { d: !var run distance }
+                  FontSize: 30
+                  PreferredWidth: 460
+                  PreferredHeight: 42
+          stage:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.stage
+                    Arguments:
+                      - !expr
+                          Do: stageName
+                          With: { table: !var stage table, index: !var stage }
+                      - !var multiplier
+                  FontSize: 24
+                  PreferredWidth: 460
+                  PreferredHeight: 36
+          score:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text
+                    Key: hud.score
+                    Arguments:
+                      - !expr
+                          Do: totalScore
+                          With: { score: !var score, distance: !var run distance }
+                  FontSize: 24
+                  PreferredWidth: 460
+                  PreferredHeight: 36
+          coins:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.coins, Arguments: [ !var coins ] }
+                  FontSize: 22
+                  PreferredWidth: 460
+                  PreferredHeight: 34
+          combo:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'combo > 1 ? label : blank'
+                    ArgumentTypes: [ int, string, string ]
+                    ReturnType: string
+                    With:
+                      combo: !var coin combo
+                      label: !text { Key: hud.combo, Arguments: [ !var coin combo ] }
+                      blank: ""
+                  FontSize: 22
+                  PreferredWidth: 460
+                  PreferredHeight: 34
+          magnet:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'left > 0 ? label : blank'
+                    ArgumentTypes: [ int, string, string ]
+                    ReturnType: string
+                    With:
+                      left: !expr
+                        Do: secondsLeft
+                        With: { until: !var magnet until, now: !clock time }
+                      label: !text
+                        Key: hud.magnet
+                        Arguments:
+                          - !expr
+                              Do: secondsLeft
+                              With: { until: !var magnet until, now: !clock time }
+                      blank: ""
+                  FontSize: 22
+                  PreferredWidth: 460
+                  PreferredHeight: 34
+          boards:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text { Key: hud.boards, Arguments: [ !var boards ] }
+                  FontSize: 22
+                  PreferredWidth: 460
+                  PreferredHeight: 34
+          wreck:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !expr
+                    Do: 'dead ? msg : blank'
+                    ArgumentTypes: [ bool, string, string ]
+                    ReturnType: string
+                    With:
+                      dead: !var dead
+                      msg: !text hud.wreck
+                      blank: ""
+                  FontSize: 30
+                  PreferredWidth: 560
+                  PreferredHeight: 44
+          quit:
+            Behaviours:
+              button:
+                Type: ui button
+                Properties: { Label: !text btn.quit, PreferredWidth: 220, PreferredHeight: 46 }
+                Listeners:
+                  - !gameover
