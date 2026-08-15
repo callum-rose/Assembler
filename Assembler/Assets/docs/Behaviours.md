@@ -872,6 +872,13 @@ Forwards an upstream trigger to listeners only if no other trigger sharing the s
 |------|------|-------------|
 | Group | string | Name identifying the exclusion group; only the first trigger in this group to fire each frame propagates. |
 
+## `relay`
+Forwards an upstream trigger straight through to its own listeners, passing the trigger context on unchanged. A shared fan-out point: when several triggers all drive the same reaction, point each at one relay instead of repeating the identical Listeners list on every one.
+
+**Role:** Executable (valid `Listeners:` target; also a trigger — emits to its own listeners).
+
+No properties.
+
 ## `state machine`
 Finite state machine for entity AI. Holds the current state in an entity string-variable and
             transitions between declared states when a transition's condition becomes true. Transitions are

@@ -395,6 +395,8 @@ namespace Assembler.Building
 				return (b, lr => b.Initialise(new ExclusiveTriggerData(i.Id,
 					i.Group.Resolve(ctx.Resolution)), i.Listeners.ToListeners(lr, ctx.Resolution)));
 			});
+			map[typeof(RelayInfo)] = Entry<RelayInfo, Relay, RelayData>(
+				(i, ctx) => new RelayData(i.Id));
 		}
 
 		private static void AddCameras(IDictionary<Type, BuilderEntry> map)

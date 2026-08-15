@@ -35,7 +35,7 @@ namespace Tests.Behaviours
 			{
 				typeof(ConditionGate), typeof(InverseConditionGate), typeof(ExclusiveTrigger),
 				typeof(DebouncedTrigger), typeof(ThrottledTrigger), typeof(DeferredTrigger),
-				typeof(TimerTrigger), typeof(IntervalTrigger),
+				typeof(TimerTrigger), typeof(IntervalTrigger), typeof(Relay),
 			})
 			{
 				Assert.IsTrue(typeof(IAmExecutable).IsAssignableFrom(t),

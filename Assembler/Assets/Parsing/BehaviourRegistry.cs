@@ -81,6 +81,7 @@ namespace Assembler.Parsing
 				["condition gate"] = ConditionGateInfo.Create,
 				["inverse condition gate"] = InverseConditionGateInfo.Create,
 				["exclusive trigger"] = ExclusiveTriggerInfo.Create,
+				["relay"] = RelayInfo.Create,
 				["state machine"] = StateMachineInfo.Create,
 				["perceive"] = PerceiveInfo.Create,
 				["perceive all"] = PerceiveAllInfo.Create,
