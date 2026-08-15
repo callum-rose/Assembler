@@ -66,6 +66,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		Spot
 	}
 
+	/// <summary>How a <c>particle burst</c> renders each particle: a camera-facing quad (cheapest, the
+	/// default), or a 3D <c>Cube</c>/<c>Sphere</c> mesh (for chunky death-debris that tumbles in 3D).</summary>
+	public enum ParticleShape
+	{
+		Billboard,
+		Cube,
+		Sphere
+	}
+
 	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
 	/// (an <c>AppendInterval</c>) that animates nothing.</summary>
 	public enum AnimationTarget
@@ -115,6 +124,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
 				typeof(TEnum) == typeof(CameraConfinerMode) ? ParseCameraConfinerMode(normalised, raw) :
 				typeof(TEnum) == typeof(LightKind) ? ParseLightKind(normalised, raw) :
+				typeof(TEnum) == typeof(ParticleShape) ? ParseParticleShape(normalised, raw) :
 				typeof(TEnum) == typeof(AnimationTarget) ? ParseAnimationTarget(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceMode) ? ParseSequenceMode(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceLoopType) ? ParseSequenceLoopType(normalised, raw) :
@@ -251,6 +261,16 @@ namespace Assembler.Parsing.Info.Behaviours
 				"spot" => LightKind.Spot,
 				_ => throw new ParsingException(
 					$"Unknown light type '{raw}'. Valid values: directional, point, spot")
+			};
+
+		private static ParticleShape ParseParticleShape(string s, string raw) =>
+			s switch
+			{
+				"billboard" or "quad" or "flat" => ParticleShape.Billboard,
+				"cube" or "box" => ParticleShape.Cube,
+				"sphere" or "ball" => ParticleShape.Sphere,
+				_ => throw new ParsingException(
+					$"Unknown particle shape '{raw}'. Valid values: billboard, cube, sphere")
 			};
 
 		private static AnimationTarget ParseAnimationTarget(string s, string raw) =>

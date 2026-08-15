@@ -487,11 +487,10 @@ A constructible builder for an irregular list of world positions — the imperat
 _No public static methods._
 
 ## `RandomMath`
-First-class randomness helpers for descriptor expressions, wrapping
-            UnityEngine.Random. Registered globally in CompiledExpressionsRegistry so every
-            expression can call these by bare name (RandomFloat, RandomOnCircle, RandomColor,
-            ...). All numeric parameters are float so int arguments coerce automatically during
-            overload resolution. Lists are carried as List<T>, matching GridMath.
+First-class randomness helpers for descriptor expressions, registered globally in
+            CompiledExpressionsRegistry so every expression can call these by bare name (RandomFloat,
+            RandomOnCircle, RandomColor, ...). All numeric parameters are float so int arguments coerce
+            automatically during overload resolution. Lists are carried as List<T>, matching GridMath.
 
 ### `bool Chance(float probability)`
 True with the given probability.
@@ -536,12 +535,12 @@ A random opaque colour with each channel between the matching channels of two co
 **Returns** (Color): A random opaque Color blended per channel between a and b.
 
 ### `float RandomFloat(float min, float max)`
-A random float in the inclusive range [min, max].
+A random float in the range [min, max).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | min | float | Lower bound (inclusive). |
-| max | float | Upper bound (inclusive). |
+| max | float | Upper bound (exclusive). |
 
 **Returns** (float): A uniformly random float in the range.
 
@@ -572,6 +571,13 @@ A random point on the circumference of a circle of the given radius (z = 0).
 | radius | float | The circle radius. |
 
 **Returns** (Vector3): A random Vector3 on the circle, in the XY plane.
+
+### `void Seed(UInt32 seed)`
+Reseeds the ambient generator so every subsequent draw follows a fresh, reproducible sequence. Called once per run by the builder; the same seed yields the same game randomness.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| seed | UInt32 | The run seed. |
 
 ### `int WeightedPickIndex(List<float> weights)`
 An index in [0, weights.Count) chosen with probability proportional to each weight.
@@ -690,7 +696,7 @@ First-class steering helpers for descriptor expressions, registered globally in
             movement function returns a desired-velocity Vector3, so they compose inside a velocity: !expr
             (or feed the steering aggregator behaviour). Positions/velocities are carried as Vector3
             (z = 0 for 2D), matching VectorMath; all numeric parameters are float so int arguments coerce
-            automatically. Wander draws on the global RNG and is therefore non-deterministic, like RandomMath.
+            automatically. Wander draws on the same seeded RNG as RandomMath, so it replays with the run seed.
 
 ### `Vector3 Alignment(Vector3 velocity, List<Vector3> neighbourVelocities, float maxSpeed)`
 Steer to match the average heading of nearby neighbours, for flock alignment.
@@ -829,7 +835,7 @@ Repulsion velocity that pushes away from nearby neighbours, for flock/crowd sepa
 **Returns** (Vector3): A velocity steering away from crowding neighbours, or zero if none are close.
 
 ### `Vector3 Wander(Vector3 velocity, float maxSpeed, float jitterDegrees)`
-Nudge the current heading by a random jitter, for aimless roaming. Non-deterministic.
+Nudge the current heading by a random jitter, for aimless roaming. Uses the seeded RNG.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
