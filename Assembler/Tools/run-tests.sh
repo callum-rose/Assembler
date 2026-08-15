@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
 #
-# Runs the EditMode test suites headlessly by booting the Unity editor in batch mode and invoking
-# Editor.TestBatch.RunEditModeTests (the same tests you would run from Window > General > Test
-# Runner). Prints a pass/fail summary to the log and exits non-zero if anything fails, so Claude
-# can run and verify tests without the UI.
+# Runs the test suites headlessly. By default it boots the Unity editor in batch mode and invokes
+# Editor.TestBatch.RunEditModeTests (the same tests you would run from Window > General > Test Runner).
+# PlayMode tests (which need behaviour Update to run — issue #101) use --player:
+#   --player    builds a StandaloneOSX player and runs the PlayMode tests inside it (Unity's -runTests).
+#               This is the reliable headless path; it also doesn't hold the project path open, so it
+#               runs alongside other worktrees. Requires the Mac Standalone build module.
+# (There is no in-editor batch PlayMode path: entering play mode triggers a domain reload that wedges the
+# batch run on the play->edit transition, so PlayMode is player-only here.)
+# Prints a pass/fail summary and exits non-zero if anything fails, so Claude can run/verify without a UI.
 #
 # Usage:
-#   Assembler/Tools/run-tests.sh                       # run all EditMode tests
-#   Assembler/Tools/run-tests.sh Tests.Compiler        # run only these assemblies (repeatable)
-#   Assembler/Tools/run-tests.sh --filter '.*Lexer.*'  # run tests whose full name matches a regex
-#   Assembler/Tools/run-tests.sh --category Slow        # run tests with a given [Category]
+#   Assembler/Tools/run-tests.sh                             # all EditMode tests
+#   Assembler/Tools/run-tests.sh --player Tests.Determinism  # PlayMode tests in a built player
+#   Assembler/Tools/run-tests.sh Tests.Compiler              # run only these assemblies (repeatable)
+#   Assembler/Tools/run-tests.sh --filter '.*Lexer.*'        # run tests whose full name matches a regex
+#   Assembler/Tools/run-tests.sh --category Slow             # run tests with a given [Category]
 # Flags and assembly names can be combined; --filter/--category are repeatable.
 #
 # Notes:
@@ -22,7 +28,7 @@
 #  - Like the other scripts, the raw Unity log is captured to a temp file and only TestBatch's
 #    delimited results block is printed, so the summary isn't buried under boot noise. The temp log
 #    path is printed at the end for when you need the full detail.
-#  - Full NUnit XML is written to TestResults/EditMode-results.xml.
+#  - Full NUnit XML is written to TestResults/EditMode-results.xml (or Player-results.xml with --player).
 set -euo pipefail
 
 # Project = the Assembler/ directory (parent of this script's Tools/ dir), resolved absolutely so
@@ -60,25 +66,35 @@ if ps -axww -o command= | awk -v u="$UNITY" -v p="$PROJECT" 'index($0, u) == 1 &
 	exit 1
 fi
 
-# Translate friendly CLI args into the -testAssembly/-testFilter/-testCategory flags that
-# TestBatch reads from the command line. Bare positional args are treated as assembly names.
-FILTER_ARGS=()
+# Bare positional args are assembly names; --filter/--category are repeatable. Collected into neutral
+# arrays and mapped to the right flag names per run mode below: TestBatch uses -testAssembly/-testFilter/
+# -testCategory, while Unity's -runTests (player mode) uses -assemblyNames/-testFilter/-testCategory.
+MODE="EditMode"
+PLAYER=0
+ASSEMBLIES=()
+FILTERS=()
+CATEGORIES=()
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--player)
+			PLAYER=1
+			MODE="Player"
+			shift
+			;;
 		--filter)
-			FILTER_ARGS+=(-testFilter "$2")
+			FILTERS+=("$2")
 			shift 2
 			;;
 		--category)
-			FILTER_ARGS+=(-testCategory "$2")
+			CATEGORIES+=("$2")
 			shift 2
 			;;
 		-*)
-			echo "error: unknown flag '$1' (expected --filter or --category, or a bare assembly name)" >&2
+			echo "error: unknown flag '$1' (expected --player, --filter or --category, or a bare assembly name)" >&2
 			exit 1
 			;;
 		*)
-			FILTER_ARGS+=(-testAssembly "$1")
+			ASSEMBLIES+=("$1")
 			shift
 			;;
 	esac
@@ -86,40 +102,81 @@ done
 
 LOG="$(mktemp -t assembler-run-tests.XXXXXX.log)"
 
-echo "Running EditMode tests with Unity $VERSION (project: $PROJECT)..."
+echo "Running $MODE tests with Unity $VERSION (project: $PROJECT)..."
 
-# Capture the (very noisy) Unity log to a temp file rather than streaming it — only the delimited
-# "TestBatch results" block (pass/fail counts + any failures) is printed, so the summary isn't buried
-# under licensing-handshake errors, asset-import spam, etc. Don't let a non-zero Unity exit abort the
-# script before we extract the report.
-# Note: "${FILTER_ARGS[@]+...}" guards the empty-array case — under `set -u`, macOS's bash 3.2
-# treats a bare "${FILTER_ARGS[@]}" on an empty array as an unbound-variable error.
+# Capture the (very noisy) Unity log to a temp file rather than streaming it, then print only the
+# relevant results so the summary isn't buried under licensing/asset-import noise. Don't let a non-zero
+# Unity exit abort the script before we report. ("${arr[@]+...}" guards the empty-array case: under
+# `set -u`, macOS's bash 3.2 errors on a bare "${arr[@]}" when arr is empty.)
 set +e
-"$UNITY" \
-	-batchmode -nographics \
-	-projectPath "$PROJECT" \
-	-executeMethod Editor.TestBatch.RunEditModeTests \
-	${FILTER_ARGS[@]+"${FILTER_ARGS[@]}"} \
-	-logFile - > "$LOG" 2>&1
-RC=$?
+if [[ "$PLAYER" -eq 1 ]]; then
+	# Built-player run via Unity's -runTests: builds a StandaloneOSX player and runs the PlayMode tests
+	# in it, writing NUnit XML to -testResults. Reliable headless — no editor play->edit transition.
+	RESULTS="$PROJECT/TestResults/Player-results.xml"
+	mkdir -p "$PROJECT/TestResults"
+	rm -f "$RESULTS"
+	# -runTests splits -assemblyNames/-testFilter/-testCategory on ';' (not ','), so join with ';' — a
+	# comma-joined multi-value list matches nothing and the framework still exits 0 with total="0".
+	PLAYER_ARGS=(-batchmode -runTests -projectPath "$PROJECT" -testPlatform StandaloneOSX -testResults "$RESULTS")
+	if [[ ${#ASSEMBLIES[@]} -gt 0 ]]; then PLAYER_ARGS+=(-assemblyNames "$(IFS=';'; echo "${ASSEMBLIES[*]}")"); fi
+	if [[ ${#FILTERS[@]} -gt 0 ]]; then PLAYER_ARGS+=(-testFilter "$(IFS=';'; echo "${FILTERS[*]}")"); fi
+	if [[ ${#CATEGORIES[@]} -gt 0 ]]; then PLAYER_ARGS+=(-testCategory "$(IFS=';'; echo "${CATEGORIES[*]}")"); fi
+	"$UNITY" "${PLAYER_ARGS[@]}" -logFile "$LOG" >/dev/null 2>&1
+	RC=$?
+else
+	# In-editor EditMode run via TestBatch.
+	FILTER_ARGS=()
+	for a in ${ASSEMBLIES[@]+"${ASSEMBLIES[@]}"}; do FILTER_ARGS+=(-testAssembly "$a"); done
+	for f in ${FILTERS[@]+"${FILTERS[@]}"}; do FILTER_ARGS+=(-testFilter "$f"); done
+	for c in ${CATEGORIES[@]+"${CATEGORIES[@]}"}; do FILTER_ARGS+=(-testCategory "$c"); done
+	"$UNITY" \
+		-batchmode -nographics \
+		-projectPath "$PROJECT" \
+		-executeMethod Editor.TestBatch.RunEditModeTests \
+		${FILTER_ARGS[@]+"${FILTER_ARGS[@]}"} \
+		-logFile - > "$LOG" 2>&1
+	RC=$?
+fi
 set -e
 
-# Extract the report between TestBatch's header line and its trailing all-equals footer. The header
-# carries text so it never matches the footer pattern; the footer guard keys off `f` so a stray
-# all-equals line in the boot noise (before the header) can't trip an early exit.
-REPORT="$(awk '/================ TestBatch results ================/{f=1} f{print} f && /^=+$/{exit}' "$LOG")"
-
 echo
-if [[ -n "$REPORT" ]]; then
-	printf '%s\n' "$REPORT"
+if [[ "$PLAYER" -eq 1 ]]; then
+	RESULTS="$PROJECT/TestResults/Player-results.xml"
+	echo "================ Player test results ================"
+	if [[ -f "$RESULTS" ]]; then
+		RUN="$(grep -oE '<test-run [^>]*>' "$RESULTS" | head -1)"
+		printf '%s\n' "$RUN" | grep -oE '(total|passed|failed|skipped|inconclusive)="[0-9]+"' | tr '\n' '  '
+		echo
+		# Best-effort list of any failed test-case full names (attribute order varies, so match loosely).
+		grep -oE '<test-case[^>]*result="Failed"[^>]*>' "$RESULTS" \
+			| grep -oE 'fullname="[^"]*"' | sed 's/fullname="/  ✗ /; s/"$//'
+		# Guard the whole class of filter/assembly typos: -runTests exits 0 even when it ran nothing.
+		TOTAL="$(printf '%s\n' "$RUN" | grep -oE 'total="[0-9]+"' | grep -oE '[0-9]+')"
+		if [[ "${TOTAL:-0}" -eq 0 ]]; then
+			echo "  error: no tests were run (0 total) — check the assembly/filter names." >&2
+			RC=1
+		fi
+	else
+		echo "  (no results XML — the player build or run failed; see the log)"
+		RC=1
+	fi
+	echo "===================================================="
+	echo "Full NUnit XML: $RESULTS"
 else
-	echo "error: no test report found in the Unity log — the editor likely failed to start." >&2
-	echo "       (A fresh worktree's first run does a one-time cold import; re-running usually fixes a" >&2
-	echo "        spurious cold-import failure.)" >&2
+	# Extract TestBatch's delimited block between its header and trailing all-equals footer. The header
+	# carries text so it never matches the footer; the footer guard keys off `f` so stray all-equals
+	# boot noise before the header can't trip an early exit.
+	REPORT="$(awk '/================ TestBatch results ================/{f=1} f{print} f && /^=+$/{exit}' "$LOG")"
+	if [[ -n "$REPORT" ]]; then
+		printf '%s\n' "$REPORT"
+	else
+		echo "error: no test report found in the Unity log — the editor likely failed to start." >&2
+		echo "       (A fresh worktree's first run does a one-time cold import; re-running usually fixes a" >&2
+		echo "        spurious cold-import failure.)" >&2
+	fi
+	echo "Full NUnit XML: $PROJECT/TestResults/$MODE-results.xml"
 fi
-echo
-echo "Full NUnit XML: $PROJECT/TestResults/EditMode-results.xml"
 echo "Full Unity log: $LOG"
 
-# Verdict comes from TestBatch's exit code (0 = all passed, 1 = a failure/error), which Unity returns.
+# Verdict comes from Unity's exit code (0 = all passed; non-zero = a failure/error).
 exit "$RC"

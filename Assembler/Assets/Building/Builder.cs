@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Assembler.Behaviours;
 using Assembler.Behaviours.AI;
+using Assembler.Behaviours.Replay;
 using Assembler.Behaviours.UI;
 using Assembler.Compiler.Compiler;
 using Assembler.Deserialisation;
@@ -121,7 +122,13 @@ namespace Assembler.Building
 		/// entropy-seeded RNG) so every normal play session and the sandbox validator are unchanged;
 		/// deterministic / replay runs pass <see cref="GameClockMode.FixedStep"/> and an explicit seed.
 		/// </param>
-		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null)
+		/// <param name="replay">
+		/// Optional input capture/replay session (issue #101). <c>null</c> leaves input untouched (normal play). A
+		/// <see cref="ReplayMode.Record"/> session captures every input-trigger emission; a
+		/// <see cref="ReplayMode.Replay"/> session suppresses live device reads and drives the game from its log.
+		/// Pair with <see cref="GameClockMode.FixedStep"/> + a fixed seed for a reproducible run.
+		/// </param>
+		public static GameObject Instantiate(this ResolvedGame resolved, RunOptions? options = null, InputReplaySession? replay = null)
 		{
 			options ??= RunOptions.Default;
 
@@ -170,6 +177,17 @@ namespace Assembler.Building
 			var gameRoot = new GameObject("Game");
 			gameRoot.AddComponent<GameController>();
 			gameRoot.AddComponent<GameClockDriver>().Clock = gameClock;
+
+			// Publish the input capture/replay session for the game's lifetime (issue #101). The driver binds the
+			// clock, sets the ambient InputReplayHub so input triggers record/suppress, pumps replayed input each
+			// frame, and clears the hub on teardown. Replay resolves triggers through a lookup over the live
+			// BehaviourRegistry, so runtime-spawned input triggers are found too (no separate registration to sync).
+			if (replay is not null)
+			{
+				gameRoot.AddComponent<ReplayDriver>().Initialise(replay, gameClock);
+				replay.BindTriggerLookup(d =>
+					behaviourRegistry.All.TryGetValue(d, out var b) && b is IReplayableInput i ? i : null);
+			}
 
 			// Drives polled live properties (clock/query/transform/partial-expression bindings) once per frame.
 			// Pushed (variable/constant/observable-expression) bindings never register here, so its tick list

@@ -31,6 +31,10 @@ namespace Editor
 		private static TestRunnerApi? _api;
 		private static Callbacks? _callbacks;
 
+		// EditMode only. There is deliberately no PlayMode entry point: entering play mode triggers a domain
+		// reload that wipes these statics (and the callback registration), so RunFinished — which writes the XML
+		// and exits — never fires and the batch editor wedges. PlayMode tests (issue #101) run in a built player
+		// via Unity's own -runTests (Tools/run-tests.sh --player), which sidesteps the play->edit transition.
 		public static void RunEditModeTests()
 		{
 			EditorBatchCli.SuppressLogStackTraces();

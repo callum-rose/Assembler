@@ -5,6 +5,7 @@
         "Assembler.Generation",
         "Assembler.Anthropic",
         "Assembler.Building",
+        "Assembler.Behaviours",
         "Assembler.Parsing",
         "Assembler.Deserialisation",
         "Assembler.Input",
