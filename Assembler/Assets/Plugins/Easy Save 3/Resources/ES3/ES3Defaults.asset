@@ -35,9 +35,39 @@ MonoBehaviour:
     referenceMode: 2
     serializationDepthLimit: 64
     assemblyNames:
-    - Assembly-CSharp-firstpass
+    - Assembler.Anthropic
+    - Assembler.AssetGeneration.Common
+    - Assembler.AssetGeneration.EyePlacement
+    - Assembler.AssetGeneration.ImageOrientation
+    - Assembler.AssetGeneration.ImageToMesh
+    - Assembler.AssetGeneration.MeshToVoxel
+    - Assembler.AssetGeneration.Resilience
+    - Assembler.AssetGeneration.TextToImage
+    - Assembler.Behaviours
+    - Assembler.Building
+    - Assembler.Compiler
+    - Assembler.Core
+    - Assembler.Deserialisation
+    - Assembler.Extensions
+    - Assembler.Generation
+    - Assembler.Generation.Runtime
+    - Assembler.Generation.Verification
+    - Assembler.Input
+    - Assembler.Libraries
+    - Assembler.Navigation
+    - Assembler.Parsing
+    - Assembler.Remote
+    - Assembler.Resolving
+    - Assembler.Time
+    - Assembler.Validation
+    - Assembler.Voxelization
+    - Assembler.Voxels
     - Assembly-CSharp
-    showAdvancedSettings: 0
+    - Assembly-CSharp-firstpass
+    - EasySave3
+    - Sirenix.OdinInspector.Modules.Unity.Addressables
+    - Voxels.Editor
+    showAdvancedSettings: 1
   addMgrToSceneAutomatically: 0
   autoUpdateReferences: 1
   onlyAddReferencesFromObjectsWithES3Referenceable: 0
