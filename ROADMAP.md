@@ -80,6 +80,58 @@ Designed and a first implementation landed on branch `claude/gracious-villani-c3
 top-level `Assets:` block (custom voxel/sprite/audio aren't shipped in the app).
 Voxel-asset remote loading is a later phase.
 
+## Determinism — partially implemented, not yet a guarantee
+
+Deterministic execution and record/replay (same descriptor + seed + input log → identical
+run) is a **design goal**, intended to make generated games debuggable (capture a session,
+replay it exactly) and testable (play a descriptor through a scripted input log and assert
+on the outcome). **It is only partially implemented — there is no end-to-end guarantee
+today.** Target scope is **Level 1 (same build, same machine), with physics-driven games
+excluded** (issue #101); cross-platform lockstep is a non-goal (floating-point and physics
+differ across CPUs/OSes/Unity versions). Note it is also on the product "not in v1" list
+above — the foundations exist because they were cheap, not because replay is being built.
+
+**In place today:**
+
+1. **A clock abstraction with a selectable deterministic clock** — `IGameClock`
+   (`Assets/Time/`) is threaded through time-dependent behaviours and triggers (they read
+   `Clock.DeltaTime` / `WaitForGameSeconds`, not `Time.deltaTime`). `RealtimeGameClock`
+   (wall-clock delta, the default) and **`FixedStepGameClock`** (constant `StepSeconds` per
+   tick — the deterministic one) implement it. Both implement the driver-facing
+   `IAdvancingGameClock` seam (`Tick()` + `CaptureDeltaTime`), kept off `IGameClock` so
+   consumers can't advance time and test fakes stay minimal. `Builder.Instantiate(RunOptions)`
+   selects between them (**defaults to `Realtime`**). Under `FixedStep`, `GameClockDriver`
+   also sets `UnityEngine.Time.captureDeltaTime` to the step (restored to 0 on teardown) so
+   Unity's frame cadence and physics accumulator march at the same constant step. Covered by
+   `Tests/Behaviours/FixedStepGameClockTests.cs`.
+2. **A seeded per-run PRNG** — `RandomMath` (`Assets/Libraries/RandomMath.cs`) draws every
+   helper from a single ambient `Unity.Mathematics.Random` (a deterministic xorshift struct,
+   seeded via `Random.CreateFromIndex(uint)` so any seed — including small/zero values the
+   bare constructor rejects — hashes to a good state), not the engine's global RNG.
+   `Builder.Instantiate` calls `RandomMath.Seed(uint)` once per run from `RunOptions.Seed`
+   (explicit for a deterministic run; otherwise derived from entropy so normal play varies)
+   and logs the resolved seed. `SteeringMath.Wander` routes through it too. The generator is
+   **static/ambient**, so it assumes one game runs at a time (fine at Level 1). Covered by
+   the seed-reproducibility tests in `Tests/Resolving/RandomMathTests.cs`.
+3. **Stable iteration order** — `Assembler.Building.BehaviourRegistry` assigns each
+   behaviour a `_registrationIndex` and sorts tag queries by it (`GetByEntityTag` /
+   `GetByEntityTagAndBehaviourId` `OrderBy` the index; `GetByBehaviourTag` is List-backed and
+   stable). Covered by `Tests/Behaviours/BehaviourRegistryOrderTests.cs`. This piece genuinely
+   is deterministic.
+
+**Not yet implemented:** input record/replay (no recorder or input-log capture at the
+trigger boundary), and no end-to-end replay regression test (needs PlayMode, since behaviour
+`Update` doesn't run in EditMode).
+
+**Remaining shape:** record/replay at the trigger boundary
+(`InputTrigger.NotifyListeners` → `TriggerContext`), capturing the ordered
+`(trigger, emitted context)` set per tick, keyed to the fixed-delta clock and seed in
+`RunOptions`. Physics-driven games stay excluded (Unity's `PhysicsScene` stepping isn't
+controlled here; manual `Physics.Simulate` is future work).
+
+**Convention to preserve now** (also in `Assembler/CLAUDE.md`): route randomness through
+`RandomMath` / `SteeringMath`, never `UnityEngine.Random` directly.
+
 ## Phase system — direction for deep multi-mode games
 
 Agreed 2026-07-08 (grill-me interview). Goal is systems **depth** (multi-mode, parallel
