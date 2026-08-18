@@ -1,0 +1,257 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9476b8078bb534ab1ae41fb590635884, type: 3}
+  m_Name: ShellTheme
+  m_EditorClassIdentifier: Assembler.Shell::Assembler.Shell.Theming.ShellTheme
+  colors:
+  - role: 0
+    color: {r: 0.98039216, g: 0.9647059, b: 0.93333334, a: 1}
+  - role: 1
+    color: {r: 1, g: 0.99215686, b: 0.972549, a: 1}
+  - role: 2
+    color: {r: 0.9372549, g: 0.9137255, b: 0.8666667, a: 1}
+  - role: 3
+    color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
+  - role: 4
+    color: {r: 0.30980393, g: 0.28235295, b: 0.23921569, a: 1}
+  - role: 5
+    color: {r: 0.5803922, g: 0.54509807, b: 0.4862745, a: 1}
+  - role: 6
+    color: {r: 0.84705883, g: 0.8117647, b: 0.74509805, a: 1}
+  - role: 7
+    color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
+  - role: 8
+    color: {r: 0.72156864, g: 0.07058824, b: 0.105882354, a: 1}
+  - role: 9
+    color: {r: 0.5411765, g: 0.44705883, b: 0.28235295, a: 1}
+  - role: 10
+    color: {r: 1, g: 0.99215686, b: 0.972549, a: 1}
+  - role: 11
+    color: {r: 0.11372549, g: 0.47843137, b: 0.27058825, a: 1}
+  - role: 12
+    color: {r: 0.72156864, g: 0.07058824, b: 0.105882354, a: 1}
+  - role: 13
+    color: {r: 0.6039216, g: 0.38431373, b: 0.07058824, a: 1}
+  - role: 14
+    color: {r: 0.90588236, g: 0.8784314, b: 0.8235294, a: 1}
+  - role: 15
+    color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
+  - role: 16
+    color: {r: 0.98039216, g: 0.9647059, b: 0.93333334, a: 1}
+  - role: 17
+    color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
+  textStyles:
+  - id: 0
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 27
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: -3
+    lineSpacing: 0
+    color: 3
+  - id: 1
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 10
+    bold: 0
+    italic: 0
+    textCase: 1
+    characterSpacing: 13
+    lineSpacing: 0
+    color: 4
+  - id: 2
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 12
+    bold: 1
+    italic: 0
+    textCase: 1
+    characterSpacing: 16
+    lineSpacing: 0
+    color: 5
+  - id: 3
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 15
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 0
+    color: 3
+  - id: 4
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 10.5
+    bold: 1
+    italic: 0
+    textCase: 1
+    characterSpacing: 20
+    lineSpacing: 0
+    color: 8
+  - id: 5
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 30
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: -2.5
+    lineSpacing: 8
+    color: 3
+  - id: 6
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 10.5
+    bold: 0
+    italic: 0
+    textCase: 1
+    characterSpacing: 10
+    lineSpacing: 0
+    color: 5
+  - id: 7
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 15
+    bold: 0
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 52
+    color: 4
+  - id: 8
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 15
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 0
+    color: 8
+  - id: 9
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 10.5
+    bold: 1
+    italic: 0
+    textCase: 1
+    characterSpacing: 20
+    lineSpacing: 0
+    color: 3
+  - id: 10
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 15.5
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: -1.2
+    lineSpacing: 18
+    color: 3
+  - id: 11
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 12.5
+    bold: 0
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 42
+    color: 4
+  - id: 12
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 9.5
+    bold: 0
+    italic: 0
+    textCase: 1
+    characterSpacing: 11
+    lineSpacing: 0
+    color: 5
+  - id: 13
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 14.5
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 22
+    color: 3
+  - id: 14
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 13
+    bold: 1
+    italic: 0
+    textCase: 1
+    characterSpacing: 14
+    lineSpacing: 0
+    color: 16
+  - id: 15
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 19
+    bold: 1
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 0
+    color: 3
+  - id: 16
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 9.5
+    bold: 0
+    italic: 0
+    textCase: 1
+    characterSpacing: 10
+    lineSpacing: 0
+    color: 5
+  - id: 17
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 15
+    bold: 0
+    italic: 0
+    textCase: 0
+    characterSpacing: 0
+    lineSpacing: 0
+    color: 3
+  - id: 18
+    font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
+    fontSize: 11
+    bold: 1
+    italic: 0
+    textCase: 1
+    characterSpacing: 18
+    lineSpacing: 0
+    color: 8
+  motion:
+    screenTransition:
+      duration: 0.12
+      ease: 7
+    buttonPress:
+      duration: 0.08
+      ease: 6
+    overlayFade:
+      duration: 0.18
+      ease: 6
+    sheetRise:
+      duration: 0.24
+      ease: 9
+    slipPop:
+      duration: 0.26
+      ease: 27
+    verdictStamp:
+      duration: 0.4
+      ease: 27
+    scoreOdometer:
+      duration: 0.7
+      ease: 9
+    launchProgress:
+      duration: 0.55
+      ease: 6
+  layout:
+    pageGutter: 20
+    listGutter: 16
+    hairline: 1
+    heavyRule: 3
+    letterpressLedge: 4
+    cornerRadius: 2
+    minHitTarget: 44
+    minFeedCellWidth: 170
