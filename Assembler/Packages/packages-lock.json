@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.easydi.easydi-unity": {
+      "version": "https://github.com/callum-rose/EasyDI.git?path=/EasyDI.Unity/Assets/EasyDI.Unity#EasyDI.Unity-v1.1.1",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "a4312ece73949f0bb50cf4dcc84e30081f9e03c9"
+    },
     "com.github-glitchenzo.nugetforunity": {
       "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
       "depth": 0,
