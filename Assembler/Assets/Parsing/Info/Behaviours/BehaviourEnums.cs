@@ -77,6 +77,15 @@ namespace Assembler.Parsing.Info.Behaviours
 		XZ
 	}
 
+	/// <summary>How a <c>box collider</c>/<c>sphere collider</c> takes its shape: <c>None</c> uses the
+	/// authored <c>Size</c>/<c>Radius</c>, <c>Bounds</c> fits the collider to the entity's whole visual
+	/// instead. For one collider per visual part, use the <c>part colliders</c> behaviour.</summary>
+	public enum ColliderFit
+	{
+		None,
+		Bounds
+	}
+
 	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
 	/// (an <c>AppendInterval</c>) that animates nothing.</summary>
 	public enum AnimationTarget
@@ -130,6 +139,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(SequenceMode) ? ParseSequenceMode(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceLoopType) ? ParseSequenceLoopType(normalised, raw) :
 				typeof(TEnum) == typeof(MirrorAxis) ? ParseMirrorAxis(normalised, raw) :
+				typeof(TEnum) == typeof(ColliderFit) ? ParseColliderFit(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				typeof(TEnum) == typeof(OnScreenControlKind) ? ParseOnScreenControlKind(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
@@ -305,6 +315,19 @@ namespace Assembler.Parsing.Info.Behaviours
 				"xz" or "zx" => MirrorAxis.XZ,
 				_ => throw new ParsingException(
 					$"Unknown mirror axis '{raw}'. Valid values: none, x, z, xz")
+			};
+
+		private static ColliderFit ParseColliderFit(string s, string raw) =>
+			s switch
+			{
+				"none" => ColliderFit.None,
+				"bounds" => ColliderFit.Bounds,
+				// 'parts' was an earlier spelling of the per-part mode, which is now its own behaviour.
+				"parts" => throw new ParsingException(
+					$"Collider fit '{raw}' is not a Fit mode. Use the 'part colliders' behaviour to put one " +
+					"fitted collider on each visual part."),
+				_ => throw new ParsingException(
+					$"Unknown collider fit '{raw}'. Valid values: none, bounds")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>

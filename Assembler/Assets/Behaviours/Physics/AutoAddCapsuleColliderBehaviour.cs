@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -17,13 +18,13 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddCapsuleColliderBehaviour : AddColliderBehaviour<CapsuleColliderData>
 	{
-		protected override Collider CreateCollider(CapsuleColliderData data)
+		protected override IReadOnlyList<Collider> CreateColliders(CapsuleColliderData data)
 		{
 			var collider = gameObject.AddComponent<CapsuleCollider>();
 			data.Radius.UseIfValueExists(v => collider.radius = v);
 			data.Height.UseIfValueExists(v => collider.height = v);
 			data.Direction.UseIfValueExists(v => collider.direction = v);
-			return collider;
+			return new Collider[] { collider };
 		}
 	}
 }
