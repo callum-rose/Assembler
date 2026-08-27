@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;0,6..72,800;1,6..72,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; -webkit-font-smoothing: antialiased; }
+    a { color: #b8121b; text-decoration: none; }
+    a:hover { color: #17130d; }
+    
+  </style>
+</helmet>
+<div style="background: #faf6ee; min-height: 100%; padding: 34px 40px 44px">
+  <header style="display: flex; flex-direction: column; gap: 0; margin-bottom: 26px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; border-bottom: 3px solid #17130d; padding-bottom: 9px">
+      <h1 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #17130d">The Daily <span style="color: #b8121b">Build</span></h1>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #948b7c">Shell UI atlas &middot; 1024&times;512 &middot; PPU 4</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #17130d; padding: 7px 0 8px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: #4f483d">
+      <span>The icons</span>
+      <span style="color: #948b7c">24-unit grid &middot; 2-unit stroke</span>
+    </div>
+  </header>
+
+  <p style="margin: 0 0 24px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 1.6; color: #4f483d; max-width: 62ch; text-wrap: pretty">
+    Each glyph is drawn on a 24-unit grid inside a 96&nbsp;px cell &mdash; 24 units at PPU&nbsp;4 &mdash; with a 2-unit stroke, round caps and round joins. The dashed square is the 2-unit safe area. Pause, play and the sparkle are filled rather than stroked: a 2-unit stroke closes up on a glyph this small, and all three only ever appear at badge size.
+  </p>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #17130d; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">Nine glyphs</h4>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 34px">
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><circle cx="10.6" cy="10.6" r="6.4" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.3 15.3 L20.2 20.2" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconSearch</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">Masthead action -> Archive.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Ink</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M4 6.8 L10.50 6.8" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.30 6.8 L20 6.8" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13.4" cy="6.8" r="1.9" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12 L6.70 12" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.50 12 L20 12" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.6" cy="12" r="1.9" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17.2 L11.70 17.2" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.50 17.2 L20 17.2" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14.6" cy="17.2" r="1.9" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconSettings</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">Masthead action -> Settings.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Ink</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M15 4.6 L8.4 12 L15 19.4" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconChevronLeft</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">The back button, which names the screen beneath the top of the stack (UIPLAN 3.3).</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Ink</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M9 4.6 L15.6 12 L9 19.4" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconChevronRight</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">Archive row and settings row disclosure.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role InkTertiary</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M5 12.7 L9.9 17.6 L19 7.2" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconTick</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">The played mark inside an 18u Disc — full opacity while the art behind it fades (UIPLAN 7.5).</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Paper</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M6.6 6.6 L17.4 17.4" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.4 6.6 L6.6 17.4" fill="none" stroke="#17130d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconClose</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">Clears the archive search field.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Paper</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><rect x="7.4" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#17130d"/><rect x="13.2" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#17130d"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconPause</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">The game strip pause glyph, in a 44u HitTarget (UIPLAN 10.7).</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role OnAccent</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M8.2 5.1 L19 12 L8.2 18.9 Z" fill="#17130d" stroke="#17130d" stroke-width="1.4" stroke-linejoin="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconPlay</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">"Next game" on the result slip.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role ButtonInk</span>
+    </div>
+  </div>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+    <svg viewBox="0 0 168 168" width="168" height="168" xmlns="http://www.w3.org/2000/svg" style="display: block; background: #fffdf8; border: 1px solid #d8cfbe">
+      <path d="M0 0 L0 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 0 L168 0" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M28 0 L28 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 28 L168 28" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M56 0 L56 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 56 L168 56" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M84 0 L84 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 84 L168 84" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M112 0 L112 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 112 L168 112" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M140 0 L140 168" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M0 140 L168 140" stroke="#d8cfbe" stroke-width="1" opacity="0.5"/><path d="M168 0 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/><path d="M0 168 L168 168" stroke="#d8cfbe" stroke-width="1" opacity="0.95"/>
+      <rect x="14" y="14" width="140" height="140" fill="none" stroke="#b8121b" stroke-width="1" stroke-dasharray="4 4" opacity=".45"/>
+      <g transform="scale(7)" style="color: #17130d"><path d="M12 3.3 C12.9 9.04, 14.96 11.1, 20.7 12 C14.96 12.9, 12.9 14.96, 12 20.7 C11.1 14.96, 9.04 12.9, 3.3 12 C9.04 11.1, 11.1 9.04, 12 3.3 Z" fill="#17130d" stroke="#17130d" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 3px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; color: #17130d">IconSparkle</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11.5px; line-height: 1.45; color: #948b7c">"New best" on the result slip.</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #b8121b">role Good</span>
+    </div>
+  </div>
+  </div>
+
+  <div style="margin-top: 34px; padding-top: 16px; border-top: 1px solid #d8cfbe; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; line-height: 1.6; color: #948b7c; max-width: 74ch">
+    <b style="color: #17130d; font-weight: 700">Nothing raycasts except things named HitTarget</b> (UIPLAN 7.4). An icon Image sets <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px">raycastTarget = false</code> and sits inside a stationary 44&times;44-unit HitTarget that never animates.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
