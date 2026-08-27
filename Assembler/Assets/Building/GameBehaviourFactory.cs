@@ -173,6 +173,14 @@ namespace Assembler.Building
 					DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
 					StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
 				});
+			map[typeof(PartColliderInfo)] = Entry<PartColliderInfo, PartColliders, PartColliderData>(
+				(i, ctx) => new PartColliderData(i.Id)
+				{
+					IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
+					Bounciness = i.Bounciness.Resolve(ctx.Resolution),
+					DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
+					StaticFriction = i.StaticFriction.Resolve(ctx.Resolution)
+				});
 		}
 
 		private static void AddPhysics(IDictionary<Type, BuilderEntry> map)

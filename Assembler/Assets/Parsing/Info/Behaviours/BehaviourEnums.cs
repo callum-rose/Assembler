@@ -77,14 +77,13 @@ namespace Assembler.Parsing.Info.Behaviours
 		XZ
 	}
 
-	/// <summary>How a <c>box collider</c>/<c>sphere collider</c> takes its shape. <c>None</c> uses the
-	/// authored <c>Size</c>/<c>Radius</c>; <c>Bounds</c> fits one collider on the entity root to the whole
-	/// visual; <c>Parts</c> puts one fitted collider on each visual part, making a compound collider.</summary>
+	/// <summary>How a <c>box collider</c>/<c>sphere collider</c> takes its shape: <c>None</c> uses the
+	/// authored <c>Size</c>/<c>Radius</c>, <c>Bounds</c> fits the collider to the entity's whole visual
+	/// instead. For one collider per visual part, use the <c>part colliders</c> behaviour.</summary>
 	public enum ColliderFit
 	{
 		None,
-		Bounds,
-		Parts
+		Bounds
 	}
 
 	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
@@ -323,9 +322,12 @@ namespace Assembler.Parsing.Info.Behaviours
 			{
 				"none" => ColliderFit.None,
 				"bounds" => ColliderFit.Bounds,
-				"parts" => ColliderFit.Parts,
+				// 'parts' was an earlier spelling of the per-part mode, which is now its own behaviour.
+				"parts" => throw new ParsingException(
+					$"Collider fit '{raw}' is not a Fit mode. Use the 'part colliders' behaviour to put one " +
+					"fitted collider on each visual part."),
 				_ => throw new ParsingException(
-					$"Unknown collider fit '{raw}'. Valid values: none, bounds, parts")
+					$"Unknown collider fit '{raw}'. Valid values: none, bounds")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>

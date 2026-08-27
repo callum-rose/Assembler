@@ -3,9 +3,9 @@
 Generated from `Assembler.Behaviours` XML doc comments. Each behaviour's description, property meanings, and trigger outputs are authored on the corresponding `GameBehaviour` MonoBehaviour; property names and types are reflected from the matching `*Info` record.
 
 ## `box collider`
-Adds a Unity BoxCollider to the entity — sized to Size, or fitted automatically to the
-            entity's visual with Fit so a model's collision matches its shape without hand-tuned
-            numbers. Required for collision/trigger physics events.
+Adds a Unity BoxCollider to the entity, sized to Size — or, with Fit: bounds,
+            sized and centred on the entity's visual instead of an authored Size. Required for
+            collision/trigger physics events.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -13,16 +13,17 @@ Adds a Unity BoxCollider to the entity — sized to Size, or fitted automaticall
 
 | Name | Type | Description |
 |------|------|-------------|
-| Size | Vector3 | Local-space dimensions of the box (x, y, z). Ignored when Fit is set to anything but none. |
-| Fit | ColliderFit | Fit the collider to the entity's visual instead of Size — "none" (default, use Size), "bounds" (one collider on the entity, sized and centred on the whole visual) or "parts" (one collider per visual part, each sized to that part). Requires a visual behaviour on the same entity, listed before this one. |
-| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. Applied to every collider when Fit is parts. |
+| Size | Vector3 | Local-space dimensions of the box (x, y, z). Ignored when Fit is bounds. |
+| Fit | ColliderFit | "none" (default) uses the authored Size; "bounds" ignores Size and fits the collider's size and centre to the entity's visual. Fitting requires a visual behaviour on the same entity, listed before this one. |
+| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
 | StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `sphere collider`
-Adds a Unity SphereCollider to the entity — sized to Radius, or fitted automatically to
-            the entity's visual with Fit. Required for collision/trigger physics events.
+Adds a Unity SphereCollider to the entity, sized to Radius — or, with Fit: bounds,
+            sized and centred on the entity's visual instead of an authored Radius. Required for
+            collision/trigger physics events.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -30,9 +31,9 @@ Adds a Unity SphereCollider to the entity — sized to Radius, or fitted automat
 
 | Name | Type | Description |
 |------|------|-------------|
-| Radius | float | Local-space radius of the sphere. Ignored when Fit is set to anything but none. |
-| Fit | ColliderFit | Fit the collider to the entity's visual instead of Radius — "none" (default, use Radius), "bounds" (one collider on the entity, centred on the whole visual with a radius spanning its longest half-extent) or "parts" (one collider per visual part, each fitted to that part). Requires a visual behaviour on the same entity, listed before this one. |
-| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. Applied to every collider when Fit is parts. |
+| Radius | float | Local-space radius of the sphere. Ignored when Fit is bounds. |
+| Fit | ColliderFit | "none" (default) uses the authored Radius; "bounds" ignores Radius and fits the collider's radius and centre to the entity's visual. Fitting requires a visual behaviour on the same entity, listed before this one. |
+| IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
 | StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
@@ -66,6 +67,23 @@ Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFil
 | Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
+
+## `part colliders`
+Gives every part of the entity's visual its own collider, shape-matched to that part and
+            fitted to its mesh — a compound collider under the entity's Rigidbody. Use this when one box or
+            sphere around the whole thing is too coarse; for that simpler case use box collider or
+            sphere collider with Fit: bounds.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| IsTrigger | bool | When true every part collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) one PhysicsMaterial is created and shared across every part collider. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
 | StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
@@ -2126,7 +2144,8 @@ Adds a single 3D primitive mesh (chosen by Shape) as a child of the entity. Use 
             are 2 units tall and its plane is 10 by 10, so model's normalised Size is the easier
             option when real dimensions matter. The mesh is visual only — for collision, add a box collider
             or sphere collider with Fit: bounds, listed after this behaviour, and it is sized to the
-            primitive for you.
+            primitive for you (part colliders does the same, shape-matched, and is the better fit for a
+            capsule or cylinder).
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -2151,8 +2170,8 @@ Assembles the entity's visual from a list of primitive parts — each with its o
             the origin rather than half-buried, and Rotation then pivots about that anchor. Mirror emits
             reflected duplicates of a part, so a symmetric shape is authored once. Parts are visual only — for
             collision, add a box collider or sphere collider with Fit: bounds (one collider
-            around the whole model) or Fit: parts (one per part), listed after this behaviour, instead of
-            hand-writing a Size or Radius.
+            around the whole model) or the part colliders behaviour (one shape-matched collider per part),
+            listed after this behaviour, instead of hand-writing a Size or Radius.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 

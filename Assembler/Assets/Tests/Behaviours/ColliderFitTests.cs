@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Assembler.Behaviours;
 using Assembler.Behaviours.Physics;
 using Assembler.Behaviours.Visual;
@@ -13,15 +12,9 @@ namespace Tests.Behaviours
 {
 	/// <summary>
 	/// Covers <c>Fit</c> on <c>box collider</c>/<c>sphere collider</c>: fitting one collider to the whole
-	/// visual (<c>bounds</c>), one per visual part (<c>parts</c>), and the untouched authored path
-	/// (<c>none</c>).
+	/// visual (<c>bounds</c>) versus the untouched authored path (<c>none</c>). One collider per visual part
+	/// is the <c>part colliders</c> behaviour, covered in <see cref="PartCollidersTests"/>.
 	/// </summary>
-	/// <remarks>
-	/// EditMode on purpose (Tests.Behaviours is Editor-only). <c>Model</c> strips the collider
-	/// <c>GameObject.CreatePrimitive</c> bundles onto each part, and in play mode that <c>Destroy</c> defers
-	/// to end of frame — so a play-mode "exactly one BoxCollider per part" assertion could see two. EditMode
-	/// takes the <c>DestroyImmediate</c> branch and is clean.
-	/// </remarks>
 	public class ColliderFitTests : BehaviourTestFixture
 	{
 		// ------------------------------------------------------------------
@@ -104,96 +97,6 @@ namespace Tests.Behaviours
 		}
 
 		// ------------------------------------------------------------------
-		// Fit: parts — one collider per visual part, on the part itself.
-		// ------------------------------------------------------------------
-
-		[Test]
-		public void FitParts_Box_PutsOneFittedColliderOnEachPart()
-		{
-			var host = BuildModel(
-				Part(PrimitiveType.Cube, size: new Vector3(2f, 1f, 2f)),
-				Part(PrimitiveType.Cylinder, size: new Vector3(1f, 3f, 1f)));
-
-			FitBox(host, ColliderFit.Parts);
-
-			Assert.IsNull(host.GetComponent<BoxCollider>(),
-				"parts mode puts the colliders on the parts, not on the entity root.");
-
-			var parts = Children(host);
-			Assert.AreEqual(2, parts.Length, "the model should have built one child per part.");
-
-			foreach (var part in parts)
-			{
-				var colliders = part.GetComponents<BoxCollider>();
-				Assert.AreEqual(1, colliders.Length, $"'{part.name}' should carry exactly one fitted collider.");
-
-				var local = part.GetComponent<MeshRenderer>().localBounds;
-				AssertVector(local.size, colliders[0].size, $"'{part.name}' is sized from its own mesh");
-				AssertVector(local.center, colliders[0].center, $"'{part.name}' is centred on its own mesh");
-			}
-
-			// The payoff: sizing in the part's own local space means the part transform's scale supplies the
-			// authored world size — including the cylinder's 2-unit-tall mesh, which Size normalises away.
-			AssertVector(new Vector3(2f, 1f, 2f), WorldSize(parts[0]), "the cube part's world size");
-			AssertVector(new Vector3(1f, 3f, 1f), WorldSize(parts[1]), "the cylinder part's world size");
-		}
-
-		[Test]
-		public void FitParts_Sphere_FitsEachPartsOwnMesh()
-		{
-			var host = BuildModel(
-				Part(PrimitiveType.Sphere, size: new Vector3(2f, 2f, 2f)),
-				Part(PrimitiveType.Cube, position: new Vector3(4f, 0f, 0f)));
-
-			FitSphere(host, ColliderFit.Parts);
-
-			Assert.IsNull(host.GetComponent<SphereCollider>(),
-				"parts mode puts the colliders on the parts, not on the entity root.");
-
-			foreach (var part in Children(host))
-			{
-				var colliders = part.GetComponents<SphereCollider>();
-				Assert.AreEqual(1, colliders.Length, $"'{part.name}' should carry exactly one fitted collider.");
-
-				var local = part.GetComponent<MeshRenderer>().localBounds;
-				AssertVector(local.center, colliders[0].center, $"'{part.name}' is centred on its own mesh");
-				Assert.AreEqual(Mathf.Max(local.extents.x, Mathf.Max(local.extents.y, local.extents.z)),
-					colliders[0].radius, 1e-4f, $"'{part.name}' spans its own largest half-extent.");
-			}
-		}
-
-		[Test]
-		public void FitParts_AppliesTriggerAndOneSharedMaterialToEveryCollider()
-		{
-			var host = BuildModel(
-				Part(PrimitiveType.Cube),
-				Part(PrimitiveType.Cube, position: new Vector3(2f, 0f, 0f)));
-
-			var behaviour = host.AddComponent<AutoAddBoxColliderBehaviour>();
-			behaviour.Initialise(
-				new BoxColliderData("c")
-				{
-					Fit = new ValueProvider<ColliderFit>(ColliderFit.Parts),
-					IsTrigger = new ValueProvider<bool>(true),
-					Bounciness = new ValueProvider<float>(0.75f)
-				},
-				Array.Empty<Listener>());
-
-			var colliders = Children(host).Select(p => p.GetComponent<BoxCollider>()).ToArray();
-			Assert.AreEqual(2, colliders.Length);
-
-			foreach (var collider in colliders)
-			{
-				Assert.IsTrue(collider.isTrigger, "IsTrigger should reach every collider the behaviour added.");
-				Assert.IsNotNull(collider.sharedMaterial, "the physics material should reach every collider.");
-				Assert.AreEqual(0.75f, collider.sharedMaterial.bounciness, 1e-4f);
-			}
-
-			Assert.AreSame(colliders[0].sharedMaterial, colliders[1].sharedMaterial,
-				"one material is allocated per behaviour and shared, so the single OnDestroy still frees it.");
-		}
-
-		// ------------------------------------------------------------------
 		// Boundaries — child entities, and nothing to fit to.
 		// ------------------------------------------------------------------
 
@@ -243,7 +146,7 @@ namespace Tests.Behaviours
 			var behaviour = host.AddComponent<AutoAddSphereColliderBehaviour>();
 
 			var error = Assert.Throws<MissingComponentException>(() => behaviour.Initialise(
-				new SphereColliderData("c") { Fit = new ValueProvider<ColliderFit>(ColliderFit.Parts) },
+				new SphereColliderData("c") { Fit = new ValueProvider<ColliderFit>(ColliderFit.Bounds) },
 				Array.Empty<Listener>()));
 
 			StringAssert.Contains("sphere collider", error!.Message);
@@ -350,13 +253,6 @@ namespace Tests.Behaviours
 
 		private static IValueProvider<Vector3> Provider(Vector3? value) =>
 			value is { } v ? new ValueProvider<Vector3>(v) : NullValueProvider<Vector3>.Instance;
-
-		private static Transform[] Children(GameObject host) =>
-			Enumerable.Range(0, host.transform.childCount).Select(host.transform.GetChild).ToArray();
-
-		// The world dimensions a parts-mode collider ends up with: its mesh-local size through the part's scale.
-		private static Vector3 WorldSize(Transform part) =>
-			Vector3.Scale(part.localScale, part.GetComponent<BoxCollider>().size);
 
 		private static void AssertVector(Vector3 expected, Vector3 actual, string message) =>
 			Assert.That(Vector3.Distance(expected, actual), Is.LessThan(1e-4f),

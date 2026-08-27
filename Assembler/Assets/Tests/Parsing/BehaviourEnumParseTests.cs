@@ -48,7 +48,7 @@ Entities:
       body:
         Type: box collider
         Properties:
-          Fit: parts
+          Fit: bounds
 ";
 
 		[Test]
@@ -56,7 +56,7 @@ Entities:
 		{
 			var box = (BoxColliderInfo)ParseHelper.ParseGame(ColliderYaml).Entities[0].Behaviours[0];
 
-			Assert.AreEqual(ColliderFit.Parts, ((ConstantSource<ColliderFit>)box.Fit).Value);
+			Assert.AreEqual(ColliderFit.Bounds, ((ConstantSource<ColliderFit>)box.Fit).Value);
 		}
 
 		[Test]
@@ -90,7 +90,45 @@ Entities:
 ";
 			var error = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
 
-			StringAssert.Contains("none, bounds, parts", error!.Message);
+			StringAssert.Contains("none, bounds", error!.Message);
+		}
+
+		[Test]
+		public void ColliderFitPartsPointsAtThePartCollidersBehaviour()
+		{
+			// 'parts' was an earlier spelling of the per-part mode before it became its own behaviour;
+			// a descriptor written against that spelling should be told where the mode went.
+			var yaml = @"
+Entities:
+  e:
+    Behaviours:
+      body:
+        Type: box collider
+        Properties:
+          Fit: parts
+";
+			var error = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
+
+			StringAssert.Contains("part colliders", error!.Message);
+		}
+
+		[Test]
+		public void PartCollidersParsesWithNoShapeProperty()
+		{
+			// The shape of each collider comes from the visual, so there is nothing to author beyond the
+			// trigger flag and the physics-material properties it shares with the other collider behaviours.
+			var yaml = @"
+Entities:
+  e:
+    Behaviours:
+      body:
+        Type: part colliders
+        Properties:
+          IsTrigger: true
+";
+			var parts = (PartColliderInfo)ParseHelper.ParseGame(yaml).Entities[0].Behaviours[0];
+
+			Assert.IsTrue(((ConstantSource<bool>)parts.IsTrigger).Value);
 		}
 
 		private const string AnimationYaml = @"

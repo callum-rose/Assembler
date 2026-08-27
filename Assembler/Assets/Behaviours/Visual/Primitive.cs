@@ -13,7 +13,8 @@ namespace Assembler.Behaviours.Visual
 	/// are 2 units tall and its plane is 10 by 10, so <c>model</c>'s normalised <c>Size</c> is the easier
 	/// option when real dimensions matter. The mesh is visual only — for collision, add a <c>box collider</c>
 	/// or <c>sphere collider</c> with <c>Fit: bounds</c>, listed after this behaviour, and it is sized to the
-	/// primitive for you.
+	/// primitive for you (<c>part colliders</c> does the same, shape-matched, and is the better fit for a
+	/// capsule or cylinder).
 	/// </summary>
 	/// <remarks>
 	/// Visual only: <see cref="GameObject.CreatePrimitive"/> bundles a default collider onto every primitive,
@@ -43,6 +44,9 @@ namespace Assembler.Behaviours.Visual
 
 			var renderer = primitive.GetComponent<MeshRenderer>();
 			renderer.sharedMaterial = Resources.Load<Material>("Materials/Primitive");
+
+			// Record the shape so `part colliders` can match a collider to it; nothing else reads it.
+			primitive.AddComponent<PrimitiveShape>().Shape = shape;
 
 			// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
 			// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without

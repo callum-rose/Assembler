@@ -94,10 +94,12 @@ namespace Assembler.Behaviours.Physics
 			Mathf.Max(MinimumExtent,
 				Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z)));
 
-		/// <summary>The error thrown when a <c>Fit</c>-enabled collider finds nothing to fit to — almost always
-		/// a descriptor that lists the collider before the visual behaviour that builds the meshes.</summary>
+		/// <summary>The error thrown when a fitting collider finds nothing to fit to — almost always a
+		/// descriptor that lists the collider before the visual behaviour that builds the meshes. Worded for
+		/// both callers: <c>part colliders</c> always fits, while box/sphere only do so under
+		/// <c>Fit: bounds</c>.</summary>
 		public static MissingComponentException MissingVisual(string behaviourName) =>
-			new($"'{behaviourName}' has Fit set but found no visual on this entity to fit to. Add a 'model', " +
+			new($"'{behaviourName}' found no visual on this entity to fit a collider to. Add a 'model', " +
 				"'primitive', 'voxel mesh' or 'sprite' behaviour to the same entity and list it before " +
 				$"'{behaviourName}', so its meshes exist by the time the collider fits.");
 
