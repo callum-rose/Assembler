@@ -190,15 +190,50 @@ comment: `Colour: !colour "#8c3b2e"`.
 
 ### What `model` is not
 
-- **Parts carry no colliders.** `model` strips the one `GameObject.CreatePrimitive` adds; collision
-  is declared explicitly with a `box`/`sphere`/`capsule collider` on the entity. One collider
-  roughly fitting the whole prop is almost always right — do not try to match the part list.
+- **Parts carry no colliders.** `model` strips the one `GameObject.CreatePrimitive` adds — a model
+  is a visual, and collision is declared separately. See [Collision](#collision) below.
 - **It is not a listener target.** `model` is continuous/passive. To change a prop at runtime, bind
   a part's `Position`/`Rotation`/`Size`/`Colour` to a `!var` or `!expr` and write to that.
 - **It is matte.** No emissive channel, no light. A lens, a glowing eye or a screen is a matte part
   **plus** a child entity carrying a `light` — see the `streetlight` recipe.
 - **`Shape`, `Name` and `Mirror` are read once** when the meshes are built; only `Position`,
   `Rotation`, `Size` and `Colour` are live. A `!var` shape will not swap the mesh at runtime.
+
+<a id="collision"></a>
+
+### Collision
+
+Parts are visual only, so collision is a second behaviour on the same entity. **Never hand-write a
+collider's `Size` or `Radius` to match a model** — both options below measure the meshes themselves:
+
+| Want | Use | Gives you |
+|---|---|---|
+| One collider around the whole prop | `box collider` or `sphere collider` with `Fit: bounds` | One collider fitted to the visual's combined bounds. Fits **once**, from the initial values. |
+| A collider per part | `part colliders` | A compound collider, each part's shape matched to the primitive that built it. Re-fits for free when a part's `Size` is live-bound. |
+
+```yaml
+Behaviours:
+  body:
+    Type: model
+    Properties:
+      Parts: [ ... ]
+  hull:
+    Type: box collider          # must come AFTER the visual it measures
+    Properties: { Fit: bounds }
+```
+
+> **The collider behaviour must be listed *after* the visual behaviour**, or initialisation throws.
+> Behaviours initialise in declaration order, and a collider that fits to meshes cannot measure
+> meshes that do not exist yet.
+
+`part colliders` maps each part's shape to a collider: `cube`, `quad` and `plane` get a
+BoxCollider, `sphere` gets a SphereCollider, and `capsule` **and `cylinder`** get a CapsuleCollider —
+so a cylinder collides with rounded ends. That is usually right for a leg or a barrel, and
+occasionally wrong for a wheel or a pillar; use `Fit: bounds` there instead. Renderers belonging to
+child entities are excluded — a child entity declares its own collision.
+
+Reach for `Fit: bounds` by default and `part colliders` when one box around the whole thing is too
+coarse to play against — a `humanoid`, a `streetlight` whose arm should not be a solid slab.
 
 ---
 
@@ -859,7 +894,9 @@ bar. A walk cycle needs child entities; `model` parts cannot be animated indepen
 | A mirrored limb crosses the body instead of splaying out | Working as designed — `Mirror` negates `Rotation` on two of three axes. Check the twin table and pick the axis whose signs you want. |
 | A rotated part's end cap pokes through what it meets | Centre the static part on the rotated part's endpoint instead of anchoring a face to it. |
 | A "glowing" part looks flat and dead | `model` is matte. Add a child entity with a `light`. |
-| Nothing collides with the prop | Parts carry no colliders by design. Add one collider behaviour to the entity. |
+| Nothing collides with the prop | Parts carry no colliders by design. Add a `box`/`sphere collider` with `Fit: bounds`, or `part colliders`, to the entity. |
+| A collider behaviour throws on initialisation | It is listed **before** the visual it measures. Behaviours initialise in declaration order; move it after the `model`. |
+| A cylinder part collides with rounded ends | `part colliders` maps `cylinder` to a CapsuleCollider. Use `Fit: bounds` for that prop, or accept it. |
 
 Verify with `validate_yaml` first (fastest at catching `Parts:` indentation), then `validate_game`,
 which is authoritative and catches bad anchor tokens, untagged colours, `Size` as a sequence and

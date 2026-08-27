@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -15,12 +16,12 @@ namespace Assembler.Behaviours.Physics
 	/// </remarks>
 	public sealed class AutoAddMeshColliderBehaviour : AddColliderBehaviour<MeshColliderData>
 	{
-		protected override Collider CreateCollider(MeshColliderData data)
+		protected override IReadOnlyList<Collider> CreateColliders(MeshColliderData data)
 		{
 			var collider = gameObject.AddComponent<MeshCollider>();
 			// Convex must be set before the base applies IsTrigger — a mesh trigger requires a convex hull.
 			data.Convex.UseIfValueExists(v => collider.convex = v);
-			return collider;
+			return new Collider[] { collider };
 		}
 	}
 }

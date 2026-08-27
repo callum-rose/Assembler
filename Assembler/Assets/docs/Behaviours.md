@@ -3,7 +3,9 @@
 Generated from `Assembler.Behaviours` XML doc comments. Each behaviour's description, property meanings, and trigger outputs are authored on the corresponding `GameBehaviour` MonoBehaviour; property names and types are reflected from the matching `*Info` record.
 
 ## `box collider`
-Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/trigger physics events.
+Adds a Unity BoxCollider to the entity, sized to Size — or, with Fit: bounds,
+            sized and centred on the entity's visual instead of an authored Size. Required for
+            collision/trigger physics events.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -11,14 +13,17 @@ Adds a Unity BoxCollider to the entity, sized to Size. Required for collision/tr
 
 | Name | Type | Description |
 |------|------|-------------|
-| Size | Vector3 | Local-space dimensions of the box (x, y, z). |
+| Size | Vector3 | Local-space dimensions of the box (x, y, z). Ignored when Fit is bounds. |
+| Fit | ColliderFit | "none" (default) uses the authored Size; "bounds" ignores Size and fits the collider's size and centre to the entity's visual. Fitting requires a visual behaviour on the same entity, listed before this one. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
 | StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
 ## `sphere collider`
-Adds a Unity SphereCollider to the entity. Required for collision/trigger physics events.
+Adds a Unity SphereCollider to the entity, sized to Radius — or, with Fit: bounds,
+            sized and centred on the entity's visual instead of an authored Radius. Required for
+            collision/trigger physics events.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -26,7 +31,8 @@ Adds a Unity SphereCollider to the entity. Required for collision/trigger physic
 
 | Name | Type | Description |
 |------|------|-------------|
-| Radius | float | Local-space radius of the sphere. |
+| Radius | float | Local-space radius of the sphere. Ignored when Fit is bounds. |
+| Fit | ColliderFit | "none" (default) uses the authored Radius; "bounds" ignores Radius and fits the collider's radius and centre to the entity's visual. Fitting requires a visual behaviour on the same entity, listed before this one. |
 | IsTrigger | bool | When true the collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
@@ -61,6 +67,23 @@ Adds a Unity MeshCollider to the entity using the mesh from the entity's MeshFil
 | Convex | bool | When true the collider uses a convex hull (required for non-kinematic Rigidbodies and trigger volumes). |
 | IsTrigger | bool | When true the collider fires trigger events instead of acting as a solid collider (requires Convex = true). |
 | Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) a PhysicsMaterial is created and assigned. |
+| DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
+| StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
+
+## `part colliders`
+Gives every part of the entity's visual its own collider, shape-matched to that part and
+            fitted to its mesh — a compound collider under the entity's Rigidbody. Use this when one box or
+            sphere around the whole thing is too coarse; for that simpler case use box collider or
+            sphere collider with Fit: bounds.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| IsTrigger | bool | When true every part collider fires trigger events (no physical collision response) instead of acting as a solid collider. |
+| Bounciness | float | Physics-material bounciness 0–1; when set (with any friction property) one PhysicsMaterial is created and shared across every part collider. |
 | DynamicFriction | float | Physics-material friction 0–1 applied while the surfaces are sliding. |
 | StaticFriction | float | Physics-material friction 0–1 applied while the surfaces are at rest. |
 
@@ -2119,7 +2142,10 @@ Adds a single 3D primitive mesh (chosen by Shape) as a child of the entity. Use 
             entity — every one of them renders at the entity origin, axis-aligned, on top of the others. Note
             that Size here is a raw localScale, not a true world size: Unity's native cylinder and capsule
             are 2 units tall and its plane is 10 by 10, so model's normalised Size is the easier
-            option when real dimensions matter.
+            option when real dimensions matter. The mesh is visual only — for collision, add a box collider
+            or sphere collider with Fit: bounds, listed after this behaviour, and it is sized to the
+            primitive for you (part colliders does the same, shape-matched, and is the better fit for a
+            capsule or cylinder).
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -2142,7 +2168,10 @@ Assembles the entity's visual from a list of primitive parts — each with its o
             Unity's native cylinder/capsule (2 units tall) and plane (10 by 10) scales are divided out for you.
             Anchors move the pivot off the part's centre so a part at Position 0,0,0 with Anchor bottom sits on
             the origin rather than half-buried, and Rotation then pivots about that anchor. Mirror emits
-            reflected duplicates of a part, so a symmetric shape is authored once.
+            reflected duplicates of a part, so a symmetric shape is authored once. Parts are visual only — for
+            collision, add a box collider or sphere collider with Fit: bounds (one collider
+            around the whole model) or the part colliders behaviour (one shape-matched collider per part),
+            listed after this behaviour, instead of hand-writing a Size or Radius.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 

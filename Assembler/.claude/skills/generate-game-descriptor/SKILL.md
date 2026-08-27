@@ -338,8 +338,10 @@ doesn't offer what you need, **stop and tell the user** — see **Feedback** bel
   [`Models.md`](../../../Assets/docs/Models.md).
 - **`Size` means different things in the two.** `primitive.Size` is a raw `localScale`; a `model`
   part's `Size` is a true world bounding box (Unity's 2-tall cylinder/capsule and 10x10 plane are
-  divided out). Copying numbers between them gives a half-height column. Model parts also carry
-  **no collider** — declare collision separately on the entity.
+  divided out). Copying numbers between them gives a half-height column.
+- **Model/primitive parts carry no collider.** Declare collision separately, and **never hand-write a
+  `Size`/`Radius` to match a visual** — use `box collider`/`sphere collider` with `Fit: bounds` (one
+  fitted collider) or `part colliders` (one per part), listed **after** the visual behaviour.
 - **A `collision_*` / `trigger_*` event needs a `rigidbody`** on at least one of the two entities.
   `IsTrigger: true` on a collider makes it overlap-only.
 - **Parse-only behaviours** (bottom of `Behaviours.md`: currently `condition`, `trigger stay trigger`,
