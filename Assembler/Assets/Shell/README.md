@@ -45,6 +45,14 @@ Native Size lands on the size the art was drawn for. At 100 the same border woul
 wide. **Any sprite brought into this canvas from elsewhere has to be imported at 4 too**, or say so
 with an `Image`'s pixels-per-unit multiplier; a 100-PPU sprite dropped in draws 25× too small.
 
+That number is also why the shell owns a **Prefab Mode environment scene**. Left to itself Prefab Mode
+invents an overlay canvas with no scaler on it, and so the stock 100 — under which a shell prefab
+opened on its own draws as a soft black blob, its nine-slice borders measured a hundredfold too wide,
+clamped to fit the rect, and the corner arc stretched over the whole graphic. The environment scene at
+`Editor/ShellPrefabEnvironment.unity` is that same canvas with the reference set to 1 and nothing else
+changed — constant pixel size, scale factor 1 — so Prefab Mode frames and fills exactly as it did
+before. `Assembler > Shell > Build Prefab Environment` authors it and points `EditorSettings` at it.
+
 ## Theming
 
 Nothing hard-codes a colour, a font size or a tween duration. A graphic carries a `ThemeColor` naming
@@ -204,7 +212,7 @@ validation, so both go through `Deferred.Run`.
 
 ## Regenerating
 
-Six editor entry points, all under `Assembler > Shell` and all re-runnable:
+Seven editor entry points, all under `Assembler > Shell` and all re-runnable:
 
 | Menu item | What it does |
 | --- | --- |
@@ -214,6 +222,7 @@ Six editor entry points, all under `Assembler > Shell` and all re-runnable:
 | `Reset Shell Theme` | Rewrites the existing theme's palette and scale from the prototype, discarding hand-tuning |
 | `Bake Newsreader Font Asset` | Re-bakes the static SDF atlas from the variable font |
 | `Import UI Atlas` | Re-slices `Art/UIAtlas.png` from `UIAtlas.slices.json`, keeping each sprite's GUID so no prefab detaches |
+| `Build Prefab Environment` | Authors the canvas Prefab Mode edits UI prefabs under, and points `EditorSettings` at it |
 | `Check Raycast Rule` | Reports every shell prefab graphic that raycasts and is not a `HitTarget` |
 
 `Build Shell Prefabs` works in a scratch preview scene rather than in whatever the editor has open.
