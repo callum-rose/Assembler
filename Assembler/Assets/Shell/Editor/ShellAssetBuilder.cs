@@ -52,7 +52,8 @@ namespace Assembler.Shell.Editor
 			("ArtBackground", "#e7e0d2", "The ground a piece of game art sits on before it loads."),
 			("ButtonFace", "#17130d", "The plate of a letterpress button."),
 			("ButtonInk", "#faf6ee", "Text on a letterpress button."),
-			("Offset", "#17130d", "The hard ledge a letterpress element casts — the depth that a press consumes.")
+			("Offset", "#17130d", "The hard ledge a letterpress element casts — the depth that a press consumes."),
+			("Scrim", "#040508b8", "The dark ground an overlay lays over everything beneath it. Carries its own alpha.")
 		};
 
 		private static readonly IReadOnlyList<StyleSpec> Scale = new[]
@@ -72,6 +73,8 @@ namespace Assembler.Shell.Editor
 			new StyleSpec { Name = "CardMeta", Size = 9.5f, Case = TextCase.UpperCase, Tracking = 11f, Color = "InkTertiary", Description = "A feed card's meta line." },
 			new StyleSpec { Name = "RowTitle", Size = 14.5f, Bold = true, Leading = 22f, Description = "An archive row's headline." },
 			new StyleSpec { Name = "ButtonLabel", Size = 13f, Bold = true, Case = TextCase.UpperCase, Tracking = 14f, Color = "ButtonInk", Description = "The label on a letterpress button." },
+			new StyleSpec { Name = "QuietButtonLabel", Size = 12f, Bold = true, Case = TextCase.UpperCase, Tracking = 14f, Description = "The label on an outlined button, which shows paper rather than ink behind it." },
+			new StyleSpec { Name = "IconGlyph", Size = 17f, Description = "The glyph on an icon button." },
 			new StyleSpec { Name = "StatValue", Size = 19f, Bold = true, Description = "A stat band figure." },
 			new StyleSpec { Name = "StatLabel", Size = 9.5f, Case = TextCase.UpperCase, Tracking = 10f, Color = "InkTertiary", Description = "The caption under a stat band figure." },
 			new StyleSpec { Name = "FieldText", Size = 15f, Description = "Editable or selectable field text: search, settings rows." },
@@ -91,6 +94,7 @@ namespace Assembler.Shell.Editor
 
 			var font = NewsreaderFontAssetBuilder.EnsureBaked();
 			var theme = EnsureTheme(font);
+			TopUp(theme, font);
 			var config = EnsureConfig();
 
 			AssetDatabase.SaveAssets();
@@ -184,6 +188,78 @@ namespace Assembler.Shell.Editor
 			return config;
 		}
 
+		/// <summary>
+		/// Appends any role or style this table carries that the theme does not, leaving every row it already
+		/// has exactly as authored.
+		/// </summary>
+		/// <remarks>
+		/// Adding a member to the tables above would otherwise be a trap: the member asset would be created and
+		/// prefabs could bind it, but the theme — which is only ever populated when it is first created — would
+		/// have no row for it, and everything bound to it would paint magenta until somebody thought to run
+		/// <see cref="ResetTheme"/> and discard their tuning along the way.
+		/// </remarks>
+		public static void TopUp(ShellTheme theme, TMP_FontAsset? font)
+		{
+			WarnIfFontMissing(font);
+
+			var serialized = new SerializedObject(theme);
+			var colors = serialized.FindProperty("colors");
+			var styles = serialized.FindProperty("textStyles");
+
+			int added = 0;
+
+			foreach (var spec in Palette)
+			{
+				if (Bound(colors, "role", spec.Name))
+				{
+					continue;
+				}
+
+				colors.arraySize++;
+				WriteColor(colors.GetArrayElementAtIndex(colors.arraySize - 1), spec);
+				added++;
+			}
+
+			foreach (var spec in Scale)
+			{
+				if (Bound(styles, "id", spec.Name))
+				{
+					continue;
+				}
+
+				styles.arraySize++;
+				WriteStyle(styles.GetArrayElementAtIndex(styles.arraySize - 1), spec, font);
+				added++;
+			}
+
+			if (added == 0)
+			{
+				return;
+			}
+
+			serialized.ApplyModifiedPropertiesWithoutUndo();
+			EditorUtility.SetDirty(theme);
+
+			Debug.Log($"{nameof(ShellAssetBuilder)}: added {added} missing theme rows to '{theme.name}'.");
+		}
+
+		// Matched on the member asset's name rather than its reference, so a row bound to a member that was
+		// deleted and re-created still counts as bound.
+		private static bool Bound(SerializedProperty rows, string field, string memberName)
+		{
+			for (int i = 0; i < rows.arraySize; i++)
+			{
+				var member = rows.GetArrayElementAtIndex(i).FindPropertyRelative(field).objectReferenceValue;
+
+				if (member != null && member.name == memberName)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		// The motion and layout blocks come from the ShellTheme's own field initialisers, so only the palette
 		// and the scale are written here.
 		private static void Populate(ShellTheme theme, TMP_FontAsset? font)
@@ -205,47 +281,60 @@ namespace Assembler.Shell.Editor
 
 			for (int i = 0; i < Palette.Count; i++)
 			{
-				var (roleName, hex, description) = Palette[i];
-
-				if (!ColorUtility.TryParseHtmlString(hex, out var color))
-				{
-					throw new InvalidOperationException($"{nameof(ShellAssetBuilder)}: '{hex}' is not a colour.");
-				}
-
-				var entry = colors.GetArrayElementAtIndex(i);
-				entry.FindPropertyRelative("role").objectReferenceValue =
-					EnsureMember<ColorRole>(RolesFolder, roleName, description);
-				entry.FindPropertyRelative("color").colorValue = color;
+				WriteColor(colors.GetArrayElementAtIndex(i), Palette[i]);
 			}
 		}
 
 		private static void WriteStyles(SerializedProperty styles, TMP_FontAsset? font)
 		{
-			if (font == null)
-			{
-				Debug.LogWarning(
-					$"{nameof(ShellAssetBuilder)}: writing the typographic scale with no font asset — every style " +
-					"will fall back to TextMeshPro's default face.");
-			}
+			WarnIfFontMissing(font);
 
 			styles.arraySize = Scale.Count;
 
 			for (int i = 0; i < Scale.Count; i++)
 			{
-				var spec = Scale[i];
-				var entry = styles.GetArrayElementAtIndex(i);
-
-				entry.FindPropertyRelative("id").objectReferenceValue =
-					EnsureMember<TextStyleId>(TextStylesFolder, spec.Name, spec.Description);
-				entry.FindPropertyRelative("font").objectReferenceValue = font;
-				entry.FindPropertyRelative("fontSize").floatValue = spec.Size;
-				entry.FindPropertyRelative("bold").boolValue = spec.Bold;
-				entry.FindPropertyRelative("italic").boolValue = false;
-				entry.FindPropertyRelative("textCase").intValue = (int)spec.Case;
-				entry.FindPropertyRelative("characterSpacing").floatValue = spec.Tracking;
-				entry.FindPropertyRelative("lineSpacing").floatValue = spec.Leading;
-				entry.FindPropertyRelative("color").objectReferenceValue = Role(spec.Color);
+				WriteStyle(styles.GetArrayElementAtIndex(i), Scale[i], font);
 			}
+		}
+
+		private static void WriteColor(
+			SerializedProperty entry,
+			(string Name, string Hex, string Description) spec)
+		{
+			if (!ColorUtility.TryParseHtmlString(spec.Hex, out var color))
+			{
+				throw new InvalidOperationException($"{nameof(ShellAssetBuilder)}: '{spec.Hex}' is not a colour.");
+			}
+
+			entry.FindPropertyRelative("role").objectReferenceValue =
+				EnsureMember<ColorRole>(RolesFolder, spec.Name, spec.Description);
+			entry.FindPropertyRelative("color").colorValue = color;
+		}
+
+		private static void WriteStyle(SerializedProperty entry, StyleSpec spec, TMP_FontAsset? font)
+		{
+			entry.FindPropertyRelative("id").objectReferenceValue =
+				EnsureMember<TextStyleId>(TextStylesFolder, spec.Name, spec.Description);
+			entry.FindPropertyRelative("font").objectReferenceValue = font;
+			entry.FindPropertyRelative("fontSize").floatValue = spec.Size;
+			entry.FindPropertyRelative("bold").boolValue = spec.Bold;
+			entry.FindPropertyRelative("italic").boolValue = false;
+			entry.FindPropertyRelative("textCase").intValue = (int)spec.Case;
+			entry.FindPropertyRelative("characterSpacing").floatValue = spec.Tracking;
+			entry.FindPropertyRelative("lineSpacing").floatValue = spec.Leading;
+			entry.FindPropertyRelative("color").objectReferenceValue = Role(spec.Color);
+		}
+
+		private static void WarnIfFontMissing(TMP_FontAsset? font)
+		{
+			if (font != null)
+			{
+				return;
+			}
+
+			Debug.LogWarning(
+				$"{nameof(ShellAssetBuilder)}: writing the typographic scale with no font asset — every style " +
+				"will fall back to TextMeshPro's default face.");
 		}
 
 		// A style's colour has to name a role the palette actually carries: a typo here would otherwise mint a
