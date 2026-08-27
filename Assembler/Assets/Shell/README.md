@@ -34,6 +34,7 @@ built so far (phases 1–2: foundations and primitives) and the traps in it.
 | `Screens/*` | Feed, Detail, Archive and Settings — bare pages that prove the shell |
 | `Overlays/NoticeOverlay` | The one overlay so far: a sheet with a heading and a way out |
 | `Composition/ShellStartup` | Opens the paper on the front page |
+| `Art/UIAtlas.png` | The one sheet every shell graphic draws from (see **The atlas**) |
 | `Prefabs/*` | The primitives and the screens, authored (see **Primitives**, **Screens**) |
 
 ## Coordinates
@@ -43,6 +44,21 @@ pixels, so every number in `Prototypes/app-look-prototype.html` transfers 1:1 �
 units, a 15px body size is a 15-unit font size. It is a *logical* coordinate system, not a render
 resolution: text is SDF and geometry rasterises at native device pixels. Bitmap art is the exception
 and must be authored at 3–4× its unit size (a 44-unit icon ships at ≥132px) or it blurs on device.
+
+The canvas scaler's **reference pixels per unit is 1**, not the stock 100. uGUI converts a sprite's
+pixels to canvas units by dividing the sprite's own pixels-per-unit by that reference, and the atlas
+imports at 4 — so 4 sheet pixels are 1 unit, a nine-slice border of 9 pixels is 2.25 units, and Set
+Native Size lands on the size the art was drawn for. At 100 the same border would come out 225 units
+wide. **Any sprite brought into this canvas from elsewhere has to be imported at 4 too**, or say so
+with an `Image`'s pixels-per-unit multiplier; a 100-PPU sprite dropped in draws 25× too small.
+
+That number is also why the shell owns a **Prefab Mode environment scene**. Left to itself Prefab Mode
+invents an overlay canvas with no scaler on it, and so the stock 100 — under which a shell prefab
+opened on its own draws as a soft black blob, its nine-slice borders measured a hundredfold too wide,
+clamped to fit the rect, and the corner arc stretched over the whole graphic. The environment scene at
+`Editor/ShellPrefabEnvironment.unity` is that same canvas with the reference set to 1 and nothing else
+changed — constant pixel size, scale factor 1 — so Prefab Mode frames and fills exactly as it did
+before. `Assembler > Shell > Build Prefab Environment` authors it and points `EditorSettings` at it.
 
 ## Theming
 
@@ -137,6 +153,36 @@ the scene's `Start` order a component happened to sit.
 before every play and throws if there is no asset, so deleting `Assets/Shell/EasyDISettings.asset`
 breaks play mode rather than merely disabling DI.
 
+## The atlas
+
+Every graphic in the shell draws a sprite off `Art/UIAtlas.png`: the rounded plates, the outlined
+button's keyline, the sheet's rounded top, the grab handle, the icons — and a plain white `Fill` for
+the square surfaces that need no shape at all. The sheet is drawn white on transparent by
+`Prototypes/ui-atlas/`, which also writes `UIAtlas.slices.json`; `Assembler > Shell > Import UI Atlas`
+applies that table to the texture. The screens carry no graphics of their own — they nest the
+primitives — so a sprite only ever has to be named once, on the primitive.
+
+**Shape comes from the sprite, colour from the role binder.** Nothing on the sheet carries a colour,
+so a second `ShellTheme` re-skins the whole shell without a second sheet — the same split that makes
+dark mode a theme asset rather than a pass over every prefab.
+
+**The square surfaces name `Fill` rather than leaving the sprite empty.** An `Image` with no sprite
+draws uGUI's built-in white texture, which is a different texture from the atlas and so breaks the
+batch either side of it. Naming a 4×4 white square off the sheet keeps the shell on one texture.
+
+Whether a sprite is nine-sliced is read off its own border at build time rather than restated in the
+builder — the slice table already decides that, and a second copy of the decision is a second thing to
+keep in step.
+
+Six of the sheet's twenty-three sprites are in use: `Fill`, `Plate`, `PlateLine`, `SheetTop`,
+`PillSmall` and `IconSearch`. The rest — `PlateHairline`, `StampFrame`, `VerdictFrame`, `Field`,
+`Segment`, `Chip`, `Disc`, `Pill` and eight of the nine icons — are waiting on the editorial content
+phase 5 lays over the bare screens: the stamp, the result slip, the search field, the filter chips,
+the played badge, the settings controls. Each one's `usedBy` in the slice table names what it is for.
+`RuleDouble` is the one that will likely stay unused: it bakes a 1u/2u/1u band, while `Rule` builds
+its double weight from two hairlines measured off the theme, and a theme that re-tunes the hairline
+should re-tune the double rule with it.
+
 ## Primitives
 
 Ten prefabs under `Prefabs/`, all authored by `Assembler > Shell > Build Shell Prefabs`:
@@ -164,6 +210,12 @@ so painting face and fill different roles turns the button into an outlined one 
 structure — which is all the `Quiet` variant is. `Icon` drops the plate, and a button with no ledge
 to consume sinks instead of travelling. All three are real Prefab Variants, so the base keeps driving
 everything they do not override.
+
+Two of them re-skin as well as repaint. `Quiet` swaps its face to `PlateLine`, the keyline drawn as a
+sprite: a solid plate in the rule colour with the fill laid over all but its edge reads the same along
+the sides, but thickens by half again at the corners, where an inset square corner cuts back further
+than a stroke does. `Icon` carries a `Glyph` — an atlas sprite on the face, 24 units square inside the
+44 the hit target guarantees — and no label at all; set it through `LetterpressButton.Glyph`.
 
 It subclasses `Selectable`, not `Button`: Button's transitions are the wrong shape for a press that
 moves geometry, while `Selectable` still gives interactable gating and slide-off-cancel for free.
@@ -236,7 +288,7 @@ the same page reached from the feed.
 
 ## Regenerating
 
-Six editor entry points, all under `Assembler > Shell` and all re-runnable:
+Nine editor entry points, all under `Assembler > Shell` and all re-runnable:
 
 | Menu item | What it does |
 | --- | --- |
@@ -246,6 +298,8 @@ Six editor entry points, all under `Assembler > Shell` and all re-runnable:
 | `Create Shell Assets` | Creates the role and style members, the theme and the config if they are missing, tops the theme up with any table rows it lacks, and leaves existing ones alone |
 | `Reset Shell Theme` | Rewrites the existing theme's palette and scale from the prototype, discarding hand-tuning |
 | `Bake Newsreader Font Asset` | Re-bakes the static SDF atlas from the variable font |
+| `Import UI Atlas` | Re-slices `Art/UIAtlas.png` from `UIAtlas.slices.json`, keeping each sprite's GUID so no prefab detaches |
+| `Build Prefab Environment` | Authors the canvas Prefab Mode edits UI prefabs under, and points `EditorSettings` at it |
 | `Check Raycast Rule` | Reports every shell prefab graphic that raycasts and is not a `HitTarget` |
 
 `Build Shell Prefabs` works in a scratch preview scene rather than in whatever the editor has open.
@@ -270,13 +324,9 @@ version of those tests would assert against a library that is not actually worki
 
 ## Known gaps
 
-- **Square corners on the sheet.** The prototype rounds the pause sheet's top corners at 16 units.
-  uGUI needs a nine-sliced sprite for that and the shell carries no sprites yet, so `SheetFrame`
-  ships square. Everything else in the letterpress look is a 2-unit radius, which at this scale is
-  within noise.
-- **The icon button's glyph is a placeholder.** The baked atlas carries Latin-1 and a newspaper's
-  punctuation, so a real icon button either extends the character set or swaps the label for a
-  graphic. That is the game strip's decision, in phase 6.
+- **`IconGlyph` is an orphan.** The text style was added for the icon button's stand-in glyph, which
+  is now a sprite. It stays on the theme because the in-game chrome's mono voice (UIPLAN 5.7) is the
+  next thing that will want a glyph set as text — but nothing binds it today.
 - **One font cut, not two.** UIPLAN 5.4 asks for Newsreader's display and text optical cuts. The repo
   carries only the variable font, and this TextMeshPro version cannot instance a variable font's axes —
   it bakes the default instance, and bold is TextMeshPro's synthesised bold. Importing the static

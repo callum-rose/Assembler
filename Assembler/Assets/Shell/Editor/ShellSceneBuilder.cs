@@ -25,11 +25,16 @@ namespace Assembler.Shell.Editor
 	/// Additive and re-runnable. Objects are found by name and configured in place; nothing is destroyed, so
 	/// running it again after the shell has grown content leaves that content alone.
 	/// </remarks>
+	/// <remarks>
+	/// It also authors the one-canvas scene Prefab Mode edits the shell's UI prefabs under, which exists for the
+	/// sake of a single number — see <see cref="ReferencePixelsPerUnit"/>.
+	/// </remarks>
 	public static class ShellSceneBuilder
 	{
 		public const string BootstrapScenePath = "Assets/Scenes/Bootstrap.unity";
 		public const string ApplicationScopePrefabPath = "Assets/Shell/ApplicationScope.prefab";
 		public const string EasyDiSettingsPath = "Assets/Shell/EasyDISettings.asset";
+		public const string PrefabEnvironmentScenePath = "Assets/Shell/Editor/ShellPrefabEnvironment.unity";
 
 		private const string ShellRootName = "ShellRoot";
 		private const string GameBootstrapName = "GameBootstrap";
@@ -37,6 +42,20 @@ namespace Assembler.Shell.Editor
 		private const string EventSystemName = "EventSystem";
 		private const string ShellScopeName = "ShellScope";
 		private const string SafeAreaName = "SafeArea";
+		private const string PrefabEnvironmentCanvasName = "ShellCanvas";
+
+		/// <summary>
+		/// What a canvas the shell draws into answers when uGUI asks how many of its pixels make a unit.
+		/// </summary>
+		/// <remarks>
+		/// One, not the stock hundred. uGUI converts a sprite's pixels to canvas units by sprite-pixels-per-unit
+		/// over this, and the atlas imports at 4 — so the shell's four-times art lands at one quarter of its pixel
+		/// size, which is the unit size it was drawn for, and Set Native Size agrees. At 100 a nine-slice border of
+		/// nine sheet pixels would be measured as 225 units, be clamped to fit whatever rect it is on, and draw
+		/// the corner arc across the whole graphic. Anything brought into a shell canvas from elsewhere has to be
+		/// imported at 4 as well, or say so with an <see cref="Image"/>'s pixels-per-unit multiplier.
+		/// </remarks>
+		private const float ReferencePixelsPerUnit = 1f;
 
 		[MenuItem("Assembler/Shell/Build Shell Root")]
 		public static void BuildShell()
@@ -75,6 +94,76 @@ namespace Assembler.Shell.Editor
 			Debug.Log($"{nameof(ShellSceneBuilder)}: shell built into {BootstrapScenePath}.");
 		}
 
+		/// <summary>
+		/// Authors the scene Prefab Mode opens the shell's UI prefabs inside, and points the editor at it.
+		/// </summary>
+		/// <remarks>
+		/// <para>
+		/// Left to itself, Prefab Mode invents an overlay canvas with no scaler on it, and so uGUI's stock hundred
+		/// reference pixels per unit. A shell prefab opened under that draws as a soft black blob: its nine-slice
+		/// borders are measured a hundredfold too wide, clamped to fit the rect, and the corner arc is stretched
+		/// over the whole graphic. The prefab is fine; the canvas it is being previewed under is not.
+		/// </para>
+		/// <para>
+		/// So this environment is Unity's own, changed in exactly one respect. A scaler has to be there at all
+		/// because <see cref="Canvas.referencePixelsPerUnit"/> is written by one and serialised by nothing else,
+		/// but it is set to constant pixel size at a scale of one — which is what a canvas with no scaler already
+		/// does — so Prefab Mode frames and fills the same way it did before.
+		/// </para>
+		/// <para>
+		/// A scene of its own rather than <c>Bootstrap</c>: Prefab Mode parents the prefab under the first canvas
+		/// it finds, and the shell's first canvas is a host layer whose safe-area panel would move whatever was
+		/// being edited. It lives under <c>Editor/</c>, so it cannot reach a build.
+		/// </para>
+		/// </remarks>
+		[MenuItem("Assembler/Shell/Build Prefab Environment")]
+		public static void BuildPrefabEnvironment()
+		{
+			// Additive, then closed again: authoring it into the open scene would leave that scene dirty though
+			// nothing in it changed, and a builder has no business deciding what the editor is holding.
+			var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+
+			try
+			{
+				var canvasObject = new GameObject(
+					PrefabEnvironmentCanvasName,
+					typeof(RectTransform),
+					typeof(Canvas),
+					typeof(CanvasScaler),
+					typeof(GraphicRaycaster));
+
+				// A new GameObject lands in the active scene, which is still whatever the editor had open.
+				SceneManager.MoveGameObjectToScene(canvasObject, scene);
+
+				canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+
+				var scaler = canvasObject.GetComponent<CanvasScaler>();
+				scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+				scaler.scaleFactor = 1f;
+				scaler.referencePixelsPerUnit = ReferencePixelsPerUnit;
+
+				EditorSceneManager.SaveScene(scene, PrefabEnvironmentScenePath);
+			}
+			finally
+			{
+				EditorSceneManager.CloseScene(scene, removeScene: true);
+			}
+
+			var environment = AssetDatabase.LoadAssetAtPath<SceneAsset>(PrefabEnvironmentScenePath);
+
+			if (environment == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellSceneBuilder)}: {PrefabEnvironmentScenePath} did not save.");
+			}
+
+			EditorSettings.prefabUIEnvironment = environment;
+			AssetDatabase.SaveAssets();
+
+			Debug.Log(
+				$"{nameof(ShellSceneBuilder)}: Prefab Mode now edits UI under {PrefabEnvironmentScenePath}.");
+		}
+
 		private static ShellRoot BuildShellRoot(Scene scene)
 		{
 			var rootObject = FindOrCreateRoot(scene, ShellRootName);
@@ -92,6 +181,8 @@ namespace Assembler.Shell.Editor
 			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
 			scaler.referenceResolution = new Vector2(390f, 844f);
 			scaler.matchWidthOrHeight = 0f;
+
+			scaler.referencePixelsPerUnit = ReferencePixelsPerUnit;
 
 			EnsureComponent<ShortAxisCanvasScaler>(rootObject);
 

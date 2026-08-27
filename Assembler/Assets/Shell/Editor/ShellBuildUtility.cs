@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Assembler.Shell.Controls;
 using Assembler.Shell.Theming;
 using Assembler.Shell.Theming.Binders;
@@ -15,7 +16,7 @@ namespace Assembler.Shell.Editor
 	/// <summary>
 	/// The operations every shell builder needs: finding or creating a child, stretching and pinning rects,
 	/// writing private serialized fields, looking theme members up by name, painting and lettering objects from
-	/// the theme, and opening a prefab to author in place.
+	/// the theme, skinning them from the UI atlas, and opening a prefab to author in place.
 	/// </summary>
 	internal static class ShellBuildUtility
 	{
@@ -140,6 +141,23 @@ namespace Assembler.Shell.Editor
 			return Member<TextStyleId>(ShellAssetBuilder.TextStylesFolder, name);
 		}
 
+		/// <summary>The atlas sprite of that name. Throws when the sheet carries no such sprite.</summary>
+		public static Sprite Sprite(string name)
+		{
+			var sprite = AssetDatabase.LoadAllAssetsAtPath(ShellAtlasImporter.AtlasPath)
+				.OfType<Sprite>()
+				.FirstOrDefault(candidate => string.Equals(candidate.name, name, StringComparison.Ordinal));
+
+			if (sprite == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellBuildUtility)}: no sprite called '{name}' on " +
+					$"{ShellAtlasImporter.AtlasPath}. Run 'Assembler > Shell > Import UI Atlas' first.");
+			}
+
+			return sprite;
+		}
+
 		private static T Member<T>(string folder, string name) where T : ScriptableEnum
 		{
 			var member = AssetDatabase.LoadAssetAtPath<T>($"{folder}/{name}.asset");
@@ -206,11 +224,13 @@ namespace Assembler.Shell.Editor
 			return instance;
 		}
 
-		// A theme-bound graphic: an Image that paints from a role and, per UIPLAN 7.4, does not raycast.
-		public static Image Paint(GameObject target, string role, float alpha = 1f)
+		// A theme-bound graphic: an Image that draws an atlas sprite, takes its colour from a role and, per
+		// UIPLAN 7.4, does not raycast.
+		public static Image Paint(GameObject target, string role, string sprite, float alpha = 1f)
 		{
 			var image = Ensure<Image>(target);
 			image.raycastTarget = false;
+			Skin(image, sprite);
 
 			var binder = Ensure<ThemeColor>(target);
 			SetField(binder, "role", Role(role));
@@ -236,6 +256,41 @@ namespace Assembler.Shell.Editor
 			binder.Apply();
 
 			return label;
+		}
+
+		/// <summary>Draws an atlas sprite on a graphic, nine-sliced or not as the sprite's own border says.</summary>
+		/// <remarks>
+		/// Sliced or simple is read off the border rather than restated here: the slice table already decides
+		/// which sprites are nine-slices, and a second copy of that decision is a second thing to keep in step.
+		/// <para>
+		/// The multiplier stays at 1. The sheet is authored at four times its unit size and imports at pixels per
+		/// unit 4, and a shell canvas answers with a reference of 1 — so a border of nine sheet pixels is two and
+		/// a quarter units, and Set Native Size lands on the unit size the art was drawn for.
+		/// </para>
+		/// </remarks>
+		public static void Skin(Image image, string sprite)
+		{
+			var art = Sprite(sprite);
+
+			image.sprite = art;
+			image.type = art.border == Vector4.zero ? Image.Type.Simple : Image.Type.Sliced;
+			image.pixelsPerUnitMultiplier = 1f;
+			EditorUtility.SetDirty(image);
+		}
+
+		/// <summary>Re-draws an already-painted graphic with a different atlas sprite — for a prefab variant.</summary>
+		public static void Reskin(GameObject root, string path, string sprite)
+		{
+			var target = Find(root, path);
+			var image = target.GetComponent<Image>();
+
+			if (image == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellBuildUtility)}: '{path}' carries no {nameof(Image)} to reskin.");
+			}
+
+			Skin(image, sprite);
 		}
 
 		public static void Repaint(GameObject root, string path, string role)
