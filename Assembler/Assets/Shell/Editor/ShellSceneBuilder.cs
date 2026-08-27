@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Assembler.Shell.Composition;
 using Assembler.Shell.Layout;
+using Assembler.Shell.Navigation;
 using Assembler.Shell.Theming;
 using EasyDI.Unity;
 using UnityEditor;
@@ -16,9 +17,9 @@ using Object = UnityEngine.Object;
 namespace Assembler.Shell.Editor
 {
 	/// <summary>
-	/// Grows the shell into <c>Bootstrap.unity</c>: the root canvas and its three layered hosts, the authored
-	/// EventSystem, and the shell lifetime scope with its installer — plus the application scope prefab and the
-	/// EasyDI settings asset that the scope chain hangs from.
+	/// Grows the shell into <c>Bootstrap.unity</c>: the root canvas and its three layered hosts, the paper the
+	/// screens are printed on, the authored EventSystem, and the shell lifetime scope with its installer — plus
+	/// the application scope prefab and the EasyDI settings asset that the scope chain hangs from.
 	/// </summary>
 	/// <remarks>
 	/// Additive and re-runnable. Objects are found by name and configured in place; nothing is destroyed, so
@@ -36,6 +37,8 @@ namespace Assembler.Shell.Editor
 		public const string PrefabEnvironmentScenePath = "Assets/Shell/Editor/ShellPrefabEnvironment.unity";
 
 		private const string ShellRootName = "ShellRoot";
+		private const string GameBootstrapName = "GameBootstrap";
+		private const string PaperGroundName = "PaperGround";
 		private const string EventSystemName = "EventSystem";
 		private const string ShellScopeName = "ShellScope";
 		private const string SafeAreaName = "SafeArea";
@@ -61,6 +64,10 @@ namespace Assembler.Shell.Editor
 			ShellAssetBuilder.EnsureTheme(font);
 			ShellAssetBuilder.EnsureConfig();
 
+			// Before the scene is opened, not after: this authors prefabs and catalogs, and everything the
+			// installer is about to be pointed at has to exist first.
+			ShellScreenBuilder.BuildScreens();
+
 			var applicationScope = EnsureApplicationScopePrefab();
 			EnsureEasyDiSettings(applicationScope);
 			AssetDatabase.SaveAssets();
@@ -72,10 +79,13 @@ namespace Assembler.Shell.Editor
 			// failing loudly.
 			var theme = AssetDatabase.LoadAssetAtPath<ShellTheme>(ShellAssetBuilder.ThemeAssetPath);
 			var config = AssetDatabase.LoadAssetAtPath<ShellConfig>(ShellAssetBuilder.ConfigAssetPath);
+			var screens = AssetDatabase.LoadAssetAtPath<ScreenCatalog>(ShellScreenBuilder.ScreenCatalogPath);
+			var overlays = AssetDatabase.LoadAssetAtPath<OverlayCatalog>(ShellScreenBuilder.OverlayCatalogPath);
 
 			var shellRoot = BuildShellRoot(scene);
 			BuildEventSystem(scene);
-			BuildShellScope(scene, theme, config, shellRoot);
+			BuildShellScope(scene, theme, config, screens, overlays, shellRoot);
+			SilenceGameBootstrap(scene);
 
 			EditorSceneManager.MarkSceneDirty(scene);
 			EditorSceneManager.SaveScene(scene);
@@ -177,6 +187,7 @@ namespace Assembler.Shell.Editor
 			EnsureComponent<ShortAxisCanvasScaler>(rootObject);
 
 			var screenHost = BuildHost(rootObject.transform, "ScreenHost", siblingIndex: 0);
+			BuildPaperGround(screenHost);
 			var gameStrip = BuildHost(rootObject.transform, "GameStrip", siblingIndex: 1);
 			var overlayHost = BuildHost(rootObject.transform, "OverlayHost", siblingIndex: 2);
 
@@ -212,6 +223,48 @@ namespace Assembler.Shell.Editor
 			return host;
 		}
 
+		// The page the screens are printed on. It belongs to the host rather than to any screen: it bleeds to the
+		// screen edge, outside the safe area the screens live in (UIPLAN 2.4), and every screen wants the same
+		// one — a per-screen ground would cross-fade paper over paper on every transition.
+		private static void BuildPaperGround(ShellHost host)
+		{
+			var existing = host.Rect.Find(PaperGroundName);
+
+			if (existing == null)
+			{
+				var source = AssetDatabase.LoadAssetAtPath<GameObject>(ShellPrefabBuilder.PaperGroundPath);
+
+				if (source == null)
+				{
+					throw new InvalidOperationException(
+						$"{nameof(ShellSceneBuilder)}: {ShellPrefabBuilder.PaperGroundPath} has not been built yet.");
+				}
+
+				var created = (GameObject)PrefabUtility.InstantiatePrefab(source, host.Rect);
+				created.name = PaperGroundName;
+				existing = created.transform;
+			}
+
+			StretchFull(existing.gameObject);
+			existing.SetSiblingIndex(0);
+		}
+
+		// Bootstrap.unity has been the place a descriptor auto-loads on play. It is the shell's scene now, and a
+		// game building itself on top of the front page is not a thing to leave switched on — so the object is
+		// deactivated, not deleted, until the session contract in phase 6 gives the shell a real way to start one.
+		private static void SilenceGameBootstrap(Scene scene)
+		{
+			var bootstrap = scene.GetRootGameObjects().FirstOrDefault(root => root.name == GameBootstrapName);
+
+			if (bootstrap == null || !bootstrap.activeSelf)
+			{
+				return;
+			}
+
+			bootstrap.SetActive(false);
+			Debug.Log($"{nameof(ShellSceneBuilder)}: deactivated '{GameBootstrapName}' so the shell is what plays.");
+		}
+
 		// Replaces the EventSystem the Builder used to stand up at runtime: uGUI needs exactly one, and the
 		// project is Input System-only, so it is authored here with the Input System module.
 		private static void BuildEventSystem(Scene scene)
@@ -222,7 +275,13 @@ namespace Assembler.Shell.Editor
 			EnsureComponent<InputSystemUIInputModule>(eventSystemObject);
 		}
 
-		private static void BuildShellScope(Scene scene, ShellTheme theme, ShellConfig config, ShellRoot shellRoot)
+		private static void BuildShellScope(
+			Scene scene,
+			ShellTheme theme,
+			ShellConfig config,
+			ScreenCatalog screens,
+			OverlayCatalog overlays,
+			ShellRoot shellRoot)
 		{
 			var scopeObject = FindOrCreateRoot(scene, ShellScopeName);
 
@@ -231,6 +290,8 @@ namespace Assembler.Shell.Editor
 
 			SetField(installer, "theme", theme);
 			SetField(installer, "config", config);
+			SetField(installer, "screenCatalog", screens);
+			SetField(installer, "overlayCatalog", overlays);
 			SetField(installer, "shellRoot", shellRoot);
 
 			SetField(scope, "installer", installer);

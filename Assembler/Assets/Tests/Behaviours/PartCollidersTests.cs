@@ -31,12 +31,12 @@ namespace Tests.Behaviours
 		public void EachPartGetsAColliderMatchingTheShapeThatBuiltIt()
 		{
 			var host = BuildModel(
-				Part(PrimitiveType.Cube),
-				Part(PrimitiveType.Sphere),
-				Part(PrimitiveType.Capsule),
-				Part(PrimitiveType.Cylinder),
-				Part(PrimitiveType.Quad),
-				Part(PrimitiveType.Plane));
+				Part(ShapeKind.Cube),
+				Part(ShapeKind.Sphere),
+				Part(ShapeKind.Capsule),
+				Part(ShapeKind.Cylinder),
+				Part(ShapeKind.Quad),
+				Part(ShapeKind.Plane));
 
 			AddPartColliders(host);
 
@@ -50,6 +50,27 @@ namespace Tests.Behaviours
 				"a cylinder is approximated by a capsule — rounded ends, usually what a leg or barrel wants");
 			Assert.IsInstanceOf<BoxCollider>(Collider(parts[4]), "a quad is a box");
 			Assert.IsInstanceOf<BoxCollider>(Collider(parts[5]), "a plane is a box");
+		}
+
+		// A wedge and a cone have no matching Unity primitive collider, and a box around either defeats
+		// the point of the shape — a ramp you cannot walk up is not a ramp. All three are convex, so the
+		// hull a convex MeshCollider cooks is the shape itself rather than an approximation of it.
+		[Test]
+		public void SlopedAndDomedPartsGetAConvexMeshColliderOfTheirOwnMesh()
+		{
+			var host = BuildModel(Part(ShapeKind.Wedge), Part(ShapeKind.Cone), Part(ShapeKind.Hemisphere));
+
+			AddPartColliders(host);
+
+			foreach (var part in Children(host))
+			{
+				var collider = Collider(part) as MeshCollider;
+				Assert.IsNotNull(collider, $"{part.name} should get a MeshCollider, not a box.");
+				Assert.IsTrue(collider!.convex,
+					$"{part.name}'s MeshCollider must be convex — PhysX rejects a concave one under a Rigidbody.");
+				Assert.AreSame(part.GetComponent<MeshFilter>().sharedMesh, collider.sharedMesh,
+					$"{part.name}'s collider should be its own mesh, shared rather than copied.");
+			}
 		}
 
 		[Test]
@@ -75,7 +96,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void CollidersGoOnThePartsNotTheEntityRoot()
 		{
-			var host = BuildModel(Part(PrimitiveType.Cube), Part(PrimitiveType.Cube));
+			var host = BuildModel(Part(ShapeKind.Cube), Part(ShapeKind.Cube));
 
 			AddPartColliders(host);
 
@@ -93,8 +114,8 @@ namespace Tests.Behaviours
 		public void EachBoxIsFittedToItsOwnPartsMesh()
 		{
 			var host = BuildModel(
-				Part(PrimitiveType.Cube, size: new Vector3(2f, 1f, 2f)),
-				Part(PrimitiveType.Cube, size: new Vector3(1f, 4f, 1f), position: new Vector3(3f, 0f, 0f)));
+				Part(ShapeKind.Cube, size: new Vector3(2f, 1f, 2f)),
+				Part(ShapeKind.Cube, size: new Vector3(1f, 4f, 1f), position: new Vector3(3f, 0f, 0f)));
 
 			AddPartColliders(host);
 
@@ -118,7 +139,7 @@ namespace Tests.Behaviours
 		public void ACapsulePartIsAlignedToItsLongestAxis()
 		{
 			// Unity's capsule mesh is 2 tall and 1 across, so the fit should pick Y with height 2, radius 0.5.
-			var host = BuildModel(Part(PrimitiveType.Capsule));
+			var host = BuildModel(Part(ShapeKind.Capsule));
 
 			AddPartColliders(host);
 
@@ -132,7 +153,7 @@ namespace Tests.Behaviours
 		public void AFlatPartIsClampedToAUsableThickness()
 		{
 			// A quad is zero-thick on Z; left alone that is a collider physics cannot hit.
-			var host = BuildModel(Part(PrimitiveType.Quad));
+			var host = BuildModel(Part(ShapeKind.Quad));
 
 			var collider = (BoxCollider)FirstColliderOf(BuildAndFit(host));
 
@@ -149,8 +170,8 @@ namespace Tests.Behaviours
 		public void TriggerAndOneSharedMaterialReachEveryPartCollider()
 		{
 			var host = BuildModel(
-				Part(PrimitiveType.Cube),
-				Part(PrimitiveType.Sphere, position: new Vector3(2f, 0f, 0f)));
+				Part(ShapeKind.Cube),
+				Part(ShapeKind.Sphere, position: new Vector3(2f, 0f, 0f)));
 
 			host.AddComponent<PartColliders>().Initialise(
 				new PartColliderData("c")
@@ -181,7 +202,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void ChildEntitiesGetNoColliderFromTheirParent()
 		{
-			var host = BuildModel(Part(PrimitiveType.Cube));
+			var host = BuildModel(Part(ShapeKind.Cube));
 
 			// A child entity is parented under its parent's GameObject, exactly as GameEntityFactory does it.
 			var child = new GameObject("child entity");
@@ -256,8 +277,8 @@ namespace Tests.Behaviours
 			return host;
 		}
 
-		private static ModelPart Part(PrimitiveType shape, Vector3? position = null, Vector3? size = null) =>
-			new(new ValueProvider<PrimitiveType>(shape),
+		private static ModelPart Part(ShapeKind shape, Vector3? position = null, Vector3? size = null) =>
+			new(new ValueProvider<ShapeKind>(shape),
 				position is { } p ? new ValueProvider<Vector3>(p) : NullValueProvider<Vector3>.Instance,
 				NullValueProvider<Vector3>.Instance,
 				size is { } s ? new ValueProvider<Vector3>(s) : NullValueProvider<Vector3>.Instance,

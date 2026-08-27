@@ -461,7 +461,7 @@ Templates:
     Behaviours:
       body:
         Type: primitive
-        Properties: { Shape: cylinder, Size: !vec { X: 0.5, Y: 0.06, Z: 0.5 }, Colour: !var coin colour }
+        Properties: { Shape: cylinder, Size: !vec { X: 0.5, Y: 0.12, Z: 0.5 }, Colour: !var coin colour }
       spin:
         Type: angular velocity
         Properties: { AngularVelocity: !vec { X: 0, Y: 220, Z: 0 } }
@@ -855,7 +855,7 @@ Entities:
     Behaviours:
       body:
         Type: primitive
-        Properties: { Shape: capsule, Size: !vec { X: 0.8, Y: 0.85, Z: 0.8 }, Colour: !var runner colour }
+        Properties: { Shape: capsule, Size: !vec { X: 0.8, Y: 1.7, Z: 0.8 }, Colour: !var runner colour }
       aura:
         Type: light
         Properties:

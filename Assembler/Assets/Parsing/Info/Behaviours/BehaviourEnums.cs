@@ -66,6 +66,31 @@ namespace Assembler.Parsing.Info.Behaviours
 		Spot
 	}
 
+	/// <summary>
+	/// The shape of one <c>primitive</c> or <c>model</c> part. Project-owned rather than
+	/// <c>UnityEngine.PrimitiveType</c>: that enum is closed at Unity's six built-ins, and Assembler
+	/// needs a wedge, a cone and a hemisphere as well. Every shape is a mesh under
+	/// <c>Assets/Resources/Meshes</c>, authored by <c>Tools/blender/build_primitives.py</c>.
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Unknown"/> is the default so that a renderer built by something other than a shape —
+	/// a <c>voxel mesh</c>, a <c>sprite</c> — is reported as what it is rather than masquerading as a
+	/// cube, which is what <c>UnityEngine.PrimitiveType</c> forced.
+	/// </remarks>
+	public enum ShapeKind
+	{
+		Unknown,
+		Cube,
+		Sphere,
+		Capsule,
+		Cylinder,
+		Plane,
+		Quad,
+		Wedge,
+		Cone,
+		Hemisphere
+	}
+
 	/// <summary>Which reflected duplicates a <c>model</c> part emits alongside the original.
 	/// <c>XZ</c> emits three twins (the X mirror, the Z mirror, and both), so a four-legged
 	/// shape is one authored part.</summary>
@@ -129,7 +154,7 @@ namespace Assembler.Parsing.Info.Behaviours
 			object parsed =
 				typeof(TEnum) == typeof(Easing) ? ParseEasing(normalised, raw) :
 				typeof(TEnum) == typeof(LayoutDirection) ? ParseLayoutDirection(normalised, raw) :
-				typeof(TEnum) == typeof(PrimitiveType) ? ParsePrimitiveType(normalised, raw) :
+				typeof(TEnum) == typeof(ShapeKind) ? ParseShapeKind(normalised, raw) :
 				typeof(TEnum) == typeof(TextAnchor) ? ParseTextAnchor(normalised, raw) :
 				typeof(TEnum) == typeof(CameraProjection) ? ParseCameraProjection(normalised, raw) :
 				typeof(TEnum) == typeof(CameraFollowMode) ? ParseCameraFollowMode(normalised, raw) :
@@ -205,17 +230,23 @@ namespace Assembler.Parsing.Info.Behaviours
 					$"Unknown layout direction '{raw}'. Valid values: vertical, horizontal, none, manual, free")
 			};
 
-		private static PrimitiveType ParsePrimitiveType(string s, string raw) =>
+		private static ShapeKind ParseShapeKind(string s, string raw) =>
 			s switch
 			{
-				"cube" => PrimitiveType.Cube,
-				"sphere" => PrimitiveType.Sphere,
-				"capsule" => PrimitiveType.Capsule,
-				"cylinder" => PrimitiveType.Cylinder,
-				"plane" => PrimitiveType.Plane,
-				"quad" => PrimitiveType.Quad,
+				"cube" => ShapeKind.Cube,
+				"sphere" => ShapeKind.Sphere,
+				"capsule" => ShapeKind.Capsule,
+				"cylinder" => ShapeKind.Cylinder,
+				"plane" => ShapeKind.Plane,
+				"quad" => ShapeKind.Quad,
+				"wedge" => ShapeKind.Wedge,
+				"cone" => ShapeKind.Cone,
+				"hemisphere" => ShapeKind.Hemisphere,
+				// `unknown` is the marker for a renderer no shape built; it is not a spelling anyone
+				// should be able to ask for, so it is deliberately absent from this list.
 				_ => throw new ParsingException(
-					$"Unknown primitive shape '{raw}'. Valid values: cube, sphere, capsule, cylinder, plane, quad")
+					$"Unknown primitive shape '{raw}'. Valid values: cube, sphere, capsule, cylinder, plane, " +
+					"quad, wedge, cone, hemisphere")
 			};
 
 		// Aliases ported from the former UiLayout.ParseAlignment; dashes are stripped before matching,

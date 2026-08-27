@@ -238,7 +238,7 @@ Entities:
         Properties:
           Shape: cylinder
           Colour: !colour "#e8e8e8"
-          Size: !vec { X: 1, Y: 1.5, Z: 1 }
+          Size: !vec { X: 1, Y: 3, Z: 1 }
       accent:
         Type: light
         Properties:
@@ -255,7 +255,7 @@ Entities:
         Properties:
           Shape: capsule
           Colour: !colour "#e8e8e8"
-          Size: !vec { X: 1, Y: 1.5, Z: 1 }
+          Size: !vec { X: 1, Y: 3, Z: 1 }
       accent:
         Type: light
         Properties:

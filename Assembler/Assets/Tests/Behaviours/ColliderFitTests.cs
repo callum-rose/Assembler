@@ -28,8 +28,8 @@ namespace Tests.Behaviours
 			// centre is 1.5 above the entity origin. This is the case a hand-written Size cannot express —
 			// box collider never touched `center` before Fit existed.
 			var host = BuildModel(
-				Part(PrimitiveType.Cube, size: new Vector3(2f, 1f, 2f), anchor: "bottom"),
-				Part(PrimitiveType.Cube, size: new Vector3(1f, 2f, 1f), position: new Vector3(0f, 1f, 0f),
+				Part(ShapeKind.Cube, size: new Vector3(2f, 1f, 2f), anchor: "bottom"),
+				Part(ShapeKind.Cube, size: new Vector3(1f, 2f, 1f), position: new Vector3(0f, 1f, 0f),
 					anchor: "bottom"));
 
 			var collider = FitBox(host, ColliderFit.Bounds);
@@ -43,7 +43,7 @@ namespace Tests.Behaviours
 		public void FitBounds_Box_RecentresOnTheOriginForMirroredParts()
 		{
 			// A part at x=2 mirrored on X emits a twin at x=-2, so the union straddles the origin again.
-			var host = BuildModel(Part(PrimitiveType.Cube, position: new Vector3(2f, 0f, 0f),
+			var host = BuildModel(Part(ShapeKind.Cube, position: new Vector3(2f, 0f, 0f),
 				mirror: MirrorAxis.X));
 
 			var collider = FitBox(host, ColliderFit.Bounds);
@@ -57,7 +57,7 @@ namespace Tests.Behaviours
 		{
 			// A unit cube spun 45° about Y: its axis-aligned box has to grow to √2 on X and Z to hold the
 			// corners. Encapsulating only the min/max of the local bounds would miss them.
-			var host = BuildModel(Part(PrimitiveType.Cube, rotation: new Vector3(0f, 45f, 0f)));
+			var host = BuildModel(Part(ShapeKind.Cube, rotation: new Vector3(0f, 45f, 0f)));
 
 			var collider = FitBox(host, ColliderFit.Bounds);
 
@@ -70,7 +70,7 @@ namespace Tests.Behaviours
 		public void FitBounds_Box_ClampsAFlatVisualToAUsableThickness()
 		{
 			// A quad is zero-thick on Z. Left alone that is a degenerate collider physics cannot hit.
-			var host = BuildModel(Part(PrimitiveType.Quad));
+			var host = BuildModel(Part(ShapeKind.Quad));
 
 			var collider = FitBox(host, ColliderFit.Bounds);
 
@@ -84,8 +84,8 @@ namespace Tests.Behaviours
 		public void FitBounds_Sphere_CentresOnTheVisualAndSpansItsLongestHalfExtent()
 		{
 			var host = BuildModel(
-				Part(PrimitiveType.Cube, size: new Vector3(2f, 1f, 2f), anchor: "bottom"),
-				Part(PrimitiveType.Cube, size: new Vector3(1f, 2f, 1f), position: new Vector3(0f, 1f, 0f),
+				Part(ShapeKind.Cube, size: new Vector3(2f, 1f, 2f), anchor: "bottom"),
+				Part(ShapeKind.Cube, size: new Vector3(1f, 2f, 1f), position: new Vector3(0f, 1f, 0f),
 					anchor: "bottom"));
 
 			var collider = FitSphere(host, ColliderFit.Bounds);
@@ -103,7 +103,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Fit_ExcludesTheVisualsOfChildEntities()
 		{
-			var host = BuildModel(Part(PrimitiveType.Cube));
+			var host = BuildModel(Part(ShapeKind.Cube));
 
 			// A child entity is parented under its parent's GameObject, exactly as GameEntityFactory does it,
 			// so a naive GetComponentsInChildren would fold its visual into the parent's collider.
@@ -161,7 +161,7 @@ namespace Tests.Behaviours
 		public void FitNone_UsesTheAuthoredSizeAndLeavesTheCentreUntouched()
 		{
 			// A visual is present and deliberately off-centre: none must ignore it entirely.
-			var host = BuildModel(Part(PrimitiveType.Cube, position: new Vector3(0f, 5f, 0f)));
+			var host = BuildModel(Part(ShapeKind.Cube, position: new Vector3(0f, 5f, 0f)));
 
 			var behaviour = host.AddComponent<AutoAddBoxColliderBehaviour>();
 			behaviour.Initialise(
@@ -180,7 +180,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void OmittedFit_IsTheSameAsNone()
 		{
-			var host = BuildModel(Part(PrimitiveType.Cube, position: new Vector3(0f, 5f, 0f)));
+			var host = BuildModel(Part(ShapeKind.Cube, position: new Vector3(0f, 5f, 0f)));
 
 			var behaviour = host.AddComponent<AutoAddBoxColliderBehaviour>();
 			behaviour.Initialise(new BoxColliderData("c"), Array.Empty<Listener>());
@@ -193,7 +193,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void OmittedFit_OnASphere_KeepsUnitysDefaults()
 		{
-			var host = BuildModel(Part(PrimitiveType.Cube, position: new Vector3(0f, 5f, 0f)));
+			var host = BuildModel(Part(ShapeKind.Cube, position: new Vector3(0f, 5f, 0f)));
 
 			var behaviour = host.AddComponent<AutoAddSphereColliderBehaviour>();
 			behaviour.Initialise(
@@ -236,13 +236,13 @@ namespace Tests.Behaviours
 			return host;
 		}
 
-		private static ModelPart Part(PrimitiveType shape,
+		private static ModelPart Part(ShapeKind shape,
 			Vector3? position = null,
 			Vector3? rotation = null,
 			Vector3? size = null,
 			string? anchor = null,
 			MirrorAxis? mirror = null) =>
-			new(new ValueProvider<PrimitiveType>(shape),
+			new(new ValueProvider<ShapeKind>(shape),
 				Provider(position),
 				Provider(rotation),
 				Provider(size),

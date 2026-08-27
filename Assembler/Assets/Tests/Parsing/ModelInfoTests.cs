@@ -41,7 +41,7 @@ namespace Tests.Parsing
 
 			Assert.AreEqual(1, info.Parts.Count);
 			Assert.AreEqual(new Vector3(-1f, -1f, 0f), info.Parts[0].Anchor);
-			Assert.AreEqual(new ConstantSource<PrimitiveType>(PrimitiveType.Cylinder), info.Parts[0].Shape);
+			Assert.AreEqual(new ConstantSource<ShapeKind>(ShapeKind.Cylinder), info.Parts[0].Shape);
 			Assert.AreEqual(new ConstantSource<MirrorAxis>(MirrorAxis.XZ), info.Parts[0].Mirror);
 			Assert.AreEqual(new ConstantSource<string>("Leg"), info.Parts[0].Name);
 		}

@@ -2,8 +2,8 @@ Game:
   Title: Primitive Models — the ten `model` recipes
   Description: >
     Every worked recipe from `Assets/docs/Models.md`, laid out on a 5x2 grid so they can be
-    compared side by side, plus a shape sampler that shows what `model`'s normalised `Size`
-    actually produces for each of the six primitives. Each entity's `Parts:` list is copied
+    compared side by side, plus a shape sampler that shows what `Size` actually produces for
+    each of the nine shapes. Each entity's `Parts:` list is copied
     verbatim from the doc — this file is the proof that the doc's YAML parses and that the
     numbers in it land where they claim to. Static camera; inspect closely via the Scene view
     while in Play mode. Escape quits.
@@ -32,7 +32,7 @@ Localisation:
       hud.title: "model recipes — 1 unit = 1 m, +Z forward, every part grounded at Y 0"
       hud.row.back: "back row (Z -5), left to right:  tree · house · car · turret · humanoid"
       hud.row.front: "front row (Z +5), left to right:  crate · barrel · coin · rock · streetlight"
-      hud.row.sampler: "far row (Z +14):  shape sampler — cube · cylinder · capsule x2 · sphere · plane · quad"
+      hud.row.sampler: "far row (Z +14):  shape sampler — cube · cylinder · capsule x2 · sphere · plane · quad · wedge · cone · hemisphere"
       hud.quit: "Esc to quit"
 
 Entities:
@@ -112,8 +112,8 @@ Entities:
   # places and aims it. The shape sampler is deliberately left unturned — see its own note.
   tree:
     # 4 parts, 4 rendered · 2.60 x 3.90 x 2.60 m.
-    # The cylinder-halving bite, the overlap rule, and a tiered canopy. Size.Y 1.0 on the trunk becomes
-    # localScale.Y 0.5 and the trunk is genuinely 1 m tall; its top is buried 0.3 inside the lowest
+    # The overlap rule and a tiered canopy. Size.Y 1.0 on the trunk means 1 m tall, full stop — every
+    # mesh is authored unit-sized, so Size is read straight off. Its top is buried 0.3 inside the lowest
     # canopy tier, and each tier overlaps the one below (1.9 into 0.7+1.6, 2.85 into 1.9+1.3). Three
     # squashed spheres of decreasing size in three greens read as foliage; one big sphere reads as a
     # lollipop.
@@ -149,15 +149,18 @@ Entities:
               Colour: !colour "#71c05a"
 
   house:
-    # 6 parts, 12 rendered · 4.72 x 3.68 x 3.40 m.
+    # 7 parts, 11 rendered · 4.72 x 3.72 x 3.46 m.
     # Anchor-as-hinge and the one legitimate mirrored part at X 0. Pitch 31 deg = atan(1.2 / 2.0). The
     # roof is anchored `right`, so its ridge end lands on (0, 3.6, 0) and the slab swings about that
     # point; the eave ends up at (-2.314, 2.209) — a 0.31 overhang below the 2.4 wall top. `Mirror: x`
     # leaves Position.X at 0 but flips the anchor to `left` and Rotation.Z to -31, so the twin sweeps
-    # the other way. The gable end is the tilted fill: one slab rotated to the roof's own -31, anchored
-    # `top-front` on the underside's midpoint (1.0, 2.95), hugs the slope exactly; `Mirror: xz` makes
-    # all four (two slopes x front/back), and one upright centre slab covers what their undersides
-    # miss. Both gable parts sit 0.03 behind the wall's front plane so nothing is coplanar with it.
+    # the other way. Each gable end is one `wedge` turned `Y -90`, so its upright face stands on the
+    # ridge line at X 0 and its slope falls away to the eave; `Mirror: x` gives the other half and the
+    # two together are the triangle. Size 0.14, 1.2, 2 is the roof's own rise over its own run, so the
+    # slope matches the pitch without an angle being typed. The front and back ends are two authored
+    # parts rather than one `Mirror: xz`: `Mirror` re-uses the same mesh, so mirroring a wedge across
+    # the axis its slope runs along returns it slope-reversed — a valley instead of a gable. Both gable
+    # parts sit 0.03 behind the wall's face so nothing is coplanar with it.
     Position: !vec { X: -8, Y: 0, Z: -5 }
     Rotation: !vec { X: 0, Y: 180, Z: 0 }
     Behaviours:
@@ -183,19 +186,20 @@ Entities:
               Size: !vec { X: 0.3, Y: 0.2, Z: 3.46 }
               Position: !vec { X: 0, Y: 3.62, Z: 0 }
               Colour: !colour "#a64535"
-            - Name: gable slope
-              Shape: cube
-              Size: !vec { X: 2.35, Y: 0.6, Z: 0.14 }
-              Position: !vec { X: 1, Y: 2.95, Z: 1.47 }
-              Rotation: !vec { X: 0, Y: 0, Z: -31 }
-              Anchor: top-front
-              Mirror: xz
-            - Name: gable centre
-              Shape: cube
-              Size: !vec { X: 2.5, Y: 0.75, Z: 0.14 }
-              Position: !vec { X: 0, Y: 2.2, Z: 1.45 }
+            - Name: gable
+              Shape: wedge
+              Size: !vec { X: 0.14, Y: 1.2, Z: 2 }
+              Position: !vec { X: 0, Y: 2.35, Z: 1.4 }
+              Rotation: !vec { X: 0, Y: -90, Z: 0 }
               Anchor: bottom-front
-              Mirror: z
+              Mirror: x
+            - Name: gable back
+              Shape: wedge
+              Size: !vec { X: 0.14, Y: 1.2, Z: 2 }
+              Position: !vec { X: 0, Y: 2.35, Z: -1.4 }
+              Rotation: !vec { X: 0, Y: -90, Z: 0 }
+              Anchor: bottom-front
+              Mirror: x
             - Name: door
               Shape: cube
               Size: !vec { X: 0.85, Y: 1.75, Z: 0.1 }
@@ -211,13 +215,14 @@ Entities:
               Colour: !colour "#7db8dc"
 
   car:
-    # 7 parts, 12 rendered · 2.04 x 1.47 x 4.20 m.
-    # `Mirror: xz`, the oversized slab, and a tilted windscreen. The wheel is the xz showcase: Size.Y
-    # 0.24 becomes localScale.Y 0.12, `Rotation: Z 90` lays the cylinder axis along world X, and centre
+    # 7 parts, 12 rendered · 2.04 x 1.45 x 4.20 m.
+    # `Mirror: xz`, the oversized slab, and a wedge windscreen. The wheel is the xz showcase: Size.Y
+    # 0.24 is the tyre's true width, `Rotation: Z 90` lays the cylinder axis along world X, and centre
     # Y 0.33 makes the tyre touch Y 0 exactly. The glass band is 0.03 wider and 0.04 deeper than the
-    # cabin it passes through, so one part reads as glazing on all four sides. The windscreen is a slab
-    # anchored `bottom` on the bonnet at (0, 1.0, 0.93) and rotated X -40, so it leans back from the
-    # bonnet to the cabin's front roof edge — the sloped surface a box-only cabin lacks.
+    # cabin it passes through, so one part reads as glazing on all four sides. The windscreen is a
+    # `wedge` turned `Y 180` so its slope falls toward the bonnet: its upright face sinks 0.1 into the
+    # cabin's front, its base 0.05 into the bonnet, and the sloped face between them is the glass. No
+    # angle is typed anywhere — the rake is Size.Y over Size.Z, so resizing the car keeps the shape.
     Position: !vec { X: 0, Y: 0, Z: -5 }
     Rotation: !vec { X: 0, Y: 180, Z: 0 }
     Behaviours:
@@ -243,11 +248,11 @@ Entities:
               Anchor: bottom
               Colour: !colour "#2c3e50"
             - Name: windscreen
-              Shape: cube
-              Size: !vec { X: 1.46, Y: 0.58, Z: 0.08 }
-              Position: !vec { X: 0, Y: 1, Z: 0.93 }
-              Rotation: !vec { X: -40, Y: 0, Z: 0 }
-              Anchor: bottom
+              Shape: wedge
+              Size: !vec { X: 1.46, Y: 0.45, Z: 0.4 }
+              Position: !vec { X: 0, Y: 1, Z: 0.5 }
+              Rotation: !vec { X: 0, Y: 180, Z: 0 }
+              Anchor: bottom-front
               Colour: !colour "#2c3e50"
             - Name: wheel
               Shape: cylinder
@@ -417,8 +422,8 @@ Entities:
 
   barrel:
     # 4 parts, 4 rendered · 0.84 x 1.08 x 0.84 m.
-    # There is no Y mirror, so the two hoops are the same part typed twice — that is the recipe. The
-    # cylinder halving bites four times over (localScale.Y 0.525 / 0.045 / 0.045 / 0.04). The hoops are
+    # There is no Y mirror, so the two hoops are the same part typed twice — that is the recipe. Every
+    # Size.Y here is the part's true height, the cylinder's included. The hoops are
     # 0.03 wider in radius than the staves: the oversized slab, applied radially.
     Position: !vec { X: -8, Y: 0, Z: 5 }
     Rotation: !vec { X: 0, Y: 180, Z: 0 }
@@ -582,16 +587,21 @@ Entities:
   # ---- Far row (Z +14): the shape sampler ---------------------------------
 
   shape sampler:
-    # What `model`'s normalised Size actually produces, one part per primitive. The cube and the
-    # cylinder are both Size 1,3,1 and are both genuinely 3 m tall — under `primitive` the cylinder
-    # would be 6. The two capsules are Size 1,2,1 and 1,3,1: the first has Y = 2X and therefore true
-    # hemisphere caps, the second is the same width and visibly stretched. The plane is Size 2,1,2 and
-    # is genuinely 2 x 2 (Unity's plane is natively 10 x 10); its Size.Y does nothing, because a plane
-    # has no thickness, and it faces +Y so it is only visible from above. The quad is 1 x 1 in the XY
-    # plane, its Size.Z does nothing, and its normal points along -Z — so it is visible from the -Z side,
-    # which is where this camera is. This is the one entity here with no `Rotation: Y 180`: turned to face
-    # +Z like the props, the quad would simply vanish, because URP's Lit shader is single-sided.
-    Position: !vec { X: 0, Y: 0, Z: 14 }
+    # What Size actually produces, one part per shape. The cube and the cylinder are both Size 1,3,1 and
+    # both genuinely 3 m tall: every mesh in Resources/Meshes is authored 1 x 1 x 1, so Size is a world
+    # measurement with nothing to divide out, and `primitive` reads it the same way. The two capsules are
+    # Size 1,2,1 and 1,3,1: the first has Y = 2X and therefore true hemisphere caps, the second is the
+    # same width and visibly stretched. The plane is Size 2,1,2 and genuinely 2 x 2; its Size.Y does
+    # nothing, because a plane has no thickness, and it faces +Y so it is only visible from above. The
+    # quad is 1 x 1 in the XY plane, its Size.Z does nothing, and its normal points along -Z — so it is
+    # visible from the -Z side, which is where this camera is. This is the one entity here with no
+    # `Rotation: Y 180`: turned to face +Z like the props, the quad would vanish, because URP's Lit
+    # shader is single-sided. The wedge shows its slope for the same reason — it falls away toward -Z,
+    # so an unrotated wedge presents the sloped face to a camera on this side. The hemisphere is the one
+    # shape whose obvious Size is a trap: 1.4, 0.7, 1.4 is a true half-sphere, and 1.4, 1.4, 1.4 would be
+    # a dome twice as tall.
+    # Shifted 2.25 left of the grid centre so the ten parts stay centred on the camera.
+    Position: !vec { X: -2.25, Y: 0, Z: 14 }
     Behaviours:
       body:
         Type: model
@@ -634,6 +644,24 @@ Entities:
               Position: !vec { X: 5, Y: 0, Z: 0 }
               Anchor: bottom
               Colour: !colour "#d48f7f"
+            - Name: wedge 1x1x2
+              Shape: wedge
+              Size: !vec { X: 1, Y: 1, Z: 2 }
+              Position: !vec { X: 6.75, Y: 0, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#9fd47f"
+            - Name: cone 1x2x1
+              Shape: cone
+              Size: !vec { X: 1, Y: 2, Z: 1 }
+              Position: !vec { X: 8.5, Y: 0, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#c9a0dc"
+            - Name: hemisphere 1.4x0.7x1.4
+              Shape: hemisphere
+              Size: !vec { X: 1.4, Y: 0.7, Z: 1.4 }
+              Position: !vec { X: 10, Y: 0, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#7fd4c4"
 
   # ---- HUD ----------------------------------------------------------------
   ui:

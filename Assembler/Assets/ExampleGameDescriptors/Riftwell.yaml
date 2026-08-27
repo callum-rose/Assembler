@@ -840,7 +840,7 @@ Templates:
     Behaviours:
       body:
         Type: primitive
-        Properties: { Shape: capsule, Size: !vec { X: 0.45, Y: 0.45, Z: 0.45 }, Colour: !var weaver colour }
+        Properties: { Shape: capsule, Size: !vec { X: 0.45, Y: 0.9, Z: 0.45 }, Colour: !var weaver colour }
       glow:
         Type: light
         Properties:

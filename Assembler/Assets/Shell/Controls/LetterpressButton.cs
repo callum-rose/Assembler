@@ -10,6 +10,10 @@ using UnityEngine.UI;
 
 namespace Assembler.Shell.Controls
 {
+	// UnityEngine.UI.Navigation, aliased inside the namespace rather than above it: an alias in the
+	// compilation unit loses to a member of an enclosing namespace, and Assembler.Shell.Navigation is one.
+	using Navigation = UnityEngine.UI.Navigation;
+
 	/// <summary>
 	/// The shell's button: a face sitting on a plate that shows as a hard ledge below and to the right of it, and
 	/// a press that travels the face onto the plate until the ledge is gone. Type pressed into paper, then

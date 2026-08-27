@@ -1,3 +1,4 @@
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
@@ -8,24 +9,22 @@ namespace Assembler.Behaviours.Visual
 	/// Adds a single 3D primitive mesh (chosen by <c>Shape</c>) as a child of the entity. Use this when an
 	/// entity needs exactly one shape; for more than one, use <c>model</c>, which places each part with its
 	/// own offset, rotation, anchor and colour. Never stack repeated <c>primitive</c> behaviours on one
-	/// entity — every one of them renders at the entity origin, axis-aligned, on top of the others. Note
-	/// that <c>Size</c> here is a raw localScale, not a true world size: Unity's native cylinder and capsule
-	/// are 2 units tall and its plane is 10 by 10, so <c>model</c>'s normalised <c>Size</c> is the easier
-	/// option when real dimensions matter. The mesh is visual only — for collision, add a <c>box collider</c>
-	/// or <c>sphere collider</c> with <c>Fit: bounds</c>, listed after this behaviour, and it is sized to the
-	/// primitive for you (<c>part colliders</c> does the same, shape-matched, and is the better fit for a
-	/// capsule or cylinder).
+	/// entity — every one of them renders at the entity origin, axis-aligned, on top of the others.
+	/// <c>Size</c> is a true world bounding box in metres, exactly as it is in <c>model</c>: a cylinder of
+	/// Size 1,3,1 is genuinely 3 units tall and a plane of Size 4,1,4 genuinely 4 by 4. The mesh is visual
+	/// only — for collision, add a <c>box collider</c> or <c>sphere collider</c> with <c>Fit: bounds</c>,
+	/// listed after this behaviour, and it is sized to the primitive for you (<c>part colliders</c> does the
+	/// same, shape-matched, and is the better fit for a capsule, cylinder, wedge or cone).
 	/// </summary>
 	/// <remarks>
-	/// Visual only: <see cref="GameObject.CreatePrimitive"/> bundles a default collider onto every primitive,
-	/// but collision in Assembler is opt-in via the explicit collider behaviours. The auto-added collider is
-	/// stripped here so a primitive is purely cosmetic — otherwise every visual mesh would silently
+	/// Visual only: collision in Assembler is opt-in via the explicit collider behaviours, so the mesh child
+	/// carries a MeshFilter and a MeshRenderer and nothing else. Otherwise every visual mesh would silently
 	/// participate in physics (e.g. a floating rigidbody grinding on a "ground" mesh, or doubled-up colliders
 	/// on an entity that also declares its own).
 	/// Properties:
-	///   Shape: Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube").
+	///   Shape: Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad", "wedge", "cone", "hemisphere" (defaults to "cube").
 	///   Colour: Optional tint applied to the primitive's material.
-	///   Size: Optional local scale of the primitive child.
+	///   Size: Optional true world size of the primitive child, in metres (defaults to 1,1,1).
 	/// </remarks>
 	public class Primitive : GameBehaviour<PrimitiveData>, INeedsLiveProperties
 	{
@@ -37,39 +36,17 @@ namespace Assembler.Behaviours.Visual
 
 		protected override void OnInitialise(PrimitiveData data)
 		{
-			var shape = data.Shape.ValueOr(PrimitiveType.Cube);
-			var primitive = GameObject.CreatePrimitive(shape);
-			primitive.name = shape.ToString();
-			primitive.transform.SetParent(transform, false);
-
+			var shape = data.Shape.ValueOr(ShapeKind.Cube);
+			var primitive = PrimitiveMeshes.Create(shape, shape.ToString(), transform);
 			var renderer = primitive.GetComponent<MeshRenderer>();
-			renderer.sharedMaterial = Resources.Load<Material>("Materials/Primitive");
-
-			// Record the shape so `part colliders` can match a collider to it; nothing else reads it.
-			primitive.AddComponent<PrimitiveShape>().Shape = shape;
-
-			// Drop the collider CreatePrimitive adds: primitives are visual, collision is declared explicitly.
-			// DestroyImmediate when not playing so the edit-mode sandbox build (which instantiates without
-			// entering play mode) can strip it too — plain Destroy throws in edit mode.
-			if (primitive.TryGetComponent<Collider>(out var collider))
-			{
-#if UNITY_EDITOR
-				if (Application.isPlaying)
-				{
-#endif
-					Destroy(collider);
-#if UNITY_EDITOR
-				}
-				else
-				{
-					DestroyImmediate(collider);
-				}
-#endif
-			}
 
 			// Live-bind the scale so a !var/!expr/!clock animates the primitive's size; an omitted Size falls
 			// back to Vector3.one, matching the transform's default (so the no-Size case is unchanged).
-			data.Size.BindLive(this, size => primitive.transform.localScale = size, Vector3.one);
+			// Normalise is what makes Size a world measurement rather than a raw localScale — the same
+			// conversion `model` applies to a part, so the two behaviours mean the same thing by Size.
+			data.Size.BindLive(this,
+				size => primitive.transform.localScale = ModelGeometry.Normalise(shape, size),
+				Vector3.one);
 
 			// Live-bind the colour so a !var/!expr re-tints the primitive at runtime (matching Size and the
 			// light behaviour). The no-fallback overload leaves an omitted colour untouched, so the primitive

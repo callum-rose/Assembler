@@ -4,7 +4,9 @@
     "references": [
         "Assembler.Shell",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "UnityEngine.UI",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -12,7 +14,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "nunit.framework.dll",
-        "DOTween.dll"
+        "DOTween.dll",
+        "EasyDI.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [

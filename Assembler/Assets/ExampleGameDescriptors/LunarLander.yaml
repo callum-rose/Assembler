@@ -616,7 +616,7 @@ Entities:
         Behaviours:
           dome:
             Type: primitive
-            Properties: { Shape: capsule, Size: !vec { X: 0.42, Y: 0.22, Z: 0.42 }, Colour: !var cabin colour }
+            Properties: { Shape: capsule, Size: !vec { X: 0.42, Y: 0.44, Z: 0.42 }, Colour: !var cabin colour }
       leg west:
         Position: !vec { X: -0.34, Y: -0.42, Z: 0 }
         Rotation: !vec { X: 0, Y: 0, Z: 22 }

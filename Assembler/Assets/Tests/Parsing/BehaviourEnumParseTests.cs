@@ -14,7 +14,7 @@ namespace Tests.Parsing
 		{
 			Assert.AreEqual(Easing.OutBack, BehaviourEnums.Parse<Easing>("OUTBACK"));
 			Assert.AreEqual(CameraProjection.Orthographic, BehaviourEnums.Parse<CameraProjection>("Orthographic"));
-			Assert.AreEqual(PrimitiveType.Sphere, BehaviourEnums.Parse<PrimitiveType>("sphere"));
+			Assert.AreEqual(ShapeKind.Sphere, BehaviourEnums.Parse<ShapeKind>("sphere"));
 		}
 
 		[Test]
@@ -33,11 +33,34 @@ namespace Tests.Parsing
 			Assert.AreEqual(ButtonPhase.Hold, BehaviourEnums.Parse<ButtonPhase>("hold"));
 		}
 
+		// The six Unity spellings must keep parsing exactly as they did before ShapeKind replaced
+		// UnityEngine.PrimitiveType, or every committed descriptor breaks.
+		[Test]
+		public void ParseAcceptsEveryShapeSpelling()
+		{
+			Assert.AreEqual(ShapeKind.Cube, BehaviourEnums.Parse<ShapeKind>("cube"));
+			Assert.AreEqual(ShapeKind.Sphere, BehaviourEnums.Parse<ShapeKind>("sphere"));
+			Assert.AreEqual(ShapeKind.Capsule, BehaviourEnums.Parse<ShapeKind>("capsule"));
+			Assert.AreEqual(ShapeKind.Cylinder, BehaviourEnums.Parse<ShapeKind>("cylinder"));
+			Assert.AreEqual(ShapeKind.Plane, BehaviourEnums.Parse<ShapeKind>("plane"));
+			Assert.AreEqual(ShapeKind.Quad, BehaviourEnums.Parse<ShapeKind>("quad"));
+			Assert.AreEqual(ShapeKind.Wedge, BehaviourEnums.Parse<ShapeKind>("wedge"));
+			Assert.AreEqual(ShapeKind.Cone, BehaviourEnums.Parse<ShapeKind>("cone"));
+			Assert.AreEqual(ShapeKind.Hemisphere, BehaviourEnums.Parse<ShapeKind>("hemisphere"));
+		}
+
+		// Unknown is the marker for a renderer no shape built, not a spelling anyone can ask for.
+		[Test]
+		public void ParseRejectsTheUnknownMarker()
+		{
+			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<ShapeKind>("unknown"));
+		}
+
 		[Test]
 		public void ParseThrowsOnUnknownValue()
 		{
 			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<Easing>("wobble"));
-			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<PrimitiveType>("blob"));
+			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<ShapeKind>("blob"));
 			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<CameraProjection>("isometric"));
 		}
 
