@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 328dcb9db23744577b2128489ef0428f, type: 3}
+  m_Name: ScreenCatalog
+  m_EditorClassIdentifier: Assembler.Shell::Assembler.Shell.Navigation.ScreenCatalog
+  entries:
+  - id: 0
+    view: {fileID: 5138435355510069281, guid: 6268168a7e31b4613b31056ea1d32693, type: 3}
+    title: Front Page
+  - id: 1
+    view: {fileID: 321142414341363261, guid: 46ce90f1aff8b4938a6bd760a04d8609, type: 3}
+    title: The Edition
+  - id: 2
+    view: {fileID: 8118989172441368212, guid: 34d80c9d1572b47f2bd5983a8e88fb86, type: 3}
+    title: The Archive
+  - id: 3
+    view: {fileID: 351460957151648476, guid: 6751f7ff07f604131a57b4b0af49ca2a, type: 3}
+    title: Settings

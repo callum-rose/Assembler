@@ -1,14 +1,21 @@
 using System;
+using Assembler.Shell.Controls;
 using Assembler.Shell.Theming;
+using Assembler.Shell.Theming.Binders;
+using TMPro;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace Assembler.Shell.Editor
 {
 	/// <summary>
-	/// The small operations every shell builder needs: finding or creating a child, stretching a rect, writing a
-	/// private serialized field, and looking a theme member up by name.
+	/// The operations every shell builder needs: finding or creating a child, stretching and pinning rects,
+	/// writing private serialized fields, looking theme members up by name, painting and lettering objects from
+	/// the theme, and opening a prefab to author in place.
 	/// </summary>
 	internal static class ShellBuildUtility
 	{
@@ -165,6 +172,209 @@ namespace Assembler.Shell.Editor
 		{
 			property.serializedObject.ApplyModifiedPropertiesWithoutUndo();
 			EditorUtility.SetDirty(target);
+		}
+
+		public static GameObject NestRule(Transform parent, string name, RuleWeight weight, string role)
+		{
+			var existing = parent.Find(name);
+			GameObject instance;
+
+			if (existing != null)
+			{
+				instance = existing.gameObject;
+			}
+			else
+			{
+				var source = AssetDatabase.LoadAssetAtPath<GameObject>(ShellPrefabBuilder.RulePath);
+
+				if (source == null)
+				{
+					throw new InvalidOperationException(
+						$"{nameof(ShellBuildUtility)}: {ShellPrefabBuilder.RulePath} has not been built yet.");
+				}
+
+				instance = (GameObject)PrefabUtility.InstantiatePrefab(source, parent);
+				instance.name = name;
+			}
+
+			var rule = instance.GetComponent<Rule>();
+			SetInt(rule, "weight", (int)weight);
+			Repaint(instance, "Line", role);
+			Repaint(instance, "LineLower", role);
+			rule.Apply();
+
+			return instance;
+		}
+
+		// A theme-bound graphic: an Image that paints from a role and, per UIPLAN 7.4, does not raycast.
+		public static Image Paint(GameObject target, string role, float alpha = 1f)
+		{
+			var image = Ensure<Image>(target);
+			image.raycastTarget = false;
+
+			var binder = Ensure<ThemeColor>(target);
+			SetField(binder, "role", Role(role));
+			SetFloat(binder, "alpha", alpha);
+			binder.Apply();
+
+			return image;
+		}
+
+		public static TextMeshProUGUI Write(
+			GameObject target,
+			string style,
+			string text,
+			TextAlignmentOptions alignment)
+		{
+			var label = Ensure<TextMeshProUGUI>(target);
+			label.raycastTarget = false;
+			label.alignment = alignment;
+			label.SetText(text);
+
+			var binder = Ensure<TextStyleBinder>(target);
+			SetField(binder, "style", Style(style));
+			binder.Apply();
+
+			return label;
+		}
+
+		public static void Repaint(GameObject root, string path, string role)
+		{
+			var target = Find(root, path);
+			var binder = target.GetComponent<ThemeColor>();
+
+			if (binder == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellBuildUtility)}: '{path}' carries no {nameof(ThemeColor)} to repaint.");
+			}
+
+			SetField(binder, "role", Role(role));
+			binder.Apply();
+		}
+
+		public static void Restyle(GameObject root, string path, string style)
+		{
+			var target = Find(root, path);
+			var binder = target.GetComponent<TextStyleBinder>();
+
+			if (binder == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellBuildUtility)}: '{path}' carries no {nameof(TextStyleBinder)} to restyle.");
+			}
+
+			SetField(binder, "style", Style(style));
+			binder.Apply();
+		}
+
+		public static GameObject Find(GameObject root, string path)
+		{
+			var found = root.transform.Find(path);
+
+			if (found == null)
+			{
+				throw new InvalidOperationException($"{nameof(ShellBuildUtility)}: no '{path}' under {root.name}.");
+			}
+
+			return found.gameObject;
+		}
+
+		public static void EnsureFolder(string path)
+		{
+			if (AssetDatabase.IsValidFolder(path))
+			{
+				return;
+			}
+
+			int separator = path.LastIndexOf('/');
+			AssetDatabase.CreateFolder(path.Substring(0, separator), path.Substring(separator + 1));
+		}
+
+		// Vector2 is forced here by the RectTransform anchor API.
+		public static Vector2 Centre => new(0.5f, 0.5f);
+
+		public static Vector2 TopLeft => new(0f, 1f);
+
+		public static Vector2 TopRight => new(1f, 1f);
+
+		public static Vector2 TopCentre => new(0.5f, 1f);
+
+		public static Vector2 BottomLeft => new(0f, 0f);
+
+		public static Vector2 BottomRight => new(1f, 0f);
+
+		public static Vector2 BottomCentre => new(0.5f, 0f);
+
+		/// <summary>
+		/// An open prefab, saved back to the same path when it closes. Opening an existing one keeps its GUID —
+		/// which is what makes re-running this safe for the scenes and variants already pointing at it.
+		/// </summary>
+		public sealed class PrefabScope : IDisposable
+		{
+			private readonly string _path;
+			private readonly bool _fromDisk;
+
+			private PrefabScope(GameObject root, string path, bool fromDisk)
+			{
+				Root = root;
+				_path = path;
+				_fromDisk = fromDisk;
+			}
+
+			public GameObject Root { get; }
+
+			public static PrefabScope Open(string path, string rootName, Scene workshop)
+			{
+				if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+				{
+					// LoadPrefabContents opens the prefab in a preview scene of its own, so this path never
+					// touches the workshop or anything the editor has open.
+					return new PrefabScope(PrefabUtility.LoadPrefabContents(path), path, fromDisk: true);
+				}
+
+				var root = new GameObject(rootName, typeof(RectTransform));
+				SceneManager.MoveGameObjectToScene(root, workshop);
+
+				return new PrefabScope(root, path, fromDisk: false);
+			}
+
+			/// <summary>Opens a variant of <paramref name="basePath"/>, creating it from an instance if absent.</summary>
+			public static PrefabScope OpenVariant(string path, string basePath, string rootName, Scene workshop)
+			{
+				if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null)
+				{
+					return new PrefabScope(PrefabUtility.LoadPrefabContents(path), path, fromDisk: true);
+				}
+
+				var source = AssetDatabase.LoadAssetAtPath<GameObject>(basePath);
+
+				if (source == null)
+				{
+					throw new InvalidOperationException(
+						$"{nameof(ShellBuildUtility)}: {basePath} has not been built yet.");
+				}
+
+				// Saving an instance of a prefab as a prefab is what makes the result a variant rather than a
+				// copy — so the base keeps driving everything this one does not override.
+				var instance = (GameObject)PrefabUtility.InstantiatePrefab(source, workshop);
+				instance.name = rootName;
+
+				return new PrefabScope(instance, path, fromDisk: false);
+			}
+
+			public void Dispose()
+			{
+				PrefabUtility.SaveAsPrefabAsset(Root, _path);
+
+				if (_fromDisk)
+				{
+					PrefabUtility.UnloadPrefabContents(Root);
+					return;
+				}
+
+				Object.DestroyImmediate(Root);
+			}
 		}
 	}
 }
