@@ -186,13 +186,37 @@ prop in two colours is two `Colour:` lines, not ten. Both rungs accept `!var`/`!
 model-wide colour can be driven live (team colour, damage state) while parts stay fixed.
 
 `Colour` must carry the `!colour` tag, and a hex string must be quoted or YAML reads the `#` as a
-comment: `Colour: !colour "#8c3b2e"`.
+comment: `Colour: !colour "#a64535"`.
+
+### Collision
+
+Parts carry no colliders — `model` strips the one `GameObject.CreatePrimitive` adds — so a prop
+does not collide until the entity says so. Two behaviours cover almost every case, and both must be
+listed **after** the visual behaviour, because fitting reads the already-built visual:
+
+- **One collider around the whole prop** — a `box collider` or `sphere collider` with
+  `Fit: bounds`. The collider's size and centre are computed from the model's rendered bounds and
+  the authored `Size`/`Radius` is ignored. Right for anything that collides as a lump: `crate`,
+  `barrel`, `car`, `house`, `rock`.
+- **One collider per part** — the `part colliders` behaviour builds a compound collider,
+  shape-matched and mesh-fitted to every part. Right where the lump would lie: props with real
+  gaps, like the `streetlight` (a bounds box would block the pavement under its arm), the
+  `humanoid` and the `tree`.
+
+```yaml
+Behaviours:
+  body:     { Type: model, Properties: { Parts: [ ... ] } }
+  collider: { Type: box collider, Properties: { Fit: bounds } }
+```
+
+Hand-sizing (`Size`/`Radius` with no `Fit`) is still right when collision should deliberately
+differ from the visual — a wider pickup radius, a forgiving hitbox. A `sphere collider` with
+`Fit: bounds` and `IsTrigger: true` is the standard pickup: see `coin`.
 
 ### What `model` is not
 
-- **Parts carry no colliders.** `model` strips the one `GameObject.CreatePrimitive` adds; collision
-  is declared explicitly with a `box`/`sphere`/`capsule collider` on the entity. One collider
-  roughly fitting the whole prop is almost always right — do not try to match the part list.
+- **It is not collidable by itself.** See [Collision](#collision) — collision is opt-in on the
+  entity, via `Fit: bounds` or `part colliders`.
 - **It is not a listener target.** `model` is continuous/passive. To change a prop at runtime, bind
   a part's `Position`/`Rotation`/`Size`/`Colour` to a `!var` or `!expr` and write to that.
 - **It is matte.** No emissive channel, no light. A lens, a glowing eye or a screen is a matte part
@@ -247,20 +271,24 @@ job: the `barrel`'s hoops, the `coin`'s rim.
 **The proud detail.** Sit a small part's **centre on the host's surface** so half protrudes. One
 number, robust to the host changing size, and it never gaps — whereas solving for tangency is exact
 and wrong the moment anything moves. The `turret`'s eye, the `car`'s headlights, the `humanoid`'s
-visor.
+eyes.
 
 **The overlap rule.** Adjacent masses overlap by 10 – 20 % of the smaller one. **Never let two parts
 merely touch.** Coplanar faces z-fight, and a butt joint plus shadow acne is a visible seam even
-when they do not. Every stack below overlaps: the `tree`'s trunk 0.5 into the canopy, the
-`humanoid`'s neck 0.06 into the torso, the `crate`'s lid rim 0.05 into the body.
+when they do not. Every stack below overlaps: the `tree`'s trunk 0.3 into the canopy, the
+`humanoid`'s head 0.06 into the torso, the `crate`'s lid rim 0.05 into the body.
 
 **Anchor as a hinge.** `Anchor` plus `Rotation` turns a part about its anchored end — the only
 practical way to build an angled part (roof slope, lamp arm, splayed limb), because the alternative
 is recomputing a rotated centre on every edit. See `streetlight` and `house`.
 
-**The stepped approximation.** A cube cannot be a triangle, and one rectangle covers at most half of
-one. Two or three boards of decreasing width, stacked up the slope, close 80 – 90 % of it. See the
-`house`'s gable end. Reach for it whenever a shape wants a diagonal edge `Mirror` cannot supply.
+**The tilted fill.** An axis-aligned cube cannot be a triangle — but a slab *rotated to the
+diagonal's own angle* hugs it exactly. Fill the diagonal edge with a rotated slab, then cover what
+its underside misses with one upright part; overlaps disappear inside the mass. The `house`'s gable
+end is the worked case: one slab at the roof's own `-31`, mirrored `xz`, plus one centre board,
+closes the whole triangle. Reach for it whenever a shape wants a slope — a windscreen, a ramp, a
+gable — before approximating with stacked steps, which close at best 80 – 90 % and read as stairs
+up close.
 
 ---
 
@@ -273,16 +301,16 @@ anything composed from scratch. Each block drops straight into an entity's `Beha
 
 | Recipe | Authored | Rendered | Bounding box (X x Y x Z) | Teaches |
 |---|---|---|---|---|
-| [`tree`](#tree) | 3 | 3 | 2.40 x 4.60 x 2.40 | the cylinder halving; the overlap rule |
-| [`house`](#house) | 7 | 12 | 4.72 x 3.68 x 3.40 | anchor as a hinge; `Mirror: x` at X 0; stepped approximation |
-| [`car`](#car) | 6 | 11 | 2.04 x 1.55 x 4.20 | `Mirror: xz`; the oversized slab |
+| [`tree`](#tree) | 4 | 4 | 2.60 x 3.90 x 2.60 | the cylinder halving; the overlap rule; a tiered canopy |
+| [`house`](#house) | 7 | 13 | 4.72 x 3.72 x 3.46 | anchor as a hinge; `Mirror: x` at X 0; the tilted fill |
+| [`car`](#car) | 7 | 12 | 2.04 x 1.47 x 4.20 | `Mirror: xz`; the oversized slab; a tilted windscreen |
 | [`crate`](#crate) | 3 | 6 | 1.06 x 1.05 x 1.06 | the cleanest `Mirror: xz` |
 | [`barrel`](#barrel) | 4 | 4 | 0.84 x 1.08 x 0.84 | there is no Y mirror; halving four times |
-| [`rock`](#rock) | 3 | 3 | 2.37 x 1.20 x 2.07 | the exception to `Anchor: bottom`; rotating ellipsoids |
+| [`rock`](#rock) | 4 | 4 | 2.34 x 1.29 x 1.72 | the exception to `Anchor: bottom`; tilted cubes for stone |
 | [`streetlight`](#streetlight) | 5 | 5 | 1.84 x 4.69 x 0.36 | anchor as a hinge; a matte lens needs a real `light` |
 | [`coin`](#coin) | 3 | 3 | 0.62 x 0.62 x 0.10 | `Rotation X 90`; the deliberate float |
-| [`turret`](#turret) | 6 | 8 | 1.50 x 1.52 x 2.05 | `Rotation X 90` + `Anchor: bottom` grows forward |
-| [`humanoid`](#humanoid) | 8 | 11 | 0.90 x 1.82 x 0.37 | capsule caps; splayed limbs |
+| [`turret`](#turret) | 6 | 8 | 1.20 x 1.10 x 1.90 | `Rotation X 90` + `Anchor: bottom` grows forward; mass order |
+| [`humanoid`](#humanoid) | 7 | 11 | 1.06 x 1.70 x 0.51 | capsule caps; splayed limbs; endpoint-centred hands |
 
 > **Every `!vec` needs `X` **and** `Y`.** Only `Z` defaults to 0. `!vec { Y: 2.2 }` is a parse
 > error — `Invalid component value: null` — not a shorthand. Write all three components; the
@@ -290,51 +318,61 @@ anything composed from scratch. Each block drops straight into an entity's `Beha
 
 ### `tree`
 
-**3 authored parts, 3 rendered · 2.40 x 4.60 x 2.40 m (Y +0.00 .. +4.60)** — trunk cylinder, two overlapping canopy spheres.
+**4 authored parts, 4 rendered · 2.60 x 3.90 x 2.60 m (Y +0.00 .. +3.90)** — a fat trunk under a three-tier canopy stack.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#3f7d3a"
+    Colour: !colour "#4e8f3d"
     Parts:
       - Name: trunk
         Shape: cylinder
-        Size: !vec { X: 0.32, Y: 2.2, Z: 0.32 }
+        Size: !vec { X: 0.5, Y: 1, Z: 0.5 }
         Anchor: bottom
-        Colour: !colour "#6b4423"
-      - Name: canopy lower
+        Colour: !colour "#7a4f2a"
+      - Name: canopy low
         Shape: sphere
-        Size: !vec { X: 2.4, Y: 2, Z: 2.4 }
-        Position: !vec { X: 0, Y: 1.7, Z: 0 }
+        Size: !vec { X: 2.6, Y: 1.6, Z: 2.6 }
+        Position: !vec { X: 0, Y: 0.7, Z: 0 }
         Anchor: bottom
-      - Name: canopy upper
+      - Name: canopy mid
         Shape: sphere
-        Size: !vec { X: 1.7, Y: 1.5, Z: 1.7 }
-        Position: !vec { X: 0, Y: 3.1, Z: 0 }
+        Size: !vec { X: 2, Y: 1.3, Z: 2 }
+        Position: !vec { X: 0, Y: 1.9, Z: 0 }
         Anchor: bottom
-        Colour: !colour "#56a34a"
+        Colour: !colour "#5da84b"
+      - Name: canopy top
+        Shape: sphere
+        Size: !vec { X: 1.3, Y: 1.05, Z: 1.3 }
+        Position: !vec { X: 0, Y: 2.85, Z: 0 }
+        Anchor: bottom
+        Colour: !colour "#71c05a"
 ```
 
-The cylinder halving, plainly: `Size.Y 2.2` becomes `localScale.Y 1.1` and the trunk is genuinely
-2.2 m tall — under `primitive` the same number would give 4.4 m.
+The cylinder halving, plainly: `Size.Y 1.0` becomes `localScale.Y 0.5` and the trunk is genuinely
+1 m tall — under `primitive` the same number would give 2 m.
 
-Everything overlaps. The trunk's top at 2.2 sits 0.5 inside the lower canopy (1.7 – 3.7); the upper
-canopy starts at 3.1, overlapping the lower by 0.6. Two spheres of different sizes, offset and
-deeply intersecting, read as foliage; two spheres that merely touch read as a snowman.
+Everything overlaps, and the canopy is a three-tier stack: 2.6 wide at the bottom, then 2.0, then
+1.3, each tier squashed flatter than it is wide and each starting inside the tier below (1.9
+against the lowest tier's 0.7 – 2.3, 2.85 against the middle's 1.9 – 3.2). The trunk's top is
+buried 0.3 inside the lowest tier. Three tiers in three greens — darkest at the bottom, lightest
+at the top — read as foliage with depth; one big sphere on a stick reads as a lollipop, and two
+that merely touch read as a snowman.
 
-*Adapt:* a dead tree drops both canopies and adds two thin cylinders rotated `Z ±40`,
-`Anchor: bottom`, part-way up the trunk.
+*Adapt:* squash the tiers harder (`Y` well under half of `X`) and it leans conifer; a dead tree
+drops the canopy and adds two thin cylinders rotated `Z ±40`, `Anchor: bottom`, part-way up the
+trunk. *Collide:* `part colliders` — a bounds box would block walking under the canopy's edge.
 
 ### `house`
 
-**7 authored parts, 12 rendered · 4.72 x 3.68 x 3.40 m (Y +0.00 .. +3.68)** — walls, a mirrored pitched roof, a three-step gable end, a door and mirrored windows.
+**7 authored parts, 13 rendered · 4.72 x 3.72 x 3.46 m (Y +0.00 .. +3.72)** — walls, a mirrored pitched roof with a ridge beam, a tilted-fill gable, a door and mirrored windows.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#d9cdb8"
+    Colour: !colour "#e2d4b6"
     Parts:
       - Name: walls
         Shape: cube
@@ -347,23 +385,23 @@ body:
         Rotation: !vec { X: 0, Y: 0, Z: 31 }
         Anchor: right
         Mirror: x
-        Colour: !colour "#8c3b2e"
-      - Name: gable lower
+        Colour: !colour "#a64535"
+      - Name: ridge
         Shape: cube
-        Size: !vec { X: 2.8, Y: 0.38, Z: 0.16 }
-        Position: !vec { X: 0, Y: 2.3, Z: 1.5 }
-        Anchor: bottom-front
-        Mirror: z
-      - Name: gable middle
+        Size: !vec { X: 0.3, Y: 0.2, Z: 3.46 }
+        Position: !vec { X: 0, Y: 3.62, Z: 0 }
+        Colour: !colour "#a64535"
+      - Name: gable slope
         Shape: cube
-        Size: !vec { X: 1.5, Y: 0.42, Z: 0.16 }
-        Position: !vec { X: 0, Y: 2.66, Z: 1.5 }
-        Anchor: bottom-front
-        Mirror: z
-      - Name: gable upper
+        Size: !vec { X: 2.35, Y: 0.6, Z: 0.14 }
+        Position: !vec { X: 1, Y: 2.95, Z: 1.47 }
+        Rotation: !vec { X: 0, Y: 0, Z: -31 }
+        Anchor: top-front
+        Mirror: xz
+      - Name: gable centre
         Shape: cube
-        Size: !vec { X: 0.8, Y: 0.24, Z: 0.16 }
-        Position: !vec { X: 0, Y: 3.06, Z: 1.5 }
+        Size: !vec { X: 2.5, Y: 0.75, Z: 0.14 }
+        Position: !vec { X: 0, Y: 2.2, Z: 1.45 }
         Anchor: bottom-front
         Mirror: z
       - Name: door
@@ -378,10 +416,11 @@ body:
         Position: !vec { X: 1.25, Y: 1.35, Z: 1.47 }
         Anchor: back
         Mirror: x
-        Colour: !colour "#6fa8c9"
+        Colour: !colour "#7db8dc"
 ```
 
-The anchor-as-hinge showcase, and the one legitimate mirrored part sitting at `X 0`.
+The anchor-as-hinge showcase, the one legitimate mirrored part sitting at `X 0`, and the tilted
+fill.
 
 **The roof.** Pitch 31 deg is `atan(1.2 / 2.0)` — a 1.2 m rise over the walls' 2.0 m half-width. The
 slab is anchored `right`, so its **ridge end** lands on `(0, 3.6, 0)` and the slab swings about that
@@ -389,25 +428,30 @@ point; its far end comes to rest at `(-2.314, 2.209)`, which is 0.314 clear of t
 0.19 below the wall top — a proper overhanging eave, and none of those numbers had to be typed.
 `Mirror: x` leaves `Position.X` at 0 but flips the anchor to `left` and `Rotation.Z` to `-31`, so
 the twin sweeps the other way from the same ridge. **This is the one case where a mirrored part at
-`X 0` is correct rather than a z-fight** — the anchor, not the position, supplies the offset.
+`X 0` is correct rather than a z-fight** — the anchor, not the position, supplies the offset. The
+two slabs can only ever butt at the apex, leaving a V-notch there, so the `ridge` beam lies along
+the joint and hides it — what the overlap rule does when a seam cannot overlap.
 
-**The gable end.** The triangle between wall top and roof underside is 3.84 wide and 1.15 tall, and
-no single rectangle covers more than half of it. Three boards of decreasing width step up the slope
-instead, each sized by where the roof's underside sits at that height
-(`underside y = 3.551 - 0.601x`), closing about 85 % of it. The sliver left at the peak is in shadow.
+**The gable end is the tilted fill.** One slab rotated to the roof's own `-31`, anchored
+`top-front` with its top edge centred on the underside's midpoint `(1.0, 2.95)`, hugs the slope
+exactly; `Mirror: xz` makes all four copies — two slopes, front and back — and the upright
+`gable centre` covers the region under their bottom edges. Both gable parts sit 0.03 and 0.05
+behind the wall's front plane: recessed, never coplanar with the wall or with each other, so
+nothing z-fights.
 
-*Adapt:* for two storeys, raise the walls' `Size.Y` and the roof's `Position.Y` by the same amount —
-pitch, eave and gable steps are all measured from the ridge downward and still hold.
+*Adapt:* for two storeys, raise the walls' `Size.Y` and every roof-line part's `Position.Y` by the
+same amount — pitch, eave and gable geometry are all measured from the ridge downward and still
+hold. *Collide:* one `box collider` with `Fit: bounds`.
 
 ### `car`
 
-**6 authored parts, 11 rendered · 2.04 x 1.55 x 4.20 m (Y +0.00 .. +1.55)** — chassis, cabin, a glass band, four wheels from one part, headlights and bumpers.
+**7 authored parts, 12 rendered · 2.04 x 1.47 x 4.20 m (Y +0.00 .. +1.47)** — chassis, cabin, a glass band, a tilted windscreen, four wheels from one part, headlights and bumpers.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#c8443c"
+    Colour: !colour "#d94f42"
     Parts:
       - Name: chassis
         Shape: cube
@@ -416,13 +460,20 @@ body:
         Anchor: bottom
       - Name: cabin
         Shape: cube
-        Size: !vec { X: 1.55, Y: 0.6, Z: 2 }
-        Position: !vec { X: 0, Y: 0.95, Z: -0.15 }
+        Size: !vec { X: 1.5, Y: 0.5, Z: 1.8 }
+        Position: !vec { X: 0, Y: 0.95, Z: -0.3 }
         Anchor: bottom
       - Name: glass band
         Shape: cube
-        Size: !vec { X: 1.58, Y: 0.3, Z: 2.04 }
-        Position: !vec { X: 0, Y: 1.08, Z: -0.15 }
+        Size: !vec { X: 1.53, Y: 0.28, Z: 1.84 }
+        Position: !vec { X: 0, Y: 1.06, Z: -0.3 }
+        Anchor: bottom
+        Colour: !colour "#2c3e50"
+      - Name: windscreen
+        Shape: cube
+        Size: !vec { X: 1.46, Y: 0.58, Z: 0.08 }
+        Position: !vec { X: 0, Y: 1, Z: 0.93 }
+        Rotation: !vec { X: -40, Y: 0, Z: 0 }
         Anchor: bottom
         Colour: !colour "#2c3e50"
       - Name: wheel
@@ -447,22 +498,29 @@ body:
         Colour: !colour "#1a1a1a"
 ```
 
-`Mirror: xz` and the oversized slab.
+`Mirror: xz`, the oversized slab, and the tilted fill as a windscreen.
 
 **The wheels** are one authored part that becomes four. `Size 0.66, 0.24, 0.66` gives
 `localScale.Y 0.12`, `Rotation: Z 90` lays the cylinder's axis along world X so it rolls the right
 way, and centre `Y 0.33` is exactly the radius, so the tyre touches `Y 0` with no anchor needed.
 Both mirrored axes carry a non-zero `Position`, so no twin is coincident with another.
 
-**The glass band** is the oversized slab: 1.58 x 0.30 x 2.04 against a 1.55 x 0.60 x 2.00 cabin, so
-it stands 0.015 proud each side and 0.02 front and back. One part reads as glazing on all four
-faces; four separate panes would be four parts and four chances to leave a gap.
+**The glass band** is the oversized slab: 1.53 x 0.28 x 1.84 against a 1.50 x 0.50 x 1.80 cabin, so
+it stands proud on every face it passes through. One part reads as glazing on all four sides; four
+separate panes would be four parts and four chances to leave a gap.
+
+**The windscreen** is a slab anchored `bottom` on the bonnet at `(0, 1.0, 0.93)` and rotated
+`X -40`, leaning back until its top edge lands at the cabin's front roof edge
+(`z = 0.93 - 0.58 sin 40 = 0.56`, `y = 1.0 + 0.58 cos 40 = 1.44`). Its foot starts 0.05 below the
+bonnet's surface and its head sinks into the cabin's front face — both joins hidden by overlap.
+The sloped pane is what separates a car silhouette from two stacked boxes.
 
 **The gap under the chassis is deliberate** — anchored `bottom` at `Y 0.35`, that clearance is what
 the wheels live in. The headlights are proud details, their centres on the chassis's front face.
 
-*Adapt:* a van lengthens the cabin and moves it forward. Wheels that must actually spin have to
-become child entities — `model` parts cannot carry a `rotate`.
+*Adapt:* a van lengthens the cabin, moves it forward and drops the windscreen rake to `X -20`.
+Wheels that must actually spin have to become child entities — `model` parts cannot carry a
+`rotate`. *Collide:* one `box collider` with `Fit: bounds`.
 
 ### `crate`
 
@@ -501,7 +559,8 @@ coplanar with a body face** — two coplanar, co-facing surfaces z-fight, and a 
 along the top of a crate is a hard bug to attribute later. Inset the smaller part; do not match the
 larger one exactly.
 
-*Adapt:* two colours is the whole palette and it is enough.
+*Adapt:* two colours is the whole palette and it is enough. *Collide:* one `box collider` with
+`Fit: bounds` — this prop is the textbook case.
 
 ### `barrel`
 
@@ -546,48 +605,61 @@ The cylinder halving bites four times: `localScale.Y` comes out 0.525, 0.045, 0.
 0.03 wider in radius than the staves — the oversized slab, applied radially.
 
 *Adapt:* to lay it on its side, put `Rotation: !vec { X: 90, Y: 0, Z: 0 }` on the **entity**, not on
-every part. Turning the whole prop is the entity's job.
+every part. Turning the whole prop is the entity's job. *Collide:* one `box collider` with
+`Fit: bounds`.
 
 ### `rock`
 
-**3 authored parts, 3 rendered · 2.37 x 1.20 x 2.07 m (Y -0.28 .. +0.92)** — three rotated ellipsoids, sunk below the ground plane.
+**4 authored parts, 4 rendered · 2.34 x 1.29 x 1.72 m (Y -0.42 .. +0.86)** — three tilted cubes and an ellipsoid pebble, sunk below the ground plane.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#6e6f74"
+    Colour: !colour "#85868c"
     Parts:
-      - Name: main
-        Shape: sphere
-        Size: !vec { X: 1.7, Y: 1.2, Z: 1.5 }
-        Position: !vec { X: 0, Y: 0.32, Z: 0 }
-        Rotation: !vec { X: 0, Y: 20, Z: 0 }
+      - Name: boulder
+        Shape: cube
+        Size: !vec { X: 1.25, Y: 0.85, Z: 1.1 }
+        Position: !vec { X: -0.15, Y: 0.22, Z: -0.05 }
+        Rotation: !vec { X: -14, Y: 28, Z: 10 }
       - Name: shoulder
+        Shape: cube
+        Size: !vec { X: 0.9, Y: 0.65, Z: 0.8 }
+        Position: !vec { X: 0.55, Y: 0.12, Z: 0.25 }
+        Rotation: !vec { X: 12, Y: -20, Z: -14 }
+        Colour: !colour "#9798a0"
+      - Name: chunk
+        Shape: cube
+        Size: !vec { X: 0.6, Y: 0.45, Z: 0.55 }
+        Position: !vec { X: -0.7, Y: 0.05, Z: 0.3 }
+        Rotation: !vec { X: 8, Y: 50, Z: -6 }
+        Colour: !colour "#74757b"
+      - Name: pebble
         Shape: sphere
-        Size: !vec { X: 1.05, Y: 0.9, Z: 1.15 }
-        Position: !vec { X: 0.55, Y: 0.2, Z: -0.3 }
-        Rotation: !vec { X: 0, Y: -35, Z: 0 }
-        Colour: !colour "#7c7d83"
-      - Name: chip
-        Shape: sphere
-        Size: !vec { X: 0.75, Y: 0.62, Z: 0.8 }
-        Position: !vec { X: -0.5, Y: 0.22, Z: 0.35 }
-        Rotation: !vec { X: 0, Y: 50, Z: 0 }
-        Colour: !colour "#62636a"
+        Size: !vec { X: 0.45, Y: 0.32, Z: 0.4 }
+        Position: !vec { X: 0.9, Y: 0.05, Z: -0.45 }
+        Rotation: !vec { X: 0, Y: 35, Z: 0 }
+        Colour: !colour "#6e6f75"
 ```
 
-**The deliberate exception to `Anchor: bottom`.** These three ellipsoids are centre-pivoted and sunk,
-reaching 0.28 below `Y 0`. Burying the bottom quarter is what stops a rock reading as a ball resting
+**The deliberate exception to `Anchor: bottom`.** All four parts are centre-pivoted and sunk,
+reaching 0.42 below `Y 0`. Burying the lower third is what stops a rock reading as a prop resting
 on a floor: a grounded rock looks placed, a sunk one looks like it was always there.
 
-**Rotating a sphere is a no-op unless it is non-uniformly scaled.** All three parts have three
-different `Size` components, so they are ellipsoids and `Rotation.Y` genuinely reorients them —
-three copies of one ellipsoid at three yaws is what buys the irregularity.
+**Stone is angular, so the masses are cubes tilted on all three axes.** A cube rotated on X, Y and
+Z at once presents corners and slanted facets instead of walls and a flat top, and three of them
+at different tilts, overlapped into one silhouette, read as fractured stone. Smooth ellipsoids
+were tried here first and read as eggs — stone is the one material where `sphere` is the wrong
+first instinct. The `pebble` keeps the counter-lesson: rotating a *sphere* is a no-op unless it is
+non-uniformly scaled, so it is an ellipsoid, and its `Rotation.Y 35` genuinely turns it.
 
-> **This recipe assumes ground at `Y 0`.** On a floating platform a quarter of it hangs in mid-air.
+> **This recipe assumes ground at `Y 0`.** On a floating platform a third of it hangs in mid-air.
 > Raise the entity, or raise every part's `Position.Y` equally — do not switch to `Anchor: bottom`,
 > which defeats the point.
+
+*Collide:* one `box collider` with `Fit: bounds` — the fitted box includes the sunk third, which
+is harmless under flat ground.
 
 ### `streetlight`
 
@@ -652,7 +724,8 @@ rather than trying to make faces meet.
 > ```
 
 *Adapt:* a double-headed lamp is `Mirror: x` on the arm, head and lens — `Rotation.Z -70` flips to
-`+70` and the second arm sweeps the other way, for free.
+`+70` and the second arm sweeps the other way, for free. *Collide:* `part colliders` — one bounds
+box around this L-shape would block the pavement under the arm.
 
 ### `coin`
 
@@ -694,146 +767,155 @@ surfaces from ever being coplanar. The emblem is a cube rotated `Z 45` into a di
 against the face's 0.08, so one part gives an emblem on both faces.
 
 *Adapt:* spin it with a `rotate` plus an `every frame trigger` on the entity;
-`Displacement: !vec { X: 0, Y: 2, Z: 0 }` takes an upright disc edge-on to face-on.
+`Displacement: !vec { X: 0, Y: 2, Z: 0 }` takes an upright disc edge-on to face-on. *Collide:* a
+`sphere collider` with `Fit: bounds` and `IsTrigger: true` — the standard pickup.
 
 ### `turret`
 
-**6 authored parts, 8 rendered · 1.50 x 1.52 x 2.05 m (Y +0.00 .. +1.52)** — base, housing, dome, eye and twin forward-growing barrels.
+**6 authored parts, 8 rendered · 1.20 x 1.10 x 1.90 m (Y +0.00 .. +1.10)** — base, a dominant housing, a squashed dome, eye and twin forward-growing barrels.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#5a6470"
+    Colour: !colour "#6b7a52"
     Parts:
       - Name: base
         Shape: cylinder
-        Size: !vec { X: 1.5, Y: 0.3, Z: 1.5 }
+        Size: !vec { X: 1.15, Y: 0.22, Z: 1.15 }
         Anchor: bottom
       - Name: housing
         Shape: cube
-        Size: !vec { X: 1, Y: 0.7, Z: 1.1 }
-        Position: !vec { X: 0, Y: 0.24, Z: 0 }
+        Size: !vec { X: 1.2, Y: 0.6, Z: 1.25 }
+        Position: !vec { X: 0, Y: 0.18, Z: 0 }
         Anchor: bottom
       - Name: dome
         Shape: sphere
-        Size: !vec { X: 0.9, Y: 0.7, Z: 0.9 }
-        Position: !vec { X: 0, Y: 0.82, Z: 0 }
+        Size: !vec { X: 0.85, Y: 0.42, Z: 0.85 }
+        Position: !vec { X: 0, Y: 0.68, Z: 0 }
         Anchor: bottom
-        Colour: !colour "#79838f"
+        Colour: !colour "#7d8c63"
       - Name: eye
         Shape: sphere
-        Size: !vec { X: 0.34, Y: 0.34, Z: 0.34 }
-        Position: !vec { X: 0, Y: 1.17, Z: 0.36 }
+        Size: !vec { X: 0.28, Y: 0.28, Z: 0.28 }
+        Position: !vec { X: 0, Y: 0.9, Z: 0.42 }
         Colour: !colour "#e8483c"
       - Name: barrel
         Shape: cylinder
-        Size: !vec { X: 0.18, Y: 1.2, Z: 0.18 }
-        Position: !vec { X: 0.28, Y: 0.72, Z: 0 }
+        Size: !vec { X: 0.2, Y: 1.15, Z: 0.2 }
+        Position: !vec { X: 0.3, Y: 0.48, Z: 0 }
         Rotation: !vec { X: 90, Y: 0, Z: 0 }
         Anchor: bottom
         Mirror: x
-        Colour: !colour "#3a4048"
+        Colour: !colour "#3d434c"
       - Name: muzzle
         Shape: cylinder
-        Size: !vec { X: 0.28, Y: 0.22, Z: 0.28 }
-        Position: !vec { X: 0.28, Y: 0.72, Z: 1.08 }
+        Size: !vec { X: 0.3, Y: 0.26, Z: 0.3 }
+        Position: !vec { X: 0.3, Y: 0.48, Z: 1.02 }
         Rotation: !vec { X: 90, Y: 0, Z: 0 }
         Anchor: bottom
         Mirror: x
-        Colour: !colour "#3a4048"
+        Colour: !colour "#3d434c"
 ```
 
-The killer combination: **`Rotation: X 90` plus `Anchor: bottom` makes a cylinder grow forward from
-its `Position`.**
+The killer combination — **`Rotation: X 90` plus `Anchor: bottom` makes a cylinder grow forward
+from its `Position`** — and a lesson in mass order.
 
 `Rotation X 90` maps the cylinder's local +Y onto world +Z, and `Anchor: bottom` puts the *near* end
 on `Position` rather than the centre. The barrel therefore starts at `Z 0`, inside the housing, and
-ends at `Z 1.2` — and lengthening it is a one-number edit to `Size.Y` with `Position` untouched.
+ends at `Z 1.15` — and lengthening it is a one-number edit to `Size.Y` with `Position` untouched.
 Without the anchor, every length change would move the midpoint and need `Position.Z` corrected by
-half the delta.
+half the delta. The muzzle uses the same rotation and anchor at `Z 1.02`, overlapping the barrel's
+last 0.13.
 
-The muzzle uses the same rotation and anchor at `Z 1.08`, overlapping the barrel's last 0.12. The
-eye is a proud detail, its centre on the dome's surface.
+**Mass order is what makes it read as a weapon.** The housing is the widest mass here (1.2 across,
+overhanging the 1.15 base disc), and the dome — 0.85 wide but only 0.42 tall — is a squashed cap
+on top of it, not a second body. An earlier draft inverted that order (1.5 base, 1.0 housing,
+tall dome) and the same six parts read as a mushroom. The eye is a proud detail, its centre on the
+dome's surface.
 
 *Adapt:* a turret whose dome actually tracks a target has to split — base and housing on the parent,
 dome and barrels in a child entity with its own `model` and a `look at`. That is the case where one
-`model` should become two.
+`model` should become two. *Collide:* one `box collider` with `Fit: bounds`.
 
 ### `humanoid`
 
-**8 authored parts, 11 rendered · 0.90 x 1.82 x 0.37 m (Y +0.00 .. +1.82)** — feet, legs, hips, torso, splayed arms, neck, head and visor.
+**7 authored parts, 11 rendered · 1.06 x 1.70 x 0.51 m (Y +0.00 .. +1.70)** — legs, torso, splayed arms with hands, an oversized head, hair and eyes.
 
 ```yaml
 body:
   Type: model
   Properties:
-    Colour: !colour "#4f6d8f"
+    Colour: !colour "#e07b39"
     Parts:
-      - Name: foot
-        Shape: cube
-        Size: !vec { X: 0.2, Y: 0.09, Z: 0.34 }
-        Position: !vec { X: 0.15, Y: 0, Z: 0.05 }
-        Anchor: bottom
-        Mirror: x
-        Colour: !colour "#2c3542"
       - Name: leg
         Shape: capsule
-        Size: !vec { X: 0.2, Y: 0.85, Z: 0.2 }
-        Position: !vec { X: 0.15, Y: 0.04, Z: 0 }
+        Size: !vec { X: 0.24, Y: 0.7, Z: 0.24 }
+        Position: !vec { X: 0.16, Y: 0, Z: 0 }
         Anchor: bottom
         Mirror: x
-      - Name: hips
-        Shape: cube
-        Size: !vec { X: 0.44, Y: 0.16, Z: 0.26 }
-        Position: !vec { X: 0, Y: 0.88, Z: 0 }
-        Colour: !colour "#2c3542"
+        Colour: !colour "#3f5875"
       - Name: torso
         Shape: cube
-        Size: !vec { X: 0.52, Y: 0.56, Z: 0.28 }
-        Position: !vec { X: 0, Y: 0.9, Z: 0 }
+        Size: !vec { X: 0.6, Y: 0.62, Z: 0.36 }
+        Position: !vec { X: 0, Y: 0.62, Z: 0 }
         Anchor: bottom
       - Name: arm
         Shape: capsule
-        Size: !vec { X: 0.17, Y: 0.62, Z: 0.17 }
-        Position: !vec { X: 0.3, Y: 1.42, Z: 0 }
-        Rotation: !vec { X: 0, Y: 0, Z: 6 }
+        Size: !vec { X: 0.18, Y: 0.58, Z: 0.18 }
+        Position: !vec { X: 0.36, Y: 1.2, Z: 0 }
+        Rotation: !vec { X: 0, Y: 0, Z: 8 }
         Anchor: top
         Mirror: x
-      - Name: neck
-        Shape: cylinder
-        Size: !vec { X: 0.13, Y: 0.1, Z: 0.13 }
-        Position: !vec { X: 0, Y: 1.4, Z: 0 }
-        Anchor: bottom
-        Colour: !colour "#2c3542"
-      - Name: head
+      - Name: hand
         Shape: sphere
-        Size: !vec { X: 0.32, Y: 0.36, Z: 0.3 }
-        Position: !vec { X: 0, Y: 1.46, Z: 0 }
-        Anchor: bottom
-        Colour: !colour "#c9d2dc"
-      - Name: visor
+        Size: !vec { X: 0.16, Y: 0.16, Z: 0.16 }
+        Position: !vec { X: 0.44, Y: 0.63, Z: 0 }
+        Mirror: x
+        Colour: !colour "#eec39a"
+      - Name: head
         Shape: cube
-        Size: !vec { X: 0.22, Y: 0.055, Z: 0.04 }
-        Position: !vec { X: 0, Y: 1.68, Z: 0.145 }
-        Colour: !colour "#7fe3ff"
+        Size: !vec { X: 0.46, Y: 0.44, Z: 0.46 }
+        Position: !vec { X: 0, Y: 1.18, Z: 0 }
+        Anchor: bottom
+        Colour: !colour "#eec39a"
+      - Name: hair
+        Shape: cube
+        Size: !vec { X: 0.5, Y: 0.16, Z: 0.5 }
+        Position: !vec { X: 0, Y: 1.54, Z: 0 }
+        Anchor: bottom
+        Colour: !colour "#43322a"
+      - Name: eye
+        Shape: cube
+        Size: !vec { X: 0.07, Y: 0.1, Z: 0.05 }
+        Position: !vec { X: 0.11, Y: 1.42, Z: 0.23 }
+        Mirror: x
+        Colour: !colour "#43322a"
 ```
 
-Capsule caps, splayed limbs, and a stack in which **every mass overlaps its neighbour**: feet into
-legs, legs into hips, hips into torso, torso into neck, neck into head. Total height 1.82 m.
+Capsule caps, splayed limbs, endpoint-centred hands, and big-head proportions.
 
-**The arms** are anchored `top` at the shoulder and rotated `Z 6` so they splay clear of the torso.
-`Mirror: x` negates `Rotation.Z` to `-6`, so the twin splays outward rather than crossing the body —
-the mirror table's second trap, made concrete. Their shoulder ends sit 0.045 inside the torso, so
-the joint cannot gap.
+**The arms** are anchored `top` at the shoulder and rotated `Z 8` so they splay clear of the torso.
+`Mirror: x` negates `Rotation.Z` to `-8`, so the twin splays outward rather than crossing the body —
+the mirror table's second trap, made concrete. Their shoulder ends sit inside the torso, so the
+joint cannot gap. Each **hand** is a sphere centred on its arm's rotated endpoint
+(`x = 0.36 + 0.58 sin 8 = 0.44`, `y = 1.2 - 0.58 cos 8 = 0.63`) — the streetlight-head move,
+applied twice for free via `Mirror: x`.
 
-> **The capsule caps here are stretched about 2.1x.** The legs are `Size.Y 0.85` against
-> `Size.X 0.20`, where true hemispheres need `Size.Y = 0.40`. That elongation is what makes them
+**The head is deliberately oversized**: a 0.46 cube on a 0.60-wide torso, wearing a hair slab 0.02
+proud on every side (the oversized slab again) and eyes half-sunk into the face plane (the proud
+detail). Character props read through caricature — a big head on chunky limbs reads as *someone*
+at twenty metres, where anatomically faithful proportions read as a mannequin.
+
+> **The capsule caps here are stretched about 1.5x.** The legs are `Size.Y 0.70` against
+> `Size.X 0.24`, where true hemispheres need `Size.Y = 0.48`. That elongation is what makes them
 > read as limbs rather than pills, so it is deliberate — but swapping `capsule` to `cylinder` at
 > identical `Size` is a one-word change with no arithmetic if you want hard limbs instead.
 
-*Adapt:* this is a mannequin, not a character — no hands, and the head is an ellipsoid with a visor
-bar. A walk cycle needs child entities; `model` parts cannot be animated independently.
+*Adapt:* recolour torso and legs for a uniform; for a robot, drop the hair and swap the two eyes
+for one pale visor bar. A walk cycle needs child entities; `model` parts cannot be animated
+independently. *Collide:* `part colliders`, or one hand-sized `box collider` for a forgiving
+hitbox.
 
 ---
 
@@ -859,7 +941,9 @@ bar. A walk cycle needs child entities; `model` parts cannot be animated indepen
 | A mirrored limb crosses the body instead of splaying out | Working as designed — `Mirror` negates `Rotation` on two of three axes. Check the twin table and pick the axis whose signs you want. |
 | A rotated part's end cap pokes through what it meets | Centre the static part on the rotated part's endpoint instead of anchoring a face to it. |
 | A "glowing" part looks flat and dead | `model` is matte. Add a child entity with a `light`. |
-| Nothing collides with the prop | Parts carry no colliders by design. Add one collider behaviour to the entity. |
+| Nothing collides with the prop | Parts carry no colliders by design. Add a `box`/`sphere collider` with `Fit: bounds`, or `part colliders` — see [Collision](#collision). |
+| A `Fit: bounds` collider is tiny or sits at the entity origin | The collider behaviour is listed *before* the visual. Fitting reads the already-built visual — list the `model` first. |
+| The prop blocks movement it visibly should not (under an arm, beside a trunk) | One bounds box fills an L-shaped prop's gaps. Use `part colliders`. |
 
 Verify with `validate_yaml` first (fastest at catching `Parts:` indentation), then `validate_game`,
 which is authoritative and catches bad anchor tokens, untagged colours, `Size` as a sequence and
