@@ -14,6 +14,7 @@ built so far (phase 1, foundations) and the traps in it.
 | `Layout/ShortAxisCanvasScaler` | Keeps the canvas's short axis at 390 units in either orientation |
 | `Layout/SafeAreaPanel` | Anchors a rect to `Screen.safeArea` |
 | `Theming/ShellTheme` | Colour roles, typographic scale, motion timings, layout measurements |
+| `Theming/ScriptableEnum` | Base for the asset-backed enums — one asset per `ColorRole` / `TextStyleId` member |
 | `Theming/ThemeService` + `Theme` | The theme in force, via DI and via a deliberately narrow static accessor |
 | `Theming/Binders/*` | `ThemeColor` and `TextStyleBinder` — the components that paint from a role |
 | `Composition/*` | The EasyDI scope chain and the shell's installer |
@@ -33,8 +34,20 @@ Nothing hard-codes a colour, a font size or a tween duration. A graphic carries 
 a `ColorRole`; a label carries a `TextStyleBinder` naming a `TextStyleId`; a tween reads a `MotionSpec`
 off the theme. Dark mode is then a second `ShellTheme` asset rather than a pass over every prefab.
 
-Two things to know:
+**`ColorRole` and `TextStyleId` are assets, not C# enums.** One asset per member, under `Theming/Roles`
+and `Theming/TextStyles`, and a prefab binds one by GUID — so renaming a member, reordering the folder
+or deleting one in the middle cannot silently repaint the app, and adding a role is a new asset plus a
+row on the theme rather than an edit to an enum and a re-check of every prefab that serialised a number.
+The inspector still draws them as a dropdown (`Editor/ScriptableEnumDrawer`), so picking one feels the
+same as picking an enum member. What each member is *for* is authored on the asset itself, in its
+`description`, which the dropdown shows as the tooltip.
 
+Three things to know:
+
+- **A binder starts out bound to nothing.** The enum version defaulted to `Ink` / `Body`; a reference
+  field cannot, so a freshly added `ThemeColor` or `TextStyleBinder` paints nothing at all until a
+  member is picked. That is deliberate — it leaves the authored colour alone while you wire the object
+  up, rather than flooding the scene with magenta and a warning per repaint.
 - **A label wants `TextStyleBinder` *instead of* `ThemeColor`, not as well.** A text style already
   names a colour role, and `TMP_Text` is a `Graphic`, so both components would fight over the colour.
 - **`Theme` is a static accessor, and that is on purpose.** Binders run under `[ExecuteAlways]` in the
@@ -65,7 +78,7 @@ Three editor entry points, all under `Assembler > Shell` and all re-runnable:
 | Menu item | What it does |
 | --- | --- |
 | `Build Shell Root` | Grows the shell into `Bootstrap.unity`. Additive — finds objects by name and configures them in place, never destroys |
-| `Create Shell Assets` | Creates the theme and config assets if they are missing, and leaves existing ones alone |
+| `Create Shell Assets` | Creates the role and style members, the theme and the config if they are missing, and leaves existing ones alone |
 | `Reset Shell Theme` | Rewrites the existing theme's palette and scale from the prototype, discarding hand-tuning |
 | `Bake Newsreader Font Asset` | Re-bakes the static SDF atlas from the variable font |
 

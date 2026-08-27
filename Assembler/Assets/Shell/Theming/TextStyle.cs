@@ -12,7 +12,7 @@ namespace Assembler.Shell.Theming
 	[Serializable]
 	public sealed class TextStyle
 	{
-		[SerializeField] private TextStyleId id;
+		[SerializeField] private TextStyleId? id;
 		[SerializeField] private TMP_FontAsset? font;
 
 		[Tooltip("Size in shell units. The canvas is 390 units across, so these are the prototype's CSS pixels 1:1.")]
@@ -29,15 +29,16 @@ namespace Assembler.Shell.Theming
 			"line height is exactly 1em, so CSS line-height 1.52 is 52 here.")]
 		[SerializeField] private float lineSpacing;
 
-		[SerializeField] private ColorRole color = ColorRole.Ink;
+		[Tooltip("The palette role this style's labels take their colour from.")]
+		[SerializeField] private ColorRole? color;
 
-		public TextStyleId Id => id;
+		public TextStyleId? Id => id;
 
 		public TMP_FontAsset? Font => font;
 
 		public float FontSize => fontSize;
 
-		public ColorRole Color => color;
+		public ColorRole? Color => color;
 
 		/// <summary>
 		/// Paints <paramref name="text"/> with this style. The colour is passed in because a style names a

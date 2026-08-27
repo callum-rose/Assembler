@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Assembler.Shell.Theming;
 using TMPro;
 using UnityEditor;
@@ -8,8 +9,9 @@ using UnityEngine;
 namespace Assembler.Shell.Editor
 {
 	/// <summary>
-	/// Authors the shell's two data assets — the <see cref="ShellTheme"/> carrying the Letterpress palette and
-	/// typographic scale, and the <see cref="ShellConfig"/> carrying the editorial numbers.
+	/// Authors the shell's data assets — the <see cref="ColorRole"/> and <see cref="TextStyleId"/> members, the
+	/// <see cref="ShellTheme"/> carrying the Letterpress palette and typographic scale, and the
+	/// <see cref="ShellConfig"/> carrying the editorial numbers.
 	/// </summary>
 	/// <remarks>
 	/// The palette and the scale are transcribed from <c>Prototypes/app-look-prototype.html</c> (variant D). The
@@ -23,51 +25,59 @@ namespace Assembler.Shell.Editor
 		public const string ThemeAssetPath = ShellResourcesFolder + "/ShellTheme.asset";
 		public const string ConfigAssetPath = ShellResourcesFolder + "/ShellConfig.asset";
 
-		private static readonly IReadOnlyList<(ColorRole Role, string Hex)> Palette = new[]
+		/// <summary>Where the <see cref="ColorRole"/> members live — one asset per role.</summary>
+		public const string RolesFolder = "Assets/Shell/Theming/Roles";
+
+		/// <summary>Where the <see cref="TextStyleId"/> members live — one asset per style.</summary>
+		public const string TextStylesFolder = "Assets/Shell/Theming/TextStyles";
+
+		// Role and style members are named here rather than referenced as enum values: they are assets now, so
+		// the name is what identifies a row of this table with the asset it authors.
+		private static readonly IReadOnlyList<(string Name, string Hex, string Description)> Palette = new[]
 		{
-			(ColorRole.Paper, "#faf6ee"),
-			(ColorRole.Surface, "#fffdf8"),
-			(ColorRole.Sunk, "#efe9dd"),
-			(ColorRole.Ink, "#17130d"),
-			(ColorRole.InkSecondary, "#4f483d"),
-			(ColorRole.InkTertiary, "#948b7c"),
-			(ColorRole.Rule, "#d8cfbe"),
-			(ColorRole.RuleHard, "#17130d"),
-			(ColorRole.Accent, "#b8121b"),
-			(ColorRole.AccentSecondary, "#8a7248"),
-			(ColorRole.OnAccent, "#fffdf8"),
-			(ColorRole.Good, "#1d7a45"),
-			(ColorRole.Bad, "#b8121b"),
-			(ColorRole.Staging, "#9a6212"),
-			(ColorRole.ArtBackground, "#e7e0d2"),
-			(ColorRole.ButtonFace, "#17130d"),
-			(ColorRole.ButtonInk, "#faf6ee"),
-			(ColorRole.Offset, "#17130d")
+			("Paper", "#faf6ee", "The page ground the whole shell sits on."),
+			("Surface", "#fffdf8", "Raised surfaces: sheets, cards, inputs."),
+			("Sunk", "#efe9dd", "Inset surfaces: the search field, segmented controls."),
+			("Ink", "#17130d", "Primary text."),
+			("InkSecondary", "#4f483d", "Body text — a step down from Ink."),
+			("InkTertiary", "#948b7c", "Metadata and captions — the quietest text."),
+			("Rule", "#d8cfbe", "Hairline rules between cells and rows."),
+			("RuleHard", "#17130d", "The heavy rules: under the masthead, under a section header."),
+			("Accent", "#b8121b", "The masthead red."),
+			("AccentSecondary", "#8a7248", "The demoted second accent."),
+			("OnAccent", "#fffdf8", "Text and glyphs drawn on top of Accent."),
+			("Good", "#1d7a45", "Positive verdicts."),
+			("Bad", "#b8121b", "Negative verdicts and failures."),
+			("Staging", "#9a6212", "Staging-channel entries, visible only in dev mode."),
+			("ArtBackground", "#e7e0d2", "The ground a piece of game art sits on before it loads."),
+			("ButtonFace", "#17130d", "The plate of a letterpress button."),
+			("ButtonInk", "#faf6ee", "Text on a letterpress button."),
+			("Offset", "#17130d", "The hard ledge a letterpress element casts — the depth that a press consumes.")
 		};
 
 		private static readonly IReadOnlyList<StyleSpec> Scale = new[]
 		{
-			new StyleSpec { Id = TextStyleId.Masthead, Size = 27f, Bold = true, Tracking = -3f },
-			new StyleSpec { Id = TextStyleId.Folio, Size = 10f, Case = TextCase.UpperCase, Tracking = 13f, Color = ColorRole.InkSecondary },
-			new StyleSpec { Id = TextStyleId.ScreenTitle, Size = 12f, Bold = true, Case = TextCase.UpperCase, Tracking = 16f, Color = ColorRole.InkTertiary },
-			new StyleSpec { Id = TextStyleId.BackLabel, Size = 15f, Bold = true },
-			new StyleSpec { Id = TextStyleId.Kicker, Size = 10.5f, Bold = true, Case = TextCase.UpperCase, Tracking = 20f, Color = ColorRole.Accent },
-			new StyleSpec { Id = TextStyleId.Headline, Size = 30f, Bold = true, Tracking = -2.5f, Leading = 8f },
-			new StyleSpec { Id = TextStyleId.HeadlineMeta, Size = 10.5f, Case = TextCase.UpperCase, Tracking = 10f, Color = ColorRole.InkTertiary },
-			new StyleSpec { Id = TextStyleId.Body, Size = 15f, Leading = 52f, Color = ColorRole.InkSecondary },
-			new StyleSpec { Id = TextStyleId.DropCap, Size = 15f, Bold = true, Color = ColorRole.Accent },
-			new StyleSpec { Id = TextStyleId.SectionHeader, Size = 10.5f, Bold = true, Case = TextCase.UpperCase, Tracking = 20f },
-			new StyleSpec { Id = TextStyleId.CardTitle, Size = 15.5f, Bold = true, Tracking = -1.2f, Leading = 18f },
-			new StyleSpec { Id = TextStyleId.CardBody, Size = 12.5f, Leading = 42f, Color = ColorRole.InkSecondary },
-			new StyleSpec { Id = TextStyleId.CardMeta, Size = 9.5f, Case = TextCase.UpperCase, Tracking = 11f, Color = ColorRole.InkTertiary },
-			new StyleSpec { Id = TextStyleId.RowTitle, Size = 14.5f, Bold = true, Leading = 22f },
-			new StyleSpec { Id = TextStyleId.ButtonLabel, Size = 13f, Bold = true, Case = TextCase.UpperCase, Tracking = 14f, Color = ColorRole.ButtonInk },
-			new StyleSpec { Id = TextStyleId.StatValue, Size = 19f, Bold = true },
-			new StyleSpec { Id = TextStyleId.StatLabel, Size = 9.5f, Case = TextCase.UpperCase, Tracking = 10f, Color = ColorRole.InkTertiary },
-			new StyleSpec { Id = TextStyleId.FieldText, Size = 15f },
+			new StyleSpec { Name = "Masthead", Size = 27f, Bold = true, Tracking = -3f, Description = "The paper's name, top-left of the masthead." },
+			new StyleSpec { Name = "Folio", Size = 10f, Case = TextCase.UpperCase, Tracking = 13f, Color = "InkSecondary", Description = "The folio strip under the masthead: edition number, date, count." },
+			new StyleSpec { Name = "ScreenTitle", Size = 12f, Bold = true, Case = TextCase.UpperCase, Tracking = 16f, Color = "InkTertiary", Description = "The small capitalised title of a pushed screen." },
+			new StyleSpec { Name = "BackLabel", Size = 15f, Bold = true, Description = "The back-button label, which names the screen beneath the top of the stack." },
+			new StyleSpec { Name = "Kicker", Size = 10.5f, Bold = true, Case = TextCase.UpperCase, Tracking = 20f, Color = "Accent", Description = "The accent-red rubric above a headline." },
+			new StyleSpec { Name = "Headline", Size = 30f, Bold = true, Tracking = -2.5f, Leading = 8f, Description = "A lead or detail headline." },
+			new StyleSpec { Name = "HeadlineMeta", Size = 10.5f, Case = TextCase.UpperCase, Tracking = 10f, Color = "InkTertiary", Description = "The byline/date line under a headline." },
+			new StyleSpec { Name = "Body", Size = 15f, Leading = 52f, Color = "InkSecondary", Description = "Running body copy." },
+			new StyleSpec { Name = "DropCap", Size = 15f, Bold = true, Color = "Accent", Description = "The drop cap that opens the lead story." },
+			new StyleSpec { Name = "SectionHeader", Size = 10.5f, Bold = true, Case = TextCase.UpperCase, Tracking = 20f, Description = "A section header ('MORE EDITIONS')." },
+			new StyleSpec { Name = "CardTitle", Size = 15.5f, Bold = true, Tracking = -1.2f, Leading = 18f, Description = "A feed card's headline." },
+			new StyleSpec { Name = "CardBody", Size = 12.5f, Leading = 42f, Color = "InkSecondary", Description = "A feed card's standfirst." },
+			new StyleSpec { Name = "CardMeta", Size = 9.5f, Case = TextCase.UpperCase, Tracking = 11f, Color = "InkTertiary", Description = "A feed card's meta line." },
+			new StyleSpec { Name = "RowTitle", Size = 14.5f, Bold = true, Leading = 22f, Description = "An archive row's headline." },
+			new StyleSpec { Name = "ButtonLabel", Size = 13f, Bold = true, Case = TextCase.UpperCase, Tracking = 14f, Color = "ButtonInk", Description = "The label on a letterpress button." },
+			new StyleSpec { Name = "StatValue", Size = 19f, Bold = true, Description = "A stat band figure." },
+			new StyleSpec { Name = "StatLabel", Size = 9.5f, Case = TextCase.UpperCase, Tracking = 10f, Color = "InkTertiary", Description = "The caption under a stat band figure." },
+			new StyleSpec { Name = "FieldText", Size = 15f, Description = "Editable or selectable field text: search, settings rows." },
 			// The prototype strikes the stamp in a monospace face. The mono cut is in-game chrome's, and lands
 			// with the game strip; until then the stamp sets in the shell's serif.
-			new StyleSpec { Id = TextStyleId.Stamp, Size = 11f, Bold = true, Case = TextCase.UpperCase, Tracking = 18f, Color = ColorRole.Accent }
+			new StyleSpec { Name = "Stamp", Size = 11f, Bold = true, Case = TextCase.UpperCase, Tracking = 18f, Color = "Accent", Description = "The PLAY stamp struck across unplayed lead art." }
 		};
 
 		/// <summary>
@@ -88,7 +98,8 @@ namespace Assembler.Shell.Editor
 
 			Debug.Log(
 				$"{nameof(ShellAssetBuilder)}: theme '{theme.name}' and config '{config.name}' ready under " +
-				$"{ShellResourcesFolder}.");
+				$"{ShellResourcesFolder}, with {Palette.Count} roles and {Scale.Count} styles under " +
+				$"{RolesFolder} and {TextStylesFolder}.");
 		}
 
 		/// <summary>Rewrites the existing theme's palette and typographic scale from the prototype.</summary>
@@ -177,6 +188,8 @@ namespace Assembler.Shell.Editor
 		// and the scale are written here.
 		private static void Populate(ShellTheme theme, TMP_FontAsset? font)
 		{
+			EnsureFolders();
+
 			var serialized = new SerializedObject(theme);
 
 			WriteColors(serialized.FindProperty("colors"));
@@ -192,7 +205,7 @@ namespace Assembler.Shell.Editor
 
 			for (int i = 0; i < Palette.Count; i++)
 			{
-				var (role, hex) = Palette[i];
+				var (roleName, hex, description) = Palette[i];
 
 				if (!ColorUtility.TryParseHtmlString(hex, out var color))
 				{
@@ -200,7 +213,8 @@ namespace Assembler.Shell.Editor
 				}
 
 				var entry = colors.GetArrayElementAtIndex(i);
-				entry.FindPropertyRelative("role").intValue = (int)role;
+				entry.FindPropertyRelative("role").objectReferenceValue =
+					EnsureMember<ColorRole>(RolesFolder, roleName, description);
 				entry.FindPropertyRelative("color").colorValue = color;
 			}
 		}
@@ -221,7 +235,8 @@ namespace Assembler.Shell.Editor
 				var spec = Scale[i];
 				var entry = styles.GetArrayElementAtIndex(i);
 
-				entry.FindPropertyRelative("id").intValue = (int)spec.Id;
+				entry.FindPropertyRelative("id").objectReferenceValue =
+					EnsureMember<TextStyleId>(TextStylesFolder, spec.Name, spec.Description);
 				entry.FindPropertyRelative("font").objectReferenceValue = font;
 				entry.FindPropertyRelative("fontSize").floatValue = spec.Size;
 				entry.FindPropertyRelative("bold").boolValue = spec.Bold;
@@ -229,32 +244,77 @@ namespace Assembler.Shell.Editor
 				entry.FindPropertyRelative("textCase").intValue = (int)spec.Case;
 				entry.FindPropertyRelative("characterSpacing").floatValue = spec.Tracking;
 				entry.FindPropertyRelative("lineSpacing").floatValue = spec.Leading;
-				entry.FindPropertyRelative("color").intValue = (int)spec.Color;
+				entry.FindPropertyRelative("color").objectReferenceValue = Role(spec.Color);
 			}
+		}
+
+		// A style's colour has to name a role the palette actually carries: a typo here would otherwise mint a
+		// stray role asset that no theme row binds, and paint the label magenta at runtime.
+		private static ColorRole Role(string roleName)
+		{
+			if (Palette.All(entry => entry.Name != roleName))
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellAssetBuilder)}: '{roleName}' is not a role in the palette.");
+			}
+
+			return EnsureMember<ColorRole>(RolesFolder, roleName);
+		}
+
+		// Creating the asset is the point, but so is rewriting its description: these tables are the source of
+		// truth for what a member means, and a re-run should carry an edited blurb onto the asset.
+		private static T EnsureMember<T>(string folder, string memberName, string? description = null)
+			where T : ScriptableEnum
+		{
+			var path = $"{folder}/{memberName}.asset";
+			var member = AssetDatabase.LoadAssetAtPath<T>(path);
+
+			if (member == null)
+			{
+				member = ScriptableObject.CreateInstance<T>();
+				AssetDatabase.CreateAsset(member, path);
+			}
+
+			if (description is not null)
+			{
+				var serialized = new SerializedObject(member);
+				serialized.FindProperty("description").stringValue = description;
+				serialized.ApplyModifiedPropertiesWithoutUndo();
+				EditorUtility.SetDirty(member);
+			}
+
+			return member;
 		}
 
 		private static void EnsureFolders()
 		{
-			if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+			EnsureFolder("Assets/Resources");
+			EnsureFolder(ShellResourcesFolder);
+			EnsureFolder(RolesFolder);
+			EnsureFolder(TextStylesFolder);
+		}
+
+		private static void EnsureFolder(string path)
+		{
+			if (AssetDatabase.IsValidFolder(path))
 			{
-				AssetDatabase.CreateFolder("Assets", "Resources");
+				return;
 			}
 
-			if (!AssetDatabase.IsValidFolder(ShellResourcesFolder))
-			{
-				AssetDatabase.CreateFolder("Assets/Resources", "Shell");
-			}
+			int separator = path.LastIndexOf('/');
+			AssetDatabase.CreateFolder(path.Substring(0, separator), path.Substring(separator + 1));
 		}
 
 		private sealed class StyleSpec
 		{
-			public TextStyleId Id;
+			public string Name = string.Empty;
+			public string Description = string.Empty;
 			public float Size;
 			public bool Bold;
 			public TextCase Case = TextCase.AsTyped;
 			public float Tracking;
 			public float Leading;
-			public ColorRole Color = ColorRole.Ink;
+			public string Color = "Ink";
 		}
 	}
 }

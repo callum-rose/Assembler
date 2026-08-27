@@ -14,7 +14,7 @@ namespace Assembler.Shell.Theming.Binders
 	[AddComponentMenu("Assembler/Shell/Text Style")]
 	public sealed class TextStyleBinder : MonoBehaviour
 	{
-		[SerializeField] private TextStyleId style = TextStyleId.Body;
+		[SerializeField] private TextStyleId? style;
 
 		private TMP_Text? _text;
 
@@ -37,6 +37,13 @@ namespace Assembler.Shell.Theming.Binders
 		/// <summary>Restyles the label from the theme in force.</summary>
 		public void Apply()
 		{
+			// As with ThemeColor: an unnamed style means the component is mid-authoring, so leave the label as
+			// it was rather than warning on every repaint.
+			if (style == null)
+			{
+				return;
+			}
+
 			_text = _text != null ? _text : GetComponent<TMP_Text>();
 
 			if (_text == null)

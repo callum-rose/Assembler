@@ -36,10 +36,17 @@ namespace Assembler.Shell.Theming
 		/// The colour bound to <paramref name="role"/>. An unbound role returns magenta rather than throwing —
 		/// a missing role should be loud on screen, not fatal at startup.
 		/// </summary>
-		public Color GetColor(ColorRole role)
+		public Color GetColor(ColorRole? role)
 		{
+			if (role == null)
+			{
+				Debug.LogWarning($"{name}: asked for a colour without naming a role.", this);
+				return Color.magenta;
+			}
+
 			_colorsByRole ??= colors
-				.GroupBy(entry => entry.Role)
+				.Where(entry => entry.Role != null)
+				.GroupBy(entry => entry.Role!)
 				.ToDictionary(group => group.Key, group => group.First().Color);
 
 			if (_colorsByRole.TryGetValue(role, out var color))
@@ -54,10 +61,16 @@ namespace Assembler.Shell.Theming
 		/// <summary>
 		/// The style bound to <paramref name="id"/>, or null when the theme doesn't define one.
 		/// </summary>
-		public TextStyle? GetStyle(TextStyleId id)
+		public TextStyle? GetStyle(TextStyleId? id)
 		{
+			if (id == null)
+			{
+				return null;
+			}
+
 			_stylesById ??= textStyles
-				.GroupBy(style => style.Id)
+				.Where(style => style.Id != null)
+				.GroupBy(style => style.Id!)
 				.ToDictionary(group => group.Key, group => group.First());
 
 			return _stylesById.TryGetValue(id, out var style) ? style : null;
@@ -66,13 +79,14 @@ namespace Assembler.Shell.Theming
 		/// <summary>
 		/// Paints <paramref name="text"/> with the named style, resolving its colour role against this theme.
 		/// </summary>
-		public void ApplyStyle(TextStyleId id, TMP_Text text)
+		public void ApplyStyle(TextStyleId? id, TMP_Text text)
 		{
 			var style = GetStyle(id);
 
 			if (style is null)
 			{
-				Debug.LogWarning($"{name}: no text style bound to {id}.", this);
+				var named = id == null ? "(no style named)" : id.ToString();
+				Debug.LogWarning($"{name}: no text style bound to {named}.", this);
 				return;
 			}
 
@@ -95,14 +109,14 @@ namespace Assembler.Shell.Theming
 			_stylesById = null;
 		}
 
-		/// <summary>One row of the palette. A list rather than eighteen fields so roles can be appended freely.</summary>
+		/// <summary>One row of the palette. A list rather than a field per role so roles can be added freely.</summary>
 		[Serializable]
 		public sealed class ColorEntry
 		{
-			[SerializeField] private ColorRole role;
+			[SerializeField] private ColorRole? role;
 			[SerializeField] private Color color = Color.magenta;
 
-			public ColorRole Role => role;
+			public ColorRole? Role => role;
 
 			public Color Color => color;
 		}

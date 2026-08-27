@@ -13,44 +13,44 @@ MonoBehaviour:
   m_Name: ShellTheme
   m_EditorClassIdentifier: Assembler.Shell::Assembler.Shell.Theming.ShellTheme
   colors:
-  - role: 0
+  - role: {fileID: 11400000, guid: 76a04246d8b2b45a59f1473611eaee9e, type: 2}
     color: {r: 0.98039216, g: 0.9647059, b: 0.93333334, a: 1}
-  - role: 1
+  - role: {fileID: 11400000, guid: 6494bd7aa80fd4469a0e14599aac69c1, type: 2}
     color: {r: 1, g: 0.99215686, b: 0.972549, a: 1}
-  - role: 2
+  - role: {fileID: 11400000, guid: 7b3100371767d4edb9684630e201b29f, type: 2}
     color: {r: 0.9372549, g: 0.9137255, b: 0.8666667, a: 1}
-  - role: 3
+  - role: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
     color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
-  - role: 4
+  - role: {fileID: 11400000, guid: 56939f56692554570823630920016fb3, type: 2}
     color: {r: 0.30980393, g: 0.28235295, b: 0.23921569, a: 1}
-  - role: 5
+  - role: {fileID: 11400000, guid: 71dcc9ad51d0646ec9a2d734f6606e32, type: 2}
     color: {r: 0.5803922, g: 0.54509807, b: 0.4862745, a: 1}
-  - role: 6
+  - role: {fileID: 11400000, guid: 8553d1acce27b4718ab93834c580b37f, type: 2}
     color: {r: 0.84705883, g: 0.8117647, b: 0.74509805, a: 1}
-  - role: 7
+  - role: {fileID: 11400000, guid: f25f3fb8a8f7240fcbeb7507764812b8, type: 2}
     color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
-  - role: 8
+  - role: {fileID: 11400000, guid: 5bca41609746b415f81146f325943a04, type: 2}
     color: {r: 0.72156864, g: 0.07058824, b: 0.105882354, a: 1}
-  - role: 9
+  - role: {fileID: 11400000, guid: 88640870a191c4b7fa8f197673044182, type: 2}
     color: {r: 0.5411765, g: 0.44705883, b: 0.28235295, a: 1}
-  - role: 10
+  - role: {fileID: 11400000, guid: f7e500a3ac7754a558ca5a19fef8d895, type: 2}
     color: {r: 1, g: 0.99215686, b: 0.972549, a: 1}
-  - role: 11
+  - role: {fileID: 11400000, guid: 3d7c33f4a27c846b18bff990e8c3301a, type: 2}
     color: {r: 0.11372549, g: 0.47843137, b: 0.27058825, a: 1}
-  - role: 12
+  - role: {fileID: 11400000, guid: 00d5437f0152941d19b408c87a8716d6, type: 2}
     color: {r: 0.72156864, g: 0.07058824, b: 0.105882354, a: 1}
-  - role: 13
+  - role: {fileID: 11400000, guid: dc1f41613087a44f4b9f7d6cdd866173, type: 2}
     color: {r: 0.6039216, g: 0.38431373, b: 0.07058824, a: 1}
-  - role: 14
+  - role: {fileID: 11400000, guid: a7f9755263fbb42048980e9e5adccd0d, type: 2}
     color: {r: 0.90588236, g: 0.8784314, b: 0.8235294, a: 1}
-  - role: 15
+  - role: {fileID: 11400000, guid: bf79b67ee68034f0b810eaa00a18793c, type: 2}
     color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
-  - role: 16
+  - role: {fileID: 11400000, guid: 423518aad388a44c9a55e78d97c0d5aa, type: 2}
     color: {r: 0.98039216, g: 0.9647059, b: 0.93333334, a: 1}
-  - role: 17
+  - role: {fileID: 11400000, guid: 29e9d0b6de3264ea598bc1a77898b9b8, type: 2}
     color: {r: 0.09019608, g: 0.07450981, b: 0.050980393, a: 1}
   textStyles:
-  - id: 0
+  - id: {fileID: 11400000, guid: f449f03504aaa42e79fca14f6bf7b36f, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 27
     bold: 1
@@ -58,8 +58,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: -3
     lineSpacing: 0
-    color: 3
-  - id: 1
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 45e5a6e9be453477e9f4d1b113b0ca85, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 10
     bold: 0
@@ -67,8 +67,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 13
     lineSpacing: 0
-    color: 4
-  - id: 2
+    color: {fileID: 11400000, guid: 56939f56692554570823630920016fb3, type: 2}
+  - id: {fileID: 11400000, guid: ec8fa8da9338b482787fe2a5a422f1a8, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 12
     bold: 1
@@ -76,8 +76,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 16
     lineSpacing: 0
-    color: 5
-  - id: 3
+    color: {fileID: 11400000, guid: 71dcc9ad51d0646ec9a2d734f6606e32, type: 2}
+  - id: {fileID: 11400000, guid: 1ad184a12e20248c1adc7d89b76655f8, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 15
     bold: 1
@@ -85,8 +85,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 0
-    color: 3
-  - id: 4
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 729dc01bdd5d64964bb17157a375dadd, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 10.5
     bold: 1
@@ -94,8 +94,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 20
     lineSpacing: 0
-    color: 8
-  - id: 5
+    color: {fileID: 11400000, guid: 5bca41609746b415f81146f325943a04, type: 2}
+  - id: {fileID: 11400000, guid: 0e6af7454777449e5857a77973f9104d, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 30
     bold: 1
@@ -103,8 +103,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: -2.5
     lineSpacing: 8
-    color: 3
-  - id: 6
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 0ce2ddcfabe2d4591b82877060d33e4d, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 10.5
     bold: 0
@@ -112,8 +112,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 10
     lineSpacing: 0
-    color: 5
-  - id: 7
+    color: {fileID: 11400000, guid: 71dcc9ad51d0646ec9a2d734f6606e32, type: 2}
+  - id: {fileID: 11400000, guid: 5433021eac56b48229ecfed25a82b7f4, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 15
     bold: 0
@@ -121,8 +121,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 52
-    color: 4
-  - id: 8
+    color: {fileID: 11400000, guid: 56939f56692554570823630920016fb3, type: 2}
+  - id: {fileID: 11400000, guid: 781102069c5124151a1c52f8ec2c7981, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 15
     bold: 1
@@ -130,8 +130,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 0
-    color: 8
-  - id: 9
+    color: {fileID: 11400000, guid: 5bca41609746b415f81146f325943a04, type: 2}
+  - id: {fileID: 11400000, guid: bbc294fb54daa4a31986aa2264fa105c, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 10.5
     bold: 1
@@ -139,8 +139,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 20
     lineSpacing: 0
-    color: 3
-  - id: 10
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: a2d9362563dd94fcc8ba3d535f16bebb, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 15.5
     bold: 1
@@ -148,8 +148,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: -1.2
     lineSpacing: 18
-    color: 3
-  - id: 11
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 550b66578fb76402c917ab5d2bbcac70, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 12.5
     bold: 0
@@ -157,8 +157,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 42
-    color: 4
-  - id: 12
+    color: {fileID: 11400000, guid: 56939f56692554570823630920016fb3, type: 2}
+  - id: {fileID: 11400000, guid: 05ad7dc144cac431c90fa297a04e4be8, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 9.5
     bold: 0
@@ -166,8 +166,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 11
     lineSpacing: 0
-    color: 5
-  - id: 13
+    color: {fileID: 11400000, guid: 71dcc9ad51d0646ec9a2d734f6606e32, type: 2}
+  - id: {fileID: 11400000, guid: 8cded6c60621a4a108d5c85bae2dd0c2, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 14.5
     bold: 1
@@ -175,8 +175,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 22
-    color: 3
-  - id: 14
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 7a39f67e7232440b49b9bb40d074d4ef, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 13
     bold: 1
@@ -184,8 +184,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 14
     lineSpacing: 0
-    color: 16
-  - id: 15
+    color: {fileID: 11400000, guid: 423518aad388a44c9a55e78d97c0d5aa, type: 2}
+  - id: {fileID: 11400000, guid: a556c8446ea2d46bd960e7de607d6666, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 19
     bold: 1
@@ -193,8 +193,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 0
-    color: 3
-  - id: 16
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 1a7155783ac9f421da69e2771943d260, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 9.5
     bold: 0
@@ -202,8 +202,8 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 10
     lineSpacing: 0
-    color: 5
-  - id: 17
+    color: {fileID: 11400000, guid: 71dcc9ad51d0646ec9a2d734f6606e32, type: 2}
+  - id: {fileID: 11400000, guid: 638ba512c28fa4109a1fe08a1ffd4c8c, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 15
     bold: 0
@@ -211,8 +211,8 @@ MonoBehaviour:
     textCase: 0
     characterSpacing: 0
     lineSpacing: 0
-    color: 3
-  - id: 18
+    color: {fileID: 11400000, guid: 28a561134c81640f5be00d109f237799, type: 2}
+  - id: {fileID: 11400000, guid: 8db41d9863e444ba690f5741e588d764, type: 2}
     font: {fileID: 11400000, guid: 117c58121ccaf4782b2ae09cbdfaf53a, type: 2}
     fontSize: 11
     bold: 1
@@ -220,7 +220,7 @@ MonoBehaviour:
     textCase: 1
     characterSpacing: 18
     lineSpacing: 0
-    color: 8
+    color: {fileID: 11400000, guid: 5bca41609746b415f81146f325943a04, type: 2}
   motion:
     screenTransition:
       duration: 0.12
