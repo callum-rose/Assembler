@@ -24,6 +24,7 @@ namespace Assembler.Parsing
 				["sphere collider"] = SphereColliderInfo.Create,
 				["capsule collider"] = CapsuleColliderInfo.Create,
 				["mesh collider"] = MeshColliderInfo.Create,
+				["part colliders"] = PartColliderInfo.Create,
 				["rigidbody"] = RigidbodyInfo.Create,
 				["add force"] = AddForceInfo.Create,
 				["add impulse"] = AddImpulseInfo.Create,

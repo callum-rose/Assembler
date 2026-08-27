@@ -487,11 +487,10 @@ A constructible builder for an irregular list of world positions — the imperat
 _No public static methods._
 
 ## `RandomMath`
-First-class randomness helpers for descriptor expressions, wrapping
-            UnityEngine.Random. Registered globally in CompiledExpressionsRegistry so every
-            expression can call these by bare name (RandomFloat, RandomOnCircle, RandomColor,
-            ...). All numeric parameters are float so int arguments coerce automatically during
-            overload resolution. Lists are carried as List<T>, matching GridMath.
+First-class randomness helpers for descriptor expressions, registered globally in
+            CompiledExpressionsRegistry so every expression can call these by bare name (RandomFloat,
+            RandomOnCircle, RandomColor, ...). All numeric parameters are float so int arguments coerce
+            automatically during overload resolution. Lists are carried as List<T>, matching GridMath.
 
 ### `bool Chance(float probability)`
 True with the given probability.
@@ -536,12 +535,12 @@ A random opaque colour with each channel between the matching channels of two co
 **Returns** (Color): A random opaque Color blended per channel between a and b.
 
 ### `float RandomFloat(float min, float max)`
-A random float in the inclusive range [min, max].
+A random float in the range [min, max).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | min | float | Lower bound (inclusive). |
-| max | float | Upper bound (inclusive). |
+| max | float | Upper bound (exclusive). |
 
 **Returns** (float): A uniformly random float in the range.
 
@@ -572,6 +571,13 @@ A random point on the circumference of a circle of the given radius (z = 0).
 | radius | float | The circle radius. |
 
 **Returns** (Vector3): A random Vector3 on the circle, in the XY plane.
+
+### `void Seed(UInt32 seed)`
+Reseeds the ambient generator so every subsequent draw follows a fresh, reproducible sequence. Called once per run by the builder; the same seed yields the same game randomness.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| seed | UInt32 | The run seed. |
 
 ### `int WeightedPickIndex(List<float> weights)`
 An index in [0, weights.Count) chosen with probability proportional to each weight.
@@ -690,7 +696,7 @@ First-class steering helpers for descriptor expressions, registered globally in
             movement function returns a desired-velocity Vector3, so they compose inside a velocity: !expr
             (or feed the steering aggregator behaviour). Positions/velocities are carried as Vector3
             (z = 0 for 2D), matching VectorMath; all numeric parameters are float so int arguments coerce
-            automatically. Wander draws on the global RNG and is therefore non-deterministic, like RandomMath.
+            automatically. Wander draws on the same seeded RNG as RandomMath, so it replays with the run seed.
 
 ### `Vector3 Alignment(Vector3 velocity, List<Vector3> neighbourVelocities, float maxSpeed)`
 Steer to match the average heading of nearby neighbours, for flock alignment.
@@ -829,7 +835,7 @@ Repulsion velocity that pushes away from nearby neighbours, for flock/crowd sepa
 **Returns** (Vector3): A velocity steering away from crowding neighbours, or zero if none are close.
 
 ### `Vector3 Wander(Vector3 velocity, float maxSpeed, float jitterDegrees)`
-Nudge the current heading by a random jitter, for aimless roaming. Non-deterministic.
+Nudge the current heading by a random jitter, for aimless roaming. Uses the seeded RNG.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -914,6 +920,15 @@ Unit forward direction for a full set of euler angles in degrees, equivalent to 
 
 **Returns** (Vector3): The unit forward vector.
 
+### `Vector3 ForwardFromRotation2D(float degrees)`
+Unit forward direction for a 2D top-down entity from its Z-axis rotation, in the XY plane. Rotation 0 faces +Y (up), 90 faces -X — the convention for a sprite drawn pointing up, matching Quaternion.Euler(0, 0, degrees) * Vector3.up. Feed it an entity's Rotation.z to get its facing direction; drops the sin/cos boilerplate every top-down shooter ("thrust along facing") would otherwise hand-roll. This is the +Y-up counterpart to the +X-forward Heading2D/LookRotation2D convention in SteeringMath.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| degrees | float | Z-axis rotation in degrees (counter-clockwise). |
+
+**Returns** (Vector3): The unit forward vector (-sin(degrees), cos(degrees), 0).
+
 ### `Vector3 ForwardFromYaw(float yawDegrees)`
 Unit forward direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane. Yaw 0 faces +Z, yaw 90 faces +X — matching Quaternion.Euler(0, yaw, 0) * Vector3.forward. Replaces hand-rolled sin/cos forward vectors when building first-person / 3D directional movement ("move forward relative to facing").
 
@@ -971,6 +986,15 @@ Unit right direction for a full set of euler angles in degrees, equivalent to Qu
 | eulerAngles | Vector3 | Euler angles in degrees (x = pitch, y = yaw, z = roll). |
 
 **Returns** (Vector3): The unit right vector.
+
+### `Vector3 RightFromRotation2D(float degrees)`
+Unit right direction for a 2D top-down entity from its Z-axis rotation, in the XY plane — 90 degrees clockwise of Single). Rotation 0 gives +X (right), 90 gives +Y. Use for strafing or lateral offsets relative to facing.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| degrees | float | Z-axis rotation in degrees (counter-clockwise). |
+
+**Returns** (Vector3): The unit right vector (cos(degrees), sin(degrees), 0).
 
 ### `Vector3 RightFromYaw(float yawDegrees)`
 Unit right direction for a yaw angle (rotation about the +Y axis), in the XZ ground plane — 90 degrees clockwise of Single), matching Quaternion.Euler(0, yaw, 0) * Vector3.right. Use for strafing.
