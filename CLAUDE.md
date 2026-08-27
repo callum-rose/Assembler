@@ -17,3 +17,7 @@ The five canonical triage roles, each label string equal to its name. See `docs/
 ### Domain docs
 
 Single-context — `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Unity assets
+
+Never hand-author Unity asset files (`.prefab`, `.unity`, `.asset`, `.mat`, …). Ask the user to check the branch out in their main checkout and create them via the `unity-mcp` editor tools — see [Creating Unity assets](Assembler/CLAUDE.md#creating-unity-assets).
