@@ -1,0 +1,412 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;0,6..72,800;1,6..72,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; -webkit-font-smoothing: antialiased; }
+    a { color: #b8121b; text-decoration: none; }
+    a:hover { color: #17130d; }
+    code { font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; }
+    b { font-weight: 700; }
+  </style>
+</helmet>
+<div style="background: #faf6ee; min-height: 100%; padding: 34px 36px 44px">
+  <header style="display: flex; flex-direction: column; gap: 0; margin-bottom: 26px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; border-bottom: 3px solid #17130d; padding-bottom: 9px">
+      <h1 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #17130d">The Daily <span style="color: #b8121b">Build</span></h1>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #948b7c">Shell UI atlas &middot; 1024&times;512 &middot; PPU 4</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #17130d; padding: 7px 0 8px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: #4f483d">
+      <span>Assembly</span>
+      <span style="color: #948b7c">Sprites &rarr; the 7.2 inventory</span>
+    </div>
+  </header>
+
+  <p style="margin: 0 0 26px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 1.6; color: #4f483d; max-width: 84ch; text-wrap: pretty">
+    Each recipe lists its layers back to front, with the colour role each one binds. Two rules cut across all of them: <b>nothing raycasts except things named HitTarget</b> (7.4), so every decorative Graphic sets <code style="font-size: 11px">raycastTarget = false</code>; and every tween takes <code style="font-size: 11px">SetLink(gameObject)</code> (8.2), because cached screens deactivate constantly and an unlinked tween completing invisibly corrupts the next OnEnter.
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px">
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">LetterpressButton</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #b8121b; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">7.3 &middot; Selectable</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="position: relative; width: 232px; height: 52px">
+  <div style="position: absolute; left: 4px; top: 4px; width: 228px; height: 48px; background: #b8121b; border-radius: 2px"></div>
+  <div style="position: absolute; left: 0; top: 0; width: 228px; height: 48px; background: #17130d; border-radius: 2px; display: flex; align-items: center; justify-content: center">
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #faf6ee">Play today's</span>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">HitTarget</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">&mdash;</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Invisible Graphic, 44&times;44 minimum, <b>never</b> animated. The only thing in the prefab that raycasts.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Accent</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The ledge. Offset +4, &minus;4 units behind the face &mdash; the depth a press consumes.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">ButtonFace</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The face. DOTween to +4, &minus;4 over Motion.ButtonPress (80&thinsp;ms), then back.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">TMP label</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">ButtonInk</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">TextStyle <b>ButtonLabel</b> &mdash; 13&thinsp;u, 800, upper, +14 tracking.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">Disabled fades a CanvasGroup rather than swapping sprites. <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px">Navigation = None</code>; the EventSystem still gives slide-off-cancel for free.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Button variants</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #efe9dd; color: #4f483d; padding: 3px 6px; border-radius: 2px; white-space: nowrap">7.2 inventory</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="display: flex; align-items: center; gap: 26px">
+  <div style="position: relative; width: 118px; height: 46px">
+    <div style="position: absolute; left: 4px; top: 4px; width: 114px; height: 42px; background: #d8cfbe; border-radius: 2px"></div>
+    <div style="position: absolute; left: 0; top: 0; width: 114px; height: 42px; background: #fffdf8; border: 1.5px solid #17130d; border-radius: 2px; display: flex; align-items: center; justify-content: center">
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #17130d">Archive</span>
+    </div>
+  </div>
+  <div style="position: relative; width: 118px; height: 46px">
+    <div style="position: absolute; left: 4px; top: 4px; width: 114px; height: 42px; background: #17130d; border-radius: 2px; display: flex; align-items: center; justify-content: center">
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #faf6ee">Pressed</span>
+    </div>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">PlateLine</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">RuleHard</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Outline variant &mdash; the archive button. 1.5&thinsp;u keyline, ledge tinted Rule.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Sunk</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Quiet variant &mdash; a sheet button with no ledge at all.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate + Icon*</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">ButtonFace</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Icon variant &mdash; face plus a 24&thinsp;u glyph, no label.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">&mdash; pressed &mdash;</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">&mdash;</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The face sits on the ledge; the ledge is gone because the face is standing on it.</span>
+  </li></ul>
+    
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Played badge</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #17130d; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">7.5 &middot; art only</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="position: relative; width: 148px; height: 92px; background: #efe9dd; overflow: hidden">
+  <svg viewBox="0 0 100 62" width="148" height="92" xmlns="http://www.w3.org/2000/svg" style="display: block; opacity: .5; filter: grayscale(1)">
+    <rect width="100" height="62" fill="#9aa2ad"/><circle cx="30" cy="24" r="13" fill="#5c6672"/><rect x="52" y="16" width="26" height="34" rx="2" fill="#767f8b"/>
+  </svg>
+  <div style="position: absolute; left: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; background: #17130d; display: flex; align-items: center; justify-content: center">
+    <svg viewBox="0 0 24 24" width="15" height="15" xmlns="http://www.w3.org/2000/svg" style="display: block; flex: none"><path d="M5 12.7 L9.9 17.6 L19 7.2" fill="none" stroke="#faf6ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">art Image</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">ArtBackground</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Alpha to 0.5 (light) / 0.42 (dark). The fade goes on the <b>art</b>, never its container.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Disc</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Ink</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">18&thinsp;u, inset 6&thinsp;u from the art's top-left corner.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">IconTick</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Paper</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">18&thinsp;u inside the disc, at full opacity &mdash; the badge is what stops grey reading as "failed to load".</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">Detail art takes the same badge at 24&thinsp;u, an archive row at 15&thinsp;u.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">PLAY stamp</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #b8121b; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">11.7 &middot; hero</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="position: relative; width: 168px; height: 84px; background: #efe9dd; overflow: hidden">
+  <svg viewBox="0 0 100 50" width="168" height="84" xmlns="http://www.w3.org/2000/svg" style="display: block">
+    <rect width="100" height="50" fill="#7d6f56"/><circle cx="26" cy="20" r="11" fill="#c0a87f"/><rect x="48" y="12" width="24" height="28" rx="2" fill="#a08e6d"/>
+  </svg>
+  <div style="position: absolute; right: 10px; bottom: 10px; transform: rotate(-8deg); border: 2.5px solid #b8121b; border-radius: 3px; padding: 5px 10px">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; color: #b8121b">PLAY</span>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">StampFrame</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Accent</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">2.5&thinsp;u keyline, radius 3&thinsp;u. Rotate the RectTransform &minus;8&deg;.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">TMP label</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Accent</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">TextStyle <b>Stamp</b> &mdash; 11&thinsp;u, 800, upper, +18 tracking.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">Scale-slams from 2.4&times; on enter. Struck on unplayed lead art only; the played hero shows the tick and "Played today" instead.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Result slip</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #b8121b; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">8.6 &middot; set piece</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="position: relative; width: 200px; height: 118px">
+  <div style="position: absolute; left: 8px; top: 8px; width: 192px; height: 110px; background: #b8121b; border-radius: 2px"></div>
+  <div style="position: absolute; left: 0; top: 0; width: 192px; height: 110px; background: #fffdf8; border: 1px solid #17130d; border-radius: 2px; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 12px 14px">
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase; color: #948b7c">Final edition</span>
+    <div style="width: 100%; height: 4px; border-bottom: 4px double #17130d; margin: 8px 0 11px"></div>
+    <span style="display: inline-block; border: 3px solid #1d7a45; color: #1d7a45; border-radius: 3px; padding: 4px 13px; transform: rotate(-4deg); font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 16px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase">Won</span>
+    <span style="margin-top: 12px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 700; color: #17130d">12,480</span>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Accent</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The slip's ledge &mdash; 8&thinsp;u offset here, twice a button's.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Plate</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Surface</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The slip ground.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">PlateHairline</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">RuleHard</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">1&thinsp;u keyline over the ground.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">RuleDouble</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">RuleHard</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">4&thinsp;u tall, under the kicker.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">VerdictFrame</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Good / Bad</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">3&thinsp;u keyline, rotate &minus;4&deg;, Motion.VerdictStamp.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">The odometer wraps its digits in <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px">&lt;mspace&gt;</code> while counting &mdash; TMP has no tabular figures.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">SheetFrame</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #17130d; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">3.6 &middot; overlay</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="width: 236px; background: #fffdf8; border-top: 1px solid #d8cfbe; border-radius: 16px 16px 0 0; padding: 8px 16px 20px; display: flex; flex-direction: column; align-items: center; gap: 0">
+  <div style="width: 38px; height: 4px; border-radius: 4px; background: #d8cfbe; margin: 4px 0 14px"></div>
+  <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 19px; font-weight: 700; color: #17130d">Paused</span>
+  <span style="margin-top: 3px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c">Spot Kick</span>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">black &alpha;.72</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The scrim, full-bleed outside the safe area.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">SheetTop</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Surface</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">16&thinsp;u top corners, square bottom &mdash; it sits flush on the screen edge.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">PillSmall</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Rule</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The grab handle, 38&thinsp;&times;&thinsp;4&thinsp;u.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">Overlays are not screens and never enter the back stack. Their tweens run unscaled &mdash; they animate at <code style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px">timeScale = 0</code>.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Search field and rows</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #efe9dd; color: #4f483d; padding: 3px 6px; border-radius: 2px; white-space: nowrap">6.4 &middot; archive</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="display: flex; align-items: center; gap: 8px; width: 246px; background: #efe9dd; border-radius: 8px; padding: 10px 12px">
+  <svg viewBox="0 0 24 24" width="17" height="17" xmlns="http://www.w3.org/2000/svg" style="display: block; flex: none"><circle cx="10.6" cy="10.6" r="6.4" fill="none" stroke="#948b7c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.3 15.3 L20.2 20.2" fill="none" stroke="#948b7c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span style="flex: 1; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 15px; color: #948b7c">Search the archive</span>
+  <span style="width: 18px; height: 18px; border-radius: 50%; background: #948b7c; display: flex; align-items: center; justify-content: center; flex: none"><svg viewBox="0 0 24 24" width="11" height="11" xmlns="http://www.w3.org/2000/svg" style="display: block; flex: none"><path d="M6.6 6.6 L17.4 17.4" fill="none" stroke="#faf6ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.4 6.6 L6.6 17.4" fill="none" stroke="#faf6ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Field</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Sunk</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Radius 8&thinsp;u. The one rounded surface in the shell.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">IconSearch</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">InkTertiary</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">20&thinsp;u, leading the field.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Disc + IconClose</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">InkTertiary / Paper</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The clear button, 18&thinsp;u, in its own 44&thinsp;u HitTarget.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Rule</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The 1&thinsp;u rule under each ArchiveRow.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">IconChevronRight</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">InkTertiary</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Row disclosure, 16&thinsp;u at 50% alpha.</span>
+  </li></ul>
+    
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Toggle and segments</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #efe9dd; color: #4f483d; padding: 3px 6px; border-radius: 2px; white-space: nowrap">11.8 &middot; settings</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="display: flex; align-items: center; gap: 30px">
+  <div style="width: 46px; height: 28px; border-radius: 999px; background: #1d7a45; position: relative; flex: none">
+    <div style="position: absolute; top: 3px; left: 21px; width: 22px; height: 22px; border-radius: 50%; background: #faf6ee"></div>
+  </div>
+  <div style="display: flex; gap: 0; background: #efe9dd; border-radius: 6px; padding: 2px">
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 4px; background: #faf6ee; color: #17130d">Light</span><span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 4px; background: transparent; color: #948b7c">Dark</span><span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 4px; background: transparent; color: #948b7c">Auto</span>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Pill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Sunk &rarr; Good</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">46&thinsp;&times;&thinsp;28&thinsp;u track. Never render Pill below 16&thinsp;u tall.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Disc</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Paper</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">22&thinsp;u knob, travels 18&thinsp;u.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Segment</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Sunk</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Radius 6&thinsp;u track, 2&thinsp;u padding.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Chip</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Paper</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Radius 4&thinsp;u thumb.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">The theme row is where dark mode (#575) lands. No sound or haptics row &mdash; v1 has nothing to turn down.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Section rules and stat band</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #17130d; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">6.1 / 7.1</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="width: 250px; display: flex; flex-direction: column; gap: 0">
+  <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 7px; border-bottom: 4px double #17130d">
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">More editions</span>
+  </div>
+  <div style="display: flex; border-top: 1px solid #d8cfbe; border-bottom: 1px solid #d8cfbe; margin-top: 20px">
+    <div style="flex: 1; text-align: center; padding: 11px 4px; ">
+      <b style="display: block; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 700; color: #17130d">4</b>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #948b7c">Plays</span>
+    </div><div style="flex: 1; text-align: center; padding: 11px 4px; border-left: 1px solid #d8cfbe">
+      <b style="display: block; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 700; color: #17130d">12,480</b>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #948b7c">Best</span>
+    </div><div style="flex: 1; text-align: center; padding: 11px 4px; border-left: 1px solid #d8cfbe">
+      <b style="display: block; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 700; color: #17130d">31 Jul</b>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: #948b7c">Last</span>
+    </div>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">RuleDouble</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">RuleHard</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Under a SectionHeader. Pin to 4&thinsp;u tall; stretch horizontally only.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">RuleHard</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The 3&thinsp;u masthead rule and the 1&thinsp;u folio rule.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Rule</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Stat band top and bottom hairlines, and the 1&thinsp;u dividers between cells.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">The stat band stays inline in the detail screen by fiat (7.1) &mdash; no reuse is expected, so it earns no prefab.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">GameCard grid</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #efe9dd; color: #4f483d; padding: 3px 6px; border-radius: 2px; white-space: nowrap">6.3 &middot; feed</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; width: 250px">
+  <div style="display: flex; flex-direction: column; padding: 0 0 8px; padding-right: 14px; border-right: 1px solid #d8cfbe">
+    <div style="width: 100%; aspect-ratio: 16 / 10; background: #efe9dd; margin-bottom: 8px"></div>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 700; line-height: 1.18; color: #17130d">Heatwave Pushes The Grid</span>
+    <span style="margin-top: 6px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 8.5px; letter-spacing: 0.11em; text-transform: uppercase; color: #948b7c">30 Jul</span>
+  </div><div style="display: flex; flex-direction: column; padding: 0 0 8px; padding-left: 14px">
+    <div style="width: 100%; aspect-ratio: 16 / 10; background: #efe9dd; margin-bottom: 8px"></div>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 13px; font-weight: 700; line-height: 1.18; color: #17130d">Heatwave Pushes The Grid</span>
+    <span style="margin-top: 6px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 8.5px; letter-spacing: 0.11em; text-transform: uppercase; color: #948b7c">30 Jul</span>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">ArtBackground</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The art ground, 16:10, behind the generated placeholder (7.6).</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Rule</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The column rule &mdash; 1&thinsp;u, owned by the <b>grid</b>, not the cell.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Rule</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The 1&thinsp;u rule above every row after the first.</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">A newspaper grid is defined by the rules between cells, so the gutter is zero and the rules do the spacing. A trailing odd card must not hang a rule with nothing beside it.</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">GameStrip</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #17130d; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">10.7 &middot; in game</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="width: 250px; background: #0d1018; padding: 12px 14px; display: flex; align-items: center; gap: 12px">
+  <span style="width: 34px; height: 34px; border-radius: 8px; background: rgba(255,255,255,.12); display: flex; align-items: center; justify-content: center; flex: none"><svg viewBox="0 0 24 24" width="17" height="17" xmlns="http://www.w3.org/2000/svg" style="display: block; flex: none"><rect x="7.4" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#ffffff"/><rect x="13.2" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#ffffff"/></svg></span>
+  <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 12px; letter-spacing: 0.1em; color: rgba(255,255,255,.75)">SPOT KICK</span>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">black</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The strip ground, full-bleed, safe-area-padded content.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Field</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">white &alpha;.12</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">34&thinsp;u pause plate.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">IconPause</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">white</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">20&thinsp;u glyph in a 44&thinsp;u HitTarget.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">TMP title</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">white &alpha;.75</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Monospace &mdash; the machine room does not speak serif (5.7).</span>
+  </li></ul>
+    <p style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.5; color: #948b7c">Right side is reserved-empty. Contended real estate: validate it against a real game (#573).</p>
+  </section>
+    <section style="display: flex; flex-direction: column; gap: 13px; background: #fffdf8; border: 1px solid #d8cfbe; padding: 17px 18px 18px">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 4px double #17130d">
+      <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #17130d">Launch overlay</h4>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: #17130d; color: #fffdf8; padding: 3px 6px; border-radius: 2px; white-space: nowrap">10.6 &middot; states</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; min-height: 108px; padding: 14px 10px; background: #faf6ee; border: 1px solid #d8cfbe"><div style="width: 236px; background: #06070a; padding: 24px 18px; display: flex; flex-direction: column; align-items: center; gap: 14px">
+  <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,.55)">Building</span>
+  <div style="width: 190px; height: 3px; border-radius: 3px; background: #24262e; overflow: hidden">
+    <div style="width: 118px; height: 3px; border-radius: 3px; background: #b8121b"></div>
+  </div>
+</div></div>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column"><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">Fill</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">#06070a</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Full-bleed black, outside the safe area.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">PillSmall</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">white &alpha;.12</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">190&thinsp;&times;&thinsp;3&thinsp;u progress track.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">PillSmall</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">Accent</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">The fill, driven over Motion.LaunchProgress.</span>
+  </li><li style="display: flex; align-items: baseline; gap: 9px; padding: 5px 0; border-bottom: 1px solid #d8cfbe">
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10.5px; font-weight: 600; color: #17130d; flex: none; min-width: 104px">TMP state</span>
+    <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9.5px; color: #8a7248; flex: none; min-width: 92px">white &alpha;.55</span>
+    <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.4; color: #4f483d">Cached / Downloading / Parsing / Building / Failed, in mono.</span>
+  </li></ul>
+    
+  </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

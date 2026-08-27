@@ -1,0 +1,421 @@
+{
+  "sheet": "1024x512",
+  "pixelsPerUnit": 4,
+  "note": "Border is [left, bottom, right, top] in sheet pixels, matching UnityEditor.SpriteMetaData.border. Import as Sprite (2D and UI), Multiple, Mesh Type Full Rect, Alpha Is Transparency on, Filter Bilinear, Compression None, Pixels Per Unit 4.",
+  "sprites": [
+    {
+      "name": "Plate",
+      "rect": {
+        "x": 16,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        9,
+        9,
+        9,
+        9
+      ],
+      "mode": "Sliced",
+      "colorRole": "ButtonFace / Surface / Offset",
+      "usedBy": "LetterpressButton plate and face, sheet buttons, the result slip body, feed art frames. Corner radius 2u."
+    },
+    {
+      "name": "PlateLine",
+      "rect": {
+        "x": 160,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        11,
+        11,
+        11,
+        11
+      ],
+      "mode": "Sliced",
+      "colorRole": "RuleHard / Rule",
+      "usedBy": "The outlined \"Open the archive\" button and the played play-button (1.5u keyline, radius 2u)."
+    },
+    {
+      "name": "PlateHairline",
+      "rect": {
+        "x": 304,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        10,
+        10,
+        10,
+        10
+      ],
+      "mode": "Sliced",
+      "colorRole": "Rule / RuleHard",
+      "usedBy": "The result slip border and the how-to-play block (1u keyline, radius 2u)."
+    },
+    {
+      "name": "StampFrame",
+      "rect": {
+        "x": 448,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        17,
+        17,
+        17,
+        17
+      ],
+      "mode": "Sliced",
+      "colorRole": "Accent",
+      "usedBy": "The rubber PLAY stamp struck on unplayed lead art (2.5u keyline, radius 3u). Rotate the RectTransform -8 degrees."
+    },
+    {
+      "name": "VerdictFrame",
+      "rect": {
+        "x": 592,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        18,
+        18,
+        18,
+        18
+      ],
+      "mode": "Sliced",
+      "colorRole": "Good / Bad",
+      "usedBy": "The stamped verdict on the result slip (3u keyline, radius 3u). Rotate -4 degrees; scale-slam per Motion.VerdictStamp."
+    },
+    {
+      "name": "Field",
+      "rect": {
+        "x": 736,
+        "y": 32,
+        "w": 128,
+        "h": 128
+      },
+      "border": [
+        33,
+        33,
+        33,
+        33
+      ],
+      "mode": "Sliced",
+      "colorRole": "Sunk",
+      "usedBy": "The archive search field and the game strip pause button (radius 8u)."
+    },
+    {
+      "name": "Segment",
+      "rect": {
+        "x": 880,
+        "y": 32,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "mode": "Sliced",
+      "colorRole": "Sunk",
+      "usedBy": "The settings theme segmented-control track (radius 6u)."
+    },
+    {
+      "name": "SheetTop",
+      "rect": {
+        "x": 16,
+        "y": 192,
+        "w": 160,
+        "h": 160
+      },
+      "border": [
+        65,
+        4,
+        65,
+        65
+      ],
+      "mode": "Sliced",
+      "colorRole": "Surface",
+      "usedBy": "SheetFrame — the pause sheet chrome. Top corners 16u, bottom square, so it can sit flush on the safe-area edge."
+    },
+    {
+      "name": "Chip",
+      "rect": {
+        "x": 208,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      },
+      "border": [
+        17,
+        17,
+        17,
+        17
+      ],
+      "mode": "Sliced",
+      "colorRole": "ButtonFace / Paper",
+      "usedBy": "The archive filter chips and the segmented-control thumb (radius 4u)."
+    },
+    {
+      "name": "Disc",
+      "rect": {
+        "x": 288,
+        "y": 192,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Ink / Accent / Paper",
+      "usedBy": "The played tick badge (18u), the toggle knob (22u), the how-to-play bullet and the staging pulse dot (5u). Simple mode, Preserve Aspect on."
+    },
+    {
+      "name": "Pill",
+      "rect": {
+        "x": 400,
+        "y": 192,
+        "w": 128,
+        "h": 64
+      },
+      "border": [
+        31,
+        31,
+        31,
+        31
+      ],
+      "mode": "Sliced",
+      "colorRole": "Sunk / Good",
+      "usedBy": "The dev-mode toggle track (46 x 28u). Fully round; never render it below 16u tall."
+    },
+    {
+      "name": "PillSmall",
+      "rect": {
+        "x": 560,
+        "y": 192,
+        "w": 24,
+        "h": 12
+      },
+      "border": [
+        5,
+        5,
+        5,
+        5
+      ],
+      "mode": "Sliced",
+      "colorRole": "Rule / Accent",
+      "usedBy": "The pause sheet grab handle (38 x 4u) and the launch overlay progress track and fill (3u). Never below 3u tall."
+    },
+    {
+      "name": "RuleDouble",
+      "rect": {
+        "x": 656,
+        "y": 192,
+        "w": 16,
+        "h": 16
+      },
+      "border": [
+        7,
+        0,
+        7,
+        0
+      ],
+      "mode": "Sliced",
+      "colorRole": "RuleHard",
+      "usedBy": "The double rule under a SectionHeader and over the slip kicker. Bands are 1u / 2u / 1u — stretch horizontally only, height fixed at 4u."
+    },
+    {
+      "name": "Fill",
+      "rect": {
+        "x": 752,
+        "y": 192,
+        "w": 16,
+        "h": 16
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "any",
+      "usedBy": "Every square surface: hairlines, the masthead rule, the letterpress ledge, stat-band dividers, column rules, the overlay scrim, full-bleed grounds."
+    },
+    {
+      "name": "IconSearch",
+      "rect": {
+        "x": 16,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Ink",
+      "usedBy": "Masthead action -> Archive."
+    },
+    {
+      "name": "IconSettings",
+      "rect": {
+        "x": 128,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Ink",
+      "usedBy": "Masthead action -> Settings."
+    },
+    {
+      "name": "IconChevronLeft",
+      "rect": {
+        "x": 240,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Ink",
+      "usedBy": "The back button, which names the screen beneath the top of the stack (UIPLAN 3.3)."
+    },
+    {
+      "name": "IconChevronRight",
+      "rect": {
+        "x": 352,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "InkTertiary",
+      "usedBy": "Archive row and settings row disclosure."
+    },
+    {
+      "name": "IconTick",
+      "rect": {
+        "x": 464,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Paper",
+      "usedBy": "The played mark inside an 18u Disc — full opacity while the art behind it fades (UIPLAN 7.5)."
+    },
+    {
+      "name": "IconClose",
+      "rect": {
+        "x": 576,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Paper",
+      "usedBy": "Clears the archive search field."
+    },
+    {
+      "name": "IconPause",
+      "rect": {
+        "x": 688,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "OnAccent",
+      "usedBy": "The game strip pause glyph, in a 44u HitTarget (UIPLAN 10.7)."
+    },
+    {
+      "name": "IconPlay",
+      "rect": {
+        "x": 800,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "ButtonInk",
+      "usedBy": "\"Next game\" on the result slip."
+    },
+    {
+      "name": "IconSparkle",
+      "rect": {
+        "x": 912,
+        "y": 384,
+        "w": 96,
+        "h": 96
+      },
+      "border": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "mode": "Simple",
+      "colorRole": "Good",
+      "usedBy": "\"New best\" on the result slip."
+    }
+  ]
+}

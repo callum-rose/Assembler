@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;0,6..72,800;1,6..72,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; -webkit-font-smoothing: antialiased; }
+    a { color: #b8121b; text-decoration: none; }
+    a:hover { color: #17130d; }
+    .legend b { color: #f8f2e5; font-weight: 700; }
+    .legend code { font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #f8f2e5; }
+  </style>
+</helmet>
+<div style="background: #13100b; min-height: 100%; padding: 34px 40px 40px">
+  <header style="display: flex; flex-direction: column; gap: 0; margin-bottom: 26px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; border-bottom: 3px solid #f8f2e5; padding-bottom: 9px">
+      <h1 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #f8f2e5">The Daily <span style="color: #e8574a">Build</span></h1>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #7b7263">Shell UI atlas &middot; 1024&times;512 &middot; PPU 4</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #f8f2e5; padding: 7px 0 8px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: #7b7263">
+      <span>The sprite sheet</span>
+      <span style="color: #7b7263">23 sprites &middot; white on transparent</span>
+    </div>
+  </header>
+
+  <div style="margin-bottom: 30px">
+    <svg viewBox="-42 -26 1096 572" width="1096" height="572" xmlns="http://www.w3.org/2000/svg" style="display: block">
+      <rect x="0" y="0" width="1024" height="512" fill="#0d0b07"/>
+      <path d="M0 0 L0 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M64 0 L64 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M128 0 L128 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M192 0 L192 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M256 0 L256 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M320 0 L320 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M384 0 L384 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M448 0 L448 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M512 0 L512 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M576 0 L576 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M640 0 L640 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M704 0 L704 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M768 0 L768 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M832 0 L832 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M896 0 L896 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M960 0 L960 512" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M1024 0 L1024 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M0 0 L1024 0" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M0 64 L1024 64" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 128 L1024 128" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 192 L1024 192" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 256 L1024 256" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <path d="M0 320 L1024 320" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 384 L1024 384" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 448 L1024 448" stroke="#312a1f" stroke-width="1" opacity="0.4"/>
+      <path d="M0 512 L1024 512" stroke="#312a1f" stroke-width="1" opacity="0.95"/>
+      <text x="0" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">0</text>
+      <text x="128" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">128</text>
+      <text x="256" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">256</text>
+      <text x="384" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">384</text>
+      <text x="512" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">512</text>
+      <text x="640" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">640</text>
+      <text x="768" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">768</text>
+      <text x="896" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">896</text>
+      <text x="1024" y="-9" text-anchor="middle" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">1024</text>
+      <text x="-12" y="4" text-anchor="end" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">0</text>
+      <text x="-12" y="132" text-anchor="end" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">128</text>
+      <text x="-12" y="260" text-anchor="end" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">256</text>
+      <text x="-12" y="388" text-anchor="end" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">384</text>
+      <text x="-12" y="516" text-anchor="end" font-family="'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace" font-size="10" fill="#7b7263">512</text>
+      <rect x="16" y="32" width="128" height="128" rx="8" ry="8" fill="#fff"/>
+  <rect x="163" y="35" width="122" height="122" rx="5" ry="5" fill="none" stroke="#fff" stroke-width="6"/>
+  <rect x="306" y="34" width="124" height="124" rx="6" ry="6" fill="none" stroke="#fff" stroke-width="4"/>
+  <rect x="453" y="37" width="118" height="118" rx="7" ry="7" fill="none" stroke="#fff" stroke-width="10"/>
+  <rect x="598" y="38" width="116" height="116" rx="6" ry="6" fill="none" stroke="#fff" stroke-width="12"/>
+  <rect x="736" y="32" width="128" height="128" rx="32" ry="32" fill="#fff"/>
+  <rect x="880" y="32" width="96" height="96" rx="24" ry="24" fill="#fff"/>
+  <path d="M16 352 L16 256 A64 64 0 0 1 80 192 L112 192 A64 64 0 0 1 176 256 L176 352 Z" fill="#fff"/>
+  <rect x="208" y="192" width="64" height="64" rx="16" ry="16" fill="#fff"/>
+  <circle cx="336" cy="240" r="48" fill="#fff"/>
+  <rect x="400" y="192" width="128" height="64" rx="32" ry="32" fill="#fff"/>
+  <rect x="560" y="192" width="24" height="12" rx="6" ry="6" fill="#fff"/>
+  <rect x="656" y="192" width="16" height="4" rx="0" ry="0" fill="#fff"/><rect x="656" y="204" width="16" height="4" rx="0" ry="0" fill="#fff"/>
+  <rect x="752" y="192" width="16" height="16" rx="0" ry="0" fill="#fff"/>
+  <g transform="translate(16 384) scale(4)"><circle cx="10.6" cy="10.6" r="6.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.3 15.3 L20.2 20.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(128 384) scale(4)"><path d="M4 6.8 L10.50 6.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.30 6.8 L20 6.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13.4" cy="6.8" r="1.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 12 L6.70 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.50 12 L20 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.6" cy="12" r="1.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17.2 L11.70 17.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.50 17.2 L20 17.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="14.6" cy="17.2" r="1.9" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(240 384) scale(4)"><path d="M15 4.6 L8.4 12 L15 19.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(352 384) scale(4)"><path d="M9 4.6 L15.6 12 L9 19.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(464 384) scale(4)"><path d="M5 12.7 L9.9 17.6 L19 7.2" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(576 384) scale(4)"><path d="M6.6 6.6 L17.4 17.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.4 6.6 L6.6 17.4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(688 384) scale(4)"><rect x="7.4" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#fff"/><rect x="13.2" y="4.8" width="3.4" height="14.4" rx="1.4" fill="#fff"/></g>
+  <g transform="translate(800 384) scale(4)"><path d="M8.2 5.1 L19 12 L8.2 18.9 Z" fill="#fff" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></g>
+  <g transform="translate(912 384) scale(4)"><path d="M12 3.3 C12.9 9.04, 14.96 11.1, 20.7 12 C14.96 12.9, 12.9 14.96, 12 20.7 C11.1 14.96, 9.04 12.9, 3.3 12 C9.04 11.1, 11.1 9.04, 12 3.3 Z" fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></g>
+  <rect x="15.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="16" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Plate</text><text x="16" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="159.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="160" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">PlateLine</text><text x="160" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="303.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="304" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">PlateHairline</text><text x="304" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="447.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="448" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">StampFrame</text><text x="448" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="591.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="592" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">VerdictFrame</text><text x="592" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="735.5" y="31.5" width="129" height="129" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="736" y="175" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Field</text><text x="736" y="188" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x128</text>
+  <rect x="879.5" y="31.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="880" y="143" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Segment</text><text x="880" y="156" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="15.5" y="191.5" width="161" height="161" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="16" y="367" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">SheetTop</text><text x="16" y="380" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">160x160</text>
+  <rect x="207.5" y="191.5" width="65" height="65" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="208" y="271" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Chip</text><text x="208" y="284" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">64x64</text>
+  <rect x="287.5" y="191.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="288" y="303" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Disc</text><text x="288" y="316" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="399.5" y="191.5" width="129" height="65" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="400" y="271" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Pill</text><text x="400" y="284" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">128x64</text>
+  <rect x="559.5" y="191.5" width="25" height="13" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="560" y="219" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">PillSmall</text><text x="560" y="232" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">24x12</text>
+  <rect x="655.5" y="191.5" width="17" height="17" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="656" y="223" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">RuleDouble</text><text x="656" y="236" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">16x16</text>
+  <rect x="751.5" y="191.5" width="17" height="17" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="752" y="223" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">Fill</text><text x="752" y="236" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">16x16</text>
+  <rect x="15.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="16" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconSearch</text><text x="16" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="127.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="128" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconSettings</text><text x="128" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="239.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="240" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconChevronLeft</text><text x="240" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="351.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="352" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconChevronRight</text><text x="352" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="463.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="464" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconTick</text><text x="464" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="575.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="576" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconClose</text><text x="576" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="687.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="688" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconPause</text><text x="688" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="799.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="800" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconPlay</text><text x="800" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+  <rect x="911.5" y="383.5" width="97" height="97" fill="none" stroke="#e8574a" stroke-width="1" stroke-dasharray="3 3" opacity=".62"/><text x="912" y="495" font-family="ui-monospace, Menlo, monospace" font-size="9.5" letter-spacing=".03em" fill="#b5aa96">IconSparkle</text><text x="912" y="508" font-family="ui-monospace, Menlo, monospace" font-size="9.5" fill="#7b7263">96x96</text>
+    </svg>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #f8f2e5; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #f8f2e5">How to read it</h4>
+  </div>
+  <div class="legend" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 34px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 13px; line-height: 1.55; color: #7b7263">
+    <div style="display: flex; flex-direction: column; gap: 5px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e8574a">White on transparent</span>
+      <span>Nothing in the atlas carries a colour. Every graphic takes one from a <b>ThemeColor</b> role binder (UIPLAN 5.2), which is what makes dark mode (#575) a second theme asset and not a second sheet.</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e8574a">Authored at 4&times;</span>
+      <span>A 44-unit hit target ships as 176 px, a 24-unit icon as 96 px &mdash; the 3&ndash;4&times; raster rule (UIPLAN 2.3). Import at <b>Pixels Per Unit 4</b> and Set Native Size lands on the unit sizes the prototype uses.</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e8574a">Nine sprites stretch</span>
+      <span>The plates, frames, field, chip, pill and sheet are 9-sliced; their borders are in the slice table. The icons, the disc and Fill are Simple.</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 5px">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e8574a">Origin is top-left</span>
+      <span>Rects below are top-left origin, as the Sprite Editor shows them. <code>UIAtlas.slices.json</code> ships the same numbers as <code>[left, bottom, right, top]</code> borders, matching <code>SpriteMetaData.border</code>.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

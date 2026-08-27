@@ -4,6 +4,7 @@
     "references": [
         "Assembler.Shell",
         "EasyDI.Unity",
+        "Unity.2D.Sprite.Editor",
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.UI"

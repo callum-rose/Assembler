@@ -1,0 +1,51 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1104,
+      "h": 1010
+    },
+    {
+      "file": "Icons.dc.html",
+      "x": 1224,
+      "y": 0,
+      "w": 940,
+      "h": 1290
+    },
+    {
+      "file": "SliceTable.dc.html",
+      "x": 2264,
+      "y": 0,
+      "w": 1180,
+      "h": 1950
+    },
+    {
+      "file": "Assembly.dc.html",
+      "x": 0,
+      "y": 1420,
+      "w": 1320,
+      "h": 2530
+    }
+  ],
+  "annotations": [
+    {
+      "id": "ground-note",
+      "x": 0,
+      "y": -190,
+      "w": 520,
+      "text": "The sheet is drawn white on transparent. It is shown here on a dark ground only so the sprites are visible — the shipped PNG has a real alpha channel and no ground at all."
+    },
+    {
+      "id": "files-note",
+      "x": 600,
+      "y": -190,
+      "w": 500,
+      "text": "Generated alongside this canvas:\nUIAtlas.png — 1024×512, white on transparent\nUIAtlas.slices.json — the same rects and borders as data\nboth in Prototypes/ui-atlas/."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

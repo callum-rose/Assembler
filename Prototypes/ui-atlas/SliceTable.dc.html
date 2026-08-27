@@ -1,0 +1,357 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;0,6..72,800;1,6..72,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; -webkit-font-smoothing: antialiased; }
+    a { color: #b8121b; text-decoration: none; }
+    a:hover { color: #17130d; }
+    code { font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; }
+  </style>
+</helmet>
+<div style="background: #faf6ee; min-height: 100%; padding: 34px 36px 44px">
+  <header style="display: flex; flex-direction: column; gap: 0; margin-bottom: 26px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 24px; border-bottom: 3px solid #17130d; padding-bottom: 9px">
+      <h1 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #17130d">The Daily <span style="color: #b8121b">Build</span></h1>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #948b7c">Shell UI atlas &middot; 1024&times;512 &middot; PPU 4</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid #17130d; padding: 7px 0 8px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: #4f483d">
+      <span>The slice table</span>
+      <span style="color: #948b7c">Rects, borders and roles</span>
+    </div>
+  </header>
+
+  <p style="margin: 0 0 22px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 1.6; color: #4f483d; max-width: 78ch; text-wrap: pretty">
+    Rect origin is top-left, as the Sprite Editor reads it. <b>Border is left, bottom, right, top</b> &mdash; the order <code>SpriteMetaData.border</code> takes &mdash; and the same numbers ship in <code>UIAtlas.slices.json</code> beside the sheet. Units are canvas units on the 390-unit short axis (UIPLAN 2.2), so they are the prototype's CSS pixels 1:1.
+  </p>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #17130d; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">Plates and frames</h4>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px">
+    <thead><tr>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Sprite</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">x, y</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">px</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">units</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Mode</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Border</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Colour role</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Used by</th>
+    </tr></thead>
+    <tbody>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Plate</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">9, 9, 9, 9</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">ButtonFace / Surface / Offset</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">LetterpressButton plate and face, sheet buttons, the result slip body, feed art frames. Corner radius 2u.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">PlateLine</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">160, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">11, 11, 11, 11</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">RuleHard / Rule</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The outlined "Open the archive" button and the played play-button (1.5u keyline, radius 2u).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">PlateHairline</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">304, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">10, 10, 10, 10</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Rule / RuleHard</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The result slip border and the how-to-play block (1u keyline, radius 2u).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">StampFrame</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">448, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">17, 17, 17, 17</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Accent</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The rubber PLAY stamp struck on unplayed lead art (2.5u keyline, radius 3u). Rotate the RectTransform -8 degrees.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">VerdictFrame</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">592, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">18, 18, 18, 18</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Good / Bad</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The stamped verdict on the result slip (3u keyline, radius 3u). Rotate -4 degrees; scale-slam per Motion.VerdictStamp.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Field</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">736, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 128</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">33, 33, 33, 33</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Sunk</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The archive search field and the game strip pause button (radius 8u).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Segment</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">880, 32</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">25, 25, 25, 25</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Sunk</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The settings theme segmented-control track (radius 6u).</td>
+    </tr>
+    </tbody>
+  </table>
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #17130d; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">Surfaces, pills and rules</h4>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px">
+    <thead><tr>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Sprite</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">x, y</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">px</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">units</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Mode</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Border</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Colour role</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Used by</th>
+    </tr></thead>
+    <tbody>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">SheetTop</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">160 &times; 160</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">40 &times; 40</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">65, 4, 65, 65</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Surface</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">SheetFrame — the pause sheet chrome. Top corners 16u, bottom square, so it can sit flush on the safe-area edge.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Chip</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">208, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">64 &times; 64</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16 &times; 16</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">17, 17, 17, 17</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">ButtonFace / Paper</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The archive filter chips and the segmented-control thumb (radius 4u).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Disc</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">288, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Ink / Accent / Paper</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The played tick badge (18u), the toggle knob (22u), the how-to-play bullet and the staging pulse dot (5u). Simple mode, Preserve Aspect on.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Pill</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">400, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128 &times; 64</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">32 &times; 16</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">31, 31, 31, 31</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Sunk / Good</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The dev-mode toggle track (46 x 28u). Fully round; never render it below 16u tall.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">PillSmall</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">560, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 12</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">6 &times; 3</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">5, 5, 5, 5</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Rule / Accent</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The pause sheet grab handle (38 x 4u) and the launch overlay progress track and fill (3u). Never below 3u tall.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">RuleDouble</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">656, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16 &times; 16</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">4 &times; 4</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #b8121b">Sliced</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">7, 0, 7, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">RuleHard</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The double rule under a SectionHeader and over the slip kicker. Bands are 1u / 2u / 1u — stretch horizontally only, height fixed at 4u.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">Fill</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">752, 192</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16 &times; 16</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">4 &times; 4</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">any</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">Every square surface: hairlines, the masthead rule, the letterpress ledge, stat-band dividers, column rules, the overlay scrim, full-bleed grounds.</td>
+    </tr>
+    </tbody>
+  </table>
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #17130d; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">Icons</h4>
+  </div>
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px">
+    <thead><tr>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Sprite</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">x, y</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">px</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">units</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Mode</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Border</th>
+      <th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Colour role</th><th style="text-align: left; font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #948b7c; padding: 0 10px 7px 0; border-bottom: 1px solid #17130d; white-space: nowrap;">Used by</th>
+    </tr></thead>
+    <tbody>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconSearch</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">16, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Ink</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">Masthead action -> Archive.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconSettings</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">128, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Ink</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">Masthead action -> Settings.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconChevronLeft</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">240, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Ink</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The back button, which names the screen beneath the top of the stack (UIPLAN 3.3).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconChevronRight</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">352, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">InkTertiary</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">Archive row and settings row disclosure.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconTick</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">464, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Paper</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The played mark inside an 18u Disc — full opacity while the art behind it fades (UIPLAN 7.5).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconClose</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">576, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Paper</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">Clears the archive search field.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconPause</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">688, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">OnAccent</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">The game strip pause glyph, in a 44u HitTarget (UIPLAN 10.7).</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconPlay</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">800, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">ButtonInk</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">"Next game" on the result slip.</td>
+    </tr>
+    <tr>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; font-weight: 600">IconSparkle</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">912, 384</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">96 &times; 96</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">24 &times; 24</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #948b7c">Simple</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap;">0, 0, 0, 0</td>
+      <td style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d; padding: 9px 10px 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: nowrap; color: #8a7248">Good</td>
+      <td style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.45; color: #4f483d; padding: 9px 0; border-bottom: 1px solid #d8cfbe; vertical-align: top; white-space: normal; min-width: 250px;">"New best" on the result slip.</td>
+    </tr>
+    </tbody>
+  </table>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 0 7px; border-bottom: 4px double #17130d; margin: 0 0 16px">
+    <h4 style="margin: 0; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10.5px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #17130d">Import settings</h4>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Texture Type</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Sprite (2D and UI)</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Sprite Mode</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Multiple</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Pixels Per Unit</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">4</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Mesh Type</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Full Rect &mdash; required, or the 9-slices tear</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Alpha Is Transparency</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">On</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Wrap Mode</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Clamp</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Filter Mode</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Bilinear</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Compression</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">None &mdash; the sheet is 22 KB</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">Generate Mip Maps</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">Off &mdash; UI is drawn at one depth</span>
+    </div>
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 8px 0; border-bottom: 1px solid #d8cfbe">
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, Menlo, 'SFMono-Regular', monospace; font-size: 11px; color: #17130d">sRGB (Color Texture)</span>
+      <span style="font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 12.5px; color: #948b7c; text-align: right">On</span>
+    </div>
+  </div>
+
+  <div style="margin-top: 26px; padding: 14px 16px 15px; background: #fffdf8; border: 1px solid #d8cfbe; border-left: 3px solid #b8121b">
+    <h5 style="margin: 0 0 9px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: #948b7c">Two sprites with a floor</h5>
+    <ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; font-family: 'Newsreader', Georgia, 'Times New Roman', serif; font-size: 13px; line-height: 1.45; color: #17130d">
+      <li><b style="color: #b8121b; font-weight: 800">Pill</b> is 31 px of border either side, so it cannot render below 16 units tall. The toggle track is 28 &mdash; fine. Anything thinner takes <b>PillSmall</b>.</li>
+      <li><b style="color: #b8121b; font-weight: 800">RuleDouble</b> stretches horizontally only. Its 1&thinsp;/&thinsp;2&thinsp;/&thinsp;1-unit bands are baked at natural height, so pin it to 4 units tall and it reproduces the prototype's <code>4px double</code> exactly.</li>
+    </ul>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
