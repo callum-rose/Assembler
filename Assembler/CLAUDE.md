@@ -167,8 +167,6 @@ AI work happens in a worktree so the user can keep using the main repo. The flow
 
 ### Creating Unity assets
 
-**Never hand-author Unity asset files** (`.prefab`, `.unity`, `.asset`, `.mat`, `.anim`, `.controller`, importer settings in `.meta`) — they're serialised editor state, and guessing GUIDs/`fileID`s yields assets that fail to import or load with null references. Ask the user to check the branch out in their main checkout, then create them through the `unity-mcp` tools (`Unity_ManageAsset`, `Unity_ManageGameObject`, `Unity_ManageScene`, `Unity_AssetGeneration_*`). If they'd rather not hand over their editor, describe what's needed and let them build it — don't fall back to hand-written YAML.
+**Never hand-author Unity asset files** (`.prefab`, `.unity`, `.asset`, `.mat`, `.anim`, `.controller`, importer settings in `.meta`) — drive a live Editor through the Unity CLI instead (`unity status`, `unity command`; see the `unity-cli` skill). `.cs` files and `Assets/**/*.yaml` descriptors are plain source, so edit those directly.
 
-**The MCP server drives the editor on the user's main checkout, never your worktree**, so writes land on whatever branch that checkout holds. Push your branch and remove the worktree (a branch can't be checked out twice), then verify before writing: `Unity_ManageEditor` `Action: "GetProjectRoot"` returns the main checkout, and `git -C <main checkout> branch --show-current` is your branch. Commit there with an explicit pathspec — that index is often pre-staged (see Committing & Pushing).
-
-`.cs` files and `Assets/**/*.yaml` descriptors are plain source — write those in the worktree as normal.
+**Several Editors are usually running here** — the user's main checkout plus one or more worktrees — so auto-discovery picks an arbitrary one. Always pass `--project-path <checkout>/Assembler` and confirm that checkout is on your branch before writing. If no Editor has your branch open, ask the user to open one rather than falling back to hand-written YAML.
