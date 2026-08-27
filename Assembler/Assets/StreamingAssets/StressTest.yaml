@@ -1,0 +1,320 @@
+Game:
+  Title: Compiler AOT Stress Test
+  Description: |
+    Throwaway descriptor for the IL2CPP compiler AOT spike. NOT a game — it is the second half of
+    the spike's verdict, and it is deliberately expression-dense and visually near-empty.
+
+    The flat case list in Assets/Spike/CompilerHarness/ drives ExpressionMethodCompiler directly.
+    That misses the *parse-layer* generic-instantiation sites — ValueSourceFactory,
+    ExpressionSynthesis and TransformContext each call MakeGenericType while turning a descriptor
+    value into a typed IValueProvider<T>, and a raw-compiler harness never reaches them. This file
+    exists to reach them: it pushes a value of every supported type (int, float, bool, string,
+    vector, colour, and the int/float/vector list forms) through a named expression with explicit
+    ArgumentTypes, and writes each result into a variable via the matching typed setter, every frame.
+
+    Coverage, mirroring the four adversarial families on the C# side:
+      - LINQ over seeded int / float / vector lists, including OrderBy (a generic comparer).
+      - `vector list` built with the PositionList helper, consumed by a Placements `At:` — the shape
+        real descriptors use, resolved at build time.
+      - Indexer access into a seeded vector list.
+      - Numeric promotion (int widened into float, integer division kept integral).
+      - Nested control flow (for / if / while) inside a named expression body.
+
+    Deliberately no UI: `text label` needs the UiPrefabLibrary asset, and a missing asset would fail
+    the build for a reason that has nothing to do with AOT — exactly the false negative this spike
+    is built to avoid.
+
+    Press Q (or the on-screen Quit button) to end. That is the mandatory !gameover path.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0E1014"
+
+Physics:
+  Gravity: !vec { X: 0, Y: 0, Z: 0 }
+
+Constants:
+  # One constant per scalar type, so every ValueSourceFactory<T> path is instantiated.
+  stress int: 7
+  stress float: 2.5
+  stress bool: true
+  stress label: "stress"
+  stress vector: !vec { X: 1, Y: 2, Z: 3 }
+  stress colour: !colour { R: 0.2, G: 0.7, B: 0.9, A: 1 }
+
+  # Seeded lists, read by the LINQ and indexer expressions below.
+  waypoint route: !vec [ { X: -2, Y: 2 }, { X: 2, Y: 2 }, { X: 2, Y: -2 }, { X: -2, Y: -2 } ]
+  weights: !int [ 5, 10, 15, 20 ]
+  ratios: !float [ 0.25, 0.5, 0.75 ]
+
+  camera position: !vec { X: 0, Y: 0, Z: -10 }
+  camera view: "orthographic"
+  camera size: 6
+
+Variables:
+  # Written every frame by the typed setters on `stress driver`. The values are never displayed —
+  # the point is that resolving and assigning each type works at all under AOT.
+  tick count: 0
+  linq sum: 0
+  ordered first: 0.0
+  promoted total: 0.0
+  ratio mean: 0.0
+  picked point: !vec { X: 0, Y: 0, Z: 0 }
+  nested flag: false
+  status text: ""
+  blend colour: !colour { R: 0, G: 0, B: 0, A: 1 }
+
+Expressions:
+  # --- LINQ over value-type element lists ---
+
+  linq_weight_sum:
+    ArgumentTypes: [ int list ]
+    ArgumentNames: [ weights ]
+    ReturnType: int
+    Expression: "return weights.Where(w => w > 5).Select(w => w * 2).Sum();"
+
+  # OrderBy pulls in Comparer<float>.Default over an OrderedEnumerable<Vector3, float> — the
+  # densest value-type generic instantiation the descriptor layer can reach.
+  ordered_route_x:
+    ArgumentTypes: [ vector list ]
+    ArgumentNames: [ route ]
+    ReturnType: float
+    Expression: "return route.OrderBy(p => p.x).First().x;"
+
+  ratio_average:
+    ArgumentTypes: [ float list ]
+    ArgumentNames: [ ratios ]
+    ReturnType: float
+    Expression: "return ratios.Sum() / ratios.Count;"
+
+  # --- Indexer into a seeded vector list ---
+
+  route_indexer:
+    ArgumentTypes: [ vector list, int ]
+    ArgumentNames: [ route, step ]
+    ReturnType: vector
+    Expression: "return route[step % route.Count];"
+
+  # --- Numeric promotion ---
+
+  # `n / 2` stays integer division and only then widens, so a promotion applied too eagerly
+  # produces a different (wrong) number rather than a crash.
+  promote_mix:
+    ArgumentTypes: [ int, float ]
+    ArgumentNames: [ n, f ]
+    ReturnType: float
+    Expression: "float widened = n; return widened + f + n / 2;"
+
+  # --- Nested control flow ---
+
+  nested_branch:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ n ]
+    ReturnType: bool
+    Expression: |
+      int total = 0;
+      for (int i = 0; i < 4; i++)
+      {
+          if (i % 2 == 0)
+          {
+              int j = 0;
+              while (j < 3)
+              {
+                  total += j;
+                  j++;
+              }
+          }
+          else
+          {
+              total += n;
+          }
+      }
+      return total > n;
+
+  # --- String and colour returns, for the remaining ValueSourceFactory<T> paths ---
+
+  status_for:
+    ArgumentTypes: [ int ]
+    ArgumentNames: [ n ]
+    ReturnType: string
+    Expression: 'return n > 3 ? "high" : "low";'
+
+  blend_ramp:
+    ArgumentTypes: [ float, colour ]
+    ArgumentNames: [ t, target ]
+    ReturnType: colour
+    Expression: "return LerpColor(new Color(0f, 0f, 0f, 1f), target, Clamp01(t));"
+
+  # --- vector list built with PositionList, consumed by Placements below ---
+
+  build_ring:
+    ReturnType: vector list
+    RegisterTypes: [ UnityEngine.Vector3 ]
+    Expression: |
+      var b = new PositionList();
+      for (int i = 0; i < 6; i++)
+      {
+          b.Add(new UnityEngine.Vector3(i * 0.6f - 1.5f, -3f, 0f));
+      }
+      return b.ToList();
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q", "<Keyboard>/escape" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+
+  # The on-screen button is the only way out on a device with no keyboard.
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
+Templates:
+  marker:
+    Behaviours:
+      dot:
+        Type: primitive
+        Properties:
+          Shape: sphere
+          Size: !vec { X: 0.2, Y: 0.2, Z: 0.2 }
+          Colour: !var stress colour
+
+Placements:
+  # Stamps the `marker` template at every position the PositionList expression returns. This is
+  # the build-time `vector list` path — the same one Pacman's pill field and PatrolDemo's route use.
+  ring:
+    Template: marker
+    At: !expr
+      ReturnType: vector list
+      Do: build_ring
+
+Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
+  # Every frame, run one expression per supported value type and write the result through the
+  # matching typed setter. Each (expression return type -> setter) pair is a distinct generic
+  # instantiation in the resolving layer.
+  stress driver:
+    Behaviours:
+      tick:
+        Type: every frame trigger
+        Listeners:
+          - set tick count
+          - set linq sum
+          - set ordered first
+          - set ratio mean
+          - set promoted total
+          - set picked point
+          - set nested flag
+          - set status text
+          - set blend colour
+
+      set tick count:
+        Type: int variable setter
+        Properties:
+          VariableId: !var tick count
+          Value: !expr
+            Do: 'n + 1'
+            ArgumentTypes: [ int ]
+            ReturnType: int
+            With: { n: !var tick count }
+
+      set linq sum:
+        Type: int variable setter
+        Properties:
+          VariableId: !var linq sum
+          Value: !expr
+            Do: linq_weight_sum
+            With: { weights: !var weights }
+
+      set ordered first:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ordered first
+          Value: !expr
+            Do: ordered_route_x
+            With: { route: !var waypoint route }
+
+      set ratio mean:
+        Type: float variable setter
+        Properties:
+          VariableId: !var ratio mean
+          Value: !expr
+            Do: ratio_average
+            With: { ratios: !var ratios }
+
+      set promoted total:
+        Type: float variable setter
+        Properties:
+          VariableId: !var promoted total
+          Value: !expr
+            Do: promote_mix
+            With:
+              n: !var stress int
+              f: !var stress float
+
+      set picked point:
+        Type: vector variable setter
+        Properties:
+          VariableId: !var picked point
+          Value: !expr
+            Do: route_indexer
+            With:
+              route: !var waypoint route
+              step: !var tick count
+
+      set nested flag:
+        Type: bool variable setter
+        Properties:
+          VariableId: !var nested flag
+          Value: !expr
+            Do: nested_branch
+            With: { n: !var stress int }
+
+      set status text:
+        Type: string variable setter
+        Properties:
+          VariableId: !var status text
+          Value: !expr
+            Do: status_for
+            With: { n: !var stress int }
+
+      set blend colour:
+        Type: colour variable setter
+        Properties:
+          VariableId: !var blend colour
+          Value: !expr
+            Do: blend_ramp
+            With:
+              t: !var stress float
+              target: !var stress colour
+
+  # A single primitive, driven from the `picked point` variable the indexer expression writes, so
+  # there is a visible sign of life on-device without a UI dependency.
+  probe:
+    Position: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 0.5, Y: 0.5, Z: 0.5 }
+          Colour: !var stress colour
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: !var camera view
+          Size: !var camera size
