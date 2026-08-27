@@ -4,7 +4,15 @@ using UnityEngine;
 
 namespace Assembler.Behaviours.Visual
 {
-	/// <summary>Adds a 3D primitive mesh (chosen by <c>Shape</c>) as a child of the entity.</summary>
+	/// <summary>
+	/// Adds a single 3D primitive mesh (chosen by <c>Shape</c>) as a child of the entity. Use this when an
+	/// entity needs exactly one shape; for more than one, use <c>model</c>, which places each part with its
+	/// own offset, rotation, anchor and colour. Never stack repeated <c>primitive</c> behaviours on one
+	/// entity — every one of them renders at the entity origin, axis-aligned, on top of the others. Note
+	/// that <c>Size</c> here is a raw localScale, not a true world size: Unity's native cylinder and capsule
+	/// are 2 units tall and its plane is 10 by 10, so <c>model</c>'s normalised <c>Size</c> is the easier
+	/// option when real dimensions matter.
+	/// </summary>
 	/// <remarks>
 	/// Visual only: <see cref="GameObject.CreatePrimitive"/> bundles a default collider onto every primitive,
 	/// but collision in Assembler is opt-in via the explicit collider behaviours. The auto-added collider is

@@ -38,5 +38,15 @@ namespace Assembler.Resolving
 
 		public static T ValueOr<T>(this IValueProvider<T> provider, T defaultValue) =>
 			provider.ValueOr(TriggerContext.Empty, defaultValue);
+
+		/// <summary>
+		/// The provider-level sibling of <see cref="ValueOr{T}(IValueProvider{T},T)"/>: yields
+		/// <paramref name="fallback"/> when this provider is an omitted optional (a
+		/// <see cref="NullValueProvider{T}"/>), and this provider otherwise. Use it to chain optional
+		/// properties whose values must stay <em>live</em> — <c>ValueOr</c> reads a value once, which would
+		/// freeze a <c>!var</c>/<c>!expr</c> source at its initial value instead of tracking it.
+		/// </summary>
+		public static IValueProvider<T> Or<T>(this IValueProvider<T> provider, IValueProvider<T> fallback) =>
+			provider is NullValueProvider<T> ? fallback : provider;
 	}
 }

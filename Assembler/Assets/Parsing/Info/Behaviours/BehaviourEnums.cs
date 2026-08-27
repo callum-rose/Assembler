@@ -66,6 +66,17 @@ namespace Assembler.Parsing.Info.Behaviours
 		Spot
 	}
 
+	/// <summary>Which reflected duplicates a <c>model</c> part emits alongside the original.
+	/// <c>XZ</c> emits three twins (the X mirror, the Z mirror, and both), so a four-legged
+	/// shape is one authored part.</summary>
+	public enum MirrorAxis
+	{
+		None,
+		X,
+		Z,
+		XZ
+	}
+
 	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
 	/// (an <c>AppendInterval</c>) that animates nothing.</summary>
 	public enum AnimationTarget
@@ -118,6 +129,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(AnimationTarget) ? ParseAnimationTarget(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceMode) ? ParseSequenceMode(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceLoopType) ? ParseSequenceLoopType(normalised, raw) :
+				typeof(TEnum) == typeof(MirrorAxis) ? ParseMirrorAxis(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				typeof(TEnum) == typeof(OnScreenControlKind) ? ParseOnScreenControlKind(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
@@ -282,6 +294,17 @@ namespace Assembler.Parsing.Info.Behaviours
 				"incremental" => SequenceLoopType.Incremental,
 				_ => throw new ParsingException(
 					$"Unknown animation loop type '{raw}'. Valid values: restart, yoyo, incremental")
+			};
+
+		private static MirrorAxis ParseMirrorAxis(string s, string raw) =>
+			s switch
+			{
+				"none" => MirrorAxis.None,
+				"x" => MirrorAxis.X,
+				"z" => MirrorAxis.Z,
+				"xz" or "zx" => MirrorAxis.XZ,
+				_ => throw new ParsingException(
+					$"Unknown mirror axis '{raw}'. Valid values: none, x, z, xz")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>

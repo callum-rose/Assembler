@@ -2113,7 +2113,13 @@ Renders a voxel mesh asset as a child of the entity.
 | Scale | Vector3 | Optional local-space scale multiplier applied to the child renderer. |
 
 ## `primitive`
-Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
+Adds a single 3D primitive mesh (chosen by Shape) as a child of the entity. Use this when an
+            entity needs exactly one shape; for more than one, use model, which places each part with its
+            own offset, rotation, anchor and colour. Never stack repeated primitive behaviours on one
+            entity — every one of them renders at the entity origin, axis-aligned, on top of the others. Note
+            that Size here is a raw localScale, not a true world size: Unity's native cylinder and capsule
+            are 2 units tall and its plane is 10 by 10, so model's normalised Size is the easier
+            option when real dimensions matter.
 
 **Role:** Continuous / passive (runs itself; not a listener target).
 
@@ -2124,6 +2130,28 @@ Adds a 3D primitive mesh (chosen by Shape) as a child of the entity.
 | Shape | PrimitiveType | Which primitive to create — one of "cube", "sphere", "capsule", "cylinder", "plane", "quad" (defaults to "cube"). |
 | Colour | Color | Optional tint applied to the primitive's material. |
 | Size | Vector3 | Optional local scale of the primitive child. |
+
+## `model`
+Assembles the entity's visual from a list of primitive parts — each with its own offset, rotation,
+            size, anchor and colour — as mesh children of the entity, so a multi-shape prop is one entity
+            instead of one entity per piece. Use this whenever an entity needs more than one shape; use
+            primitive for exactly one. Never stack repeated primitive behaviours on one entity —
+            they all render at the origin, axis-aligned, on top of each other. A part's Size is its true
+            world bounding box, unlike primitive's Size, which is a raw localScale: a cylinder of
+            Size 1,3,1 here is genuinely 3 units tall and a plane of Size 10,1,10 is genuinely 10 by 10, because
+            Unity's native cylinder/capsule (2 units tall) and plane (10 by 10) scales are divided out for you.
+            Anchors move the pivot off the part's centre so a part at Position 0,0,0 with Anchor bottom sits on
+            the origin rather than half-buried, and Rotation then pivots about that anchor. Mirror emits
+            reflected duplicates of a part, so a symmetric shape is authored once.
+
+**Role:** Continuous / passive (runs itself; not a listener target).
+
+### Properties
+
+| Name | Type | Description |
+|------|------|-------------|
+| Parts | IReadOnlyList<ModelPartInfo> | Ordered list of part maps (required — there is no single-shape shorthand). Each has Shape (required — cube, sphere, capsule, cylinder, plane or quad), Position (offset from the entity origin, default 0,0,0), Rotation (euler angles about the part's anchor, default 0,0,0), Size (true world dimensions, default 1,1,1), Anchor (hyphen-separated, order-agnostic point on the part that lands on Position — left/right on X, bottom/top on Y, back/front on Z, e.g. "bottom-left"; an omitted axis is centred and naming one axis twice is an error), Colour (overrides the model-wide Colour for this part), Mirror (emit reflected duplicates in addition to the original — x, z, or xz for all three twins) and Name (hierarchy name, defaults to "Part {i} ({Shape})"). |
+| Colour | Color | Model-wide tint applied to every part that does not set its own Colour; omit both and parts keep the shared material's colour. |
 
 ## `light`
 Adds a realtime UnityEngine.Light to the entity so a 3D scene is lit

@@ -510,6 +510,10 @@ namespace Assembler.Building
 					i.Shape.Resolve(ctx.Resolution),
 					i.Colour.Resolve(ctx.Resolution),
 					i.Size.Resolve(ctx.Resolution)));
+			map[typeof(ModelInfo)] = Entry<ModelInfo, Model, ModelData>(
+				(i, ctx) => new ModelData(i.Id,
+					i.Parts.Select(p => p.Resolve(ctx.Resolution)).ToArray(),
+					i.Colour.Resolve(ctx.Resolution)));
 			map[typeof(LightInfo)] = Entry<LightInfo, LightBehaviour, LightData>(
 				(i, ctx) => new LightData(i.Id,
 					i.Type.Resolve(ctx.Resolution),
