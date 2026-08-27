@@ -28,6 +28,9 @@ namespace Assembler.Shell.Theming
 		[Tooltip("Corner radius. The letterpress look is nearly square.")]
 		[SerializeField] private float cornerRadius = 2f;
 
+		[Tooltip("The rule an outlined element draws around itself — a quiet button, a stat band cell.")]
+		[SerializeField] private float outlineWidth = 1.5f;
+
 		[Tooltip("Minimum size of a HitTarget. Nothing in the shell is tappable below this.")]
 		[SerializeField] private float minHitTarget = 44f;
 
@@ -45,6 +48,8 @@ namespace Assembler.Shell.Theming
 		public float LetterpressLedge => letterpressLedge;
 
 		public float CornerRadius => cornerRadius;
+
+		public float OutlineWidth => outlineWidth;
 
 		public float MinHitTarget => minHitTarget;
 

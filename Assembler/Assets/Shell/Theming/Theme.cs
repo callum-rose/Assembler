@@ -24,7 +24,10 @@ namespace Assembler.Shell.Theming
 		{
 			get
 			{
-				if (_service is null)
+				// The theme is checked for life, not just for presence. A cached service outlives the asset it
+				// holds whenever Unity unloads it — a scene change, an asset-import worker finishing its batch —
+				// and every reader would then throw MissingReferenceException rather than fall back.
+				if (_service is null || _service.Current == null)
 				{
 					Bind(new ThemeService(LoadFallbackTheme()));
 				}

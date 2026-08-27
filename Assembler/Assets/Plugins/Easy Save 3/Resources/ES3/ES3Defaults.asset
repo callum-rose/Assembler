@@ -67,6 +67,7 @@ MonoBehaviour:
     - EasyDI.Unity
     - EasySave3
     - Sirenix.OdinInspector.Modules.Unity.Addressables
+    - Tests.Shell.Runtime
     - Voxels.Editor
     showAdvancedSettings: 0
   addMgrToSceneAutomatically: 0
