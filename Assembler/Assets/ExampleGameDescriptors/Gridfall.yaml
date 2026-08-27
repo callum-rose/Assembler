@@ -156,18 +156,18 @@ Constants:
   slug speed: 15.0
 
   # --- Creep kinds (size / tint / frost response per kind; stats come from the table) ---
-  creep size: !vec { X: 0.55, Y: 0.62, Z: 0.55 }
+  creep size: !vec { X: 0.55, Y: 1.24, Z: 0.55 }
   creep colour: !colour { R: 0.9, G: 0.3, B: 0.35, A: 1 }
-  runner size: !vec { X: 0.42, Y: 0.5, Z: 0.42 }
+  runner size: !vec { X: 0.42, Y: 1, Z: 0.42 }
   runner colour: !colour { R: 0.98, G: 0.62, B: 0.2, A: 1 }
-  brute size: !vec { X: 0.85, Y: 0.85, Z: 0.85 }
+  brute size: !vec { X: 0.85, Y: 1.7, Z: 0.85 }
   brute colour: !colour { R: 0.6, G: 0.15, B: 0.2, A: 1 }
   brute slow resist: 0.85
-  splitter size: !vec { X: 0.6, Y: 0.58, Z: 0.6 }
+  splitter size: !vec { X: 0.6, Y: 1.16, Z: 0.6 }
   splitter colour: !colour { R: 0.2, G: 0.85, B: 0.7, A: 1 }
-  imp size: !vec { X: 0.34, Y: 0.4, Z: 0.34 }
+  imp size: !vec { X: 0.34, Y: 0.8, Z: 0.34 }
   imp colour: !colour { R: 0.45, G: 0.95, B: 0.8, A: 1 }
-  titan size: !vec { X: 1.15, Y: 1.35, Z: 1.15 }
+  titan size: !vec { X: 1.15, Y: 2.7, Z: 1.15 }
   titan colour: !colour { R: 0.7, G: 0.25, B: 0.95, A: 1 }
   titan slow resist: 0.7
   chill tint: !colour { R: 0.5, G: 0.85, B: 1.0, A: 1 }
@@ -534,7 +534,7 @@ Templates:
         Type: primitive
         Properties:
           Shape: cylinder
-          Size: !vec { X: 0.72, Y: 0.26, Z: 0.72 }
+          Size: !vec { X: 0.72, Y: 0.52, Z: 0.72 }
           Colour: !expr { Do: towerTint, With: { base: !parameter tint, level: !var level } }
       barrel:
         Type: primitive

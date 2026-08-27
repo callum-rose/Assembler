@@ -11,7 +11,7 @@ namespace Assembler.Parsing.Info.Behaviours
 	/// direction of the anchored face/corner, so it is a plain <see cref="Vector3"/> rather than a
 	/// <see cref="ValueSource{T}"/>.</summary>
 	public sealed record ModelPartInfo(
-		ValueSource<PrimitiveType> Shape,
+		ValueSource<ShapeKind> Shape,
 		ValueSource<Vector3> Position,
 		ValueSource<Vector3> Rotation,
 		ValueSource<Vector3> Size,
@@ -104,11 +104,12 @@ namespace Assembler.Parsing.Info.Behaviours
 			if (shapeRaw is null or NoValue)
 			{
 				throw new ParsingException(
-					$"model '{id}' part {index}: needs a Shape (cube, sphere, capsule, cylinder, plane, quad).");
+					$"model '{id}' part {index}: needs a Shape (cube, sphere, capsule, cylinder, plane, quad, "
+					+ "wedge, cone, hemisphere).");
 			}
 
 			return new ModelPartInfo(
-				ValueSourceFactory.CreateEnumSource(ctx, shapeRaw, PrimitiveType.Cube),
+				ValueSourceFactory.CreateEnumSource(ctx, shapeRaw, ShapeKind.Cube),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, dict.GetValueOrDefault("Position")),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, dict.GetValueOrDefault("Rotation")),
 				ValueSourceFactory.CreateOptionalValueSource<Vector3>(ctx, dict.GetValueOrDefault("Size")),

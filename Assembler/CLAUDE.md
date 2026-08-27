@@ -179,4 +179,12 @@ AI work happens in a worktree so the user can keep using the main repo. The flow
 
 **Never hand-author Unity asset files** (`.prefab`, `.unity`, `.asset`, `.mat`, `.anim`, `.controller`, importer settings in `.meta`) — drive a live Editor through the Unity CLI instead (`unity status`, `unity command`; see the `unity-cli` skill). `.cs` files and `Assets/**/*.yaml` descriptors are plain source, so edit those directly.
 
+**The nine primitive meshes are Blender-authored**, not `GameObject.CreatePrimitive`. They live in
+`Assets/Resources/Meshes` and their source is [`Tools/blender/build_primitives.py`](Tools/blender/build_primitives.py) —
+edit that and re-export rather than touching the FBXs. Every mesh is 1x1x1 (the capsule alone
+excepted, at 1x2x1, because a capsule of diameter 1 and height 1 is a sphere), which is what makes a
+`Size` a true world bounding box in both `primitive` and `model`. See
+[`Tools/CLAUDE.md`](Tools/CLAUDE.md) for the export settings that matter and the import settings to
+re-apply afterwards.
+
 **Several Editors are usually running here** — the user's main checkout plus one or more worktrees — so auto-discovery picks an arbitrary one. Always pass `--project-path <checkout>/Assembler` and confirm that checkout is on your branch before writing. If no Editor has your branch open, ask the user to open one rather than falling back to hand-written YAML.

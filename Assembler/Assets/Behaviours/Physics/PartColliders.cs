@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Assembler.Behaviours.Visual;
+using Assembler.Parsing.Info.Behaviours;
 using Assembler.Resolving.Behaviours;
 using UnityEngine;
 
@@ -16,8 +17,10 @@ namespace Assembler.Behaviours.Physics
 	/// Each part's collider is chosen by the shape that built it: cube, quad and plane get a BoxCollider,
 	/// sphere gets a SphereCollider, and capsule and cylinder get a CapsuleCollider — so a cylinder is
 	/// approximated with rounded ends, which is usually what you want for a leg or a barrel and occasionally
-	/// is not. A renderer built by something other than a primitive (a <c>voxel mesh</c>, a <c>sprite</c>)
-	/// falls back to a fitted box.
+	/// is not. Wedge, cone and hemisphere get a convex MeshCollider around their own mesh, because no Unity
+	/// primitive collider has a sloped or tapered face: a box around a wedge is a box, and a ramp that
+	/// cannot be walked up is not a ramp. A renderer built by something other than a shape (a
+	/// <c>voxel mesh</c>, a <c>sprite</c>) falls back to a fitted box.
 	/// Each collider is sized in its own part's local space, so unlike <c>Fit: bounds</c> — which fits once
 	/// from the initial values — these re-fit for free when a part's <c>Size</c> is live-bound, because the
 	/// part transform's own scale is what turns the mesh-local size into world size.
@@ -58,22 +61,42 @@ namespace Assembler.Behaviours.Physics
 
 			return Shape(host) switch
 			{
-				PrimitiveType.Sphere => FitSphere(host, bounds),
-				PrimitiveType.Capsule or PrimitiveType.Cylinder => FitCapsule(host, bounds),
+				ShapeKind.Sphere => FitSphere(host, bounds),
+				ShapeKind.Capsule or ShapeKind.Cylinder => FitCapsule(host, bounds),
+				ShapeKind.Wedge or ShapeKind.Cone or ShapeKind.Hemisphere => FitMesh(host, bounds),
 				_ => FitBox(host, bounds)
 			};
 		}
 
-		// PrimitiveType has no "unknown" member, so a renderer with no marker is reported as Cube — which is
-		// the box fallback we want for a voxel mesh or a sprite anyway.
-		private static PrimitiveType Shape(GameObject host) =>
-			host.TryGetComponent<PrimitiveShape>(out var marker) ? marker.Shape : PrimitiveType.Cube;
+		// ShapeKind.Unknown is what a renderer no shape built reports — a voxel mesh, a sprite — and the box
+		// fallback is what we want for those. Unlike UnityEngine.PrimitiveType, it does not have to lie and
+		// call them cubes.
+		private static ShapeKind Shape(GameObject host) =>
+			host.TryGetComponent<PrimitiveShape>(out var marker) ? marker.Shape : ShapeKind.Unknown;
 
 		private static Collider FitBox(GameObject host, Bounds bounds)
 		{
 			var collider = host.AddComponent<BoxCollider>();
 			collider.size = VisualBounds.ClampSize(bounds.size);
 			collider.center = bounds.center;
+			return collider;
+		}
+
+		// The part's own mesh, marked convex so it can sit under a moving Rigidbody (PhysX only supports
+		// convex mesh colliders on non-static bodies) — every shape routed here is convex anyway, so the
+		// hull is the mesh rather than an approximation of it. Scale comes from the part transform, exactly
+		// as it does for the renderer, so a live-bound Size re-fits this collider for free like the others.
+		// A mesh that somehow has no MeshFilter falls back to a box rather than throwing mid-build.
+		private static Collider FitMesh(GameObject host, Bounds bounds)
+		{
+			if (!host.TryGetComponent<MeshFilter>(out var filter) || filter.sharedMesh == null)
+			{
+				return FitBox(host, bounds);
+			}
+
+			var collider = host.AddComponent<MeshCollider>();
+			collider.sharedMesh = filter.sharedMesh;
+			collider.convex = true;
 			return collider;
 		}
 

@@ -230,7 +230,7 @@ Entities:
     Behaviours:
       mesh:
         Type: primitive
-        Properties: { Shape: cylinder, Size: !vec { X: 2.2, Y: 60, Z: 2.2 }, Colour: !var pole colour }
+        Properties: { Shape: cylinder, Size: !vec { X: 2.2, Y: 120, Z: 2.2 }, Colour: !var pole colour }
       track tick:
         Type: every frame trigger
         Listeners: [ follow ball ]

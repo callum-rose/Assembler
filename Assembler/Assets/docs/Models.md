@@ -45,55 +45,65 @@ carry their own behaviours, or be addressed by id.
 
 ### Shapes and true world size
 
-A part's `Size` is its **true world bounding box in metres**, not a scale factor: Unity's built-in
-primitives are not all unit-sized, so `model` divides the native dimensions out before assigning
-`localScale`.
+A part's `Size` is its **true world bounding box in metres**, not a scale factor. Every shape is a
+project-owned mesh under `Assets/Resources/Meshes`, authored 1 x 1 x 1 by
+[`Tools/blender/build_primitives.py`](../../Tools/blender/build_primitives.py), so `Size` is read
+straight off with nothing to divide out — **and `primitive`'s `Size` means exactly the same thing.**
 
-| `Shape` | Unity's native mesh | `localScale` `model` computes | Worked example |
-|---|---|---|---|
-| `cube` | 1 x 1 x 1 | `Size` verbatim | `Size 2, 0.5, 3` -> `localScale 2, 0.5, 3` -> 2 x 0.5 x 3 m |
-| `sphere` | 1 diameter | `Size` verbatim | `Size 2, 1, 2` -> an ellipsoid 2 m wide and 1 m tall |
-| `cylinder` | **2 tall**, 1 diameter | `(x, y / 2, z)` | `Size 1, 3, 1` -> `localScale 1, 1.5, 1` -> genuinely 3 m tall |
-| `capsule` | **2 tall**, 1 diameter | `(x, y / 2, z)` | `Size 0.6, 1.2, 0.6` -> `localScale 0.6, 0.6, 0.6` -> 1.2 m tall |
-| `plane` | **10 x 10** in XZ, no thickness | `(x / 10, y, z / 10)` | `Size 4, 1, 4` -> `localScale 0.4, 1, 0.4` -> genuinely 4 x 4 m |
-| `quad` | 1 x 1 in XY, no thickness | `Size` verbatim | `Size 2, 1, 1` -> 2 m wide, 1 m tall |
+| `Shape` | The mesh | Worked example |
+|---|---|---|
+| `cube` | 1 x 1 x 1 | `Size 2, 0.5, 3` -> 2 x 0.5 x 3 m |
+| `sphere` | 1 diameter | `Size 2, 1, 2` -> an ellipsoid 2 m wide and 1 m tall |
+| `cylinder` | 1 diameter, 1 tall | `Size 1, 3, 1` -> genuinely 3 m tall |
+| `capsule` | 1 diameter, **2 tall** | `Size 0.6, 1.2, 0.6` -> genuinely 1.2 m tall |
+| `plane` | 1 x 1 in XZ, no thickness | `Size 4, 1, 4` -> genuinely 4 x 4 m |
+| `quad` | 1 x 1 in XY, no thickness | `Size 2, 1, 1` -> 2 m wide, 1 m tall |
+| `wedge` | 1 x 1 x 1 | `Size 2, 1, 4` -> a ramp 2 m wide, 1 m high, 4 m long |
+| `cone` | 1 diameter base, 1 tall | `Size 1.6, 3, 1.6` -> a spire 1.6 m across and 3 m tall |
+| `hemisphere` | 1 diameter, 1 tall | `Size 2, 1, 2` -> a true half-sphere, dome 2 m across |
 
-Three consequences worth internalising:
+Four consequences worth internalising:
 
-- **A cylinder's `Size.Y` is its height, full stop.** Under `primitive` the same number gives twice
-  that; if a column looks double height, this is why.
+- **`Size` is metres everywhere.** A cylinder's `Size.Y` is its height in both `primitive` and
+  `model`. There is one number and one meaning.
 - **`plane` has no thickness and `quad` has no depth.** A plane's `Size.Y` and a quad's `Size.Z` are
   accepted and then do nothing. For a thin slab use a `cube` with one small `Size` component.
 - **A flat part is single-sided** — URP's Lit shader does not render back faces. An unrotated `plane`
   faces **+Y**; an unrotated `quad` faces **-Z**, which is toward a default-facing camera. Turn
   either around and it disappears; check this first when a part has vanished but its numbers look
   right.
+- **`wedge`, `cone` and `hemisphere` are closed solids.** Unlike `plane` and `quad` they have a back
+  and a bottom, so they can be viewed and lit from any side.
 
-> **Capsule caps are hemispheres only when `Size.Y == 2 * Size.X == 2 * Size.Z`.** Unity's capsule is
-> a 1-tall cylinder with two radius-0.5 hemispheres, so under a non-uniform `Size` the caps become
-> half-ellipsoids: `Size 0.20, 0.85, 0.20` gives caps 0.2125 long against a 0.10 radius, about 2.1x
-> stretched. Often right for a limb, wrong for a pill-shaped button. Below `Y = 2X` they flatten.
+> **The capsule is the one shape whose mesh is not 1 x 1 x 1, and it cannot be.** A capsule of
+> diameter 1 and height 1 *is* a sphere, so the mesh is 2 tall and `model` halves its `Size.Y` for
+> you. `Size` still means the bounding box — `Size 0.6, 1.2, 0.6` is genuinely 1.2 m tall — but the
+> caps are hemispheres only when `Size.Y == 2 * Size.X == 2 * Size.Z`. Under a non-uniform `Size` they
+> become half-ellipsoids: `Size 0.20, 0.85, 0.20` gives caps 0.2125 long against a 0.10 radius, about
+> 2.1x stretched. Often right for a limb, wrong for a pill-shaped button. Below `Y = 2X` they flatten.
 
-### The `primitive` / `model` `Size` divergence
+### The three shapes Unity does not have
 
-> **`primitive.Size` is a raw `localScale`. `model`'s part `Size` is a true world bounding box.**
-> They are different quantities with the same name, and only `cube`, `sphere` and `quad` — the
-> already-unit-sized meshes — make them agree.
->
-> ```yaml
-> Type: primitive                       # a cylinder 6 m tall — localScale.Y 3 on a 2-tall mesh
-> Properties: { Shape: cylinder, Size: !vec { X: 1, Y: 3, Z: 1 } }
-> ```
-> ```yaml
-> Type: model                           # a cylinder 3 m tall — Size.Y 3 means 3 metres
-> Properties:
->   Parts:
->     - Shape: cylinder
->       Size: !vec { X: 1, Y: 3, Z: 1 }
-> ```
->
-> Porting from `primitive` to `model`: **double every cylinder's and capsule's `Size.Y`, and divide a
-> plane's `Size.X`/`Size.Z` by ten.**
+`wedge`, `cone` and `hemisphere` are Assembler's own meshes; Unity ships none of them. They exist
+because a diagonal, a taper and a dome each used to cost several parts and some hand-solved
+trigonometry.
+
+| `Shape` | Reads as | Orientation at `Rotation 0, 0, 0` |
+|---|---|---|
+| `wedge` | ramp, roof slope, windscreen, gable, plough front, buttress | Upright face at **+Z**, sloping down to **-Z**, so the slope faces a default camera. Base flat on **-Y**. The rake is `Size.Y` over `Size.Z` — there is no angle to type. |
+| `cone` | conifer, spire, funnel, arrow, hazard marker | Base circle on **-Y**, apex at **+Y**. |
+| `hemisphere` | dome, bowl, turret cap, umbrella | Flat disc on **-Y**, pole at **+Y**. `Rotation X 180` turns it into a bowl. |
+
+> **A hemisphere of `Size 1, 1, 1` is a dome twice as tall as a half-sphere.** `Size` is the bounding
+> box, so a *true* half-sphere is `Size d, d/2, d` — `Size 1.4, 0.7, 1.4` for a 1.4 m dome. This is
+> the same rule as `sphere` (where `Size 2, 1, 2` is an ellipsoid, not a sphere), not a special case,
+> but it is the one that catches people.
+
+> **`Mirror` re-uses the mesh, so it only reflects shapes that are symmetric about the mirrored
+> axis.** Every shape but `wedge` is symmetric about both X and Z, so this never came up before. A
+> wedge mirrored across the axis its *slope* runs along comes back slope-reversed: two of them make a
+> valley, not a ridge. Mirroring across its extrusion axis is exact. The `house` gable is the worked
+> case — its two ends are two authored parts, not one `Mirror: xz`, for exactly this reason.
 
 ### Anchors
 
@@ -119,9 +129,10 @@ so `Anchor: bottom` on a part of `Size.Y 2.2` lifts its centre by 1.1 and the pa
 `Y 0 .. 2.2`. `Anchor: right` on a part of `Size.X 2.7` shifts its centre 1.35 to the **left**, so
 that its right-hand face lands on `Position`.
 
-> **The offset uses `Size`, not `localScale`.** A cylinder of `Size.Y 3` anchored `bottom` rises by
-> 1.5 — half its true height — even though its `localScale.Y` is 1.5. You never have to do the
-> halving twice.
+> **The offset uses `Size`, not `localScale`.** The two differ for exactly one shape, the capsule,
+> whose mesh is 2 tall. A capsule of `Size.Y 3` anchored `bottom` rises by **1.5** — half its true
+> height. Taken from its `localScale.Y` of 1.5 it would have risen 0.75 and sat half-buried. You
+> never have to do the halving yourself.
 
 > **`Anchor` cannot be templated.** It is baked at transform time into a plain direction vector, so
 > it rejects `!var`/`!expr`/`!parameter` outright and template parameters do not substitute into it.
@@ -226,11 +237,17 @@ Behaviours:
 > Behaviours initialise in declaration order, and a collider that fits to meshes cannot measure
 > meshes that do not exist yet.
 
-`part colliders` maps each part's shape to a collider: `cube`, `quad` and `plane` get a
-BoxCollider, `sphere` gets a SphereCollider, and `capsule` **and `cylinder`** get a CapsuleCollider —
-so a cylinder collides with rounded ends. That is usually right for a leg or a barrel, and
-occasionally wrong for a wheel or a pillar; use `Fit: bounds` there instead. Renderers belonging to
-child entities are excluded — a child entity declares its own collision.
+`part colliders` maps each part's shape to a collider:
+
+| `Shape` | Collider | Note |
+|---|---|---|
+| `cube`, `quad`, `plane` | BoxCollider | Fitted to the part's own bounds. |
+| `sphere` | SphereCollider | |
+| `capsule`, `cylinder` | CapsuleCollider | A cylinder collides with **rounded ends** — usually right for a leg or a barrel, occasionally wrong for a wheel or a pillar. Use `Fit: bounds` there instead. |
+| `wedge`, `cone`, `hemisphere` | convex MeshCollider | The part's own mesh. All three are convex, so the hull *is* the shape and a ramp is genuinely walkable up its slope. |
+
+A renderer no shape built — a `voxel mesh`, a `sprite` — gets a fitted box. Renderers belonging to
+child entities are excluded; a child entity declares its own collision.
 
 Reach for `Fit: bounds` by default and `part colliders` when one box around the whole thing is too
 coarse to play against — a `humanoid`, a `streetlight` whose arm should not be a solid slab, a
@@ -297,13 +314,19 @@ when they do not. Every stack below overlaps: the `tree`'s trunk 0.3 into the ca
 practical way to build an angled part (roof slope, lamp arm, splayed limb), because the alternative
 is recomputing a rotated centre on every edit. See `streetlight` and `house`.
 
-**The tilted fill.** An axis-aligned cube cannot be a triangle — but a slab *rotated to the
-diagonal's own angle* hugs it exactly. Fill the diagonal edge with a rotated slab, then cover what
-its underside misses with one upright part; overlaps disappear inside the mass. The `house`'s gable
-end is the worked case: one slab at the roof's own `-31`, mirrored `xz`, plus one centre board,
-closes the whole triangle. Reach for it whenever a shape wants a slope — a windscreen, a ramp, a
-gable — before approximating with stacked steps, which close at best 80 – 90 % and read as stairs
-up close.
+**The diagonal is a `wedge`.** Whenever a shape wants a slope — a ramp, a roof, a windscreen, a
+gable, a plough front — reach for `wedge` first. Its rake is `Size.Y` over `Size.Z`, so the slope is
+stated as a rise and a run rather than solved for as an angle, and it survives a resize: change the
+run and the slope follows. The `car`'s windscreen is one wedge turned `Y 180`; the `house`'s gable
+end is one wedge turned `Y -90` and mirrored `x`, and its `Size 0.14, 1.2, 2` is nothing but the
+roof's own rise over its own run.
+
+**The tilted fill is the fallback**, for a slope a wedge cannot make — a slab of *constant
+thickness* along the diagonal (a handrail, a bracing strut, a chamfer on a face a wedge would fill
+solid). A slab rotated to the diagonal's own angle hugs it exactly; cover what its underside misses
+with one upright part and the overlaps disappear inside the mass. It costs a hand-derived angle and
+does not survive a size change without re-deriving it, which is why it is second choice now. Either
+beats approximating with stacked steps, which close at best 80 – 90 % and read as stairs up close.
 
 ---
 
@@ -316,11 +339,11 @@ anything composed from scratch. Each block drops straight into an entity's `Beha
 
 | Recipe | Authored | Rendered | Bounding box (X x Y x Z) | Teaches |
 |---|---|---|---|---|
-| [`tree`](#tree) | 4 | 4 | 2.60 x 3.90 x 2.60 | the cylinder halving; the overlap rule; a tiered canopy |
-| [`house`](#house) | 7 | 13 | 4.72 x 3.72 x 3.46 | anchor as a hinge; `Mirror: x` at X 0; the tilted fill |
-| [`car`](#car) | 7 | 12 | 2.04 x 1.47 x 4.20 | `Mirror: xz`; the oversized slab; a tilted windscreen |
+| [`tree`](#tree) | 4 | 4 | 2.60 x 3.90 x 2.60 | `Size` is metres; the overlap rule; a tiered canopy |
+| [`house`](#house) | 7 | 11 | 4.72 x 3.72 x 3.46 | anchor as a hinge; `Mirror: x` at X 0; `wedge` as a gable |
+| [`car`](#car) | 7 | 12 | 2.04 x 1.45 x 4.20 | `Mirror: xz`; the oversized slab; `wedge` as a windscreen |
 | [`crate`](#crate) | 3 | 6 | 1.06 x 1.05 x 1.06 | the cleanest `Mirror: xz` |
-| [`barrel`](#barrel) | 4 | 4 | 0.84 x 1.08 x 0.84 | there is no Y mirror; halving four times |
+| [`barrel`](#barrel) | 4 | 4 | 0.84 x 1.08 x 0.84 | there is no Y mirror; radial oversized slabs |
 | [`rock`](#rock) | 4 | 4 | 2.34 x 1.29 x 1.72 | the exception to `Anchor: bottom`; tilted cubes for stone |
 | [`streetlight`](#streetlight) | 5 | 5 | 1.84 x 4.69 x 0.36 | anchor as a hinge; a matte lens needs a real `light` |
 | [`coin`](#coin) | 3 | 3 | 0.62 x 0.62 x 0.10 | `Rotation X 90`; the deliberate float |
@@ -365,8 +388,8 @@ body:
         Colour: !colour "#71c05a"
 ```
 
-The cylinder halving, plainly: `Size.Y 1.0` becomes `localScale.Y 0.5` and the trunk is genuinely
-1 m tall — under `primitive` the same number would give 2 m.
+`Size.Y 1.0` on the trunk means the trunk is 1 m tall, and it means that in `primitive` too. There
+is no conversion anywhere in this file.
 
 Everything overlaps, and the canopy is a three-tier stack: 2.6 wide at the bottom, then 2.0, then
 1.3, each tier squashed flatter than it is wide and each starting inside the tier below (1.9
@@ -381,7 +404,7 @@ trunk. *Collide:* `part colliders` — a bounds box would block walking under th
 
 ### `house`
 
-**7 authored parts, 13 rendered · 4.72 x 3.72 x 3.46 m (Y +0.00 .. +3.72)** — walls, a mirrored pitched roof with a ridge beam, a tilted-fill gable, a door and mirrored windows.
+**7 authored parts, 11 rendered · 4.72 x 3.72 x 3.46 m (Y +0.00 .. +3.72)** — walls, a mirrored pitched roof with a ridge beam, a wedge gable at each end, a door and mirrored windows.
 
 ```yaml
 body:
@@ -406,19 +429,20 @@ body:
         Size: !vec { X: 0.3, Y: 0.2, Z: 3.46 }
         Position: !vec { X: 0, Y: 3.62, Z: 0 }
         Colour: !colour "#a64535"
-      - Name: gable slope
-        Shape: cube
-        Size: !vec { X: 2.35, Y: 0.6, Z: 0.14 }
-        Position: !vec { X: 1, Y: 2.95, Z: 1.47 }
-        Rotation: !vec { X: 0, Y: 0, Z: -31 }
-        Anchor: top-front
-        Mirror: xz
-      - Name: gable centre
-        Shape: cube
-        Size: !vec { X: 2.5, Y: 0.75, Z: 0.14 }
-        Position: !vec { X: 0, Y: 2.2, Z: 1.45 }
+      - Name: gable
+        Shape: wedge
+        Size: !vec { X: 0.14, Y: 1.2, Z: 2 }
+        Position: !vec { X: 0, Y: 2.35, Z: 1.4 }
+        Rotation: !vec { X: 0, Y: -90, Z: 0 }
         Anchor: bottom-front
-        Mirror: z
+        Mirror: x
+      - Name: gable back
+        Shape: wedge
+        Size: !vec { X: 0.14, Y: 1.2, Z: 2 }
+        Position: !vec { X: 0, Y: 2.35, Z: -1.4 }
+        Rotation: !vec { X: 0, Y: -90, Z: 0 }
+        Anchor: bottom-front
+        Mirror: x
       - Name: door
         Shape: cube
         Size: !vec { X: 0.85, Y: 1.75, Z: 0.1 }
@@ -434,8 +458,8 @@ body:
         Colour: !colour "#7db8dc"
 ```
 
-The anchor-as-hinge showcase, the one legitimate mirrored part sitting at `X 0`, and the tilted
-fill.
+The anchor-as-hinge showcase, the one legitimate mirrored part sitting at `X 0`, and `wedge` as a
+gable.
 
 **The roof.** Pitch 31 deg is `atan(1.2 / 2.0)` — a 1.2 m rise over the walls' 2.0 m half-width. The
 slab is anchored `right`, so its **ridge end** lands on `(0, 3.6, 0)` and the slab swings about that
@@ -447,20 +471,29 @@ the twin sweeps the other way from the same ridge. **This is the one case where 
 two slabs can only ever butt at the apex, leaving a V-notch there, so the `ridge` beam lies along
 the joint and hides it — what the overlap rule does when a seam cannot overlap.
 
-**The gable end is the tilted fill.** One slab rotated to the roof's own `-31`, anchored
-`top-front` with its top edge centred on the underside's midpoint `(1.0, 2.95)`, hugs the slope
-exactly; `Mirror: xz` makes all four copies — two slopes, front and back — and the upright
-`gable centre` covers the region under their bottom edges. Both gable parts sit 0.03 and 0.05
-behind the wall's front plane: recessed, never coplanar with the wall or with each other, so
-nothing z-fights.
+**The gable end is one `wedge`, and its `Size` is the roof restated.** `Rotation Y -90` stands the
+wedge's upright face on the ridge line at `X 0` with its slope falling away to the eave;
+`Anchor: bottom-front` puts that upright face's foot on `Position`, so the half grows outward from
+`X 0` and `Mirror: x` supplies the other half. `Size 0.14, 1.2, 2` is thickness, then **the roof's
+own rise (1.2) over its own run (2.0)** — the same two numbers the `31` was derived from, so the
+gable matches the pitch with no angle written down and follows the roof if the house is resized.
+Anchored at `Y 2.35`, the wedge runs from 0.05 inside the wall top up to 0.055 inside the roof's
+underside: both joins buried, neither coplanar, and each end sits 0.03 behind its wall face.
+
+**The two ends are two authored parts, not one `Mirror: xz`.** `Mirror` reflects a part's placement
+but re-uses the same mesh, which is exact only for a shape symmetric about the mirrored axis. The
+wedge is the one shape that is not: mirrored across the axis its slope runs along it returns
+slope-reversed, and the back gable would come out as a V. `Mirror: x` — across the wedge's
+extrusion axis — is exact, so each end still costs one authored part.
 
 *Adapt:* for two storeys, raise the walls' `Size.Y` and every roof-line part's `Position.Y` by the
 same amount — pitch, eave and gable geometry are all measured from the ridge downward and still
-hold. *Collide:* one `box collider` with `Fit: bounds`.
+hold. For a shallower roof, change the roof slab's `Rotation.Z` and the gable's `Size.Y` together;
+they are the same pitch stated twice. *Collide:* one `box collider` with `Fit: bounds`.
 
 ### `car`
 
-**7 authored parts, 12 rendered · 2.04 x 1.47 x 4.20 m (Y +0.00 .. +1.47)** — chassis, cabin, a glass band, a tilted windscreen, four wheels from one part, headlights and bumpers.
+**7 authored parts, 12 rendered · 2.04 x 1.45 x 4.20 m (Y +0.00 .. +1.45)** — chassis, cabin, a glass band, a wedge windscreen, four wheels from one part, headlights and bumpers.
 
 ```yaml
 body:
@@ -485,11 +518,11 @@ body:
         Anchor: bottom
         Colour: !colour "#2c3e50"
       - Name: windscreen
-        Shape: cube
-        Size: !vec { X: 1.46, Y: 0.58, Z: 0.08 }
-        Position: !vec { X: 0, Y: 1, Z: 0.93 }
-        Rotation: !vec { X: -40, Y: 0, Z: 0 }
-        Anchor: bottom
+        Shape: wedge
+        Size: !vec { X: 1.46, Y: 0.45, Z: 0.4 }
+        Position: !vec { X: 0, Y: 1, Z: 0.5 }
+        Rotation: !vec { X: 0, Y: 180, Z: 0 }
+        Anchor: bottom-front
         Colour: !colour "#2c3e50"
       - Name: wheel
         Shape: cylinder
@@ -513,10 +546,10 @@ body:
         Colour: !colour "#1a1a1a"
 ```
 
-`Mirror: xz`, the oversized slab, and the tilted fill as a windscreen.
+`Mirror: xz`, the oversized slab, and `wedge` as a windscreen.
 
-**The wheels** are one authored part that becomes four. `Size 0.66, 0.24, 0.66` gives
-`localScale.Y 0.12`, `Rotation: Z 90` lays the cylinder's axis along world X so it rolls the right
+**The wheels** are one authored part that becomes four. `Size 0.66, 0.24, 0.66` is a tyre 0.66
+across and 0.24 wide, `Rotation: Z 90` lays the cylinder's axis along world X so it rolls the right
 way, and centre `Y 0.33` is exactly the radius, so the tyre touches `Y 0` with no anchor needed.
 Both mirrored axes carry a non-zero `Position`, so no twin is coincident with another.
 
@@ -524,16 +557,20 @@ Both mirrored axes carry a non-zero `Position`, so no twin is coincident with an
 it stands proud on every face it passes through. One part reads as glazing on all four sides; four
 separate panes would be four parts and four chances to leave a gap.
 
-**The windscreen** is a slab anchored `bottom` on the bonnet at `(0, 1.0, 0.93)` and rotated
-`X -40`, leaning back until its top edge lands at the cabin's front roof edge
-(`z = 0.93 - 0.58 sin 40 = 0.56`, `y = 1.0 + 0.58 cos 40 = 1.44`). Its foot starts 0.05 below the
-bonnet's surface and its head sinks into the cabin's front face — both joins hidden by overlap.
-The sloped pane is what separates a car silhouette from two stacked boxes.
+**The windscreen** is one `wedge`, and no trigonometry survives it. `Rotation Y 180` turns the
+wedge round so its slope falls toward the bonnet; `Anchor: bottom-front` stands its upright face at
+`(0, 1.0, 0.5)`, which is 0.1 inside the cabin's front and 0.05 below the bonnet's surface. `Size
+1.46, 0.45, 0.4` then does the rest: the wedge occupies `Y 1.00 .. 1.45` and `Z 0.50 .. 0.90`, its
+apex landing exactly on the cabin roof line, and the glass is the sloped face between — a 0.45 rise
+over a 0.40 run, about 48 deg. Both joins are buried, and lengthening the bonnet is a change to
+`Size.Z` alone rather than a re-solve. The sloped pane is what separates a car silhouette from two
+stacked boxes.
 
 **The gap under the chassis is deliberate** — anchored `bottom` at `Y 0.35`, that clearance is what
 the wheels live in. The headlights are proud details, their centres on the chassis's front face.
 
-*Adapt:* a van lengthens the cabin, moves it forward and drops the windscreen rake to `X -20`.
+*Adapt:* a van lengthens the cabin, moves it forward and rakes the windscreen back by growing its
+`Size.Z`.
 Wheels that must actually spin have to become child entities — `model` parts cannot carry a
 `rotate`. *Collide:* one `box collider` with `Fit: bounds`.
 
@@ -615,9 +652,9 @@ body:
 Y axis and never will. Anything that repeats up its own vertical axis — hoops, rungs, storeys, stair
 treads — gets typed out.
 
-The cylinder halving bites four times: `localScale.Y` comes out 0.525, 0.045, 0.045 and 0.04 for
-`Size.Y` of 1.05, 0.09, 0.09 and 0.08. Trust `Size`; never reason about `localScale`. The hoops are
-0.03 wider in radius than the staves — the oversized slab, applied radially.
+The four cylinders are 1.05, 0.09, 0.09 and 0.08 tall, and those are the numbers written down —
+`Size` is metres, so there is nothing to convert. The hoops are 0.03 wider in radius than the
+staves — the oversized slab, applied radially.
 
 *Adapt:* to lay it on its side, put `Rotation: !vec { X: 90, Y: 0, Z: 0 }` on the **entity**, not on
 every part. Turning the whole prop is the entity's job. *Collide:* one `box collider` with
@@ -941,7 +978,8 @@ hitbox.
 | `model 'x': needs a Parts list. For a single shape use the 'primitive' behaviour instead.` | `Parts:` missing or empty. There is no single-shape shorthand. |
 | `model 'x': Parts must be a list of part maps.` | `Parts:` is a mapping or a scalar. It is a sequence — every entry starts with `- `. |
 | `model 'x' part 2: each Parts entry must be a { Shape, ... } map.` | An entry is a bare scalar — usually `- cube` where `- Shape: cube` was meant. |
-| `model 'x' part 0: needs a Shape (cube, sphere, capsule, cylinder, plane, quad).` | `Shape` missing or misspelled. Property **keys** are case-sensitive (`Shape`, not `shape`); enum **values** are not. |
+| `model 'x' part 0: needs a Shape (cube, sphere, capsule, cylinder, plane, quad, wedge, cone, hemisphere).` | `Shape` missing or misspelled. Property **keys** are case-sensitive (`Shape`, not `shape`); enum **values** are not. |
+| `Unknown primitive shape 'blob'. Valid values: cube, sphere, capsule, cylinder, plane, quad, wedge, cone, hemisphere` | A `Shape` outside the nine. There is no `dome`, no `pyramid`, no `torus`. |
 | `unknown Anchor token 'middle'. Valid tokens: left, right (X), bottom, top (Y), back, front (Z)` | The vocabulary is exactly those six. There is no `centre` — omit the axis instead. |
 | `Anchor 'left-right' names the X axis more than once` | One token per axis, at most. |
 | `Anchor 'bottom-' has an empty segment.` | A trailing or doubled hyphen. |
@@ -949,8 +987,9 @@ hitbox.
 | `Invalid component value: null` | A `!vec` missing `X` or `Y`. Only `Z` defaults to 0. |
 | Parse failure on a `Colour:` line | `Colour` needs the `!colour` tag and a hex string needs quotes: `Colour: !colour "#8c3b2e"`. |
 | A part is invisible from one side | It is a `plane` or a `quad` — both single-sided under URP. A plane faces +Y, a quad faces -Z. |
-| A part is twice as tall as intended | A `cylinder`/`capsule` `Size.Y` copied from a `primitive`, where `Size` is a raw `localScale`. Halve it. |
-| A plane is ten times too big | A `plane` `Size` copied from a `primitive`. Divide X and Z by ten. |
+| A hemisphere is twice as tall as expected | `Size` is the bounding box, so a true half-sphere is `Size d, d/2, d`. `Size 1, 1, 1` is a dome 1 m tall. |
+| A wedge's slope faces the wrong way | Unrotated, a wedge's upright face is at +Z and it falls away to -Z. `Rotation: Y 180` turns it round; `Y ±90` stands it on end for a gable. |
+| A mirrored wedge slopes the wrong way | `Mirror` re-uses the mesh, so it is exact only across the wedge's extrusion axis. Author the second one as its own part. |
 | A part is half-buried in the ground | Centre pivot with no `Anchor`. Add `Anchor: bottom`. |
 | Two parts flicker against each other | Coplanar faces (inset the smaller part by 0.02 rather than matching exactly), or a `Mirror` whose axis has zero offset in both `Position` and `Anchor`, so the twins are coincident. |
 | A mirrored limb crosses the body instead of splaying out | Working as designed — `Mirror` negates `Rotation` on two of three axes. Check the twin table and pick the axis whose signs you want. |
@@ -959,6 +998,7 @@ hitbox.
 | Nothing collides with the prop | Parts carry no colliders by design. Add a `box`/`sphere collider` with `Fit: bounds`, or `part colliders`, to the entity — see [Collision](#collision). |
 | A collider behaviour throws on initialisation | It is listed **before** the visual it measures. Behaviours initialise in declaration order; move it after the `model`. |
 | A cylinder part collides with rounded ends | `part colliders` maps `cylinder` to a CapsuleCollider. Use `Fit: bounds` for that prop, or accept it. |
+| A ramp cannot be walked up | Its collider is a box. `part colliders` gives a `wedge` or `cone` a convex MeshCollider that follows the slope; `Fit: bounds` cannot. |
 
 Verify with `validate_yaml` first (fastest at catching `Parts:` indentation), then `validate_game`,
 which is authoritative and catches bad anchor tokens, untagged colours, `Size` as a sequence and

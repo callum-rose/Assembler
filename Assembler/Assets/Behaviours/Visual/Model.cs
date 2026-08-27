@@ -12,9 +12,9 @@ namespace Assembler.Behaviours.Visual
 	/// instead of one entity per piece. Use this whenever an entity needs more than one shape; use
 	/// <c>primitive</c> for exactly one. Never stack repeated <c>primitive</c> behaviours on one entity —
 	/// they all render at the origin, axis-aligned, on top of each other. A part's <c>Size</c> is its true
-	/// world bounding box, unlike <c>primitive</c>'s <c>Size</c>, which is a raw localScale: a cylinder of
-	/// Size 1,3,1 here is genuinely 3 units tall and a plane of Size 10,1,10 is genuinely 10 by 10, because
-	/// Unity's native cylinder/capsule (2 units tall) and plane (10 by 10) scales are divided out for you.
+	/// world bounding box in metres — a cylinder of Size 1,3,1 is genuinely 3 units tall and a plane of
+	/// Size 10,1,10 is genuinely 10 by 10 — and <c>primitive</c>'s <c>Size</c> means exactly the same thing,
+	/// so the two behaviours agree.
 	/// Anchors move the pivot off the part's centre so a part at Position 0,0,0 with Anchor bottom sits on
 	/// the origin rather than half-buried, and Rotation then pivots about that anchor. Mirror emits
 	/// reflected duplicates of a part, so a symmetric shape is authored once. Parts are visual only — for
@@ -24,7 +24,7 @@ namespace Assembler.Behaviours.Visual
 	/// </summary>
 	/// <remarks>
 	/// Properties:
-	///   Parts: Ordered list of part maps (required — there is no single-shape shorthand). Each has Shape (required — cube, sphere, capsule, cylinder, plane or quad), Position (offset from the entity origin, default 0,0,0), Rotation (euler angles about the part's anchor, default 0,0,0), Size (true world dimensions, default 1,1,1), Anchor (hyphen-separated, order-agnostic point on the part that lands on Position — left/right on X, bottom/top on Y, back/front on Z, e.g. "bottom-left"; an omitted axis is centred and naming one axis twice is an error), Colour (overrides the model-wide Colour for this part), Mirror (emit reflected duplicates in addition to the original — x, z, or xz for all three twins) and Name (hierarchy name, defaults to "Part {i} ({Shape})").
+	///   Parts: Ordered list of part maps (required — there is no single-shape shorthand). Each has Shape (required — cube, sphere, capsule, cylinder, plane, quad, wedge, cone or hemisphere), Position (offset from the entity origin, default 0,0,0), Rotation (euler angles about the part's anchor, default 0,0,0), Size (true world dimensions, default 1,1,1), Anchor (hyphen-separated, order-agnostic point on the part that lands on Position — left/right on X, bottom/top on Y, back/front on Z, e.g. "bottom-left"; an omitted axis is centred and naming one axis twice is an error), Colour (overrides the model-wide Colour for this part), Mirror (emit reflected duplicates in addition to the original — x, z, or xz for all three twins) and Name (hierarchy name, defaults to "Part {i} ({Shape})").
 	///   Colour: Model-wide tint applied to every part that does not set its own Colour; omit both and parts keep the shared material's colour.
 	/// </remarks>
 	public class Model : GameBehaviour<ModelData>, INeedsLiveProperties
@@ -60,38 +60,13 @@ namespace Assembler.Behaviours.Visual
 			}
 		}
 
-		private void BuildPart(ModelPart part, PrimitiveType shape, string name, MirrorTwin twin,
+		private void BuildPart(ModelPart part, ShapeKind shape, string name, MirrorTwin twin,
 			IValueProvider<Color> colour)
 		{
-			var mesh = GameObject.CreatePrimitive(shape);
-			mesh.name = name;
-			mesh.transform.SetParent(transform, false);
-
-			// Drop the collider CreatePrimitive adds: model parts are visual, collision is declared
-			// explicitly. DestroyImmediate when not playing so the edit-mode sandbox build (which
-			// instantiates without entering play mode) can strip it too — plain Destroy throws in edit mode.
-			if (mesh.TryGetComponent<Collider>(out var collider))
-			{
-#if UNITY_EDITOR
-				if (Application.isPlaying)
-				{
-#endif
-					Destroy(collider);
-#if UNITY_EDITOR
-				}
-				else
-				{
-					DestroyImmediate(collider);
-				}
-#endif
-			}
-
+			// PrimitiveMeshes stamps the PrimitiveShape marker `part colliders` reads, and adds no
+			// collider of its own — model parts are visual, collision is declared explicitly.
+			var mesh = PrimitiveMeshes.Create(shape, name, transform);
 			var renderer = mesh.GetComponent<MeshRenderer>();
-			renderer.sharedMaterial = Resources.Load<Material>("Materials/Primitive");
-
-			// Record the shape so `part colliders` can match each part's collider to it rather than boxing
-			// everything; nothing else reads it.
-			mesh.AddComponent<PrimitiveShape>().Shape = shape;
 
 			// Position, Rotation and Size cannot be three independent one-line bindings: the anchor offset is
 			// a function of the *current* Size, so all three share cached state and re-apply together.
@@ -116,7 +91,7 @@ namespace Assembler.Behaviours.Visual
 		private sealed class PartPlacement
 		{
 			private readonly Transform _transform;
-			private readonly PrimitiveType _shape;
+			private readonly ShapeKind _shape;
 			private readonly Vector3 _anchor;
 			private readonly MirrorTwin _twin;
 
@@ -124,7 +99,7 @@ namespace Assembler.Behaviours.Visual
 			private Vector3 _rotation = Vector3.zero;
 			private Vector3 _size = Vector3.one;
 
-			public PartPlacement(Transform transform, PrimitiveType shape, Vector3 anchor, MirrorTwin twin) =>
+			public PartPlacement(Transform transform, ShapeKind shape, Vector3 anchor, MirrorTwin twin) =>
 				(_transform, _shape, _anchor, _twin) = (transform, shape, anchor, twin);
 
 			public void SetPosition(Vector3 position)
@@ -184,17 +159,17 @@ namespace Assembler.Behaviours.Visual
 			new(new Vector3(-1f, 1f, -1f), new Vector3(-1f, 1f, -1f), new Vector3(-1f, 1f, -1f), " (mirrored xz)");
 
 		/// <summary>
-		/// Converts a part's true world <paramref name="size"/> into the localScale that produces it. Unity's
-		/// native primitives are not all unit-sized: a cylinder and a capsule are 2 units tall and a plane is
-		/// 10 by 10, so those axes are divided out. Cube, sphere and quad are already unit-sized.
+		/// Converts a part's true world <paramref name="size"/> into the localScale that produces it.
 		/// </summary>
-		public static Vector3 Normalise(PrimitiveType shape, Vector3 size) =>
-			shape switch
-			{
-				PrimitiveType.Cylinder or PrimitiveType.Capsule => new Vector3(size.x, size.y * 0.5f, size.z),
-				PrimitiveType.Plane => new Vector3(size.x * 0.1f, size.y, size.z * 0.1f),
-				_ => size
-			};
+		/// <remarks>
+		/// Every mesh in <c>Resources/Meshes</c> is authored 1 x 1 x 1, so this is the identity for all but
+		/// one shape. The capsule is the exception and cannot be otherwise: at radius 0.5 and height 1 a
+		/// capsule *is* a sphere, so its mesh is 2 units tall and its Y is halved here. That keeps
+		/// <c>Size</c> a true world bounding box for every shape without exception — a capsule of
+		/// <c>Size 0.6, 1.2, 0.6</c> is genuinely 1.2 m tall.
+		/// </remarks>
+		public static Vector3 Normalise(ShapeKind shape, Vector3 size) =>
+			shape is ShapeKind.Capsule ? new Vector3(size.x, size.y * 0.5f, size.z) : size;
 
 		/// <summary>
 		/// The local offset that moves a centre-pivoted mesh so that the point named by
