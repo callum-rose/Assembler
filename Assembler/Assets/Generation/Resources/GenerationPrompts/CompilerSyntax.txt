@@ -54,6 +54,12 @@ double c = 3.14;      // floating point
 double d = -2.5;      // negative floating point
 ```
 
+A numeric value is implicitly widened to the type it flows into — no explicit cast needed — at
+declarations, assignments, `return`, and the branches of a ternary / `if`-`else`. So `float x = 1;`,
+`return 0.5;` from a float-returning expression, and `cond ? 1 : 2.0` (unified to `double`) all
+compile. An impossible conversion (e.g. `return "text";` into an `int`) is a positioned compile error,
+not a runtime crash.
+
 ### String Literals
 ```csharp
 string text = "Hello World";
@@ -76,6 +82,29 @@ bool f = false;
 int x;              // declare without initialization
 int y = 10;         // declare with initialization
 var z = 20;         // type inferred from initializer
+Vector3 dir = new Vector3(0, 1, 0);          // registered type name as the declared type
+UnityEngine.Vector3 v = new Vector3(1, 2, 3); // fully-qualified type name also works
+```
+
+The declared type can be `var`, a built-in keyword (`int`, `float`, `double`, `bool`, `string`), or
+any **registered/resolvable type** (e.g. a type listed in a descriptor's `RegisterTypes`) — used either
+by simple name or fully qualified, exactly as in `new` expressions.
+
+### Scoping
+
+Variables are **block-scoped**, exactly as in C#. A variable declared inside a `{ ... }` block (or a
+`for`/`while` body, or a `for` initializer) is visible only within that block and goes out of scope
+when it closes — reading it afterwards is an error. Re-declaring a name that is already visible in the
+same or an enclosing scope (including a method/expression parameter, or via a lambda parameter) is a
+compile error. Two *sibling* scopes may each declare the same name, since neither is visible to the
+other:
+```csharp
+for (int i = 0; i < 3; i++) { ... }
+for (int i = 0; i < 4; i++) { ... }   // OK — the first i is out of scope here
+
+int y = 1;
+if (cond) { int y = 2; }              // ERROR — y is already declared in the enclosing scope
+list.Where(y => y > 0);               // ERROR — lambda parameter y shadows the enclosing y
 ```
 
 ### Assignment
@@ -94,14 +123,12 @@ x /= 4;             // divide and assign
 
 ### Increment/Decrement
 ```csharp
-x++;                // postfix increment — yields the value before incrementing (no prefix ++x)
+x++;                // postfix increment — yields the value before incrementing
 x--;                // postfix decrement — yields the value before decrementing
 ```
-
-### Scoping
-Variables are block-scoped like C#: a variable declared in a `{ ... }` block or loop is out of scope
-after it, and re-declaring a name already visible in the same or an enclosing scope (including a lambda
-parameter shadowing an outer variable) is a compile error. Sibling scopes may reuse a name.
+Only the postfix forms (`x++`, `x--`) are supported; there is no prefix `++x`. As in C#, the
+expression evaluates to the operand's value *before* the change, so `x++ + 1` uses the old `x`. Also
+works on indexer targets (`a[i]++`). As a bare statement the distinction doesn't matter.
 
 ---
 
@@ -294,24 +321,14 @@ return value;        // return a value
 return x + y;        // return expression result
 ```
 
-**Important:** Early returns are supported but are preprocessed. The following:
+**Important:** Early returns are supported. The following works as written — the `return`
+exits the method, and any code after the `if` block runs only when the condition is false:
 ```csharp
 if (condition)
 {
     return x;
 }
 // more code
-```
-Is automatically transformed to:
-```csharp
-if (condition)
-{
-    return x;
-}
-else
-{
-    // more code
-}
 ```
 
 ---
@@ -352,10 +369,16 @@ doSomething(10);
 
 ### Calling Registered Static Methods
 ```csharp
-// If Math class methods are registered
+// If Math class methods are registered, call them by bare name…
 int absolute = (int)Abs(-5);
 double power = Pow(2.0, 3.0);
+
+// …or by their type-qualified name, exactly as in regular C#:
+float s = Mathf.Sin(x);
+float p = UnityEngine.Mathf.Sin(x); // fully-qualified also works
 ```
+`RegisterStaticMethods(type)` registers each method by its bare name *and* the type itself, so
+both the bare (`Sin(x)`) and qualified (`Mathf.Sin(x)`) call forms resolve.
 
 ### Method Overloading
 The compiler supports calling overloaded methods and will select the best matching overload based on argument types.
@@ -374,9 +397,30 @@ var sb = new System.Text.StringBuilder("Hello");
 
 // Using type aliases (if registered)
 var v = new Vector3(1.0, 2.0, 3.0);
+
+// Inline generic arguments are parsed, so common generic collections work without a registered alias
+var nums = new List<int>();
+var lookup = new Dictionary<string, int>();
 ```
 
-**Note:** Types must be registered with the compiler before they can be constructed. Use fully qualified names or registered type aliases.
+**Note:** Types must be registered with the compiler before they can be constructed. Use fully qualified names or registered type aliases. Closed generic types (`List<int>`, `Dictionary<int, string>`, including nested ones like `Dictionary<string, List<int>>`) are resolved from their inline type arguments — the common `System.Collections.Generic` collections resolve without any registration; other generics need their open definition registered or fully qualified.
+
+### Collection & Dictionary Initializers
+```csharp
+// Collection initializer — desugars to construct + repeated .Add(...)
+var nums = new List<int> { 1, 2, 3 };
+var withParens = new List<int>() { 1, 2, 3 };   // empty parens are allowed too
+var computed = new List<int> { x, x * 2, x + 1 };
+var empty = new List<int> { };                   // just the construction
+
+// Dictionary initializer — each { key, value } brace pair desugars to .Add(key, value)
+var scores = new Dictionary<string, int> { { "a", 1 }, { "b", 2 } };
+
+// Initializers are values, so they chain into LINQ / indexing directly
+var sum = new List<int> { 1, 2, 3, 4 }.Where(x => x > 2).Sum();
+```
+
+**Note:** A trailing comma before the closing brace is allowed. The target type must expose a matching public instance `Add` method (a single-argument `Add` for collection elements, a two-argument `Add(key, value)` for dictionary pairs) — otherwise the initializer is a compile error.
 
 ---
 
@@ -418,6 +462,35 @@ string result = sb.ToString();
 // Chained method calls
 sb.Append("Hello").Append(" ").Append("World");
 ```
+
+### Index / Element Access
+Square-bracket indexing works on arrays and on any type with an indexer
+(`this[...]`) — e.g. `List<T>`, `Dictionary<K, V>`, `string`.
+```csharp
+// Reading elements (the index can be any expression)
+int first = list[0];
+int last = list[list.Count - 1];
+int value = map["key"];
+char c = text[2];
+
+// Writing elements
+list[0] = 99;
+map["key"] = 42;
+array[i] = array[i - 1] + 1;
+
+// Compound assignment and increment on an element
+list[i] += 10;
+list[i]++;
+
+// Multi-dimensional arrays use a comma-separated index list
+int cell = grid[row, col];
+
+// Chains with member access and method calls
+int n = matrix[0].Count;
+```
+The index expression is widened to `int` for array access, or converted to the
+indexer's parameter type for an indexer property. An index access on a type with
+no matching indexer is a compile error.
 
 ---
 
@@ -526,7 +599,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ Properties (only fields are supported directly)
 - ❌ Events
 - ❌ Delegates (except in lambda expressions)
-- ❌ Indexers
 - ❌ Operator overloading
 - ❌ Extension methods (definition - calling registered ones is OK)
 - ❌ Generics (definition - using generic types is OK)
@@ -540,8 +612,8 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ String interpolation (`$"text {variable}"`)
 
 ### Not Supported - Statements
-- ❌ switch expressions (switch statements with case/default ARE supported - see below)
-- ❌ foreach loops (NOT supported despite token existing)
+- ❌ switch statements and switch expressions
+- ❌ foreach loops
 - ❌ do-while loops
 - ❌ try-catch-finally
 - ❌ throw statements
@@ -550,7 +622,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ goto statements
 
 ### Not Supported - Operators
-- ✅ `^` (XOR) IS supported — see [Operators](#xor-operator)
 - ❌ Bitwise operators (`&`, `|`, `~`, `<<`, `>>`)
 - ❌ Compound null-conditional operators (`?.`, `?[]`)
 - ❌ Compound null-coalescing operators (`??`, `??=`)
@@ -560,10 +631,9 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ default operator
 
 ### Not Supported - Collections
-- ❌ Array initializers (`new int[] { 1, 2, 3 }`)
-- ❌ Collection initializers (`new List<int> { 1, 2, 3 }`)
-- ❌ Dictionary initializers
-- ❌ Index access (`array[0]`) - despite token existing, parsing not implemented
+- ❌ Array creation / array initializers (`new int[3]`, `new int[] { 1, 2, 3 }`, `new[] { 1, 2 }`)
+
+(Collection and dictionary initializers — `new List<int> { 1, 2, 3 }`, `new Dictionary<string, int> { { "a", 1 } }` — *are* supported; see [Object Construction](#object-construction).)
 
 ### Not Supported - Lambdas
 - ❌ Multi-parameter lambdas (`(x, y) => x + y`)
@@ -584,12 +654,6 @@ The following C# features are **NOT** supported and will cause errors:
 - ❌ this keyword
 - ❌ base keyword
 - ❌ static keyword (outside registered types)
-
----
-
-## Switch Statements
-
-**IMPORTANT:** While the lexer has tokens for `switch`, `case`, and `default`, the parser does **NOT** implement switch statement parsing. Do not use switch statements.
 
 ---
 
@@ -682,7 +746,7 @@ return result + category + sq;
 
 5. **Types must be registered** before using them with `new`. Check what types are available before generating construction code.
 
-6. **Early returns are OK** but remember they're transformed - avoid complex logic after early returns.
+6. **Early returns are OK** - a `return` inside an `if` exits the method, and code after the `if` runs only when the condition was false.
 
 7. **Use LINQ method syntax**, not query syntax (`from x in list`).
 
@@ -704,9 +768,11 @@ This compiler supports:
 ✅ For and while loops
 ✅ Break and continue
 ✅ Local method definitions
-✅ Object construction with `new`
+✅ Object construction with `new` (including inline generics, e.g. `new List<int>()`)
+✅ Collection & dictionary initializers (`new List<int> { 1, 2, 3 }`) — see [Object Construction](#collection--dictionary-initializers)
 ✅ Property and field access
 ✅ Method calls (static and instance)
+✅ Index / element access (arrays, `List<T>`, `Dictionary<K,V>`, `string`) — see [Member Access](#index--element-access)
 ✅ Single-parameter lambda expressions
 ✅ LINQ extension methods
 ✅ Ternary conditional operator

@@ -14,6 +14,7 @@ namespace Assembler.Generation.Verification.Editor
 			(".claude/skills/generate-game-descriptor/SKILL.md", "Skill.txt"),
 			("Assets/docs/Behaviours.md", "Behaviours.txt"),
 			("Assets/docs/Libraries.md", "Libraries.txt"),
+			("Assets/docs/Models.md", "Models.txt"),
 			("Assets/Compiler/COMPILER_SYNTAX_REFERENCE.md", "CompilerSyntax.txt"),
 		};
 

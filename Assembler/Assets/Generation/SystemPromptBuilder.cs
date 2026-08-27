@@ -11,6 +11,7 @@ namespace Assembler.Generation
 			var skill = LoadRequired("Skill");
 			var behaviours = LoadRequired("Behaviours");
 			var libraries = LoadRequired("Libraries");
+			var models = LoadRequired("Models");
 			var compilerSyntax = LoadRequired("CompilerSyntax");
 
 			return $$"""
@@ -27,6 +28,9 @@ namespace Assembler.Generation
 
 			         ==== BEHAVIOUR CATALOGUE ====
 			         {{behaviours}}
+
+			         ==== MODEL COMPOSITION GUIDE ====
+			         {{models}}
 
 			         ==== EXPRESSION COMPILER SYNTAX REFERENCE ====
 			         {{compilerSyntax}}
