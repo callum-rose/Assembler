@@ -27,7 +27,14 @@ built so far (phases 1–2: foundations and primitives) and the traps in it.
 | `Controls/SheetFrame` | Overlay chrome: scrim, rising surface, content slot |
 | `Layout/GridCellSizeDriver` | The feed grid's column arithmetic |
 | `Typography/DropCapFormatter` + `DropCap` | The drop cap, as arithmetic and as a component |
-| `Prefabs/*` | The primitives above, authored (see **Primitives**) |
+| `Navigation/ScreenCatalog` | `ScreenId` → prefab and title |
+| `Navigation/ScreenNavigator` | The back stack, and the screens it builds and keeps |
+| `Navigation/ScreenView` + `ScreenPresenter` | The V and the P of a screen |
+| `Navigation/OverlayService` + `OverlayView` | The overlay layer's show/dismiss, and what it shows |
+| `Screens/*` | Feed, Detail, Archive and Settings — bare pages that prove the shell |
+| `Overlays/NoticeOverlay` | The one overlay so far: a sheet with a heading and a way out |
+| `Composition/ShellStartup` | Opens the paper on the front page |
+| `Prefabs/*` | The primitives and the screens, authored (see **Primitives**, **Screens**) |
 
 ## Coordinates
 
@@ -64,6 +71,52 @@ Three things to know:
   leaf binders only — anything with a constructor takes `IThemeService` from DI. When nothing has
   bound a service, it falls back to `Resources/Shell/ShellTheme`.
 
+## Navigation
+
+`INavigator` is a real back stack (UIPLAN 3.3): `Push(id, params)`, `Pop()`, `Replace(id, params)`. Overlays are
+not screens and never appear in it — they have their own `IOverlayService`, one slot, show and dismiss.
+
+**The stack is data; the instances are a cache.** The stack holds ids and the arguments they were pushed with,
+nothing else, and a screen re-binds from its entry's argument every time it is entered. Two things follow: the
+same instance serves a screen pushed twice with different arguments and is right both times, and dropping an
+instance cannot lose your place.
+
+Screens are built on first visit and then kept — deactivated, not destroyed (UIPLAN 3.2) — which is what makes
+the feed's scroll position and the archive's search text survive a round trip for nothing. `KeepAlive => false`
+on a view is the escape hatch for a screen expensive enough to be worth rebuilding instead of holding.
+
+Adding a screen is four things: a prefab whose root is a `ScreenView<TPresenter>`, a member on `ScreenId`, a row
+on `ScreenCatalog`, and a line in `ShellInstaller` if the presenter needs a service nothing else does.
+
+Four things to know:
+
+- **The pairing of a view with its presenter is on the view, not the catalog.** `ScreenView<FeedPresenter>` is
+  checked by the compiler; a serialized type name on a catalog row goes stale the first time a class is renamed.
+  It also leaves the catalog the plain id → prefab map UIPLAN 3.1 asks for.
+- **A presenter's constructor must take its view by the concrete type.** The navigator passes the view to
+  `resolver.Instantiate` as an additional argument (UIPLAN 1.6), and EasyDI matches an additional argument on
+  exactly the type it was declared with — `FeedPresenter(FeedView view, …)` resolves, `(ScreenView view, …)`
+  does not.
+- **Bind before the entrance, unbind after the exit.** The navigator calls `Enter` before the screen fades in
+  and `Exit` after it has faded out, so a screen is right by the time any of it is visible and stays right while
+  it is leaving.
+- **A view's events echo the identifiers it was bound with** (UIPLAN 4.2) — `event Action<string> LeadSelected`,
+  not `event Action LeadTapped`. Without that the presenter grows a `currentGameId` field and the stateless
+  claim rots.
+
+**A transition in flight refuses the next request rather than queueing it.** The guard is taken synchronously,
+before the first `await`, which is what catches the case that actually happens: a double-tapped button pushing
+the same screen twice.
+
+**Screens live in `ScreenHost`'s safe area; the paper ground does not.** The ground bleeds to the screen edge
+(UIPLAN 2.4) and belongs to the host, not to any screen — a per-screen ground would cross-fade paper over paper
+on every transition. Overlays parent to `OverlayHost`'s full-bleed rect instead, because a scrim that stops at
+the notch is not a scrim.
+
+`Assembler.Shell.Navigation` collides with `UnityEngine.UI.Navigation`, and inside `Assembler.Shell.*` the
+namespace wins the name. `LetterpressButton` and `ShellPrefabBuilder` alias it — **inside** their namespace
+declaration, not above it, because an alias in the compilation unit loses to a member of an enclosing namespace.
+
 ## Composition
 
 The chain is **application → shell**, with a per-game-session scope to come.
@@ -75,6 +128,10 @@ authored in `Bootstrap.unity` and registers the shell's services through `ShellI
 The shell scope overrides `DoParentTransformToParentScope` to `false`. By default a scope reparents
 onto its parent, which would drag it out of `Bootstrap` and into `DontDestroyOnLoad` — leaving a scope
 that outlives the scene objects its installer holds references to.
+
+`ShellStartup` is an `IStartable`, registered by `ShellInstaller`, and it pushes the feed. Nothing in the scene
+starts the shell: the first push happens once the whole object graph is built, rather than at whatever point in
+the scene's `Start` order a component happened to sit.
 
 **EasyDI needs the settings asset to exist.** Its initialiser reads `EasyDISettings.RootLifetimeScope`
 before every play and throws if there is no asset, so deleting `Assets/Shell/EasyDISettings.asset`
@@ -160,14 +217,32 @@ Unity forbids resizing a `RectTransform` from inside `OnValidate`: the resize ra
 the console fills with a warning per rect instead. `Rule` and `GridCellSizeDriver` both re-lay-out on
 validation, so both go through `Deferred.Run`.
 
+## Screens
+
+Four screen prefabs and one overlay, all authored by `Assembler > Shell > Build Shell Screens`: `FeedScreen`,
+`DetailScreen`, `ArchiveScreen`, `SettingsScreen` and `NoticeOverlay`, plus `ScreenCatalog.asset` and
+`OverlayCatalog.asset`.
+
+They are deliberately bare — a title, a rule, and the buttons it takes to get everywhere from everywhere. What
+they prove is the shell rather than the paper: that a screen is built on first visit and kept, that a pushed
+argument arrives, that the back control names the page underneath, that a presenter is constructed with its
+view, and that the overlay layer shows and dismisses. The editorial content lands on top of them in phase 5, and
+`Screens/Placeholder.cs` — the stand-in catalogue they are wired against — is deleted when the model arrives in
+phase 4.
+
+The back control is authored on the screen but labelled by the navigator, because its label is the title of the
+entry *beneath* the top of the stack: "The Archive" on a detail page reached from the archive, "Front Page" on
+the same page reached from the feed.
+
 ## Regenerating
 
-Five editor entry points, all under `Assembler > Shell` and all re-runnable:
+Six editor entry points, all under `Assembler > Shell` and all re-runnable:
 
 | Menu item | What it does |
 | --- | --- |
 | `Build Shell Root` | Grows the shell into `Bootstrap.unity`. Additive — finds objects by name and configures them in place, never destroys |
 | `Build Shell Prefabs` | Authors the primitives under `Prefabs/`. Opens an existing prefab and reconfigures it in place, so its GUID survives |
+| `Build Shell Screens` | Authors the four screens, the notice overlay and the two catalogs. Runs `Build Shell Prefabs` first — the screens are assembled out of the primitives |
 | `Create Shell Assets` | Creates the role and style members, the theme and the config if they are missing, tops the theme up with any table rows it lacks, and leaves existing ones alone |
 | `Reset Shell Theme` | Rewrites the existing theme's palette and scale from the prototype, discarding hand-tuning |
 | `Bake Newsreader Font Asset` | Re-bakes the static SDF atlas from the variable font |
