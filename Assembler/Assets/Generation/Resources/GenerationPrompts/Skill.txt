@@ -38,6 +38,13 @@ generated from the deserialisation DTOs and is the authoritative contract for ev
 type, scalar inference rule, and tag form. Consult it whenever you're unsure of a section's shape. This
 skill is the authoring guide, not the schema.
 
+**Model composition.** [`Models.md`](../../../Assets/docs/Models.md) covers the `model` behaviour and
+the craft of making primitives look like something: normalised sizes, anchors, mirroring, the
+composition rules (real-world scale, silhouette, grounding, a tight palette), and ten worked recipes
+— tree, house, car, crate, barrel, rock, streetlight, coin, turret, humanoid. **Any entity needing
+more than one shape is a `model`**, and you should start from the nearest recipe and adapt it rather
+than composing geometry from scratch.
+
 ---
 
 ## Reference descriptors
@@ -326,6 +333,15 @@ doesn't offer what you need, **stop and tell the user** — see **Feedback** bel
   never a built player or the default Game view. Use `primitive` for geometry that must render
   in-game; gizmos are debug overlays only.
 - **Every game needs a `camera` entity with a `camera` behaviour** or nothing renders.
+- **One shape is `primitive`; two or more is `model`.** Never stack repeated `primitive` behaviours
+  on one entity — they all render at the entity origin, axis-aligned, on top of each other. See
+  [`Models.md`](../../../Assets/docs/Models.md).
+- **`Size` means different things in the two.** `primitive.Size` is a raw `localScale`; a `model`
+  part's `Size` is a true world bounding box (Unity's 2-tall cylinder/capsule and 10x10 plane are
+  divided out). Copying numbers between them gives a half-height column.
+- **Model/primitive parts carry no collider.** Declare collision separately, and **never hand-write a
+  `Size`/`Radius` to match a visual** — use `box collider`/`sphere collider` with `Fit: bounds` (one
+  fitted collider) or `part colliders` (one per part), listed **after** the visual behaviour.
 - **A `collision_*` / `trigger_*` event needs a `rigidbody`** on at least one of the two entities.
   `IsTrigger: true` on a collider makes it overlap-only.
 - **Parse-only behaviours** (bottom of `Behaviours.md`: currently `condition`, `trigger stay trigger`,
@@ -580,6 +596,8 @@ its report when the check fails. See `Assembler/CLAUDE.md` › Build & Test if n
 - [ ] Template-internal references use `EntityId: !parameter self_id`.
 - [ ] Colliders needing `collision_*` / `trigger_*` have a `rigidbody` on one of the two entities.
 - [ ] A `camera` entity with a `camera` behaviour exists.
+- [ ] Every entity needing more than one shape uses `model` (not stacked `primitive`s), sized in
+      true world metres, grounded with `Anchor: bottom` unless floating on purpose.
 - [ ] Every `!expr` uses `{ Do, With }` with `With` as a map, was authored via the
       `unity-expression-compiler` skill, and reuses `Libraries.md` bare-name helpers instead of
       hand-rolled math (with no now-unnecessary `RegisterTypes`/`RegisterTypeStatics` left behind).

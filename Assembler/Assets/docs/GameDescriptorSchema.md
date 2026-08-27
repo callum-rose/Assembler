@@ -8,13 +8,14 @@ It is derived from the deserialisation DTOs in `Assets/Deserialisation/Dtos/` (t
 source-of-truth shapes) and the tag registry in `Assets/Deserialisation/GameFileParser.cs`. When this
 doc and the DTOs disagree, **the DTOs win** — update this doc.
 
-This schema covers **structure only**. It is one of three reference docs; each owns a different axis:
+This schema covers **structure only**. It is one of four reference docs; each owns a different axis:
 
 | Doc | Owns | Use it for |
 |---|---|---|
 | **`GameDescriptorSchema.md`** (this file) | The document shape: sections, nesting, value types, tags | "What keys exist and how do they nest?" |
 | [`Behaviours.md`](Behaviours.md) | The behaviour catalogue: every `Type:`, its `Properties:`, its trigger `Outputs` | "What behaviour types and property names are legal?" |
 | [`Libraries.md`](Libraries.md) | Global expression helpers callable by bare name from any `!expr` | "What functions can an expression body call?" |
+| [`Models.md`](Models.md) | Composing a multi-part visual out of primitives with `model`, and making it look right | "How do I build a prop that reads as a car?" |
 
 > **Behaviour `Type:` and `Properties:` names are NOT defined here.** They live in
 > [`Behaviours.md`](Behaviours.md) and are the source of truth — never invent a behaviour type,
@@ -489,7 +490,7 @@ Tags carry a leading `!` and tell the loader how to interpret a value. The full 
 
 | Tag | DTO | Accepted form(s) | Meaning |
 |---|---|---|---|
-| `!vec` | `VecDto` | `!vec { X: 0, Y: 0, Z: 0 }` (Z optional, defaults 0) | A `Vector3` literal. There is no `Vector2`; 2D quantities are `Vector3` with Z=0. `X`/`Y`/`Z` may themselves be expressions. |
+| `!vec` | `VecDto` | `!vec { X: 0, Y: 0, Z: 0 }` | A `Vector3` literal. **`X` and `Y` are required; only `Z` defaults to 0** — `!vec { Y: 2.2 }` throws `Invalid component value: null`. There is no `Vector2`; 2D quantities are `Vector3` with Z=0. `X`/`Y`/`Z` may themselves be expressions. |
 | `!colour` | `ColourDto` | `!colour red` · `!colour "#RRGGBB"` (also `#RGB`, `#RRGGBBAA`) · `!colour { R:1, G:0, B:0, A:1 }` (A optional, defaults 1) | A colour: named, hex string (quote it), or RGBA mapping. |
 | `!var` | `VarRefDto` | `!var some id` (scalar) | Reads a value by id: per-entity `Variables` → global `Variables` → `Constants`. The only read tag — there is no `!const`. |
 | `!parameter` | `ParamRefDto` | `!parameter slot` (scalar) | Inside a template, a parameter slot filled at instantiation. `!parameter self_id` = this entity's own id. |

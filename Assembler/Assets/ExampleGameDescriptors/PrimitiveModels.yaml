@@ -1,0 +1,698 @@
+Game:
+  Title: Primitive Models — the ten `model` recipes
+  Description: >
+    Every worked recipe from `Assets/docs/Models.md`, laid out on a 5x2 grid so they can be
+    compared side by side, plus a shape sampler that shows what `model`'s normalised `Size`
+    actually produces for each of the six primitives. Each entity's `Parts:` list is copied
+    verbatim from the doc — this file is the proof that the doc's YAML parses and that the
+    numbers in it land where they claim to. Static camera; inspect closely via the Scene view
+    while in Play mode. Escape quits.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#182028"
+
+# Three directional lights. Directional coverage is position-independent, so every model on the
+# grid is lit identically and the recipes can be compared fairly — a point/spot rig would flatter
+# whichever prop happened to sit under it.
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/escape" ]
+    mobile:
+      quit: [ "<Gamepad>/buttonSouth" ]
+
+Localisation:
+  DefaultLocale: en
+  Locales:
+    en:
+      hud.title: "model recipes — 1 unit = 1 m, +Z forward, every part grounded at Y 0"
+      hud.row.back: "back row (Z -5), left to right:  tree · house · car · turret · humanoid"
+      hud.row.front: "front row (Z +5), left to right:  crate · barrel · coin · rock · streetlight"
+      hud.row.sampler: "far row (Z +14):  shape sampler — cube · cylinder · capsule x2 · sphere · plane · quad"
+      hud.quit: "Esc to quit"
+
+Entities:
+  # ---- Stage: ground and lights -------------------------------------------
+  ground:
+    # Deliberately a `primitive` cube, not a plane: for a cube `Size` means the same thing in both
+    # behaviours (it is already unit-sized), so the ground cannot accidentally teach the divergence.
+    # Half the 0.2 thickness sits below the origin, putting the top face at exactly Y 0.
+    Position: !vec { X: 0, Y: -0.1, Z: 0 }
+    Behaviours:
+      slab:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Colour: !colour "#4d5359"
+          Size: !vec { X: 60, Y: 0.2, Z: 60 }
+
+  key light:
+    Rotation: !vec { X: 50, Y: -30, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: directional
+          Colour: !colour "#fff4e0"
+          Intensity: 1.1
+
+  fill light:
+    Rotation: !vec { X: -15, Y: 145, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: directional
+          Colour: !colour "#8fa8d0"
+          Intensity: 0.35
+
+  rim light:
+    Rotation: !vec { X: 25, Y: 200, Z: 0 }
+    Behaviours:
+      light:
+        Type: light
+        Properties:
+          Type: directional
+          Colour: !colour "#cfe4ff"
+          Intensity: 0.35
+
+  camera:
+    Tags: [ camera ]
+    # No virtual camera anywhere in this file, so the Cinemachine brain leaves the transform alone
+    # and the camera keeps this authored Position/Rotation. `camera` has no LookAt — aim it by Rotation.
+    Position: !vec { X: 0, Y: 12, Z: -22 }
+    Rotation: !vec { X: 21, Y: 0, Z: 0 }
+    Behaviours:
+      camera:
+        Type: camera
+        Properties:
+          View: "perspective"
+          DefaultBlend: 0
+
+  quit:
+    # The only input in the file, and the only reason it exists: a descriptor with no reachable
+    # !gameover listener is refused at build time.
+    Behaviours:
+      quit action:
+        Type: input action
+        Properties:
+          Action: quit
+        Listeners:
+          - !gameover
+
+  # ---- Back row (Z -5) ----------------------------------------------------
+  # Every prop below carries `Rotation: Y 180`. The recipes are authored +Z forward — doors,
+  # headlights, gun barrels and visors all face +Z — and this camera sits on the -Z side looking
+  # toward +Z, so without it every prop would present its back. Turning the *entity* rather than
+  # editing the parts is the whole point of the split: the `model` describes the prop, the entity
+  # places and aims it. The shape sampler is deliberately left unturned — see its own note.
+  tree:
+    # 4 parts, 4 rendered · 2.60 x 3.90 x 2.60 m.
+    # The cylinder-halving bite, the overlap rule, and a tiered canopy. Size.Y 1.0 on the trunk becomes
+    # localScale.Y 0.5 and the trunk is genuinely 1 m tall; its top is buried 0.3 inside the lowest
+    # canopy tier, and each tier overlaps the one below (1.9 into 0.7+1.6, 2.85 into 1.9+1.3). Three
+    # squashed spheres of decreasing size in three greens read as foliage; one big sphere reads as a
+    # lollipop.
+    Position: !vec { X: -16, Y: 0, Z: -5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#4e8f3d"
+          Parts:
+            - Name: trunk
+              Shape: cylinder
+              Size: !vec { X: 0.5, Y: 1, Z: 0.5 }
+              Anchor: bottom
+              Colour: !colour "#7a4f2a"
+            - Name: canopy low
+              Shape: sphere
+              Size: !vec { X: 2.6, Y: 1.6, Z: 2.6 }
+              Position: !vec { X: 0, Y: 0.7, Z: 0 }
+              Anchor: bottom
+            - Name: canopy mid
+              Shape: sphere
+              Size: !vec { X: 2, Y: 1.3, Z: 2 }
+              Position: !vec { X: 0, Y: 1.9, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#5da84b"
+            - Name: canopy top
+              Shape: sphere
+              Size: !vec { X: 1.3, Y: 1.05, Z: 1.3 }
+              Position: !vec { X: 0, Y: 2.85, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#71c05a"
+
+  house:
+    # 6 parts, 12 rendered · 4.72 x 3.68 x 3.40 m.
+    # Anchor-as-hinge and the one legitimate mirrored part at X 0. Pitch 31 deg = atan(1.2 / 2.0). The
+    # roof is anchored `right`, so its ridge end lands on (0, 3.6, 0) and the slab swings about that
+    # point; the eave ends up at (-2.314, 2.209) — a 0.31 overhang below the 2.4 wall top. `Mirror: x`
+    # leaves Position.X at 0 but flips the anchor to `left` and Rotation.Z to -31, so the twin sweeps
+    # the other way. The gable end is the tilted fill: one slab rotated to the roof's own -31, anchored
+    # `top-front` on the underside's midpoint (1.0, 2.95), hugs the slope exactly; `Mirror: xz` makes
+    # all four (two slopes x front/back), and one upright centre slab covers what their undersides
+    # miss. Both gable parts sit 0.03 behind the wall's front plane so nothing is coplanar with it.
+    Position: !vec { X: -8, Y: 0, Z: -5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#e2d4b6"
+          Parts:
+            - Name: walls
+              Shape: cube
+              Size: !vec { X: 4, Y: 2.4, Z: 3 }
+              Anchor: bottom
+            - Name: roof
+              Shape: cube
+              Size: !vec { X: 2.7, Y: 0.18, Z: 3.4 }
+              Position: !vec { X: 0, Y: 3.6, Z: 0 }
+              Rotation: !vec { X: 0, Y: 0, Z: 31 }
+              Anchor: right
+              Mirror: x
+              Colour: !colour "#a64535"
+            - Name: ridge
+              Shape: cube
+              Size: !vec { X: 0.3, Y: 0.2, Z: 3.46 }
+              Position: !vec { X: 0, Y: 3.62, Z: 0 }
+              Colour: !colour "#a64535"
+            - Name: gable slope
+              Shape: cube
+              Size: !vec { X: 2.35, Y: 0.6, Z: 0.14 }
+              Position: !vec { X: 1, Y: 2.95, Z: 1.47 }
+              Rotation: !vec { X: 0, Y: 0, Z: -31 }
+              Anchor: top-front
+              Mirror: xz
+            - Name: gable centre
+              Shape: cube
+              Size: !vec { X: 2.5, Y: 0.75, Z: 0.14 }
+              Position: !vec { X: 0, Y: 2.2, Z: 1.45 }
+              Anchor: bottom-front
+              Mirror: z
+            - Name: door
+              Shape: cube
+              Size: !vec { X: 0.85, Y: 1.75, Z: 0.1 }
+              Position: !vec { X: 0, Y: 0, Z: 1.47 }
+              Anchor: bottom-back
+              Colour: !colour "#4a3423"
+            - Name: window
+              Shape: cube
+              Size: !vec { X: 0.7, Y: 0.6, Z: 0.1 }
+              Position: !vec { X: 1.25, Y: 1.35, Z: 1.47 }
+              Anchor: back
+              Mirror: x
+              Colour: !colour "#7db8dc"
+
+  car:
+    # 7 parts, 12 rendered · 2.04 x 1.47 x 4.20 m.
+    # `Mirror: xz`, the oversized slab, and a tilted windscreen. The wheel is the xz showcase: Size.Y
+    # 0.24 becomes localScale.Y 0.12, `Rotation: Z 90` lays the cylinder axis along world X, and centre
+    # Y 0.33 makes the tyre touch Y 0 exactly. The glass band is 0.03 wider and 0.04 deeper than the
+    # cabin it passes through, so one part reads as glazing on all four sides. The windscreen is a slab
+    # anchored `bottom` on the bonnet at (0, 1.0, 0.93) and rotated X -40, so it leans back from the
+    # bonnet to the cabin's front roof edge — the sloped surface a box-only cabin lacks.
+    Position: !vec { X: 0, Y: 0, Z: -5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#d94f42"
+          Parts:
+            - Name: chassis
+              Shape: cube
+              Size: !vec { X: 1.8, Y: 0.7, Z: 4 }
+              Position: !vec { X: 0, Y: 0.35, Z: 0 }
+              Anchor: bottom
+            - Name: cabin
+              Shape: cube
+              Size: !vec { X: 1.5, Y: 0.5, Z: 1.8 }
+              Position: !vec { X: 0, Y: 0.95, Z: -0.3 }
+              Anchor: bottom
+            - Name: glass band
+              Shape: cube
+              Size: !vec { X: 1.53, Y: 0.28, Z: 1.84 }
+              Position: !vec { X: 0, Y: 1.06, Z: -0.3 }
+              Anchor: bottom
+              Colour: !colour "#2c3e50"
+            - Name: windscreen
+              Shape: cube
+              Size: !vec { X: 1.46, Y: 0.58, Z: 0.08 }
+              Position: !vec { X: 0, Y: 1, Z: 0.93 }
+              Rotation: !vec { X: -40, Y: 0, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#2c3e50"
+            - Name: wheel
+              Shape: cylinder
+              Size: !vec { X: 0.66, Y: 0.24, Z: 0.66 }
+              Position: !vec { X: 0.9, Y: 0.33, Z: 1.25 }
+              Rotation: !vec { X: 0, Y: 0, Z: 90 }
+              Mirror: xz
+              Colour: !colour "#1a1a1a"
+            - Name: headlight
+              Shape: sphere
+              Size: !vec { X: 0.22, Y: 0.18, Z: 0.14 }
+              Position: !vec { X: 0.58, Y: 0.75, Z: 2 }
+              Mirror: x
+              Colour: !colour "#ffe9a8"
+            - Name: bumper
+              Shape: cube
+              Size: !vec { X: 1.86, Y: 0.18, Z: 0.16 }
+              Position: !vec { X: 0, Y: 0.45, Z: 1.94 }
+              Anchor: back
+              Mirror: z
+              Colour: !colour "#1a1a1a"
+
+  turret:
+    # 6 parts, 8 rendered · 1.20 x 1.27 x 1.91 m.
+    # `Rotation: X 90` + `Anchor: bottom` makes a cylinder grow *forward* from its Position: the barrel
+    # starts at Z 0 inside the housing and ends at Z 1.15, and lengthening it is a one-number edit to
+    # Size.Y with Position untouched. Mass order matters: the housing is the widest thing here (1.2,
+    # wider than the 1.15 base disc and the 0.8 dome), which is what makes it read as a weapon platform
+    # rather than a mushroom. The eye sphere's centre sits on the dome's surface, so half protrudes.
+    Position: !vec { X: 8, Y: 0, Z: -5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#6b7a52"
+          Parts:
+            - Name: base
+              Shape: cylinder
+              Size: !vec { X: 1.15, Y: 0.22, Z: 1.15 }
+              Anchor: bottom
+            - Name: housing
+              Shape: cube
+              Size: !vec { X: 1.2, Y: 0.6, Z: 1.25 }
+              Position: !vec { X: 0, Y: 0.18, Z: 0 }
+              Anchor: bottom
+            - Name: dome
+              Shape: sphere
+              Size: !vec { X: 0.85, Y: 0.42, Z: 0.85 }
+              Position: !vec { X: 0, Y: 0.68, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#7d8c63"
+            - Name: eye
+              Shape: sphere
+              Size: !vec { X: 0.28, Y: 0.28, Z: 0.28 }
+              Position: !vec { X: 0, Y: 0.9, Z: 0.42 }
+              Colour: !colour "#e8483c"
+            - Name: barrel
+              Shape: cylinder
+              Size: !vec { X: 0.2, Y: 1.15, Z: 0.2 }
+              Position: !vec { X: 0.3, Y: 0.48, Z: 0 }
+              Rotation: !vec { X: 90, Y: 0, Z: 0 }
+              Anchor: bottom
+              Mirror: x
+              Colour: !colour "#3d434c"
+            - Name: muzzle
+              Shape: cylinder
+              Size: !vec { X: 0.3, Y: 0.26, Z: 0.3 }
+              Position: !vec { X: 0.3, Y: 0.48, Z: 1.02 }
+              Rotation: !vec { X: 90, Y: 0, Z: 0 }
+              Anchor: bottom
+              Mirror: x
+              Colour: !colour "#3d434c"
+
+  humanoid:
+    # 7 parts, 11 rendered · 1.06 x 1.70 x 0.51 m.
+    # Capsule limbs, splayed arms, and endpoint-centred hands. The arms are anchored `top` at the
+    # shoulder and rotated 8 deg outward; `Mirror: x` negates Rotation.Z to -8 and the splay mirrors
+    # correctly. Each hand sphere is centred on its arm's rotated endpoint (0.44, 0.63) — the same
+    # place-on-the-tip move as the streetlight head. The head is a deliberately oversized cube (0.46
+    # against a 0.60 torso) with a proud hair slab and eyes half-sunk into the face — big-head
+    # proportions read as a character where accurate ones read as a mannequin.
+    Position: !vec { X: 16, Y: 0, Z: -5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#e07b39"
+          Parts:
+            - Name: leg
+              Shape: capsule
+              Size: !vec { X: 0.24, Y: 0.7, Z: 0.24 }
+              Position: !vec { X: 0.16, Y: 0, Z: 0 }
+              Anchor: bottom
+              Mirror: x
+              Colour: !colour "#3f5875"
+            - Name: torso
+              Shape: cube
+              Size: !vec { X: 0.6, Y: 0.62, Z: 0.36 }
+              Position: !vec { X: 0, Y: 0.62, Z: 0 }
+              Anchor: bottom
+            - Name: arm
+              Shape: capsule
+              Size: !vec { X: 0.18, Y: 0.58, Z: 0.18 }
+              Position: !vec { X: 0.36, Y: 1.2, Z: 0 }
+              Rotation: !vec { X: 0, Y: 0, Z: 8 }
+              Anchor: top
+              Mirror: x
+            - Name: hand
+              Shape: sphere
+              Size: !vec { X: 0.16, Y: 0.16, Z: 0.16 }
+              Position: !vec { X: 0.44, Y: 0.63, Z: 0 }
+              Mirror: x
+              Colour: !colour "#eec39a"
+            - Name: head
+              Shape: cube
+              Size: !vec { X: 0.46, Y: 0.44, Z: 0.46 }
+              Position: !vec { X: 0, Y: 1.18, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#eec39a"
+            - Name: hair
+              Shape: cube
+              Size: !vec { X: 0.5, Y: 0.16, Z: 0.5 }
+              Position: !vec { X: 0, Y: 1.54, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#43322a"
+            - Name: eye
+              Shape: cube
+              Size: !vec { X: 0.07, Y: 0.1, Z: 0.05 }
+              Position: !vec { X: 0.11, Y: 1.42, Z: 0.23 }
+              Mirror: x
+              Colour: !colour "#43322a"
+
+  # ---- Front row (Z +5) ---------------------------------------------------
+
+  crate:
+    # 3 parts, 6 rendered · 1.06 x 1.05 x 1.06 m.
+    # The cleanest `Mirror: xz`: one authored corner post becomes four. The posts stand 0.02 proud of
+    # the body's +/-0.50 faces so they read as battens rather than decals, and they are inset 0.02 top
+    # and bottom so no face is coplanar with the body's — two coplanar co-facing faces z-fight.
+    Position: !vec { X: -16, Y: 0, Z: 5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#a9793f"
+          Parts:
+            - Name: body
+              Shape: cube
+              Size: !vec { X: 1, Y: 1, Z: 1 }
+              Anchor: bottom
+            - Name: corner post
+              Shape: cube
+              Size: !vec { X: 0.14, Y: 0.96, Z: 0.14 }
+              Position: !vec { X: 0.45, Y: 0.02, Z: 0.45 }
+              Anchor: bottom
+              Mirror: xz
+              Colour: !colour "#7a5427"
+            - Name: lid rim
+              Shape: cube
+              Size: !vec { X: 1.06, Y: 0.1, Z: 1.06 }
+              Position: !vec { X: 0, Y: 0.95, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#7a5427"
+
+  barrel:
+    # 4 parts, 4 rendered · 0.84 x 1.08 x 0.84 m.
+    # There is no Y mirror, so the two hoops are the same part typed twice — that is the recipe. The
+    # cylinder halving bites four times over (localScale.Y 0.525 / 0.045 / 0.045 / 0.04). The hoops are
+    # 0.03 wider in radius than the staves: the oversized slab, applied radially.
+    Position: !vec { X: -8, Y: 0, Z: 5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#7a5a34"
+          Parts:
+            - Name: staves
+              Shape: cylinder
+              Size: !vec { X: 0.78, Y: 1.05, Z: 0.78 }
+              Anchor: bottom
+            - Name: lower hoop
+              Shape: cylinder
+              Size: !vec { X: 0.84, Y: 0.09, Z: 0.84 }
+              Position: !vec { X: 0, Y: 0.22, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#4a4a52"
+            - Name: upper hoop
+              Shape: cylinder
+              Size: !vec { X: 0.84, Y: 0.09, Z: 0.84 }
+              Position: !vec { X: 0, Y: 0.74, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#4a4a52"
+            - Name: lid
+              Shape: cylinder
+              Size: !vec { X: 0.72, Y: 0.08, Z: 0.72 }
+              Position: !vec { X: 0, Y: 1, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#8a6a40"
+
+  coin:
+    # 3 parts, 3 rendered · 0.62 x 0.62 x 0.10 m, floating between Y 0.14 and Y 0.76.
+    # The deliberate exception to "ground everything" — a pickup should hover. `Rotation: X 90` swings
+    # the cylinder axis onto world Z, standing the disc upright in the XY plane. The rim is wider but
+    # thinner than the face, so only a 0.035 ring of it shows: the oversized slab again, radially.
+    Position: !vec { X: 0, Y: 0, Z: 5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#d4a017"
+          Parts:
+            - Name: rim
+              Shape: cylinder
+              Size: !vec { X: 0.62, Y: 0.06, Z: 0.62 }
+              Position: !vec { X: 0, Y: 0.45, Z: 0 }
+              Rotation: !vec { X: 90, Y: 0, Z: 0 }
+            - Name: face
+              Shape: cylinder
+              Size: !vec { X: 0.55, Y: 0.08, Z: 0.55 }
+              Position: !vec { X: 0, Y: 0.45, Z: 0 }
+              Rotation: !vec { X: 90, Y: 0, Z: 0 }
+              Colour: !colour "#f0c33c"
+            - Name: emblem
+              Shape: cube
+              Size: !vec { X: 0.22, Y: 0.22, Z: 0.1 }
+              Position: !vec { X: 0, Y: 0.45, Z: 0 }
+              Rotation: !vec { X: 0, Y: 0, Z: 45 }
+              Colour: !colour "#a87708"
+
+  rock:
+    # 3 parts, 3 rendered · 2.35 x 1.32 x 1.94 m, of which 0.38 is below Y 0.
+    # The other exception to `Anchor: bottom`: centre-pivoted and deliberately sunk, because burying
+    # the lower third is what stops a rock reading as a prop resting on a floor. The two big masses are
+    # cubes tilted on all three axes — stone is angular, and a rotated cube's corners and facets do
+    # what no smooth ellipsoid can. The pebble keeps the counter-lesson: rotating a sphere is a no-op
+    # unless it is non-uniformly scaled, so it is an ellipsoid and Rotation.Y genuinely turns it. This
+    # recipe depends on ground at Y 0; on a floating platform a third of it hangs in mid-air.
+    Position: !vec { X: 8, Y: 0, Z: 5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#85868c"
+          Parts:
+            - Name: boulder
+              Shape: cube
+              Size: !vec { X: 1.25, Y: 0.85, Z: 1.1 }
+              Position: !vec { X: -0.15, Y: 0.22, Z: -0.05 }
+              Rotation: !vec { X: -14, Y: 28, Z: 10 }
+            - Name: shoulder
+              Shape: cube
+              Size: !vec { X: 0.9, Y: 0.65, Z: 0.8 }
+              Position: !vec { X: 0.55, Y: 0.12, Z: 0.25 }
+              Rotation: !vec { X: 12, Y: -20, Z: -14 }
+              Colour: !colour "#9798a0"
+            - Name: chunk
+              Shape: cube
+              Size: !vec { X: 0.6, Y: 0.45, Z: 0.55 }
+              Position: !vec { X: -0.7, Y: 0.05, Z: 0.3 }
+              Rotation: !vec { X: 8, Y: 50, Z: -6 }
+              Colour: !colour "#74757b"
+            - Name: pebble
+              Shape: sphere
+              Size: !vec { X: 0.45, Y: 0.32, Z: 0.4 }
+              Position: !vec { X: 0.9, Y: 0.05, Z: -0.45 }
+              Rotation: !vec { X: 0, Y: 35, Z: 0 }
+              Colour: !colour "#6e6f75"
+
+  streetlight:
+    # 5 parts, 5 rendered · 1.84 x 4.69 x 0.36 m.
+    # The anchor-as-hinge showcase, and the only honest way to place the head. The arm is anchored
+    # `bottom` at (0, 4.1, 0) and rotated Z -70, so it pivots at its foot; its tip therefore lands at
+    # x = 1.5 * sin(70) = 1.410 and y = 4.10 + 1.5 * cos(70) = 4.613 — which is exactly where the head
+    # is the head's
+    # Position — with no anchor at all, because centring the head on the tip is what buries the arm's flat
+    # end cap inside it instead of letting it poke through the head's top face. Change the arm's length or
+    # angle and the head has to be re-derived; that is the cost of the technique, and still far cheaper
+    # than hand-computing a rotated centre.
+    Position: !vec { X: 16, Y: 0, Z: 5 }
+    Rotation: !vec { X: 0, Y: 180, Z: 0 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#3c4046"
+          Parts:
+            - Name: base
+              Shape: cylinder
+              Size: !vec { X: 0.36, Y: 0.16, Z: 0.36 }
+              Anchor: bottom
+            - Name: column
+              Shape: cylinder
+              Size: !vec { X: 0.16, Y: 4.2, Z: 0.16 }
+              Position: !vec { X: 0, Y: 0.1, Z: 0 }
+              Anchor: bottom
+            - Name: arm
+              Shape: cylinder
+              Size: !vec { X: 0.13, Y: 1.5, Z: 0.13 }
+              Position: !vec { X: 0, Y: 4.1, Z: 0 }
+              Rotation: !vec { X: 0, Y: 0, Z: -70 }
+              Anchor: bottom
+            - Name: head
+              Shape: cube
+              Size: !vec { X: 0.5, Y: 0.16, Z: 0.3 }
+              Position: !vec { X: 1.41, Y: 4.61, Z: 0 }
+            - Name: lens
+              Shape: cube
+              Size: !vec { X: 0.42, Y: 0.06, Z: 0.24 }
+              Position: !vec { X: 1.41, Y: 4.55, Z: 0 }
+              Anchor: top
+              Colour: !colour "#ffe9b0"
+    Children:
+      lamp:
+        # The lens is matte — `model` has no emissive channel and no light of its own. Anything that
+        # should *glow* needs a real `light`, so the lamp is a child entity parked just under the head.
+        Position: !vec { X: 1.41, Y: 4.42, Z: 0 }
+        Behaviours:
+          light:
+            Type: light
+            Properties:
+              Type: point
+              Colour: !colour "#ffd9a0"
+              Intensity: 4
+              Range: 12
+
+  # ---- Far row (Z +14): the shape sampler ---------------------------------
+
+  shape sampler:
+    # What `model`'s normalised Size actually produces, one part per primitive. The cube and the
+    # cylinder are both Size 1,3,1 and are both genuinely 3 m tall — under `primitive` the cylinder
+    # would be 6. The two capsules are Size 1,2,1 and 1,3,1: the first has Y = 2X and therefore true
+    # hemisphere caps, the second is the same width and visibly stretched. The plane is Size 2,1,2 and
+    # is genuinely 2 x 2 (Unity's plane is natively 10 x 10); its Size.Y does nothing, because a plane
+    # has no thickness, and it faces +Y so it is only visible from above. The quad is 1 x 1 in the XY
+    # plane, its Size.Z does nothing, and its normal points along -Z — so it is visible from the -Z side,
+    # which is where this camera is. This is the one entity here with no `Rotation: Y 180`: turned to face
+    # +Z like the props, the quad would simply vanish, because URP's Lit shader is single-sided.
+    Position: !vec { X: 0, Y: 0, Z: 14 }
+    Behaviours:
+      body:
+        Type: model
+        Properties:
+          Colour: !colour "#b9c2cc"
+          Parts:
+            - Name: cube 1x3x1
+              Shape: cube
+              Size: !vec { X: 1, Y: 3, Z: 1 }
+              Position: !vec { X: -4.5, Y: 0, Z: 0 }
+              Anchor: bottom
+            - Name: cylinder 1x3x1
+              Shape: cylinder
+              Size: !vec { X: 1, Y: 3, Z: 1 }
+              Position: !vec { X: -3, Y: 0, Z: 0 }
+              Anchor: bottom
+            - Name: capsule 1x2x1
+              Shape: capsule
+              Size: !vec { X: 1, Y: 2, Z: 1 }
+              Position: !vec { X: -1.5, Y: 0, Z: 0 }
+              Anchor: bottom
+            - Name: capsule 1x3x1
+              Shape: capsule
+              Size: !vec { X: 1, Y: 3, Z: 1 }
+              Anchor: bottom
+              Colour: !colour "#cdb98a"
+            - Name: sphere 1x1x1
+              Shape: sphere
+              Size: !vec { X: 1, Y: 1, Z: 1 }
+              Position: !vec { X: 1.5, Y: 0, Z: 0 }
+              Anchor: bottom
+            - Name: plane 2x2
+              Shape: plane
+              Size: !vec { X: 2, Y: 1, Z: 2 }
+              Position: !vec { X: 3.2, Y: 0.02, Z: 0 }
+              Colour: !colour "#7fb2d4"
+            - Name: quad 1x1
+              Shape: quad
+              Size: !vec { X: 1, Y: 1, Z: 1 }
+              Position: !vec { X: 5, Y: 0, Z: 0 }
+              Anchor: bottom
+              Colour: !colour "#d48f7f"
+
+  # ---- HUD ----------------------------------------------------------------
+  ui:
+    Behaviours:
+      canvas:
+        Type: ui canvas
+        Properties:
+          MatchWidthOrHeight: 0.5
+          ReferenceResolution: !vec { X: 1920, Y: 1080 }
+    Children:
+      hud:
+        # There is no world-space text behaviour, so the grid is labelled row by row from a screen
+        # overlay rather than with a caption under each prop.
+        Behaviours:
+          layout:
+            Type: ui container
+            Properties:
+              Direction: vertical
+              Spacing: 6
+              Padding: 24
+              ChildAlignment: upper-left
+        Children:
+          title:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.title
+                  FontSize: 30
+                  PreferredHeight: 40
+          back row:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.row.back
+                  FontSize: 24
+                  PreferredHeight: 34
+          front row:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.row.front
+                  FontSize: 24
+                  PreferredHeight: 34
+          sampler row:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.row.sampler
+                  FontSize: 24
+                  PreferredHeight: 34
+          quit hint:
+            Behaviours:
+              label:
+                Type: text label
+                Properties:
+                  Text: !text hud.quit
+                  FontSize: 20
+                  PreferredHeight: 30
