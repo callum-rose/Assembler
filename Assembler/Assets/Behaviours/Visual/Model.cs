@@ -26,9 +26,8 @@ namespace Assembler.Behaviours.Visual
 	/// </remarks>
 	public class Model : GameBehaviour<ModelData>, INeedsLiveProperties
 	{
-		// URP's Lit shader exposes the main colour as _BaseColor; _Color covers the built-in pipeline.
+		// URP's Lit shader exposes the main colour as _BaseColor.
 		private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-		private static readonly int ColorId = Shader.PropertyToID("_Color");
 
 		public LivePropertyUpdater LiveProperties { get; set; } = null!;
 
@@ -40,13 +39,16 @@ namespace Assembler.Behaviours.Visual
 
 				// Shape, Name and Mirror decide how many GameObjects exist and which mesh each holds, so
 				// they are read once here rather than bound — a live shape would mean rebuilding the child.
-				var shape = part.Shape.ValueOr(PrimitiveType.Cube);
+				// Shape is required (ModelInfo rejects a part without one), so it is read outright: a null
+				// provider here is a pipeline bug and should throw rather than quietly become a cube.
+				var shape = part.Shape.Get();
 				var name = part.Name.ValueOr($"Part {i} ({shape})");
 				var mirror = part.Mirror.ValueOr(MirrorAxis.None);
 
 				// Colour fallback chain, rung by rung: the part's own colour, else the model-wide colour,
-				// else (both being NullValueProviders) nothing is bound and the shared material shows through.
-				var colour = part.Colour is NullValueProvider<Color> ? data.Colour : part.Colour;
+				// else (both being omitted) nothing is bound and the shared material shows through. Picking
+				// the provider rather than ValueOr's value keeps a !var/!expr colour live.
+				var colour = part.Colour.Or(data.Colour);
 
 				foreach (var twin in ModelGeometry.Twins(mirror))
 				{
@@ -97,7 +99,6 @@ namespace Assembler.Behaviours.Visual
 			colour.BindLive(this, c =>
 			{
 				block.SetColor(BaseColorId, c);
-				block.SetColor(ColorId, c);
 				renderer.SetPropertyBlock(block);
 			});
 		}
