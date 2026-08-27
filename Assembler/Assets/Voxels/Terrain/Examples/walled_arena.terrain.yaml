@@ -1,0 +1,23 @@
+# Flat enclosed arena — a level floor inside tall sealed walls (a closed box),
+# with a central raised dais.
+#
+# Bake with: Assembler > Generate Terrain → Load this file → Bake to Resources.
+# Writes Assets/Resources/Voxels/walled_arena.vox.
+Name: walled_arena
+Seed: 7
+Size: { X: 128, Y: 128, Z: 48 }
+SkinThickness: 2
+
+Enclosure: sealed         # walls + a ceiling slab (a closed room)
+WallHeight: 40
+WallThickness: 3
+WallColour: "#4a4f5a"
+
+Base:
+  Type: flat
+  Colour: "#7d7f86"
+  Height: 3               # flat floor top sits at Z=3
+
+Ops:
+  # A circular dais in the centre of the arena.
+  - { Op: stamp, Shape: cylinder, Centre: { X: 64, Y: 64, Z: 6 }, Radius: 18, Height: 8, Axis: Z, Colour: "#9a6b3c" }

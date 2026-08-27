@@ -1,0 +1,96 @@
+# TerrainDemo — consume a baked voxel terrain in a game via the EXISTING runtime
+# path (no new behaviours): a `mesh` asset + `voxel mesh` (render) + `mesh collider`.
+#
+# PREREQUISITES — bake the terrain first, then move this file to run it:
+#   1. Assembler > Generate Terrain.
+#   2. Load rolling_meadow.terrain.yaml (this folder); click "Bake to Resources"
+#      → writes Assets/Resources/Voxels/rolling_meadow.vox (imported to a Mesh).
+#   3. Copy THIS file into Assets/ExampleGameDescriptors/ and launch it from
+#      Assembler > Game Launcher.
+#
+# This file is kept OUT of Assets/ExampleGameDescriptors/ on purpose: validate-game
+# recurses that folder and would fail to build a descriptor whose .vox isn't baked yet.
+#
+# A rigidbody cube drops under gravity and comes to rest ON the terrain surface.
+# The terrain mesh imports Z-up -> Y-up, so the surface faces +Y and gravity is -Y.
+
+Game:
+  Title: Terrain Demo
+  Description: A rigidbody cube drops onto a baked voxel-terrain surface.
+
+World:
+  Dimensionality: 3
+  BackgroundColor: "#0e1118"
+
+Physics:
+  Gravity: !vec { X: 0, Y: -9.81, Z: 0 }
+
+Assets:
+  - Id: terrain mesh
+    Type: mesh
+    Source: resources
+    Path: Voxels/rolling_meadow
+
+Constants:
+  camera position: !vec { X: 0, Y: 28, Z: -40 }
+  camera rotation: !vec { X: 30, Y: 0, Z: 0 }
+
+Controls:
+  Actions:
+    quit: { Type: button, Phase: down }
+  Bindings:
+    desktop:
+      quit: [ "<Keyboard>/q" ]
+    mobile:
+      quit: [ "<Gamepad>/start" ]
+  OnScreen:
+    - { Type: button, Action: quit, Label: "Quit", Anchor: upper-right, Offset: { X: 120, Y: 120 }, Size: { X: 180, Y: 180 } }
+
+Entities:
+  controls:
+    Behaviours:
+      quit:
+        Type: input action
+        Properties: { Action: quit }
+        Listeners: [ !gameover ]
+
+  terrain:
+    # NOTE: deliberately NOT given the Navigation ObstacleTag — a terrain-wide mesh
+    # collider would otherwise rasterise the entire nav grid as blocked.
+    Position: !vec { X: -25, Y: 0, Z: -25 }   # centre the 200-voxel skin (x0.25 = 50u) on the origin
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      surface:
+        Type: voxel mesh
+        Properties:
+          Mesh: !asset { Id: terrain mesh }
+          Scale: !vec { X: 0.25, Y: 0.25, Z: 0.25 }
+      collide:
+        Type: mesh collider
+        Properties: { Convex: false }
+
+  faller:
+    Position: !vec { X: 0, Y: 30, Z: 0 }
+    Rotation: !vec { X: 0, Y: 0, Z: 0 }
+    Behaviours:
+      body:
+        Type: primitive
+        Properties:
+          Shape: cube
+          Size: !vec { X: 2, Y: 2, Z: 2 }
+          Colour: !colour "#e8a13c"
+      collider:
+        Type: box collider
+        Properties: { Size: !vec { X: 2, Y: 2, Z: 2 }, IsTrigger: false }
+      rb:
+        Type: rigidbody
+        Properties: { UseGravity: true, IsKinematic: false, Mass: 1 }
+
+  camera:
+    Tags: [ camera ]
+    Position: !var camera position
+    Rotation: !var camera rotation
+    Behaviours:
+      camera:
+        Type: camera
+        Properties: { View: "perspective", Size: 10 }
