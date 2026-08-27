@@ -83,6 +83,14 @@ namespace Assembler.Shell.Editor
 			scaler.referenceResolution = new Vector2(390f, 844f);
 			scaler.matchWidthOrHeight = 0f;
 
+			// One reference pixel per unit, against the atlas's four pixels per unit: uGUI converts a sprite's
+			// pixels to canvas units by sprite-pixels-per-unit over this, so the shell's four-times art lands at
+			// one quarter of its pixel size — which is the unit size it was drawn for. The stock 100 would blow a
+			// nine-slice border of nine sheet pixels up to 225 units. Every sprite the shell draws comes off that
+			// sheet; anything else brought into this canvas has to be imported at 4 too, or say so with an
+			// Image's pixels-per-unit multiplier.
+			scaler.referencePixelsPerUnit = 1f;
+
 			EnsureComponent<ShortAxisCanvasScaler>(rootObject);
 
 			var screenHost = BuildHost(rootObject.transform, "ScreenHost", siblingIndex: 0);

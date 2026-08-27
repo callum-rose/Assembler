@@ -97,6 +97,7 @@ MonoBehaviour:
   face: {fileID: 7829920723195671331}
   fill: {fileID: 5931060215244322290}
   label: {fileID: 2895322753555243985}
+  icon: {fileID: 0}
   hitTarget: {fileID: 1461416426287965531}
   sinkScale: 0.9
   disabledAlpha: 0.4
@@ -170,8 +171,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: -1557082506, guid: 714c92c117cc64b638e438e5a03f5804, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -261,8 +262,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: -1557082506, guid: 714c92c117cc64b638e438e5a03f5804, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -502,8 +503,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: -1557082506, guid: 714c92c117cc64b638e438e5a03f5804, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4

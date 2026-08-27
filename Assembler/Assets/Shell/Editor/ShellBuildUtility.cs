@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Assembler.Shell.Theming;
 using UnityEditor;
 using UnityEngine;
@@ -131,6 +132,23 @@ namespace Assembler.Shell.Editor
 		public static TextStyleId Style(string name)
 		{
 			return Member<TextStyleId>(ShellAssetBuilder.TextStylesFolder, name);
+		}
+
+		/// <summary>The atlas sprite of that name. Throws when the sheet carries no such sprite.</summary>
+		public static Sprite Sprite(string name)
+		{
+			var sprite = AssetDatabase.LoadAllAssetsAtPath(ShellAtlasImporter.AtlasPath)
+				.OfType<Sprite>()
+				.FirstOrDefault(candidate => string.Equals(candidate.name, name, StringComparison.Ordinal));
+
+			if (sprite == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellBuildUtility)}: no sprite called '{name}' on " +
+					$"{ShellAtlasImporter.AtlasPath}. Run 'Assembler > Shell > Import UI Atlas' first.");
+			}
+
+			return sprite;
 		}
 
 		private static T Member<T>(string folder, string name) where T : ScriptableEnum

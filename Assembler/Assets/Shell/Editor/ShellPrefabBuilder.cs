@@ -27,6 +27,14 @@ namespace Assembler.Shell.Editor
 	/// The measurements are the prototype's, in canvas units. Anything the theme already knows — the ledge, the
 	/// hairline, the minimum hit target — is read from it rather than repeated here.
 	/// </para>
+	/// <para>
+	/// Every graphic draws a sprite off <c>Shell/Art/UIAtlas.png</c> — the rounded plates, the keyline, the sheet
+	/// chrome, the glyphs, and a plain white <c>Fill</c> for the square surfaces that need no shape at all. The
+	/// square ones would look identical with no sprite, but an <see cref="Image"/> without one draws the built-in
+	/// white texture and so breaks the batch either side of it; naming <c>Fill</c> keeps the whole shell on one
+	/// texture. Shape is the sprite's business and colour is the role binder's, which is what lets a second theme
+	/// re-skin the shell without a second sheet.
+	/// </para>
 	/// </remarks>
 	public static class ShellPrefabBuilder
 	{
@@ -51,6 +59,10 @@ namespace Assembler.Shell.Editor
 		private const float SectionHeaderTopPadding = 14f;
 		private const float SectionHeaderBottomPadding = 7f;
 		private const float SectionHeaderTitleHeight = 14f;
+
+		// The atlas draws its icons on a 24-unit grid, so an icon at native size is 24 units square inside the
+		// 44 the hit target guarantees.
+		private const float IconSize = 24f;
 
 		private const float SheetHeight = 320f;
 		private const float SheetGrabWidth = 38f;
@@ -120,8 +132,8 @@ namespace Assembler.Shell.Editor
 			var line = Child(prefab.Root.transform, "Line");
 			var lower = Child(prefab.Root.transform, "LineLower");
 
-			Paint(line, "Rule");
-			Paint(lower, "Rule");
+			Paint(line, "Rule", "Fill");
+			Paint(lower, "Rule", "Fill");
 			lower.SetActive(false);
 
 			var rule = Ensure<Rule>(prefab.Root);
@@ -136,7 +148,7 @@ namespace Assembler.Shell.Editor
 			using var prefab = PrefabScope.Open(PaperGroundPath, "PaperGround", workshop);
 
 			Stretch(prefab.Root);
-			Paint(prefab.Root, "Paper");
+			Paint(prefab.Root, "Paper", "Fill");
 		}
 
 		private static void BuildButton(Scene workshop)
@@ -153,17 +165,17 @@ namespace Assembler.Shell.Editor
 			// Plate sits down and to the right of the face; the face's press consumes exactly that offset.
 			var plate = Child(prefab.Root.transform, "Plate");
 			Stretch(plate, new Vector2(ledge, 0f), new Vector2(0f, -ledge));
-			Paint(plate, "Offset");
+			Paint(plate, "Offset", "Plate");
 
 			var face = Child(prefab.Root.transform, "Face");
 			Stretch(face, new Vector2(0f, ledge), new Vector2(-ledge, 0f));
-			Paint(face, "ButtonFace");
+			Paint(face, "ButtonFace", "Plate");
 
 			// The fill is inset by an outline's width. Painted the same role as the face here, so it is
 			// invisible — a variant that paints the two differently gets an outlined button for free.
 			var fill = Child(face.transform, "Fill");
 			Stretch(fill, new Vector2(outline, outline), new Vector2(-outline, -outline));
-			Paint(fill, "ButtonFace");
+			Paint(fill, "ButtonFace", "Plate");
 
 			var label = Child(fill.transform, "Label");
 			Stretch(label, new Vector2(12f, 0f), new Vector2(-12f, 0f));
@@ -206,6 +218,12 @@ namespace Assembler.Shell.Editor
 				Repaint(quiet.Root, "Face", "RuleHard");
 				Repaint(quiet.Root, "Face/Fill", "Paper");
 				Restyle(quiet.Root, "Face/Fill/Label", "QuietButtonLabel");
+
+				// PlateLine is the keyline drawn as a sprite — a ring of exactly the outline width, hollow in the
+				// middle. Painting a solid plate the rule colour and covering all but its edge with the fill would
+				// read the same along the sides and thicken by half again at the corners, where an inset square
+				// corner cuts back further than a stroke does.
+				Reskin(quiet.Root, "Face", "PlateLine");
 			}
 
 			using (var icon = PrefabScope.OpenVariant(ButtonIconPath, ButtonPath, "LetterpressButtonIcon", workshop))
@@ -222,15 +240,21 @@ namespace Assembler.Shell.Editor
 				Hide(face);
 				Hide(icon.Root.transform.Find("Face/Fill")!.gameObject);
 
-				// A placeholder, not a pause glyph: the baked atlas carries Latin-1 and a newspaper's
-				// punctuation, so a real icon button either extends the character set or swaps the label for a
-				// graphic. Deciding which is the game strip's problem, in phase 6.
-				Restyle(icon.Root, "Face/Fill/Label", "IconGlyph");
-				var label = icon.Root.transform.Find("Face/Fill/Label")!.GetComponent<TMP_Text>();
-				label.SetText("\u2022");
+				// The glyph is a sprite, not a character. The font atlas is baked from a newspaper's character
+				// set — Latin-1 and its punctuation — so a glyph drawn as text would mean either extending that
+				// set per icon or living with a stand-in; the UI atlas draws the same marks as art, at the same
+				// four-times scale as the rest of the sheet.
+				var label = icon.Root.transform.Find("Face/Fill/Label")!.gameObject;
+				label.SetActive(false);
+
+				var glyph = Child(face.transform, "Icon");
+				Pin(glyph, Centre, Centre, Centre, Vector2.zero, new Vector2(IconSize, IconSize));
+				Paint(glyph, "Ink", "IconSearch");
 
 				var button = icon.Root.GetComponent<LetterpressButton>();
 				ClearField(button, "plate");
+				ClearField(button, "label");
+				SetField(button, "icon", glyph.GetComponent<Image>());
 			}
 		}
 
@@ -285,7 +309,7 @@ namespace Assembler.Shell.Editor
 
 			var scrim = Child(prefab.Root.transform, "Scrim");
 			Stretch(scrim);
-			Paint(scrim, "Scrim");
+			Paint(scrim, "Scrim", "Fill");
 			var scrimGroup = Ensure<CanvasGroup>(scrim);
 
 			var scrimHit = Child(scrim.transform, "ScrimHitTarget");
@@ -294,7 +318,10 @@ namespace Assembler.Shell.Editor
 
 			var sheet = Child(prefab.Root.transform, "Sheet");
 			Pin(sheet, BottomLeft, BottomRight, BottomCentre, Vector2.zero, new Vector2(0f, SheetHeight));
-			Paint(sheet, "Surface");
+
+			// SheetTop rounds its top two corners and leaves the bottom square, so the sheet sits flush on the
+			// safe-area edge however far it is dragged.
+			Paint(sheet, "Surface", "SheetTop");
 
 			// First child, so anything an overlay parents into Content draws — and is hit — above it. Its job is
 			// only to stop a tap on empty sheet falling through to the scrim and reading as "dismiss".
@@ -314,7 +341,7 @@ namespace Assembler.Shell.Editor
 				TopCentre,
 				new Vector2(0f, -10f),
 				new Vector2(SheetGrabWidth, SheetGrabHeight));
-			Paint(grab, "Rule");
+			Paint(grab, "Rule", "PillSmall");
 
 			var content = Child(sheet.transform, "Content");
 			Stretch(content, new Vector2(16f, 26f), new Vector2(-16f, -30f));
@@ -381,11 +408,13 @@ namespace Assembler.Shell.Editor
 			return instance;
 		}
 
-		// A theme-bound graphic: an Image that paints from a role and, per UIPLAN 7.4, does not raycast.
-		private static Image Paint(GameObject target, string role, float alpha = 1f)
+		// A theme-bound graphic: an Image that draws an atlas sprite, takes its colour from a role and, per
+		// UIPLAN 7.4, does not raycast.
+		private static Image Paint(GameObject target, string role, string sprite, float alpha = 1f)
 		{
 			var image = Ensure<Image>(target);
 			image.raycastTarget = false;
+			Skin(image, sprite);
 
 			var binder = Ensure<ThemeColor>(target);
 			SetField(binder, "role", Role(role));
@@ -411,6 +440,36 @@ namespace Assembler.Shell.Editor
 			binder.Apply();
 
 			return label;
+		}
+
+		// Sliced or simple is read off the sprite's own border rather than repeated here: the slice table decides
+		// which sprites are nine-slices, and a second copy of that decision is a second thing to keep in step.
+		//
+		// The multiplier stays at 1. The sheet is authored at four times its unit size and imports at pixels per
+		// unit 4, and the shell canvas answers with a reference of 1 — so a border of nine sheet pixels is two
+		// and a quarter units, and Set Native Size lands on the unit size the art was drawn for.
+		private static void Skin(Image image, string sprite)
+		{
+			var art = Sprite(sprite);
+
+			image.sprite = art;
+			image.type = art.border == Vector4.zero ? Image.Type.Simple : Image.Type.Sliced;
+			image.pixelsPerUnitMultiplier = 1f;
+			EditorUtility.SetDirty(image);
+		}
+
+		private static void Reskin(GameObject root, string path, string sprite)
+		{
+			var target = Find(root, path);
+			var image = target.GetComponent<Image>();
+
+			if (image == null)
+			{
+				throw new InvalidOperationException(
+					$"{nameof(ShellPrefabBuilder)}: '{path}' carries no {nameof(Image)} to reskin.");
+			}
+
+			Skin(image, sprite);
 		}
 
 		private static void Repaint(GameObject root, string path, string role)

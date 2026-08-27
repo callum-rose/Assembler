@@ -28,7 +28,8 @@ namespace Assembler.Shell.Controls
 	/// inset from the bottom-right, and is what moves; <c>Fill</c> sits inside the face inset by the outline
 	/// width, so that painting face and fill different roles turns the button into an outlined one with no change
 	/// of structure; <c>HitTarget</c> is the stationary rect the pointer actually hits (UIPLAN 7.4). A button
-	/// with no plate has no ledge to consume, so it sinks — that is the icon variant.
+	/// with no plate has no ledge to consume, so it sinks — that is the icon variant, whose face carries a
+	/// <c>Glyph</c> from the UI atlas in place of a label.
 	/// </para>
 	/// <para>
 	/// <b>Runtime only, deliberately — no <c>[ExecuteAlways]</c>.</b> The inset the ledge cuts is read from the
@@ -54,6 +55,9 @@ namespace Assembler.Shell.Controls
 
 		[Tooltip("The label on the face. Empty for an icon button whose glyph is a graphic.")]
 		[SerializeField] private TMP_Text? label;
+
+		[Tooltip("The glyph on the face. Empty for a button that carries a label instead.")]
+		[SerializeField] private Image? icon;
 
 		[Tooltip("The stationary rect the pointer hits. Never animated, never smaller than the theme's minimum.")]
 		[SerializeField] private HitTarget hitTarget = null!;
@@ -86,6 +90,19 @@ namespace Assembler.Shell.Controls
 				if (label != null)
 				{
 					label.SetText(value);
+				}
+			}
+		}
+
+		/// <summary>The glyph on an icon button's face. Null on a button that carries a label instead.</summary>
+		public Sprite? Glyph
+		{
+			get => icon == null ? null : icon.sprite;
+			set
+			{
+				if (icon != null)
+				{
+					icon.sprite = value;
 				}
 			}
 		}
