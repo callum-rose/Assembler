@@ -550,8 +550,8 @@ writing or editing a descriptor:
 
 | Script | Checks |
 |---|---|
-| `Tools/validate-yaml.sh <file>` | YAML well-formedness + duplicate keys (structure only). |
-| `Tools/check-expression.sh <file>` | Every embedded `!expr` / `Expressions:` body compiles. |
-| `Tools/validate-game.sh <file>` | The descriptor builds through **structure → deserialise → parse → resolve → instantiate**, reporting the exact failing stage. The authoritative "does it build" check. |
+| `unity command validate_yaml --targets <file>` | YAML well-formedness + duplicate keys (structure only). |
+| `unity command check_expression --targets <file>` | Every embedded `!expr` / `Expressions:` body compiles. |
+| `unity command validate_game --targets <file>` | The descriptor builds through **structure → deserialise → parse → resolve → instantiate**, reporting the exact failing stage. The authoritative "does it build" check. |
 
-`validate-game.sh` with no argument sweeps every file in `Assets/ExampleGameDescriptors/`.
+`validate_game` with no `--targets` sweeps every file in `Assets/ExampleGameDescriptors/`.

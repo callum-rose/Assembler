@@ -5,7 +5,7 @@ using System.Text;
 namespace Assembler.RemoteTooling;
 
 /// <summary>
-/// Thin wrappers over <see cref="Process"/> for shelling out to git / gh / claude / validate-game.sh.
+/// Thin wrappers over <see cref="Process"/> for shelling out to git / gh / claude / the unity CLI.
 /// An <c>env</c> entry with a <c>null</c> value removes that variable from the child (the C# equivalent
 /// of <c>env -u VAR</c>).
 /// </summary>
@@ -105,7 +105,7 @@ public static class Proc
 			.Any(dir => File.Exists(Path.Combine(dir, name)));
 	}
 
-	// Ensure a long-running child (claude, or validate-game.sh booting Unity) is torn down if this
+	// Ensure a long-running child (claude, or the unity CLI booting Unity) is torn down if this
 	// process is interrupted (Ctrl-C / SIGINT) or terminated (SIGTERM, e.g. `launchctl unload`), rather
 	// than leaking as an orphan that keeps running. PosixSignalRegistration handlers run synchronously
 	// before the default terminate action, so the child is killed before we exit — AppDomain.ProcessExit

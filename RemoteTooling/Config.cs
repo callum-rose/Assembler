@@ -43,12 +43,12 @@ public static class Config
 	public static int MaxConcurrent =>
 		int.TryParse(Env("ASSEMBLER_MAX_CONCURRENT"), out var n) && n > 0 ? n : 3;
 
-	/// <summary>The Unity project root that holds <c>Tools/validate-game.sh</c>.</summary>
+	/// <summary>The Unity project root — the directory holding <c>ProjectSettings/ProjectVersion.txt</c>.</summary>
 	public static string EngineDir() =>
 		Env("ASSEMBLER_ENGINE_DIR")
 		?? AutoDetectEngineDir()
 		?? throw new AppException(
-			"could not locate the Unity project (looked for an ancestor with Assembler/Tools/validate-game.sh) — set ASSEMBLER_ENGINE_DIR");
+			"could not locate the Unity project (looked for an ancestor with Assembler/ProjectSettings/ProjectVersion.txt) — set ASSEMBLER_ENGINE_DIR");
 
 	private static string? Env(string key)
 	{
@@ -58,26 +58,35 @@ public static class Config
 
 	// Walk up from the working directory and the app's own location looking for the Unity project.
 	// The tooling lives at <repo>/RemoteTooling and the Unity project at <repo>/Assembler, so from
-	// anywhere inside the repo we find <ancestor>/Assembler/Tools/validate-game.sh (or, if run from
-	// inside the Unity project itself, <ancestor>/Tools/validate-game.sh).
+	// anywhere inside the repo we find <ancestor>/Assembler/ProjectSettings/ProjectVersion.txt (or, if
+	// run from inside the Unity project itself, <ancestor>/ProjectSettings/ProjectVersion.txt).
+	//
+	// ProjectVersion.txt is the sentinel because it is what *defines* a Unity project root: every Unity
+	// project has one, it is tracked, and `unity run` reads it to pick the editor version. This used to
+	// probe for Tools/validate-game.sh, which stopped being a safe marker once that script was replaced
+	// by the `validate_game` pipeline command.
 	private static string? AutoDetectEngineDir()
 	{
 		foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
 		{
 			for (var dir = new DirectoryInfo(start); dir is not null; dir = dir.Parent)
 			{
-				if (File.Exists(Path.Combine(dir.FullName, "Tools", "validate-game.sh")))
+				if (IsUnityProject(dir.FullName))
 				{
 					return dir.FullName;
 				}
 
-				if (File.Exists(Path.Combine(dir.FullName, "Assembler", "Tools", "validate-game.sh")))
+				var nested = Path.Combine(dir.FullName, "Assembler");
+				if (IsUnityProject(nested))
 				{
-					return Path.Combine(dir.FullName, "Assembler");
+					return nested;
 				}
 			}
 		}
 
 		return null;
 	}
+
+	private static bool IsUnityProject(string dir) =>
+		File.Exists(Path.Combine(dir, "ProjectSettings", "ProjectVersion.txt"));
 }

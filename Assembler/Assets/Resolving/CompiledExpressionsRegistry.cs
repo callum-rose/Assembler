@@ -155,7 +155,7 @@ namespace Assembler.Resolving
 		// caller can report all failures in a single pass. A successfully compiled expression is still
 		// registered so later expressions that call it resolve; a failed one is skipped (its dependents
 		// then fail too, but the root cause is reported against the offending expression). Used by the
-		// standalone expression check (Tools/check-expression.sh) to audit expressions without booting a
+		// standalone expression check (the check_expression command) to audit expressions without booting a
 		// game. Returns one result per input expression, in the input order.
 		public IReadOnlyList<ExpressionCompileResult> CompileAndRegisterAllBestEffort(
 			IReadOnlyList<ExpressionInfo> expressions)

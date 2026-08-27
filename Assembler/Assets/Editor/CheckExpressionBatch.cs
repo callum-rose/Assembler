@@ -8,67 +8,76 @@ using Assembler.Deserialisation;
 using Assembler.Parsing;
 using Assembler.Parsing.Info;
 using Assembler.Resolving;
+using Unity.Pipeline.Commands;
 using UnityEditor;
 using UnityEngine;
 
 namespace Editor
 {
-	// Headless + menu entry points for the standalone ExpressionMethodCompiler check: feeds expressions
+	// Pipeline + menu entry points for the standalone ExpressionMethodCompiler check: feeds expressions
 	// straight through the compiler and reports compile errors (with the positions the compiler embeds in
-	// its messages) WITHOUT booting a game. This is the cheap, sub-second companion to validate-game.sh for
+	// its messages) WITHOUT booting a game. This is the cheap, sub-second companion to `validate_game` for
 	// exactly the failure class the expression-compiler authoring guidance warns about — bad expression
 	// syntax that otherwise only surfaces at runtime.
 	//
 	// Two input modes (combinable in one run):
-	//   - raw snippets:    -expr '<C# body>'  (repeatable), compiled with -returnType (default 'float')
-	//                      and any -arg '<type>:<name>' pairs (repeatable), exactly as a descriptor's
-	//                      ExpressionInfo would be.
-	//   - descriptor sweep: -descriptorPath <file-or-dir> (repeatable) extracts EVERY expression embedded
-	//                      in each descriptor (named + inline) by running it through deserialise + transform
-	//                      (no resolve/instantiate), then compiles each.
-	// With neither flag it sweeps every descriptor under Assets/ExampleGameDescriptors as a batch audit.
+	//   - raw snippet:      --expr '<C# body>', compiled with --return-type (default 'float') and any
+	//                       --args '<type>:<name>,...' pairs, exactly as a descriptor's ExpressionInfo would be.
+	//   - descriptor sweep: --targets <file-or-dir>,... extracts EVERY expression embedded in each
+	//                       descriptor (named + inline) by running it through deserialise + transform
+	//                       (no resolve/instantiate), then compiles each.
+	// With neither it sweeps every descriptor under Assets/ExampleGameDescriptors as a batch audit.
 	//
-	// Invoked from Tools/check-expression.sh via:
-	//   Unity -batchmode -quit -nographics -projectPath <project>
-	//         -executeMethod Editor.CheckExpressionBatch.Check -logFile -
-	//         [-expr '<code>' ...] [-returnType <name>] [-arg '<type>:<name>' ...]
-	//         [-descriptorPath <file-or-dir> ...]
-	//
-	// Exits 0 when every expression compiles and 1 when any fails, so the script and Claude can detect the
-	// outcome from the exit code as well as the logged per-expression report.
+	// Reached from the command line as `unity command check_expression`. A failure to compile fails the
+	// command (non-zero exit), so the outcome is readable from the exit status as well as the report.
 	public static class CheckExpressionBatch
 	{
 		private const string DefaultDescriptorDir = "Assets/ExampleGameDescriptors";
 		private const string DefaultReturnType = "float";
 
-		// Command-line entry point.
-		public static void Check()
+		// Pipeline entry point, reached as `unity command check_expression`. Keeps both of the script's
+		// input modes: --expr compiles raw snippets against --return-type / --args, --targets audits the
+		// expressions embedded in descriptors, and passing neither audits the example descriptors.
+		// Compilation is in-process and cheap, so this comfortably fits the 60s main-thread budget.
+		[CliCommand("check_expression",
+			"Compile expressions via ExpressionMethodCompiler without booting a game — raw snippets or "
+			+ "every !expr / Expressions: body in a descriptor. Fails the command when any fails to compile.",
+			Tags = new[] { "assembler/validation" })]
+		public static PipelineReport CheckExpressionCommand(
+			[CliArg("targets", "Comma-separated descriptor files or directories to audit. "
+				+ "Defaults to Assets/ExampleGameDescriptors when --expr is also omitted.")]
+			string? targets = null,
+			// Deliberately NOT comma-separated, unlike the other list arguments: expression bodies
+			// contain commas themselves (`Clamp(x, 0f, 1f)` would split into three fragments that each
+			// fail to compile). One expression per call; they are sub-second, so calling repeatedly is
+			// cheap, and a descriptor sweep covers the bulk case.
+			[CliArg("expr", "A single raw expression body to compile directly, e.g. 'Clamp(x, 0f, 1f)'.")]
+			string? expr = null,
+			[CliArg("return-type", "Return type for raw --expr snippets, e.g. float, vector, bool.")]
+			string returnType = DefaultReturnType,
+			[CliArg("args", "Comma-separated argument specs for raw --expr snippets, "
+				+ "each 'type:name', e.g. 'vector:vel,float:dt'.")]
+			string? args = null)
 		{
-			EditorBatchCli.SuppressLogStackTraces();
-			try
+			EditorPipelineCli.RequireFreshAssets();
+
+			var rawExprs = new List<string>();
+			if (!string.IsNullOrWhiteSpace(expr))
 			{
-				string[] args = Environment.GetCommandLineArgs();
-
-				List<string> rawExprs = EditorBatchCli.ArgValues(args, "-expr");
-				List<string> descriptorPaths = EditorBatchCli.ArgValues(args, "-descriptorPath");
-				string returnType = EditorBatchCli.ArgValues(args, "-returnType").LastOrDefault() ?? DefaultReturnType;
-				List<string> argSpecs = EditorBatchCli.ArgValues(args, "-arg");
-
-				// Default to a full audit of the example descriptors when no input is specified.
-				if (rawExprs.Count == 0 && descriptorPaths.Count == 0)
-				{
-					descriptorPaths.Add(DefaultDescriptorDir);
-				}
-
-				bool ok = Run(rawExprs, returnType, argSpecs, descriptorPaths, out string report);
-				EditorBatchCli.LogReport(report, ok);
-				EditorApplication.Exit(ok ? 0 : 1);
+				rawExprs.Add(expr!);
 			}
-			catch (Exception e)
+
+			List<string> descriptorPaths = EditorPipelineCli.SplitTargets(targets);
+			List<string> argSpecs = EditorPipelineCli.SplitTargets(args);
+
+			// Same default as the command line: with no input at all, audit the example descriptors.
+			if (rawExprs.Count == 0 && descriptorPaths.Count == 0)
 			{
-				Debug.LogError("CheckExpressionBatch failed: " + e);
-				EditorApplication.Exit(1);
+				descriptorPaths.Add(DefaultDescriptorDir);
 			}
+
+			bool ok = Run(rawExprs, returnType, argSpecs, descriptorPaths, out string report);
+			return EditorPipelineCli.Complete(report, ok);
 		}
 
 		// In-editor convenience: audit every example descriptor's expressions and log the report.

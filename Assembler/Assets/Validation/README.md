@@ -42,8 +42,8 @@ access; on platforms without it, load the text yourself and call `Validate`.
 
 ## Running it during authoring
 
-- **Command line**: `Assembler/Tools/validate-yaml.sh` (boots Unity headlessly, validates all example
-  descriptors by default, or the file/dir paths you pass; exits non-zero on errors).
+- **Command line**: `unity command validate_yaml` (runs against the live editor, validates all example
+  descriptors by default, or the `--targets` file/dir paths you pass; exits non-zero on errors).
 - **Editor menu**: `Assembler > Validate Descriptor YAML`.
 
 Both front-ends call into this assembly via `Editor.YamlValidatorBatch`.

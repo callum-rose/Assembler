@@ -34,17 +34,37 @@
 #           # Full history so the scripts can diff the changed .cs against master.
 #           fetch-depth: 0
 #
+#       # The checks below reach a *running* editor over com.unity.pipeline, so CI must boot one and
+#       # wait for it before issuing any command. `unity run --command` cannot do this in one step:
+#       # it dispatches before the editor has settled and fails with a spurious 503 (see issue #588).
+#       - name: Boot a headless editor
+#         run: |
+#           # No -quit: the editor must stay up to serve commands.
+#           /Applications/Unity/Hub/Editor/6000.4.5f1/Unity.app/Contents/MacOS/Unity \
+#             -batchmode -projectPath Assembler -logFile "$RUNNER_TEMP/unity.log" &
+#           echo $! > "$RUNNER_TEMP/unity.pid"
+#           # Compile errors make Unity boot into Safe Mode (or exit outright), leaving the pipeline
+#           # unreachable — so a timeout here means "look at unity.log", not "retry".
+#           timeout 600 bash -c 'until unity status --format json | grep -q "\"state\": *\"ready\""; do sleep 5; done'
+#
 #       - name: Compile check
-#         run: Assembler/Tools/check-compile.sh
+#         run: |
+#           unity command recompile --project-path Assembler
+#           timeout 600 bash -c 'until unity command recompile_status --project-path Assembler --format json | grep -q completed; do sleep 5; done'
+#           unity command recompile_status --project-path Assembler --format json | grep -q '"failed":false'
 #
 #       - name: Format check
 #         run: Assembler/Tools/check-format.sh
 #
 #       - name: Docs drift check
-#         run: Assembler/Tools/check-docs.sh
+#         run: unity command check_docs --project-path Assembler
 #
 #       - name: EditMode tests
-#         run: Assembler/Tools/run-tests.sh
+#         run: unity command run_tests --mode editor --project-path Assembler
+#
+#       - name: Shut the editor down
+#         if: always()
+#         run: kill "$(cat "$RUNNER_TEMP/unity.pid")" || true
 #
 #       - name: Upload test results
 #         if: always()

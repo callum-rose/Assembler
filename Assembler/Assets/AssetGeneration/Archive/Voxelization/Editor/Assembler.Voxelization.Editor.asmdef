@@ -4,7 +4,8 @@
     "references": [
         "Assembler.Voxelization",
         "Assembler.Voxels",
-        "Assembler.Anthropic"
+        "Assembler.Anthropic",
+        "Unity.Pipeline"
     ],
     "includePlatforms": [
         "Editor"

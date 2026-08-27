@@ -2,49 +2,47 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Assembler.Validation;
+using Unity.Pipeline.Commands;
 using UnityEditor;
 using UnityEngine;
 
 namespace Editor
 {
-	// Headless + menu entry points for the structural YAML validator. The actual validation lives in
+	// Pipeline + menu entry points for the structural YAML validator. The actual validation lives in
 	// the runtime Assembler.Validation assembly (YamlStructureValidator) so it also runs inside player
-	// builds on any platform; this class just drives it from the editor and the command line.
+	// builds on any platform; this class just drives it from the editor and the CLI.
 	//
-	// Invoked from Tools/validate-yaml.sh via:
-	//   Unity -batchmode -quit -nographics -projectPath <project>
-	//         -executeMethod Editor.YamlValidatorBatch.Validate -logFile -
-	//         [-yamlPath <file-or-dir> ...]
-	//
-	// With no -yamlPath args it validates everything under Assets/ExampleGameDescriptors. Exits 0 when
-	// every file is structurally valid and 1 when any file has errors, so the script and Claude can
-	// detect the outcome from the exit code as well as the logged report.
+	// Reached from the command line as `unity command validate_yaml [--targets <file-or-dir>,...]`,
+	// which validates everything under Assets/ExampleGameDescriptors when given no targets. A file with
+	// errors fails the command (non-zero exit), so the outcome is readable from the exit status as well
+	// as the report.
 	public static class YamlValidatorBatch
 	{
 		private const string DefaultDescriptorDir = "Assets/ExampleGameDescriptors";
 
-		// Command-line entry point.
-		public static void Validate()
+		// Pipeline entry point: the same check driven over com.unity.pipeline against a resident editor,
+		// which is what `unity command validate_yaml` reaches. Structural YAML validation is cheap — the
+		// whole example corpus measures well under a second — so a full sweep is nowhere near the 60s
+		// main-thread budget a command gets.
+		[CliCommand("validate_yaml",
+			"Validate descriptor YAML structure (well-formedness + duplicate keys). Fails the command "
+			+ "when any file has errors, with the per-file report as the error message.",
+			Tags = new[] { "assembler/validation" })]
+		public static PipelineReport ValidateYamlCommand(
+			[CliArg("targets", "Comma-separated files or directories to validate. "
+				+ "Defaults to Assets/ExampleGameDescriptors.")]
+			string? targets = null)
 		{
-			EditorBatchCli.SuppressLogStackTraces();
-			try
-			{
-				string[] args = Environment.GetCommandLineArgs();
-				List<string> targets = EditorBatchCli.ArgValues(args, "-yamlPath");
-				if (targets.Count == 0)
-				{
-					targets.Add(DefaultDescriptorDir);
-				}
+			EditorPipelineCli.RequireFreshAssets();
 
-				bool ok = Run(targets, out string report);
-				EditorBatchCli.LogReport(report, ok);
-				EditorApplication.Exit(ok ? 0 : 1);
-			}
-			catch (Exception e)
+			List<string> resolved = EditorPipelineCli.SplitTargets(targets);
+			if (resolved.Count == 0)
 			{
-				Debug.LogError("YamlValidatorBatch failed: " + e);
-				EditorApplication.Exit(1);
+				resolved.Add(DefaultDescriptorDir);
 			}
+
+			bool ok = Run(resolved, out string report);
+			return EditorPipelineCli.Complete(report, ok);
 		}
 
 		// In-editor convenience: validate the example descriptors and log the report to the console.

@@ -164,8 +164,13 @@ the new script.) `GameBootstrap` stays as a single-descriptor dev launcher.
   asset-bearing descriptors with a clean message; voxel-asset remote loading is a later phase.
 - **Generation prompt may need tuning.** `publish` asks the `generate-game-descriptor` skill to emit YAML
   on stdout. If your skill version writes to a file instead, adjust the prompt in `GameGenerator.cs`.
-- **`validate-game.sh` baseline:** some example descriptors already fail the sandbox validator on a clean
+- **Sandbox-validator baseline:** some example descriptors already fail the sandbox validator on a clean
   tree; treat a hard failure (parse/instantiate error) as the publish gate.
+- **Why validation still shells out to `Assembler/Tools/validate-game.sh`:** every other check in this repo
+  moved to a pipeline command against a running editor, but this daemon runs unattended and
+  `unity run --command` dispatches before the editor has settled, failing with a spurious `503 Server Busy`
+  (issue #588). The script and the `validate_game` command wrap the same `GameSandboxValidatorBatch.Run`,
+  so there is no duplicated logic — only a duplicated entry point, until #588 is fixed.
 - **Validation fix loop:** `publish` validates the descriptor and, on failure, feeds the validator's
   per-stage report back to the `generate-game-descriptor` skill to fix, then re-validates — looping until
   the descriptor builds cleanly (no attempt cap; only a generator that emits nothing at all is treated as a

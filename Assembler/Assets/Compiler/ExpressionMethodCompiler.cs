@@ -77,7 +77,7 @@ namespace Assembler.Compiler.Compiler
 				// here carries no position — a raw ArgumentException from an Expression factory at an
 				// unguarded site, an InvalidOperationException, or a bare Exception from an internal helper.
 				// Re-throw as a CompileException so the contract callers — the LLM fix-loop and
-				// Tools/check-expression.sh — depend on always holds. There is no token here, so position 0,0.
+				// the check_expression command — depend on always holds. There is no token here, so position 0,0.
 				throw new CompileException(ex.Message, 0, 0, ex);
 			}
 		}

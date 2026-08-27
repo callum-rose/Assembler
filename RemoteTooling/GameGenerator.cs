@@ -38,11 +38,11 @@ public static class GameGenerator
 	private const string GrantedTools = "Read,Grep,Glob,Skill";
 
 	// Prepended to every prompt. The generate-game-descriptor skill makes it a *hard requirement* to
-	// self-verify by writing the YAML to disk and running the headless validators (validate-game.sh /
-	// check-expression.sh). That path is both impossible and undesirable here: this runs non-interactively
+	// self-verify by writing the YAML to disk and running the validators (`validate_game` /
+	// `check_expression`). That path is both impossible and undesirable here: this runs non-interactively
 	// under `claude -p` with the toolset stripped to GrantedTools (Bash, Write and Edit do not exist in
-	// the session — see Invoke), and — even if they did — N concurrent generation runs each booting
-	// validate-game.sh would race the one Unity project Library and corrupt it (why PublishCommand
+	// the session — see Invoke), and — even if they did — N concurrent generation runs each booting their
+	// own editor would race the one Unity project Library and corrupt it (why PublishCommand
 	// serialises validation behind a single gate). The daemon validates the output itself afterwards and
 	// loops the report back via Fix, so the model must NOT try to self-validate. Without this override
 	// the model follows the skill, discovers writing and running commands are unavailable, and gives up
@@ -56,8 +56,8 @@ public static class GameGenerator
 		+ "running non-interactively and your toolset is exactly Read, Grep, Glob and Skill — Bash, Write, "
 		+ "Edit and every other tool are removed from this session, not just discouraged. You CAN read files "
 		+ "(the behaviour catalogue, the schema, the libraries doc, example descriptors) — do that to author "
-		+ "correctly. Do NOT try to write a descriptor file, and do NOT try to run the headless validators "
-		+ "(validate-game.sh / check-expression.sh) — no tool that could do either exists in this session. "
+		+ "correctly. Do NOT try to write a descriptor file, and do NOT try to run the validators "
+		+ "(`validate_game` / `check_expression`) — no tool that could do either exists in this session. "
 		+ "Author the descriptor purely "
 		+ "by reasoning against the catalogue docs and output it as text. Output contract: everything before "
 		+ "the delimiter in your FINAL message is captured verbatim as the descriptor file, so that message "

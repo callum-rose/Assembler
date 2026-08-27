@@ -7,11 +7,14 @@
 # re-wrap lines, so your line breaks are preserved.
 #
 # `dotnet format` operates on a solution/project, and the Unity .sln/.csproj are gitignored and
-# regenerated on demand, so this script boots Unity in batch mode to (re)generate them via Unity's
-# built-in UnityEditor.SyncVS.SyncSolution when they're missing or stale, then runs dotnet format
-# against Assembler.sln.
-# That makes it the heaviest Tools script (a Unity boot + an MSBuild workspace load — a couple of
-# minutes). Unity emits benign MSBuild workspace warnings; they don't affect formatting.
+# regenerated on demand, so this script regenerates them via Unity's built-in
+# UnityEditor.SyncVS.SyncSolution when they're missing or stale, then runs dotnet format against
+# Assembler.sln. Regeneration takes ~1s against a resident editor (via the Pipeline server), falling
+# back to a batch-mode Unity boot only when no editor is running.
+#
+# This is the one check that is NOT a pipeline command, because the expensive part isn't Unity at all
+# — it's the MSBuild workspace load inside `dotnet format`, which lives outside the editor entirely.
+# Unity emits benign MSBuild workspace warnings; they don't affect formatting.
 #
 # Usage:
 #   Tools/check-format.sh                 # check files changed vs master (default)
@@ -76,12 +79,23 @@ if [[ "${#TARGETS[@]}" -eq 0 ]]; then
 	exit 0
 fi
 
-#### locate Unity (same pattern as the other Tools scripts) ####
+#### locate Unity (for the cold fallback below) ####
 VERSION_FILE="$PROJECT/ProjectSettings/ProjectVersion.txt"
 [[ -f "$VERSION_FILE" ]] || { echo "error: $VERSION_FILE not found — is this an Assembler Unity project?" >&2; exit 1; }
 VERSION="$(awk '/^m_EditorVersion:/ { print $2; exit }' "$VERSION_FILE")"
 UNITY="/Applications/Unity/Hub/Editor/$VERSION/Unity.app/Contents/MacOS/Unity"
 [[ -x "$UNITY" ]] || { echo "error: Unity $VERSION not found at $UNITY" >&2; exit 1; }
+
+# SyncVS.SyncSolution is Unity's built-in IDE project generator. It is internal, so `eval` cannot call
+# it by name ("'SyncVS' is inaccessible due to its protection level") — reach it by reflection.
+SYNC_CODE='
+var t = System.Type.GetType("UnityEditor.SyncVS, UnityEditor");
+if (t == null) return "SyncVS type not found";
+var m = t.GetMethod("SyncSolution", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+if (m == null) return "SyncSolution method not found";
+m.Invoke(null, null);
+return "synced";
+'
 
 #### (re)generate the solution if missing or older than any .cs we care about ####
 need_solution_regen() {
@@ -89,16 +103,23 @@ need_solution_regen() {
 	[[ -n "$(find Assets -name '*.cs' -newer "$SOLUTION" -print -quit 2>/dev/null)" ]]
 }
 if need_solution_regen; then
-	# Two Unity processes on one path corrupt the Library; refuse if an editor already has THIS path open.
-	if ps -axww -o command= | awk -v u="$UNITY" -v p="$PROJECT" 'index($0, u) == 1 && index($0, p)' | grep -q .; then
-		echo "error: a Unity editor already has this project path open ($PROJECT) — close it and re-run." >&2
-		exit 1
+	echo "Regenerating the Unity solution (one-time / when stale)..."
+	# Fast path: a resident editor regenerates through the Pipeline server in ~1s. An open editor used to
+	# be a hard error here (two Unity processes on one path corrupt the Library); now it is the fast path.
+	if command -v unity >/dev/null 2>&1 && unity command eval --code "$SYNC_CODE" --project-path "$PROJECT" --quiet >/dev/null 2>&1; then
+		: # regenerated against the running editor
+	else
+		# Cold fallback: boot a batch editor ourselves. NOT `unity run --command`, which dispatches before
+		# the editor has settled and fails with "503 Server Busy" on com.unity.pipeline 0.5.0-exp.1.
+		# Two Unity processes on one path corrupt the Library, so refuse if an editor holds THIS path.
+		if ps -axww -o command= | awk -v u="$UNITY" -v p="$PROJECT" 'index($0, u) == 1 && index($0, p)' | grep -q .; then
+			echo "error: a Unity editor has this project path open ($PROJECT) but is not answering the Pipeline server — wait for it to finish importing/compiling, or close it and re-run." >&2
+			exit 1
+		fi
+		echo "  no resident editor — booting Unity $VERSION (slow)..."
+		"$UNITY" -batchmode -quit -nographics -projectPath "$PROJECT" \
+			-executeMethod UnityEditor.SyncVS.SyncSolution -logFile - >/dev/null
 	fi
-	echo "Generating Unity solution with Unity $VERSION (one-time / when stale)..."
-	# SyncVS.SyncSolution is Unity's built-in IDE project generator — invokable directly via
-	# -executeMethod, so no custom editor script is needed in the project.
-	"$UNITY" -batchmode -quit -nographics -projectPath "$PROJECT" \
-		-executeMethod UnityEditor.SyncVS.SyncSolution -logFile - >/dev/null
 	[[ -f "$SOLUTION" ]] || { echo "error: solution generation did not produce $SOLUTION" >&2; exit 1; }
 fi
 

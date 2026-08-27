@@ -240,13 +240,13 @@ Author the **master palette** asset alongside milestone 2 — it gates colour qu
 
 ## 8. Testing & verification
 - Steps are pure grid transforms → cover with **EditMode tests** (`Tests.Voxels` area;
-  `Tools/run-tests.sh Tests.Voxels`). Test on small hand-built grids: a grid with a detached
+  `unity command run_tests --mode editor --filter Tests.Voxels --filter_type assembly`). Test on small hand-built grids: a grid with a detached
   speck (floaters), a two-region shaded block (de-light collapses to 2 colours), an off-centre
   near-symmetric shape (mirror confidence/offset), a lumpy disc (revolve → round).
 - Watch the `VoxWriter` coordinate note: it flips an axis to preserve handedness; verify against
   an **asymmetric** test mesh (an "L") that output isn't mirrored after the round-trip — symmetry
   steps make mirroring bugs easy to mask.
-- Compile check if unsure: `Tools/check-compile.sh` (boots Unity batch mode; slow — use sparingly).
+- Compile check if unsure: `unity command recompile`, then poll `unity command recompile_status`.
 
 ## 9. Open/assumed defaults (flagged, not blocking)
 - Master palette is **hand-authored** (assumed). If a derived-from-corpus palette is wanted

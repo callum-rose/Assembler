@@ -204,8 +204,8 @@ Subcategories (the actual folders under `Assets/Behaviours/`): `Movement`, `Rota
 `VariableUpdaters`, `UI`, `Triggers`, `Triggers.Conditionals`, `Triggers.Input`, `Triggers.Input.Touch`,
 `Triggers.Physical`, `Triggers.Timing`, `Triggers.Variables`.
 
-> **The MonoBehaviour is the documentation home.** The doc generator (`Tools/generate-docs.sh`, or the
-> `Assembler > Generate Behaviour Docs` menu item) reads the `<summary>` and `<remarks>` XML doc
+> **The MonoBehaviour is the documentation home.** The doc generator (`unity command generate_docs`, or
+> the `Assembler > Generate Behaviour Docs` menu item) reads the `<summary>` and `<remarks>` XML doc
 > comments above the class declaration to build the AI-facing `Assets/docs/Behaviours.md`.
 > **Author docs here, not on the Info record.**
 > Doc-gen validates the property set: any Info property missing from your `Properties:` block (or any
@@ -572,10 +572,10 @@ or wrong docs when the docs are regenerated.
 After authoring the files, regenerate and check the docs yourself by running the headless script:
 
 ```bash
-Tools/generate-docs.sh
+unity command generate_docs
 ```
 
-It boots Unity in batch mode and runs the same generator as the `Assembler > Generate Behaviour Docs`
+It runs against the live editor (about a second) and uses the same generator as the `Assembler > Generate Behaviour Docs`
 menu item (first run on a fresh worktree imports the project and is slow; later runs are fast). Then
 read your new behaviour's section in `Assets/docs/Behaviours.md` and the `## Doc-gen warnings` section
 at the bottom — fix any warning that names your behaviour (a missing/extra `Properties:` entry, or a
@@ -584,21 +584,23 @@ wrong MonoBehaviour mapping). The in-editor menu item still works if you'd rathe
 First do a fast compile-only check that your five files build (errors **and** warnings, no test run):
 
 ```bash
-Tools/check-compile.sh   # surfaces compiler errors/warnings; non-zero on error
+unity command recompile          # then poll until it reports completed:
+unity command recompile_status   # {"status":"completed","failed":false,"errors":[]}
+unity command console --level Error   # warnings and errors from the console
 ```
 
-It boots Unity in batch mode, parses the compiler output, prints a `Compile check` summary, and exits
+`recompile_status` reports the compiler output, and exits
 non-zero on any compiler error — the quickest way to catch a typo or a nullable warning in the
 behaviour before running the (slower) tests. By default it reports diagnostics for the code that
 recompiled (your new/changed files); add `--all` for a full-project sweep. Then run the tests
 headlessly to confirm the behaviour works and nothing regressed:
 
 ```bash
-Tools/run-tests.sh                 # all EditMode suites
-Tools/run-tests.sh Tests.Behaviours  # or scope to one assembly to iterate faster
+unity command run_tests --mode editor    # all EditMode suites
+unity command run_tests --mode editor --filter Tests.Behaviours --filter_type assembly  # or scope to one assembly
 ```
 
-It boots Unity in batch mode and runs the same tests as Window > General > Test Runner (via
+It runs against the live editor — the same tests as Window > General > Test Runner (via
 `Editor.TestBatch.RunEditModeTests`), prints a pass/fail summary, and exits non-zero on failure
 (first run on a fresh worktree imports the project and is slow; later runs are fast). A compile error
 in any of your five files surfaces here too. If you add a test for the behaviour, put it under

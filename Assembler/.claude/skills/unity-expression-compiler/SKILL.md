@@ -249,10 +249,10 @@ needed**. Prefer them over hand-rolling math or registering `UnityEngine.Mathf` 
 
 The full, authoritative list (every signature + description) is in
 [`Assets/docs/Libraries.md`](../../../Assets/docs/Libraries.md), generated from the library
-source by running `Tools/generate-docs.sh` (headless — boots Unity in batch mode and runs the same
-generator as the **`Assembler > Generate Library Docs`** menu item; first run on a fresh worktree is
-slow, later runs are fast). Read it before writing math-heavy expressions. If that file is missing or
-stale, regenerate it with the script (or read the source under `Assets/Libraries/`: `GridMath`,
+source by running `unity command generate_docs` (runs against the live editor in about a second, using
+the same generator as the **`Assembler > Generate Library Docs`** menu item). Read it before writing
+math-heavy expressions. If that file is missing or
+stale, regenerate it with that command (or read the source under `Assets/Libraries/`: `GridMath`,
 `VectorMath`, `NumberMath`, `RandomMath`, `ColorMath`, `HexMath`).
 
 Representative helpers (not exhaustive — consult the doc for the complete set):
@@ -312,22 +312,23 @@ Subtler gotchas (backed by tests in `Assets/Tests/Compiler/CompilerTests.cs`):
 ## Verifying an Expression Compiles
 
 The syntax mistakes this guide warns about normally only surface at **runtime**. To catch them
-first, run the expression through the standalone `Tools/check-expression.sh` — a cheap, sub-second
-check that feeds the snippet straight through `ExpressionMethodCompiler` (no game boot) and exits
-non-zero with the compiler's position-annotated error on any failure. Run it from the `Assembler/`
-project dir (first run in a fresh worktree does a one-time ~3 min import; later runs are fast).
+first, run the expression through `unity command check_expression` — a cheap, sub-second check that
+feeds the snippet straight through `ExpressionMethodCompiler` (no game boot) and exits non-zero with
+the compiler's position-annotated error on any failure. It needs a Unity editor open on this path; see
+`Assembler/CLAUDE.md` › Build & Test if there isn't one.
 
 ```bash
 # Raw snippet — treated exactly like an inline `Do:` body (a bare expression is
 # auto-wrapped as `return <body>;`). Default return type is float.
-Tools/check-expression.sh -e 'Clamp(x, 0f, 1f)' -a 'float:x'
+unity command check_expression --expr 'Clamp(x, 0f, 1f)' --args 'float:x'
 
-# Non-float return type + multiple declared args (-a '<type>:<name>', repeatable):
-Tools/check-expression.sh -r vector -a 'vector:vel' -a 'float:dt' \
-    -e 'return AddVector(vel, ScaleVector(vel, dt));'
+# Non-float return type + multiple declared args (--args is a comma-separated '<type>:<name>' list).
+# --expr takes ONE expression: it is not comma-split, because expression bodies contain commas.
+unity command check_expression --return-type vector --args 'vector:vel,float:dt' \
+    --expr 'return AddVector(vel, ScaleVector(vel, dt));'
 
 # Sweep every expression embedded in a descriptor (named + inline) and compile each:
-Tools/check-expression.sh Assets/ExampleGameDescriptors/Pong.yaml
+unity command check_expression --targets Assets/ExampleGameDescriptors/Pong.yaml
 ```
 
 With no arguments it audits every descriptor under `Assets/ExampleGameDescriptors/`.

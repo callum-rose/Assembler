@@ -28,8 +28,9 @@ the C# — treat the descriptor as a self-contained authoring format.
    helpers in [`Libraries.md`](../../../Assets/docs/Libraries.md) — prefer them over hand-rolled math.
 3. **Read one flagship end to end** (`Gridfall.yaml`, `HollowManorHeist.yaml`, `Riftwell.yaml`) before
    authoring anything beyond a single-mechanic demo, and model your structure on it.
-4. **Verify before handing back**, in the same turn, unasked: `Tools/validate-game.sh <file>` and
-   `Tools/check-expression.sh <file>`. Descriptors saved under `Assets/ExampleGameDescriptors/` are
+4. **Verify before handing back**, in the same turn, unasked:
+   `unity command validate_game --targets <file>` and `unity command check_expression --targets <file>`.
+   Descriptors saved under `Assets/ExampleGameDescriptors/` are
    auto-discovered by `Assembler > Game Launcher` — never edit `Builder.cs` to register one.
 
 **Structural reference.** [`GameDescriptorSchema.md`](../../../Assets/docs/GameDescriptorSchema.md) is
@@ -89,8 +90,8 @@ A deliberately small ask → keep it small but keep the flagship *structure* (ta
 templates, gate chains, bound visuals, localised HUD). Never pad with systems the user didn't ask for.
 
 **Before copying from any example:** take `Type:`/property names from `Behaviours.md`, never from an
-example (some predate renames), and run `Tools/validate-game.sh` on a file before modelling on it —
-some descriptors in that folder no longer build.
+example (some predate renames), and run `unity command validate_game --targets <file>` on a file
+before modelling on it — some descriptors in that folder no longer build.
 
 ---
 
@@ -553,11 +554,14 @@ Larger-scale, for anything beyond a single mechanic:
 Run these after writing or editing a descriptor and fix what they report. They boot Unity in batch
 mode; the first run in a fresh worktree does a one-time cold import.
 
-| Script | Checks | When |
+| Command | Checks | When |
 |---|---|---|
-| `Tools/validate-yaml.sh <file>` | well-formedness + duplicate keys (structure only) | quick syntax sanity |
-| `Tools/check-expression.sh <file>` | every embedded `!expr` / `Expressions:` body compiles | after any expression work |
-| `Tools/validate-game.sh <file>` | builds through **structure → deserialise → parse → resolve → instantiate**, reporting the failing stage | **always**, before handing back |
+| `unity command validate_yaml --targets <file>` | well-formedness + duplicate keys (structure only) | quick syntax sanity |
+| `unity command check_expression --targets <file>` | every embedded `!expr` / `Expressions:` body compiles | after any expression work |
+| `unity command validate_game --targets <file>` | builds through **structure → deserialise → parse → resolve → instantiate**, reporting the failing stage | **always**, before handing back |
+
+These run against the running Unity editor and answer in about a second. Each exits non-zero and prints
+its report when the check fails. See `Assembler/CLAUDE.md` › Build & Test if no editor is running.
 
 ---
 
@@ -582,7 +586,7 @@ mode; the first run in a fresh worktree does a one-time cold import.
 - [ ] Every `!output` fed into an inline `!expr` has an explicit `ArgumentTypes` entry.
 - [ ] At least one reachable `!gameover` listener exists.
 - [ ] User-facing strings go through `!text` + `Localisation:`.
-- [ ] `Tools/validate-game.sh <file>` and `Tools/check-expression.sh <file>` both pass.
+- [ ] `unity command validate_game --targets <file>` and `unity command check_expression --targets <file>` both pass.
 
 ---
 

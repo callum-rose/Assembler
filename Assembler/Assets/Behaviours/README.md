@@ -13,7 +13,7 @@ Inside any file under `Assembler.Behaviours.*` (e.g. `Assembler.Behaviours.Camer
 - `Debug.Log/LogWarning/LogError` → the `Assembler.Behaviours.Debug` namespace (gizmo/debug behaviours), not `UnityEngine.Debug`.
 - `Physics.SyncTransforms()` / `Physics.Raycast()` → the `Assembler.Behaviours.Physics` namespace, not `UnityEngine.Physics`.
 
-Both produce `CS0234: '<member>' does not exist in the namespace 'Assembler.Behaviours.<X>'`. **Fully-qualify:** `UnityEngine.Debug.LogWarning(...)`, `UnityEngine.Physics.SyncTransforms()`. This error does *not* surface in `validate-game`/EditMode until the assembly recompiles; `check-compile.sh` catches it directly. (Related: reading `Collider.bounds` at build time needs a prior `UnityEngine.Physics.SyncTransforms()` — play mode leaves `autoSyncTransforms` off, so build-time bounds are otherwise stale → misregistered nav cells / invisible walls.)
+Both produce `CS0234: '<member>' does not exist in the namespace 'Assembler.Behaviours.<X>'`. **Fully-qualify:** `UnityEngine.Debug.LogWarning(...)`, `UnityEngine.Physics.SyncTransforms()`. This error does *not* surface in `validate_game`/EditMode until the assembly recompiles; `unity command recompile` + `recompile_status` catches it directly. (Related: reading `Collider.bounds` at build time needs a prior `UnityEngine.Physics.SyncTransforms()` — play mode leaves `autoSyncTransforms` off, so build-time bounds are otherwise stale → misregistered nav cells / invisible walls.)
 
 ### Object pooling — the reuse contract
 
@@ -36,7 +36,7 @@ Only entities spawned via `Spawn` get a `GameEntity.TemplateId`; a null id means
 
 The legacy raw-input triggers (`key hold/down/up`, `mouse button`, `axis`, `gamepad button`, `mouse position`, `scroll wheel`) were **removed**. The only input path is the `Controls:` section (abstract actions + per-platform bindings) read via the `input action` behaviour. Touch gesture recognizers stay — they're not `Controls` bindings.
 
-A `Controls` value action (`Type: value, ValueType: vector2`) already accepts *any* Vector2 Input System control path — `<Mouse>/position`, `<Mouse>/delta`, `<Mouse>/scroll`, `<Gamepad>/leftStick` — and emits them as `axis`/`x`/`y` outputs every frame. So "adding mouse/scroll to Controls" needs **no new C#** — only bindings. There is no semantic `mouse_position`/`scroll_delta` output; read `axis`/`x`/`y`. (The trigger docs in `Assets/docs/Behaviours.md` are generated — run `Tools/generate-docs.sh` after changing behaviours, and re-sync the `Generation/Resources/GenerationPrompts/*.txt` copies.)
+A `Controls` value action (`Type: value, ValueType: vector2`) already accepts *any* Vector2 Input System control path — `<Mouse>/position`, `<Mouse>/delta`, `<Mouse>/scroll`, `<Gamepad>/leftStick` — and emits them as `axis`/`x`/`y` outputs every frame. So "adding mouse/scroll to Controls" needs **no new C#** — only bindings. There is no semantic `mouse_position`/`scroll_delta` output; read `axis`/`x`/`y`. (The trigger docs in `Assets/docs/Behaviours.md` are generated — run `unity command generate_docs` after changing behaviours, and re-sync the `Generation/Resources/GenerationPrompts/*.txt` copies.)
 
 #### Mobile on-screen controls recipe
 

@@ -65,7 +65,7 @@ Designed and a first implementation landed on branch `claude/gracious-villani-c3
   `Builder.BuildFromYaml(string)`, and returns to the shelf when the `!gameover` path
   destroys the game.
 - **Generation:** `Tools/remote/` scripts — `publish-game.sh` (generate via the
-  `generate-game-descriptor` skill, `claude -p` → `validate-game.sh` → push),
+  `generate-game-descriptor` skill, `claude -p` → sandbox validation → push),
   `refine-game.sh`, and a `generation-daemon.sh` (+ launchd LaunchAgent) that fulfils
   briefs queued as GitHub issues labelled `generate`.
 

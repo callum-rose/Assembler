@@ -22,7 +22,8 @@
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.Pipeline"
     ],
     "includePlatforms": [
         "Editor"
