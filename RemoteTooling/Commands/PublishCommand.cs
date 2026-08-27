@@ -191,6 +191,27 @@ public static class PublishCommand
 		return lines.Length <= maxLines ? report : string.Join('\n', lines[^maxLines..]);
 	}
 
+	/// <summary>
+	/// Is <paramref name="path"/> an existing file with an executable bit set?
+	/// </summary>
+	/// <remarks>
+	/// Guards the one remaining <c>Tools/*.sh</c> dependency. Every other check in this repo moved to a
+	/// <c>[CliCommand]</c> on the Unity Pipeline server, and descriptor validation was meant to follow
+	/// via <c>unity run &lt;project&gt; --command validate_game</c> — a one-shot batch boot matching what
+	/// this script already costs.
+	///
+	/// That does not work on com.unity.pipeline 0.5.0-exp.1: <c>unity run --command</c> boots the Editor
+	/// and then dispatches the command before the Editor has settled, so the server rejects it with
+	/// <c>503 Service Unavailable: Server Busy … still settling after startup</c> and the CLI exits
+	/// non-zero. It is a false failure, it reproduces on a warm Library, and the settle gate has no
+	/// opt-out — the supported pattern is to poll <c>editor_status</c> until ready, which the one-shot
+	/// runner does not do. Since this daemon runs unattended, a spurious validation failure would send
+	/// a perfectly good descriptor back through a needless Fix round.
+	///
+	/// So validation keeps booting the script until that is fixed upstream. The logic is not duplicated:
+	/// the script's <c>-executeMethod</c> entry point and the <c>validate_game</c> command are two
+	/// wrappers over the same <c>GameSandboxValidatorBatch.Run</c>.
+	/// </remarks>
 	private static bool IsExecutable(string path)
 	{
 		if (!File.Exists(path))

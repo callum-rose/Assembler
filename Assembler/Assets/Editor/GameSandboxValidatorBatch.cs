@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Assembler.Generation.Verification;
+using Unity.Pipeline.Commands;
 using UnityEditor;
 using UnityEngine;
 
@@ -47,6 +48,32 @@ namespace Editor
 				Debug.LogError("GameSandboxValidatorBatch failed: " + e);
 				EditorApplication.Exit(1);
 			}
+		}
+
+		// Pipeline entry point, reached as `unity command validate_game`. Nominally the most expensive of
+		// the validators — each descriptor is built through the whole pipeline in a throwaway sandbox —
+		// but against a warm editor the whole example corpus (55 descriptors) measures ~1s, comfortably
+		// inside the 60s main-thread budget a command gets. Should a much larger corpus ever approach
+		// that, `unity command --detach` runs unbounded and is polled via `unity job`.
+		[CliCommand("validate_game",
+			"Sandbox-build descriptors through structure → deserialise → parse → resolve → instantiate. "
+			+ "Fails the command when any descriptor fails, with the per-stage report as the error message.",
+			Tags = new[] { "assembler/validation" })]
+		public static PipelineReport ValidateGameCommand(
+			[CliArg("targets", "Comma-separated descriptor files or directories to sandbox-build. "
+				+ "Defaults to sweeping Assets/ExampleGameDescriptors.")]
+			string? targets = null)
+		{
+			EditorPipelineCli.RequireFreshAssets();
+
+			List<string> resolved = EditorPipelineCli.SplitTargets(targets);
+			if (resolved.Count == 0)
+			{
+				resolved.Add(DefaultDescriptorDir);
+			}
+
+			bool ok = Run(resolved, out string report);
+			return EditorPipelineCli.Complete(report, ok);
 		}
 
 		// In-editor convenience: sandbox-build the example descriptors and log the report to the console.

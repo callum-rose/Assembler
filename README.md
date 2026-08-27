@@ -89,17 +89,25 @@ YAML
 
 - **Run a game:** menu `Assembler > Game Launcher` — discovers every descriptor in `ExampleGameDescriptors/`, lets you pick one, and enters Play mode via `Builder.Build(yamlPath)`.
 
-Headless helper scripts (each boots Unity in batch mode — slow; use sparingly):
+Checks run against a **live** Unity editor through the [`unity` CLI](https://github.com/Unity-Technologies/unity-cli)
+and the `com.unity.pipeline` package, so they answer in about a second rather than booting Unity each time:
 
-| Script | Checks |
+| Command | Checks |
 |---|---|
-| `Tools/check-expression.sh` | Expressions compile (cheapest) |
-| `Tools/validate-yaml.sh` | Descriptor YAML is structurally well-formed |
-| `Tools/validate-game.sh` | A descriptor builds a runnable game (per-stage report) |
-| `Tools/check-compile.sh` | Project C# compiles (errors + warnings) |
+| `unity command check_expression` | Expressions compile (cheapest) |
+| `unity command validate_yaml` | Descriptor YAML is structurally well-formed |
+| `unity command validate_game` | A descriptor builds a runnable game (per-stage report) |
+| `unity command recompile` → `recompile_status` | Project C# compiles (errors + warnings) |
+| `unity command run_tests` | Test suites (`Tests.*` assemblies) |
+| `unity command generate_docs` / `check_docs` | Regenerate / verify behaviour & library docs |
 | `Tools/check-format.sh` | C# matches house style (`dotnet format`) |
-| `Tools/run-tests.sh` | EditMode test suites (`Tests.*` assemblies) |
-| `Tools/generate-docs.sh` / `check-docs.sh` | Regenerate / verify behaviour & library docs |
+
+They need an editor open on the project — `unity status` shows what is running. `unity command` with no
+argument lists every available command. Each exits non-zero with its report when a check fails.
+
+`check-format.sh` stays a script because its slow part (`dotnet format`'s MSBuild load) is outside Unity
+entirely. `Tools/validate-game.sh` also survives, used only by `RemoteTooling` — see
+[`Assembler/CLAUDE.md`](Assembler/CLAUDE.md) › Build & Test.
 
 ## Documentation
 

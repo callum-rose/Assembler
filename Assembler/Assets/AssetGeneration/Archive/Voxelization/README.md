@@ -2,7 +2,7 @@
 
 LLM-driven generation of part-based voxel models. Input: a one-line game brief (and optionally reference images); output: validated, rigged `.vmodel.yaml` models plus `.vox`/Goxel/PNG exports, generated as a consistent *set* (shared scale, shared style). Everything LLM-facing is deterministic-gated: a plan that cannot possibly produce a correct model is rejected by code before any authoring spend.
 
-Run it from **Assembler > Voxel Set Review** (editor window). Tests: `Tools/run-tests.sh Tests.Voxelization`.
+Run it from **Assembler > Voxel Set Review** (editor window). Tests: `unity command run_tests --mode editor --filter Tests.Voxelization --filter_type assembly`.
 
 ## Conventions (load-bearing — read first)
 

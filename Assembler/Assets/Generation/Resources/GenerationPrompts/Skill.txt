@@ -39,10 +39,11 @@ The game is built by composing **entities** out of **behaviours** drawn from a f
 > 3. **Verify the descriptor builds before handing it back.** A new or edited descriptor saved under
 >    `Assets/ExampleGameDescriptors/` is **automatically discovered** by the in-editor **`Assembler >
 >    Game Launcher`** window (it lists every `*.yaml` in that folder) — there is **no** per-game
->    `MenuItem` to register any more, so do **not** edit `Builder.cs`. Instead, run the headless
->    validators (see **Verifying your work** below): at minimum `Tools/validate-game.sh <file>` to
->    confirm it actually builds through every pipeline stage, and `Tools/check-expression.sh <file>`
->    to confirm every embedded expression compiles. Do this in the same turn that you write the YAML,
+>    `MenuItem` to register any more, so do **not** edit `Builder.cs`. Instead, run the
+>    validators (see **Verifying your work** below): at minimum
+>    `unity command validate_game --targets <file>` to confirm it actually builds through every
+>    pipeline stage, and `unity command check_expression --targets <file>` to confirm every
+>    embedded expression compiles. Do this in the same turn that you write the YAML,
 >    without being asked.
 
 You do not need to understand or reference the C# implementation, the build pipeline, the parsing
@@ -798,14 +799,16 @@ The repo ships fast headless validators — **run them after writing or editing 
 fix what they report) before handing it back. They boot Unity in batch mode; the first run in a fresh
 worktree does a one-time cold import.
 
-| Script | Checks | When |
+| Command | Checks | When |
 |---|---|---|
-| `Tools/validate-yaml.sh <file>` | YAML well-formedness + duplicate keys (structure only) | quick syntax sanity |
-| `Tools/check-expression.sh <file>` | every embedded `!expr` / `Expressions:` body compiles | after any expression work |
-| `Tools/validate-game.sh <file>` | the descriptor builds through **structure → deserialise → parse → resolve → instantiate**, reporting the exact failing stage | always, before handing back |
+| `unity command validate_yaml --targets <file>` | YAML well-formedness + duplicate keys (structure only) | quick syntax sanity |
+| `unity command check_expression --targets <file>` | every embedded `!expr` / `Expressions:` body compiles | after any expression work |
+| `unity command validate_game --targets <file>` | the descriptor builds through **structure → deserialise → parse → resolve → instantiate**, reporting the exact failing stage | always, before handing back |
 
-`validate-game.sh` is the authoritative "does it actually build" check. Pass a single file to scope
-it; with no argument it sweeps everything in `Assets/ExampleGameDescriptors/`.
+`validate_game` is the authoritative "does it actually build" check. Pass `--targets <file>` to scope
+it; with no arguments it sweeps everything in `Assets/ExampleGameDescriptors/`. These run against the
+running Unity editor and answer in about a second; each exits non-zero and prints its report when the
+check fails.
 
 ### Learning from the example descriptors
 
@@ -814,9 +817,9 @@ structure — read them to see how movement, scoring, spawning, UI, and cameras 
 
 **But do not assume any example is current.** Descriptors fall out of date as the engine evolves, and
 some in that folder no longer build. **Before you copy patterns from an example, run
-`Tools/validate-game.sh <that-file>` and confirm it builds** — if it fails, don't model your work on
-it. Treat a clean `validate-game.sh` (not the file's mere presence) as the signal that a pattern is
-safe to copy.
+`unity command validate_game --targets <that-file>` and confirm it builds** — if it fails, don't model
+your work on it. Treat a clean `validate_game` (not the file's mere presence) as the signal that a
+pattern is safe to copy.
 
 ---
 
@@ -851,7 +854,7 @@ Run through this before handing a descriptor back:
 - [ ] At least one `!gameover` listener exists and is reachable (a discrete event, or a
       `condition gate` polled by an `every frame trigger`), so the game can actually end.
 - [ ] User-facing strings go through `!text` + `Localisation:`, not inline literals.
-- [ ] `Tools/validate-game.sh <file>` and `Tools/check-expression.sh <file>` both pass.
+- [ ] `unity command validate_game --targets <file>` and `unity command check_expression --targets <file>` both pass.
 
 ---
 

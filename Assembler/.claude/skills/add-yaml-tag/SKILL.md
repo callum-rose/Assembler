@@ -191,15 +191,15 @@ historical reasons around scalar/mapping coexistence inside generic `object?` fi
 
 1. Open `GameFileParser.cs` and visually confirm both lines are present and ordered consistently.
    Then do a fast compile-only check that the converter builds (errors **and** warnings, no test run):
-   `Tools/check-compile.sh` — it boots Unity in batch mode, parses the compiler output, prints a
-   `Compile check` summary, and exits non-zero on any compiler error, so a typo surfaces in seconds
-   before you write or run tests.
+   `unity command recompile`, then poll `unity command recompile_status` until it reports
+   `completed` — it reports every compiler error against the live editor, so a typo surfaces in
+   seconds before you write or run tests.
 2. Add a parsing test if the user wants one. Pattern lives in
    `Assets/Tests/Parsing/TemplateTests.cs` — `new GameFileParser().Parse(yaml)` against an
    inline YAML string, then assert on the resulting DTO tree. Run it headlessly with
-   `Tools/run-tests.sh Tests.Parsing` — this boots Unity in batch mode (via
-   `Editor.TestBatch.RunEditModeTests`), prints a pass/fail summary, and exits non-zero on failure,
-   so a parse regression or compile error in the converter surfaces without opening the editor.
+   `unity command run_tests --mode editor --filter Tests.Parsing --filter_type assembly` — this runs
+   against the live editor, reports a pass/fail summary, and exits non-zero on failure, so a parse
+   regression or compile error in the converter surfaces without leaving the terminal.
 3. Tell the user the tag is now parseable and ask how they want it consumed downstream
    (which Info record holds it? does it become a `ValueSource<T>`? etc.). That's a separate task.
 

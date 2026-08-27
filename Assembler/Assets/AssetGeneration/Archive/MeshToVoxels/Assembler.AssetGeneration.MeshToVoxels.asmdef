@@ -1,7 +1,9 @@
 {
     "name": "Assembler.AssetGeneration.MeshToVoxels",
     "rootNamespace": "Assembler",
-    "references": [],
+    "references": [
+        "Unity.Pipeline"
+    ],
     "includePlatforms": [
         "Editor"
     ],

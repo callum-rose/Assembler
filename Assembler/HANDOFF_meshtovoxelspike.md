@@ -211,9 +211,8 @@ shapes or whether it's a new feature. **Conclusion: mostly a new feature.** Find
 1. `git pull` on branch `claude/new-feature-impl-t6pw16`.
 2. Let Unity import + compile. If errors, see the g3 pitfalls section — paste the `error CS####`
    lines with file:line.
-3. Optional headless checks (each boots Unity in batch mode, slow; **close the editor on this branch
-   first, or run from a detached worktree at a different path**): `Assembler/Tools/check-compile.sh`,
-   `Assembler/Tools/run-tests.sh`.
+3. Optional checks against the running editor: `unity command recompile` (poll `recompile_status`)
+   and `unity command run_tests --mode editor`.
 4. Real test: `Window > Voxels > Mesh to Voxel Spike` → pick a textured Meshy `.obj`/`.fbx` →
    **Convert** (preview) or **Convert & Save .vox…** (preview + write file). Judge the blocky output
    on (a) does it capture the shape essence / read as clean Crossy-Road, (b) do the reprojected
@@ -398,11 +397,10 @@ axes → gap-flagged → were wrongly skipped despite 5 occupied neighbours.
 ### Status / verification
 
 - **41 EditMode tests, all passing.** Every follow-up change was compiled + run headlessly in a
-  **detached temp worktree** (the user's editor holds the branch, so `Tools/*.sh` can't run against
-  this checkout directly — `git worktree add --detach <scratch> HEAD`, rsync the working-tree
-  `MeshToVoxelSpike/` + `ObjToVoxConverter.cs` over it, run `Tools/run-tests.sh
-  Assembler.AssetGeneration.MeshToVoxelSpike.Tests`, remove the worktree). The user's open editor is
-  still the ultimate compile authority.
+  the editor the user already has open on the branch — `unity command run_tests --mode editor
+  --filter Assembler.AssetGeneration.MeshToVoxelSpike.Tests --filter_type assembly`. (This used to
+  need a detached temp worktree, because the batch-mode scripts refused to run against a path an
+  editor held open; driving the live editor removes that constraint entirely.)
 - Acceptance = the user's "Run test set…" over the locked Meshy test-set folder (12-model spread
   from the plan; minimum viable subset: dog, crab, rocket, oak tree), tuning geometry toggles
   first, then Potts strength, with the metrics table alongside. The corgi (`Assets/MeshyImports/`)

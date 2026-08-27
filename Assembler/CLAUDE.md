@@ -37,26 +37,36 @@ This is a Unity project — there is no CLI build. Open in Unity Editor 6000.4.5
 
 **Run a game**: Editor menu `Assembler > Game Launcher` opens a window that auto-discovers every descriptor in `Assets/ExampleGameDescriptors/`, lets you pick one (and optionally simulate a target platform), and enters Play mode running it via `Builder.Build(yamlPath)`.
 
-> **Use the `Tools/*.sh` scripts sparingly.** They each boot Unity in batch mode and are slow (tens of seconds to a couple of minutes). Only run one when you're genuinely unsure whether a change is correct — for routine edits where the code is obviously correct, skip the check and rely on the user's open editor to surface any issue. Prefer the cheapest applicable script and scope it to the files you touched rather than running `--all`.
+**Checks run against a *live* editor** via the `unity` CLI and the `com.unity.pipeline` package, not by booting Unity per invocation. A warm editor answers in ~1s, so these are cheap enough to run freely — a full 55-descriptor `validate_game` sweep takes about a second. They need an editor open on **this** path; `unity status` lists what is running and its `state`.
 
-**Each script documents its own modes, flags, and caveats in its header comment — read that rather than guessing.** All exit non-zero on failure, print a compact summary, and have an equivalent `Assembler >` editor menu item.
-
-| Script | Checks | Cost |
+| Command | Checks | Cost |
 |---|---|---|
-| `check-expression.sh` | Expressions compile via `ExpressionMethodCompiler`, without booting a game. `-e '<code>'` snippets or a descriptor sweep | cheapest |
-| `validate-yaml.sh` | Descriptor YAML *structure* only — well-formedness + duplicate keys | light |
-| `check-compile.sh` | C# compiles; reports errors **and** warnings. Incremental by default; `--all` for a full audit | light |
-| `run-tests.sh` | EditMode test suites; NUnit XML in `TestResults/`. Scope with assembly names, `--filter`, `--category` | medium |
-| `validate-game.sh` | A descriptor actually *boots*: structure → deserialise → parse → resolve → instantiate, reported per stage | medium |
-| `check-docs.sh` | Committed `Assets/docs/*.md` still match generated output (drift guard) | medium |
-| `generate-docs.sh` | Regenerates `Assets/docs/Behaviours.md` + `Libraries.md` | medium |
-| `check-format.sh` | `dotnet format` against `.editorconfig`; `--fix` writes | **heaviest** (Unity boot + MSBuild load) |
+| `unity command check_expression` | Expressions compile via `ExpressionMethodCompiler`, without booting a game. `--expr '<code>'` for one snippet, or `--targets` for a descriptor sweep | cheapest |
+| `unity command validate_yaml` | Descriptor YAML *structure* only — well-formedness + duplicate keys | light |
+| `unity command recompile` → `recompile_status` | C# compiles; `recompile_status` reports the errors. Add `unity command console --level Error` for warnings | light |
+| `unity command run_tests` | Test suites; NUnit XML still written to `TestResults.xml`. `--mode editor` for EditMode; scope with `--filter <pattern> --filter_type assembly\|category\|testName`; `--async_tests` returns immediately, then poll `test_status` | medium |
+| `unity command validate_game` | A descriptor actually *boots*: structure → deserialise → parse → resolve → instantiate, reported per stage | medium |
+| `unity command check_docs` | Committed `Assets/docs/*.md` still match generated output (drift guard) | medium |
+| `unity command generate_docs` | Regenerates `Assets/docs/Behaviours.md` + `Libraries.md` | medium |
+| `Tools/check-format.sh` | `dotnet format` against `.editorconfig`; `--fix` writes | **heaviest** (MSBuild workspace load) |
+
+`unity command <name> --help` prints each command's own arguments; `unity command` with no argument lists all of them. Every check **fails the command** (non-zero exit) when it finds a problem, with the full report as the error message — so the exit status alone is enough to gate on. Each also has an equivalent `Assembler >` editor menu item.
+
+Pass `--project-path <path>` when more than one editor is running, or the CLI may reach the wrong one.
+
+> **Two scripts survive in `Tools/`, both deliberately.** `check-format.sh` is not a Unity check at all — the slow part is the MSBuild workspace load inside `dotnet format`, outside the editor entirely; it uses the pipeline only to regenerate the `.csproj`/`.sln`. `validate-game.sh` exists solely because `RemoteTooling`'s unattended daemon cannot use the pipeline: `unity run --command` dispatches before the editor has settled and fails with a spurious `503 Server Busy` (see issue #588). Both wrap the *same* code the pipeline commands do — there is no second implementation.
+
+**Staleness — the one thing a resident editor gets wrong that a batch boot could not.** A batch process booted fresh and read the truth off disk; a live editor holds imported state that a `git checkout` or an external edit has already invalidated. Every command above calls `AssetDatabase.Refresh()` first and **refuses to run** while the editor is importing or compiling, rather than answering from stale state. If one tells you to poll `recompile_status`, do that and retry — don't work around it.
+
+**After changing C#**, run `unity command recompile` and poll `recompile_status` until `completed` before trusting any other check; a command that runs against the old assemblies is confidently wrong.
 
 Test assemblies live in `Assets/Tests/` per area: `Tests.Compiler`, `Tests.Parsing`, `Tests.Behaviours`, `Tests.Generation`, `Tests.Voxels`, `Tests.Input`, `Tests.Resolving`.
 
-**Concurrency, all scripts:** they run fine alongside an editor open on a *different* path (e.g. the user's main checkout), but refuse if an editor already has *this* path open. The first run in a fresh worktree does a one-time cold import (~3 min).
+**No editor running on this path?** Start one (the user's own editor counts), or boot a headless one — `Unity -batchmode -projectPath <project> -logFile <log>` with **no** `-quit`, then poll `unity status` until it reports `ready`. A fresh worktree does a one-time cold import (~3 min); seeding `Library/` from the main checkout with `cp -Rc` (APFS clone — instant, no extra disk) avoids it.
 
-> **If a script gives a confusing result — a compile error you didn't cause, a pass that should have failed, a descriptor the Launcher won't show — read [`Tools/CLAUDE.md`](Tools/CLAUDE.md) before debugging it.** It documents the batch-mode traps (spurious `PackageCache` errors on a cold import, the `| tail` exit-code footgun, the `validate-game` baseline failure, the `com.unity.ai.assistant` DLL collision).
+> **If the editor is unreachable entirely, suspect Safe Mode.** C# compile errors make Unity boot into Safe Mode, where packages — including `com.unity.pipeline` — do not load, so *every* `unity command` fails to connect. A batch-mode editor exits outright ("Scripts have compiler errors"). `unity pipeline list` reports Safe Mode explicitly. Fix the compile errors at the source and restart; don't read "can't connect" as "no editor, so hand-edit blindly".
+
+> **If a check gives a confusing result — a descriptor the Launcher won't show, a pass that should have failed — read [`Tools/CLAUDE.md`](Tools/CLAUDE.md).** It documents the known baseline failure and the traps that still apply.
 
 **Adding a registry package to `Packages/manifest.json`:** don't guess the version — read the editor's recommended `minimumVersion` from `/Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/Resources/PackageManager/Editor/manifest.json`. (For 6000.4.5f1, `com.unity.addressables` → `2.9.1`.) The resolver bumps transitive deps as needed.
 

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Assembler.Voxels.Scripting;
+using Unity.Pipeline.Commands;
 
 namespace Assembler.Voxelization.Editor
 {
@@ -178,92 +179,129 @@ namespace Editor
 	using UnityEngine;
 
 	/// <summary>
-	/// Headless entry point for the voxelization pipeline, driven by
-	/// <c>Tools/voxelize.sh</c>:
-	///   Unity -batchmode -quit -nographics -projectPath &lt;project&gt;
-	///         -executeMethod Editor.VoxelizeBatch.Run -logFile -
-	///         [-brief &lt;text&gt; | -manifest &lt;path&gt;] [-imageFolder ..] [-outputFolder ..]
-	///         [-only a,b] [-note ..] [-manifestModel ..] [-planningModel ..]
-	///         [-authoringModel ..] [-concurrency N]
+	/// CLI entry point for the voxelization pipeline, reached as <c>unity command voxelize</c>.
 	///
 	/// Constructs a <see cref="ClaudeCliGateway"/> (so the run bills the Claude plan,
 	/// not API credits), runs <see cref="VoxelizeRunner"/>, refreshes the asset
-	/// database, and exits non-zero if any asset failed. Because the export step
-	/// touches Unity main-thread APIs (<c>Texture2D.EncodeToPNG</c>), the async run is
-	/// driven by a single-thread message pump on the main thread rather than a
-	/// blocking wait — continuations that produce the preview PNGs run on the editor
-	/// thread, never the thread pool.
+	/// database, and fails the command if any asset failed. The export step touches
+	/// Unity main-thread APIs (<c>Texture2D.EncodeToPNG</c>); awaiting inside a command
+	/// resumes on the editor's own synchronization context, so those continuations run
+	/// on the editor thread, never the thread pool.
 	/// </summary>
 	public static class VoxelizeBatch
 	{
-		public static void Run()
+		/// <summary>
+		/// Pipeline entry point, reached as <c>unity command voxelize</c>. Same run as <see cref="Run"/>,
+		/// driven from a resident editor instead of a batch boot.
+		/// </summary>
+		/// <remarks>
+		/// <para>
+		/// Declared <c>async Task</c> deliberately. The Pipeline server dispatches the synchronous part of
+		/// a main-thread command under a 60s budget, then awaits the returned Task on a background thread
+		/// while the editor keeps pumping — so an async command is not bound by that budget, and a run
+		/// lasting many minutes is fine. Awaiting here resumes on Unity's own editor-thread
+		/// synchronization context, so the main-thread-only export steps still land on the main thread.
+		/// (The <c>-executeMethod</c> entry point this replaced needed a hand-rolled message pump for
+		/// that, because nothing pumps a blocked batch-mode call.)
+		/// </para>
+		/// <para>
+		/// The CLI's own <c>--timeout</c> (30s by default) is a client-side wait and will give up long
+		/// before a real run finishes, even though the run continues server-side. Pass a generous
+		/// <c>--timeout</c>, or <c>--detach</c> and poll with <c>unity job</c>.
+		/// </para>
+		/// </remarks>
+		[CliCommand("voxelize", "Generate voxel models from a brief or a manifest via the LLM-driven "
+			+ "voxelization pipeline. Long-running — use --detach or a large --timeout.",
+			Tags = new[] { "assembler/assetgen" })]
+		public static async Task<string> VoxelizeCommand(
+			[CliArg("brief", "Natural-language brief to generate a manifest from, "
+				+ "e.g. 'pirate cove props'. Mutually exclusive with --manifest.")]
+			string? brief = null,
+			[CliArg("manifest", "Path to an existing .manifest.yaml to run. Mutually exclusive with --brief.")]
+			string? manifest = null,
+			[CliArg("image-folder", "Folder of reference images to condition generation on.")]
+			string? imageFolder = null,
+			[CliArg("output-folder", "Where generated voxel assets are written.")]
+			string outputFolder = "Assets/GeneratedVoxels",
+			[CliArg("only", "Comma-separated asset ids to restrict the run to, e.g. 'tree,rock'.")]
+			string? only = null,
+			[CliArg("note", "Extra instruction applied to the whole run, e.g. 'make them chunkier'.")]
+			string? note = null,
+			[CliArg("manifest-model", "Override the model used for the manifest stage.")]
+			string? manifestModel = null,
+			[CliArg("planning-model", "Override the model used for the planning stage.")]
+			string? planningModel = null,
+			[CliArg("authoring-model", "Override the model used for the authoring stage.")]
+			string? authoringModel = null,
+			[CliArg("concurrency", "How many assets to generate at once.")]
+			int concurrency = 0)
 		{
-			SuppressLogStackTraces();
-			try
+			if (string.IsNullOrWhiteSpace(brief) == string.IsNullOrWhiteSpace(manifest))
 			{
-				var args = Environment.GetCommandLineArgs();
-				var options = ParseOptions(args);
-				var settings = VoxelizationSettings.LoadOrCreate();
-				var config = ApplyModelOverrides(settings.ToConfig(), args);
-				var concurrency = IntArg(args, "-concurrency", ClaudeCliGateway.DefaultConcurrency);
-
-				var usage = new TokenUsageTracker();
-				var log = new BatchProgress();
-
-				VoxelizeRunResult result;
-				using (var gateway = new ClaudeCliGateway(usage, concurrency))
-				{
-					result = AsyncPump.Run(() =>
-						VoxelizeRunner.RunAsync(gateway, config, options, usage, log, CancellationToken.None));
-				}
-
-				AssetDatabase.Refresh();
-
-				var report = BuildReport(result, usage, config);
-				var ok = result.Results.Count > 0 && result.Results.All(r => r.Status != ModelStatus.Failed);
-				if (ok)
-				{
-					Debug.Log(report);
-				}
-				else
-				{
-					Debug.LogError(report);
-				}
-
-				EditorApplication.Exit(ok ? 0 : 1);
+				throw new ArgumentException("pass exactly one of --brief or --manifest.");
 			}
-			catch (Exception e)
+
+			var options = new VoxelizeOptions
 			{
-				Debug.LogError("VoxelizeBatch failed: " + e);
-				EditorApplication.Exit(1);
+				Brief = brief ?? string.Empty,
+				ManifestPath = manifest ?? string.Empty,
+				ImageFolder = imageFolder ?? string.Empty,
+				OutputFolder = outputFolder,
+				Note = note ?? string.Empty,
+				Only = (only ?? string.Empty)
+					.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(x => x.Trim())
+					.Where(x => x.Length > 0)
+					.ToList(),
+			};
+
+			var settings = VoxelizationSettings.LoadOrCreate();
+			var config = settings.ToConfig() with
+			{
+				ManifestModel = Override(manifestModel, settings.ToConfig().ManifestModel),
+				PlanningModel = Override(planningModel, settings.ToConfig().PlanningModel),
+				AuthoringModel = Override(authoringModel, settings.ToConfig().AuthoringModel),
+			};
+
+			var usage = new TokenUsageTracker();
+			var log = new BatchProgress();
+
+			VoxelizeRunResult result;
+			using (var gateway = new ClaudeCliGateway(
+				usage, concurrency > 0 ? concurrency : ClaudeCliGateway.DefaultConcurrency))
+			{
+				result = await VoxelizeRunner.RunAsync(
+					gateway, config, options, usage, log, CancellationToken.None);
 			}
+
+			AssetDatabase.Refresh();
+
+			var report = BuildReport(result, usage, config);
+			var ok = result.Results.Count > 0 && result.Results.All(r => r.Status != ModelStatus.Failed);
+			if (!ok)
+			{
+				// Surface as a command failure so the CLI exits non-zero, matching the batch path's exit code.
+				throw new InvalidOperationException(report);
+			}
+
+			return report;
 		}
 
-		private static VoxelizeOptions ParseOptions(string[] args) => new()
-		{
-			Brief = ArgValue(args, "-brief"),
-			ManifestPath = ArgValue(args, "-manifest"),
-			ImageFolder = ArgValue(args, "-imageFolder"),
-			OutputFolder = ArgValue(args, "-outputFolder", "Assets/GeneratedVoxels"),
-			Note = ArgValue(args, "-note"),
-			Only = ArgValue(args, "-only")
-				.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(s => s.Trim())
-				.Where(s => s.Length > 0)
-				.ToList(),
-		};
+		private static string Override(string? value, string fallback) =>
+			string.IsNullOrWhiteSpace(value) ? fallback : value!;
 
-		private static VoxelizationConfig ApplyModelOverrides(VoxelizationConfig config, string[] args)
+		/// <summary>Logs each pipeline progress line straight to the Unity log as it arrives.</summary>
+		private sealed class BatchProgress : IProgress<string>
 		{
-			var manifestModel = ArgValue(args, "-manifestModel");
-			var planningModel = ArgValue(args, "-planningModel");
-			var authoringModel = ArgValue(args, "-authoringModel");
-			return config with
+			private readonly object _gate = new();
+
+			public void Report(string value)
 			{
-				ManifestModel = manifestModel.Length > 0 ? manifestModel : config.ManifestModel,
-				PlanningModel = planningModel.Length > 0 ? planningModel : config.PlanningModel,
-				AuthoringModel = authoringModel.Length > 0 ? authoringModel : config.AuthoringModel,
-			};
+				lock (_gate)
+				{
+					Debug.Log(value);
+				}
+			}
 		}
 
 		private static string BuildReport(VoxelizeRunResult result, TokenUsageTracker usage, VoxelizationConfig config)
@@ -301,92 +339,5 @@ namespace Editor
 			return sb.ToString();
 		}
 
-		private static string ArgValue(string[] args, string flag, string fallback = "")
-		{
-			for (var i = 0; i < args.Length - 1; i++)
-			{
-				if (args[i] == flag)
-				{
-					return args[i + 1];
-				}
-			}
-
-			return fallback;
-		}
-
-		private static int IntArg(string[] args, string flag, int fallback)
-		{
-			var raw = ArgValue(args, flag);
-			return int.TryParse(raw, out var value) ? value : fallback;
-		}
-
-		private static void SuppressLogStackTraces()
-		{
-			// Batch-only, process-wide: keep the report block from being trailed by a
-			// script stack trace (which reads like a failure). Mirrors EditorBatchCli.
-			Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
-			Application.SetStackTraceLogType(LogType.Error, StackTraceLogType.None);
-		}
-
-		/// <summary>Logs each pipeline progress line straight to the Unity log as it arrives.</summary>
-		private sealed class BatchProgress : IProgress<string>
-		{
-			private readonly object _gate = new();
-
-			public void Report(string value)
-			{
-				lock (_gate)
-				{
-					Debug.Log(value);
-				}
-			}
-		}
-
-		/// <summary>
-		/// Minimal single-thread message pump (Stephen Toub's AsyncPump): installs a
-		/// synchronization context whose posted continuations are drained on the
-		/// calling (editor main) thread until the task completes. This is what lets the
-		/// pipeline's main-thread-only export run on the editor thread in batch mode,
-		/// where Unity's own update loop isn't pumping a blocked <c>-executeMethod</c>.
-		/// </summary>
-		private static class AsyncPump
-		{
-			public static T Run<T>(Func<Task<T>> func)
-			{
-				var previous = SynchronizationContext.Current;
-				var context = new SingleThreadSynchronizationContext();
-				SynchronizationContext.SetSynchronizationContext(context);
-				try
-				{
-					var task = func();
-					task.ContinueWith(_ => context.Complete(), TaskScheduler.Default);
-					context.RunOnCurrentThread();
-					return task.GetAwaiter().GetResult();
-				}
-				finally
-				{
-					SynchronizationContext.SetSynchronizationContext(previous);
-				}
-			}
-
-			private sealed class SingleThreadSynchronizationContext : SynchronizationContext
-			{
-				private readonly BlockingCollection<(SendOrPostCallback Callback, object? State)> _queue = new();
-
-				public override void Post(SendOrPostCallback d, object? state) => _queue.Add((d, state));
-
-				public override void Send(SendOrPostCallback d, object? state) => d(state);
-
-				public void Complete() => _queue.CompleteAdding();
-
-				public void RunOnCurrentThread()
-				{
-					foreach (var work in _queue.GetConsumingEnumerable())
-					{
-						work.Callback(work.State);
-					}
-				}
-			}
-		}
 	}
 }
