@@ -100,6 +100,7 @@ The validators recurse it (`SearchOption.AllDirectories`), but the Game Launcher
 
 ## The two surviving scripts
 
+
 - **`check-format.sh`** — not a Unity check. The slow part is the MSBuild workspace load
   inside `dotnet format`, outside the editor entirely; Unity is involved only to regenerate
   the gitignored `.csproj`/`.sln` via `SyncVS.SyncSolution`. It does that through the
@@ -112,3 +113,33 @@ The validators recurse it (`SearchOption.AllDirectories`), but the Game Launcher
   `-executeMethod` entry point and the `validate_game` command are two wrappers over the same
   `GameSandboxValidatorBatch.Run`. **Prefer `unity command validate_game`** — this script
   boots Unity per call and refuses to run if an editor already holds this path.
+
+## `blender/build_primitives.py`
+
+Not a check — it is the **source of the nine primitive meshes** in
+`Assets/Resources/Meshes`, which `primitive` and `model` render every shape from. Run it
+inside Blender (the Blender MCP's `execute_blender_code` with a `runpy.run_path`, or
+`blender --background --python … -- <output dir>`); it rebuilds the `Assembler Primitives`
+collection from scratch and writes one FBX per shape.
+
+Three things about it are load-bearing, and all three were arrived at by measuring the
+imported result rather than by reading the exporter's documentation:
+
+- **`bake_space_transform=True`.** Without it Blender puts the Z-up-to-Y-up axis conversion
+  and the metre-to-centimetre unit conversion on the FBX *node* transform. Assembler loads
+  the `Mesh` sub-asset directly and never instantiates the imported prefab, so the node
+  transform is never applied: the meshes arrive rotated onto their backs and at 1/100 scale.
+  `apply_scale_options` makes no difference either way once this is set.
+- **Geometry is written in Unity coordinates** and converted by the `U` helper on the way
+  into Blender, so the numbers in the script match the ones documented in `Models.md`.
+- **Normals are explicit per-loop custom split normals**, not smoothing flags. That gives the
+  round shapes their exact analytic normal and puts a hard edge where a cap meets a curved
+  side without depending on a smoothing angle surviving the FBX round trip.
+
+After re-exporting, the import settings must be re-applied — `isReadable` in particular,
+which `part colliders` needs to build a convex MeshCollider for a wedge or cone:
+
+```
+unity command --project-path <project> set_import_settings --asset Assets/Resources/Meshes/<Shape>.fbx \
+  --settings '{"isReadable":true,"materialImportMode":0,"importAnimation":false,"importCameras":false,"importLights":false,"importVisibility":false,"importBlendShapes":false,"importConstraints":false,"generateSecondaryUV":false,"addCollider":false}'
+```

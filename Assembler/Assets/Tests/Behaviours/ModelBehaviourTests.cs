@@ -19,33 +19,56 @@ namespace Tests.Behaviours
 		// ------------------------------------------------------------------
 
 		[Test]
-		public void Normalise_HalvesTheHeightOfTallPrimitives()
+		public void Normalise_HalvesTheCapsuleHeight()
 		{
-			Assert.AreEqual(new Vector3(1f, 1.5f, 1f),
-				ModelGeometry.Normalise(PrimitiveType.Cylinder, new Vector3(1f, 3f, 1f)),
-				"Unity's cylinder is 2 units tall, so a 3-unit-tall part scales to 1.5.");
 			Assert.AreEqual(new Vector3(2f, 1f, 2f),
-				ModelGeometry.Normalise(PrimitiveType.Capsule, new Vector3(2f, 2f, 2f)),
-				"Unity's capsule is 2 units tall, so a 2-unit-tall part scales to 1.");
+				ModelGeometry.Normalise(ShapeKind.Capsule, new Vector3(2f, 2f, 2f)),
+				"The capsule mesh is 2 units tall, so a 2-unit-tall part scales to 1.");
+			Assert.AreEqual(new Vector3(0.6f, 0.6f, 0.6f),
+				ModelGeometry.Normalise(ShapeKind.Capsule, new Vector3(0.6f, 1.2f, 0.6f)),
+				"Size stays the world bounding box: a 1.2-tall capsule is localScale 0.6.");
 		}
 
 		[Test]
-		public void Normalise_DividesPlaneByTenOnXAndZ()
-		{
-			Assert.AreEqual(new Vector3(1f, 1f, 2f),
-				ModelGeometry.Normalise(PrimitiveType.Plane, new Vector3(10f, 1f, 20f)),
-				"Unity's plane is 10 by 10, so a 10x20 part scales to 1x2 (Y is untouched).");
-		}
-
-		[Test]
-		public void Normalise_LeavesUnitSizedPrimitivesAlone()
+		public void Normalise_LeavesEveryOtherShapeAlone()
 		{
 			var size = new Vector3(2f, 3f, 4f);
 
-			foreach (var shape in new[] { PrimitiveType.Cube, PrimitiveType.Sphere, PrimitiveType.Quad })
+			foreach (var shape in new[]
+			{
+				ShapeKind.Cube, ShapeKind.Sphere, ShapeKind.Cylinder, ShapeKind.Plane, ShapeKind.Quad,
+				ShapeKind.Wedge, ShapeKind.Cone, ShapeKind.Hemisphere
+			})
 			{
 				Assert.AreEqual(size, ModelGeometry.Normalise(shape, size),
-					$"{shape} is already unit-sized, so Size is its localScale unchanged.");
+					$"{shape}'s mesh is authored 1 x 1 x 1, so Size is its localScale unchanged.");
+			}
+		}
+
+		// The whole point of owning the meshes: Size means the same thing in both behaviours, so a part
+		// copied from a `primitive` into a `model` (or back) renders identically.
+		[Test]
+		public void EveryShapeMeshIsUnitSizedExceptTheCapsule()
+		{
+			foreach (ShapeKind shape in System.Enum.GetValues(typeof(ShapeKind)))
+			{
+				if (shape is ShapeKind.Unknown)
+				{
+					continue;
+				}
+
+				var expected = shape is ShapeKind.Capsule ? new Vector3(1f, 2f, 1f)
+					: shape is ShapeKind.Plane ? new Vector3(1f, 0f, 1f)
+					: shape is ShapeKind.Quad ? new Vector3(1f, 1f, 0f)
+					: Vector3.one;
+
+				var size = PrimitiveMeshes.For(shape).bounds.size;
+
+				Assert.AreEqual(expected.x, size.x, 0.001f, $"{shape} mesh width");
+				Assert.AreEqual(expected.y, size.y, 0.001f, $"{shape} mesh height");
+				Assert.AreEqual(expected.z, size.z, 0.001f, $"{shape} mesh depth");
+				Assert.AreEqual(Vector3.zero, PrimitiveMeshes.For(shape).bounds.center,
+					$"{shape} mesh must be centred on its origin, or Anchor lands off by half a part.");
 			}
 		}
 
@@ -75,7 +98,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Anchor_IsMeasuredFromThePartsPosition()
 		{
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				position: new ValueProvider<Vector3>(new Vector3(5f, 0f, 0f)),
 				size: new ValueProvider<Vector3>(new Vector3(2f, 4f, 6f)),
 				anchor: ModelAnchor.Parse("bottom", "test"));
@@ -91,7 +114,7 @@ namespace Tests.Behaviours
 		{
 			// A 4-tall post anchored at its foot, tipped 90 degrees about Z: the foot stays at the origin and
 			// the post lies along -X, so its centre sits at (-2, 0, 0) rather than (0, 2, 0).
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				rotation: new ValueProvider<Vector3>(new Vector3(0f, 0f, 90f)),
 				size: new ValueProvider<Vector3>(new Vector3(1f, 4f, 1f)),
 				anchor: ModelAnchor.Parse("bottom", "test"));
@@ -195,7 +218,7 @@ namespace Tests.Behaviours
 		{
 			// A 2-wide part anchored on its left edge sits at +1; its X twin anchors on the right and sits
 			// at -1. Both inner faces touch the origin, which is the point of a flipped anchor.
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				size: new ValueProvider<Vector3>(new Vector3(2f, 2f, 2f)),
 				anchor: ModelAnchor.Parse("left", "test"),
 				mirror: new ValueProvider<MirrorAxis>(MirrorAxis.X));
@@ -209,7 +232,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Mirror_DoesNotNegateSize()
 		{
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				size: new ValueProvider<Vector3>(new Vector3(2f, 3f, 4f)),
 				mirror: new ValueProvider<MirrorAxis>(MirrorAxis.XZ));
 
@@ -231,7 +254,7 @@ namespace Tests.Behaviours
 		{
 			var host = BuildModel(
 				new ValueProvider<Color>(Color.blue),
-				NewPart(PrimitiveType.Cube, colour: new ValueProvider<Color>(Color.red)));
+				NewPart(ShapeKind.Cube, colour: new ValueProvider<Color>(Color.red)));
 
 			Assert.AreEqual(Color.red, ReadBlockColour(host.transform.GetChild(0)));
 		}
@@ -239,7 +262,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Colour_FallsBackToTheModelWideColour()
 		{
-			var host = BuildModel(new ValueProvider<Color>(Color.green), NewPart(PrimitiveType.Cube));
+			var host = BuildModel(new ValueProvider<Color>(Color.green), NewPart(ShapeKind.Cube));
 
 			Assert.AreEqual(Color.green, ReadBlockColour(host.transform.GetChild(0)));
 		}
@@ -247,7 +270,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Colour_WithNeitherSet_LeavesTheSharedMaterialUntouched()
 		{
-			var host = BuildModel(NewPart(PrimitiveType.Cube));
+			var host = BuildModel(NewPart(ShapeKind.Cube));
 
 			Assert.IsFalse(host.transform.GetChild(0).GetComponent<MeshRenderer>().HasPropertyBlock(),
 				"with no part or model colour the renderer should keep the shared material's own colour.");
@@ -261,7 +284,7 @@ namespace Tests.Behaviours
 		public void LiveSize_RecomputesTheAnchorOffset()
 		{
 			var size = new ValueProvider<Vector3>(new Vector3(1f, 2f, 1f));
-			var part = NewPart(PrimitiveType.Cube, size: size, anchor: ModelAnchor.Parse("bottom", "test"));
+			var part = NewPart(ShapeKind.Cube, size: size, anchor: ModelAnchor.Parse("bottom", "test"));
 			var child = BuildModel(part).transform.GetChild(0);
 
 			Assert.AreEqual(new Vector3(0f, 1f, 0f), child.localPosition);
@@ -277,7 +300,7 @@ namespace Tests.Behaviours
 		public void LivePosition_KeepsTheAnchorOffset()
 		{
 			var position = new ValueProvider<Vector3>(Vector3.zero);
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				position: position,
 				size: new ValueProvider<Vector3>(new Vector3(1f, 2f, 1f)),
 				anchor: ModelAnchor.Parse("bottom", "test"));
@@ -297,8 +320,8 @@ namespace Tests.Behaviours
 		public void Model_LeavesNoColliderButKeepsEveryMesh()
 		{
 			var host = BuildModel(
-				NewPart(PrimitiveType.Cube),
-				NewPart(PrimitiveType.Sphere, mirror: new ValueProvider<MirrorAxis>(MirrorAxis.X)));
+				NewPart(ShapeKind.Cube),
+				NewPart(ShapeKind.Sphere, mirror: new ValueProvider<MirrorAxis>(MirrorAxis.X)));
 
 			Assert.IsNull(host.GetComponentInChildren<Collider>(),
 				"model parts are visual only — the collider CreatePrimitive adds must be stripped.");
@@ -309,7 +332,7 @@ namespace Tests.Behaviours
 		[Test]
 		public void Parts_AreNamedByIndexAndShapeWhenUnnamed()
 		{
-			var host = BuildModel(NewPart(PrimitiveType.Cube), NewPart(PrimitiveType.Cylinder));
+			var host = BuildModel(NewPart(ShapeKind.Cube), NewPart(ShapeKind.Cylinder));
 
 			Assert.AreEqual("Part 0 (Cube)", host.transform.GetChild(0).name);
 			Assert.AreEqual("Part 1 (Cylinder)", host.transform.GetChild(1).name);
@@ -319,7 +342,7 @@ namespace Tests.Behaviours
 		// Helpers.
 		// ------------------------------------------------------------------
 
-		private static ModelPart NewPart(PrimitiveType shape,
+		private static ModelPart NewPart(ShapeKind shape,
 			IValueProvider<Vector3>? position = null,
 			IValueProvider<Vector3>? rotation = null,
 			IValueProvider<Vector3>? size = null,
@@ -327,7 +350,7 @@ namespace Tests.Behaviours
 			IValueProvider<string>? name = null,
 			IValueProvider<MirrorAxis>? mirror = null,
 			Vector3 anchor = default) =>
-			new(new ValueProvider<PrimitiveType>(shape),
+			new(new ValueProvider<ShapeKind>(shape),
 				position ?? NullValueProvider<Vector3>.Instance,
 				rotation ?? NullValueProvider<Vector3>.Instance,
 				size ?? NullValueProvider<Vector3>.Instance,
@@ -339,7 +362,7 @@ namespace Tests.Behaviours
 		// A 2x4x2 leg at (2,0,3), rotated on all three axes so every mirrored rotation sign is observable.
 		// The anchor stays centred here — the anchor flip has its own test, where it is readable on its own.
 		private static ModelPart MirroredLeg(MirrorAxis mirror) =>
-			NewPart(PrimitiveType.Cube,
+			NewPart(ShapeKind.Cube,
 				position: new ValueProvider<Vector3>(new Vector3(2f, 0f, 3f)),
 				rotation: new ValueProvider<Vector3>(new Vector3(10f, 20f, 30f)),
 				size: new ValueProvider<Vector3>(new Vector3(2f, 4f, 2f)),
@@ -361,7 +384,7 @@ namespace Tests.Behaviours
 
 		private void AssertPartLocalPosition(string anchor, Vector3 size, Vector3 expected)
 		{
-			var part = NewPart(PrimitiveType.Cube,
+			var part = NewPart(ShapeKind.Cube,
 				size: new ValueProvider<Vector3>(size),
 				anchor: ModelAnchor.Parse(anchor, "test"));
 

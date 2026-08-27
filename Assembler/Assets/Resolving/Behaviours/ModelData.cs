@@ -11,7 +11,7 @@ namespace Assembler.Resolving.Behaviours
 	/// <see cref="Colour"/> and the geometric defaults for the rest.</summary>
 	public sealed class ModelPart
 	{
-		public IValueProvider<PrimitiveType> Shape { get; }
+		public IValueProvider<ShapeKind> Shape { get; }
 		public IValueProvider<Vector3> Position { get; }
 		public IValueProvider<Vector3> Rotation { get; }
 		public IValueProvider<Vector3> Size { get; }
@@ -21,7 +21,7 @@ namespace Assembler.Resolving.Behaviours
 		public Vector3 Anchor { get; }
 
 		public ModelPart(
-			IValueProvider<PrimitiveType> shape,
+			IValueProvider<ShapeKind> shape,
 			IValueProvider<Vector3> position,
 			IValueProvider<Vector3> rotation,
 			IValueProvider<Vector3> size,

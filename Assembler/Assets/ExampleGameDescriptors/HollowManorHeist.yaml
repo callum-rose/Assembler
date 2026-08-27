@@ -91,7 +91,7 @@ Constants:
   player speed: 4.2
   sprint multiplier: 1.65
   player colour: !colour { R: 0.35, G: 0.85, B: 0.45, A: 1 }
-  player size: !vec { X: 0.7, Y: 0.85, Z: 0.7 }
+  player size: !vec { X: 0.7, Y: 1.7, Z: 0.7 }
   play min: !vec { X: -11.4, Y: 0.9, Z: -8.4 }
   play max: !vec { X: 11.4, Y: 0.9, Z: 8.4 }
 
@@ -104,7 +104,7 @@ Constants:
   catch range: 0.9
   arrive eps: 0.8
   guard colour: !colour { R: 0.9, G: 0.3, B: 0.3, A: 1 }
-  guard size: !vec { X: 0.8, Y: 0.9, Z: 0.8 }
+  guard size: !vec { X: 0.8, Y: 1.8, Z: 0.8 }
 
   # Patrol routes are straight-line seek chains (patrol does not pathfind), so every
   # consecutive pair — including last -> first on the loop — is line-of-sight clear.

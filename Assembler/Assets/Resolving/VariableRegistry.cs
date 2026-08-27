@@ -50,7 +50,7 @@ namespace Assembler.Resolving
 		private static IValueProvider BuildEnumProvider(Type enumType, string raw) =>
 			enumType == typeof(Easing) ? new ValueProvider<Easing>(BehaviourEnums.Parse<Easing>(raw)) :
 			enumType == typeof(LayoutDirection) ? new ValueProvider<LayoutDirection>(BehaviourEnums.Parse<LayoutDirection>(raw)) :
-			enumType == typeof(PrimitiveType) ? new ValueProvider<PrimitiveType>(BehaviourEnums.Parse<PrimitiveType>(raw)) :
+			enumType == typeof(ShapeKind) ? new ValueProvider<ShapeKind>(BehaviourEnums.Parse<ShapeKind>(raw)) :
 			enumType == typeof(TextAnchor) ? new ValueProvider<TextAnchor>(BehaviourEnums.Parse<TextAnchor>(raw)) :
 			enumType == typeof(CameraProjection) ? new ValueProvider<CameraProjection>(BehaviourEnums.Parse<CameraProjection>(raw)) :
 			enumType == typeof(CameraFollowMode) ? new ValueProvider<CameraFollowMode>(BehaviourEnums.Parse<CameraFollowMode>(raw)) :
