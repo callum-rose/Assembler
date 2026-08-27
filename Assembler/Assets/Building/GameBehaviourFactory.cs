@@ -137,6 +137,7 @@ namespace Assembler.Building
 				(i, ctx) => new BoxColliderData(i.Id)
 				{
 					Size = i.Size.Resolve(ctx.Resolution),
+					Fit = i.Fit.Resolve(ctx.Resolution),
 					IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
 					Bounciness = i.Bounciness.Resolve(ctx.Resolution),
 					DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),
@@ -146,6 +147,7 @@ namespace Assembler.Building
 				(i, ctx) => new SphereColliderData(i.Id)
 				{
 					Radius = i.Radius.Resolve(ctx.Resolution),
+					Fit = i.Fit.Resolve(ctx.Resolution),
 					IsTrigger = i.IsTrigger.Resolve(ctx.Resolution),
 					Bounciness = i.Bounciness.Resolve(ctx.Resolution),
 					DynamicFriction = i.DynamicFriction.Resolve(ctx.Resolution),

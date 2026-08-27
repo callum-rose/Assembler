@@ -17,7 +17,10 @@ namespace Assembler.Behaviours.Visual
 	/// Unity's native cylinder/capsule (2 units tall) and plane (10 by 10) scales are divided out for you.
 	/// Anchors move the pivot off the part's centre so a part at Position 0,0,0 with Anchor bottom sits on
 	/// the origin rather than half-buried, and Rotation then pivots about that anchor. Mirror emits
-	/// reflected duplicates of a part, so a symmetric shape is authored once.
+	/// reflected duplicates of a part, so a symmetric shape is authored once. Parts are visual only — for
+	/// collision, add a <c>box collider</c> or <c>sphere collider</c> with <c>Fit: bounds</c> (one collider
+	/// around the whole model) or <c>Fit: parts</c> (one per part), listed after this behaviour, instead of
+	/// hand-writing a Size or Radius.
 	/// </summary>
 	/// <remarks>
 	/// Properties:

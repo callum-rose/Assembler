@@ -41,6 +41,58 @@ namespace Tests.Parsing
 			Assert.Throws<ParsingException>(() => BehaviourEnums.Parse<CameraProjection>("isometric"));
 		}
 
+		private const string ColliderYaml = @"
+Entities:
+  e:
+    Behaviours:
+      body:
+        Type: box collider
+        Properties:
+          Fit: parts
+";
+
+		[Test]
+		public void ColliderFitParsesToItsMember()
+		{
+			var box = (BoxColliderInfo)ParseHelper.ParseGame(ColliderYaml).Entities[0].Behaviours[0];
+
+			Assert.AreEqual(ColliderFit.Parts, ((ConstantSource<ColliderFit>)box.Fit).Value);
+		}
+
+		[Test]
+		public void OmittedColliderFitFallsBackToNone()
+		{
+			var yaml = @"
+Entities:
+  e:
+    Behaviours:
+      body:
+        Type: box collider
+        Properties:
+          Size: !vec { X: 1, Y: 1, Z: 1 }
+";
+			var box = (BoxColliderInfo)ParseHelper.ParseGame(yaml).Entities[0].Behaviours[0];
+
+			Assert.AreEqual(ColliderFit.None, ((ConstantSource<ColliderFit>)box.Fit).Value);
+		}
+
+		[Test]
+		public void UnknownColliderFitThrowsListingTheValidValues()
+		{
+			var yaml = @"
+Entities:
+  e:
+    Behaviours:
+      body:
+        Type: sphere collider
+        Properties:
+          Fit: snug
+";
+			var error = Assert.Throws<ParsingException>(() => ParseHelper.ParseGame(yaml));
+
+			StringAssert.Contains("none, bounds, parts", error!.Message);
+		}
+
 		private const string AnimationYaml = @"
 Entities:
   e:

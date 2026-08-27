@@ -11,7 +11,9 @@ namespace Assembler.Behaviours.Visual
 	/// entity — every one of them renders at the entity origin, axis-aligned, on top of the others. Note
 	/// that <c>Size</c> here is a raw localScale, not a true world size: Unity's native cylinder and capsule
 	/// are 2 units tall and its plane is 10 by 10, so <c>model</c>'s normalised <c>Size</c> is the easier
-	/// option when real dimensions matter.
+	/// option when real dimensions matter. The mesh is visual only — for collision, add a <c>box collider</c>
+	/// or <c>sphere collider</c> with <c>Fit: bounds</c>, listed after this behaviour, and it is sized to the
+	/// primitive for you.
 	/// </summary>
 	/// <remarks>
 	/// Visual only: <see cref="GameObject.CreatePrimitive"/> bundles a default collider onto every primitive,

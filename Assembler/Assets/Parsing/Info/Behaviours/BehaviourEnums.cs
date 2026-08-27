@@ -77,6 +77,16 @@ namespace Assembler.Parsing.Info.Behaviours
 		XZ
 	}
 
+	/// <summary>How a <c>box collider</c>/<c>sphere collider</c> takes its shape. <c>None</c> uses the
+	/// authored <c>Size</c>/<c>Radius</c>; <c>Bounds</c> fits one collider on the entity root to the whole
+	/// visual; <c>Parts</c> puts one fitted collider on each visual part, making a compound collider.</summary>
+	public enum ColliderFit
+	{
+		None,
+		Bounds,
+		Parts
+	}
+
 	/// <summary>Which transform property one <c>animation</c> step tweens. <c>Wait</c> is a pure delay
 	/// (an <c>AppendInterval</c>) that animates nothing.</summary>
 	public enum AnimationTarget
@@ -130,6 +140,7 @@ namespace Assembler.Parsing.Info.Behaviours
 				typeof(TEnum) == typeof(SequenceMode) ? ParseSequenceMode(normalised, raw) :
 				typeof(TEnum) == typeof(SequenceLoopType) ? ParseSequenceLoopType(normalised, raw) :
 				typeof(TEnum) == typeof(MirrorAxis) ? ParseMirrorAxis(normalised, raw) :
+				typeof(TEnum) == typeof(ColliderFit) ? ParseColliderFit(normalised, raw) :
 				typeof(TEnum) == typeof(ButtonPhase) ? ParseButtonPhase(normalised, raw) :
 				typeof(TEnum) == typeof(OnScreenControlKind) ? ParseOnScreenControlKind(normalised, raw) :
 				throw new ParsingException($"No enum parser registered for type '{typeof(TEnum)}'");
@@ -305,6 +316,16 @@ namespace Assembler.Parsing.Info.Behaviours
 				"xz" or "zx" => MirrorAxis.XZ,
 				_ => throw new ParsingException(
 					$"Unknown mirror axis '{raw}'. Valid values: none, x, z, xz")
+			};
+
+		private static ColliderFit ParseColliderFit(string s, string raw) =>
+			s switch
+			{
+				"none" => ColliderFit.None,
+				"bounds" => ColliderFit.Bounds,
+				"parts" => ColliderFit.Parts,
+				_ => throw new ParsingException(
+					$"Unknown collider fit '{raw}'. Valid values: none, bounds, parts")
 			};
 
 		private static ButtonPhase ParseButtonPhase(string s, string raw) =>
