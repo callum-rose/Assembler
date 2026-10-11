@@ -80,7 +80,8 @@ axis. The smallest part is 1 × 1 × 1.** [checkable]
 
 **R5. A part's grid may sit on a half-voxel offset — the root included.** A 5-wide snout centres on
 the same line as a 6-wide body by shifting half a voxel; a 9-wide body centres on the origin with its
-edges at ±4.5. Offsets are measured in the parent's grid.
+edges at ±4.5. Offsets are measured in the parent's grid; for a rotated part, the point it
+rotates about is the one that sits on the half-voxel lattice.
 *Why:* lets parts of odd and even widths share a centreline, and is the main tool for satisfying R8.
 [checkable: every offset component is a multiple of 0.5 voxel]
 
@@ -108,8 +109,10 @@ orthogonal only when its subject is (a die, a crate).
   used as bevels. A toy car with long slopes everywhere reads as a different, angrier vehicle.
 - **Build a slope by tiering, then bevelling.** Step the mass down in tiers and bevel the steps with
   wedges (R7b). Laying an angled slab over a box corner adds bulk instead of cutting the corner away.
-- **Small lips are acceptable.** A slope at an angle other than 45° rarely meets both its ends
-  exactly in whole voxels; a lip or notch of up to about half a voxel where it lands is fine.
+- **Small lips and ledges are acceptable.** A slope at an angle other than 45° rarely meets both its
+  ends exactly in whole voxels; a lip or notch of up to about half a voxel where it lands is fine. So
+  is a half-voxel ledge left on purpose to keep two parts' faces out of one plane (R8) — the
+  giraffe's 10-wide tier under its 9-wide back.
 - **Form only.** This rule is about shape. Markings (R12) are colour and may step diagonally — a
   triangular window painted in voxels is fine.
 *Why:* angled parts are what distinguish this style from plain voxels; a model built only on the
@@ -128,7 +131,7 @@ sides — never inset, never proud. Its legs and its length are whole voxels.
   wedge's outer bottom edge.
 - **Colour bands and markings stop at the edge of a bevel**; the wedge takes the colour of the faces
   it joins. Where those two faces differ, it takes the colour of the surface it continues — the
-  larger or upper one — and the other colour stops at the bevel.
+  upper one — and the other colour stops at the bevel.
 - **A round part** — a wheel, a dish — is one square slab with all four corners bevelled this way:
   an octagon, every piece the same thickness. A dish may recess its centre. Use round parts only
   where the roundness survives the thumbnail test (R7c): things that spin, and round outlines that
@@ -144,13 +147,14 @@ the k√2 diagonal, so its ends poke out past the faces it should meet or stop s
 inset slab leaves a step at each side. A wedge sized to its corner is indistinguishable from a
 bevelled surface.
 
-**R7c. Keep only what survives the thumbnail test.** Render the model about 80 pixels tall from the
-thumbnail camera — a three-quarter view, 30° above the horizon, until the game's own camera is fixed,
-then that camera. A feature stays only if it changes the silhouette at that size or is part of what
-makes the subject recognisable; otherwise simplify it to the simplest shape that still passes
+**R7c. Keep only what survives the thumbnail test.** Render the model (not the frame) about 80
+pixels tall from the thumbnail camera — a three-quarter view from the front-left, 30° above the
+horizon. A feature stays only if it changes the silhouette at that size or is part of what makes the
+subject recognisable; otherwise simplify it to the simplest shape that still passes
 (square beats octagon, no lip beats a lip) or drop it. Small insets, lips, trims and roundings go,
 even when the reference shows them.
-- A feature *reads* if it is at least 3 pixels across in the thumbnail. Eyes always stay.
+- A feature *reads* if its smaller dimension is at least 3 pixels in the thumbnail. Eyes are exempt:
+  they always stay, at the size R13 gives them.
 - A round part earns an octagon only if it is at least 8 voxels across; smaller, it is square.
 - Parts another rule requires (a ridge cap, R21) stay, in their simplest form; the test strips
   optional detail only.
@@ -170,7 +174,9 @@ either side they don't, so a check that only samples frames can pass by luck. A 
 its rest angle (a hip through a whole stance) is checked throughout. [checkable]
 The same-colour exemption covers only parts that bake their AO as one group (R24) — parts that
 never move relative to each other. Parts that move relative to each other carry different baked AO,
-so even same-colour coincident faces flicker between them: moving parts never share a plane.
+so even same-colour coincident faces flicker between them: moving parts never share a plane where
+either face can be seen. Faces that can never be seen are exempt — two segment ends pressed together
+at a straight knee, or sibling parts overlapping in their buried portions inside a parent.
 *Why:* this was the most frequent artefact while developing the style — snout against jaw, tail
 stalk against body, an octopus's knees. Offline renderers (Blender's Cycles) show any coincident
 faces as black, so previews may look wrong where the game will not.
@@ -201,10 +207,10 @@ not a texture; they count toward R11's six colours.
 
 ## 4. Faces
 
-**R13. Every creature has eyes, in Ink (P08), that read at thumbnail size (R7c).** As a minimum, one
-voxel per eye, or 2 × 2 when the head is 8 or more voxels tall or the model is 40 or more voxels on
-its longest side; the shape may follow the reference (a moose's 2 × 1 slit) as long as it still
-reads. Eyes are recoloured voxels of the head part, not parts of their own, so they move with it. A
+**R13. Every creature has square eyes, in Ink (P08), sized by its head: 1 × 1 when the head is
+under 8 voxels tall, 2 × 2 when it is 8 or more.** Eyes are never slits, even when the reference
+shows them, and never sized up to clear the thumbnail threshold — on a tall model a 1 × 1 eye is
+tiny in the thumbnail, and that is right (see Taste calls). Eyes are recoloured voxels of the head part, not parts of their own, so they move with it. A
 mouth (R14) is Mouth (P07).
 *Why:* missing eyes was the most common failure across the test models; a creature without them
 reads as an object.
@@ -226,7 +232,8 @@ fills what would otherwise open up as the part turns. How deep is whatever works
 usual starting point. A gap means daylight through the joint: test that the child's buried end
 stays inside the parent in every pose, including both extremes of the motion, *and* that no light
 passes between the two parts. Side faces turning out of the parent as the part swings are expected,
-not a gap; so is a small notch on the outside of a bend between two limbs of equal width (R17).
+not a gap; so is a small notch on the outside of a bend between two limbs of equal width (R17) —
+an opening only on the outside of the bend, with no hole through the joint seen from any side.
 [checkable]
 *Why:* a part that merely touches its parent visibly detaches the moment it rotates.
 
@@ -250,12 +257,13 @@ with the lower axle on the ground. A lift of up to about half a voxel is invisib
 There is no suspension. Things that fly or land (a lander, a bird) may hover clear of the ground;
 their rest pose is the touchdown pose.
 
-**Cycle speed.** Smaller animals step faster. A walk loop lasts
-**frames = round(36 × √h)** at 24 fps, where **h** is the *real* animal's hip height in metres —
-not the model's, which R3 may have scaled up. A goose (0.3 m) walks in 20 frames, a dog (0.6 m) in
-28, a moose (1.2 m) in 39, a giraffe (1.8 m) in 48. A subject without legs to measure (a fish, an
-octopus) uses its real body height instead. Character may override it: a turtle is slower than its
-size suggests.
+**Cycle speed.** Smaller subjects move faster. A locomotion loop (walk, waddle, swim, crawl) lasts
+**frames = round(24 × √L)** at 24 fps, where **L** is the *real* subject's longest dimension in
+metres — not the model's, which R3 may have scaled up. A goose (0.8 m) waddles in 21 frames, an
+octopus (0.8 m) crawls in 21, a shark (2.4 m) swims in 37, a moose (3 m) walks in 42, a giraffe
+(5 m) in 54. Character may override it: a turtle is slower than its size suggests. Rounding to a
+nearby count that puts a gait's phases on whole frames is fine — the octopus's two-group crawl uses
+20 (divisible by 4) rather than 21.
 
 **Loops.** Every animation loops seamlessly: the last key equals the first, with cyclic or linear
 interpolation at the seam, so the loop doesn't hitch.
@@ -346,8 +354,10 @@ nearly still.
 animation.** Parts that never move relative to each other (a body's bumpers, its cabin, its roof
 sign) bake as one group. Spread the poses across each part's motion *relative to its parent* — for a
 spin, across its angle of symmetry — and sample often enough to catch the extremes of the fastest
-motion: at least 6 poses, more for motions that peak twice per cycle. Extremes that fall between
-samples are acceptable. Bake the part at each pose with its neighbours present, and average. This
+motion: at least 6 poses, more for motions that peak twice per cycle. Poses may fall between frames
+(a 54-frame walk's quarter points are half frames), and extremes that fall between samples are
+acceptable. When every child is a big mover (R25) the parent bakes alone — legal, and its AO is only
+its own creases. Bake the part at each pose with its neighbours present, and average. This
 one bake carries three layers:
 - **self-occlusion** — a rigid part's own creases, correct in every pose;
 - **seam contact** — the parent darkening the child where it enters, which barely moves because the
@@ -373,42 +383,27 @@ Embedded portions (R15) bake almost black. That is correct — they are never se
 
 ## Palette
 
-49 colours, grouped into material families, each family ordered light to dark. Pick by material
-("wood", "roof"), then by shade. **Provisional** — seeded from the first thirteen test models plus
-building materials; tune the values freely, the indices are what models refer to.
+64 colours in thirteen families, each family listed light to dark, so every hue has a neighbouring
+shade to separate forms with (R11). Pick by family ("wood", "roof", "purple"), then by shade.
+Indices are permanent — models refer to them — so colours added later take the next free number
+rather than renumbering; that is why the numbers within a family are not always consecutive. Tune
+the hex values freely.
 
-| # | Name | Hex | # | Name | Hex |
-|---|---|---|---|---|---|
-| **Neutrals** | | | **Wood** | | |
-| P00 | White | `#f6f6f2` | P24 | Pale wood | `#c89a60` |
-| P01 | Pale grey | `#dcdcd8` | P25 | Oak | `#9a6a3a` |
-| P02 | Light grey | `#b2b2b2` | P26 | Walnut | `#6b4528` |
-| P03 | Grey | `#8a8b90` | P27 | Dark wood | `#4a3020` |
-| P04 | Slate | `#66676c` | **Stone & brick** | | |
-| P05 | Charcoal | `#4a4a50` | P28 | Limestone | `#b8b0a4` |
-| P06 | Graphite | `#2b2b30` | P29 | Stone | `#8a837a` |
-| **Features** | | | P30 | Dark stone | `#5c5650` |
-| P07 | Mouth | `#3a2630` | P31 | Brick | `#b5543a` |
-| P08 | Ink | `#141414` | P32 | Dark brick | `#8a3a28` |
-| **Fur & earth** | | | **Roof** | | |
-| P09 | Cream | `#ece0c0` | P33 | Terracotta | `#9c4a36` |
-| P10 | Sand | `#dcc08e` | P34 | Dark tile | `#6a2e2a` |
-| P11 | Fawn | `#c49470` | P35 | Slate roof | `#4a5260` |
-| P12 | Tan | `#b07a50` | **Glass & water** | | |
-| P13 | Chestnut | `#8e5634` | P36 | Glass | `#cfe6f2` |
-| P14 | Brown | `#6e3d22` | P37 | Sky | `#8ab4d8` |
-| P15 | Dark brown | `#4a2818` | P38 | Water | `#2f7fa8` |
-| P16 | Umber | `#2e1810` | P39 | Blue | `#4a66b4` |
-| **Foliage** | | | P40 | Deep blue | `#3a4d8c` |
-| P17 | Lime | `#a6ee28` | **Accents** | | |
-| P18 | Sage | `#bcc584` | P41 | Butter | `#ffd070` |
-| P19 | Leaf | `#8fc23a` | P42 | Yellow | `#f6d021` |
-| P20 | Olive | `#9ea26a` | P43 | Amber | `#eea62a` |
-| P21 | Grass | `#5a9440` | P44 | Orange | `#f08236` |
-| P22 | Forest | `#3b7038` | P45 | Red | `#c83a2a` |
-| P23 | Pine | `#23452a` | P46 | Pink | `#e8899a` |
-| | | | P47 | Purple | `#b868c0` |
-| | | | P48 | Plum | `#7a3e86` |
+| Family | Light → dark |
+|---|---|
+| **Neutrals** | P00 White `#f6f6f2` · P01 Pale grey `#dcdcd8` · P02 Light grey `#b2b2b2` · P63 Steel `#8896a8` · P03 Grey `#8a8b90` · P04 Slate `#66676c` · P05 Charcoal `#4a4a50` · P06 Graphite `#2b2b30` |
+| **Features** | P07 Mouth `#3a2630` · P08 Ink `#141414` |
+| **Skin** | P60 Light skin `#f2d0b0` · P61 Mid skin `#c88a60` · P62 Dark skin `#6e4428` |
+| **Fur & earth** | P09 Cream `#ece0c0` · P10 Sand `#dcc08e` · P11 Fawn `#c49470` · P12 Tan `#b07a50` · P13 Chestnut `#8e5634` · P14 Brown `#6e3d22` · P15 Dark brown `#4a2818` · P16 Umber `#2e1810` |
+| **Foliage** | P59 Mint `#b8e6b0` · P17 Lime `#a6ee28` · P18 Sage `#bcc584` · P19 Leaf `#8fc23a` · P20 Olive `#9ea26a` · P21 Grass `#5a9440` · P22 Forest `#3b7038` · P23 Pine `#23452a` |
+| **Wood** | P24 Pale wood `#c89a60` · P25 Oak `#9a6a3a` · P26 Walnut `#6b4528` · P27 Dark wood `#4a3020` |
+| **Stone & brick** | P28 Limestone `#b8b0a4` · P29 Stone `#8a837a` · P30 Dark stone `#5c5650` · P31 Brick `#b5543a` · P32 Dark brick `#8a3a28` |
+| **Roof** | P33 Terracotta `#9c4a36` · P34 Dark tile `#6a2e2a` · P35 Slate roof `#4a5260` |
+| **Glass & water** | P36 Glass `#cfe6f2` · P58 Aqua `#7ad0c8` · P37 Sky `#8ab4d8` · P57 Teal `#2a8a8a` · P38 Water `#2f7fa8` · P39 Blue `#4a66b4` · P40 Deep blue `#3a4d8c` · P56 Navy `#23305a` |
+| **Yellows** | P41 Butter `#ffd070` · P42 Yellow `#f6d021` · P52 Gold `#c8961a` |
+| **Oranges** | P50 Peach `#f6b48a` · P43 Amber `#eea62a` · P44 Orange `#f08236` · P51 Rust `#b4521e` |
+| **Reds & pinks** | P53 Blush `#f6c4cc` · P46 Pink `#e8899a` · P54 Rose `#b84a64` · P45 Red `#c83a2a` · P49 Dark red `#8c2520` |
+| **Purples** | P55 Lavender `#d4b0e0` · P47 Purple `#b868c0` · P48 Plum `#7a3e86` |
 
 ---
 
@@ -425,6 +420,8 @@ close, do what these did. Every review that makes a call adds one here.
 | Cottage | Octagon window and round-topped door as bevelled openings | Square openings | The house has exactly the same character either way; the bevels were cost without gain (R7b) |
 | Turtle | Shell as a stack of shrinking tiers | Level crest ringed by mitred 45° wedges | The staircase was the one place the reference read as stepped rather than shaped (R7a, R7b) |
 | Moose | Antler palms rolled outward 15° | Flat palms on the main grid | The roll read as a reindeer |
+| Goose | 2 × 1 slit eyes | 1 × 1 square eyes | Slits read as evil; square eyes keep creatures friendly (R13) |
+| Giraffe | Eyes enlarged to clear the thumbnail threshold | 1 × 1 eyes, sized by the head | Oversized eyes made it cartoonish; eye size follows the head, not the thumbnail (R13) |
 | Octopus | Tentacles sprawled as in the reference | Eight straight tentacles, two joints each | Readable and animatable; the sprawl couldn't walk (R3) |
 | Octopus | Tentacles tapering from 2 × 2 to 1 × 1 | Constant 2 × 2 with a hidden tenon | An even width reads as one limb; the taper read as a stick on a block (R17) |
 | Cottage | Chimney leaning 5° with a further 5° cap | One stack leaning 10° | Same crookedness, one part fewer; the cap didn't survive the thumbnail (R7c) |
@@ -453,11 +450,16 @@ The order that has worked, as a guide rather than a rule:
 
 ## Examples
 
-Five models built to these rules. Each exercises a different part of the style: the shark rotated
-grids and a jaw, the turtle wedges on a creature, the taxi wedges and wheels on a boxy subject, the
-lander working without a reference, the cottage the building rules. The turtle and taxi previews are lit directly with their baked AO
-multiplied in (R23) — the closest stand-in for how the game shows them; the shark's are path-traced
-renders, and its baked AO is shown in the [Shading](#7-shading) section.
+Nine models built while the style was developed — follow them. Each exercises a different part of
+the style: the shark rotated grids and a jaw, the turtle wedges on a creature, the taxi wedges and
+wheels on a boxy subject, the lander working without a reference, the cottage the building rules,
+the giraffe a tall subject at real size, the moose antlers and a mixed-colour bevel, the goose the
+detail budget and a fast cycle, the octopus a pose that overrides its reference and constant-width
+limbs. Each example ends with its **taste** — the judgement calls the rules didn't decide, and why.
+
+Previews are lit directly with the baked AO multiplied in (R23) — the closest stand-in for how the
+game shows them — except the shark's, which are path-traced; its baked AO is in the
+[Shading](#7-shading) section.
 
 ### Shark — rotated grids, a jaw and a swim chain
 
@@ -486,6 +488,12 @@ the head counter-sways 3°; the stalk follows at 13°, the tail at 20°, each a 
 one in front; the pectorals flap; the jaw opens once per cycle.
 
 ![Swim cycle — three-quarter and top views](../../../docs/images/voxel-style/shark-swim.gif)
+
+**Taste.** The snout and jaw tilt toward each other so the nose reads as a wedge without a single
+bevel. The fins are straight angled strips — clean leading edges, tapering only on the trailing
+edge — because a shark is recognised by its fin outlines. The tail lobes were cut down from a first
+version that dominated the body: at 7 and 4 voxels they balance the dorsal fin. The belly is White
+against Grey for the countershading every shark has, and the mouth is a single dark row (R14).
 
 ### Turtle — a stepped reference, softened with wedges
 
@@ -583,3 +591,143 @@ hinged on its edge, swinging to 85° and back (R22). It is a big mover, so the h
 without it (R25).
 
 ![Door swing — three-quarter and cutaway](../../../docs/images/voxel-style/cottage-door.gif)
+
+### Giraffe — a tall subject at real size
+
+Built at real size: 55 voxels (5.5 m) tall, so each voxel is under 2 pixels in the thumbnail and the
+detail budget is tight. Thirteen parts, four colours — Butter P41 (coat), Chestnut P13 (patches),
+Brown P14 (muzzle, hooves, ossicone tips), Ink P08 (eyes).
+
+![Reference (left) and model (right)](../../../docs/images/voxel-style/giraffe-vs-reference.png)
+
+| Part | Grid | Size (W × L × H voxels) | Pivot |
+|---|---|---|---|
+| Body | main (root) | 10 × 20 × 11, rear-top corner bevelled by a 3 × 3 wedge the full width | origin, centre of the four feet |
+| Back | offset ½ in X, pitched 10° | 9 × 16 × 6 | — (rigid with the body) |
+| Legs ×4 | main | 3 × 3 × 19, 3 buried | shoulder and hip, 3 voxels up inside the body (R16) |
+| Neck | offset ½ in X, leaning 15° forward | 5 × 5 × 24, 5 buried | where its axis meets the back's top |
+| Head | main | 6 × 9 × 6, eyes 1 × 1 (head under 8 tall, R13) | centre of the neck's top |
+| Muzzle, ossicones ×2, ears ×2 | pitched 15°; leaning 10°; drooping 20° | 4 × 6 × 5; 2 × 2 × 5; 4 × 2 × 1 | — (rigid with the head) |
+
+**Walk.** 54 frames (cycle speed, 5 m). It paces — both legs on one side swing together, ±20° — the
+neck nods with each step and sways once a stride, and the head counter-nods to stay level. The legs
+are big movers (R25); the neck's contact is averaged into the body.
+
+![Pacing walk](../../../docs/images/voxel-style/giraffe-walk.gif)
+
+**Taste.**
+- **The rump is a tier and a wedge, not a raised back.** The 10° back sits on top and the wedge only
+  bevels the rear corner, so the back rises out of the rump instead of sitting on a plain box.
+- **A half-voxel ledge along each side** where the 10-wide tier meets the 9-wide back keeps their
+  faces out of one plane (R7a, R8).
+- **Patches are 3 × 3 squares in staggered rows, one voxel in from every edge** — the patches make it
+  a giraffe, and the margin stops one-voxel slivers wrapping corners, which read as noise. The neck
+  gets one patch column per face, staggered face to face.
+- **Plain legs**: a patch on a 3-wide leg is either a sliver or under 3 pixels.
+- **Pace, not trot**: giraffes really do move both legs on a side together, so it reads as a giraffe
+  rather than a horse — and with hips at the real joint, a trot would collide the legs.
+- **The neck nods once per step**: a tall neck bobbing with the stride sells the long, slow walk.
+- **No tail**, **2-voxel hooves and ossicone tips**: the tail is invisible from the thumbnail camera;
+  at one voxel the dark tips vanished.
+- **1 × 1 eyes**: larger eyes made it cartoonish (Taste calls).
+
+### Moose — antlers, a hump and a mixed-colour bevel
+
+~3 m long, eight parts, five colours — Chestnut P13 (coat), Brown P14 (nose), Dark brown P15
+(hooves), Sand P10 (antlers, chest patch, belly), Ink P08 (eyes).
+
+![Reference (left) and model (right)](../../../docs/images/voxel-style/moose-vs-reference.png)
+
+| Part | Grid | Size (W × L × H voxels) | Pivot |
+|---|---|---|---|
+| Body | main, offset ½ in X (root, R5) | shoulders 11 wide, rump 9; hump falls to the rump through a 2 × 2 wedge | origin |
+| Legs ×4 | main, offset ½ in Y | 3 × 3 × 10, 2 buried | hip and shoulder centres on the underside |
+| Head | offset ½ in Y and Z | skull and drooping muzzle (2 × 2 wedge), dewlap 2 × 2 × 3, eyes 2 × 2 (head 11 tall) | neck base on the shoulders' front face |
+| Antlers ×2 | main, offset ½ in X | flat palms 14 × 7 with a notched back wall | — (rigid with the head) |
+
+**Walk.** 42 frames, diagonal leg pairs ±20°, the body bobbing so the lowest sole always touches the
+ground, the head nodding ±6° with the antlers riding on it.
+
+![Walk](../../../docs/images/voxel-style/moose-walk.gif)
+
+**Taste.**
+- **Rump 9 wide under 11-wide shoulders**: the reference's rear legs stand near the body's sides; a
+  half-voxel root offset keeps the shoulder step and spreads them.
+- **The muzzle wedge is coat-coloured**: the droop is the muzzle top falling forward, so the slope
+  continues the top (R7b) and the nose plate reads as a separate face below it.
+- **Flat antler palms with 2-voxel notches**: rolled palms read as a reindeer; one-voxel notches
+  blurred into a plain wall in the thumbnail.
+- **A 3-tall dewlap**: the bell is a moose identifier; at 2 tall it vanished into the chest patch.
+- **Square 2 × 2 eyes ahead of the palms**, not the reference's slits — slits read as evil, and the
+  palms would shade them.
+- **No tail, hoof clefts or nostrils**: none survives the thumbnail; the dark hoof row and the nose
+  plate carry the same idea.
+
+### Goose — the detail budget and a fast cycle
+
+A 0.8 m bird scaled up to 2 m to clear its reference's proportions (R3). Seven parts, four colours —
+White P00, Pale grey P01 (wings), Orange P44 (beak, feet), Ink P08 (eyes).
+
+![Reference (left) and model (right)](../../../docs/images/voxel-style/goose-vs-reference.png)
+
+| Part | Grid | Size (W × L × H voxels) | Pivot |
+|---|---|---|---|
+| Body | main, offset ½ in X (root) | 9 × 10 × 7, 2 × 2 wedges at breast and underside, a tail hump with 1 × 1 bevels | origin; rolls about it |
+| Neck | offset ½ in X and Y | 3 × 3 × 8, 2 buried | base of the neck on the body top |
+| Head | main | 4 × 4 × 5, square beak 2 × 2 × 2, eyes 1 × 1 | — (rigid with the neck) |
+| Wings ×2 | offset ½ in X and Z | 2 × 5 × 4, 1 buried | hinge edge at the shoulder (R16) |
+| Legs ×2 | offset ½ in X and Y | 1 × 1 shin on a 3 × 3 foot plate | hip on the underside |
+
+**Waddle.** 21 frames — fast, because it is a small bird (cycle speed). Legs alternate ±20°, the
+body rolls ±6° onto the standing leg, the neck pumps twice a step, and each wing flicks once.
+
+![Waddle](../../../docs/images/voxel-style/goose-waddle.gif)
+
+**Taste.**
+- **A plain body, no lip**: the reference's inset isn't part of what makes it a goose (Taste calls).
+- **A square beak**: the reference's beak is a crisp cube, and it is the bird's one colour accent.
+- **Pale grey wings**: white on white disappears; a neighbouring shade keeps a one-voxel-proud wing
+  readable (R11).
+- **Plain foot plates, no toe notches**: one-voxel notches are under the thumbnail threshold; orange
+  plates read as webbed feet.
+- **One straight neck pumping twice a step**: the head-pump is the goose's signature and needs only
+  one joint.
+- **A wing flick, not a flap**: one sharp 12° flick reads as a nervous ruffle.
+- **A ±6° roll**: the roll is what makes it a waddle rather than a walk; more tipped it into comedy.
+- **1 × 1 square eyes**: slits read as evil (Taste calls).
+
+### Octopus — a pose that overrides its reference, and constant-width limbs
+
+The reference sprawls its tentacles across the ground; the spec stands it up on eight straight
+tentacles so it can walk (R3). 25 parts, three colours — Purple P47 (mantle), Plum P48 (tentacles),
+Ink P08 (eyes).
+
+![Reference (left) and model (right)](../../../docs/images/voxel-style/octopus-vs-reference.png)
+
+| Part | Grid | Size (W × L × H voxels) | Pivot |
+|---|---|---|---|
+| Mantle | main (root) | 8 × 8 × 10, crest bevelled by mitred 2 × 2 wedges, eyes 2 × 2 (mantle 10 tall) | origin, centre of the tips |
+| Upper segments ×8 | corner tentacles on the main grid; side tentacles turned 45° | 2 × 2 × 5, 1 buried | hip, on the mantle's underside |
+| Lower segments ×8 | same turn as the upper | 2 × 2 × 4 | knee, centre of the join |
+| Tenons ×8 | half-voxel offset, same turn | 1 × 1 × 2, rigid with the lower | — |
+
+**Crawl.** 20 frames. The corner and side tentacles step in alternating groups, each knee folding
+outward to lift the tip and plant it; at each changeover the knees splay and the mantle sinks, and it
+sways ±2.5°. Every tentacle is a big mover, so the mantle bakes alone (R24, R25).
+
+![Crawl](../../../docs/images/voxel-style/octopus-crawl.gif)
+
+**Taste.**
+- **Straight tentacles, not the sprawl**: the sprawl couldn't walk; standing it up keeps the
+  reference's mantle, eyes and colour and gives it a gait.
+- **Constant 2 × 2 tentacles with a hidden tenon** (R17): an even width reads as one limb; a taper
+  read as a stick on a block.
+- **Side tentacles turned 45°, not re-hinged**: every tentacle still bends straight outward, so the
+  crawl reads the same, while every hinge now runs diagonally to its faces — which is what stopped the
+  knees flickering.
+- **20 frames, not 21**: divisible by 4, so both groups' crouches and swing peaks land on whole frames
+  and the two half-cycles look identical; a touch fast suits a small, skittering animal.
+- **Plum tentacles under a Purple mantle**: the reference is one colour, but the darker shade makes the
+  arms read as limbs under a head and keeps the gaps between them legible.
+- **Tight packing**: an octopus's arms bunch, and opening the spacing would mean thinner or fewer
+  tentacles; in motion they always swing apart.
