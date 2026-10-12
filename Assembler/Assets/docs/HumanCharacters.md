@@ -166,8 +166,8 @@ visible; held props follow the prop rules in VoxelStyle.md. They count toward th
   surface under it — which keeps it clear of every body plane (R8) without swallowing the face.
 - **Glasses** (`glasses`) are a `Glasses` part on that grid, a child of Head: a full rim round each eye,
   a bridge joining the tops of the rims, end pieces out to the temples and arms back along the sides of
-  the head, all half a voxel thick. Each rim is 3.5 wide and the eye's height plus 1.5 tall: the eye
-  sits against the top rim, with half a voxel of skin between it and the frame on the other sides. That needs `eye_inset` 2+, three columns between the eyes, a row below
+  the head, all half a voxel thick. Each rim is 3.5 wide and the eye's height plus 1.5 tall, with the
+  eye centred in it: half a voxel of skin either side, a quarter above and below. That needs `eye_inset` 2+, three columns between the eyes, a row below
   the eyes and one above them under the fringe.
 - **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face —
   or under the glasses' bottom rim when there are glasses.

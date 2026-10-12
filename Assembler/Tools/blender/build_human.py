@@ -349,10 +349,10 @@ head_ob = head.build(pivot=(0, torso_top, 0))
 
 if K["glasses"]:                                                                  # H13: an accessory on the half-voxel grid
     # Frames half a voxel thick throughout, a quarter voxel proud of the face and of the sides of the head, so
-    # no plane is shared with it (R8). Each lens is a ring 3.5 wide round its eye, the eye against the top rim
-    # and a half-voxel of skin between it and the rim on the other sides; a half-voxel bridge joins the tops.
+    # no plane is shared with it (R8). Each lens is a ring 3.5 wide round its eye, the eye centred in it: half a
+    # voxel of skin either side, a quarter above and below. A half-voxel bridge joins the tops of the rings.
     t, gz = 0.5, D / 2 - 0.25
-    y0, y1 = ey - 1, ey + eye_h + t                                               # ring bottom and top
+    y0, y1 = ey - 0.75, ey + eye_h + 0.75                                         # ring bottom and top
     glasses = Part("Glasses", unit=t)
     g = lambda x0, x1, ya, yb, za=gz, zb=gz + t: glasses.box(x0, x1, ya, yb, za, zb, K["glasses"])
     for c in (xl + ei + 0.5, xr - ei + 0.5):                                      # eye centres
