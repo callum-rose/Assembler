@@ -24,12 +24,12 @@ DEFAULTS = dict(                                         # every dimension is in
     shoulder_bevel=1,
     neck_length=1, neck_width=3, neck_depth=3,
     head_width=7, head_height=6, head_depth=6, head_bevel=1,
-    eye_inset=1, eye_row=-1,                             # eye_row -1 = a third of the way up the head (H10)
+    eye_inset=1, eye_row=-1, eye_height=-1,              # -1 = derive: a third of the way up; 1 tall, 2 at heads 8+ (H10)
     arm_length=7, arm_width=2, arm_depth=2, hand_length=2,
     hair="short",
     skin="P61", hair_colour="P15", top="P57", bottom="P56", shoes="P06",
     tie="", collar="",                                   # optional palette indices; a tie blade needs a leg gap of 2+
-    glasses="",                                          # optional palette index for frames; needs eye_inset 2+ (H13)
+    glasses="",                                          # optional palette index: a Glasses part on the Head (H13)
     cheeks="",                                           # optional palette index for a blush under each eye (H12)
 )
 LOOKS = {   # the worked examples in HumanCharacters.md
@@ -44,7 +44,7 @@ LOOKS = {   # the worked examples in HumanCharacters.md
     "suit":     dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, top="P56", bottom="P56",
                      shoes="P08", collar="P00", tie="P45", hair_colour="P13"),
     "burnham":  dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, head_width=9, head_height=9,
-                     head_depth=7, eye_inset=2, eye_row=2, skin="P60", hair_colour="P15", glasses="P08", cheeks="P46",
+                     head_depth=7, eye_inset=2, eye_row=2, eye_height=1, skin="P60", hair_colour="P15", glasses="P08", cheeks="P46",
                      top="P56", bottom="P56", shoes="P08", tie="P39"),
 }
 PALETTE = {
@@ -74,10 +74,10 @@ widest = max(K["chest_width"], K["belly_width"])
 arm_top = torso_top - K["shoulder_bevel"]               # H8: arm top level with the shoulder bevel's foot
 arm_bottom = arm_top - K["arm_length"]
 eye_gap = K["head_width"] - 2 * K["eye_inset"] - 2
-eye_h = 2 if K["head_height"] >= 8 else 1
+eye_h = K["eye_height"] if K["eye_height"] >= 1 else 2 if K["head_height"] >= 8 else 1
 eye_row = K["eye_row"] if K["eye_row"] >= 0 else round(K["head_height"] / 3)
 problems = [msg for ok, msg in (
-    (min(v for k, v in K.items() if isinstance(v, int) and k not in ("leg_gap", "eye_row", "shoe_length", "shoulder_bevel", "head_bevel")) >= 1,
+    (min(v for k, v in K.items() if isinstance(v, int) and k not in ("leg_gap", "eye_row", "eye_height", "shoe_length", "shoulder_bevel", "head_bevel")) >= 1,
      "every length, width and depth must be 1+"),
     (leg_gap >= 1, "leg_gap must be 1+: legs that touch share a plane through the whole stride (H6, R8)"),
     (leg_out <= K["belly_width"] / 2 - 0.5, "legs must sit inside the hips: leg_gap/2 + leg_width <= belly_width/2 - 0.5 (H6, R8)"),
@@ -96,8 +96,8 @@ problems = [msg for ok, msg in (
     (len({K[r] for r in ("skin", "hair_colour", "top", "bottom", "shoes", "tie", "collar", "glasses", "cheeks") if K[r]} | {INK}) <= 6,
      "at most six palette colours, eyes included (H4, R11)"),
     (K["shoulder_bevel"] >= 0 and K["head_bevel"] >= 0, "bevels are 0+ voxels"),
-    (not K["glasses"] or (K["eye_inset"] >= 2 and eye_gap >= 3 and eye_row + eye_h <= K["head_height"] - 4),
-     "glasses need eye_inset 2+, three columns between the eyes, a lens row and a frame row above them under the fringe (H13)"),
+    (not K["glasses"] or eye_row + eye_h <= K["head_height"] - 4,
+     "glasses need a lens row and a frame row above the eyes, under the fringe (H13)"),
 ) if not ok]
 assert not problems, "\n".join(problems)
 
@@ -328,11 +328,6 @@ elif style == "afro":
     top_bevel = False
 ey, ei = hb + eye_row, K["eye_inset"]                                            # H10: 1 x 1, or 1 wide x 2 tall at 8+
 head.paint(lambda x, y, z: z == zf and ey <= y < ey + eye_h and x in (xl + ei, xr - ei), INK)
-if K["glasses"]:                                                                  # H13: browline frames as markings
-    rims = (xl + ei - 2, xl + ei + 2, xr - ei - 2, xr - ei + 2)                   # outer and inner rim columns
-    lt = ey + eye_h + 1                                                           # a skin row over the eye: rims outgrow it
-    head.paint(lambda x, y, z: z == zf and ((y == lt and rims[0] <= x <= rims[3]) or (ey <= y < lt and x in rims)), K["glasses"])
-    head.paint(lambda x, y, z: side(x) and y == lt and z >= 0, K["glasses"])      # arms back along the temples
 if K["cheeks"]:                                                                   # 2 x 1 under each eye, toward the outside
     head.paint(lambda x, y, z: z == zf and y == ey - 1 and (xl + ei - 1 <= x <= xl + ei or xr - ei <= x <= xr - ei + 1),
                K["cheeks"])
@@ -342,7 +337,23 @@ for sx in (1, -1):
         head.bevel((sx, 1, 0), W / 2 + ht - hbv, in_head)
     if hbv:
         head.bevel((sx, -1, 0), W / 2 - hb - hbv, in_head)
-head.build(pivot=(0, torso_top, 0))
+head_ob = head.build(pivot=(0, torso_top, 0))
+
+if K["glasses"]:                                                                  # H13: browline frames, a part half proud of the face
+    # Every plane sits half a voxel off the head's lattice, so nothing is shared with it (R5, R8): the front
+    # is half buried in the face, the arms half buried in the sides. Each lens opening is two wide, centred on
+    # its eye, and a row taller than the eye so the rims outgrow it and read as frames, not more eyes.
+    gx, gz, lt = W / 2 + 0.5, D / 2 - 0.5, ey + eye_h + 1
+    glasses = Part("Glasses")
+    glasses.box(-gx, gx, lt, lt + 1, gz, gz + 1, K["glasses"])                    # top bar, temple to temple
+    for c in (xl + ei + 0.5, xr - ei + 0.5):                                      # eye centres
+        glasses.box(c - 1 - ei, c - 1, ey, lt, gz, gz + 1, K["glasses"]) if c < 0 else glasses.box(c + 1, c + 1 + ei, ey, lt, gz, gz + 1, K["glasses"])
+    glasses.box(xl + ei + 1.5, xr - ei - 0.5, ey, lt, gz, gz + 1, K["glasses"])   # bridge
+    for sx in (1, -1):                                                            # arms back along the temples
+        glasses.box(sx * gx - (1 if sx > 0 else 0), sx * gx + (0 if sx > 0 else 1), lt, lt + 1, 0, gz, K["glasses"])
+    glasses.build(pivot=(0, torso_top, 0))
+    bpy.data.objects["Glasses"].parent = head_ob                                  # rigid with the head (H12)
+    bpy.data.objects["Glasses"].location = (0, 0, 0)
 
 # ---- Arms: one width throughout, half a voxel clear of the widest band they pass (H8) ----------------
 for sx in (1, -1):

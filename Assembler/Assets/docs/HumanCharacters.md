@@ -63,6 +63,7 @@ There are no ranges. The template is the default for each knob:
 | | `head_bevel` | 1 | |
 | Face | `eye_inset` | 1 | columns between each eye and the head's side edge |
 | | `eye_row` | derived | a third of the way up the head unless set |
+| | `eye_height` | derived | H10's 1, or 2 at heads 8+, unless set |
 | Arms | `arm_length`, `arm_width`, `arm_depth` | 7, 2, 2 | |
 | | `hand_length` | 2 | rows of skin at the end of the arm |
 
@@ -160,12 +161,12 @@ the head and costs no parts.
 
 **H13. Accessories follow H12:** glasses and beards as markings or proud parts that leave the eyes
 visible; held props follow the prop rules in VoxelStyle.md. They count toward the six colours (H4).
-- **Glasses** (`glasses`) are browline frames painted on the face: a top bar spanning both lenses, a
-  rim column either side of each eye, and arms back along the temples — no bottom rim. Each lens is
-  three columns wide with the eye centred and **one skin row above the eye**, so the rims stand taller
-  than the eye and read as frames rather than more eyes. That needs `eye_inset` 2+, three columns
-  between the eyes, and the top bar below the fringe. Frames may be Ink; they must not be the hair
-  colour if the top bar touches the fringe.
+- **Glasses** (`glasses`) are a `Glasses` part, a child of Head: browline frames — a top bar from
+  temple to temple, a rim either side of each lens, and arms back along the temples, with no bottom
+  rim. Every plane sits half a voxel off the head's lattice, so the front is half buried in the face
+  and the arms half buried in the sides, and no plane is shared (R5, R8). Each lens opening is two
+  wide, centred on its eye, and **one row taller than the eye**, so the rims outgrow it and read as
+  frames rather than more eyes. That needs a lens row and a frame row above the eyes, under the fringe.
 - **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face.
 
 *Why:* the eyes are the one feature every creature must keep (R13); props are props.
@@ -188,7 +189,7 @@ The worked examples, all on the template body unless noted. Build any of them wi
 | `fringe` | fringe dropping a row over one eye | P60 | P51 | P19 | P14 | P15 | template |
 | `bald` | grey at the back and sides | P61 | P01 | P48 | P10 | P26 | template |
 | `suit` | short | P61 | P13 | P56 | P56 | P08 | broad: chest and belly 10 wide, belly 4 long, chest 2; P00 collar, P45 tie with a blade to mid-thigh |
-| `burnham` | short | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, `eye_row` 2; P08 browline glasses, P46 cheeks, P39 tie, no collar |
+| `burnham` | short | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, `eye_row` 2, 1 × 1 eyes (`eye_height` 1, against H10); P08 Glasses part, P46 cheeks, P39 tie, no collar |
 
 ---
 
@@ -208,6 +209,7 @@ Decisions from reviews that the rules alone didn't settle — precedent for clos
 | Eyes in the head's corner columns | `eye_inset` ≥ 1 (H10) | A corner eye wraps the edge and reads as a slit |
 | Full-ring glasses round a 1 × 1 eye | Browline frames, lens a row taller than the eye (H13) | A ring as thick as the eye read as a bandit mask; rims level with the eye read as piano keys |
 | Frames in the hair colour | Ink frames, or a skin row between the top bar and the fringe | Hair-coloured frames touching the fringe merged into it and read as bangs |
+| Glasses painted on the face | A `Glasses` part half proud of it | The depth and its shadow separate the frames from the face and the eyes |
 | A white collar on a look that also wants cheeks | Drop the collar | Cheeks were the seventh colour (R11); the tie alone still reads as a suit |
 
 ---
