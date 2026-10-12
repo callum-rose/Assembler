@@ -161,13 +161,16 @@ the head and costs no parts.
 
 **H13. Accessories follow H12:** glasses and beards as markings or proud parts that leave the eyes
 visible; held props follow the prop rules in VoxelStyle.md. They count toward the six colours (H4).
-- **Glasses** (`glasses`) are a `Glasses` part, a child of Head: browline frames — a top bar from
-  temple to temple, a rim either side of each lens, and arms back along the temples, with no bottom
-  rim. Every plane sits half a voxel off the head's lattice, so the front is half buried in the face
-  and the arms half buried in the sides, and no plane is shared (R5, R8). Each lens opening is two
-  wide, centred on its eye, and **one row taller than the eye**, so the rims outgrow it and read as
-  frames rather than more eyes. That needs a lens row and a frame row above the eyes, under the fringe.
-- **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face.
+- **Accessories may use the half-voxel grid.** An accessory part (not the body, head or limbs) may be
+  built from half-size voxels, so it can be half a voxel thick and sit a quarter voxel proud of the
+  surface under it — which keeps it clear of every body plane (R8) without swallowing the face.
+- **Glasses** (`glasses`) are a `Glasses` part on that grid, a child of Head: a full rim round each eye,
+  a bridge joining the tops of the rims, end pieces out to the temples and arms back along the sides of
+  the head, all half a voxel thick. Each rim is 3.5 wide, leaving half a voxel of skin between the eye
+  and the frame on every side. That needs `eye_inset` 2+, three columns between the eyes, a row below
+  the eyes and one above them under the fringe.
+- **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face —
+  or under the glasses' bottom rim when there are glasses.
 
 *Why:* the eyes are the one feature every creature must keep (R13); props are props.
 
@@ -189,7 +192,7 @@ The worked examples, all on the template body unless noted. Build any of them wi
 | `fringe` | fringe dropping a row over one eye | P60 | P51 | P19 | P14 | P15 | template |
 | `bald` | grey at the back and sides | P61 | P01 | P48 | P10 | P26 | template |
 | `suit` | short | P61 | P13 | P56 | P56 | P08 | broad: chest and belly 10 wide, belly 4 long, chest 2; P00 collar, P45 tie with a blade to mid-thigh |
-| `burnham` | short | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, `eye_row` 2, 1 × 1 eyes (`eye_height` 1, against H10); P08 Glasses part, P46 cheeks, P39 tie, no collar |
+| `burnham` | combover: short, swept down over half the forehead | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, 1 × 1 eyes (`eye_height` 1, against H10); P08 Glasses part, P46 cheeks, P39 tie, no collar |
 
 ---
 
@@ -207,9 +210,10 @@ Decisions from reviews that the rules alone didn't settle — precedent for clos
 | A new skin swatch between Peach and Orange for an orange-skinned caricature | Orange P44 | Stronger read; no palette change needed |
 | 2 × 2 eyes on heads 8+ tall | 1 × 2 (H10) | Large square eyes stared |
 | Eyes in the head's corner columns | `eye_inset` ≥ 1 (H10) | A corner eye wraps the edge and reads as a slit |
-| Full-ring glasses round a 1 × 1 eye | Browline frames, lens a row taller than the eye (H13) | A ring as thick as the eye read as a bandit mask; rims level with the eye read as piano keys |
+| Glasses rims a whole voxel thick | Rims half a voxel thick on the accessory grid (H13) | Whole-voxel rims read as a bandit mask or piano keys, and swallowed the face |
 | Frames in the hair colour | Ink frames, or a skin row between the top bar and the fringe | Hair-coloured frames touching the fringe merged into it and read as bangs |
-| Glasses painted on the face | A `Glasses` part half proud of it | The depth and its shadow separate the frames from the face and the eyes |
+| Glasses painted on the face | A `Glasses` part proud of it | The depth and its shadow separate the frames from the face and the eyes |
+| Browline frames with no bottom rim | A full rim round each eye | Without a bottom rim the glasses looked unfinished |
 | A white collar on a look that also wants cheeks | Drop the collar | Cheeks were the seventh colour (R11); the tie alone still reads as a suit |
 
 ---

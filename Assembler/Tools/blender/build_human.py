@@ -44,7 +44,7 @@ LOOKS = {   # the worked examples in HumanCharacters.md
     "suit":     dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, top="P56", bottom="P56",
                      shoes="P08", collar="P00", tie="P45", hair_colour="P13"),
     "burnham":  dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, head_width=9, head_height=9,
-                     head_depth=7, eye_inset=2, eye_row=2, eye_height=1, skin="P60", hair_colour="P15", glasses="P08", cheeks="P46",
+                     head_depth=7, eye_inset=2, eye_height=1, hair="combover", skin="P60", hair_colour="P15", glasses="P08", cheeks="P46",
                      top="P56", bottom="P56", shoes="P08", tie="P39"),
 }
 PALETTE = {
@@ -96,8 +96,11 @@ problems = [msg for ok, msg in (
     (len({K[r] for r in ("skin", "hair_colour", "top", "bottom", "shoes", "tie", "collar", "glasses", "cheeks") if K[r]} | {INK}) <= 6,
      "at most six palette colours, eyes included (H4, R11)"),
     (K["shoulder_bevel"] >= 0 and K["head_bevel"] >= 0, "bevels are 0+ voxels"),
-    (not K["glasses"] or eye_row + eye_h <= K["head_height"] - 4,
-     "glasses need a lens row and a frame row above the eyes, under the fringe (H13)"),
+    (not K["glasses"] or (K["eye_inset"] >= 2 and eye_gap >= 3 and eye_row >= 1 and eye_row + eye_h + 1 <= K["head_height"] - 2),
+     "glasses need eye_inset 2+, three columns between the eyes, a row below them and one above under the fringe (H13)"),
+    (not (K["glasses"] and K["cheeks"]) or eye_row >= 2, "cheeks under glasses need two rows below the eyes"),
+    (not (K["glasses"] and K["hair"] == "combover") or eye_row + eye_h + 1 <= K["head_height"] - 4,
+     "a combover needs two forehead rows above the glasses"),
 ) if not ok]
 assert not problems, "\n".join(problems)
 
@@ -135,10 +138,10 @@ def _area(poly):
         n += Vector(poly[i]).cross(Vector(poly[(i + 1) % len(poly)]))
     return n.length / 2
 
-def clip_voxel(k, planes):
-    """Clip the unit voxel at min corner k by half-spaces n.p <= d (R7b bevels). None if no plane cuts
+def clip_voxel(k, planes, unit=1):
+    """Clip the voxel of side `unit` at min corner k by half-spaces n.p <= d (R7b bevels). None if no plane cuts
     it, [] if nothing is left, else [(polygon, tag)]: tag (axis, sign) for what remains of a cube face."""
-    lo, hi = k, [c + 1 for c in k]
+    lo, hi = k, [c + unit for c in k]
     corners = [(a, b, c) for a in (lo[0], hi[0]) for b in (lo[1], hi[1]) for c in (lo[2], hi[2])]
     act = [(n, d) for n, d in planes if any(_dot(n, p) > d + EPS for p in corners)]
     if not act:
@@ -182,14 +185,16 @@ def clip_voxel(k, planes):
     return faces
 
 class Part:
-    """A rigid block of voxels on one grid (R4), keyed by min corner on the half-voxel lattice (R5)."""
-    def __init__(s, name):
-        s.name, s.vox, s.planes = name, {}, []
+    """A rigid block of voxels on one grid (R4), keyed by min corner on the half-voxel lattice (R5).
+    `unit` is the voxel size: 1 for the body, 0.5 for an accessory on the half-voxel grid (H13)."""
+    def __init__(s, name, unit=1):
+        s.name, s.vox, s.planes, s.unit = name, {}, [], unit
     def box(s, x0, x1, y0, y1, z0, z1, col):
-        for i in range(round(x1 - x0)):
-            for j in range(round(y1 - y0)):
-                for k in range(round(z1 - z0)):
-                    s.vox[(x0 + i, y0 + j, z0 + k)] = col
+        u = s.unit
+        for i in range(round((x1 - x0) / u)):
+            for j in range(round((y1 - y0) / u)):
+                for k in range(round((z1 - z0) / u)):
+                    s.vox[(x0 + i * u, y0 + j * u, z0 + k * u)] = col
     def paint(s, pred, col):
         for k in s.vox:
             if pred(*k):
@@ -208,7 +213,7 @@ class Part:
         clipped = {}
         for k in list(s.vox):
             pl = [(n, d) for n, d, w in s.planes if w is None or w(*k)]
-            faces = clip_voxel(k, pl) if pl else None
+            faces = clip_voxel(k, pl, s.unit) if pl else None
             if faces == []:
                 del s.vox[k]
             elif faces:
@@ -218,15 +223,15 @@ class Part:
             if k in clipped:
                 for poly, tag in clipped[k]:
                     if tag is not None:
-                        nb = list(k); nb[tag[0]] += tag[1]
+                        nb = list(k); nb[tag[0]] += tag[1] * s.unit
                         if tuple(nb) in s.vox:
                             continue
                     face(poly, col)
                 continue
             for d, ax in dirs:
-                if (k[0] + d[0], k[1] + d[1], k[2] + d[2]) in s.vox:
+                if (k[0] + d[0] * s.unit, k[1] + d[1] * s.unit, k[2] + d[2] * s.unit) in s.vox:
                     continue
-                lo, hi = list(k), [c + 1 for c in k]
+                lo, hi = list(k), [c + s.unit for c in k]
                 u, v = [a for a in range(3) if a != ax]
                 pts = []
                 for a, b in ((0, 0), (1, 0), (1, 1), (0, 1)):
@@ -295,6 +300,8 @@ top_bevel = True
 style = K["hair"]
 if style == "short":
     head.paint(lambda x, y, z: y >= hb and short(x, y, z), HR)
+elif style == "combover":                                                         # short, swept down over half the forehead
+    head.paint(lambda x, y, z: y >= hb and (short(x, y, z) or (z == zf and ((y == ht - 3 and x < 1) or (y == ht - 4 and x < 3 - W / 2)))), HR)
 elif style == "buzz":
     head.paint(lambda x, y, z: y >= ht - 1 or (z == zb and y >= ht - 3) or (side(x) and y >= ht - 2 and z < 0), HR)
 elif style == "bald":
@@ -328,8 +335,9 @@ elif style == "afro":
     top_bevel = False
 ey, ei = hb + eye_row, K["eye_inset"]                                            # H10: 1 x 1, or 1 wide x 2 tall at 8+
 head.paint(lambda x, y, z: z == zf and ey <= y < ey + eye_h and x in (xl + ei, xr - ei), INK)
+cy = ey - 2 if K["glasses"] else ey - 1                                          # below the frames' bottom rim
 if K["cheeks"]:                                                                   # 2 x 1 under each eye, toward the outside
-    head.paint(lambda x, y, z: z == zf and y == ey - 1 and (xl + ei - 1 <= x <= xl + ei or xr - ei <= x <= xr - ei + 1),
+    head.paint(lambda x, y, z: z == zf and y == cy and (xl + ei - 1 <= x <= xl + ei or xr - ei <= x <= xr - ei + 1),
                K["cheeks"])
 hbv = K["head_bevel"]
 for sx in (1, -1):
@@ -339,18 +347,23 @@ for sx in (1, -1):
         head.bevel((sx, -1, 0), W / 2 - hb - hbv, in_head)
 head_ob = head.build(pivot=(0, torso_top, 0))
 
-if K["glasses"]:                                                                  # H13: browline frames, a part half proud of the face
-    # Every plane sits half a voxel off the head's lattice, so nothing is shared with it (R5, R8): the front
-    # is half buried in the face, the arms half buried in the sides. Each lens opening is two wide, centred on
-    # its eye, and a row taller than the eye so the rims outgrow it and read as frames, not more eyes.
-    gx, gz, lt = W / 2 + 0.5, D / 2 - 0.5, ey + eye_h + 1
-    glasses = Part("Glasses")
-    glasses.box(-gx, gx, lt, lt + 1, gz, gz + 1, K["glasses"])                    # top bar, temple to temple
+if K["glasses"]:                                                                  # H13: an accessory on the half-voxel grid
+    # Frames half a voxel thick throughout, a quarter voxel proud of the face and of the sides of the head, so
+    # no plane is shared with it (R8). Each lens is a ring 3.5 wide round its eye, a half-voxel of skin between
+    # the eye and the rim on every side; a half-voxel bridge joins the tops of the rings.
+    t, gz = 0.5, D / 2 - 0.25
+    y0, y1 = ey - 1, ey + eye_h + 1                                               # ring bottom and top
+    glasses = Part("Glasses", unit=t)
+    g = lambda x0, x1, ya, yb, za=gz, zb=gz + t: glasses.box(x0, x1, ya, yb, za, zb, K["glasses"])
     for c in (xl + ei + 0.5, xr - ei + 0.5):                                      # eye centres
-        glasses.box(c - 1 - ei, c - 1, ey, lt, gz, gz + 1, K["glasses"]) if c < 0 else glasses.box(c + 1, c + 1 + ei, ey, lt, gz, gz + 1, K["glasses"])
-    glasses.box(xl + ei + 1.5, xr - ei - 0.5, ey, lt, gz, gz + 1, K["glasses"])   # bridge
-    for sx in (1, -1):                                                            # arms back along the temples
-        glasses.box(sx * gx - (1 if sx > 0 else 0), sx * gx + (0 if sx > 0 else 1), lt, lt + 1, 0, gz, K["glasses"])
+        g(c - 1.75, c + 1.75, y0, y0 + t); g(c - 1.75, c + 1.75, y1 - t, y1)      # bottom and top rims
+        g(c - 1.75, c - 1.75 + t, y0 + t, y1 - t); g(c + 1.75 - t, c + 1.75, y0 + t, y1 - t)
+    g(xl + ei + 2.25, xr - ei - 1.25, y1 - t, y1)                                 # bridge
+    for sx in (1, -1):
+        e0, e1 = sorted((sx * (W / 2 + 0.25), sx * (W / 2 - ei + 1.25)))
+        g(e0, e1, y1 - t, y1)                                                     # end piece, rim to temple
+        a0, a1 = sorted((sx * (W / 2 - 0.25), sx * (W / 2 + 0.25)))
+        g(a0, a1, y1 - t, y1, gz - D / 2, gz)                                     # arm back along the temple
     glasses.build(pivot=(0, torso_top, 0))
     bpy.data.objects["Glasses"].parent = head_ob                                  # rigid with the head (H12)
     bpy.data.objects["Glasses"].location = (0, 0, 0)
