@@ -114,6 +114,19 @@ The validators recurse it (`SearchOption.AllDirectories`), but the Game Launcher
   `GameSandboxValidatorBatch.Run`. **Prefer `unity command validate_game`** — this script
   boots Unity per call and refuses to run if an editor already holds this path.
 
+## `blender/build_human.py`
+
+Builds a human character to [`Assets/docs/HumanCharacters.md`](../Assets/docs/HumanCharacters.md)
+from `key=value` arguments (every knob in that spec, plus `look=<preset>` and `out=<render prefix>`),
+and renders four preview views. It follows the `bake_shade.py` build-script contract — parts in
+voxels under `root`, root part `Body`, a `ground`, and the standard render loop — so the same
+arguments after `bake_shade.py -- build_human.py <fbx> Body` bake and export the character.
+
+- **It refuses illegal bodies.** Every coupling rule (H5–H11) is checked up front and all the
+  broken ones are listed in the assertion message; change the knobs rather than the checks.
+- **Faces are quads or triangles and vertices are welded**, because `bake_shade.py` asserts the
+  first and finds convex edges (for the edge light) through shared edges.
+
 ## `blender/build_primitives.py`
 
 Not a check — it is the **source of the nine primitive meshes** in
