@@ -29,6 +29,8 @@ DEFAULTS = dict(                                         # every dimension is in
     hair="short",
     skin="P61", hair_colour="P15", top="P57", bottom="P56", shoes="P06",
     tie="", collar="",                                   # optional palette indices; a tie blade needs a leg gap of 2+
+    glasses="",                                          # optional palette index for frames; needs eye_inset 2+ (H13)
+    cheeks="",                                           # optional palette index for a blush under each eye (H12)
 )
 LOOKS = {   # the worked examples in HumanCharacters.md
     "standard": dict(),
@@ -41,12 +43,15 @@ LOOKS = {   # the worked examples in HumanCharacters.md
     "bald":     dict(hair="bald",   skin="P61", hair_colour="P01", top="P48", bottom="P10", shoes="P26"),
     "suit":     dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, top="P56", bottom="P56",
                      shoes="P08", collar="P00", tie="P45", hair_colour="P13"),
+    "burnham":  dict(chest_width=10, belly_width=10, belly_length=4, chest_length=2, head_width=9, head_height=9,
+                     head_depth=7, eye_inset=2, eye_row=2, skin="P60", hair_colour="P15", glasses="P08", cheeks="P46",
+                     top="P56", bottom="P56", shoes="P08", tie="P39"),
 }
 PALETTE = {
     "P00": "f6f6f2", "P01": "dcdcd8", "P04": "66676c", "P05": "4a4a50", "P06": "2b2b30", "P08": "141414",
     "P10": "dcc08e", "P13": "8e5634", "P14": "6e3d22", "P15": "4a2818", "P16": "2e1810", "P19": "8fc23a",
     "P20": "9ea26a", "P26": "6b4528", "P39": "4a66b4", "P40": "3a4d8c", "P41": "ffd070", "P42": "f6d021",
-    "P44": "f08236", "P45": "c83a2a", "P46": "e8899a", "P48": "7a3e86", "P51": "b4521e", "P55": "d4b0e0",
+    "P44": "f08236", "P45": "c83a2a", "P46": "e8899a", "P48": "7a3e86", "P51": "b4521e", "P53": "f6c4cc", "P55": "d4b0e0",
     "P56": "23305a", "P57": "2a8a8a", "P60": "f2d0b0", "P61": "c88a60", "P62": "6e4428",
 }
 INK = "P08"
@@ -87,7 +92,12 @@ problems = [msg for ok, msg in (
     (eye_gap >= 2, "head_width - 2*eye_inset - 2 must be 2+: two columns between the eyes (H10)"),
     (K["eye_inset"] >= 1, "eye_inset must be 1+ so an eye never wraps a corner (H10)"),
     (eye_row + eye_h <= K["head_height"] - 2, "eyes must sit below the fringe rows (H10)"),
+    (not K["cheeks"] or eye_row >= 1, "cheeks need a row below the eyes"),
+    (len({K[r] for r in ("skin", "hair_colour", "top", "bottom", "shoes", "tie", "collar", "glasses", "cheeks") if K[r]} | {INK}) <= 6,
+     "at most six palette colours, eyes included (H4, R11)"),
     (K["shoulder_bevel"] >= 0 and K["head_bevel"] >= 0, "bevels are 0+ voxels"),
+    (not K["glasses"] or (K["eye_inset"] >= 2 and eye_gap >= 3 and eye_row + eye_h <= K["head_height"] - 4),
+     "glasses need eye_inset 2+, three columns between the eyes, a lens row and a frame row above them under the fringe (H13)"),
 ) if not ok]
 assert not problems, "\n".join(problems)
 
@@ -318,6 +328,14 @@ elif style == "afro":
     top_bevel = False
 ey, ei = hb + eye_row, K["eye_inset"]                                            # H10: 1 x 1, or 1 wide x 2 tall at 8+
 head.paint(lambda x, y, z: z == zf and ey <= y < ey + eye_h and x in (xl + ei, xr - ei), INK)
+if K["glasses"]:                                                                  # H13: browline frames as markings
+    rims = (xl + ei - 2, xl + ei + 2, xr - ei - 2, xr - ei + 2)                   # outer and inner rim columns
+    lt = ey + eye_h + 1                                                           # a skin row over the eye: rims outgrow it
+    head.paint(lambda x, y, z: z == zf and ((y == lt and rims[0] <= x <= rims[3]) or (ey <= y < lt and x in rims)), K["glasses"])
+    head.paint(lambda x, y, z: side(x) and y == lt and z >= 0, K["glasses"])      # arms back along the temples
+if K["cheeks"]:                                                                   # 2 x 1 under each eye, toward the outside
+    head.paint(lambda x, y, z: z == zf and y == ey - 1 and (xl + ei - 1 <= x <= xl + ei or xr - ei <= x <= xr - ei + 1),
+               K["cheeks"])
 hbv = K["head_bevel"]
 for sx in (1, -1):
     if hbv and top_bevel:

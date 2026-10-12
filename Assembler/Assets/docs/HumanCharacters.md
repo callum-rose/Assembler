@@ -160,6 +160,14 @@ the head and costs no parts.
 
 **H13. Accessories follow H12:** glasses and beards as markings or proud parts that leave the eyes
 visible; held props follow the prop rules in VoxelStyle.md. They count toward the six colours (H4).
+- **Glasses** (`glasses`) are browline frames painted on the face: a top bar spanning both lenses, a
+  rim column either side of each eye, and arms back along the temples — no bottom rim. Each lens is
+  three columns wide with the eye centred and **one skin row above the eye**, so the rims stand taller
+  than the eye and read as frames rather than more eyes. That needs `eye_inset` 2+, three columns
+  between the eyes, and the top bar below the fringe. Frames may be Ink; they must not be the hair
+  colour if the top bar touches the fringe.
+- **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face.
+
 *Why:* the eyes are the one feature every creature must keep (R13); props are props.
 
 ---
@@ -180,6 +188,7 @@ The worked examples, all on the template body unless noted. Build any of them wi
 | `fringe` | fringe dropping a row over one eye | P60 | P51 | P19 | P14 | P15 | template |
 | `bald` | grey at the back and sides | P61 | P01 | P48 | P10 | P26 | template |
 | `suit` | short | P61 | P13 | P56 | P56 | P08 | broad: chest and belly 10 wide, belly 4 long, chest 2; P00 collar, P45 tie with a blade to mid-thigh |
+| `burnham` | short | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, `eye_row` 2; P08 browline glasses, P46 cheeks, P39 tie, no collar |
 
 ---
 
@@ -197,6 +206,9 @@ Decisions from reviews that the rules alone didn't settle — precedent for clos
 | A new skin swatch between Peach and Orange for an orange-skinned caricature | Orange P44 | Stronger read; no palette change needed |
 | 2 × 2 eyes on heads 8+ tall | 1 × 2 (H10) | Large square eyes stared |
 | Eyes in the head's corner columns | `eye_inset` ≥ 1 (H10) | A corner eye wraps the edge and reads as a slit |
+| Full-ring glasses round a 1 × 1 eye | Browline frames, lens a row taller than the eye (H13) | A ring as thick as the eye read as a bandit mask; rims level with the eye read as piano keys |
+| Frames in the hair colour | Ink frames, or a skin row between the top bar and the fringe | Hair-coloured frames touching the fringe merged into it and read as bangs |
+| A white collar on a look that also wants cheeks | Drop the collar | Cheeks were the seventh colour (R11); the tie alone still reads as a suit |
 
 ---
 
