@@ -13,6 +13,7 @@ file format a model is stored in is deliberately out of scope.
 |---|---|
 | [`Models.md`](Models.md) | Composing visuals from the engine's primitive meshes with the `model` behaviour |
 | **`VoxelStyle.md`** (this file) | The voxel art style: grids, parts, palette, faces, articulation, buildings, shading |
+| [`HumanCharacters.md`](HumanCharacters.md) | Human characters in this style: the parameterised body, faces, hair, clothing |
 
 ![The worked example, three-quarter view](../../../docs/images/voxel-style/shark-three-quarter.png)
 
