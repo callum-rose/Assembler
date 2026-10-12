@@ -99,8 +99,8 @@ problems = [msg for ok, msg in (
     (not K["glasses"] or (K["eye_inset"] >= 2 and eye_gap >= 3 and eye_row >= 1 and eye_row + eye_h + 1 <= K["head_height"] - 2),
      "glasses need eye_inset 2+, three columns between the eyes, a row below them and one above under the fringe (H13)"),
     (not (K["glasses"] and K["cheeks"]) or eye_row >= 2, "cheeks under glasses need two rows below the eyes"),
-    (not (K["glasses"] and K["hair"] == "combover") or eye_row + eye_h + 1 <= K["head_height"] - 4,
-     "a combover needs two forehead rows above the glasses"),
+    (not (K["glasses"] and K["hair"] == "combover") or eye_row + eye_h + 1 <= K["head_height"] - 3,
+     "a combover needs a forehead row above the glasses"),
 ) if not ok]
 assert not problems, "\n".join(problems)
 
@@ -300,8 +300,8 @@ top_bevel = True
 style = K["hair"]
 if style == "short":
     head.paint(lambda x, y, z: y >= hb and short(x, y, z), HR)
-elif style == "combover":                                                         # short, swept down over half the forehead
-    head.paint(lambda x, y, z: y >= hb and (short(x, y, z) or (z == zf and ((y == ht - 3 and x < 1) or (y == ht - 4 and x < 3 - W / 2)))), HR)
+elif style == "combover":                                                         # short, one row swept down over half the forehead
+    head.paint(lambda x, y, z: y >= hb and (short(x, y, z) or (z == zf and y == ht - 3 and x < 1)), HR)
 elif style == "buzz":
     head.paint(lambda x, y, z: y >= ht - 1 or (z == zb and y >= ht - 3) or (side(x) and y >= ht - 2 and z < 0), HR)
 elif style == "bald":
@@ -349,10 +349,10 @@ head_ob = head.build(pivot=(0, torso_top, 0))
 
 if K["glasses"]:                                                                  # H13: an accessory on the half-voxel grid
     # Frames half a voxel thick throughout, a quarter voxel proud of the face and of the sides of the head, so
-    # no plane is shared with it (R8). Each lens is a ring 3.5 wide round its eye, a half-voxel of skin between
-    # the eye and the rim on every side; a half-voxel bridge joins the tops of the rings.
+    # no plane is shared with it (R8). Each lens is a ring 3.5 wide round its eye, the eye against the top rim
+    # and a half-voxel of skin between it and the rim on the other sides; a half-voxel bridge joins the tops.
     t, gz = 0.5, D / 2 - 0.25
-    y0, y1 = ey - 1, ey + eye_h + 1                                               # ring bottom and top
+    y0, y1 = ey - 1, ey + eye_h + t                                               # ring bottom and top
     glasses = Part("Glasses", unit=t)
     g = lambda x0, x1, ya, yb, za=gz, zb=gz + t: glasses.box(x0, x1, ya, yb, za, zb, K["glasses"])
     for c in (xl + ei + 0.5, xr - ei + 0.5):                                      # eye centres

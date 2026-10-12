@@ -166,8 +166,8 @@ visible; held props follow the prop rules in VoxelStyle.md. They count toward th
   surface under it — which keeps it clear of every body plane (R8) without swallowing the face.
 - **Glasses** (`glasses`) are a `Glasses` part on that grid, a child of Head: a full rim round each eye,
   a bridge joining the tops of the rims, end pieces out to the temples and arms back along the sides of
-  the head, all half a voxel thick. Each rim is 3.5 wide, leaving half a voxel of skin between the eye
-  and the frame on every side. That needs `eye_inset` 2+, three columns between the eyes, a row below
+  the head, all half a voxel thick. Each rim is 3.5 wide and the eye's height plus 1.5 tall: the eye
+  sits against the top rim, with half a voxel of skin between it and the frame on the other sides. That needs `eye_inset` 2+, three columns between the eyes, a row below
   the eyes and one above them under the fringe.
 - **Cheeks** (`cheeks`) are a 2 × 1 blush in the row under each eye, toward the outside of the face —
   or under the glasses' bottom rim when there are glasses.
@@ -192,7 +192,7 @@ The worked examples, all on the template body unless noted. Build any of them wi
 | `fringe` | fringe dropping a row over one eye | P60 | P51 | P19 | P14 | P15 | template |
 | `bald` | grey at the back and sides | P61 | P01 | P48 | P10 | P26 | template |
 | `suit` | short | P61 | P13 | P56 | P56 | P08 | broad: chest and belly 10 wide, belly 4 long, chest 2; P00 collar, P45 tie with a blade to mid-thigh |
-| `burnham` | combover: short, swept down over half the forehead | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, 1 × 1 eyes (`eye_height` 1, against H10); P08 Glasses part, P46 cheeks, P39 tie, no collar |
+| `burnham` | combover: short, one row swept down over half the forehead | P60 | P15 | P56 | P56 | P08 | the suit build with a 9 × 9 × 7 head, `eye_inset` 2, 1 × 1 eyes (`eye_height` 1, against H10); P08 Glasses part, P46 cheeks, P39 tie, no collar |
 
 ---
 
